@@ -1,6 +1,9 @@
 # CNTK Dockerfile
 #   CPU only
 #   No 1-bit SGD
+#
+# To build, run from the parent with the command line:
+# 	docker build -t <image name> -f CNTK-CPUOnly-Image/Dockerfile .
 
 FROM ubuntu:16.04
 
@@ -39,6 +42,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         openjdk-8-jdk \
         # For SWIG
         libpcre3-dev && \
+		# .NET Core SDK
+		apt-transport-https && \
     rm -rf /var/lib/apt/lists/*
 
 RUN OPENMPI_VERSION=1.10.3 && \
@@ -150,6 +155,20 @@ RUN cd /root && \
     ./configure --without-alllang && \
     make -j $(nproc) && \
     make install
+
+COPY ./Patches /tmp/patches
+RUN /tmp/patches/patch_swig.sh /usr/local/share/swig/3.0.10 && \
+	rm -rfd /tmp/patches
+	
+# .NET Core SDK
+RUN cd /tmp && \
+    (wget -q packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb || true) && \
+    dpkg -i packages-microsoft-prod.deb && \
+    apt-get update && \
+    apt-get --yes install dotnet-sdk-2.1.200 && \
+    rm /tmp/packages-microsoft-prod.deb && \
+    apt-get --yes autoremove && \
+    rm -rf /var/lib/apt/lists/*
 
 # Anaconda
 RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh && \

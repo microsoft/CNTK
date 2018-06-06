@@ -16,22 +16,23 @@ if [ "$OS" == "Windows_NT" ]; then
 
     DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image/CIFAR/v0
     cp -R $DataSourceDir/cifar-10-batches-py $TestDataDir || exit $?
-
+	
     # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
     [ "$TEST_DEVICE" == "cpu" ] && export CUDA_VISIBLE_DEVICES=-1
 
-    pushd $TestDataDir
+	pushd $TestDataDir
+	
+    pushd $TEST_BIN_DIR > /dev/null
+    dotnet CNTKLibraryCSTrainingTest.dll CifarResNetClassifierTest `cygpath -aw $TestDataDir/cifar-10-batches-py`
+	popd > /dev/null
+	
+	# Delete the test data
+	popd
+	rm -rf $TestDataDir
+	
+	exit 0
 
-    $TEST_BIN_DIR/CNTKLibraryCSTrainingTest.exe CifarResNetClassifierTest
 else
     echo Cannot run CNTKLibraryCSTrainingTest on Linux.
     exit 1
 fi
-
-ExitCode=$?
-
-# Delete the test data
-popd
-rm -rf $TestDataDir
-
-exit $ExitCode

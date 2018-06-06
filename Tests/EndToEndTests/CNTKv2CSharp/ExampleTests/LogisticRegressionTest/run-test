@@ -3,7 +3,9 @@
 . $TEST_ROOT_DIR/run-test-common
 
 if [ "$OS" == "Windows_NT" ]; then
-  $TEST_BIN_DIR/CNTKLibraryCSTrainingTest.exe LogisticRegressionTest
+  pushd $TEST_BIN_DIR > /dev/null
+  dotnet CNTKLibraryCSTrainingTest.dll LogisticRegressionTest
+  popd > /dev/null
 else
   echo Cannot run CNTKLibraryCSTrainingTest on Linux.
   exit 1

@@ -1,0 +1,40 @@
+--- std_wstring.i	2017-09-05 18:29:41.000000000 +0000
++++ std_wstring.modified.i	2018-05-31 20:40:22.257638700 +0000
+@@ -13,6 +13,28 @@
+ 
+ %{
+ #include <string>
++
++std::wstring UTF16ToWString(wchar_t const *str)
++{
++    if(str == nullptr)
++        return std::wstring();
++
++    short const * pBegin(reinterpret_cast<short const *>(str));
++    short const * ptr(pBegin);
++
++    while(*ptr != 0)
++        ++ptr;
++
++    std::wstring result;
++
++    result.reserve(ptr - pBegin);
++
++    while(pBegin != ptr)
++        result.push_back(*pBegin++);
++
++    return result;
++}
++
+ %}
+ 
+ namespace std {
+@@ -71,7 +93,7 @@
+     SWIG_CSharpSetPendingExceptionArgument(SWIG_CSharpArgumentNullException, "null wstring", 0);
+     return $null;
+    }
+-   std::wstring $1_str($input);
++   std::wstring $1_str(UTF16ToWString($input));
+    $1 = &$1_str; %}
+ %typemap(out) const wstring & %{ $result = SWIG_csharp_wstring_callback($1->c_str()); %}
+ 

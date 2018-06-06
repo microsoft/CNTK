@@ -139,7 +139,7 @@ namespace CNTK.CSTrainingExamples
             string predictionNodeName = "prediction";
             Variable imageInput, labelInput;
             Function trainingLoss, predictionError;
-            Function transferLearningModel = CreateTransferLearningModel(BaseResnetModelFile, featureNodeName, predictionNodeName,
+            Function transferLearningModel = CreateTransferLearningModel(Path.Combine(ExampleImageFoler, BaseResnetModelFile), featureNodeName, predictionNodeName,
                 lastHiddenNodeName, animalModelNumClasses, device,
                 out imageInput, out labelInput, out trainingLoss, out predictionError);
 

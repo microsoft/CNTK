@@ -113,6 +113,7 @@ ALL:=
 ALL_LIBS:=
 PYTHON_LIBS:=
 JAVA_LIBS:=
+CSHARP_LIBS:=
 LIBS_FULLPATH:=
 SRC:=
 
@@ -333,6 +334,7 @@ PERF_PROFILER_LIB:= $(LIBDIR)/lib$(PERF_PROFILER).so
 ALL_LIBS += $(PERF_PROFILER_LIB)
 PYTHON_LIBS += $(PERF_PROFILER_LIB)
 JAVA_LIBS += $(PERF_PROFILER_LIB)
+CSHARP_LIBS += $(PERF_PROFILER_LIB)
 SRC += $(PP_SRC)
 
 $(PERF_PROFILER_LIB): $(PP_OBJ)
@@ -433,6 +435,7 @@ CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).so
 ALL_LIBS += $(CNTKMATH_LIB)
 PYTHON_LIBS += $(CNTKMATH_LIB)
 JAVA_LIBS += $(CNTKMATH_LIB)
+CSHARP_LIBS += $(CNTKMATH_LIB)
 SRC+=$(MATH_SRC)
 
 $(CNTKMATH_LIB): $(MATH_OBJ) | $(PERF_PROFILER_LIB)
@@ -568,6 +571,7 @@ CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
 ALL_LIBS+=$(CNTKLIBRARY_LIB)
 PYTHON_LIBS+=$(CNTKLIBRARY_LIB)
 JAVA_LIBS+=$(CNTKLIBRARY_LIB)
+CSHARP_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
@@ -1551,6 +1555,50 @@ endif
 	javac -cp $(JAVA_SWIG_DIR) $(JAVA_TEST_DIR)/src/Main.java -d $(LIBDIR)/java
 
 ALL += java
+
+endif
+
+########################################
+# C# Support
+########################################
+ifeq ("$(CSHARP_SUPPORT)","true")
+	
+# This is a short-term hack to shoehorn cmake into our build system. In the near future, we will fully migrate
+# to a cmake-based system and this hack will no longer be necessary.
+
+ifeq ("$(BUILDTYPE)","debug")
+	CSHARP_BUILDTYPE:=Debug
+endif
+ifeq ("$(BUILDTYPE)","release")
+	CSHARP_BUILDTYPE:=Release
+endif
+
+.PHONY: csharp
+csharp: $(CSHARP_LIBS)
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
+	mkdir -p bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE)
+	cd bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE) && \
+		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) && \
+		make
+	mkdir -p bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)
+	cd bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE) && \
+		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) && \
+		make
+	cp --recursive bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/* $(LIBDIR)
+
+ALL += csharp
+	
+# Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+V2LibraryCSTests.dll: csharp
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
+	cd Tests/UnitTests/V2LibraryCSTests && \
+		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
+		dotnet build /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE)
+	cp $(LIBDIR)/*.so Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)
+	
+ALL += V2LibraryCSTests.dll
 
 endif
 
