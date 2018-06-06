@@ -2413,7 +2413,7 @@ public:
         m_runCountUntied(0),
         m_one(1, 1, deviceId),
         m_convertRunningVariancePending(false),
-        m_reluFuse(reluFuse), m_dBias(deviceId)
+        m_reluFuse(reluFuse)
     {
         m_one.SetValue((StatType)1); // (constant value used for GPU-side update of runCount)
     }
@@ -2742,7 +2742,7 @@ public:
             auto sliceInputGrad = needsInputGradient ? Input(DATA)->GradientFor(fr) : m_dDataDummy->AsReference();
 
             m_dScale->Resize(scale); // gradients for scale and bias get stored here
-            m_dBias.Resize(bias);
+            m_dBias->Resize(bias);
 
             double blendFactor = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
@@ -2753,7 +2753,7 @@ public:
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
                               *m_savedMean, *m_savedInvStdDev,  // (in)  saved mean/invstddev values used in ForwardProp()
-                              *m_dScale, m_dBias,              // (out) gradients for scale and bias
+                              *m_dScale, *m_dBias,              // (out) gradients for scale and bias
                               !Input(DATA)->IsGradientInitializedBy(this)); // whether data gradient should be accumulated
 
             m_gradientValid = true;
@@ -2772,9 +2772,9 @@ public:
             assert(m_gradientValid);
 
             if (this->template TypedInput<StatType>(BIAS)->IsGradientInitializedBy(this))
-                this->template TypedInput<StatType>(BIAS)->Gradient().AssignValuesOf(m_dBias);
+                this->template TypedInput<StatType>(BIAS)->Gradient().AssignValuesOf(*m_dBias);
             else
-                this->template TypedInput<StatType>(BIAS)->Gradient() += m_dBias;
+                this->template TypedInput<StatType>(BIAS)->Gradient() += *m_dBias;
         }
         // No derivatives with respect to running mean and variance.
     }
@@ -2936,6 +2936,7 @@ public:
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_dDataDummy, matrixPool);
         this->template TypedRequestMatrixFromPool<StatType>(m_dScale, matrixPool);
+        this->template TypedRequestMatrixFromPool<StatType>(m_dBias, matrixPool);
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
@@ -2945,6 +2946,7 @@ public:
         this->template TypedReleaseMatrixToPool<StatType>(m_savedInvStdDev, matrixPool);
         ReleaseMatrixToPool(m_dDataDummy, matrixPool);
         this->template TypedReleaseMatrixToPool<StatType>(m_dScale, matrixPool);
+        this->template TypedReleaseMatrixToPool<StatType>(m_dBias, matrixPool);
     }
 
     void SetNormalizationTimeConstants(double normalizationTimeConstant, double prevNormalizationTimeConstant,
@@ -3064,7 +3066,8 @@ private:
     // Not used for blendFactor=1 in CNTK engine.
     shared_ptr<Matrix<ElemType>> m_dDataDummy;
     shared_ptr<Matrix<StatType>> m_dScale;
-    Matrix<StatType> m_dBias; //Fix Exception for  memory sharing mechanics
+    shared_ptr<Matrix<StatType>> m_dBias;
+    // Matrix<StatType> m_dBias; //Fix Exception for  memory sharing mechanics
 
     bool m_gradientValid = false;
 
