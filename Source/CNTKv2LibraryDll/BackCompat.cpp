@@ -180,6 +180,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Softmax;
                 else if (node->OperationName() == OperationNameOf(HardmaxNode))
                     opType = PrimitiveOpType::Hardmax;
+                else if (node->OperationName() == OperationNameOf(StraightThroughNode))
+                    opType = PrimitiveOpType::StraightThrough;
                 else if (node->OperationName() == OperationNameOf(TransposeDimensionsNode))
                 {
                     auto transposeDimensionsNode = node->As<TransposeDimensionsNode<ElementType>>();

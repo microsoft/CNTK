@@ -1309,6 +1309,11 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Hardmax, operand, Dictionary(), name);
     }
 
+    FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::StraightThrough, operand, Dictionary(), name);
+    }
+
     FunctionPtr HardSigmoid(const Variable& operand, float alpha, float beta, const std::wstring& name)
     {
         // f(x) = max(0,min(alpha*x+beta,1))

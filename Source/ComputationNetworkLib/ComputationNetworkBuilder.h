@@ -199,6 +199,7 @@ public:
     ComputationNodePtr SquareError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Tanh(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr StraightThrough(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Times(const ComputationNodePtr a, const ComputationNodePtr b, size_t outputRank = 1, const std::wstring nodeName = L"");
     ComputationNodePtr TransposeDimensions(const ComputationNodePtr matrix, int dim1, int dim2, const std::wstring nodeName = L"");
     ComputationNodePtr TransposeTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");

@@ -791,6 +791,9 @@ namespace CNTK
                 case PrimitiveOpType::Hardmax:
                     ASSIGN_NEW_NODE(HardmaxNode, network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::StraightThrough:
+                    ASSIGN_NEW_NODE(StraightThroughNode, network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::TopK:
                 {
                     auto k = functionConfig[PrimitiveFunction::AttributeNameNumItems].Value<size_t>();
