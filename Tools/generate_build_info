@@ -154,6 +154,10 @@ BUILDER=$USER
 BUILDMACHINE=`hostname`
 BUILDPATH=`pwd`
 
+# Delete the old versions of the buildinfo file, as they can break the build in some scenarios if left hanging around
+[ ! -e Source/CNTK/buildinfo.h ] || rm Source/CNTK/buildinfo.h
+[ ! -e Source/CNTKv2LibraryDll/buildinfo.h ] || rm Source/CNTKv2LibraryDll/buildinfo.h
+
 target=Source/CNTKv2LibraryDll/Generated/Linux/buildinfo.h
 if [ ! -d Source ] ; then
     usage

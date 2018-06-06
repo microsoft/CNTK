@@ -10,6 +10,10 @@ setlocal enableDelayedexpansion
 ::: This is called as a pre-build step for the CNTK executable, taking parameters below.
 ::: It creates Generated\Windows\buildinfo.h, which makes version information available to the executable itself.
 
+:: Delete the old versions of the buildinfo file, as they can break the build in some scenarios if left hanging around
+if exist "..\CNTK\buildinfo.h" del "..\CNTK\buildinfo.h"
+if exist "buildinfo.h" del "buildinfo.h"
+
 if not exist "Generated\Windows" mkdir "Generated\Windows"
 set _outfile=Generated\Windows\buildinfo.h
 

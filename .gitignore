@@ -189,6 +189,8 @@ core
 *.lyx~
 
 # prebuild file
+Source/CNTK/buildinfo.h
+Source/CNTKv2LibraryDll/buildinfo.h
 Source/CNTKv2LibraryDll/Generated
 Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.h
 Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc
