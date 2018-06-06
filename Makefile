@@ -842,6 +842,8 @@ HTKDESERIALIZERS_SRC =\
 	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDeserializer.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFIndexBuilder.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFBinaryDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFBinaryIndexBuilder.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFUtils.cpp \
 
 HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
