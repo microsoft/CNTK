@@ -92,7 +92,7 @@ PROTOC = $(PROTOBUF_PATH)/bin/protoc
 
 SOURCEDIR:= Source
 GSL_PATH:=$(SOURCEDIR)/../external/gsl
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/Generated/Linux CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 INCLUDEPATH+=$(GSL_PATH)/include
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
@@ -307,7 +307,7 @@ RPATH=-Wl,-rpath,
 # Build info
 ########################################
 
-BUILDINFO:= $(SOURCEDIR)/CNTKv2LibraryDll/buildinfo.h
+BUILDINFO:= $(SOURCEDIR)/CNTKv2LibraryDll/Generated/Linux/buildinfo.h
 GENBUILD:=Tools/generate_build_info
 
 BUILDINFO_OUTPUT := $(shell $(GENBUILD) $(BUILD_TOP)/Config.make && echo Success)
