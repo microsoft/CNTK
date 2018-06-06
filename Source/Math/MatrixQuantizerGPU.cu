@@ -421,7 +421,7 @@ void MatrixQuantizerGPU<ElemType>::UnTopKAsync(struct stream &recvbuf, Matrix<El
     PrepareDevice(this->GetDeviceId());
 
     // Verify  input matrix parameter's dimensions
-    assert((inQMatrix.GetNumRows() == outMatrix.GetNumRows()) && (inQMatrix.GetNumCols() == outMatrix.GetNumCols()));
+    //assert((inQMatrix.GetNumRows() == outMatrix.GetNumRows()) && (inQMatrix.GetNumCols() == outMatrix.GetNumCols()));
 
     size_t dim = outMatrix.GetNumRows() * outMatrix.GetNumCols();
     bool GPUMatrixNewlyAllocated = false;

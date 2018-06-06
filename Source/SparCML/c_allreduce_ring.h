@@ -20,7 +20,7 @@ template<class IdxType, class ValType> int c_allreduce_ring(const struct stream 
     return MPI_SUCCESS;
   }
 
-  int i; /* runner */
+  size_t i; /* runner */
   int segsize, *segsizes; /* segment sizes and offsets per segment (number of segments == number of nodes */
   int speer, rpeer; /* send and recvpeer */
   //int mycount; /* temporary */
@@ -41,7 +41,7 @@ template<class IdxType, class ValType> int c_allreduce_ring(const struct stream 
   segsizes[p-1] = maxsegsize;
 
   char *buf = (char *) malloc(p * sizeof(unsigned) + (p * maxsegsize * sizeof(ValType)));
-  struct stream* splits[p];
+  struct stream** splits = new stream*[p];
   struct stream* recvsplit = (struct stream*)malloc(sizeof(unsigned) + maxsegsize * sizeof(ValType));
   struct stream* tmpbuf = (struct stream*)malloc(sizeof(unsigned) + maxsegsize * sizeof(ValType));
   struct stream* ptrForDelete1 = recvsplit;
@@ -100,8 +100,12 @@ template<class IdxType, class ValType> int c_allreduce_ring(const struct stream 
   if (overall * (sizeof(IdxType) + sizeof(ValType)) >= dim * sizeof(ValType)) {
     recvbuf->nofitems = dim;
     ValType * result = (ValType *)recvbuf->items;
+#if defined(_MSC_VER)
+#pragma omp parallel
+#else
 #pragma omp simd 
-    for(size_t i = 0; i < dim; ++i) {
+#endif
+    for(i = 0; i < dim; ++i) {
       result[i] = 0.0;
     }
     unsigned offset = 0;
@@ -150,6 +154,7 @@ template<class IdxType, class ValType> int c_allreduce_ring(const struct stream 
   free(ptrForDelete1);
   free(ptrForDelete2);
   free(segsizes);
+  delete splits;
 
   return MPI_SUCCESS;
 }

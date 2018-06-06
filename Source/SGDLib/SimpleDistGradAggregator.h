@@ -290,7 +290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                             size_t nCol = gpuCopyBuffer->GetNumCols();
                             size_t dim = nRow * nCol;
 
-                            size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
+                            topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
                             size_t numBuckets = dim / DEFAULT_BUCKET_SIZE;
 
                             m_preAggGradQuantizers.push_back(std::unique_ptr<MatrixQuantizerImpl<ElemType>>(MatrixQuantizerImpl<ElemType>::Create(deviceId, m_useAsyncAggregation)));
@@ -493,7 +493,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                 RuntimeError("Unallowed.");
                             }
 
-                            size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
+                            topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
                             m_preAggGradQuantizers[gpuToCpuIndex]->TopKAsync(*(gradients[nextGradientIndex]), *m_residuals[gpuToCpuIndex], *(m_sendbufs[gpuToCpuIndex]->m_buffer), *m_residuals[gpuToCpuIndex], topK);
                         }
 
@@ -524,7 +524,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                                     RuntimeError("Unallowed.");
                                 }
                                 // Async D-to-H copy (next gradient)
-                                size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
+                                topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
                                 m_preAggGradQuantizers[gpuToCpuIndex]->TopKAsync(*(gradients[nextGradientIndex]), *m_residuals[gpuToCpuIndex], *(m_sendbufs[gpuToCpuIndex]->m_buffer), *m_residuals[gpuToCpuIndex], topK);
                             }
 
