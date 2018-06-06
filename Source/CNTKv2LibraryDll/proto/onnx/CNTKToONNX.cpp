@@ -410,7 +410,8 @@ std::unique_ptr<ONNXIR::Model> CNTKToONNX::CreateModel(const FunctionPtr& src)
     if (!status.IsOK())
         LogicError("%s", status.ErrorMessage().c_str());
 
-    model->SetModelversion(static_cast<ONNXIR::Version>(CNTK_ONNX_MODEL_VERSION)); // This is the default. Should be surfaced as graph's 'save' API input.
+    model->SetModelversion(static_cast<ONNXIR::Version>(CNTK_ONNX_MODEL_VERSION)); // REVIEW sptiwari: This is the default. This and doc_string should be surfaced as graph's 'save' API input.
+    model->SetDomain(CNTK_ONNX_MODEL_DOMAIN);
     model->SetProducerVersion(CNTK_ONNX_PRODUCER_VERSION);
     model->SetProducerName(CNTK_ONNX_PRODUCER_NAME);
     return model;
