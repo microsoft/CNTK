@@ -475,7 +475,7 @@ DefBinaryOp(ElementwiseProductWithSinhDerivative, a * cosh_(b)); // note: b = in
 DefBinaryOp(ElementwiseProductWithCoshDerivative, a * sinh_(b)); // note: b = input for cosh()
 DefBinaryOp(ElementwiseProductWithAsinhDerivative, a / sqrt_(1 + b * b)); // note: b = input for asinh()
 DefBinaryOp(ElementwiseProductWithAtanhDerivative, a / (1 - b * b)); // note: b = input for atanh()
-DefBinaryOp(ElementwiseProductWithStraightThroughDerivativeFromOutput, fabs_(b) <= (ElemType)1 ? a : (ElemType)0);
+DefBinaryOp(ElementwiseProductWithStraightThroughDerivative, fabs_(b) <= (ElemType)1 ? a : (ElemType)0); // note: b = input for straightthrough()
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")

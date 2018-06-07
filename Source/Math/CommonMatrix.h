@@ -112,7 +112,7 @@ enum ElementWiseOperator
     opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative,
     opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
     opElementwiseProductWithExponentialLinearUnitDerivativeFromOutput,
-    opElementwiseProductWithStraightThroughDerivativeFromOutput,
+    opElementwiseProductWithStraightThroughDerivative,
     // binary ops for indexing
     // opIndex,
     // ternary
@@ -195,7 +195,7 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithSqrtDerivative);                             \
     Macro(SqrOfDifference);                                                  \
     Macro(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput);  \
-    Macro(ElementwiseProductWithStraightThroughDerivativeFromOutput); 
+    Macro(ElementwiseProductWithStraightThroughDerivative); 
     //Macro(Index);
 
 #define ForAllTernaryOps(Macro)                         \
