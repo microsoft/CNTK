@@ -65,7 +65,6 @@ namespace CNTK {
 
             out = std::string(buffer.data()).substr(0, uttLabelLength);
 
-            std::cout << out << endl;
             if (uttLabelLength > MAX_UTTERANCE_LABEL_LENGTH)
                 RuntimeError("Utterance label length is greater than limit %hu: %s", uttLabelLength, out.c_str());
         }
