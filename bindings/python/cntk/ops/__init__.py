@@ -1463,7 +1463,7 @@ def param_relu(alpha, x, name=''):
     return pre_lu(alpha, x, name)
 
 @typemap
-def straight_through_mpl(x, name=''):
+def straight_through_impl(x, name=''):
     '''
     element-wise binarization node using the straight through estimator
 
@@ -1471,7 +1471,7 @@ def straight_through_mpl(x, name=''):
         >>> # create (1,3) matrix 
         >>> data = np.asarray([[-3, 4, -2]], dtype=np.float32)
         >>> x = C.input_variable((3))
-        >>> C.straight_through_mpl(x).eval({x:data})
+        >>> C.straight_through_impl(x).eval({x:data})
         array([[-1., 1., -1.]], dtype=float32)
 
     Args:
