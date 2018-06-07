@@ -41,7 +41,8 @@ template<class IdxType, class ValType> int c_allreduce_ring(const struct stream 
   segsizes[p-1] = maxsegsize;
 
   char *buf = (char *) malloc(p * sizeof(unsigned) + (p * maxsegsize * sizeof(ValType)));
-  struct stream** splits = new stream*[p];
+  // struct stream* splits[p]; 
+  struct stream** splits = (stream**) malloc( p * sizeof(stream *));
   struct stream* recvsplit = (struct stream*)malloc(sizeof(unsigned) + maxsegsize * sizeof(ValType));
   struct stream* tmpbuf = (struct stream*)malloc(sizeof(unsigned) + maxsegsize * sizeof(ValType));
   struct stream* ptrForDelete1 = recvsplit;
@@ -154,7 +155,7 @@ template<class IdxType, class ValType> int c_allreduce_ring(const struct stream 
   free(ptrForDelete1);
   free(ptrForDelete2);
   free(segsizes);
-  delete splits;
+  free(splits);
 
   return MPI_SUCCESS;
 }

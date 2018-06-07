@@ -456,7 +456,7 @@ void printStream(const struct stream *s, unsigned dim, int rank) {
   int sz = 100 + (s->nofitems * 20);
   // Original code: error : expression must have a constant value
   // char str[sz];
-  char* str = new char[sz];
+  char* str = (char*)malloc(sz * sizeof(char));
   sprintf(str, "[RANK: %d]: Size: %d, Type: %s\n", rank, s->nofitems, s->nofitems == dim ? "DENSE" : "SPARSE");
   if(s->nofitems == dim) {
     for(unsigned i = 0; i < dim; ++i) {
@@ -469,7 +469,7 @@ void printStream(const struct stream *s, unsigned dim, int rank) {
     }
   }
   printf("%s", str);
-  if (str) delete str;
+  if (str) free(str);
 }
 
 template<class IdxType, class ValType>
