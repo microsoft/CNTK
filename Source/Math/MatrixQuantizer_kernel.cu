@@ -502,9 +502,10 @@ void _TopKMatrix(
     size_t numBuckets = (numElements + (DEFAULT_BUCKET_SIZE - 1)) / DEFAULT_BUCKET_SIZE;
 
     dim3 griddim, blockdim;
-    griddim = numBuckets;
+    griddim = (unsigned int) numBuckets;
     blockdim = WARP_SIZE;
-    _selectK<ElemType><<<griddim, blockdim, 0, stream>>>(us, curResidual, numBuckets, buffer, topK, newResidual, numElements);
+
+    _selectK<ElemType><<<griddim, blockdim, 0, stream>>>(us, curResidual, (long)numBuckets, buffer, topK, newResidual, numElements);
 }
 
 template <class ElemType>
@@ -519,7 +520,7 @@ void _UnTopKMatrix(const char* gpuBuffer, size_t nofItems,
     size_t numerOfWarps = (nofItems + (WARP_SIZE - 1)) / WARP_SIZE;
 
     dim3 griddim, blockdim;
-    griddim = numerOfWarps;
+    griddim = (unsigned int)numerOfWarps;
     blockdim = WARP_SIZE;
     _writeBackK<<<griddim, blockdim, 0, stream>>>(us, gpuBuffer, nofItems, M*N == nofItems);
 }

@@ -142,7 +142,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
     <ClCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaInclude)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaInclude);$(SolutionDir)Source\SparcML</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>

@@ -14,7 +14,8 @@ template<class IdxType, class ValType> struct s_item {
 
 struct stream {
   unsigned nofitems;
-  char items[];
+  //char items[];
+  char *items;
 };
 
 template<class IdxType, class ValType>
@@ -102,7 +103,7 @@ template<class IdxType, class ValType> void split_stream(const struct stream *st
 }
 
 template<class IdxType, class ValType>
-struct stream * sum_into_first_stream(struct stream *first_s, struct stream *second_s, struct stream *tmpbuf, unsigned dim) {
+stream * sum_into_first_stream(struct stream *first_s, struct stream *second_s, struct stream *tmpbuf, unsigned dim) {
   unsigned p1 = 0;
   unsigned p2 = 0;
 
@@ -114,7 +115,11 @@ struct stream * sum_into_first_stream(struct stream *first_s, struct stream *sec
     ValType *first = (ValType *)first_s->items;
     const ValType * const __restrict__ second = (const ValType *)second_s->items;
 
+#if defined(_MSC_VER)
+#pragma omp parallel
+#else
 #pragma omp simd 
+#endif
     for(size_t i = 0; i < dim; ++i) {
       first[i] += second[i];
     }
@@ -158,7 +163,11 @@ struct stream * sum_into_first_stream(struct stream *first_s, struct stream *sec
     tmpbuf->nofitems = dim;
     ValType * const __restrict__ result = (ValType *)tmpbuf->items;
 
+#if defined(_MSC_VER)
+#pragma omp parallel
+#else
 #pragma omp simd 
+#endif
     for(size_t i = 0; i < dim; ++i) {
       result[i] = 0.0;
     }
@@ -198,7 +207,7 @@ struct stream * sum_into_first_stream(struct stream *first_s, struct stream *sec
 }
 
 template<class IdxType, class ValType>
-struct stream * sum_into_stream(struct stream *first_s, struct stream *second_s, struct stream *tmpbuf, unsigned dim, bool disjoint) {
+stream * sum_into_stream(struct stream *first_s, struct stream *second_s, struct stream *tmpbuf, unsigned dim, bool disjoint) {
   unsigned p1 = 0;
   unsigned p2 = 0;
 
@@ -210,7 +219,11 @@ struct stream * sum_into_stream(struct stream *first_s, struct stream *second_s,
     ValType *first = (ValType *)first_s->items;
     const ValType * const __restrict__ second = (const ValType *)second_s->items;
 
+#if defined(_MSC_VER)
+#pragma omp parallel
+#else
 #pragma omp simd 
+#endif
     for(size_t i = 0; i < dim; ++i) {
       first[i] += second[i];
     }
@@ -249,7 +262,11 @@ struct stream * sum_into_stream(struct stream *first_s, struct stream *second_s,
     tmpbuf->nofitems = dim;
     ValType * const __restrict__ result = (ValType *)tmpbuf->items;
 
+#if defined(_MSC_VER)
+#pragma omp parallel
+#else
 #pragma omp simd 
+#endif
     for(size_t i = 0; i < dim; ++i) {
       result[i] = 0.0;
     }
@@ -338,7 +355,11 @@ template<class IdxType, class ValType> void sum_streams(const struct stream *fir
       const ValType * const __restrict__ first = (const ValType *)first_s->items;
       const ValType * const __restrict__ second = (const ValType *)second_s->items;
 
+#if defined(_MSC_VER)
+#pragma omp parallel
+#else
 #pragma omp simd 
+#endif
       for(size_t i = 0; i < dim; ++i) {
         result[i] = first[i] + second[i];
       }
@@ -374,7 +395,11 @@ template<class IdxType, class ValType> void sum_streams(const struct stream *fir
       const struct s_item<IdxType, ValType> *first = (const struct s_item<IdxType, ValType> *)first_s->items;
       const struct s_item<IdxType, ValType> *second = (const struct s_item<IdxType, ValType> *)second_s->items;
 
+#if defined(_MSC_VER)
+#pragma omp parallel
+#else
 #pragma omp simd 
+#endif
       for(size_t i = 0; i < dim; ++i) {
         result[i] = 0.0;
       }
@@ -429,7 +454,9 @@ template<class IdxType, class ValType> void sum_streams(const struct stream *fir
 template<class IdxType, class ValType>
 void printStream(const struct stream *s, unsigned dim, int rank) {
   int sz = 100 + (s->nofitems * 20);
-  char str[sz];
+  // Original code: error : expression must have a constant value
+  // char str[sz];
+  char* str = (char*)malloc(sz * sizeof(char));
   sprintf(str, "[RANK: %d]: Size: %d, Type: %s\n", rank, s->nofitems, s->nofitems == dim ? "DENSE" : "SPARSE");
   if(s->nofitems == dim) {
     for(unsigned i = 0; i < dim; ++i) {
@@ -442,6 +469,7 @@ void printStream(const struct stream *s, unsigned dim, int rank) {
     }
   }
   printf("%s", str);
+  if (str) free(str);
 }
 
 template<class IdxType, class ValType>
