@@ -4045,17 +4045,11 @@ ONNXIR::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr &src,
     oneTensor.add_float_data(1.0f);
     oneNode->AddAttribute("value", oneTensor);
 
-    // ONNX can broadcast only the second input for element-wise operations,
-    // so instead of 1 - flag01 use -(flag01 - 1).
-    ONNXIR::NodeArg &subOneOutputArg = graph->CreateOwnedNodeArg(outputName + "_sub_one_out", nullptr);
-    ONNXIR::Node* subOneNode = graph->AddNode(outputName + "_sub_one", "Sub", "", { &ceilOutputArg, &oneOutputArg  }, { &subOneOutputArg });
-    subOneNode->AddAttribute("broadcast", static_cast<int64_t>(1));
-
-    ONNXIR::NodeArg &negOutputArg = graph->CreateOwnedNodeArg(outputName + "_neg_out", nullptr);
-    graph->AddNode(outputName + "_neg", "Neg", "", { &subOneOutputArg }, { &negOutputArg });
+    ONNXIR::NodeArg &oneSubOutputArg = graph->CreateOwnedNodeArg(outputName + "_one_sub_out", nullptr);
+    graph->AddNode(outputName + "_sub_one", "Sub", "", { &oneOutputArg, &ceilOutputArg }, { &oneSubOutputArg });
 
     ONNXIR::NodeArg &mulFalseOutputArg = graph->CreateOwnedNodeArg(outputName + "_mul_false_out", nullptr);
-    graph->AddNode(outputName + "_mul_false", "Mul", "", { &negOutputArg, inputs[2] }, { &mulFalseOutputArg });
+    graph->AddNode(outputName + "_mul_false", "Mul", "", { &oneSubOutputArg, inputs[2] }, { &mulFalseOutputArg });
 
     ONNXIR::Node* sumNode = graph->AddNode(outputName + "_sum", "Sum", "", { &mulTrueOutputArg, &mulFalseOutputArg }, { outputs[0] });
 
