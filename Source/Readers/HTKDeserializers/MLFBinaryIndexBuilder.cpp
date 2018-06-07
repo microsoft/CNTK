@@ -8,6 +8,7 @@
 #include "MLFBinaryIndexBuilder.h"
 #include "MLFUtils.h"
 #include "ReaderUtil.h"
+#include <iostream>
 
 namespace CNTK {
 
@@ -54,12 +55,19 @@ namespace CNTK {
         else if (modelVersion == 2)
         {
             result = reader.TryReadBinarySegment(sizeof(ushort), buffer.data());
+            if (!result)
+                return false;
             ushort uttLabelLength = *(ushort*)buffer.data();
-            if (uttLabelLength > MAX_UTTERANCE_LABEL_LENGTH)
-                RuntimeError("Utterance label length is greater than limit.");
 
             result = result && reader.TryReadBinarySegment(sizeof(char) * uttLabelLength, buffer.data());
+            if (!result)
+                return false;
+
             out = std::string(buffer.data()).substr(0, uttLabelLength);
+
+            std::cout << out << endl;
+            if (uttLabelLength > MAX_UTTERANCE_LABEL_LENGTH)
+                RuntimeError("Utterance label length is greater than limit %hu: %s", uttLabelLength, out.c_str());
         }
         else 
         {
