@@ -94,7 +94,7 @@ echo.
 echo Use this script to build the mkl-dnn library for CNTK.
 echo The script requires two parameter
 echo   Parameter 1: The complete path to the mkl-dnn source directory 
-echo                e.g. C:\local\src\mkl-dnn-0.12
+echo                e.g. C:\local\src\mkl-dnn-0.14
 echo   Parameter 2: The target path for the created binaries
 echo                e.g. C:\local\mkl-dnn-0.12, or c:\local\mklml\mklml_win_2018.0.1.20171227
 echo Note: mkl-dnn could be built with or without MKLML (a trimmed version of Intel MKL).

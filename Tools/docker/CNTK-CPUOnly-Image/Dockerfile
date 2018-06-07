@@ -104,19 +104,23 @@ RUN PROTOBUF_VERSION=3.1.0 \
     rm -rf $PROTOBUF_STRING
 
 # Install MKLDNN and MKLML
+ARG MKLDNN_VERSION=0.14
+ARG MKLDNN_LONG_VERSION=mklml_lnx_2018.0.3.20180406
 RUN mkdir /usr/local/mklml && \
-    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/v0.12/mklml_lnx_2018.0.1.20171227.tgz | \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/v${MKLDNN_VERSION}/${MKLDNN_LONG_VERSION.tgz} | \
     tar -xzf - -C /usr/local/mklml && \
-    wget --no-verbose -O - https://github.com/01org/mkl-dnn/archive/v0.12.tar.gz | tar -xzf - && \
-    cd mkl-dnn-0.12 && \
+    MKLDNN_STRING=mkl-dnn-${MKLDNN_VERSION} && \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/archive/v${MKLDNN_VERSION}.tar.gz | tar -xzf - && \
+    cd ${MKLDNN_STRING} && \
     ln -s /usr/local external && \
     mkdir -p build && \
     cd build && \
-    cmake .. && \
+    cmake .. -DCMAKE_INSTALL_PREFIX=/ && \
     make && \
-    make install && \
+    make install DESTDIR=/usr/local && \
+    make install DESTDIR=/usr/local/mklml/${MKLDNN_LONG_VERSION} && \
     cd ../.. && \
-    rm -rf mkl-dnn-0.12
+    rm -rf ${MKLDNN_STRING}
 
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa
@@ -187,7 +191,7 @@ WORKDIR /cntk
 # Build CNTK
 RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK.git cntksrc && \
     cd cntksrc && \
-    MKLML_VERSION_DETAIL=mklml_lnx_2018.0.1.20171227 && \
+    MKLML_VERSION_DETAIL=${MKLDNN_LONG_VERSION} && \
     CONFIGURE_OPTS="\
       --with-kaldi=${KALDI_PATH} \
       --with-py35-path=/root/anaconda3/envs/cntk-py35" && \
@@ -198,7 +202,7 @@ RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK
     cd ../../.. && \
     mkdir -p build-mkl/cpu/release && \
     cd build-mkl/cpu/release && \
-    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/mklml/$MKLML_VERSION_DETAIL && \
+    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/mklml/${MKLML_VERSION_DETAIL} && \
     make -j"$(nproc)" all
 
 RUN cd cntksrc/Examples/Image/DataSets/CIFAR-10 && \
