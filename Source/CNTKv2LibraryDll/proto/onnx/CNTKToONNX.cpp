@@ -22,6 +22,7 @@
 using namespace Microsoft::MSR::CNTK;
 using namespace CNTK::ONNX;
 using namespace CNTK;
+using namespace ONNXIR;
 
 const int FreeSequenceLen = 0;
 const std::string FreeSequenceDimParam = "None";

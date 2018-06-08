@@ -135,6 +135,12 @@
     <ClCompile Include="proto\onnx\onnx\checker.cpp">
       <Filter>proto\onnx\onnx</Filter>
     </ClCompile>
+    <ClCompile Include="proto\onnx\onnx\defs\logical\old.cpp">
+      <Filter>proto\onnx\onnx\defs\logical</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnx\common\assertions.cpp">
+      <Filter>proto\onnx\onnx\common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -294,6 +300,9 @@
     </ClInclude>
     <ClInclude Include="proto\onnx\core\common\CommonSTD.h">
       <Filter>proto\onnx\core\common</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\onnx\common\assertions.h">
+      <Filter>proto\onnx\onnx\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

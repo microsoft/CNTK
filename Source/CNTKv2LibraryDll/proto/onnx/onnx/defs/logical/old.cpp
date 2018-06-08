@@ -3,44 +3,45 @@
 
 #include "proto/onnx/onnx/defs/schema.h"
 
+using namespace ONNX_NAMESPACE;
+
 namespace ONNX_NAMESPACE {
 
-inline void unaryLogicalOpInference(InferenceContext& ctx) {
+inline void logicalOpInference_opset1(InferenceContext& ctx) {
     updateOutputElemType(ctx, 0, TensorProto::BOOL);
     if (hasInputShape(ctx, 0)) {
         propagateShapeFromInputToOutput(ctx, 0, 0);
     }
 }
 
-std::function<void(OpSchema&)> BinaryLogicDocGenerator(const char* name) {
+std::function<void(OpSchema&)> BinaryLogicDocGenerator_opset1(const char* name) {
     return [=](OpSchema& schema) {
         std::string doc = R"DOC(
 Returns the tensor resulted from performing the `{name}` logical operation
-elementwise on the input tensors `A` and `B` (with Numpy-style broadcasting support).
+elementwise on the input tensors `A` and `B`.
 
-{broadcast_doc}
+If broadcasting is enabled, the right-hand-side argument will be broadcasted
+to match the shape of left-hand-side argument. See the doc of `Add` for a
+detailed description of the broadcasting rules.
 )DOC";
         ReplaceAll(doc, "{name}", name);
-        ReplaceAll(doc, "{broadcast_doc}", GenerateBroadcastingDocMul().c_str());
         schema.SetDoc(doc);
-        schema.Input(0, "A", "First input operand for the logical operator.", "T");
-        schema.Input(1, "B", "Second input operand for the logical operator.", "T");
+        schema.Attr("broadcast", "Enable broadcasting", AttributeProto::INT, static_cast<int64_t>(0));
+        schema.Attr("axis", "If set, defines the broadcast dimensions.",
+                    AttributeProto::INT,
+                    OPTIONAL);
+        schema.Input(0, "A", "Left input tensor for the logical operator.", "T");
+        schema.Input(1, "B", "Right input tensor for the logical operator.", "T");
         schema.Output(0, "C", "Result tensor.", "T1");
-        schema.TypeAndShapeInferenceFunction([](InferenceContext& ctx) {
-            updateOutputElemType(ctx, 0, TensorProto::BOOL);
-            bidirectionalBroadcastShapeInference(
-                ctx.getInputType(0)->tensor_type().shape(),
-                ctx.getInputType(1)->tensor_type().shape(),
-                *ctx.getOutputType(0)->mutable_tensor_type()->mutable_shape());
-        });
+        schema.TypeAndShapeInferenceFunction(logicalOpInference_opset1);
     };
 }
 
 ONNX_OPERATOR_SET_SCHEMA(
     And,
-    7,
+    1,
     OpSchema()
-        .FillUsing(BinaryLogicDocGenerator("and"))
+        .FillUsing(BinaryLogicDocGenerator_opset1("and"))
         .TypeConstraint(
             "T",
             {"tensor(bool)"},
@@ -52,9 +53,9 @@ ONNX_OPERATOR_SET_SCHEMA(
 
 ONNX_OPERATOR_SET_SCHEMA(
     Or,
-    7,
+    1,
     OpSchema()
-        .FillUsing(BinaryLogicDocGenerator("or"))
+        .FillUsing(BinaryLogicDocGenerator_opset1("or"))
         .TypeConstraint(
             "T",
             {"tensor(bool)"},
@@ -66,9 +67,9 @@ ONNX_OPERATOR_SET_SCHEMA(
 
 ONNX_OPERATOR_SET_SCHEMA(
     Xor,
-    7,
+    1,
     OpSchema()
-        .FillUsing(BinaryLogicDocGenerator("xor"))
+        .FillUsing(BinaryLogicDocGenerator_opset1("xor"))
         .TypeConstraint(
             "T",
             {"tensor(bool)"},
@@ -80,9 +81,9 @@ ONNX_OPERATOR_SET_SCHEMA(
 
 ONNX_OPERATOR_SET_SCHEMA(
     Greater,
-    7,
+    1,
     OpSchema()
-        .FillUsing(BinaryLogicDocGenerator("greater"))
+        .FillUsing(BinaryLogicDocGenerator_opset1("greater"))
         .TypeConstraint(
             "T",
             {"tensor(float16)", "tensor(float)", "tensor(double)"},
@@ -94,9 +95,9 @@ ONNX_OPERATOR_SET_SCHEMA(
 
 ONNX_OPERATOR_SET_SCHEMA(
     Less,
-    7,
+    1,
     OpSchema()
-        .FillUsing(BinaryLogicDocGenerator("less"))
+        .FillUsing(BinaryLogicDocGenerator_opset1("less"))
         .TypeConstraint(
             "T",
             {"tensor(float16)", "tensor(float)", "tensor(double)"},
@@ -108,9 +109,9 @@ ONNX_OPERATOR_SET_SCHEMA(
 
 ONNX_OPERATOR_SET_SCHEMA(
     Equal,
-    7,
+    1,
     OpSchema()
-        .FillUsing(BinaryLogicDocGenerator("equal"))
+        .FillUsing(BinaryLogicDocGenerator_opset1("equal"))
         .TypeConstraint(
             "T",
             {"tensor(bool)", "tensor(int32)", "tensor(int64)"},
@@ -119,22 +120,5 @@ ONNX_OPERATOR_SET_SCHEMA(
             "T1",
             {"tensor(bool)"},
             "Constrains output to boolean tensor."));
-
-static const char* Not_ver1_doc = R"DOC(
-Returns the negation of the input tensor element-wise.
-)DOC";
-
-ONNX_OPERATOR_SET_SCHEMA(
-    Not,
-    1,
-    OpSchema()
-        .SetDoc(Not_ver1_doc)
-        .Input(0, "X", "Input tensor", "T")
-        .Output(0, "Y", "Output tensor", "T")
-        .TypeConstraint(
-            "T",
-            {"tensor(bool)"},
-            "Constrains input/output to boolean tensors.")
-        .TypeAndShapeInferenceFunction(unaryLogicalOpInference));
 
 }  // namespace ONNX_NAMESPACE

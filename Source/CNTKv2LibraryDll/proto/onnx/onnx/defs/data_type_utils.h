@@ -10,13 +10,11 @@
 #include <unordered_set>
 #include "proto/onnx/onnx/onnx_pb.h"
 
-namespace ONNX_NAMESPACE
-{
+namespace ONNX_NAMESPACE {
 // String pointer as unique TypeProto identifier.
 using DataType = const std::string*;
 
-namespace Utils
-{
+namespace Utils {
 
 // Data type utility, which maintains a global type string to TypeProto map.
 // DataType (string pointer) is used as unique data type identifier for
@@ -34,36 +32,35 @@ namespace Utils
 //
 // Example: float, tensor(float), etc.
 //
-class DataTypeUtils final
-{
-public:
-    static DataType ToType(const std::string& type_str);
+class DataTypeUtils final {
+ public:
+  static DataType ToType(const std::string& type_str);
 
-    static DataType ToType(const TypeProto& type_proto);
+  static DataType ToType(const TypeProto& type_proto);
 
-    static const TypeProto& ToTypeProto(const DataType& data_type);
+  static const TypeProto& ToTypeProto(const DataType& data_type);
 
-private:
-    static void FromString(const std::string& type_str, TypeProto& type_proto);
+ private:
+  static void FromString(const std::string& type_str, TypeProto& type_proto);
 
-    static void FromDataTypeString(
-        const std::string& type_str,
-        TensorProto::DataType& tensor_data_type);
+  static void FromDataTypeString(
+      const std::string& type_str,
+      TensorProto::DataType& tensor_data_type);
 
-    static std::string ToString(
-        const TypeProto& type_proto,
-        const std::string& left = "",
-        const std::string& right = "");
+  static std::string ToString(
+      const TypeProto& type_proto,
+      const std::string& left = "",
+      const std::string& right = "");
 
-    static std::string ToDataTypeString(
-        const TensorProto::DataType& tensor_data_type);
+  static std::string ToDataTypeString(
+      const TensorProto::DataType& tensor_data_type);
 
-    static bool IsValidDataTypeString(const std::string& type_str);
+  static bool IsValidDataTypeString(const std::string& type_str);
 
-    static std::unordered_map<std::string, TypeProto>& GetTypeStrToProtoMap();
+  static std::unordered_map<std::string, TypeProto>& GetTypeStrToProtoMap();
 
-    // Returns lock used for concurrent updates to TypeStrToProtoMap.
-    static std::mutex& GetTypeStrLock();
+  // Returns lock used for concurrent updates to TypeStrToProtoMap.
+  static std::mutex& GetTypeStrLock();
 };
 } // namespace Utils
 } // namespace ONNX_NAMESPACE

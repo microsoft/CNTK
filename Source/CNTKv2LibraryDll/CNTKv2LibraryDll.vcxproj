@@ -203,6 +203,7 @@
     <ClInclude Include="proto\onnx\ONNX.h" />
     <ClInclude Include="proto\onnx\ONNXToCNTK.h" />
     <ClInclude Include="proto\onnx\onnx\checker.h" />
+    <ClInclude Include="proto\onnx\onnx\common\assertions.h" />
     <ClInclude Include="proto\onnx\onnx\common\stl_backports.h" />
     <ClInclude Include="proto\onnx\onnx\defs\data_type_utils.h" />
     <ClInclude Include="proto\onnx\onnx\defs\schema.h" />
@@ -258,11 +259,13 @@
     <ClCompile Include="proto\onnx\ONNX.cpp" />
     <ClCompile Include="proto\onnx\ONNXToCNTK.cpp" />
     <ClCompile Include="proto\onnx\onnx\checker.cpp" />
+    <ClCompile Include="proto\onnx\onnx\common\assertions.cpp" />
     <ClCompile Include="proto\onnx\onnx\defs\controlflow\defs.cpp" />
     <ClCompile Include="proto\onnx\onnx\defs\data_type_utils.cpp" />
     <ClCompile Include="proto\onnx\onnx\defs\experiments\defs.cpp" />
     <ClCompile Include="proto\onnx\onnx\defs\generator\defs.cpp" />
     <ClCompile Include="proto\onnx\onnx\defs\logical\defs.cpp" />
+    <ClCompile Include="proto\onnx\onnx\defs\logical\old.cpp" />
     <ClCompile Include="proto\onnx\onnx\defs\math\defs.cpp" />
     <ClCompile Include="proto\onnx\onnx\defs\math\old.cpp" />
     <ClCompile Include="proto\onnx\onnx\defs\nn\defs.cpp" />
