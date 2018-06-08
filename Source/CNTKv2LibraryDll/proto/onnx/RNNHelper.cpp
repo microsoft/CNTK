@@ -2,9 +2,20 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-#include "RNNHelper.h"
-#include "Operators.h"
 
+#include "RNNHelper.h"
+
+// both CNTK and Lotus define make_unique causing redefined conflict in linux build.
+// use this flag to avoid the conflict.
+#define CNTK_make_unique_already_defined = 1
+
+#include "proto/onnx/core/graph/model.h"
+
+#include "Operators.h"
+#include "Utils.h"
+
+
+using namespace CNTK;
 using namespace CNTK::ONNX;
 
 std::string MapActivationNameONNXToCNTK(const std::string &onnxOp)
@@ -42,16 +53,16 @@ std::string MapActivationNameCNTKToONNX(const std::string &cntkOp)
 bool IsActivationOp(const std::string &activationName)
 {
     return activationName == "Relu" || activationName == "ReLU" ||
-           activationName == "Tanh" ||
-           activationName == "Sigmoid" || activationName == "StableSigmoid" ||
-           activationName == "Affine" ||
-           activationName == "LeakyRelu" || activationName == "LeakyReLU" ||
-           activationName == "ThresholdedRelu" || activationName == "ThresholdedReLU" ||
-           activationName == "ScaledTanh" ||
-           activationName == "HardSigmoid" ||
-           activationName == "Elu" || activationName == "ELU" ||
-           activationName == "Softsign" ||
-           activationName == "Softplus";
+        activationName == "Tanh" ||
+        activationName == "Sigmoid" || activationName == "StableSigmoid" ||
+        activationName == "Affine" ||
+        activationName == "LeakyRelu" || activationName == "LeakyReLU" ||
+        activationName == "ThresholdedRelu" || activationName == "ThresholdedReLU" ||
+        activationName == "ScaledTanh" ||
+        activationName == "HardSigmoid" ||
+        activationName == "Elu" || activationName == "ELU" ||
+        activationName == "Softsign" ||
+        activationName == "Softplus";
 }
 
 std::function<FunctionPtr(const Variable &)> ActivationMap(const std::string &activationName)
@@ -92,7 +103,7 @@ std::function<FunctionPtr(const Variable &)> ActivationMap(const std::string &ac
 }
 
 std::function<FunctionPtr(const Variable &)> ActivationMap(const std::string &activationName,
-                                                           float activation_alpha)
+    float activation_alpha)
 {
     if (activationName == "LeakyRelu")
     {
@@ -105,7 +116,7 @@ std::function<FunctionPtr(const Variable &)> ActivationMap(const std::string &ac
 }
 
 std::function<FunctionPtr(const Variable &)> ActivationMap(const std::string &activationName,
-                                                           float activation_alpha, float activation_beta)
+    float activation_alpha, float activation_beta)
 {
     if (activationName == "HardSigmoid")
     {
@@ -217,14 +228,14 @@ GetRNNActivations(const std::vector<std::string> &activations, const std::vector
 }
 
 std::pair<FunctionPtr, FunctionPtr> LSTMPCell(Variable input,
-                                              const std::function<FunctionPtr(const Variable &)> &iofActivationOp,
-                                              const std::function<FunctionPtr(const Variable &)> &cellActivationOp,
-                                              const std::function<FunctionPtr(const Variable &)> &hiddenActivationOp,
-                                              Variable prevOutput, Variable prevCellState,
-                                              Constant &W, Constant &R, Constant &B, Constant &Ci, Constant &Cf, Constant &Co)
+    const std::function<FunctionPtr(const Variable &)> &iofActivationOp,
+    const std::function<FunctionPtr(const Variable &)> &cellActivationOp,
+    const std::function<FunctionPtr(const Variable &)> &hiddenActivationOp,
+    Variable prevOutput, Variable prevCellState,
+    Constant &W, Constant &R, Constant &B, Constant &Ci, Constant &Cf, Constant &Co)
 {
     size_t outputDim = prevOutput.Shape()[0];
-    int stacked_dim = (int) outputDim;
+    int stacked_dim = (int)outputDim;
 
     FunctionPtr proj4;
     if (B.IsInitialized())
@@ -237,12 +248,12 @@ std::pair<FunctionPtr, FunctionPtr> LSTMPCell(Variable input,
     }
 
     // CNTK weight and bias are in icfo order.
-    std::vector<Axis> stack_axis({Axis(-1)});
+    std::vector<Axis> stack_axis({ Axis(-1) });
     const int IGateIndex = 0, CGateIndex = 1, FGateIndex = 2, OGateIndex = 3;
-    FunctionPtr it_proj = Slice(proj4, stack_axis, {IGateIndex * stacked_dim}, {(IGateIndex + 1) * stacked_dim});
-    FunctionPtr bit_proj = Slice(proj4, stack_axis, {CGateIndex * stacked_dim}, {(CGateIndex + 1) * stacked_dim});
-    FunctionPtr ft_proj = Slice(proj4, stack_axis, {FGateIndex * stacked_dim}, {(FGateIndex + 1) * stacked_dim});
-    FunctionPtr ot_proj = Slice(proj4, stack_axis, {OGateIndex * stacked_dim}, {(OGateIndex + 1) * stacked_dim});
+    FunctionPtr it_proj = Slice(proj4, stack_axis, { IGateIndex * stacked_dim }, { (IGateIndex + 1) * stacked_dim });
+    FunctionPtr bit_proj = Slice(proj4, stack_axis, { CGateIndex * stacked_dim }, { (CGateIndex + 1) * stacked_dim });
+    FunctionPtr ft_proj = Slice(proj4, stack_axis, { FGateIndex * stacked_dim }, { (FGateIndex + 1) * stacked_dim });
+    FunctionPtr ot_proj = Slice(proj4, stack_axis, { OGateIndex * stacked_dim }, { (OGateIndex + 1) * stacked_dim });
 
     bool hasPeephole = Ci.IsInitialized();
 
@@ -261,17 +272,17 @@ std::pair<FunctionPtr, FunctionPtr> LSTMPCell(Variable input,
     auto c = ct;
     auto h = ht;
 
-    return {h, c};
+    return { h, c };
 }
 
 FunctionPtr GRUCell(Variable input,
-                    const std::function<FunctionPtr(const Variable &)> &fActivationOp,
-                    const std::function<FunctionPtr(const Variable &)> &gActivationOp,
-                    Variable prevOutput,
-                    Constant &W, Constant &R, Constant &H1, Constant &B)
+    const std::function<FunctionPtr(const Variable &)> &fActivationOp,
+    const std::function<FunctionPtr(const Variable &)> &gActivationOp,
+    Variable prevOutput,
+    Constant &W, Constant &R, Constant &H1, Constant &B)
 {
     size_t outputDim = prevOutput.Shape()[0];
-    int stacked_dim = (int) outputDim;
+    int stacked_dim = (int)outputDim;
 
     FunctionPtr projx3;
     if (B.IsInitialized())
@@ -282,17 +293,17 @@ FunctionPtr GRUCell(Variable input,
     FunctionPtr projh2 = Times(R, prevOutput);
 
     // both CNTK and ONNX weight and bias are in zrh order.
-    std::vector<Axis> stack_axis({Axis(-1)});
+    std::vector<Axis> stack_axis({ Axis(-1) });
     FunctionPtr zt_proj =
-        Slice(projx3, stack_axis, {0 * stacked_dim}, {1 * stacked_dim}) +
-        Slice(projh2, stack_axis, {0 * stacked_dim}, {1 * stacked_dim});
+        Slice(projx3, stack_axis, { 0 * stacked_dim }, { 1 * stacked_dim }) +
+        Slice(projh2, stack_axis, { 0 * stacked_dim }, { 1 * stacked_dim });
 
     FunctionPtr rt_proj =
-        Slice(projx3, stack_axis, {1 * stacked_dim}, {2 * stacked_dim}) +
-        Slice(projh2, stack_axis, {1 * stacked_dim}, {2 * stacked_dim});
+        Slice(projx3, stack_axis, { 1 * stacked_dim }, { 2 * stacked_dim }) +
+        Slice(projh2, stack_axis, { 1 * stacked_dim }, { 2 * stacked_dim });
 
     FunctionPtr ct_proj =
-        Slice(projx3, stack_axis, {2 * stacked_dim}, {3 * stacked_dim});
+        Slice(projx3, stack_axis, { 2 * stacked_dim }, { 3 * stacked_dim });
 
     FunctionPtr zt = fActivationOp(zt_proj);
 
@@ -312,9 +323,9 @@ FunctionPtr GRUCell(Variable input,
 }
 
 FunctionPtr RNNCell(Variable input,
-                    const std::function<FunctionPtr(const Variable &)> &activationOp,
-                    Variable prevOutput,
-                    Constant &W, Constant &R, Constant &B)
+    const std::function<FunctionPtr(const Variable &)> &activationOp,
+    Variable prevOutput,
+    Constant &W, Constant &R, Constant &B)
 {
     FunctionPtr proj = Times(W, input) + Times(R, prevOutput);
     ;
@@ -329,14 +340,14 @@ FunctionPtr RNNCell(Variable input,
 #include "BlockFunction.h"
 
 std::tuple<FunctionPtr, FunctionPtr> LSTMPComponent(Variable input,
-                                                    const NDShape &cellShape,
-                                                    const std::function<FunctionPtr(const Variable &)> &iofActivationOp,
-                                                    const std::function<FunctionPtr(const Variable &)> &cellActivationOp,
-                                                    const std::function<FunctionPtr(const Variable &)> &hiddenActivationOp,
-                                                    const std::function<FunctionPtr(const Variable &)> &recurrenceHookH,
-                                                    const std::function<FunctionPtr(const Variable &)> &recurrenceHookC,
-                                                    Constant &W, Constant &R, Constant &B,
-                                                    Constant &Ci, Constant &Cf, Constant &Co)
+    const NDShape &cellShape,
+    const std::function<FunctionPtr(const Variable &)> &iofActivationOp,
+    const std::function<FunctionPtr(const Variable &)> &cellActivationOp,
+    const std::function<FunctionPtr(const Variable &)> &hiddenActivationOp,
+    const std::function<FunctionPtr(const Variable &)> &recurrenceHookH,
+    const std::function<FunctionPtr(const Variable &)> &recurrenceHookC,
+    Constant &W, Constant &R, Constant &B,
+    Constant &Ci, Constant &Cf, Constant &Co)
 {
     auto dh = PlaceholderVariable(cellShape, input.DynamicAxes());
     auto dc = PlaceholderVariable(cellShape, input.DynamicAxes());
@@ -352,24 +363,24 @@ std::tuple<FunctionPtr, FunctionPtr> LSTMPComponent(Variable input,
     auto actualDh = recurrenceHookH(dh2);
     auto actualDc = recurrenceHookC(dc2);
 
-    auto LSTMCellcombined = Combine({LSTMCell.first, LSTMCell.second});
+    auto LSTMCellcombined = Combine({ LSTMCell.first, LSTMCell.second });
 
-    auto LSTMCellcombinedBlk = AsBlock(std::move(LSTMCellcombined), {{inputPlaceholder, input}, {dh, actualDh}, {dc, actualDc}}, L"LSTM", L"");
+    auto LSTMCellcombinedBlk = AsBlock(std::move(LSTMCellcombined), { { inputPlaceholder, input },{ dh, actualDh },{ dc, actualDc } }, L"LSTM", L"");
 
-    actualDh->ReplacePlaceholders({{dh2, LSTMCellcombinedBlk->Outputs()[0]}});
-    actualDc->ReplacePlaceholders({{dc2, LSTMCellcombinedBlk->Outputs()[1]}});
+    actualDh->ReplacePlaceholders({ { dh2, LSTMCellcombinedBlk->Outputs()[0] } });
+    actualDc->ReplacePlaceholders({ { dc2, LSTMCellcombinedBlk->Outputs()[1] } });
 
     // Because state and cell variables share the same owner function, we need
     // to use Alias so that they can be differenciated when building subsequent graph.
     return std::make_tuple(Alias(LSTMCellcombinedBlk->Outputs()[0]),
-                           Alias(LSTMCellcombinedBlk->Outputs()[1]));
+        Alias(LSTMCellcombinedBlk->Outputs()[1]));
 }
 FunctionPtr GRUComponent(Variable input,
-                         const NDShape &cellShape,
-                         const std::function<FunctionPtr(const Variable &)> &fActivationOp,
-                         const std::function<FunctionPtr(const Variable &)> &gActivationOp,
-                         const std::function<FunctionPtr(const Variable &)> &recurrenceHookH,
-                         Constant &W, Constant &R, Constant &H1, Constant &B)
+    const NDShape &cellShape,
+    const std::function<FunctionPtr(const Variable &)> &fActivationOp,
+    const std::function<FunctionPtr(const Variable &)> &gActivationOp,
+    const std::function<FunctionPtr(const Variable &)> &recurrenceHookH,
+    Constant &W, Constant &R, Constant &H1, Constant &B)
 {
     auto dh = PlaceholderVariable(cellShape, input.DynamicAxes());
     auto dh2 = PlaceholderVariable(cellShape, input.DynamicAxes());
@@ -381,16 +392,16 @@ FunctionPtr GRUComponent(Variable input,
         dh, W, R, H1, B);
 
     auto actualDh = recurrenceHookH(dh2);
-    auto gruBlock = AsBlock(std::move(gruCell), {{inputPlaceholder, input}, {dh, actualDh}}, L"GRU", L"");
-    actualDh->ReplacePlaceholders({{dh2, gruBlock}});
+    auto gruBlock = AsBlock(std::move(gruCell), { { inputPlaceholder, input },{ dh, actualDh } }, L"GRU", L"");
+    actualDh->ReplacePlaceholders({ { dh2, gruBlock } });
     return gruBlock;
 }
 
 FunctionPtr RNNComponent(Variable input,
-                         const NDShape &cellShape,
-                         const std::function<FunctionPtr(const Variable &)> &activationOp,
-                         const std::function<FunctionPtr(const Variable &)> &recurrenceHookH,
-                         Constant &W, Constant &R, Constant &B)
+    const NDShape &cellShape,
+    const std::function<FunctionPtr(const Variable &)> &activationOp,
+    const std::function<FunctionPtr(const Variable &)> &recurrenceHookH,
+    Constant &W, Constant &R, Constant &B)
 {
     auto dh = PlaceholderVariable(cellShape, input.DynamicAxes());
     auto dh2 = PlaceholderVariable(cellShape, input.DynamicAxes());
@@ -402,8 +413,8 @@ FunctionPtr RNNComponent(Variable input,
         dh, W, R, B);
 
     auto actualDh = recurrenceHookH(dh2);
-    auto rnnBlock = AsBlock(std::move(rnnCell), {{inputPlaceholder, input}, {dh, actualDh}}, L"RNNStep", L"");
-    actualDh->ReplacePlaceholders({{dh2, rnnBlock}});
+    auto rnnBlock = AsBlock(std::move(rnnCell), { { inputPlaceholder, input },{ dh, actualDh } }, L"RNNStep", L"");
+    actualDh->ReplacePlaceholders({ { dh2, rnnBlock } });
     return rnnBlock;
 }
 
@@ -421,7 +432,7 @@ const std::vector<Variable> FindByNameHint(const std::vector<Variable> &inputs, 
 }
 
 Variable GetInitialStateVariable(const std::vector<Variable> &inputs, int numDirections,
-                                 const std::string &nameHint, CNTK::DataType datatype)
+    const std::string &nameHint, CNTK::DataType datatype)
 {
     Variable initialVariable = datatype == CNTK::DataType::Double ? Constant::Scalar(0.0) : Constant::Scalar(0.0f);
     const std::vector<Variable> initialVariables = FindByNameHint(inputs, nameHint);
@@ -438,7 +449,7 @@ Variable GetInitialStateVariable(const std::vector<Variable> &inputs, int numDir
 }
 
 FunctionPtr CreateLSTM(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
-                       const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
@@ -466,7 +477,7 @@ FunctionPtr CreateLSTM(const ONNXIR::Node *node, const std::vector<Variable> &in
         if (peepholeVariables.size() != 0 && peepholeVariables.size() != LSTMPeepholeCount && peepholeVariables.size() != 2 * LSTMPeepholeCount)
         {
             CNTK::LogicError("Peephole Variable count (%d) should be 0, 1 or 2 times the number of peephole factors (%d).",
-                             (int) (peepholeVariables.size()), (int) LSTMPeepholeCount);
+                (int)(peepholeVariables.size()), (int)LSTMPeepholeCount);
         }
         else if (numDirections == 1 && peepholeVariables.size() >= LSTMPeepholeCount)
         {
@@ -507,22 +518,22 @@ FunctionPtr CreateLSTM(const ONNXIR::Node *node, const std::vector<Variable> &in
         }
 
         std::tie<FunctionPtr, FunctionPtr>(outputH, outputC) = LSTMPComponent(
-            X, {(size_t) hiddenDim}, iofActivationOp, cellActivationOp, hiddenActivationOp,
-            recurrenceHookH, recurrenceHookC, (Constant &) W, (Constant &) R, (Constant &) B,
-            (Constant &) Ci, (Constant &) Cf, (Constant &) Co);
+            X, { (size_t)hiddenDim }, iofActivationOp, cellActivationOp, hiddenActivationOp,
+            recurrenceHookH, recurrenceHookC, (Constant &)W, (Constant &)R, (Constant &)B,
+            (Constant &)Ci, (Constant &)Cf, (Constant &)Co);
         outputHs.push_back(outputH);
     }
     if (outputHs.size() == 1)
         return outputHs[0];
     else
     {
-        std::vector<Variable> operands({outputHs[0], outputHs[1]});
+        std::vector<Variable> operands({ outputHs[0], outputHs[1] });
         return Splice(operands, Axis(0), ToWString(node->Name()));
     }
 }
 
 FunctionPtr CreateGRU(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
-                      const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
@@ -567,21 +578,21 @@ FunctionPtr CreateGRU(const ONNXIR::Node *node, const std::vector<Variable> &inp
             recurrenceHook = [initHVariable](const Variable &x) { return PastValue(x, initHVariable); };
 
         outputH = GRUComponent(
-            X, {(size_t) hiddenDim}, fActivationOp, gActivationOp,
-            recurrenceHook, (Constant &) W, (Constant &) R, (Constant &) H1, (Constant &) B);
+            X, { (size_t)hiddenDim }, fActivationOp, gActivationOp,
+            recurrenceHook, (Constant &)W, (Constant &)R, (Constant &)H1, (Constant &)B);
         outputHs.push_back(outputH);
     }
     if (outputHs.size() == 1)
         return outputHs[0];
     else
     {
-        std::vector<Variable> operands({outputHs[0], outputHs[1]});
+        std::vector<Variable> operands({ outputHs[0], outputHs[1] });
         return Splice(operands, Axis(0), ToWString(node->Name()));
     }
 }
 
 FunctionPtr CreateRNN(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
-                      const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
@@ -617,22 +628,22 @@ FunctionPtr CreateRNN(const ONNXIR::Node *node, const std::vector<Variable> &inp
             recurrenceHook = [initHVariable](const Variable &x) { return PastValue(x, initHVariable); };
 
         outputH = RNNComponent(
-            X, {(size_t) hiddenDim}, activationOp,
-            recurrenceHook, (Constant &) W, (Constant &) R, (Constant &) B);
+            X, { (size_t)hiddenDim }, activationOp,
+            recurrenceHook, (Constant &)W, (Constant &)R, (Constant &)B);
         outputHs.push_back(outputH);
     }
     if (outputHs.size() == 1)
         return outputHs[0];
     else
     {
-        std::vector<Variable> operands({outputHs[0], outputHs[1]});
+        std::vector<Variable> operands({ outputHs[0], outputHs[1] });
         return Splice(operands, Axis(0), ToWString(node->Name()));
     }
 }
 
 template <typename FunctionType>
 void TraverseGraphWithPrePostActions(FunctionPtr cntkFunction, std::unordered_set<FunctionPtr> &visitedFunctions,
-                                     FunctionType preFunctor, FunctionType postFunctor)
+    FunctionType preFunctor, FunctionType postFunctor)
 {
     visitedFunctions.insert(cntkFunction);
     preFunctor(cntkFunction);
@@ -653,11 +664,11 @@ void TraverseGraphWithPrePostActions(FunctionPtr cntkFunction, std::unordered_se
 bool IsSupportedRNNActivation(const std::wstring &cntkOpName)
 {
     static std::vector<std::wstring> supportedRNNActivations(
-        {L"ReLU",
-         L"Tanh",
-         L"StableSigmoid"});
+        { L"ReLU",
+        L"Tanh",
+        L"StableSigmoid" });
     return std::find(supportedRNNActivations.cbegin(), supportedRNNActivations.cend(), cntkOpName) !=
-           supportedRNNActivations.cend();
+        supportedRNNActivations.cend();
 }
 
 std::string FindActivation(const std::vector<FunctionPtr> &path, int nth)
@@ -724,7 +735,7 @@ FunctionPtr GetStabilizerOp(FunctionPtr parentOp)
         {
             if (parentOp->Inputs()[i].Owner() &&
                 (parentOp->Inputs()[i].Owner()->OpName() == L"Times" ||
-                 parentOp->Inputs()[i].Owner()->OpName() == L"ElementTimes"))
+                    parentOp->Inputs()[i].Owner()->OpName() == L"ElementTimes"))
             {
                 timesOp = parentOp->Inputs()[i].Owner();
                 break;
@@ -761,9 +772,9 @@ double GetScaler(Variable variable)
     switch (variable.GetDataType())
     {
     case CNTK::DataType::Float:
-        return *((float *) cpuV->DataBuffer<float>());
+        return *((float *)cpuV->DataBuffer<float>());
     case CNTK::DataType::Double:
-        return *((double *) cpuV->DataBuffer<double>());
+        return *((double *)cpuV->DataBuffer<double>());
     default:
         NOT_IMPLEMENTED;
     }
@@ -777,7 +788,7 @@ double GetStabilizerCoef(const FunctionPtr stabilizerDhOp)
 }
 
 void GetDelayOps(const std::vector<Variable> &inputVars,
-                 std::vector<FunctionPtr> &pastValueOps, std::vector<FunctionPtr> &futureValueOps)
+    std::vector<FunctionPtr> &pastValueOps, std::vector<FunctionPtr> &futureValueOps)
 {
     for (std::vector<Variable>::const_iterator it = inputVars.cbegin(); it != inputVars.cend(); ++it)
     {
@@ -793,18 +804,18 @@ void GetDelayOps(const std::vector<Variable> &inputVars,
 // to traverse the graph to find the 4 paths along the 4 gates. It helps to
 // subsequently find needed attributes in order to build an ONNX LSTM op.
 void TraceLSTMPathes(const FunctionPtr &src,
-                     string &f_activation,
-                     string &g_activation,
-                     string &h_activation,
-                     RNNDirection &direction,
-                     Variable &initStateH,
-                     Variable &initStateC,
-                     Variable &peepholeCi,
-                     Variable &peepholeCo,
-                     Variable &peepholeCf,
-                     double &stabilizer_dh,
-                     double &stabilizer_dc,
-                     double &stabilizer_c)
+    string &f_activation,
+    string &g_activation,
+    string &h_activation,
+    RNNDirection &direction,
+    Variable &initStateH,
+    Variable &initStateC,
+    Variable &peepholeCi,
+    Variable &peepholeCo,
+    Variable &peepholeCf,
+    double &stabilizer_dh,
+    double &stabilizer_dc,
+    double &stabilizer_c)
 {
     // src has to be an LSTM node.
     std::vector<Variable> inputVars = src->Inputs();
@@ -848,23 +859,23 @@ void TraceLSTMPathes(const FunctionPtr &src,
 
         // traverse to find the joint of bit and bft
         TraverseGraphWithPrePostActions(src->BlockRoot(),
-                                        peepHoleVisitedFunctions,
-                                        (std::function<void(const FunctionPtr &)>) [
-                                            &peepHoleVisitedFunctions, &pathesBitBftJoint, &currentPeepholePath
-                                        ](const FunctionPtr &function) {
-                                            currentPeepholePath.push_back(function);
-                                            if (function->OpName() == L"Plus" &&
-                                                function->Inputs()[0].Owner() && function->Inputs()[0].Owner()->OpName() == L"ElementTimes" &&
-                                                function->Inputs()[1].Owner() && function->Inputs()[1].Owner()->OpName() == L"ElementTimes")
-                                            {
-                                                pathesBitBftJoint.push_back(currentPeepholePath);
-                                                peepHoleVisitedFunctions.erase(std::find_if(peepHoleVisitedFunctions.begin(), peepHoleVisitedFunctions.end(),
-                                                                                            [function](FunctionPtr f) { return function == f; }));
-                                            }
-                                        },
-                                        (std::function<void(const FunctionPtr &)>) [&currentPeepholePath](const FunctionPtr &function) {
-                                            currentPeepholePath.pop_back();
-                                        });
+            peepHoleVisitedFunctions,
+            (std::function<void(const FunctionPtr &)>) [
+                &peepHoleVisitedFunctions, &pathesBitBftJoint, &currentPeepholePath
+            ](const FunctionPtr &function) {
+            currentPeepholePath.push_back(function);
+            if (function->OpName() == L"Plus" &&
+                function->Inputs()[0].Owner() && function->Inputs()[0].Owner()->OpName() == L"ElementTimes" &&
+                function->Inputs()[1].Owner() && function->Inputs()[1].Owner()->OpName() == L"ElementTimes")
+            {
+                pathesBitBftJoint.push_back(currentPeepholePath);
+                peepHoleVisitedFunctions.erase(std::find_if(peepHoleVisitedFunctions.begin(), peepHoleVisitedFunctions.end(),
+                    [function](FunctionPtr f) { return function == f; }));
+            }
+        },
+                    (std::function<void(const FunctionPtr &)>) [&currentPeepholePath](const FunctionPtr &function) {
+            currentPeepholePath.pop_back();
+        });
     }
 
     FunctionPtr peepholeCoOp;
@@ -873,9 +884,9 @@ void TraceLSTMPathes(const FunctionPtr &src,
     {
         // the last ElementTimes op is the peephole op
         std::vector<FunctionPtr> &peepholePath = *std::max_element(pathesBitBftJoint.begin(), pathesBitBftJoint.end(),
-                                                                   [](std::vector<FunctionPtr> &p1, std::vector<FunctionPtr> &p2) { return p1.size() < p2.size(); });
+            [](std::vector<FunctionPtr> &p1, std::vector<FunctionPtr> &p2) { return p1.size() < p2.size(); });
         std::vector<FunctionPtr>::reverse_iterator itPeepholeOp = std::find_if(peepholePath.rbegin(), peepholePath.rend(),
-                                                                               [](FunctionPtr function) { return function->OpName() == L"ElementTimes"; });
+            [](FunctionPtr function) { return function->OpName() == L"ElementTimes"; });
         if (itPeepholeOp == peepholePath.rend())
         {
             CNTK::LogicError("Cannot find peephole op from a LSTM graph");
@@ -899,21 +910,21 @@ void TraceLSTMPathes(const FunctionPtr &src,
         visitedFunctions.insert(peepholeCoOp);
 
     TraverseGraphWithPrePostActions(src->BlockRoot(),
-                                    visitedFunctions,
-                                    (std::function<void(const FunctionPtr &)>) [&pathesToPlusSlice, &currentPath ](const FunctionPtr &function) {
-                                        currentPath.push_back(function);
-                                        if (function->OpName() == L"Slice")
-                                        {
-                                            FunctionPtr functionSource = function->Inputs()[0].Owner();
-                                            if (functionSource->OpName() == L"Plus")
-                                            {
-                                                pathesToPlusSlice.push_back(currentPath);
-                                            }
-                                        }
-                                    },
-                                    (std::function<void(const FunctionPtr &)>) [&currentPath](const FunctionPtr &function) {
-                                        currentPath.pop_back();
-                                    });
+        visitedFunctions,
+        (std::function<void(const FunctionPtr &)>) [&pathesToPlusSlice, &currentPath](const FunctionPtr &function) {
+        currentPath.push_back(function);
+        if (function->OpName() == L"Slice")
+        {
+            FunctionPtr functionSource = function->Inputs()[0].Owner();
+            if (functionSource->OpName() == L"Plus")
+            {
+                pathesToPlusSlice.push_back(currentPath);
+            }
+        }
+    },
+        (std::function<void(const FunctionPtr &)>) [&currentPath](const FunctionPtr &function) {
+        currentPath.pop_back();
+    });
 
     // 4 gates of LSTM shall be traced.
     if (pathesToPlusSlice.size() != 4)
@@ -922,13 +933,13 @@ void TraceLSTMPathes(const FunctionPtr &src,
     }
 
     std::sort(pathesToPlusSlice.begin(), pathesToPlusSlice.end(),
-              [](const std::vector<FunctionPtr> &path1, const std::vector<FunctionPtr> &path2) {
-                  FunctionPtr slice1 = *path1.rbegin();
-                  FunctionPtr slice2 = *path2.rbegin();
-                  int beginIndex1 = slice1->Attributes()[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-                  int beginIndex2 = slice2->Attributes()[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-                  return beginIndex1 < beginIndex2;
-              });
+        [](const std::vector<FunctionPtr> &path1, const std::vector<FunctionPtr> &path2) {
+        FunctionPtr slice1 = *path1.rbegin();
+        FunctionPtr slice2 = *path2.rbegin();
+        int beginIndex1 = slice1->Attributes()[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+        int beginIndex2 = slice2->Attributes()[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+        return beginIndex1 < beginIndex2;
+    });
 
     // This code is heavily coupled with CNTK python layer code:
     // https://github.com/Microsoft/CNTK/blob/44c626a483edeaff97b4f7a46847b055a1d483aa/bindings/python/cntk/layers/blocks.py#L261
@@ -995,7 +1006,7 @@ FunctionPtr TraverseGraphFindFirstRNNOp(FunctionPtr src)
 }
 
 void TraceGRUPathes(const FunctionPtr &src, string &f_activation, string &g_activation,
-                    RNNDirection &direction, Variable &initStateH)
+    RNNDirection &direction, Variable &initStateH)
 {
     std::vector<Variable> inputVars = src->Inputs();
     std::vector<FunctionPtr> pastValueOps, futureValueOps;
@@ -1034,7 +1045,7 @@ void TraceGRUPathes(const FunctionPtr &src, string &f_activation, string &g_acti
 }
 
 void TraceRNNPathes(const FunctionPtr &src, string &activation,
-                    RNNDirection &direction, Variable &initStateH)
+    RNNDirection &direction, Variable &initStateH)
 {
     std::vector<Variable> inputVars = src->Inputs();
     std::vector<FunctionPtr> pastValueOps, futureValueOps;
