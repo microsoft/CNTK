@@ -101,6 +101,7 @@ namespace CNTK
         ConstantOp = 89,
         LatticeSequenceWithSoftmax = 90,
         Cast = 91,
+        BiVfsmn = 92,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

@@ -5176,6 +5176,244 @@ __global__ void _rcrfTransGrdComputeMax1024Labels(
 };
 
 template <class ElemType>
+__global__ void _computeBiVfsmnMemory(
+    const ElemType* in,        // D x T
+    const ElemType* l_filter,  // D x N1 (TODO: +1)
+    const ElemType* r_filter,  // D x N2
+    const ElemType* flags,     // 1 x T
+    const CUDA_LONG N, const CUDA_LONG rows, const CUDA_LONG cols,
+    const CUDA_LONG l_order, const CUDA_LONG r_order,
+    const CUDA_LONG l_stride, const CUDA_LONG r_stride,
+    ElemType* out)             // D x T
+{
+    // TODO: process flags[x] == -1 (GAP sentence)
+
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    CUDA_LONG col = id / rows;
+    CUDA_LONG row = id - (col * rows);  // = id % rows
+    ElemType value = 0.0;
+    int shift_index = 0;
+    int index = col * rows + row;
+    out[index] = in[index];
+    for (int order = 0; order < l_order; order++)
+    {
+        shift_index = col - order * l_stride;
+        if (shift_index >= 0 && flags[shift_index] == flags[col])
+        {
+            value += in[shift_index * rows + row] * l_filter[order * rows + row];
+        }
+    }
+    for (int order = 1; order <= r_order; order++)
+    {
+        shift_index = col + order * r_stride;
+        if (shift_index < cols && flags[shift_index] == flags[col])
+        {
+            value += in[shift_index * rows + row] * r_filter[(order-1) * rows + row];
+        }
+    }
+    out[index] += value;
+}
+
+template <class ElemType>
+__global__ void _computeBiVfsmnMemoryGradient(
+    const ElemType* in,        // D x T, output gradient
+    const ElemType* l_filter,  // D x N1 (TODO: +1)
+    const ElemType* r_filter,  // D x N2
+    const ElemType* flags,     // 1 x T
+    const CUDA_LONG N, const CUDA_LONG rows, const CUDA_LONG cols,
+    const CUDA_LONG l_order, const CUDA_LONG r_order,
+    const CUDA_LONG l_stride, const CUDA_LONG r_stride,
+    ElemType* out)             // D x T, input gradient
+{
+    // TODO: process flags[x] == -1 (GAP sentence)
+
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    CUDA_LONG col = id / rows;
+    CUDA_LONG row = id - (col * rows);  // = id % rows
+    ElemType value = 0.0;
+    int shift_index = 0;
+    int index = col * rows + row;
+    out[index] = in[index];
+    for (int order = -r_order; order < 0; order++)
+    {
+        shift_index = col + order * r_stride;
+        if (shift_index >= 0 && flags[shift_index] == flags[col])
+        {
+            value += in[shift_index * rows + row] * r_filter[(-order-1) * rows + row];
+        }
+    }
+    for (int order = 0; order < l_order; order++)
+    {
+        shift_index = col + order * l_stride;
+        if (shift_index < cols && flags[shift_index] == flags[col])
+        {
+            value += in[shift_index * rows + row] * l_filter[order * rows + row];
+        }
+    }
+    out[index] += value;
+}
+
+template <class ElemType>
+__global__ void _computeBiVfsmnLeftFilterGradient(
+    const ElemType* diff,      // D x T, output gradient
+    const ElemType* in,        // D x T, input
+    const ElemType* flags,     // 1 x T
+    const CUDA_LONG rows, const CUDA_LONG cols,
+    const CUDA_LONG l_order,
+    const CUDA_LONG l_stride,
+    ElemType* out)             // D x T, left filter gradient
+{
+    const int CU1DBLOCK = 256;
+
+    int j = blockIdx.x;
+    int THREADS = blockDim.x;
+    if (j >= rows*l_order) return;
+
+    __shared__ ElemType aux[CU1DBLOCK];
+
+    int steps = (cols - 1)/THREADS + 1;
+    int order = j/rows;
+    int row   = j%rows;
+    int shift = order * l_stride;
+    int index = order*rows + row;
+    //copy input to aux
+    int col = threadIdx.x - shift;
+
+    if (steps > 1)
+    {
+        if (col >= 0 && fabs_(flags[threadIdx.x] - flags[col])<1e-2)
+        {
+            aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
+        }
+        else
+        {
+            aux[threadIdx.x] = 0;
+        }
+        __syncthreads();
+        for (int i = 1; i<steps; ++i)
+        {
+            int index = threadIdx.x + i*THREADS;
+
+            if (index < cols && fabs_(flags[index] - flags[index - shift])<1e-2)
+                aux[threadIdx.x] += in[(index - shift)*rows + row] * diff[index*rows + row];
+        }
+        __syncthreads();
+    }
+    else
+    {
+        if (col >= 0 && threadIdx.x<cols && fabs_(flags[threadIdx.x] - flags[col])<1e-2)
+        {
+            aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
+        }
+        else
+        {
+            aux[threadIdx.x] = 0;
+        }
+        __syncthreads();
+    }
+
+    int nTotalThreads = THREADS;
+    __syncthreads();
+    while (nTotalThreads > 1) {
+        int halfPoint = ((1 + nTotalThreads) >> 1);   // divide by two
+        // only the first half of the threads will be active.
+        if (threadIdx.x < halfPoint)  {
+            // Get the shared value stored by another thread
+            if (threadIdx.x + halfPoint < nTotalThreads)
+                aux[threadIdx.x] += aux[threadIdx.x + halfPoint];
+        }
+        __syncthreads();
+        nTotalThreads = ((1 + nTotalThreads) >> 1);   // divide by two.
+    }
+    ElemType sum = aux[0];
+    __syncthreads();
+    out[index] = sum;
+}
+
+template <class ElemType>
+__global__ void _computeBiVfsmnRightFilterGradient(
+    const ElemType* diff,      // D x T, output gradient
+    const ElemType* in,        // D x T, input
+    const ElemType* flags,     // 1 x T
+    const CUDA_LONG rows, const CUDA_LONG cols,
+    const CUDA_LONG r_order,
+    const CUDA_LONG r_stride,
+    ElemType* out)             // D x T, right filter gradient
+{
+    const int CU1DBLOCK = 256;
+
+    int j = blockIdx.x;
+    int THREADS = blockDim.x;
+    if (j >= rows*r_order) return;
+
+    __shared__ ElemType aux[CU1DBLOCK];
+
+    int steps = (cols - 1)/THREADS + 1;
+    int order = j/rows;
+    int row   = j%rows;
+    int shift = (order+1) * r_stride;
+    int index = order*rows + row;
+    //copy input to aux
+    int col = threadIdx.x + shift;
+
+    if (steps > 1)
+    {
+        if (col < cols && fabs_(flags[threadIdx.x] - flags[col])<1e-2)
+        {
+            aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
+        }
+        else
+        {
+            aux[threadIdx.x] = 0;
+        }
+        __syncthreads();
+        for (int i = 1; i<steps; ++i)
+        {
+            int index = threadIdx.x + i*THREADS;
+
+            if (index + shift < cols && fabs_(flags[index] - flags[index + shift])<1e-2)
+                aux[threadIdx.x] += in[(index + shift)*rows + row] * diff[index*rows + row];
+        }
+        __syncthreads();
+    }
+    else
+    {
+        if (col < cols && threadIdx.x<cols && fabs_(flags[threadIdx.x] - flags[col])<1e-2)
+        {
+            aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
+        }
+        else
+        {
+            aux[threadIdx.x] = 0;
+        }
+        __syncthreads();
+    }
+
+    int nTotalThreads = THREADS;
+    __syncthreads();
+    while (nTotalThreads > 1) {
+        int halfPoint = ((1 + nTotalThreads) >> 1);   // divide by two
+        // only the first half of the threads will be active.
+        if (threadIdx.x < halfPoint)  {
+            // Get the shared value stored by another thread
+            if (threadIdx.x + halfPoint < nTotalThreads)
+                aux[threadIdx.x] += aux[threadIdx.x + halfPoint];
+        }
+        __syncthreads();
+        nTotalThreads = ((1 + nTotalThreads) >> 1);   // divide by two.
+    }
+    ElemType sum = aux[0];
+    __syncthreads();
+    out[index] = sum;
+}
+
+template <class ElemType>
 __global__ void _reductionLogAddSum(
     const ElemType* data,
     ElemType* sum,

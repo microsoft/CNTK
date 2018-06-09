@@ -162,6 +162,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 #ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
 #endif
+    else if (EqualInsensitive(nodeType, OperationNameOf(BiVfsmnNode), L"BiVfsmn")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassificationErrorNode), L"ErrorPrediction")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(EditDistanceErrorNode))) ret = true;

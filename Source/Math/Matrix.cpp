@@ -6070,6 +6070,164 @@ void Matrix<ElemType>::RCRFTransGrdCompute(const Matrix<ElemType>& lbls,
 }
 
 template <class ElemType>
+void Matrix<ElemType>::ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // DxT
+                                            const Matrix<ElemType>& l_filter,// DxN1 TODO: +1
+                                            const Matrix<ElemType>& r_filter,// DxN2
+                                            const Matrix<ElemType>& flags,   // 1xT
+                                            int l_order, int r_order,
+                                            int l_stride, int r_stride,
+                                            Matrix<ElemType>& out)
+{
+    DecideAndMoveToRightDevice(in, l_filter, r_filter, out);
+    flags._transferToDevice(in.GetDeviceId());
+
+    if (out.GetDeviceId() < 0) // CPU
+    {
+        if (in.m_matrixType == MatrixType::DENSE && l_filter.m_matrixType == MatrixType::DENSE &&
+            r_filter.m_matrixType == MatrixType::DENSE && out.m_matrixType == MatrixType::DENSE)
+        {
+            CPUMatrix<ElemType>::ComputeBiVfsmnMemory(
+                *in.m_CPUMatrix,
+                *l_filter.m_CPUMatrix,
+                *r_filter.m_CPUMatrix,
+                *flags.m_CPUMatrix,
+                l_order, r_order,
+                l_stride, r_stride,
+                *out.m_CPUMatrix);
+            out.SetDataLocation(CPU, DENSE);
+        }
+    } else // GPU
+    {
+        if (in.m_matrixType == MatrixType::DENSE && l_filter.m_matrixType == MatrixType::DENSE &&
+            r_filter.m_matrixType == MatrixType::DENSE && out.m_matrixType == MatrixType::DENSE)
+        {
+            GPUMatrix<ElemType>::ComputeBiVfsmnMemory(
+                *in.m_GPUMatrix,
+                *l_filter.m_GPUMatrix,
+                *r_filter.m_GPUMatrix,
+                *flags.m_GPUMatrix,
+                l_order, r_order,
+                l_stride, r_stride,
+                *out.m_GPUMatrix);
+            out.SetDataLocation(GPU, DENSE);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
+    const Matrix<ElemType>& gradientValues,
+    const Matrix<ElemType>& l_filter,
+    const Matrix<ElemType>& r_filter,
+    const Matrix<ElemType>& flags,
+    int l_order, int r_order,
+    int l_stride, int r_stride,
+    Matrix<ElemType>& inputGradientValues)
+{
+    DecideAndMoveToRightDevice(gradientValues, l_filter, r_filter, inputGradientValues);
+    flags._transferToDevice(inputGradientValues.GetDeviceId());
+
+    if (inputGradientValues.GetDeviceId() < 0) // CPU
+    {
+        // NOT_IMPLEMENTED;
+        fprintf(stderr, "ComputeBiVfsmnMemoryGradient NOT_IMPLEMENTED\n");
+    } else // GPU
+    {
+        if (gradientValues.m_matrixType == MatrixType::DENSE && l_filter.m_matrixType == MatrixType::DENSE &&
+            r_filter.m_matrixType == MatrixType::DENSE && inputGradientValues.m_matrixType == MatrixType::DENSE)
+        {
+            GPUMatrix<ElemType>::ComputeBiVfsmnMemoryGradient(
+                *gradientValues.m_GPUMatrix,
+                *l_filter.m_GPUMatrix,
+                *r_filter.m_GPUMatrix,
+                *flags.m_GPUMatrix,
+                l_order, r_order,
+                l_stride, r_stride,
+                *inputGradientValues.m_GPUMatrix);
+            inputGradientValues.SetDataLocation(GPU, DENSE);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
+    const Matrix<ElemType>& gradientValues,
+    const Matrix<ElemType>& inputValues,
+    const Matrix<ElemType>& flags,
+    int l_order, int l_stride,
+    Matrix<ElemType>& leftFilterGradientValues)
+{
+    DecideAndMoveToRightDevice(gradientValues, inputValues, flags, leftFilterGradientValues);
+
+    if (leftFilterGradientValues.GetDeviceId() < 0) // CPU
+    {
+        // NOT_IMPLEMENTED;
+        fprintf(stderr, "ComputeBiVfsmnLeftFilterGradient NOT_IMPLEMENTED\n");
+    } else // GPU
+    {
+        if (gradientValues.m_matrixType == MatrixType::DENSE && inputValues.m_matrixType == MatrixType::DENSE &&
+            leftFilterGradientValues.m_matrixType == MatrixType::DENSE)
+        {
+            GPUMatrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
+                *gradientValues.m_GPUMatrix,
+                *inputValues.m_GPUMatrix,
+                *flags.m_GPUMatrix,
+                l_order,
+                l_stride,
+                *leftFilterGradientValues.m_GPUMatrix);
+            leftFilterGradientValues.SetDataLocation(GPU, DENSE);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
+    const Matrix<ElemType>& gradientValues,
+    const Matrix<ElemType>& inputValues,
+    const Matrix<ElemType>& flags,
+    int r_order, int r_stride,
+    Matrix<ElemType>& rightFilterGradientValues)
+{
+    DecideAndMoveToRightDevice(gradientValues, inputValues, flags, rightFilterGradientValues);
+
+    if (rightFilterGradientValues.GetDeviceId() < 0) // CPU
+    {
+        // NOT_IMPLEMENTED;
+        fprintf(stderr, "ComputeBiVfsmnRightFilterGradient NOT_IMPLEMENTED\n");
+    } else // GPU
+    {
+        if (gradientValues.m_matrixType == MatrixType::DENSE && inputValues.m_matrixType == MatrixType::DENSE &&
+            rightFilterGradientValues.m_matrixType == MatrixType::DENSE)
+        {
+            GPUMatrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
+                *gradientValues.m_GPUMatrix,
+                *inputValues.m_GPUMatrix,
+                *flags.m_GPUMatrix,
+                r_order,
+                r_stride,
+                *rightFilterGradientValues.m_GPUMatrix);
+            rightFilterGradientValues.SetDataLocation(GPU, DENSE);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+}
+
+template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType& threshhold)
 {
     DecideAndMoveToRightDevice(*this, label, gamma);

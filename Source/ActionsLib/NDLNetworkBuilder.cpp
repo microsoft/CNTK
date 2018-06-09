@@ -509,6 +509,30 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                                              horizontalSubsample, verticalSubsample, imageLayoutKind, name);
         }
     }
+    else if (cnNodeType == OperationNameOf(BiVfsmnNode))
+    {
+        // std::cout << "parameter.size(): " << parameter.size() << std::endl;
+        if (parameter.size() != 7)
+            RuntimeError("%ls should have 7 fix parameters[inputValueNodeName, lFilter, rFilter, lOrder, rOrder, lStride, rStride]", cnNodeType.c_str());
+
+        nodeParamCount = 3;
+        nodeParamStart = 0;
+
+        if (pass == ndlPassInitial)
+        {
+            int id = 3;
+
+            vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
+            id = 0;
+            size_t lOrder = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+            size_t rOrder = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+            size_t lStride = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+            size_t rStride = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+            // std::cout << lOrder << " " << rOrder << " " << lStride << " " << rStride << std::endl;
+            assert(id == 4);
+            nodePtr = builder.BiVfsmn(NULL, NULL, NULL, lOrder, rOrder, lStride, rStride, name);
+        }
+    }
     else if (cnNodeType == OperationNameOf(BatchNormalizationNode))
     {
         if (parameter.size() < 5)

@@ -72,6 +72,7 @@ namespace CNTK
         {PrimitiveOpType::FutureValue, L"FutureValue"},
         {PrimitiveOpType::ReduceElements, L"ReduceElements"},
         {PrimitiveOpType::BatchNormalization, L"BatchNormalization"},
+        {PrimitiveOpType::BiVfsmn, L"BiVfsmn"},
         {PrimitiveOpType::Clip, L"Clip"},
         {PrimitiveOpType::Select, L"Select"},
         {PrimitiveOpType::Splice, L"Splice"},
@@ -311,6 +312,10 @@ namespace CNTK
         static const std::wstring AttributeNameCustomAttributes;
         static const std::wstring AttributeNameNumItems;
         static const std::wstring AttributeNameFillValue;
+        static const std::wstring AttributeNameLOrder;
+        static const std::wstring AttributeNameROrder;
+        static const std::wstring AttributeNameLStride;
+        static const std::wstring AttributeNameRStride;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
