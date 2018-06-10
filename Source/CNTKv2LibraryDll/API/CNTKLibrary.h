@@ -4348,6 +4348,11 @@ namespace CNTK
     CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, 
         const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
 
+	///
+	/// Create an instance of the CNTK built-in operation for computing the transcription error for specified operands.
+	///
+	CNTK_API FunctionPtr TranscriptionError(const Variable& prediction, const Variable& labels, bool squashInputs, const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in operation for sequence with lattice training (typically for speech).
     ///

@@ -458,6 +458,202 @@ protected:
 template class NDCG1EvalNode<float>;
 template class NDCG1EvalNode<double>;
 
+template<class ElemType>
+class TextTranscriptionErrorNodeBase : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+	using Base = ComputationNodeNonLooping<ElemType>;
+public:
+	TextTranscriptionErrorNodeBase(DEVICEID_TYPE deviceId, const wstring & name, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
+		: Base(deviceId, name), m_squashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
+	{
+	}
+
+	virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
+	{
+		LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
+	}
+
+	virtual void ComputeTextError() = 0;
+
+	virtual void ForwardPropNonLooping() override
+	{
+		bool isInput0Sparse = Input(0)->template Is<SparseInputValue<ElemType>>();
+		bool isInput1Sparse = Input(1)->template Is<SparseInputValue<ElemType>>();
+		if (isInput0Sparse || isInput1Sparse)
+			LogicError("EditDistanceError node was not tested for sparse inputs.");
+
+		FrameRange frameRange(Input(0)->GetMBLayout());
+		Input(0)->ValueFor(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
+		Input(1)->ValueFor(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true);
+
+		MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
+		MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
+
+		ComputeTextError();
+	}
+
+	virtual void Validate(bool isFinalValidationPass) override
+	{
+		ValidateBinaryReduce(isFinalValidationPass);
+	}
+
+	virtual void UpdateFunctionMBSize() override
+	{
+		Base::UpdateFunctionMBSize();
+
+		// resize the temporaries to their proper size
+		size_t cols = Input(0)->Value().GetNumCols();
+		m_maxIndexes0->Resize(1, cols);
+		m_maxIndexes1->Resize(1, cols);
+		m_maxValues->Resize(1, cols);
+	}
+
+	virtual void CopyTo(ComputationNodeBasePtr  nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+	{
+		Base::CopyTo(nodeP, newName, flags);
+
+		if (flags & CopyNodeFlags::copyNodeValue)
+		{
+			auto node = dynamic_pointer_cast<EditDistanceErrorNode<ElemType>>(nodeP);
+			node->m_maxIndexes0 = m_maxIndexes0;
+			node->m_maxIndexes1 = m_maxIndexes1;
+			node->m_maxValues = m_maxValues;
+			node->m_squashInputs = m_squashInputs;
+			node->m_tokensToIgnore = m_tokensToIgnore;
+		}
+	}
+
+	//request matrices needed to do node function value evaluation
+	virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+	{
+		Base::RequestMatricesBeforeForwardProp(matrixPool);
+		RequestMatrixFromPool(m_maxIndexes0, matrixPool);
+		RequestMatrixFromPool(m_maxIndexes1, matrixPool);
+		RequestMatrixFromPool(m_maxValues, matrixPool);
+	}
+
+	//release temp matrices that are only used by forward computation
+	//don't release matrices that need to be used in the gradient computation
+	virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+	{
+		Base::ReleaseMatricesAfterForwardProp(matrixPool);
+		ReleaseMatrixToPool(m_maxIndexes0, matrixPool);
+		ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
+		ReleaseMatrixToPool(m_maxValues, matrixPool);
+	}
+
+	virtual void Save(File& fstream) const override
+	{
+		Base::Save(fstream);
+		fstream << m_squashInputs;
+		fstream << m_tokensToIgnore;
+	}
+
+	virtual void Load(File& fstream, size_t modelVersion) override
+	{
+		Base::Load(fstream, modelVersion);
+		fstream >> m_squashInputs;
+		fstream >> m_tokensToIgnore;
+	}
+
+	bool SquashInputs() const { return m_squashInputs; }
+	std::vector<size_t> TokensToIgnore() const { return m_tokensToIgnore; }
+
+protected:
+	shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
+	shared_ptr<Matrix<ElemType>> m_maxValues;
+	bool m_squashInputs;
+	std::vector<size_t> m_tokensToIgnore;
+
+	// Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.
+	static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<size_t>& tokensToIgnore, std::vector<int>& out_SampleSeqVec)
+	{
+		out_SampleSeqVec.clear();
+
+		// Get the first element in the sequence
+		size_t lastId = (int)firstSeq(0, columnIndices[0]);
+		if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), lastId) == tokensToIgnore.end())
+			out_SampleSeqVec.push_back(lastId);
+
+		// Remaining elements
+		if (squashInputs)
+		{
+			//squash sequences of identical samples
+			for (size_t i = 1; i < columnIndices.size(); i++)
+			{
+				size_t refId = (int)firstSeq(0, columnIndices[i]);
+				if (lastId != refId)
+				{
+					lastId = refId;
+					if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), refId) == tokensToIgnore.end())
+						out_SampleSeqVec.push_back(refId);
+				}
+			}
+		}
+		else
+		{
+			for (size_t i = 1; i < columnIndices.size(); i++)
+			{
+				auto refId = (int)firstSeq(0, columnIndices[i]);
+				if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), refId) == tokensToIgnore.end())
+					out_SampleSeqVec.push_back(refId);
+			}
+		}
+	}
+};
+
+template<class ElemType>
+class TranscriptionErrorNode : public TextTranscriptionErrorNodeBase<ElemType>
+{
+	using Base = TextTranscriptionErrorNodeBase<ElemType>;
+    UsingComputationNodeMembersBoilerplate;
+	static const std::wstring TypeName() { return L"TranscriptionError"; }
+
+public:
+	TranscriptionErrorNode(DEVICEID_TYPE deviceId, const wstring & name, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
+		: TextTranscriptionErrorNodeBase<ElemType>(deviceId, name, squashInputs, tokensToIgnore)
+	{
+	}
+
+	TranscriptionErrorNode(const ScriptableObjects::IConfigRecordPtr configp)
+		: TranscriptionErrorNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"squashInputs"), {})
+	{
+		AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+		m_tokensToIgnore = ScriptableObjects::ConfigArray::FlattenedVectorFrom<size_t>(configp->Get(L"tokensToIgnore"));
+	}
+
+	virtual void ComputeTextError() override {
+		vector<int> firstSeqVec;
+		vector<int> secondSeqVec;
+		ElemType numIncorrectSeqs = 0;
+		MBLayoutPtr pMBLayout = Input(0)->GetMBLayout();
+		for (const auto& sequence : pMBLayout->GetAllSequences())
+		{
+			if (sequence.seqId == GAP_SEQUENCE_ID)
+				continue;
+
+			auto numFrames = pMBLayout->GetNumSequenceFramesInCurrentMB(sequence);
+
+			if (numFrames > 0)
+			{
+				auto columnIndices = pMBLayout->GetColumnIndices(sequence);
+				ExtractSampleSequence(*m_maxIndexes0, columnIndices, m_squashInputs, m_tokensToIgnore, firstSeqVec);
+				ExtractSampleSequence(*m_maxIndexes1, columnIndices, m_squashInputs, m_tokensToIgnore, secondSeqVec);
+				if (firstSeqVec != secondSeqVec) 
+				{
+					++numIncorrectSeqs;
+				}
+			}
+		}
+		Value()(0, 0) = numIncorrectSeqs;
+		Value().TransferToDeviceIfNotThere(Input(0)->GetDeviceId());
+	}
+};
+
+template class TranscriptionErrorNode<float>;
+template class TranscriptionErrorNode<double>;
+
+
 // Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
 // Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
 // 
@@ -470,9 +666,10 @@ template class NDCG1EvalNode<double>;
 // Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
 // Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 template<class ElemType>
-class EditDistanceErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
+class EditDistanceErrorNode : public TextTranscriptionErrorNodeBase<ElemType>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+	using Base = TextTranscriptionErrorNodeBase<ElemType>;
+	UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"EditDistanceError"; }
 
 public:
@@ -482,7 +679,7 @@ public:
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of indices of samples to ignore during edit distance evaluation
     EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 1.0f, float delPen = 1.0f, float insPen = 1.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
-        : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
+        : TextTranscriptionErrorNodeBase<ElemType>(deviceId, name, squashInputs, tokensToIgnore), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen)
     {
     }
 
@@ -493,79 +690,21 @@ public:
         m_tokensToIgnore = ScriptableObjects::ConfigArray::FlattenedVectorFrom<size_t>(configp->Get(L"tokensToIgnore"));
     }
 
-    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
-    {
-        LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
-    }
-
-    virtual void ForwardPropNonLooping() override
-    {
-        bool isInput0Sparse = Input(0)->template Is<SparseInputValue<ElemType>>();
-        bool isInput1Sparse = Input(1)->template Is<SparseInputValue<ElemType>>();
-        if (isInput0Sparse || isInput1Sparse)
-            LogicError("EditDistanceError node was not tested for sparse inputs.");
-
-        FrameRange frameRange(Input(0)->GetMBLayout());
-        Input(0)->ValueFor(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
-        Input(1)->ValueFor(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true);
-
-        MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
-        MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
-        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_tokensToIgnore);
-        Value().TransferToDeviceIfNotThere(Input(0)->GetDeviceId());
-    }
-
-    virtual void Validate(bool isFinalValidationPass) override
-    {
-        ValidateBinaryReduce(isFinalValidationPass);
-    }
-
-    virtual void UpdateFunctionMBSize() override
-    {
-        Base::UpdateFunctionMBSize();
-
-        // resize the temporaries to their proper size
-        size_t cols = Input(0)->Value().GetNumCols();
-        m_maxIndexes0->Resize(1, cols);
-        m_maxIndexes1->Resize(1, cols);
-        m_maxValues->Resize(1, cols);
-    }
+	virtual void ComputeTextError() override {
+		Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_tokensToIgnore);
+		Value().TransferToDeviceIfNotThere(Input(0)->GetDeviceId());
+	}
 
     virtual void CopyTo(ComputationNodeBasePtr  nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
-        Base::CopyTo(nodeP, newName, flags);
-
+		TextTranscriptionErrorNodeBase<ElemType>::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<EditDistanceErrorNode<ElemType>>(nodeP);
-            node->m_maxIndexes0 = m_maxIndexes0;
-            node->m_maxIndexes1 = m_maxIndexes1;
-            node->m_maxValues = m_maxValues;
-            node->m_squashInputs = m_squashInputs;
             node->m_subPen = m_subPen;
             node->m_delPen = m_delPen;
             node->m_insPen = m_insPen;
-            node->m_tokensToIgnore = m_tokensToIgnore;
         }
-    }
-
-    //request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
-    {
-        Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_maxIndexes0, matrixPool);
-        RequestMatrixFromPool(m_maxIndexes1, matrixPool);
-        RequestMatrixFromPool(m_maxValues, matrixPool);
-    }
-
-    //release temp matrices that are only used by forward computation
-    //don't release matrices that need to be used in the gradient computation
-    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
-    {
-        Base::ReleaseMatricesAfterForwardProp(matrixPool);
-        ReleaseMatrixToPool(m_maxIndexes0, matrixPool);
-        ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
-        ReleaseMatrixToPool(m_maxValues, matrixPool);
     }
 
     // firstSeq - first sequence of samples
@@ -693,74 +832,28 @@ public:
 
     virtual void Save(File& fstream) const override
     {
-        Base::Save(fstream);
+		TextTranscriptionErrorNodeBase<ElemType>::Save(fstream);
         fstream << m_subPen;
         fstream << m_delPen;
         fstream << m_insPen;
-        fstream << m_squashInputs;
-        fstream << m_tokensToIgnore;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
     {
-        Base::Load(fstream, modelVersion);
+		TextTranscriptionErrorNodeBase<ElemType>::Load(fstream, modelVersion);
         fstream >> m_subPen;
         fstream >> m_delPen;
         fstream >> m_insPen;
-        fstream >> m_squashInputs;
-        fstream >> m_tokensToIgnore;
     }
 
-    float SubstitutionPenalty() const { return m_subPen; }
-    float DeletionPenalty() const { return m_delPen; }
-    float InsertionPenalty() const { return m_insPen; }
-    bool SquashInputs() const { return m_squashInputs; }
-    std::vector<size_t> TokensToIgnore() const { return m_tokensToIgnore; }
+	float SubstitutionPenalty() const { return m_subPen; }
+	float DeletionPenalty() const { return m_delPen; }
+	float InsertionPenalty() const { return m_insPen; }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
-    shared_ptr<Matrix<ElemType>> m_maxValues;
-    bool m_squashInputs;
     float m_subPen;
     float m_delPen;
     float m_insPen;
-    std::vector<size_t> m_tokensToIgnore;
-
-    // Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.
-    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<size_t>& tokensToIgnore, std::vector<int>& out_SampleSeqVec)
-    {
-        out_SampleSeqVec.clear();
-
-        // Get the first element in the sequence
-        size_t lastId = (int)firstSeq(0, columnIndices[0]);
-        if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), lastId) == tokensToIgnore.end())
-            out_SampleSeqVec.push_back(lastId);
-
-        // Remaining elements
-        if (squashInputs)
-        {
-            //squash sequences of identical samples
-            for (size_t i = 1; i < columnIndices.size(); i++)
-            {
-                size_t refId = (int)firstSeq(0, columnIndices[i]);
-                if (lastId != refId)
-                {
-                    lastId = refId;
-                    if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), refId) == tokensToIgnore.end())
-                        out_SampleSeqVec.push_back(refId);
-                }
-            }
-        }
-        else
-        {
-            for (size_t i = 1; i < columnIndices.size(); i++)
-            {
-                auto refId = (int)firstSeq(0, columnIndices[i]);
-                if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), refId) == tokensToIgnore.end())
-                    out_SampleSeqVec.push_back(refId);
-            }
-        }
-    }
 };
 
 template class EditDistanceErrorNode<float>;
