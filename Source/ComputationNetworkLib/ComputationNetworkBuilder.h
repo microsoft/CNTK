@@ -120,6 +120,7 @@ public:
 #ifdef COMING_SOON
     ComputationNodePtr CRF(const ComputationNodePtr label, const ComputationNodePtr postDepScore, const ComputationNodePtr transition_score, const std::wstring nodeName = L"");
 #endif
+    ComputationNodePtr BiVfsmn(const ComputationNodePtr in, const ComputationNodePtr lFilter, const ComputationNodePtr rFilter, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride, const std::wstring nodeName = L"");
     ComputationNodePtr Abs(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Acos(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Asin(const ComputationNodePtr a, const std::wstring nodeName = L"");
