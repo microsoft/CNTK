@@ -32,18 +32,25 @@
     <StartupObject />
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_NoOpt|x64'">
-    <DefineConstants>TRACE</DefineConstants>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(Configuration)'=='Debug_CpuOnly'">
+    <DefineConstants>DEBUG;TRACE;DEBUG_CPUONLY;CPUONLY</DefineConstants>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DefineConstants>RELEASE;TRACE</DefineConstants>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(Configuration)'=='Release_NoOpt'">
+    <DefineConstants>RELEASE;TRACE</DefineConstants>
     <Optimize>false</Optimize>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">
-    <DefineConstants>TRACE;DEBUG_CPUONLY;NETCOREAPP2_0;CPUONLY</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">
-    <DefineConstants>TRACE;RELEASE_CPUONLY;NETCOREAPP2_0;CPUONLY</DefineConstants>
+  <PropertyGroup Condition="'$(Configuration)'=='Release_CpuOnly'">
+    <DefineConstants>RELEASE;TRACE;RELEASE_CPUONLY;CPUONLY</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -55,8 +62,8 @@
 	<Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\TestHelper.cs" Link="TestHelper.cs" />
 	<Compile Include="..\..\..\..\Examples\TrainingCSharp\Common\TransferLearning.cs" Link="TransferLearning.cs" />
 	
-	<None Remove="App.config" />
-	<Compile Remove="Properties\AssemblyInfo.cs" />
+	<None Remove="App.config" /> 
+    <Compile Remove="Properties\AssemblyInfo.cs" /> 
   </ItemGroup>
 
   <ItemGroup>
