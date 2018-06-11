@@ -8,7 +8,6 @@
 #include "MLFBinaryIndexBuilder.h"
 #include "MLFUtils.h"
 #include "ReaderUtil.h"
-#include <iostream>
 
 namespace CNTK {
 
