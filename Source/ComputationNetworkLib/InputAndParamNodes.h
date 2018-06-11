@@ -313,6 +313,7 @@ public:
         fstream << m_dynamicAxisNodeName;
 
         fstream << m_learningRateMultiplier;
+        fstream << m_orthonormalConstraint;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -344,10 +345,17 @@ public:
             m_dynamicAxisNodeName = L""; // Use default
 
         float learningRateMultiplier = 0;
+        /* guoye: start */
+        float orthonormalConstraint = 0;
         if (modelVersion >= CNTK_MODEL_VERSION_10)
+        {
             fstream >> learningRateMultiplier;
-
+            fstream >> orthonormalConstraint;
+        }
         Init(sampleLayout, m_isSparse, m_dynamicAxisNodeName, learningRateMultiplier);
+        SetOrthonormalConstraint(orthonormalConstraint);
+        /* guoye: end */
+
     }
 
     // InputValue must not resize its inputs because that might destroy it. It should already have the correct size.

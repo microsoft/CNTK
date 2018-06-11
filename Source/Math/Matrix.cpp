@@ -574,7 +574,32 @@ Matrix<ElemType> Matrix<ElemType>::Eye(const size_t rows, DEVICEID_TYPE deviceId
     c.SetDiagonalValue(1);
     return c;
 }
+/* guoye: start */
+template <class ElemType>
+ElemType Matrix<ElemType>::MatTrace()
+{
+    Matrix<ElemType>& M = *this;
+    int devId;    
+    size_t num_rows, num_cols;
 
+    num_rows = M.GetNumRows();
+    num_cols = M.GetNumCols();
+    assert(num_rows == num_cols);
+    
+    devId = M.GetDeviceId();
+
+    Matrix<ElemType> MI(num_rows, num_rows, devId);
+
+    ElemType trace;
+
+    Matrix<ElemType> I = Eye(num_rows, M.GetDeviceId());
+
+    MI.AssignElementProductOf(M, I);
+    trace = MI.SumOfElements();
+
+    return trace;
+}
+/* guoye: end */
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType low, const ElemType high, unsigned long seed)
 {
@@ -917,7 +942,7 @@ void Matrix<ElemType>::SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat
     m_numTimesMatrixTypeChanged++;
 
     if ((GetMathLibTraceLevel() > 0) && (m_numTimesMatrixTypeChanged == NUM_MATRIXTYPE_CHANGED_WARN))
-        fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long) GetNumRows(), (unsigned long) GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
+        fprintf(stderr, "WARNING: [SwitchToMatrixType()] The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long) GetNumRows(), (unsigned long) GetNumCols(), NUM_MATRIXTYPE_CHANGED_WARN);
 
     if (GetDeviceId() < 0) // CPU
     {
@@ -4290,7 +4315,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
             m_devicesTransferedTo[1] = to_id;
     }
     if ((GetMathLibTraceLevel() > 0) && (m_numTimesDeviceChanged == NUM_DEVICE_CHANGED_WARN && m_devicesTransferedTo[1] >= CPUDEVICE))
-        fprintf(stderr, "WARNING: The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long) GetNumRows(), (unsigned long) GetNumCols(), NUM_DEVICE_CHANGED_WARN);
+        fprintf(stderr, "WARNING: [_transferFromDeviceToDevice()] The same matrix with dim [%lu, %lu] has been transferred between different devices for %d times.\n", (unsigned long) GetNumRows(), (unsigned long) GetNumCols(), NUM_DEVICE_CHANGED_WARN);
 
     // do the transfer
     if (m_matrixType == MatrixType::SPARSE)
@@ -5113,6 +5138,9 @@ template <class ElemType>
 void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
                                               ElemType beta, Matrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier)
 {
+    // std::cout << "In Matrix<ElemType>::MultiplyAndWeightedAdd()" << std::endl;
+    // PrintMatrix(a);
+    // PrintMatrix(b);
     DecideAndMoveToRightDevice(a, b, c);
 
     if (c.GetDeviceId() < 0) // CPU
@@ -5257,6 +5285,8 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
             NOT_IMPLEMENTED;
         }
     }
+    // std::cout << "Out:" << std::endl;
+    // PrintMatrix(c);
 }
 
 template <class ElemType>
@@ -6138,6 +6168,230 @@ void Matrix<ElemType>::RCRFTransGrdCompute(const Matrix<ElemType>& lbls,
                                 shift),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
+}
+
+// template<class ElemType>
+// void PrintMatrix(const Matrix<ElemType>& in)
+// {
+//     double temp = 0.0;
+//     std::cout << std::endl;
+//     std::cout << in.GetNumRows() << "x" << in.GetNumCols() << std::endl;
+//     for (int r = 0; r < in.GetNumRows(); ++r)
+//     {
+//         for (int c = 0; c < in.GetNumCols(); ++c)
+//         {
+//             temp = in(r, c);
+//             std::cout << temp << " ";
+//         }
+//         std::cout << std::endl;
+//     }
+//     std::cout << std::endl;
+// }
+
+template <class ElemType>
+void Matrix<ElemType>::ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // DxT
+                                            const Matrix<ElemType>& l_filter,// DxN1 TODO: +1
+                                            const Matrix<ElemType>& r_filter,// DxN2
+                                            const Matrix<short>& flags,   // 1xT
+                                            int flag_stride,
+                                            int l_order, int r_order,
+                                            int l_stride, int r_stride,
+                                            Matrix<ElemType>& out)
+{
+    // std::cout << "In begining of ComputeBiVfsmnMemory()" << std::endl;
+    // std::cout << l_order << " " << r_order << " " << l_stride << " " << r_stride << std::endl;
+    // PrintMatrix(in);
+    // PrintMatrix(l_filter);
+    // PrintMatrix(r_filter);
+    // PrintMatrix(flags);
+
+    DecideAndMoveToRightDevice(out, in, l_filter, r_filter);
+    flags._transferToDevice(out.GetDeviceId());
+
+    if (out.GetDeviceId() < 0) // CPU
+    {
+        if (in.m_matrixType == MatrixType::DENSE && l_filter.m_matrixType == MatrixType::DENSE &&
+            r_filter.m_matrixType == MatrixType::DENSE && out.m_matrixType == MatrixType::DENSE)
+        {
+            CPUMatrix<ElemType>::ComputeBiVfsmnMemory(
+                *in.m_CPUMatrix,
+                *l_filter.m_CPUMatrix,
+                *r_filter.m_CPUMatrix,
+                *flags.m_CPUMatrix,
+                flag_stride,
+                l_order, r_order,
+                l_stride, r_stride,
+                *out.m_CPUMatrix);
+            out.SetDataLocation(CPU, DENSE);
+        }
+    } else // GPU
+    {
+        if (in.m_matrixType == MatrixType::DENSE && l_filter.m_matrixType == MatrixType::DENSE &&
+            r_filter.m_matrixType == MatrixType::DENSE && out.m_matrixType == MatrixType::DENSE)
+        {
+            GPUMatrix<ElemType>::ComputeBiVfsmnMemory(
+                *in.m_GPUMatrix,
+                *l_filter.m_GPUMatrix,
+                *r_filter.m_GPUMatrix,
+                *flags.m_GPUMatrix,
+                flag_stride,
+                l_order, r_order,
+                l_stride, r_stride,
+                *out.m_GPUMatrix);
+            out.SetDataLocation(GPU, DENSE);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    // std::cout << out.GetDeviceId() << std::endl;
+    // PrintMatrix(out);
+    // std::cout << out.GetDeviceId() << std::endl;
+    // out._transferToDevice(flags.GetDeviceId());
+    // std::cout << out.GetDeviceId() << std::endl;
+    // std::cout << "At end of ComputeBiVfsmnMemory()" << std::endl;
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
+    const Matrix<ElemType>& gradientValues,
+    const Matrix<ElemType>& l_filter,
+    const Matrix<ElemType>& r_filter,
+    const Matrix<short>& flags,
+    int flag_stride,
+    int l_order, int r_order,
+    int l_stride, int r_stride,
+    Matrix<ElemType>& inputGradientValues)
+{
+    // std::cout << "In begining of ComputeBiVfsmnMemoryGradient()" << std::endl;
+    // std::cout << l_order << " " << r_order << " " << l_stride << " " << r_stride << std::endl;
+    // PrintMatrix(gradientValues);
+    // PrintMatrix(l_filter);
+    // PrintMatrix(r_filter);
+    // PrintMatrix(flags);
+
+    DecideAndMoveToRightDevice(gradientValues, l_filter, r_filter, inputGradientValues);
+    flags._transferToDevice(inputGradientValues.GetDeviceId());
+
+    if (inputGradientValues.GetDeviceId() < 0) // CPU
+    {
+        // NOT_IMPLEMENTED;
+        fprintf(stderr, "ComputeBiVfsmnMemoryGradient NOT_IMPLEMENTED\n");
+    } else // GPU
+    {
+        if (gradientValues.m_matrixType == MatrixType::DENSE && l_filter.m_matrixType == MatrixType::DENSE &&
+            r_filter.m_matrixType == MatrixType::DENSE && inputGradientValues.m_matrixType == MatrixType::DENSE)
+        {
+            GPUMatrix<ElemType>::ComputeBiVfsmnMemoryGradient(
+                *gradientValues.m_GPUMatrix,
+                *l_filter.m_GPUMatrix,
+                *r_filter.m_GPUMatrix,
+                *flags.m_GPUMatrix,
+                flag_stride,
+                l_order, r_order,
+                l_stride, r_stride,
+                *inputGradientValues.m_GPUMatrix);
+            inputGradientValues.SetDataLocation(GPU, DENSE);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    // PrintMatrix(inputGradientValues);
+    // std::cout << "At end of ComputeBiVfsmnMemoryGradient()" << std::endl;
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
+    const Matrix<ElemType>& gradientValues,
+    const Matrix<ElemType>& inputValues,
+    const Matrix<short>& flags,
+    int flag_stride,
+    int l_order, int l_stride,
+    Matrix<ElemType>& leftFilterGradientValues)
+{
+    // std::cout << "In begining of ComputeBiVfsmnLeftFilterGradient()" << std::endl;
+    // std::cout << l_order << " " << l_stride << std::endl;
+    // PrintMatrix(gradientValues);
+    // PrintMatrix(inputValues);
+    // PrintMatrix(flags);
+
+    DecideAndMoveToRightDevice(gradientValues, inputValues, leftFilterGradientValues);
+    flags._transferToDevice(gradientValues.GetDeviceId());
+    if (leftFilterGradientValues.GetDeviceId() < 0) // CPU
+    {
+        // NOT_IMPLEMENTED;
+        fprintf(stderr, "ComputeBiVfsmnLeftFilterGradient NOT_IMPLEMENTED\n");
+    } else // GPU
+    {
+        if (gradientValues.m_matrixType == MatrixType::DENSE && inputValues.m_matrixType == MatrixType::DENSE &&
+            leftFilterGradientValues.m_matrixType == MatrixType::DENSE)
+        {
+            GPUMatrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
+                *gradientValues.m_GPUMatrix,
+                *inputValues.m_GPUMatrix,
+                *flags.m_GPUMatrix,
+                flag_stride,
+                l_order,
+                l_stride,
+                *leftFilterGradientValues.m_GPUMatrix);
+            leftFilterGradientValues.SetDataLocation(GPU, DENSE);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    // PrintMatrix(leftFilterGradientValues);
+    // std::cout << "At end of ComputeBiVfsmnLeftFilterGradient()" << std::endl;
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
+    const Matrix<ElemType>& gradientValues,
+    const Matrix<ElemType>& inputValues,
+    const Matrix<short>& flags,
+    int flag_stride,
+    int r_order, int r_stride,
+    Matrix<ElemType>& rightFilterGradientValues)
+{
+    // std::cout << "In begining of ComputeBiVfsmnRightFilterGradient()" << std::endl;
+    // std::cout << r_order << " " << r_stride << std::endl;
+    // PrintMatrix(gradientValues);
+    // PrintMatrix(inputValues);
+    // PrintMatrix(flags);
+
+    DecideAndMoveToRightDevice(gradientValues, inputValues,  rightFilterGradientValues);
+    flags._transferToDevice(gradientValues.GetDeviceId());
+
+    if (rightFilterGradientValues.GetDeviceId() < 0) // CPU
+    {
+        // NOT_IMPLEMENTED;
+        fprintf(stderr, "ComputeBiVfsmnRightFilterGradient NOT_IMPLEMENTED\n");
+    } else // GPU
+    {
+        if (gradientValues.m_matrixType == MatrixType::DENSE && inputValues.m_matrixType == MatrixType::DENSE &&
+            rightFilterGradientValues.m_matrixType == MatrixType::DENSE)
+        {
+            GPUMatrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
+                *gradientValues.m_GPUMatrix,
+                *inputValues.m_GPUMatrix,
+                *flags.m_GPUMatrix,
+                flag_stride,
+                r_order,
+                r_stride,
+                *rightFilterGradientValues.m_GPUMatrix);
+            rightFilterGradientValues.SetDataLocation(GPU, DENSE);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    // PrintMatrix(rightFilterGradientValues);
+    // std::cout << "At end of ComputeBiVfsmnRightFilterGradient()" << std::endl;
 }
 
 template <class ElemType>

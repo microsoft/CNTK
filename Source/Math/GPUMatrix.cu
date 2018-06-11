@@ -4813,6 +4813,127 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
     TracingGPUMemoryAllocator::Free<ElemType>(alpha.GetComputeDeviceId(), d_zeta);
 };
 
+template <class ElemType>
+void GPUMatrix<ElemType>::ComputeBiVfsmnMemory(const GPUMatrix<ElemType>& in,      // DxT
+                                               const GPUMatrix<ElemType>& l_filter,// DxN1 TODO: +1
+                                               const GPUMatrix<ElemType>& r_filter,// DxN2
+                                               const GPUMatrix<short>& flags,   // 1xT
+                                               int flag_stride,
+                                               int l_order, int r_order,
+                                               int l_stride, int r_stride,
+                                               GPUMatrix<ElemType>& out)
+{
+    if (in.GetNumRows() != l_filter.GetNumRows() || in.GetNumRows() != r_filter.GetNumRows() ||
+        // in.GetNumCols() != flags.GetNumCols() || l_filter.GetNumCols() != l_order || r_filter.GetNumCols() != r_order)
+        l_filter.GetNumCols() != l_order || r_filter.GetNumCols() != r_order)
+    {
+        LogicError("[ComputeBiVfsmnMemory] dim mismatch");
+    }
+
+    CUDA_LONG N = (CUDA_LONG) out.GetNumElements();
+    int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+    out.PrepareDevice();
+    SyncGuard syncGuard;
+    _computeBiVfsmnMemory<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
+        in.Data(), l_filter.Data(), r_filter.Data(), flags.Data(), flag_stride,
+        N, (CUDA_LONG) out.GetNumRows(), (CUDA_LONG) out.GetNumCols(),
+        (CUDA_LONG) l_order, (CUDA_LONG) r_order, (CUDA_LONG) l_stride, (CUDA_LONG) r_stride,
+        out.Data());
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ComputeBiVfsmnMemoryGradient(
+    const GPUMatrix<ElemType>& gradientValues,
+    const GPUMatrix<ElemType>& l_filter,
+    const GPUMatrix<ElemType>& r_filter,
+    const GPUMatrix<short>& flags,
+    int flag_stride,
+    int l_order, int r_order,
+    int l_stride, int r_stride,
+    GPUMatrix<ElemType>& inputGradientValues)
+{
+    if (gradientValues.GetNumRows() != l_filter.GetNumRows()
+        || gradientValues.GetNumRows() != r_filter.GetNumRows()
+        // || gradientValues.GetNumCols() != flags.GetNumCols()
+        || l_filter.GetNumCols() != l_order
+        || r_filter.GetNumCols() != r_order)
+    {
+        LogicError("[ComputeBiVfsmnMemoryGradient] dim mismatch");
+    }
+
+    CUDA_LONG N = (CUDA_LONG) inputGradientValues.GetNumElements();
+    int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+    inputGradientValues.PrepareDevice();
+    SyncGuard syncGuard;
+    _computeBiVfsmnMemoryGradient<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
+        gradientValues.Data(), l_filter.Data(), r_filter.Data(), flags.Data(), flag_stride,
+        N, (CUDA_LONG) inputGradientValues.GetNumRows(), (CUDA_LONG) inputGradientValues.GetNumCols(),
+        (CUDA_LONG) l_order, (CUDA_LONG) r_order, (CUDA_LONG) l_stride, (CUDA_LONG) r_stride,
+        inputGradientValues.Data());
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
+    const GPUMatrix<ElemType>& gradientValues,
+    const GPUMatrix<ElemType>& inputValues,
+    const GPUMatrix<short>& flags,
+    int flag_stride,
+    int l_order, int l_stride,
+    GPUMatrix<ElemType>& leftFilterGradientValues)
+{
+    if (leftFilterGradientValues.GetNumRows() != gradientValues.GetNumRows()
+        || leftFilterGradientValues.GetNumCols() != l_order)
+    {
+        LogicError("[ComputeBiVfsmnLeftFilterGradient] dim mismatch");
+    }
+
+    CUDA_LONG rows = (CUDA_LONG) gradientValues.GetNumRows();
+    CUDA_LONG cols = (CUDA_LONG) gradientValues.GetNumCols();
+    const int CU1DBLOCK = 256;
+    dim3 dimBlock(CU1DBLOCK);
+    dim3 dimGrid(rows * l_order);
+
+    leftFilterGradientValues.PrepareDevice();
+    SyncGuard syncGuard;
+
+    _computeBiVfsmnLeftFilterGradient<ElemType><<<dimGrid, dimBlock, 0, t_stream>>>(
+        gradientValues.Data(), inputValues.Data(), flags.Data(), flag_stride,
+        (CUDA_LONG) rows, (CUDA_LONG) cols,
+        (CUDA_LONG) l_order, (CUDA_LONG) l_stride,
+        leftFilterGradientValues.Data());
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
+    const GPUMatrix<ElemType>& gradientValues,
+    const GPUMatrix<ElemType>& inputValues,
+    const GPUMatrix<short>& flags,
+    int flag_stride,
+    int r_order, int r_stride,
+    GPUMatrix<ElemType>& rightFilterGradientValues)
+{
+    if (rightFilterGradientValues.GetNumRows() != gradientValues.GetNumRows()
+        || rightFilterGradientValues.GetNumCols() != r_order)
+    {
+        LogicError("[ComputeBiVfsmnRightFilterGradient] dim mismatch");
+    }
+
+    CUDA_LONG rows = (CUDA_LONG) gradientValues.GetNumRows();
+    CUDA_LONG cols = (CUDA_LONG) gradientValues.GetNumCols();
+    const int CU1DBLOCK = 256;
+    dim3 dimBlock(CU1DBLOCK);
+    dim3 dimGrid(rows * r_order);
+
+    rightFilterGradientValues.PrepareDevice();
+    SyncGuard syncGuard;
+
+    _computeBiVfsmnRightFilterGradient<ElemType><<<dimGrid, dimBlock, 0, t_stream>>>(
+        gradientValues.Data(), inputValues.Data(), flags.Data(), flag_stride,
+        (CUDA_LONG) rows, (CUDA_LONG) cols,
+        (CUDA_LONG) r_order, (CUDA_LONG) r_stride,
+        rightFilterGradientValues.Data());
+}
+
 // -----------------------------------------------------------------------
 // TensorView entry points from Matrix.cpp
 // -----------------------------------------------------------------------

@@ -73,6 +73,10 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         SetLearningRateMultiplier(configp->Get(L"learningRateMultiplier"));
     else if (configp->Exists(L"needsGradient") || configp->Exists(L"needGradient") || configp->Exists(L"computeGradient"))
         InvalidArgument("Deprecated parameter names needsGradient|needGradient|computeGradient are not supported in BrainScript. Use learningRateMultiplier instead.");
+    /* guoye: start */
+    if (configp->Exists(L"orthonormalConstraint"))
+        SetOrthonormalConstraint(configp->Get(L"orthonormalConstraint"));
+    /* guoye: end */
 
     // initialization
     wstring initString = configp->Get(L"init");
@@ -471,6 +475,9 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
         LogicError("LearnableParameter: Cannot Save() before deferred initialization has completed.");
     Base::Save(fstream);
     fstream << m_learningRateMultiplier;
+    /* guoye: start */
+    fstream << m_orthonormalConstraint;
+    /* guoye: end */
     m_sampleLayout.Save(fstream);
     fstream << Value();
 }
@@ -485,6 +492,9 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
     if (modelVersion >= CNTK_MODEL_VERSION_3)
     {
         fstream >> m_learningRateMultiplier;
+        /* guoye: start */
+        fstream >> m_orthonormalConstraint;
+        /* guoye: end */
         sampleLayout.Load(fstream);
     }
     else // legacy format(s)

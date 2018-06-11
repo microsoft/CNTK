@@ -524,6 +524,9 @@ public:
                        const double L2RegWeight, const double L1RegWeight,
                        const bool needAveMultiplier,
                        const bool useNesterovMomentum) const;
+    /* guoye: start */
+    void ApplySemiOrthogonalConstraint(Matrix<ElemType>& functionValues, float alpha) const;
+    /* guoye: end */
     // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode);
 

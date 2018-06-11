@@ -140,5 +140,9 @@ namespace CNTK
         CNTK_API static const std::wstring AttributeNameTransposeRightOperand;
 
         CNTK_API static const std::vector<std::wstring> s_rngStateAttributes;
+        CNTK_API static const std::wstring AttributeNameLOrder;
+        CNTK_API static const std::wstring AttributeNameROrder;
+        CNTK_API static const std::wstring AttributeNameLStride;
+        CNTK_API static const std::wstring AttributeNameRStride;
     };
 }

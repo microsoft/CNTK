@@ -127,7 +127,10 @@ public:
     static Matrix<ElemType> Ones(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId);
     static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId);
     static Matrix<ElemType> Eye(const size_t rows, DEVICEID_TYPE deviceId);
-
+    /* guoye: start */
+    // get the trace of the matrix
+    ElemType MatTrace();
+    /* guoye: end */
 #define USE_TIME_BASED_SEED ULONG_MAX
     static Matrix<ElemType> RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
     static Matrix<ElemType> RandomGaussian(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
@@ -684,6 +687,36 @@ public:
                                     Matrix<ElemType>& grd,
                                     const int startLbl, // the time 0 start symbol in the output layer
                                     const int shift);
+public:
+    static void ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // DxT
+                                     const Matrix<ElemType>& l_filter,// DxN1 TODO: +1
+                                     const Matrix<ElemType>& r_filter,// DxN2
+                                     const Matrix<short>& flags,   // 1xT
+                                     int flag_stride,
+                                     int l_order, int r_order,
+                                     int l_stride, int r_stride,
+                                     Matrix<ElemType>& out);
+
+    static void ComputeBiVfsmnMemoryGradient(const Matrix<ElemType>& gradientValues,
+                                             const Matrix<ElemType>& l_filter,
+                                             const Matrix<ElemType>& r_filter,
+                                             const Matrix<short>& flags,
+                                             int flag_stride,
+                                             int l_order, int r_order,
+                                             int l_stride, int r_stride,
+                                             Matrix<ElemType>& inputGradientValues);
+    static void ComputeBiVfsmnLeftFilterGradient(const Matrix<ElemType>& gradientValues,
+                                                 const Matrix<ElemType>& inputValues,
+                                                 const Matrix<short>& flags,
+                                                 int flag_stride,
+                                                 int l_order, int l_stride,
+                                                 Matrix<ElemType>& leftFilterGradientValues);
+    static void ComputeBiVfsmnRightFilterGradient(const Matrix<ElemType>& gradientValues,
+                                                  const Matrix<ElemType>& inputValues,
+                                                  const Matrix<short>& flags,
+                                                  int flag_stride,
+                                                  int r_order, int r_stride,
+                                                  Matrix<ElemType>& rightFilterGradientValues);
 
     template <typename T>
     friend class MatrixQuantizer;

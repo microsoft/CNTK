@@ -641,6 +641,35 @@ public:
                                     GPUMatrix<ElemType>& grd,
                                     const int startLbl, // the time 0 start symbol in the output layer
                                     const int shift);
+public:
+    static void ComputeBiVfsmnMemory(const GPUMatrix<ElemType>& in,      // DxT
+                                     const GPUMatrix<ElemType>& l_filter,// DxN1 TODO: +1
+                                     const GPUMatrix<ElemType>& r_filter,// DxN2
+                                     const GPUMatrix<short>& flags,   // 1xT
+                                     int flag_stride,
+                                     int l_order, int r_order,
+                                     int l_stride, int r_stride,
+                                     GPUMatrix<ElemType>& out);
+    static void ComputeBiVfsmnMemoryGradient(const GPUMatrix<ElemType>& gradientValues,
+                                             const GPUMatrix<ElemType>& l_filter,
+                                             const GPUMatrix<ElemType>& r_filter,
+                                             const GPUMatrix<short>& flags,
+                                             int flag_stride,
+                                             int l_order, int r_order,
+                                             int l_stride, int r_stride,
+                                             GPUMatrix<ElemType>& inputGradientValues);
+    static void ComputeBiVfsmnLeftFilterGradient(const GPUMatrix<ElemType>& gradientValues,
+                                                 const GPUMatrix<ElemType>& inputValues,
+                                                 const GPUMatrix<short>& flags,
+                                                 int flag_stride,
+                                                 int l_order, int l_stride,
+                                                 GPUMatrix<ElemType>& leftFilterGradientValues);
+    static void ComputeBiVfsmnRightFilterGradient(const GPUMatrix<ElemType>& gradientValues,
+                                                  const GPUMatrix<ElemType>& inputValues,
+                                                  const GPUMatrix<short>& flags,
+                                                  int flag_stride,
+                                                  int r_order, int r_stride,
+                                                  GPUMatrix<ElemType>& rightFilterGradientValues);
 
 public:
     friend File& operator>>(File& stream, GPUMatrix<ElemType>& us)

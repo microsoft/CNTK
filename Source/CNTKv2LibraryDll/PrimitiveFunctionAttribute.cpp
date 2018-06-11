@@ -123,6 +123,12 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameCustomOp = L"customOp";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameTransposeLeftOperand = L"transA";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameTransposeRightOperand = L"transB";
+    
+    
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameLOrder = L"lOrder";
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameROrder = L"rOrder";
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameLStride = L"lStride";
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameRStride = L"rStride";
 
     /*static*/ const std::vector<std::wstring> PrimitiveFunctionAttribute::s_rngStateAttributes =
                    { PrimitiveFunctionAttribute::AttributeNameRngSeed,

@@ -71,6 +71,7 @@ namespace CNTK
         {PrimitiveOpType::FutureValue, L"FutureValue"},
         {PrimitiveOpType::ReduceElements, L"ReduceElements"},
         {PrimitiveOpType::BatchNormalization, L"BatchNormalization"},
+        {PrimitiveOpType::BiVfsmn, L"BiVfsmn"},
         {PrimitiveOpType::Clip, L"Clip"},
         {PrimitiveOpType::Select, L"Select"},
         {PrimitiveOpType::Splice, L"Splice"},
@@ -211,6 +212,8 @@ namespace CNTK
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
     public:
+
+    
         static const size_t convolutionOpDefaultValueForGroups = 1;
 
     protected:

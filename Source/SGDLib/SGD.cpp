@@ -16,7 +16,9 @@
 #include "MatrixQuantizerImpl.h"
 #include "InputAndParamNodes.h"
 #include "AccumulatorAggregation.h"
-
+/* guoye: start */
+#include "RandomOrdering.h"
+/* guoye: end */
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
 // ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
@@ -1404,6 +1406,37 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   numSamplesInMinibatch,
                                   m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
                                   m_needAveMultiplier, m_useNesterovMomentum);
+                    /* guoye: start */
+                    
+                    float alpha = node->GetOrthonormalConstraint();
+                    // float LR = node->GetLearningRateMultiplier();
+
+                    if (alpha > 1e-7 || alpha < -1e-7)
+                    {
+                        // fprintf(stderr, "SGD: alpha = %f, LR = %f.\n", alpha, LR);
+
+                        if (Microsoft::MSR::CNTK::rand(0, 4) == 0)
+                        {
+                            // fprintf(stderr, "SGD starting apply semi.\n");
+
+                            size_t num_rows, num_cols;
+                            num_rows = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().GetNumRows();
+                            num_cols = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().GetNumCols();
+                            if (num_rows <= num_cols)
+                            {
+                                ApplySemiOrthogonalConstraint(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(), alpha);
+                            }
+                            else
+                            {
+                                Matrix<ElemType> trans_weight_mat = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().Transpose();
+                                ApplySemiOrthogonalConstraint(trans_weight_mat, alpha);
+                                dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().SetValue(trans_weight_mat.Transpose());
+                                trans_weight_mat.ReleaseMemory();
+                            }
+                        }
+                    }
+                    
+                    /* guoye: end */
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
                     if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
@@ -2446,6 +2479,160 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     functionValues.Print("Parameter Update");
 #endif
 }
+template <class ElemType>
+void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alpha) const
+{
+    int devId;
+    
+    size_t num_rows, num_cols;
+    ElemType trace_P, trace_PP, old_criterion;
+    float nu, ratio, scale;
+    num_rows = M.GetNumRows();
+    num_cols = M.GetNumCols();
+    devId = M.GetDeviceId();
+
+    Matrix<ElemType> P(num_rows, num_rows, devId);
+    Matrix<ElemType> PP(num_rows, num_rows, devId);
+    Matrix<ElemType> delta_M(num_rows, num_cols, devId);
+
+    Matrix<ElemType> NP(num_rows, num_rows, devId);
+    Matrix<ElemType> NPP(num_rows, num_rows, devId);
+    Matrix<ElemType> NM(num_rows, num_cols, devId);
+
+
+    // Matrix<ElemType> tmp = functionValues;
+    if (alpha <= 1e-7 && alpha >= -1e-7)
+        return; 
+    // We'd like to enforce the rows of M to be orthonormal.
+    // define P = M M^T.  If P is unit then M has orthonormal rows.
+    // We actually want P to equal scale^2 * I, so that M's rows are
+    // orthogonal with 2-norms equal to 'alpha'.
+    // We (notionally) add to the objective function, the value
+    // -alpha times the sum of squared elements of Q = (P - scale^2 * I).
+
+    Matrix<ElemType>::Multiply(M, false, M, true, P);
+
+    // The 'nu' is a constant that determines how fast we approach a
+    // matrix with the desired properties (larger -> faster).  Larger values will
+    // update faster but will be more prone to instability.  0.125 (1/8) is the
+    // value that gives us the fastest possible convergence when we are already
+    // close to be a semi-orthogonal matrix (in fact, it will lead to quadratic
+    // convergence).
+    // See  http://www.danielpovey.com/files/2018_interspeech_tdnnf.pdf
+    // for more details.
+    nu = 0.125;
+             
+    Matrix<ElemType>::Multiply(P, true, P, false, PP);
+
+    trace_P = P.MatTrace();
+    trace_PP = PP.MatTrace();
+        
+      
+
+    // The following is a tweak to avoid divergence when the eigenvalues aren't
+    // close to being the same.  trace_P is the sum of eigenvalues of P, and
+    // trace_P_P is the sum-square of eigenvalues of P.  Treat trace_P as a sum
+    // of positive values, and trace_P_P as their sumsq.  Then mean = trace_P /
+   // dim, and trace_P_P cannot be less than dim * (trace_P / dim)^2,
+   // i.e. trace_P_P >= trace_P^2 / dim.  If ratio = trace_P_P * dim /
+   // trace_P^2, then ratio >= 1.0, and the excess above 1.0 is a measure of
+   // how far we are from convergence.  If we're far from convergence, we make
+   // the learning rate slower to reduce the risk of divergence, since the
+   // update may not be stable for starting points far from equilibrium.
+   ratio = float(trace_PP * num_rows / (trace_P * trace_P));
+   //fprintf(stderr, "Before ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
+
+   assert(ratio > 0.999);
+   if (ratio > 1.02)
+   {
+        nu *= 0.5; // Slow down the update speed to reduce the risk of divergence.
+   }
+    
+   if (alpha < -1e-7)
+   {
+        // If alpha < -1e-9 then it's like letting the scale "float",
+        // as in Sec. 2.3 of
+        // http://www.danielpovey.com/files/2018_interspeech_tdnnf.pdf,
+        //
+        // We pick the alpha that will give us an update to M that is
+        // orthogonal to M (viewed as a vector): i.e., if we're doing
+        //  tr(P^2 - alpha^2 P) == 0,
+        // or alpha^2 = tr(P^2) / tr(P).
+        // Note: P is symmetric so it doesn't matter whether we use tr(P P) or
+        // tr(P^T P); we use tr(P^T P) because I believe it's faster to compute.
+   
+        alpha = std::sqrt(float(trace_PP / trace_P));
+    }
+
+    // see Sec. 2.2 of http://www.danielpovey.com/files/2018_interspeech_tdnnf.pdf
+    // for explanation of the 1/(scale*scale) factor, but there is a difference in
+    // notation; 'scale' here corresponds to 'alpha' in the paper, and
+    // 'update_speed' corresponds to 'nu' in the paper.
+    nu = float(-4.0)*nu;
+    scale = nu / (alpha * alpha);
+
+    Matrix<ElemType> I = Matrix<ElemType>::Eye(num_rows, M.GetDeviceId());
+
+    // Matrix<ElemType>::ScaleAndAdd((ElemType) (-1.0 * alpha * alpha), I, P);
+    
+    Matrix<ElemType>::ScaleAndAdd((ElemType)(-1.0), I, P); // for debug, P will be P-I
+    Matrix<ElemType>::Multiply(P, false, P, true, PP);
+    trace_PP = PP.MatTrace();
+    
+    //fprintf(stderr, "Before ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f \n", trace_PP);
+
+    Matrix<ElemType>::ScaleAndAdd((ElemType)(1.0 - 1.0 * alpha * alpha), I, P); // for debug, P will be P-alpha^2*I
+    Matrix<ElemType>::Multiply(P, false, P, true, PP);
+    trace_PP = PP.MatTrace();
+    //fprintf(stderr, "Before ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
+
+    old_criterion = trace_PP;
+    
+    
+
+    
+    // At this point, the matrix P contains what, in the math, would be Q =
+    // P-alpha^2*I.  
+    // The derivative of the objective w.r.t M equals: scale*(P-alpha^2*I)*M.
+    // (Currently the matrix P contains what, in the math, is P-alpha^2*I).
+    while(nu <= -1e-7)
+    {
+        scale = nu / (alpha * alpha);
+        NM.SetValue(M);
+
+        Matrix<ElemType>::MultiplyAndWeightedAdd(scale, P, false, NM, false, 1.0, NM, nullptr);
+        /* guoye: for debug purpose */
+        Matrix<ElemType>::Multiply(NM, false, NM, true, NP);
+
+        Matrix<ElemType>::Multiply(NP, true, NP, false, NPP);
+
+        trace_P = NP.MatTrace();
+        trace_PP = NPP.MatTrace();
+
+        ratio = float(trace_PP * num_rows / (trace_P * trace_P));
+        //fprintf(stderr, "After ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
+
+        Matrix<ElemType>::ScaleAndAdd((ElemType)(-1.0), I, NP); // for debug, P will be P-I
+        Matrix<ElemType>::Multiply(NP, false, NP, true, NPP);
+        trace_PP = NPP.MatTrace();
+
+        //fprintf(stderr, "After ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f \n", trace_PP);
+
+        Matrix<ElemType>::ScaleAndAdd((ElemType)(1.0 - 1.0 * alpha * alpha), I, NP); // for debug, P will be P-alpha^2*I
+        Matrix<ElemType>::Multiply(NP, false, NP, true, NPP);
+        trace_PP = NPP.MatTrace();
+        //fprintf(stderr, "After ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
+
+        if (trace_PP <= old_criterion) break;
+        // diverge
+        nu *= 0.5;
+        //fprintf(stderr, "After ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f is larger than old criterion = %f, reducing nu to be %f \n", trace_PP, old_criterion, nu);
+    }
+    
+    if (nu <= -1e-7) M.SetValue(NM);
+
+    I.ReleaseMemory();
+}
 
 // protected:
 template <class ElemType>
@@ -2734,8 +2921,12 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
         for (size_t itry = 0; itry < min((size_t) 50, node->Value().GetNumElements()); itry++)
         {
             // no support to sparse matrix yet
-            int irow = (int)fmod(rand(), node->Value().GetNumRows() - 1);
-            int icol = (int)fmod(rand(), node->Value().GetNumCols() - 1);
+            /* guoye: start */
+            // int irow = (int) fmod(rand(), node->Value().GetNumRows() - 1);
+            //int icol = (int) fmod(rand(), node->Value().GetNumCols() - 1);
+            int irow = (int) fmod(::rand(), node->Value().GetNumRows() - 1);
+            int icol = (int) fmod(::rand(), node->Value().GetNumCols() - 1);
+            /* guoye: end */
             irow = max(0, irow);
             icol = max(0, icol);
 

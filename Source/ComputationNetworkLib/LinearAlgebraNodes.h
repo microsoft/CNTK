@@ -22,8 +22,181 @@
 #include <set>
 #include "Quantizers.h"
 #include "InputAndParamNodes.h"
+#include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+// template<class ElemType>
+// void PrintMatrix(const Matrix<ElemType>& in)
+// {
+//     double temp = 0.0;
+//     std::cout << std::endl;
+//     std::cout << in.GetNumRows() << "x" << in.GetNumCols() << std::endl;
+//     for (int r = 0; r < in.GetNumRows(); ++r)
+//     {
+//         for (int c = 0; c < in.GetNumCols(); ++c)
+//         {
+//             temp = in(r, c);
+//             std::cout << temp << " ";
+//         }
+//         std::cout << std::endl;
+//     }
+//     std::cout << std::endl;
+// }
+
+template <class ElemType>
+class BiVfsmnNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"BiVfsmn"; }
+
+public:
+    BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+    BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride)
+        : Base(deviceId, name),
+          m_lOrder(lOrder), m_rOrder(rOrder),
+          m_lStride(lStride), m_rStride(rStride)
+    {
+    }
+    BiVfsmnNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : BiVfsmnNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"lOrder"), configp->Get(L"rOrder"), configp->Get(L"lStride"), configp->Get(L"rStride"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    // This MatrixPool related method doesn't work well and I still can get CUDA 77 error:
+    // https://github.com/Microsoft/CNTK/issues/3356
+
+    // virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    // {
+    //     Base::RequestMatricesBeforeForwardProp(matrixPool);
+    //     RequestMatrixFromPool(m_flags, matrixPool);
+    // }
+
+    // virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    // {
+    //     Base::ReleaseMatricesAfterBackprop(matrixPool);
+    //     ReleaseMatrixToPool(m_flags, matrixPool);
+    // }
+
+    // virtual void UpdateFunctionMBSize() override
+    // {
+    //     Base::UpdateFunctionMBSize();
+
+    //     m_flags->Resize(1, InputRef(0).Value().GetNumCols());
+    // }
+
+    virtual void /*ComputationNode::*/ BeginForwardProp() override
+    {
+        Base::BeginForwardProp();
+        // make sure the seqIndex matrix has been generated on target Device.
+        GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping()
+    {
+        
+        // forward computation
+        const auto& flags = GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
+        auto flagStride = GetMBLayout()->GetNumParallelSequences();
+        Matrix<ElemType>::ComputeBiVfsmnMemory(Input(0)->Value(), Input(1)->Value(), Input(2)->Value(),
+                                               flags, flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                                               Value());
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex)
+    {
+        const auto& flags = GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
+        auto flagStride = GetMBLayout()->GetNumParallelSequences();
+        if (inputIndex == 0)
+        {
+            Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
+                Gradient(), Input(1)->Value(), Input(2)->Value(),
+                flags, flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                Input(0)->Gradient());
+        }
+        else if (inputIndex == 1)
+        {
+            Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
+                Gradient(), Input(0)->Value(),
+                flags, flagStride, m_lOrder, m_lStride,
+                Input(1)->Gradient());
+        }
+        else if (inputIndex == 2)
+        {
+            Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
+                Gradient(), Input(0)->Value(),
+                flags, flagStride, m_rOrder, m_rStride,
+                Input(2)->Gradient());
+        }
+        else
+            RuntimeError("BiVfsmnNode BackpropTo error");
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        // LinkToMBLayout(Input(0)->GetMBLayout());
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        SetDims(Input(0));
+    }
+
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+
+        fstream << m_lOrder;
+        fstream << m_rOrder;
+        fstream << m_lStride;
+        fstream << m_rStride;
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_lOrder;
+        fstream >> m_rOrder;
+        fstream >> m_lStride;
+        fstream >> m_rStride;
+    }
+
+    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<BiVfsmnNode<ElemType>>(nodeP);
+            assert(node != nullptr);
+            node->m_lOrder  = m_lOrder;
+            node->m_rOrder  = m_rOrder;
+            node->m_lStride = m_lStride;
+            node->m_rStride = m_rStride;
+        }
+    }
+
+    // TODO: should return true?
+    // virtual bool ImplementsGradientOverwriteOptimization() const override { return false; }
+    // virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    // virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
+
+    size_t LOrder() const { return m_lOrder; }
+    size_t ROrder() const { return m_rOrder; }
+    size_t LStride() const { return m_lStride; }
+    size_t RStride() const { return m_rStride; }
+
+protected:
+    size_t m_lOrder;
+    size_t m_rOrder;
+    size_t m_lStride;
+    size_t m_rStride;
+};
+
+template class BiVfsmnNode<float>;
+template class BiVfsmnNode<double>;
 
 // -----------------------------------------------------------------------
 // PlusNode (summand1, summand2)
@@ -640,6 +813,22 @@ private:
 public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
+        // BEGIN DEBUG
+        // auto in0MBLayout = InputRef(0).GetMBLayout();
+        // if (in0MBLayout == nullptr) {
+        //     in0MBLayout = InputRef(1).GetMBLayout();
+        // }
+        // if (in0MBLayout) {
+        //     auto in0Sequences = in0MBLayout->GetAllSequences();
+        //     for (size_t i = 0; i < in0Sequences.size(); ++i)
+        //     {
+        //         let& in0Seq = in0Sequences[i];
+        //         std::cout << in0Seq.seqId << " " << in0Seq.s << " " << in0Seq.tBegin << " " << in0Seq.tEnd << std::endl;
+        //     }
+        //     std::cout << in0MBLayout->GetNumTimeSteps() << " " << in0MBLayout->GetNumParallelSequences() << std::endl;
+        // }
+        //END DEBUG
+
         // If argument A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
         // This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
         auto inputMBLayout = InputRef(0).GetMBLayout();
