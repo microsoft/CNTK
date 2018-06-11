@@ -21,12 +21,19 @@ using namespace std;
 using namespace Microsoft::MSR::CNTK;
 
 // MLF chunk when operating in sequence mode.
-class MLFBinaryDeserializer::BinarySequenceChunk : public MLFDeserializer::SequenceChunk
+class MLFBinaryDeserializer::BinarySequenceChunk : public MLFDeserializer::ChunkBase
 {
 public:
     BinarySequenceChunk(const MLFBinaryDeserializer& parent, const ChunkDescriptor& descriptor, const wstring& fileName, StateTablePtr states)
-        : MLFDeserializer::SequenceChunk(parent, descriptor, fileName, states)
+        : ChunkBase::ChunkBase(parent, descriptor, fileName, states)
     {
+        this->m_sequences.resize(m_descriptor.Sequences().size());
+
+#pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < descriptor.Sequences().size(); ++i)
+            CacheSequence(descriptor.Sequences()[i], i);
+
+        CleanBuffer();
     }
 
     void CacheSequence(const SequenceDescriptor& sequence, size_t index)
