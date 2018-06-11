@@ -2832,7 +2832,6 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
                 momentum = 1.0f + expm1(-48.0f / normalizationTimeConstant);
 
             node->AddAttribute(attributesMap[L"spatial"], spatial);
-            node->AddAttribute("is_test", (int64_t)1);
             node->AddAttribute(attributesMap[L"epsilon"], epsilon);
             node->AddAttribute("momentum", momentum);
         }
@@ -2877,7 +2876,6 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
         {
             auto dropoutRate = (float)src->Attributes()[L"dropoutRate"].Value<double>();
             node->AddAttribute(attributesMap[L"dropoutRate"], dropoutRate);
-            node->AddAttribute("is_test", (int64_t)1);
         }
         else if ((src->OpName() == L"RandomDistribution") ||
                  (src->OpName() == L"UniformRandom") || (src->OpName() == L"NormalRandom") ||

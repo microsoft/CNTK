@@ -181,8 +181,6 @@ def test_AveragePool(tmpdir):
 
 #BatchNormalization
 def test_BatchNormalization(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
-
     dtype = np.float32
 
     sample = [  # 5 samples having 4 classes
@@ -326,7 +324,6 @@ def test_Div(tmpdir):
 
 #Dropout
 def test_Dropout(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     data = np.asarray([[10, 20],[30, 40],[50, 60]], dtype=np.float32)
     model = C.dropout(data, 0.5)
     verify_no_input(model, tmpdir, 'Dropout_0')
