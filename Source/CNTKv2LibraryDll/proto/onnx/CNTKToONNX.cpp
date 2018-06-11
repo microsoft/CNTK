@@ -3105,13 +3105,6 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
                 // a scalar with dynamic access elementwise a constant scalar.
                 broadcast = true;
             }
-
-            node->AddAttribute("broadcast", (int64_t)(broadcast ? 1 : 0));
-            if (broadcast && axis >= 0)
-            {
-                // +1 to take into consideration the batch aies
-                node->AddAttribute("axis", (int64_t)axis);
-            }
         }
         else if (src->OpName() == L"Times")
         {
@@ -3449,7 +3442,6 @@ ONNXIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, ONNXIR::Graph* g
                 }
 
                 node = graph->AddNode(nodeName, ToOPName(src), "", {&inputOutput1Arg, &inputOutput2Arg}, outputs);
-                node->AddAttribute("broadcast", (int64_t)1);
             }
             else
                 node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
@@ -3522,13 +3514,11 @@ ONNXIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, ONNXIR::Graph* g
             ONNXIR::NodeArg &mulTensorOutputArg = graph->CreateOwnedNodeArg(nodeName + string("_mul_output0"), &input0ArgType);
             ONNXIR::Node* mulNode = graph->AddNode(nodeName + string("_mul"), "Mul",
                                                    "", { &mvnTensorOutputArg, input1 }, { &mulTensorOutputArg });
-            mulNode->AddAttribute("broadcast", static_cast<int64_t>(1));
 
             auto input2 = inputs[biasIndexInOnnxInputs];
             ONNXIR::NodeArg &addTensorOutputArg = graph->CreateOwnedNodeArg(nodeName + string("_Output_0"), &input0ArgType);
             node = graph->AddNode(nodeName + string("_add"), "Add",
                                   "", { &mulTensorOutputArg, input2 }, { &addTensorOutputArg });
-            node->AddAttribute("broadcast", static_cast<int64_t>(1));
         }
         else
             node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);

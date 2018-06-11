@@ -68,7 +68,6 @@ def test_Abs(tmpdir):
 
 #Add
 def test_Add(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     shape = (4, 5)
     data1 = np.random.rand(*shape).astype(np.float32)
     data2 = np.random.rand(*shape).astype(np.float32)
@@ -477,7 +476,6 @@ def test_ImageScaler(tmpdir):
 
 #LayerNormalization
 def test_LayerNormalization(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     # This test point tests the LayerNormalization round trip with defaultepsilon. We loose always the epsilon value when 
     # exporting to ONNX (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back 
     # from ONNX, CNTK always uses the default eposilon value (0.00001). That's why test below has the default epsilon 
@@ -603,7 +601,6 @@ def test_Max(tmpdir):
 
 #MaxPool
 def test_MaxPool(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
     x = C.input_variable(img.shape)
     model = C.pooling(x, C.MAX_POOLING, (2,2), (3,3))
@@ -611,7 +608,6 @@ def test_MaxPool(tmpdir):
 
 #MaxRoiPool
 def test_MaxRoiPool(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     input_map = [[[1., 2., 3.],       # (1, 3, 3) input operand (conv feature map)
            [4., 5., 6.],
            [7., 8., 9.]]]
@@ -681,7 +677,6 @@ def test_Min(tmpdir):
 
 #Mul
 def test_Mul(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     data0 = np.asarray([1., 1., 1., 1.], dtype=np.float32)
     data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=np.float32)
     model = C.element_times(data0, data1)
@@ -701,7 +696,6 @@ OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
                            (True, 4, 2, 3, 'rnnTanh'), (False, 2, 2, 3, 'rnnTanh'), (True, 1, 2, 3, 'rnnTanh'))
 @pytest.mark.parametrize("bidirectional, num_layers, input_size, hidden_size, recurrent_op", OPTIM_RNN_STACK_CONFIGS)
 def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id):
-    pytest.skip('Need to support new ONNX spec.')
     if device_id == -1:
         pytest.skip('Test only runs on GPU')
     dev = cntk_device(device_id)    
@@ -966,7 +960,6 @@ def test_Sqrt(tmpdir):
 
 #Sub
 def test_Sub(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     model = C.minus([1, 2, 3], [4, 5, 6])
     verify_no_input(model, tmpdir, 'Sub_0')
 
@@ -1015,7 +1008,6 @@ def test_TransposeAxes(tmpdir):
      (((9, 10), (11, 12)), ((13, 14), (15, 16)))),
 ))
 def test_Select(flag, if_true, if_false, tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     flag = np.asarray(flag, dtype=np.float32)
     if_true = np.asarray(if_true, dtype=np.float32)
     if_false = np.asarray(if_false, dtype=np.float32)

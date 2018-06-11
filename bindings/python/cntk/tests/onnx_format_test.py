@@ -9,7 +9,6 @@ import cntk as C
 import pytest
 
 def test_load_save_constant(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     c = C.constant(value=[1,3])
     root_node = c * 5
 
@@ -27,7 +26,6 @@ def test_load_save_constant(tmpdir):
     assert np.allclose(loaded_result, expected)
 
 def test_dense_layer(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     img_shape = (1, 5, 5)
     img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=np.float32)
 
