@@ -99,6 +99,8 @@ public:
     class ChunkBase : public Chunk
     {
     public:
+        vector<vector<MLFFrameRange>> m_sequences; // Each sequence is a vector of sequential frame ranges.
+
         ChunkBase(const MLFDeserializer& deserializer, const ChunkDescriptor& descriptor, const wstring& fileName, const StateTablePtr& states)
             : m_parser(states),
             m_descriptor(descriptor),
@@ -133,50 +135,6 @@ public:
             // Make sure we do not keep unnecessary memory after sequences have been parsed.
             vector<char> tmp;
             m_buffer.swap(tmp);
-        }
-
-        vector<char> m_buffer;   // Buffer for the whole chunk
-        vector<bool> m_valid;    // Bit mask whether the parsed sequence is valid.
-        MLFUtteranceParser m_parser;
-
-        const MLFDeserializer& m_deserializer;
-        const ChunkDescriptor& m_descriptor;     // Current chunk descriptor.
-    };
-    
-    // MLF chunk when operating in sequence mode.
-    class SequenceChunk : public ChunkBase
-    {
-    public:
-        vector<vector<MLFFrameRange>> m_sequences; // Each sequence is a vector of sequential frame ranges.
-    
-        SequenceChunk(const MLFDeserializer& parent, const ChunkDescriptor& descriptor, const wstring& fileName, StateTablePtr states)
-            : ChunkBase(parent, descriptor, fileName, states)
-        {
-            m_sequences.resize(m_descriptor.Sequences().size());
-
-#pragma omp parallel for schedule(dynamic)
-            for (int i = 0; i < descriptor.Sequences().size(); ++i)
-                CacheSequence(descriptor.Sequences()[i], i);
-
-            CleanBuffer();
-        }
-
-        void CacheSequence(const SequenceDescriptor& sequence, size_t index)
-        {
-            auto start = m_buffer.data() + sequence.OffsetInChunk();
-            auto end = start + sequence.SizeInBytes();
-
-            vector<MLFFrameRange> utterance;
-            auto absoluteOffset = m_descriptor.StartOffset() + sequence.OffsetInChunk();
-            bool parsed = m_parser.Parse(boost::make_iterator_range(start, end), utterance, absoluteOffset);
-            if (!parsed) // cannot parse
-            {
-                fprintf(stderr, "WARNING: Cannot parse the utterance '%s'\n", KeyOf(sequence).c_str());
-                m_valid[index] = false;
-                return;
-            }
-
-            m_sequences[index] = move(utterance);
         }
 
         void GetSequence(size_t sequenceIndex, vector<SequenceDataPtr>& result) override
@@ -227,6 +185,51 @@ public:
 
             result.push_back(s);
         }
+
+        vector<char> m_buffer;   // Buffer for the whole chunk
+        vector<bool> m_valid;    // Bit mask whether the parsed sequence is valid.
+        MLFUtteranceParser m_parser;
+
+        const MLFDeserializer& m_deserializer;
+        const ChunkDescriptor& m_descriptor;     // Current chunk descriptor.
+    };
+    
+    // MLF chunk when operating in sequence mode.
+    class SequenceChunk : public ChunkBase
+    {
+    public:
+    
+        SequenceChunk(const MLFDeserializer& parent, const ChunkDescriptor& descriptor, const wstring& fileName, StateTablePtr states)
+            : ChunkBase(parent, descriptor, fileName, states)
+        {
+            this->m_sequences.resize(m_descriptor.Sequences().size());
+
+#pragma omp parallel for schedule(dynamic)
+            for (int i = 0; i < descriptor.Sequences().size(); ++i)
+                CacheSequence(descriptor.Sequences()[i], i);
+
+            CleanBuffer();
+        }
+
+        void CacheSequence(const SequenceDescriptor& sequence, size_t index)
+        {
+            auto start = m_buffer.data() + sequence.OffsetInChunk();
+            auto end = start + sequence.SizeInBytes();
+
+            vector<MLFFrameRange> utterance;
+            auto absoluteOffset = m_descriptor.StartOffset() + sequence.OffsetInChunk();
+            bool parsed = m_parser.Parse(boost::make_iterator_range(start, end), utterance, absoluteOffset);
+            if (!parsed) // cannot parse
+            {
+                fprintf(stderr, "WARNING: Cannot parse the utterance '%s'\n", KeyOf(sequence).c_str());
+                m_valid[index] = false;
+                return;
+            }
+
+            m_sequences[index] = move(utterance);
+        }
+
+        
     };
 
     // MLF chunk when operating in frame mode.
