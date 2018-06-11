@@ -456,6 +456,15 @@ namespace CNTK
 
                     opType = PrimitiveOpType::BatchNormalization;
                 }
+                else if (node->OperationName() == OperationNameOf(BiVfsmnNode))
+                {
+                    auto biVfsmnNode = node->As<BiVfsmnNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLOrder] = biVfsmnNode->LOrder();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameROrder] = biVfsmnNode->ROrder();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLStride] = biVfsmnNode->LStride();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRStride] = biVfsmnNode->RStride();
+                    opType = PrimitiveOpType::BiVfsmn;
+                }
                 else if (node->OperationName() == OperationNameOf(ClipNode))
                     opType = PrimitiveOpType::Clip;
                 else if (node->OperationName() == OperationNameOf(IfNode))

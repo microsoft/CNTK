@@ -4361,6 +4361,11 @@ namespace CNTK
     CNTK_API FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in operation for computing FSMN memory
+    ///
+    CNTK_API FunctionPtr BiVfsmn(const Variable& in, const Variable& lFilter, const Variable& rFilter, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operation for computing the labels to graph for input operands.
     ///
     CNTK_API FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name = L"");

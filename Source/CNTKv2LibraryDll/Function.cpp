@@ -2631,6 +2631,23 @@ namespace CNTK
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"LocalResponseNormalization", name);
     }
 
+    FunctionPtr BiVfsmn(const Variable& in, const Variable& lFilter, const Variable& rFilter,
+                        size_t lOrder, size_t rOrder, size_t lStride, size_t rStride,
+                        const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameLOrder] = lOrder;
+        additionalProperties[PrimitiveFunction::AttributeNameROrder] = rOrder;
+        additionalProperties[PrimitiveFunction::AttributeNameLStride] = lStride;
+        additionalProperties[PrimitiveFunction::AttributeNameRStride] = rStride;
+        std::vector<Variable> operands = { in, lFilter, rFilter };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BiVfsmn,
+                                            operands,
+                                            std::move(additionalProperties),
+                                            name),
+                                         name);
+    }
+
     FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand, min, max };

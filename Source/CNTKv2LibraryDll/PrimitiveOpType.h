@@ -103,6 +103,7 @@ namespace CNTK
         Cast = 91,
         EyeLikeOp = 92,
         CustomProxyOp = 93,
+        BiVfsmn = 94,
 
         // New op types should only be appended to the end of this list 
         UnknownOP

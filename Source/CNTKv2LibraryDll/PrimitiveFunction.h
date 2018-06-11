@@ -72,6 +72,7 @@ namespace CNTK
         {PrimitiveOpType::FutureValue, L"FutureValue"},
         {PrimitiveOpType::ReduceElements, L"ReduceElements"},
         {PrimitiveOpType::BatchNormalization, L"BatchNormalization"},
+        {PrimitiveOpType::BiVfsmn, L"BiVfsmn"},
         {PrimitiveOpType::Clip, L"Clip"},
         {PrimitiveOpType::Select, L"Select"},
         {PrimitiveOpType::Splice, L"Splice"},
@@ -319,6 +320,10 @@ namespace CNTK
         static const std::wstring AttributeNameDoVarianceScaling;
         static const std::wstring AttributeNameGroups;
         static const std::wstring AttributeNameCustomOp;
+        static const std::wstring AttributeNameLOrder;
+        static const std::wstring AttributeNameROrder;
+        static const std::wstring AttributeNameLStride;
+        static const std::wstring AttributeNameRStride;
 
         static const size_t convolutionOpDefaultValueForGroups = 1;
 

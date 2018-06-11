@@ -579,6 +579,15 @@ public:
                                      const size_t tPos // position
                                      );
 
+public:
+    static void ComputeBiVfsmnMemory(const CPUMatrix<ElemType>& in,      // DxT
+                                     const CPUMatrix<ElemType>& l_filter,// DxN1 TODO: +1
+                                     const CPUMatrix<ElemType>& r_filter,// DxN2
+                                     const CPUMatrix<ElemType>& flags,   // 1xT
+                                     int l_order, int r_order,
+                                     int l_stride, int r_stride,
+                                     CPUMatrix<ElemType>& out);
+
 protected:
     size_t LocateElement(const size_t i, const size_t j) const;
     size_t LocateColumn(const size_t j) const;

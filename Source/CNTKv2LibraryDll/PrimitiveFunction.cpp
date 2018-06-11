@@ -971,6 +971,12 @@ namespace CNTK
                             outputShape = BatchNormalizationOutputShape(m_inputs, spatial, true);
                             break;
                         }
+                        case PrimitiveOpType::BiVfsmn:
+                        {
+                            assert(m_inputs.size() == 7);
+                            outputShape = m_inputs[0].Shape();
+                            break;
+                        }
                         case PrimitiveOpType::GatherPacked:
                         {
                             bool sourceHasDynamicAxis = !m_inputs[0].DynamicAxes().empty();

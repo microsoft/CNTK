@@ -43,6 +43,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(AcosNode))                             return New<AcosNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(AsinNode))                             return New<AsinNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode))return New<ClassBasedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(BiVfsmnNode))                          return New<BiVfsmnNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ClassificationErrorNode))              return New<ClassificationErrorNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ClipNode))                             return New<ClipNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CosDistanceNode))                      return New<CosDistanceNode<ElemType>>(forward<_Types>(_Args)...);
@@ -561,6 +562,17 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CRF(c
     return net.AddNodeToNetAndAttachInputs(New<CRFNode<ElemType>>(net.GetDeviceId(), nodeName), { label, postDepScore, transition_score });
 }
 #endif
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BiVfsmn(const ComputationNodePtr in,
+                                                                                   const ComputationNodePtr lFilter,
+                                                                                   const ComputationNodePtr rFilter,
+                                                                                   size_t lOrder, size_t rOrder,
+                                                                                   size_t lStride, size_t rStride,
+                                                                                   const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<BiVfsmnNode<ElemType>>(net.GetDeviceId(), nodeName, lOrder, rOrder, lStride, rStride), { in, lFilter, rFilter });
+}
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DummyCriterion(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction, const std::wstring nodeName)

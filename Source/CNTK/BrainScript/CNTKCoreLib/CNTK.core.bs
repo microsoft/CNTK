@@ -647,6 +647,11 @@ BatchNormalization(input, scale, bias, runMean, runVariance, runCount=None, spat
         else _AsNodes (input : scale : bias : runMean : runVariance : runCount)
     /*plus the function args*/
 }
+BiVfsmn(in, lFilter, rFilter, lOrder, rOrder, lStride, rStride, tag='') = new ComputationNode
+[
+    operation = 'BiVfsmn'
+    inputs = _AsNodes(in : lFilter : rFilter)
+]
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = _AsNodes (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
 Clip(minValue, maxValue, x, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = _AsNodes (minValue : maxValue : x) /* plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = _AsNodes (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]

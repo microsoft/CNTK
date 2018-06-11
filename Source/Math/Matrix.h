@@ -678,6 +678,32 @@ public:
                                     Matrix<ElemType>& grd,
                                     const int startLbl, // the time 0 start symbol in the output layer
                                     const int shift);
+public:
+    static void ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // DxT
+                                     const Matrix<ElemType>& l_filter,// DxN1 TODO: +1
+                                     const Matrix<ElemType>& r_filter,// DxN2
+                                     const Matrix<ElemType>& flags,   // 1xT
+                                     int l_order, int r_order,
+                                     int l_stride, int r_stride,
+                                     Matrix<ElemType>& out);
+
+    static void ComputeBiVfsmnMemoryGradient(const Matrix<ElemType>& gradientValues,
+                                             const Matrix<ElemType>& l_filter,
+                                             const Matrix<ElemType>& r_filter,
+                                             const Matrix<ElemType>& flags,
+                                             int l_order, int r_order,
+                                             int l_stride, int r_stride,
+                                             Matrix<ElemType>& inputGradientValues);
+    static void ComputeBiVfsmnLeftFilterGradient(const Matrix<ElemType>& gradientValues,
+                                                 const Matrix<ElemType>& inputValues,
+                                                 const Matrix<ElemType>& flags,
+                                                 int l_order, int l_stride,
+                                                 Matrix<ElemType>& leftFilterGradientValues);
+    static void ComputeBiVfsmnRightFilterGradient(const Matrix<ElemType>& gradientValues,
+                                                  const Matrix<ElemType>& inputValues,
+                                                  const Matrix<ElemType>& flags,
+                                                  int r_order, int r_stride,
+                                                  Matrix<ElemType>& rightFilterGradientValues);
 
     template <typename T>
     friend class MatrixQuantizer;

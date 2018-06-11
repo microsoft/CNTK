@@ -1174,6 +1174,15 @@ namespace CNTK
 
                     break;
                 }
+                case PrimitiveOpType::BiVfsmn:
+                {
+                    size_t lOrder = functionConfig[PrimitiveFunction::AttributeNameLOrder].Value<size_t>();
+                    size_t rOrder = functionConfig[PrimitiveFunction::AttributeNameROrder].Value<size_t>();
+                    size_t lStride = functionConfig[PrimitiveFunction::AttributeNameLStride].Value<size_t>();
+                    size_t rStride = functionConfig[PrimitiveFunction::AttributeNameRStride].Value<size_t>();
+                    computationNodePtr = New<BiVfsmnNode<ElementType>>(network->GetDeviceId(), internalNodeName, lOrder, rOrder, lStride, rStride);
+                    break;
+                }
                 case PrimitiveOpType::ReduceElements:
                 {
                     bool keepDimensions = true;
