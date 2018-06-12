@@ -448,6 +448,12 @@ void AddDataElementArrayViewToTensorProto(const NDArrayViewPtr src, int srcIndex
         *(dst.mutable_float_data()->Add()) = data[srcIndex];
     }
     break;
+	case CNTK::DataType::Float16:
+    {
+        auto data = reinterpret_cast<const uint16_t*>(src->DataBuffer<float16>());
+        *(dst.mutable_int32_data()->Add()) = data[srcIndex];
+    }
+    break;
     case CNTK::DataType::Double:
     {
         auto data = src->DataBuffer<double>();
@@ -487,6 +493,8 @@ void AppendCNTKBiasWeightToONNXTensor(DType *data, const NDShape &shape, onnx::T
         int src_index = row;
         if (typeid(DType) == typeid(float))
             *(dst.mutable_float_data()->Add()) = (float)data[src_index];
+        else if (typeid(DType) == typeid(uint16_t))
+            *(dst.mutable_int32_data()->Add()) = (uint16_t)data[src_index];
         else if (typeid(DType) == typeid(double))
             *(dst.mutable_double_data()->Add()) = (double)data[src_index];
         else
@@ -500,7 +508,9 @@ void AppendCNTKBiasWeightToONNXTensor(DType *data, const NDShape &shape, onnx::T
     {
         if (typeid(DType) == typeid(float))
             *(dst.mutable_float_data()->Add()) = 0;
-        else if (typeid(DType) == typeid(double))
+        else if (typeid(DType) == typeid(uint16_t))
+            *(dst.mutable_int32_data()->Add()) = 0;
+		else if (typeid(DType) == typeid(double))
             *(dst.mutable_double_data()->Add()) = 0;
         else
             NOT_IMPLEMENTED;
@@ -555,6 +565,8 @@ void AppendCNTKWeightToONNXTensor(DType *data, const NDShape &shape, onnx::Tenso
         int src_index = LSTMWeightDimensionHiddenMultiplier * cell_size * col + row;
         if (typeid(DType) == typeid(float))
             *(dst.mutable_float_data()->Add()) = (float)(data[src_index] * stabilizer);
+        else if (typeid(DType) == typeid(uint16_t))
+            *(dst.mutable_int32_data()->Add()) = (uint16_t)(data[src_index] * stabilizer);
         else if(typeid(DType) == typeid(double))
             *(dst.mutable_double_data()->Add()) = (double)(data[src_index] * stabilizer);
         else
@@ -568,6 +580,9 @@ void SetTensorType(onnx::TensorProto& dst, CNTK::DataType dataType)
     {
     case CNTK::DataType::Float:
         dst.set_data_type(onnx::TensorProto_DataType_FLOAT);
+        break;
+	case CNTK::DataType::Float16:
+        dst.set_data_type(onnx::TensorProto_DataType_FLOAT16);
         break;
     case CNTK::DataType::Double:
         dst.set_data_type(onnx::TensorProto_DataType_DOUBLE);
@@ -605,6 +620,12 @@ void CNTKToONNXHelper::CopyTensorsWithCNTKToONNXLSTMWeightLayoutConversion(const
         case CNTK::DataType::Float:
         {
             auto data = srcTemp->DataBuffer<float>();
+            AppendCNTKWeightToONNXTensor(data, srcShape, dst, stabilizer);
+            break;
+        }
+        case CNTK::DataType::Float16:
+        {
+            auto data = reinterpret_cast<const uint16_t*>(srcTemp->DataBuffer<float16>());
             AppendCNTKWeightToONNXTensor(data, srcShape, dst, stabilizer);
             break;
         }
@@ -649,6 +670,13 @@ void CNTKToONNXHelper::CopyTensorsWithMultipliers(const std::vector<NDArrayViewP
             for (size_t index = 0; index < totalSize; index++)
                 *(dst.mutable_float_data()->Add()) = (float)(data[index] * multiplier);
 
+            break;
+        }
+        case CNTK::DataType::Float16:
+        {
+            auto data = reinterpret_cast<const uint16_t*>(srcTemp->DataBuffer<float16>());
+            for (size_t index = 0; index < totalSize; index++)
+                *(dst.mutable_int32_data()->Add()) = (uint16_t) (data[index] * multiplier);
             break;
         }
         case CNTK::DataType::Double:
@@ -697,6 +725,11 @@ void CNTKToONNXHelper::CopyRNNBiasTensors(const std::vector<NDArrayViewPtr> &src
             case CNTK::DataType::Float:
             {
                 *(dst.mutable_float_data()->Add()) = 0;
+            }
+            break;
+            case CNTK::DataType::Float16:
+            {
+                *(dst.mutable_int32_data()->Add()) = 0;
             }
             break;
             case CNTK::DataType::Double:
@@ -878,6 +911,18 @@ void CNTKToONNXHelper::CopyTensor(const NDArrayViewPtr src, onnx::TensorProto& d
             }
         break;
     }
+	case CNTK::DataType::Float16:
+	{
+		if (!inputArgType->has_tensor_type())
+			dst.set_data_type(onnx::TensorProto_DataType_FLOAT16);
+		else
+			dst.set_data_type(inputArgType->tensor_type().elem_type());
+
+		auto data = reinterpret_cast<const uint16_t*>(srcTemp->DataBuffer<float16>());
+		for (size_t index = 0; index < totalSize; index++)
+			*(dst.mutable_int32_data()->Add()) = data[index];
+		break;
+	}
     case CNTK::DataType::Double:
     {
         // TODO: ONNX data types other than float and double are
@@ -1142,6 +1187,9 @@ void CNTKToONNXHelper::UpdateONNXType(CNTK::DataType dataType, onnx::TypeProto &
     {
     case CNTK::DataType::Float:
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_FLOAT);
+        break;
+    case CNTK::DataType::Float16:
+        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_FLOAT16);
         break;
     case CNTK::DataType::Double:
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_DOUBLE);
@@ -3589,6 +3637,22 @@ void CNTKToONNXHelper::FillTensorWithScalar(const std::vector<NDArrayViewPtr> &s
         }
 
         break;
+    }
+    case CNTK::DataType::Float16:
+    {
+        for (int i = 0; i < srcs.size(); i++)
+        {
+            auto srcTemp = srcs[i]->DeepClone();
+            srcTemp->ChangeDevice(DeviceDescriptor::CPUDevice());
+            auto scalar = reinterpret_cast<const uint16_t*>(srcTemp->DataBuffer<float16>());
+
+            for (size_t index = 0; index < eachSrcSize; index++)
+            {
+                *(dst.mutable_int32_data()->Add()) = *scalar;
+            }
+        }
+
+         break;
     }
     case CNTK::DataType::Double:
     {

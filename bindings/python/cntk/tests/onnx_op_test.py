@@ -52,44 +52,52 @@ def verify_two_input(model, data1, data2, tmpdir, name):
     o1 = loaded_model.eval({loaded_model.arguments[0]:data1, loaded_model.arguments[1]:data2})
 
     assert np.allclose(o0, o1)
+
+#Shared Test Configs
+DType_Config = (np.float32, np.float16)
     
 #Abs
-def test_Abs(tmpdir):
-    shape = (4, 5)
-    data = np.random.rand(*shape).astype(np.float32)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Abs(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        shape = (4, 5)
+        data = np.random.rand(*shape).astype(dtype)
 
-    model = C.abs(data)
-    verify_no_input(model, tmpdir, 'Abs_0')
+        model = C.abs(data)
+        verify_no_input(model, tmpdir, 'Abs_0')
 
-    x = C.input_variable(shape)
-    model = C.abs(x)
+        x = C.input_variable(shape)
+        model = C.abs(x)
 
-    verify_one_input(model, data, tmpdir, 'Abs_1')
+        verify_one_input(model, data, tmpdir, 'Abs_1')
 
 #Add
-def test_Add(tmpdir):
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Add(tmpdir, dtype):
     pytest.skip('Need to support new ONNX spec.')
-    shape = (4, 5)
-    data1 = np.random.rand(*shape).astype(np.float32)
-    data2 = np.random.rand(*shape).astype(np.float32)
-    model = C.plus(data1, data2)
-    verify_no_input(model, tmpdir, 'Add_0')
+    
+    with C.default_options(dtype = dtype):
+        shape = (4, 5)
+        data1 = np.random.rand(*shape).astype(dtype)
+        data2 = np.random.rand(*shape).astype(dtype)
+        model = C.plus(data1, data2)
+        verify_no_input(model, tmpdir, 'Add_0')
 
-    x = C.input_variable(shape)
-    model = C.plus(x, data2)
+        x = C.input_variable(shape)
+        model = C.plus(x, data2)
 
-    verify_one_input(model, data1, tmpdir, 'Add_1')
+        verify_one_input(model, data1, tmpdir, 'Add_1')
 
-    y = C.input_variable(shape)
-    model = C.plus(x, y)
+        y = C.input_variable(shape)
+        model = C.plus(x, y)
 
-    verify_two_input(model, data1, data2, tmpdir, 'Add_2')
+        verify_two_input(model, data1, data2, tmpdir, 'Add_2')
 
 #And
-def test_And(tmpdir):
+def test_And(tmpdir, dtype):
     pytest.skip('Need to support new ONNX spec.')
-    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
-    data2 = np.asarray([1, 0, 1, 0], np.float32)
+    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], dtype)
+    data2 = np.asarray([1, 0, 1, 0], dtype)
 
     model = C.element_and(data1, data2)
     verify_no_input(model, tmpdir, 'And_0')
@@ -104,7 +112,7 @@ def test_And(tmpdir):
     verify_two_input(model, data1, data2, tmpdir, 'And_2')
 
 #Or
-def test_Or(tmpdir):
+def test_Or(tmpdir, dtype):
     pytest.skip('Need to support new ONNX spec.')
     data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
     data2 = np.asarray([1, 0, 1, 0], np.float32)
@@ -140,8 +148,8 @@ def test_Xor(tmpdir):
     verify_two_input(model, data1, data2, tmpdir, 'Xor_2')
 
 #Not
-def test_Not(tmpdir):
-    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
+def test_Not(tmpdir, dtype):
+    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]])
 
     model = C.element_not(data1)
     verify_no_input(model, tmpdir, 'Not_0')
@@ -152,64 +160,73 @@ def test_Not(tmpdir):
     verify_one_input(model, data1, tmpdir, 'Not_1')
 
 #ArgMax
-def test_ArgMax(tmpdir):
-    shape = (4, 5)
-    data = np.random.rand(*shape).astype(np.float32)
-    model = C.argmax(data, 0)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ArgMax(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        shape = (4, 5)
+        data = np.random.rand(*shape).astype(dtype)
+        model = C.argmax(data, 0)
 
-    verify_no_input(model, tmpdir, 'ArgMax_0')
+        verify_no_input(model, tmpdir, 'ArgMax_0')
 
-    x = C.input_variable(shape)
-    model = C.argmax(x, 0)
-    verify_one_input(model, data, tmpdir, 'ArgMax_1')
+        x = C.input_variable(shape)
+        model = C.argmax(x, 0)
+        verify_one_input(model, data, tmpdir, 'ArgMax_1')
 
 #ArgMin
-def test_ArgMin(tmpdir):
-    shape = (4, 5)
-    data = np.random.rand(*shape).astype(np.float32)
-    model = C.argmin(data, 0)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ArgMin(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        shape = (4, 5)
+        data = np.random.rand(*shape).astype(dtype)
+        model = C.argmin(data, 0)
 
-    verify_no_input(model, tmpdir, 'ArgMin_0')
+        verify_no_input(model, tmpdir, 'ArgMin_0')
 
 #AveragePool
-def test_AveragePool(tmpdir):
-    img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-    x = C.input_variable(img.shape)
-    model = C.pooling(x, C.AVG_POOLING, (2,2), (2,2))
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_AveragePool(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
+        x = C.input_variable(img.shape)
+        model = C.pooling(x, C.AVG_POOLING, (2,2), (2,2))
 
-    verify_one_input(model, img, tmpdir, 'AveragePool_1')
+        verify_one_input(model, img, tmpdir, 'AveragePool_1')
 
 #BatchNormalization
-def test_BatchNormalization(tmpdir):
-    dtype = np.float32
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_BatchNormalization(tmpdir, dtype):
+    if dtype == np.float16:
+        pytest.skip("To Be Fixed")
 
-    sample = [  # 5 samples having 4 classes
-        [1, 1, 2, 3],
-        [0, 0, 0, 0],
-        [3, 3, 4, 4],
-        [1000, 1000, 1000, 1000],
-        [10000, 10000, 10000, 10000]]
+    with C.default_options(dtype = dtype):
+        sample = [  # 5 samples having 4 classes
+            [1, 1, 2, 3],
+            [0, 0, 0, 0],
+            [3, 3, 4, 4],
+            [1000, 1000, 1000, 1000],
+            [10000, 10000, 10000, 10000]]
 
-    epsilon = 0.00001
+        epsilon = 0.00001
 
-    t = np.asarray(sample, dtype=dtype).reshape(-1,1)
-    mean = 1
-    var = 2
-    init_scale = 3
-    init_bias = 4
+        t = np.asarray(sample, dtype=dtype).reshape(-1,1)
+        mean = 1
+        var = 2
+        init_scale = 3
+        init_bias = 4
 
-    scale        = C.Parameter(init=np.asarray([init_scale], dtype=dtype), dtype=dtype)
-    bias         = C.Parameter(init=np.asarray([init_bias], dtype=dtype), dtype=dtype)
-    run_mean     = C.ops.constant(mean, shape=(1), dtype=dtype)
-    run_variance = C.ops.constant(var,  shape=(1), dtype=dtype)
-    run_count    = C.ops.constant(0,               dtype=dtype)
+        scale        = C.Parameter(init=np.asarray([init_scale], dtype=dtype), dtype=dtype)
+        bias         = C.Parameter(init=np.asarray([init_bias], dtype=dtype), dtype=dtype)
+        run_mean     = C.ops.constant(mean, shape=(1), dtype=dtype)
+        run_variance = C.ops.constant(var,  shape=(1), dtype=dtype)
+        run_count    = C.ops.constant(0,               dtype=dtype)
 
-    a = C.input_variable(shape=(1), dtype=dtype, needs_gradient=False, name='a')
+        a = C.input_variable(shape=(1), dtype=dtype, needs_gradient=False, name='a')
 
-    op_node = C.batch_normalization(a, scale, bias, run_mean, run_variance, running_count=run_count, spatial=False,
-        epsilon=epsilon)
+        op_node = C.batch_normalization(a, scale, bias, run_mean, run_variance, running_count=run_count, spatial=False,
+            epsilon=epsilon)
 
-    verify_one_input(op_node, t, tmpdir, 'BatchNormalization')
+        verify_one_input(op_node, t, tmpdir, 'BatchNormalization')
 
 # Ceil
 def test_Ceil(tmpdir):
@@ -240,52 +257,58 @@ def test_Clip(tmpdir):
     verify_one_input(model, data, tmpdir, 'clip_1')
 
 #Concat
-def test_Concat(tmpdir):
-    data1 = np.asarray([[[1, 2], [4, 5]]], dtype=np.float32)
-    x = C.constant(value=data1)
-    # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-    data2 = np.asarray([[[10, 20], 
-                         [30, 40], 
-                         [50, 60]]],dtype=np.float32)
-    y = C.constant(value=data2)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Concat(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data1 = np.asarray([[[1, 2], [4, 5]]], dtype=dtype)
+        x = C.constant(value=data1)
+        # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        data2 = np.asarray([[[10, 20], 
+                             [30, 40], 
+                             [50, 60]]],dtype=dtype)
+        y = C.constant(value=data2)
 
-    # splice both inputs on axis=0 returns a 5x2 matrix
-    model = C.splice(x, y, axis=1)
+        # splice both inputs on axis=0 returns a 5x2 matrix
+        model = C.splice(x, y, axis=1)
 
-    verify_no_input(model, tmpdir, 'Concat_0')
+        verify_no_input(model, tmpdir, 'Concat_0')
 
-    x = C.input_variable(data1.shape)
+        x = C.input_variable(data1.shape)
 
-    model = C.splice(x, y, axis=1)
+        model = C.splice(x, y, axis=1)
 
-    verify_one_input(model, data1, tmpdir, 'Concat_1')
+        verify_one_input(model, data1, tmpdir, 'Concat_1')
 
-def test_ConvTranspose(tmpdir):
-    # Keep the shapes below as they are, because this tests an earlier bug.
-    input_shape = (48, 16, 16) 
-    img = np.reshape(np.arange(np.prod(input_shape), dtype = np.float32), input_shape) 
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ConvTranspose(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        # Keep the shapes below as they are, because this tests an earlier bug.
+        input_shape = (48, 16, 16) 
+        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape) 
 
-    x = C.input_variable(input_shape)
+        x = C.input_variable(input_shape)
 
-    kernel_shape = (48, 32, 3, 3) # For convolution_transpose the shape is (I x O x W x H)
-    kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = np.float32))
+        kernel_shape = (48, 32, 3, 3) # For convolution_transpose the shape is (I x O x W x H)
+        kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = dtype))
 
-    conv_trans_model = C.convolution_transpose(kernel, x, strides=(2, 2), output_shape=(32, 32, 32), auto_padding = [False, True, True])
+        conv_trans_model = C.convolution_transpose(kernel, x, strides=(2, 2), output_shape=(32, 32, 32), auto_padding = [False, True, True])
 
-    verify_one_input(conv_trans_model, img, tmpdir, 'ConvTranspose_0')
+        verify_one_input(conv_trans_model, img, tmpdir, 'ConvTranspose_0')
 
 # DepthToSpace
-def test_DepthToSpace(tmpdir):
-    num_channels = 9
-    block_size = 3
-    image_shape = (4, 5)
-    input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=np.float32)
-    input_val = np.tile(input_val, (1,) + image_shape)
-    input_val.shape = (1,) + input_val.shape
-    img = C.input_variable((num_channels,) + image_shape, dtype=np.float32)
-    model = C.depth_to_space(img, block_size)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_DepthToSpace(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        num_channels = 9
+        block_size = 3
+        image_shape = (4, 5)
+        input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=dtype)
+        input_val = np.tile(input_val, (1,) + image_shape)
+        input_val.shape = (1,) + input_val.shape
+        img = C.input_variable((num_channels,) + image_shape, dtype=dtype)
+        model = C.depth_to_space(img, block_size)
 
-    verify_one_input(model, input_val, tmpdir, 'DepthToSpace')
+        verify_one_input(model, input_val, tmpdir, 'DepthToSpace')
 
 #Div
 def test_Div(tmpdir):
@@ -323,24 +346,28 @@ def test_Div(tmpdir):
     run_div_test(shape1, shape2, tmpdir)
 
 #Dropout
-def test_Dropout(tmpdir):
-    data = np.asarray([[10, 20],[30, 40],[50, 60]], dtype=np.float32)
-    model = C.dropout(data, 0.5)
-    verify_no_input(model, tmpdir, 'Dropout_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Dropout(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([[10, 20],[30, 40],[50, 60]], dtype=dtype)
+        model = C.dropout(data, 0.5)
+        verify_no_input(model, tmpdir, 'Dropout_0')
 
-    x = C.input_variable(data.shape)
-    model = C.dropout(x, 0.5)
-    verify_one_input(model, data, tmpdir, 'Dropout_1')
+        x = C.input_variable(data.shape)
+        model = C.dropout(x, 0.5)
+        verify_one_input(model, data, tmpdir, 'Dropout_1')
 
 #Elu
-def test_Elu(tmpdir):
-    data = np.asarray([[-1, -0.5, 0, 1, 2]], dtype=np.float32)
-    model = C.elu(data)
-    verify_no_input(model, tmpdir, 'Elu_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Elu(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([[-1, -0.5, 0, 1, 2]], dtype=dtype)
+        model = C.elu(data)
+        verify_no_input(model, tmpdir, 'Elu_0')
 
-    x = C.input_variable(data.shape)
-    model = C.elu(x)
-    verify_one_input(model, data, tmpdir, 'Elu_1')
+        x = C.input_variable(data.shape)
+        model = C.elu(x)
+        verify_one_input(model, data, tmpdir, 'Elu_1')
 
 #Equal
 def test_Equal(tmpdir):
@@ -360,15 +387,17 @@ def test_Exp(tmpdir):
     verify_one_input(model, data, tmpdir, 'Exp_1')
 
 #Flatten
-def test_Flatten(tmpdir):
-    shape = (2, 3, 4, 5)
-    data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
-    model = C.flatten(data, 1)
-    verify_no_input(model, tmpdir, 'Flatten_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Flatten(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        shape = (2, 3, 4, 5)
+        data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
+        model = C.flatten(data, 1)
+        verify_no_input(model, tmpdir, 'Flatten_0')
 
-    x = C.input_variable(data.shape)
-    model = C.flatten(x, 1)
-    verify_one_input(model, data, tmpdir, 'Flatten_1')
+        x = C.input_variable(data.shape)
+        model = C.flatten(x, 1)
+        verify_one_input(model, data, tmpdir, 'Flatten_1')
 
 #Floor
 def test_Floor(tmpdir):
@@ -500,10 +529,12 @@ def test_LayerNormalization(tmpdir):
     assert model1.shape == loaded_model.shape
 
 #LeakyRelu
-def test_LeakyRelu(tmpdir):
-    data = np.asarray([[-1, -0.5, 0, 1, 2]], dtype=np.float32)
-    model = C.leaky_relu(data)
-    verify_no_input(model, tmpdir, 'LeakyRelu_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LeakyRelu(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([[-1, -0.5, 0, 1, 2]], dtype=dtype)
+        model = C.leaky_relu(data)
+        verify_no_input(model, tmpdir, 'LeakyRelu_0')
 
 #Less
 def test_Less(tmpdir):
@@ -534,65 +565,70 @@ def test_LRN(tmpdir):
     verify_one_input(model, img, tmpdir, 'LRN_1')
 
 #LSTM
-def test_LSTM(tmpdir):
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LSTM(tmpdir, dtype):
     pytest.skip('Need to support new ONNX spec.')
-    def CreateLSTMModel(activation, 
-                        peepholes, 
-                        self_stabilization, 
-                        cell_dim, 
-                        initial_state):  
-        return C.layers.Sequential([  
-            C.layers.Recurrence(C.layers.LSTM(cell_dim,  
-                                              use_peepholes = peepholes,  
-                                              activation = activation,     
-                                              enable_self_stabilization = self_stabilization),     
-                                initial_state = initial_state) 
-            ])
+
+    with C.default_options(dtype = dtype):
+        def CreateLSTMModel(activation, 
+                            peepholes, 
+                            self_stabilization, 
+                            cell_dim, 
+                            initial_state):  
+            return C.layers.Sequential([  
+                C.layers.Recurrence(C.layers.LSTM(cell_dim,  
+                                                  use_peepholes = peepholes,  
+                                                  activation = activation,     
+                                                  enable_self_stabilization = self_stabilization),     
+                                    initial_state = initial_state) 
+                ])
 
 
-    def MakeLSTMNameFromConfig(use_peepholes, enable_self_stabilization, initial_state, activition):
-        model_name = 'LSTM.' + activition.__name__
-        if (use_peepholes):    
-            model_name += '.peephole'
-        if(enable_self_stabilization):        
-            model_name += '.stabilize'
-        if (initial_state != 0):
-            model_name += '.initial'
-        return model_name 
+        def MakeLSTMNameFromConfig(use_peepholes, enable_self_stabilization, initial_state, activition):
+            model_name = 'LSTM.' + activition.__name__
+            if (use_peepholes):    
+                model_name += '.peephole'
+            if(enable_self_stabilization):        
+                model_name += '.stabilize'
+            if (initial_state != 0):
+                model_name += '.initial'
+            return model_name 
 
-    # lstm attributes
-    use_peepholes_options = [False]
-    enable_self_stabilization_options = [False]
-    activation_options = [C.tanh]
+        # lstm attributes
+        use_peepholes_options = [False]
+        enable_self_stabilization_options = [False]
+        activation_options = [C.tanh]
 
-    #Recurrence attributes
-    initial_state_options = [0, 0.23]
+        #Recurrence attributes
+        initial_state_options = [0, 0.23]
 
-    input_dim = 2
-    cell_dim = 3
-    batch_size = 1
-    sequence_len = 5
+        input_dim = 2
+        cell_dim = 3
+        batch_size = 1
+        sequence_len = 5
 
-    for config in list(product(use_peepholes_options, enable_self_stabilization_options, 
-                               initial_state_options, activation_options)):
-        model_filename = MakeLSTMNameFromConfig(*config)
-        use_peepholes, enable_self_stabilization, initial_state, activation =  config
+        for config in list(product(use_peepholes_options, enable_self_stabilization_options, 
+                                   initial_state_options, activation_options)):
+            model_filename = MakeLSTMNameFromConfig(*config)
+            use_peepholes, enable_self_stabilization, initial_state, activation =  config
     
-        x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
-        LSTMmodel = CreateLSTMModel(peepholes = use_peepholes,   
-                                    activation = activation,
-                                    initial_state = initial_state,
-                                    cell_dim = cell_dim,
-                                    self_stabilization = enable_self_stabilization)(x)
-        data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
-        verify_one_input(LSTMmodel, data, tmpdir, model_filename)
+            x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
+            LSTMmodel = CreateLSTMModel(peepholes = use_peepholes,   
+                                        activation = activation,
+                                        initial_state = initial_state,
+                                        cell_dim = cell_dim,
+                                        self_stabilization = enable_self_stabilization)(x)
+            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+            verify_one_input(LSTMmodel, data, tmpdir, model_filename)
 
 #MatMul
-def test_MatMul(tmpdir):
-    data0 = np.asarray([[1,2],[3,4]], dtype=np.float32)
-    data1 = np.asarray([[5],[6]], dtype=np.float32)
-    model = C.times(data0, data1)
-    verify_no_input(model, tmpdir, 'MatMul_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MatMul(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data0 = np.asarray([[1,2],[3,4]], dtype=dtype)
+        data1 = np.asarray([[5],[6]], dtype=dtype)
+        model = C.times(data0, data1)
+        verify_no_input(model, tmpdir, 'MatMul_0')
 
 #Max
 def test_Max(tmpdir):
@@ -639,15 +675,17 @@ def test_MaxRoiPool(tmpdir):
     verify_two_input(model, conv_input, roi_input, tmpdir, 'MaxRoiPool_1')
 
 #Mean
-def test_Mean(tmpdir):
-    in1 = C.input_variable((4,))
-    in2 = C.input_variable((4,))
-    model = C.mean([in1, in2])
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Mean(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        in1 = C.input_variable((4,))
+        in2 = C.input_variable((4,))
+        model = C.mean([in1, in2])
 
-    in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
-    in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
+        in1_data = np.asarray([[1., 2., 3., 4.]], dtype = dtype)
+        in2_data = np.asarray([[0., 5., -3., 2.]], dtype = dtype)
 
-    verify_two_input(model, in1_data, in2_data, tmpdir, 'Mean_2')
+        verify_two_input(model, in1_data, in2_data, tmpdir, 'Mean_2')
     
 #MeanVarianceNormalization
 def test_MeanVarianceNormalization(tmpdir):
@@ -715,17 +753,19 @@ def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, r
     verify_one_input(f, s, tmpdir, model_filename)
 
 #Pad
-def test_Pad(tmpdir):
-    shape = (4, 5)
-    data = np.random.rand(*shape).astype(np.float32)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Pad(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        shape = (4, 5)
+        data = np.random.rand(*shape).astype(dtype)
 
-    model = C.pad(data, pattern=[(1,1),(2,2)], mode=C.ops.CONSTANT_PAD, constant_value=1)
-    verify_no_input(model, tmpdir, 'Pad_0')
+        model = C.pad(data, pattern=[(1,1),(2,2)], mode=C.ops.CONSTANT_PAD, constant_value=1)
+        verify_no_input(model, tmpdir, 'Pad_0')
 
-    x = C.input_variable(shape)
-    model = C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.REFLECT_PAD)
+        x = C.input_variable(shape)
+        model = C.pad(x, pattern=[(1,1),(2,2)], mode=C.ops.REFLECT_PAD)
 
-    verify_one_input(model, data, tmpdir, 'Pad_1')
+        verify_one_input(model, data, tmpdir, 'Pad_1')
 
 #PRelu
 #def test_PRelu(tmpdir):
@@ -801,93 +841,100 @@ def test_ReduceSum(tmpdir):
     verify_no_input(model, tmpdir, 'ReduceSum_0')
 
 #Relu
-def test_Relu(tmpdir):
-    data = [[-1, -0.5, 0, 1, 2]]
-    model = C.relu([[-1, -0.5, 0, 1, 2]])
-    verify_no_input(model, tmpdir, 'Relu_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Relu(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[-1, -0.5, 0, 1, 2]], dtype = dtype)
+        model = C.relu(data)
+        verify_no_input(model, tmpdir, 'Relu_0')
 
 #Reshape
-def test_Reshape(tmpdir):
-    data = np.asarray([[[[0., 1.],[2., 3.],[4., 5.]]]], dtype=np.float32)
-    i1 = C.input_variable(shape=(3,2))
-    model = C.reshape(i1, (2,3))
-    verify_one_input(model, data, tmpdir, 'Reshape_1')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Reshape(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([[[[0., 1.],[2., 3.],[4., 5.]]]], dtype=dtype)
+        i1 = C.input_variable(shape=(3,2))
+        model = C.reshape(i1, (2,3))
+        verify_one_input(model, data, tmpdir, 'Reshape_1')
 
 #RNN
-def test_RNN(tmpdir):
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_RNN(tmpdir, dtype):
     pytest.skip('Need to support new ONNX spec.')
-    def CreatRNN(cell_dim, 
-                 activation, 
-                 initial_state,
-                 direction, 
-                 num_layers, 
-                 init=C.default_override_or(C.glorot_uniform()), 
-                 init_bias=C.default_override_or(0)):
-        if direction == 'bidirectional':  
-            return C.layers.Sequential([  
-                C.layers.For(range(num_layers), lambda i: [  
-                    (C.layers.Recurrence(C.layers.RNNStep(cell_dim, 
-                                                          activation = activation,    
-                                                          init = init,   
-                                                          init_bias = init_bias),  
-                                initial_state = initial_state,  
-                                return_full_state = False, go_backwards=False),   
-                     C.layers.Recurrence(C.layers.RNNStep(cell_dim, activation = activation,   
-                                    init = init,  
-                                    init_bias = init_bias), 
-                                initial_state = initial_state,  
-                                return_full_state = False, go_backwards=True)),   
-                    C.splice])])
-        else:
-            go_backward = False if direction == 'forward' else True
-            return C.layers.Sequential([ 
-                C.layers.For(range(num_layers), lambda i: [ 
-                    C.layers.Recurrence(C.layers.RNNStep(cell_dim, 
-                                                         activation = activation,   
-                                    init = init,  
-                                    init_bias = init_bias),  
-                                initial_state = initial_state,  
-                                return_full_state = False, go_backwards=go_backward)])])
 
-    def MakeRNNNameFromConfig(direction, num_layers, initial_state, activition):
-        model_name = 'RNN.' + direction + '.'
+    with C.default_options(dtype = dtype):
+        def CreatRNN(cell_dim, 
+                     activation, 
+                     initial_state,
+                     direction, 
+                     num_layers, 
+                     init=C.default_override_or(C.glorot_uniform()), 
+                     init_bias=C.default_override_or(0)):
+            if direction == 'bidirectional':  
+                return C.layers.Sequential([  
+                    C.layers.For(range(num_layers), lambda i: [  
+                        (C.layers.Recurrence(C.layers.RNNStep(cell_dim, 
+                                                              activation = activation,    
+                                                              init = init,   
+                                                              init_bias = init_bias),  
+                                    initial_state = initial_state,  
+                                    return_full_state = False, go_backwards=False),   
+                         C.layers.Recurrence(C.layers.RNNStep(cell_dim, activation = activation,   
+                                        init = init,  
+                                        init_bias = init_bias), 
+                                    initial_state = initial_state,  
+                                    return_full_state = False, go_backwards=True)),   
+                        C.splice])])
+            else:
+                go_backward = False if direction == 'forward' else True
+                return C.layers.Sequential([ 
+                    C.layers.For(range(num_layers), lambda i: [ 
+                        C.layers.Recurrence(C.layers.RNNStep(cell_dim, 
+                                                             activation = activation,   
+                                        init = init,  
+                                        init_bias = init_bias),  
+                                    initial_state = initial_state,  
+                                    return_full_state = False, go_backwards=go_backward)])])
 
-        if num_layers == 1:
-            model_name += 'one_layer.'
-        else:
-            assert (num_layers == 2), "needs 1 or 2 layers!"
-            model_name += 'two_layer.'
+        def MakeRNNNameFromConfig(direction, num_layers, initial_state, activition):
+            model_name = 'RNN.' + direction + '.'
 
-        if (initial_state != 0):
-            model_name += 'initial.'
+            if num_layers == 1:
+                model_name += 'one_layer.'
+            else:
+                assert (num_layers == 2), "needs 1 or 2 layers!"
+                model_name += 'two_layer.'
+
+            if (initial_state != 0):
+                model_name += 'initial.'
         
-        model_name += activition.__name__
-        return model_name 
+            model_name += activition.__name__
+            return model_name 
 
-    direction_options = ['forward', 'reverse', 'bidirectional']
-    num_layers_options = [1, 2]
-    initial_state_options = [0]
-    activation_options = [C.tanh, C.relu, C.sigmoid]
+        direction_options = ['forward', 'reverse', 'bidirectional']
+        num_layers_options = [1, 2]
+        initial_state_options = [0]
+        activation_options = [C.tanh, C.relu, C.sigmoid]
 
-    input_dim = 2
-    hidden_dim = 3
-    batch_size = 1
-    sequence_len = 5
+        input_dim = 2
+        hidden_dim = 3
+        batch_size = 1
+        sequence_len = 5
 
-    for config in list(product(direction_options, num_layers_options, initial_state_options, activation_options)):
-        model_filename = MakeRNNNameFromConfig(*config)
-        print(model_filename)
-        direction, num_layers, initial_state, activation = config
+        for config in list(product(direction_options, num_layers_options, initial_state_options, activation_options)):
+            model_filename = MakeRNNNameFromConfig(*config)
+            print(model_filename)
+            direction, num_layers, initial_state, activation = config
     
-        x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
-        RNNModel = CreatRNN(
-            hidden_dim, 
-            activation,  
-            initial_state, 
-            direction, 
-            num_layers)(x)
-        data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
-        verify_one_input(RNNModel, data, tmpdir, model_filename)
+            x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
+            RNNModel = CreatRNN(
+                hidden_dim, 
+                activation,  
+                initial_state, 
+                direction, 
+                num_layers)(x)
+            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype(dtype)
+            verify_one_input(RNNModel, data, tmpdir, model_filename)
 
 #Selu
 def test_Selu(tmpdir):
@@ -936,28 +983,32 @@ def test_Softsign(tmpdir):
 #    verify_one_input(model, x0, tmpdir, 'Squeeze_0')
 
 #Sum
-def test_Sum(tmpdir):
-    in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
-    in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Sum(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        in1_data = np.asarray([[1., 2., 3., 4.]], dtype = dtype)
+        in2_data = np.asarray([[0., 5., -3., 2.]], dtype = dtype)
 
-    in1 = C.input_variable(np.shape(in1_data))
-    in2 = C.input_variable(np.shape(in2_data))
-    model = C.sum([in1, in2])
+        in1 = C.input_variable(np.shape(in1_data))
+        in2 = C.input_variable(np.shape(in2_data))
+        model = C.sum([in1, in2])
 
-    verify_two_input(model, in1_data, in2_data, tmpdir, 'Sum_2')
+        verify_two_input(model, in1_data, in2_data, tmpdir, 'Sum_2')
 
 # SpaceToDepth
-def test_SpaceToDepth(tmpdir):
-    num_channels = 3
-    block_size = 3
-    image_shape = (12, 15)
-    input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=np.float32)
-    input_val = np.tile(input_val, (1,) + image_shape)
-    input_val.shape = (1,) + input_val.shape
-    img = C.input_variable((num_channels,) + image_shape, dtype=np.float32)
-    model = C.space_to_depth(img, block_size)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_SpaceToDepth(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        num_channels = 3
+        block_size = 3
+        image_shape = (12, 15)
+        input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=dtype)
+        input_val = np.tile(input_val, (1,) + image_shape)
+        input_val.shape = (1,) + input_val.shape
+        img = C.input_variable((num_channels,) + image_shape, dtype=dtype)
+        model = C.space_to_depth(img, block_size)
 
-    verify_one_input(model, input_val, tmpdir, 'SpaceToDepth')
+        verify_one_input(model, input_val, tmpdir, 'SpaceToDepth')
 
 #Sqrt
 def test_Sqrt(tmpdir):
@@ -971,23 +1022,28 @@ def test_Sub(tmpdir):
     verify_no_input(model, tmpdir, 'Sub_0')
 
 #Tanh
-def test_Tanh(tmpdir):
-    model = C.tanh([[1,2],[3,4]])
-    verify_no_input(model, tmpdir, 'Tanh_0')
+
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Tanh(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.tanh([[1,2],[3,4]])
+        verify_no_input(model, tmpdir, 'Tanh_0')
 
 #Transpose
-def test_Transpose(tmpdir):
-    data = np.arange(24).reshape(2,3,4).astype('f')
-    x = C.input_variable(np.shape(data))
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Transpose(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.arange(24).reshape(2,3,4).astype(dtype)
+        x = C.input_variable(np.shape(data))
 
-    model = C.transpose(data, perm=(2, 0, 1))
-    verify_no_input(model, tmpdir, 'Transpose_0')
+        model = C.transpose(data, perm=(2, 0, 1))
+        verify_no_input(model, tmpdir, 'Transpose_0')
 
-    model = C.transpose(x, perm=(2, 0, 1))
-    verify_one_input(model, data, tmpdir, 'Transpose_1')
+        model = C.transpose(x, perm=(2, 0, 1))
+        verify_one_input(model, data, tmpdir, 'Transpose_1')
 
-    model = C.transpose(x, perm=(0, 2, 1))
-    verify_one_input(model, data, tmpdir, 'Transpose_1_2')
+        model = C.transpose(x, perm=(0, 2, 1))
+        verify_one_input(model, data, tmpdir, 'Transpose_1_2')
 
 #Transpose
 def test_TransposeAxes(tmpdir):

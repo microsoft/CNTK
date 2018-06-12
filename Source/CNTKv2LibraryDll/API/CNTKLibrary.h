@@ -123,6 +123,8 @@ namespace CNTK
             return DataType::Int8;
         else if (std::is_same<ElementType, int16_t>())
             return DataType::Int16;
+		else if (std::is_same<ElementType, uint16_t>())
+            return DataType::Float16;
         else
             NOT_IMPLEMENTED;
     }
