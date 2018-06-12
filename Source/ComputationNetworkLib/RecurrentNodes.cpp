@@ -334,6 +334,7 @@ template<class ElemType, int direction>
     size_t rank = DetermineElementwiseTensorRank();
     TensorView<ElemType> src;
     int t_delayed = (int)(fr.t() + direction * m_timeStep); // this might end up outside the current window
+    int latency = direction * m_pMBLayout->RightSplice();
     if (t_delayed < 0) // handle special case of truncated BPTT
     {
         if (!m_inputAnySeqValid[fr.t()])
@@ -352,12 +353,22 @@ template<class ElemType, int direction>
                 tensorShape = TensorShape(dims);
             }
 
-            auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + T_delayedActivation), m_delayedActivationMBLayout);
+            auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + latency + T_delayedActivation), m_delayedActivationMBLayout);
             tensorShape.NarrowTo(slice);
             src = TensorView<ElemType>(m_delayedValue, tensorShape);
         }
         else
-            LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
+        {
+            if (m_pMBLayout->RightSplice() > 0)
+            {
+                // init using inititalMatrix zero init for latency control blstm
+                src = TensorView<ElemType>(m_zeroMatrix, TensorShape(1));
+            }
+            else
+            {
+                LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
+            }
+        }
     }
     else if (t_delayed >= GetNumTimeSteps())
     {
