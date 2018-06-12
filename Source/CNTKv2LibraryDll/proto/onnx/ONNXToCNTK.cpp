@@ -39,10 +39,11 @@ private:
     static Constant CreateConstant(const Node *node, const DeviceDescriptor &computeDevice);
     static Constant CreateConstant(const onnx::TensorProto &valueProto, const std::string &nodeName,
                                    const DeviceDescriptor &computeDevice);
-    template <typename T>
+    template<typename TDst, typename TSrc>
     static const CNTK::Constant CreateConstantWithTensorData(CNTK::NDShape &shape, onnx::TensorProto_DataType tensorProtoDataType,
-        CNTK::DataType cntkDataType, const T *srcData, CNTK::NDShape &reversedShape, 
+        CNTK::DataType cntkDataType, const TSrc *srcData, CNTK::NDShape &reversedShape, 
         const CNTK::DeviceDescriptor &computeDevice, const std::string &nodeName);
+
     static Variable CreateLeafVariableOrConstant(const NodeArg *nodeArg, const Node *parentNode, const Graph *graph,
                                                  const DeviceDescriptor &computeDevice);
     static std::vector<Variable> CreateRNNLeafVariableOrConstant(const NodeArg *nodeArg,
@@ -258,6 +259,8 @@ CNTK::DataType ONNXToCNTKHelper::FromONNXType(onnx::TypeProto type)
     case onnx::TensorProto_DataType_BOOL:
     case onnx::TensorProto_DataType_FLOAT:
         return CNTK::DataType::Float;
+    case onnx::TensorProto_DataType_FLOAT16:
+        return CNTK::DataType::Float16;
     case onnx::TensorProto_DataType_DOUBLE:
         return CNTK::DataType::Double;
         break;
@@ -403,7 +406,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
             srcFloatData[i] = srcData[i];
         delete[] srcData;
 
-        return CreateConstantWithTensorData<float>(shape, tensorProtoDataType, CNTK::DataType::Float,
+        return CreateConstantWithTensorData<float, float>(shape, tensorProtoDataType, CNTK::DataType::Float,
             &srcFloatData[0], reversedShape, computeDevice, nodeName);
     }
     break;
@@ -417,7 +420,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
         for (int i = 0; i < shape.TotalSize(); i++)
             srcFloatData[i] = srcData[i];
 
-        return CreateConstantWithTensorData<float>(shape, tensorProtoDataType, CNTK::DataType::Float,
+        return CreateConstantWithTensorData<float, float>(shape, tensorProtoDataType, CNTK::DataType::Float,
             &srcFloatData[0], reversedShape, computeDevice, nodeName);
     }
     break;
@@ -431,7 +434,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
         for (int i = 0; i < shape.TotalSize(); i++)
             srcFloatData[i] = srcData[i];
 
-        return CreateConstantWithTensorData<float>(shape, tensorProtoDataType, CNTK::DataType::Float,
+        return CreateConstantWithTensorData<float, float> (shape, tensorProtoDataType, CNTK::DataType::Float,
             &srcFloatData[0], reversedShape, computeDevice, nodeName);
     }
     break;
@@ -442,8 +445,19 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
             RetrieveRawDataAsFloat(valueProto);
         }
 
-        return CreateConstantWithTensorData<float>(shape, tensorProtoDataType, CNTK::DataType::Float,
+        return CreateConstantWithTensorData<float, float>(shape, tensorProtoDataType, CNTK::DataType::Float,
             &(valueProto.float_data()[0]), reversedShape, computeDevice, nodeName);
+    }
+    break;
+    case TensorProto_DataType_FLOAT16:
+    {
+        if (valueProto.int32_data().empty())
+        {
+            NOT_IMPLEMENTED;
+        }
+
+        return CreateConstantWithTensorData<uint16_t, int>(shape, tensorProtoDataType, CNTK::DataType::Float16,
+            &(valueProto.int32_data()[0]), reversedShape, computeDevice, nodeName);
     }
     break;
     case TensorProto_DataType_DOUBLE:
@@ -454,7 +468,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
             RetrieveRawDataAsDouble(valueProto);
         }
 
-        return CreateConstantWithTensorData<double>(shape, tensorProtoDataType, CNTK::DataType::Double,
+        return CreateConstantWithTensorData<double, double>(shape, tensorProtoDataType, CNTK::DataType::Double,
             &(valueProto.double_data()[0]), reversedShape, computeDevice, nodeName);
     }
     break;
@@ -463,12 +477,49 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     }
 }
 
-template <typename T>
+template<typename T>
+void CopyFromProto(const onnx::TensorProto &src, T &dst, vector<int> &srcIndexRange, int dstIndex)
+{
+    dst[dstIndex] = 0;
+    auto dtype = src.data_type();
+    if (dtype == onnx::TensorProto_DataType_FLOAT16)
+    {
+        for (int i = 0; i < srcIndexRange.size(); i++)
+        {
+            dst[dstIndex] += src.int32_data()[srcIndexRange[i]];
+        }
+    }
+    else
+    {
+        for (int i = 0; i < srcIndexRange.size(); i++)
+        {
+            dst[dstIndex] += src.float_data()[srcIndexRange[i]];
+        }
+    }
+
+}
+
+template<typename T>
+void CopyFromProto(const onnx::TensorProto &src, T &dst, int srcIndex, int dstIndex)
+{
+    auto dtype = src.data_type();
+    if (dtype == onnx::TensorProto_DataType_FLOAT16)
+    {
+        dst[dstIndex] = src.int32_data()[srcIndex];
+    }
+    else
+    {
+        dst[dstIndex] = src.float_data()[srcIndex];
+    }
+}
+
+
+template <typename TDst, typename TSrc>
 const CNTK::Constant CNTK::ONNXToCNTKHelper::CreateConstantWithTensorData(CNTK::NDShape &shape, onnx::TensorProto_DataType tensorProtoDataType, 
-    CNTK::DataType cntkDataType, const T *srcData, CNTK::NDShape &reversedShape, const CNTK::DeviceDescriptor &computeDevice, const std::string &nodeName)
+    CNTK::DataType cntkDataType, const TSrc *srcData, CNTK::NDShape &reversedShape, const CNTK::DeviceDescriptor &computeDevice, const std::string &nodeName)
 {
     auto totalSize = shape.TotalSize();
-    T *data = new T[totalSize];
+    TDst *data = new TDst[totalSize];
 
     if (shape.Rank() <= 2)
     {
@@ -498,7 +549,7 @@ const CNTK::Constant CNTK::ONNXToCNTKHelper::CreateConstantWithTensorData(CNTK::
     }
 
     NDArrayViewPtr dstFinal(new NDArrayView(cntkDataType, reversedShape, &data[0],
-                                            totalSize * sizeof(T), computeDevice.CPUDevice()));
+                                            totalSize * sizeof(TDst), computeDevice.CPUDevice()));
 
     if (computeDevice.Type() == DeviceKind::CPU)
     {
@@ -637,7 +688,8 @@ Constant CreateConstantWithRawData(DType *data, const NDShape &shape, const std:
     }
 }
 
-std::vector<Variable> CreateRNNConstant(
+template<typename DType>
+std::vector<Variable> CreateRNNConstantHelper(
     const Node *parentNode, int index, const std::string &name, const onnx::TensorProto &valueProto, const DeviceDescriptor &computeDevice)
 {
     std::vector<Variable> inputs;
@@ -674,14 +726,14 @@ std::vector<Variable> CreateRNNConstant(
         case LSTMInputIndexW:
         case LSTMInputIndexH:
             // W, R:
-            {
-                // see ONNX spec for the tensor shape
-                int num_directions = valueProto.dims(0);
-                size_t rows = valueProto.dims(1);
-                size_t cols = valueProto.dims(2);
+        {
+            // see ONNX spec for the tensor shape
+            int num_directions = valueProto.dims(0);
+            size_t rows = valueProto.dims(1);
+            size_t cols = valueProto.dims(2);
 
-                // CNTK cpp requires shape being (input_size, 4 * hidden_size)
-                NDShape weightShape({rows, cols});
+            // CNTK cpp requires shape being (input_size, 4 * hidden_size)
+            NDShape weightShape({ rows, cols });
 
                 int input_size = cols;
                 int cell_size = rows / 4;
@@ -692,82 +744,85 @@ std::vector<Variable> CreateRNNConstant(
                     int totalSizePerDirection = rows * cols;
                     
                     // TODO: what about double?
-                    float *data = new float[totalSizePerDirection];
+                    DType *data = new DType[totalSizePerDirection];
                     for (size_t count = 0; count < totalSizePerDirection; count++)
                     {
                         int row = count / input_size;
                         int col = count % input_size;
                         int block = row / cell_size;
 
-                        if (block == 1)
-                        {
-                            // o
-                            row += cell_size * 2;
-                        }
-                        else if (block == 3)
-                        {
-                            // c
-                            row -= cell_size * 2;
-                        }
-
-                        int sourceIndex = dir * totalSizePerDirection + count;
-                        int targetIndex = col * cell_size * 4 + row;
-                        data[targetIndex] = valueProto.float_data()[sourceIndex];
+                    if (block == 1)
+                    {
+                        // o
+                        row += cell_size * 2;
+                    }
+                    else if (block == 3)
+                    {
+                        // c
+                        row -= cell_size * 2;
                     }
 
-                    Constant constant = CreateConstantWithRawData(&data[0], weightShape, nodeName, computeDevice);
-                    inputs.push_back(constant);
+                    int sourceIndex = dir * totalSizePerDirection + count;
+                    int targetIndex = col * cell_size * 4 + row;
+                    CopyFromProto(valueProto, data, sourceIndex, targetIndex);
                 }
-                return inputs;
+
+                Constant constant = CreateConstantWithRawData(&data[0], weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
             }
+            return inputs;
+        }
         case LSTMInputIndexB:
             // B
+        {
+            // see ONNX spec for the tensor shape
+            int num_directions = valueProto.dims(0);
+            int cell_size = valueProto.dims(1) / 8;
+            // there is an ONNX spec issue with bias input. It states that
+            // "This tensor has shape `[num_directions, 8*hidden_size]", which means
+            // hidden and input are applied with bias separately after weight.
+            // In CNTK, bias is be applied in fused form, after hidden and input
+            // are element-wise added. In this case
+            // the bias shape is [num_directions, 4*hidden_size]
+            NDShape weightShape({ (size_t)(4 * cell_size) });
+            for (int dir = 0; dir < num_directions; dir++)
             {
-                // see ONNX spec for the tensor shape
-                int num_directions = valueProto.dims(0);
-                int cell_size = valueProto.dims(1) / 8;
-                // there is an ONNX spec issue with bias input. It states that
-                // "This tensor has shape `[num_directions, 8*hidden_size]", which means
-                // hidden and input are applied with bias separately after weight.
-                // In CNTK, bias is be applied in fused form, after hidden and input
-                // are element-wise added. In this case
-                // the bias shape is [num_directions, 4*hidden_size]
-                NDShape weightShape({(size_t)(4 * cell_size)});
-                for (int dir = 0; dir < num_directions; dir++)
+                std::string nodeName = name + std::string(1, (char)('0' + dir)) + LSTMInputBiasNameHint;
+                int totalSizePerDirection = 4 * cell_size;
+                DType *data = new DType[totalSizePerDirection];
+                for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
                 {
-                    std::string nodeName = name + std::string(1, (char) ('0' + dir)) + LSTMInputBiasNameHint;
-                    int totalSizePerDirection = 4 * cell_size;
-                    float *data = new float[totalSizePerDirection];
-                    for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
+                    int row = targetIndex;
+
+                    // TODO: specific to LSTM. icfo (CNTK) to iofc(ONNX)
+                    int block = row / cell_size;
+                    if (block == 1)
                     {
-                        int row = targetIndex;
-
-                        // TODO: specific to LSTM. icfo (CNTK) to iofc(ONNX)
-                        int block = row / cell_size;
-                        if (block == 1)
-                        {
-                            // c
-                            row += 2 * cell_size;
-                        }
-                        else if (block == 3)
-                        {
-                            // o
-                            row -= 2 * cell_size;
-                        }
-
-                        // source is column major
-                        int src_index = row;
-                        // "fuse"
-                        data[targetIndex] =
-                            valueProto.float_data()[dir * 2 * totalSizePerDirection + src_index] +
-                            valueProto.float_data()[dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index];
+                        // c
+                        row += 2 * cell_size;
+                    }
+                    else if (block == 3)
+                    {
+                        // o
+                        row -= 2 * cell_size;
                     }
 
-                    Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
-                    inputs.push_back(constant);
+                    // source is column major
+                    int src_index = row;
+
+                    // "fuse"
+                    vector<int> srcIndexRange = {
+                        dir * 2 * totalSizePerDirection + src_index,
+                        dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index };
+
+                    CopyFromProto(valueProto, data, srcIndexRange, targetIndex);
                 }
-                return inputs;
+
+                Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
             }
+            return inputs;
+        }
         case LSTMInputIndexSequenceLens:
             // sequence length is treated as free dimension
             return inputs;
@@ -786,19 +841,19 @@ std::vector<Variable> CreateRNNConstant(
             // In CNTK, bias is be applied in fused form, after hidden and input
             // are element-wise added. In this case
             // the bias shape is [num_directions, 4*hidden_size]
-            NDShape weightShape({(size_t)(cell_size)});
+            NDShape weightShape({ (size_t)(cell_size) });
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + std::string(1, (char) ('0' + dir));
+                std::string nodeName = name + std::string(1, (char)('0' + dir));
                 if (index == 5)
                     nodeName += LSTMInputInitialHNameHint;
                 else
                     nodeName += LSTMInputInitialCNameHint;
 
-                float *data = new float[cell_size];
+                DType *data = new DType[cell_size];
                 for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
                 {
-                    data[targetIndex] = valueProto.float_data()[dir * cell_size + targetIndex];
+                    CopyFromProto(valueProto, data, dir * cell_size + targetIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
@@ -809,26 +864,27 @@ std::vector<Variable> CreateRNNConstant(
         break;
         case LSTMInputIndexP:
             // P
-            {
-                int num_directions = valueProto.dims(0);
-                int cell_size = valueProto.dims(1) / 3;
-                for (int dir = 0; dir < num_directions; dir++)
-                    for (int i = 0; i < 3; i++)
-                    {
-                        std::string nodeName = name + ((i == 0) ? "_i" : ((i == 1) ? "_o" : "_f")) +
-                                               std::string(1, (char) ('0' + dir)) + LSTMInputPeepholeNameHint;
-                        float *data = new float[cell_size];
-                        NDShape weightShape({(size_t)(cell_size)});
-                        for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
-                        {
-                            data[targetIndex] = valueProto.float_data()[(dir * 3 + i) * cell_size + targetIndex];
-                        }
+        {
+            int num_directions = valueProto.dims(0);
+            int cell_size = valueProto.dims(1) / 3;
+            for (int dir = 0; dir < num_directions; dir++)
+                for (int i = 0; i < 3; i++)
+                {
+                    std::string nodeName = name + ((i == 0) ? "_i" : ((i == 1) ? "_o" : "_f")) +
+                        std::string(1, (char)('0' + dir)) + LSTMInputPeepholeNameHint;
 
-                        Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
-                        inputs.push_back(constant);
+                    DType *data = new DType[cell_size];
+                    NDShape weightShape({ (size_t)(cell_size) });
+                    for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
+                    {
+                        CopyFromProto(valueProto, data, (dir * 3 + i) * cell_size + targetIndex, targetIndex);
                     }
-                return inputs;
-            }
+
+                    Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
+                    inputs.push_back(constant);
+                }
+            return inputs;
+        }
         default:
             CNTK::LogicError("CreateRNNConstant received unexpected index: %d", index);
         }
@@ -849,25 +905,26 @@ std::vector<Variable> CreateRNNConstant(
             size_t cols = valueProto.dims(2);
 
             // CNTK cpp requires shape: (input_size, 3 * hidden_size)
-            NDShape weightShape({rows, cols});
+            NDShape weightShape({ rows, cols });
 
             int input_size = cols;
             int cell_size = rows / 3;
 
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + "_W_" + (char) ('0' + dir);
+                std::string nodeName = name + "_W_" + (char)('0' + dir);
                 int totalSizePerDirection = rows * cols;
 
                 // TODO: what about double?
-                float *data = new float[totalSizePerDirection];
+                DType *data = new DType[totalSizePerDirection];
                 for (size_t count = 0; count < totalSizePerDirection; count++)
                 {
                     int row = count / input_size;
                     int col = count % input_size;
                     int sourceIndex = dir * totalSizePerDirection + count;
                     int targetIndex = col * cell_size * GRUWeightDimensionHiddenMultiplier + row;
-                    data[targetIndex] = valueProto.float_data()[sourceIndex];
+
+                    CopyFromProto(valueProto, data, sourceIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(&data[0], weightShape, nodeName, computeDevice);
@@ -885,18 +942,18 @@ std::vector<Variable> CreateRNNConstant(
             int input_size = cols;
             int cell_size = rows / 3;
 
-            NDShape hShape({(size_t) cell_size * 2, (size_t) input_size});
-            NDShape h1Shape({(size_t) cell_size, (size_t) input_size});
+            NDShape hShape({ (size_t)cell_size * 2, (size_t)input_size });
+            NDShape h1Shape({ (size_t)cell_size, (size_t)input_size });
 
             inputs.resize(num_directions * 2);
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string hNodeName = name + "_H_" + (char) ('0' + dir);
-                std::string h1NodeName = name + "_H1_" + (char) ('0' + dir);
+                std::string hNodeName = name + "_H_" + (char)('0' + dir);
+                std::string h1NodeName = name + "_H1_" + (char)('0' + dir);
                 int totalSizePerDirection = rows * cols;
 
-                float *hData = new float[hShape.TotalSize()];
-                float *h1Data = new float[h1Shape.TotalSize()];
+                DType *hData = new DType[hShape.TotalSize()];
+                DType *h1Data = new DType[h1Shape.TotalSize()];
                 for (size_t count = 0; count < totalSizePerDirection; count++)
                 {
                     int row = count / input_size;
@@ -906,12 +963,14 @@ std::vector<Variable> CreateRNNConstant(
                     if (block < CNTKGRUZRWeightMultiplier)
                     {
                         int targetIndex = col * cell_size * CNTKGRUZRWeightMultiplier + row;
-                        hData[targetIndex] = valueProto.float_data()[sourceIndex];
+
+                        CopyFromProto(valueProto, hData, sourceIndex, targetIndex);
                     }
                     else
                     {
                         int targetIndex = col * cell_size + row - cell_size * CNTKGRUZRWeightMultiplier;
-                        h1Data[targetIndex] = valueProto.float_data()[sourceIndex];
+
+                        CopyFromProto(valueProto, h1Data, sourceIndex, targetIndex);
                     }
                 }
 
@@ -924,34 +983,37 @@ std::vector<Variable> CreateRNNConstant(
         }
         case GRUInputIndexB:
             // B
+        {
+            // see ONNX spec for the tensor shape
+            int num_directions = valueProto.dims(0);
+            int cell_size = valueProto.dims(1) / GRUBiasDimensionHiddenMultiplier;
+            // shape size is divided by 2 so that it only applies to input (CNTK)
+            // TODO: this incompatibility needs further investigation.
+            NDShape weightShape({ (size_t)(GRUBiasDimensionHiddenMultiplier / 2 * cell_size) });
+            for (int dir = 0; dir < num_directions; dir++)
             {
-                // see ONNX spec for the tensor shape
-                int num_directions = valueProto.dims(0);
-                int cell_size = valueProto.dims(1) / GRUBiasDimensionHiddenMultiplier;
-                // shape size is divided by 2 so that it only applies to input (CNTK)
-                // TODO: this incompatibility needs further investigation.
-                NDShape weightShape({(size_t)(GRUBiasDimensionHiddenMultiplier / 2 * cell_size)});
-                for (int dir = 0; dir < num_directions; dir++)
+                std::string nodeName = name + std::string(1, '0' + dir) + LSTMInputBiasNameHint;
+                int totalSizePerDirection = GRUBiasDimensionHiddenMultiplier / 2 * cell_size;
+                DType *data = new DType[totalSizePerDirection];
+                for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
                 {
-                    std::string nodeName = name + std::string(1, '0' + dir) + LSTMInputBiasNameHint;
-                    int totalSizePerDirection = GRUBiasDimensionHiddenMultiplier / 2 * cell_size;
-                    float *data = new float[totalSizePerDirection];
-                    for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
-                    {
-                        int row = targetIndex;
-                        // source is column major
-                        int src_index = row;
-                        // "fuse"
-                        data[targetIndex] =
-                            valueProto.float_data()[dir * 2 * totalSizePerDirection + src_index] +
-                            valueProto.float_data()[dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index];
-                    }
+                    int row = targetIndex;
+                    // source is column major
+                    int src_index = row;
+                    // "fuse"
+                    vector<int> sourceIndexRange = {
+                        dir * 2 * totalSizePerDirection + src_index,
+                        dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index
+                    };
 
-                    Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
-                    inputs.push_back(constant);
+                    CopyFromProto(valueProto, data, sourceIndexRange, targetIndex);
                 }
-                return inputs;
+
+                Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
             }
+            return inputs;
+        }
         case GRUInputIndexSequenceLens:
             return inputs;
         case GRUInitialH:
@@ -959,15 +1021,15 @@ std::vector<Variable> CreateRNNConstant(
             // initial_h
             int num_directions = valueProto.dims(0);
             int cell_size = valueProto.dims(2);
-            NDShape weightShape({(size_t)(cell_size)});
+            NDShape weightShape({ (size_t)(cell_size) });
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + std::string(1, (char) ('0' + dir)) + LSTMInputInitialHNameHint;
+                std::string nodeName = name + std::string(1, (char)('0' + dir)) + LSTMInputInitialHNameHint;
 
-                float *data = new float[cell_size];
+                DType *data = new DType[cell_size];
                 for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
                 {
-                    data[targetIndex] = valueProto.float_data()[dir * cell_size + targetIndex];
+                    CopyFromProto(valueProto, data, dir * cell_size + targetIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
@@ -996,25 +1058,26 @@ std::vector<Variable> CreateRNNConstant(
             size_t cols = valueProto.dims(2);
 
             // CNTK cpp requires shape: (input_size, 3 * hidden_size)
-            NDShape weightShape({rows, cols});
+            NDShape weightShape({ rows, cols });
 
             int input_size = cols;
             int cell_size = rows;
 
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + (index == RNNInputIndexW ? "_W_" : "_R_") + (char) ('0' + dir);
+                std::string nodeName = name + (index == RNNInputIndexW ? "_W_" : "_R_") + (char)('0' + dir);
                 int totalSizePerDirection = rows * cols;
 
                 // TODO: what about double?
-                float *data = new float[totalSizePerDirection];
+                DType *data = new DType[totalSizePerDirection];
                 for (size_t count = 0; count < totalSizePerDirection; count++)
                 {
                     int row = count / input_size;
                     int col = count % input_size;
                     int sourceIndex = dir * totalSizePerDirection + count;
                     int targetIndex = col * cell_size + row;
-                    data[targetIndex] = valueProto.float_data()[sourceIndex];
+
+                    CopyFromProto(valueProto, data, sourceIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(&data[0], weightShape, nodeName, computeDevice);
@@ -1024,39 +1087,43 @@ std::vector<Variable> CreateRNNConstant(
         }
         case RNNInputIndexB:
             // B
+        {
+            // see ONNX spec for the tensor shape:
+            // https://github.com/onnx/onnx/blob/master/docs/Operators.md#inputs-3---6-1
+            // shape of bias is [num_directions, 2*hidden_size] thus we divide dim(1) by 2
+            // to get cell_size.
+            int num_directions = valueProto.dims(0);
+            int cell_size = valueProto.dims(1) / 2;
+            NDShape weightShape({ (size_t)(cell_size) });
+            for (int dir = 0; dir < num_directions; dir++)
             {
-                // see ONNX spec for the tensor shape:
-                // https://github.com/onnx/onnx/blob/master/docs/Operators.md#inputs-3---6-1
-                // shape of bias is [num_directions, 2*hidden_size] thus we divide dim(1) by 2
-                // to get cell_size.
-                int num_directions = valueProto.dims(0);
-                int cell_size = valueProto.dims(1) / 2;
-                NDShape weightShape({(size_t)(cell_size)});
-                for (int dir = 0; dir < num_directions; dir++)
+                std::string nodeName = name + std::string(1, '0' + dir) + LSTMInputBiasNameHint;
+                int totalSizePerDirection = cell_size;
+                DType *data = new DType[totalSizePerDirection];
+                for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
                 {
-                    std::string nodeName = name + std::string(1, '0' + dir) + LSTMInputBiasNameHint;
-                    int totalSizePerDirection = cell_size;
-                    float *data = new float[totalSizePerDirection];
-                    for (size_t targetIndex = 0; targetIndex < totalSizePerDirection; targetIndex++)
-                    {
-                        int row = targetIndex;
-                        // source is column major
-                        int src_index = row;
-                        // "fuse"
-                        // RNN only has one bias vector. It is applied after element-wise addition
-                        // of projected input and hidden states. Therefore we need to fuse two biases
-                        // in ONNX into one.
-                        // RNNBiasMultiplier = 2
-                        data[targetIndex] =
-                            valueProto.float_data()[dir * RNNBiasMultiplier * totalSizePerDirection + src_index] +
-                            valueProto.float_data()[dir * RNNBiasMultiplier * totalSizePerDirection + totalSizePerDirection + src_index];
-                    }
+                    int row = targetIndex;
+                    // source is column major
+                    int src_index = row;
+                    // "fuse"
+                    // RNN only has one bias vector. It is applied after element-wise addition
+                    // of projected input and hidden states. Therefore we need to fuse two biases
+                    // in ONNX into one.
+                    // RNNBiasMultiplier = 2
 
-                    Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
-                    inputs.push_back(constant);
+                    vector<int> srcIndexRange = {
+                        dir * RNNBiasMultiplier * totalSizePerDirection + src_index,
+                        dir * RNNBiasMultiplier * totalSizePerDirection + totalSizePerDirection + src_index
+                    };
+
+                    CopyFromProto(valueProto, data, srcIndexRange, targetIndex);
                 }
-                return inputs;
+
+                Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
+                inputs.push_back(constant);
             }
+            return inputs;
+        }
         case RNNInputIndexSequenceLens:
             return inputs;
         case RNNInitialH:
@@ -1064,15 +1131,15 @@ std::vector<Variable> CreateRNNConstant(
             // initial_h
             int num_directions = valueProto.dims(0);
             int cell_size = valueProto.dims(2);
-            NDShape weightShape({(size_t)(cell_size)});
+            NDShape weightShape({ (size_t)(cell_size) });
             for (int dir = 0; dir < num_directions; dir++)
             {
-                std::string nodeName = name + std::string(1, (char) ('0' + dir)) + LSTMInputInitialHNameHint;
+                std::string nodeName = name + std::string(1, (char)('0' + dir)) + LSTMInputInitialHNameHint;
 
-                float *data = new float[cell_size];
+                DType *data = new DType[cell_size];
                 for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
                 {
-                    data[targetIndex] = valueProto.float_data()[dir * cell_size + targetIndex];
+                    CopyFromProto(valueProto, data, dir * cell_size + targetIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
@@ -1087,6 +1154,19 @@ std::vector<Variable> CreateRNNConstant(
     else
     {
         NOT_IMPLEMENTED;
+    }
+}
+
+std::vector<Variable> CreateRNNConstant(
+    const Node *parentNode, int index, const std::string &name, const onnx::TensorProto &valueProto, const DeviceDescriptor &computeDevice)
+{
+    if (valueProto.data_type() == TensorProto_DataType_FLOAT16)
+    {
+        return CreateRNNConstantHelper<uint16_t>(parentNode, index, name, valueProto, computeDevice);
+    }
+    else
+    {
+        return CreateRNNConstantHelper<float>(parentNode, index, name, valueProto, computeDevice);
     }
 }
 
@@ -1289,6 +1369,10 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     case CNTK::DataType::Float:
     {
         return InputVariable(shape, CNTK::DataType::Float, ToWString(nodeArg->Name()), dynamicAxes);
+    }
+    case CNTK::DataType::Float16:
+    {
+        return InputVariable(shape, CNTK::DataType::Float16, ToWString(nodeArg->Name()), dynamicAxes);
     }
     case CNTK::DataType::Double:
     {

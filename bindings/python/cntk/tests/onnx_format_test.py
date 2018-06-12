@@ -73,23 +73,26 @@ def test_convolution(tmpdir, auto_padding):
     x_ = loaded_node.arguments[0]
     assert np.allclose(loaded_node.eval({x_:[img]}), root_node.eval({x:[img]}))
 
-def test_convolution_transpose(tmpdir):
-    img_shape = (1, 3, 3)
-    img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=np.float32)
+DType_Config = (np.float32, np.float16)    
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_convolution_transpose(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        img_shape = (1, 3, 3)
+        img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
 
-    x = C.input_variable(img.shape)
-    filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
-    kernel = C.constant(value = filter)
-    root_node = C.convolution_transpose(kernel, x, auto_padding=[False], output_shape=(1, 4, 4))
+        x = C.input_variable(img.shape)
+        filter = np.reshape(np.array([2, -1, -1, 2], dtype=dtype), (1, 2, 2))
+        kernel = C.constant(value = filter)
+        root_node = C.convolution_transpose(kernel, x, auto_padding=[False], output_shape=(1, 4, 4))
     
-    filename = os.path.join(str(tmpdir), R'conv_transpose.onnx')
-    root_node.save(filename, format=C.ModelFormat.ONNX)
+        filename = os.path.join(str(tmpdir), R'conv_transpose.onnx')
+        root_node.save(filename, format=C.ModelFormat.ONNX)
 
-    loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
-    assert root_node.shape == loaded_node.shape
+        loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
+        assert root_node.shape == loaded_node.shape
 
-    x_ = loaded_node.arguments[0]
-    assert np.allclose(loaded_node.eval({x_:[img]}), root_node.eval({x:[img]}))
+        x_ = loaded_node.arguments[0]
+        assert np.allclose(loaded_node.eval({x_:[img]}), root_node.eval({x:[img]}))
 
 POOLING_TEST_DATA = [
     # auto_padding: Value for the auto_adding parameter to pooling. 
@@ -116,22 +119,24 @@ POOLING_TEST_DATA = [
 # This is a roundtrip test. It saves a CNTK pooling node in ONNX format (with different padding options), 
 # and loads it back to check that the same results are produced.
 @pytest.mark.parametrize("auto_padding, pooling_type", POOLING_TEST_DATA)
-def test_pooling(tmpdir, auto_padding, pooling_type):
-    img_shape = (1, 5, 5)
-    img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=np.float32)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_pooling(tmpdir, auto_padding, pooling_type, dtype):
+    with C.default_options(dtype = dtype):
+        img_shape = (1, 5, 5)
+        img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
 
-    x = C.input_variable(img.shape)    
-    pool_type = C.MAX_POOLING if pooling_type else C.AVG_POOLING
-    root_node = C.pooling(x, pool_type, (2, 2), auto_padding=auto_padding)
+        x = C.input_variable(img.shape)    
+        pool_type = C.MAX_POOLING if pooling_type else C.AVG_POOLING
+        root_node = C.pooling(x, pool_type, (2, 2), auto_padding=auto_padding)
 
-    filename = os.path.join(str(tmpdir), R'conv.onnx')
-    root_node.save(filename, format=C.ModelFormat.ONNX)
+        filename = os.path.join(str(tmpdir), R'conv.onnx')
+        root_node.save(filename, format=C.ModelFormat.ONNX)
 
-    loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
-    assert root_node.shape == loaded_node.shape
+        loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
+        assert root_node.shape == loaded_node.shape
 
-    x_ = loaded_node.arguments[0]
-    assert np.allclose(loaded_node.eval({x_:[img]}), root_node.eval({x:[img]}))
+        x_ = loaded_node.arguments[0]
+        assert np.allclose(loaded_node.eval({x_:[img]}), root_node.eval({x:[img]}))
 
 def test_conv_model(tmpdir):
     def create_model(input):
@@ -358,40 +363,43 @@ def test_resnet_model(tmpdir):
 
     filename3 = os.path.join(str(tmpdir), R'resnet_model2.cntkmodel')
     loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
-    
-def test_conv_with_freedim_model(tmpdir):    
-    img_shape = (3, 32, 32)
-    img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=np.float32)
 
-    x = C.input_variable((3, C.FreeDimension, C.FreeDimension))
 
-    conv_size1 = (32, 3, 5, 5)
-    conv_map1 = C.constant(value=np.arange(np.prod(conv_size1), dtype=np.float32).reshape(conv_size1))
-    conv_op1 = C.convolution(conv_map1, x, auto_padding=(False, True, True))
-    relu_op1 = C.relu(conv_op1)
-    maxpool_op1 = C.pooling(relu_op1, C.MAX_POOLING, (2, 2), (2, 2))
+@pytest.mark.parametrize("dtype", DType_Config)    
+def test_conv_with_freedim_model(tmpdir, dtype):    
+    with C.default_options(dtype = dtype):
+        img_shape = (3, 32, 32)
+        img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
 
-    conv_size2 = (64, 32, 3, 3)
-    conv_map2 = C.constant(value=np.arange(np.prod(conv_size2), dtype=np.float32).reshape(conv_size2))
-    conv_op2 = C.convolution(conv_map2, maxpool_op1, auto_padding=(False, True, True))
-    relu_op2 = C.relu(conv_op2)
-    root_node = C.pooling(relu_op2, C.MAX_POOLING, (2, 2), (2, 2))
+        x = C.input_variable((3, C.FreeDimension, C.FreeDimension))
 
-    filename = os.path.join(str(tmpdir), R'conv_with_freedim.onnx')
-    root_node.save(filename, format=C.ModelFormat.ONNX)
+        conv_size1 = (32, 3, 5, 5)
+        conv_map1 = C.constant(value=np.arange(np.prod(conv_size1), dtype=dtype).reshape(conv_size1))
+        conv_op1 = C.convolution(conv_map1, x, auto_padding=(False, True, True))
+        relu_op1 = C.relu(conv_op1)
+        maxpool_op1 = C.pooling(relu_op1, C.MAX_POOLING, (2, 2), (2, 2))
 
-    loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
-    assert root_node.shape == loaded_node.shape
+        conv_size2 = (64, 32, 3, 3)
+        conv_map2 = C.constant(value=np.arange(np.prod(conv_size2), dtype=dtype).reshape(conv_size2))
+        conv_op2 = C.convolution(conv_map2, maxpool_op1, auto_padding=(False, True, True))
+        relu_op2 = C.relu(conv_op2)
+        root_node = C.pooling(relu_op2, C.MAX_POOLING, (2, 2), (2, 2))
 
-    x_ = loaded_node.arguments[0]
-    assert np.allclose(loaded_node.eval({x_:img}), root_node.eval({x:img}))
+        filename = os.path.join(str(tmpdir), R'conv_with_freedim.onnx')
+        root_node.save(filename, format=C.ModelFormat.ONNX)
 
-    # Additional test to ensure that loaded_node can be saved as both ONNX and CNTKv2 again.
-    filename2 = os.path.join(str(tmpdir), R'conv_with_freedim2.onnx')
-    loaded_node.save(filename2, format=C.ModelFormat.ONNX)
+        loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
+        assert root_node.shape == loaded_node.shape
 
-    filename3 = os.path.join(str(tmpdir), R'conv_with_freedim2.cntkmodel')
-    loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
+        x_ = loaded_node.arguments[0]
+        assert np.allclose(loaded_node.eval({x_:img}), root_node.eval({x:img}))
+
+        # Additional test to ensure that loaded_node can be saved as both ONNX and CNTKv2 again.
+        filename2 = os.path.join(str(tmpdir), R'conv_with_freedim2.onnx')
+        loaded_node.save(filename2, format=C.ModelFormat.ONNX)
+
+        filename3 = os.path.join(str(tmpdir), R'conv_with_freedim2.cntkmodel')
+        loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
 
 def test_save_no_junk(tmpdir):
     """ Test for an issue with save() not having O_TRUNC mode
