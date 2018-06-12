@@ -1121,6 +1121,10 @@ Status Graph::InferAndVerifyTypeMatch(Node& node,
                               ") does not match expected type (" + *inferred_type + ").");
         }
 
+        auto output_def_shape_ptr = output_def->Shape();
+        TensorShapeProto output_def_shape;
+        if (output_def_shape_ptr != nullptr)
+            output_def_shape.CopyFrom(*output_def_shape_ptr);
         output_def->SetType(inferred_type);
 
         // Update output-shape if it was inferred:
@@ -1130,6 +1134,10 @@ Status Graph::InferAndVerifyTypeMatch(Node& node,
             if (tensor_type.has_shape())
             {
                 output_def->SetShape(tensor_type.shape());
+            }
+            else if (output_def_shape_ptr != nullptr)
+            {
+                output_def->SetShape(output_def_shape);
             }
         }
     }
