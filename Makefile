@@ -92,7 +92,7 @@ PROTOC = $(PROTOBUF_PATH)/bin/protoc
 
 SOURCEDIR:= Source
 GSL_PATH:=$(SOURCEDIR)/../external/gsl
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/Generated/Linux CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, SparCML Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/Generated/Linux CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 INCLUDEPATH+=$(GSL_PATH)/include
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
@@ -161,12 +161,12 @@ ifdef CUDA_PATH
   endif
 
 # Set up NCCL if needed
-  ifdef NCCL_PATH
-    INCLUDEPATH += $(NCCL_PATH)/include
-    LIBPATH += $(NCCL_PATH)/lib
-    LIBS_LIST += nccl
-    COMMON_FLAGS += -DUSE_NCCL
-  endif
+  # ifdef NCCL_PATH
+  #   INCLUDEPATH += $(NCCL_PATH)/include
+  #   LIBPATH += $(NCCL_PATH)/lib
+  #   LIBS_LIST += nccl
+  #   COMMON_FLAGS += -DUSE_NCCL
+  # endif
 else
   DEVICE = cpu
 

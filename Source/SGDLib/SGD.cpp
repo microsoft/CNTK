@@ -397,10 +397,12 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     m_prevChosenMinibatchSize = m_mbSize[startEpoch];
 
     int currentNumGradientBits = 0; // this remembers the last #gradient bits we set for dataParallelSGD (init val 0 has no meaning, just keep compiler happy)
+    int currentTopK = 0;
     if (GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD)
     {
         currentNumGradientBits = m_numGradientBits[startEpoch]; // remember so that we can detect a change
-        InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel);
+        currentTopK = m_topK[startEpoch];
+        InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel, currentTopK);
     }
     else if (GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD || 
              GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD)
@@ -527,7 +529,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             currentNumGradientBits != m_numGradientBits[i])
         {
             currentNumGradientBits = m_numGradientBits[i];
-            InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel);
+            currentTopK = m_topK[i];
+            InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel, currentTopK);
         }
 
         Timer timer;
@@ -1082,8 +1085,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         LOGPRINTF(stderr, "Starting minibatch loop");
         if (useGradientAggregation)
         {
-            fprintf(stderr, ", DataParallelSGD training (myRank = %d, numNodes = %d, numGradientBits = %d)",
-                    (int) m_mpi->CurrentNodeRank(), (int) m_mpi->NumNodesInUse(), (int) m_numGradientBits[epochNumber]);
+            fprintf(stderr, ", DataParallelSGD training (myRank = %d, numNodes = %d, numGradientBits = %d, topK = %d)",
+                    (int) m_mpi->CurrentNodeRank(), (int) m_mpi->NumNodesInUse(), (int) m_numGradientBits[epochNumber], (int) m_topK[epochNumber]);
 
             if (m_bufferedAsyncGradientAggregation)
                 fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
@@ -2265,7 +2268,7 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
 }
 
 template <class ElemType>
-void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel)
+void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel, int topK)
 {
     assert(GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD);
 
@@ -2288,11 +2291,11 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
     else
     {
         if (traceLevel > 0)
-            fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation.\n", numGradientBits);
+            fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation and topK %d.\n", numGradientBits, topK);
         if (Globals::UseV2Aggregator()) // Currently used to check V2 against baselines.
             m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes));
         else
-            m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, m_packThresholdSizeInBytes);
+            m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, m_packThresholdSizeInBytes, topK);
     }
 
     m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });
@@ -3127,6 +3130,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     // parallel training
     m_parallelizationMethod = ParallelizationMethod::none;
     m_numGradientBits = vector<int>{8 * (int)sizeofElemType}; // means no quantization
+    m_topK = vector<int>{-1}; // means same as bucket
     m_zeroThresholdFor1Bit = true;
     m_bufferedAsyncGradientAggregation = false;
     m_enableDistributedMBReading = false;
@@ -3160,6 +3164,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             const ConfigRecordType& configDataParallelSGD(configParallelTrain(L"DataParallelSGD", ConfigRecordType::Record()));
             let defaultGradientBits = 8 * (int)sizeofElemType;
             m_numGradientBits = configDataParallelSGD(L"gradientBits", ConfigRecordType::Array(intargvector(vector<int>{defaultGradientBits})));
+            let defaultTopK = -1;
+            m_topK = configDataParallelSGD(L"topK", ConfigRecordType::Array(intargvector(vector<int>{defaultTopK})));
             m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
             m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
             for (size_t i = 0; i < m_numGradientBits.size(); i++)
