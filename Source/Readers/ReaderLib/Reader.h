@@ -35,6 +35,7 @@ struct ReaderConfiguration
     size_t m_workerRank;                    // Rank of the Open MPI worker, worker rank has to be less than the number of workers
     size_t m_minibatchSizeInSamples;        // Maximum minibatch size for the epoch in samples
     size_t m_truncationSize;                // Truncation size in samples for truncated BPTT mode.
+    size_t m_rightSplice;                   // RightSplice(nc) for latency control BLSTM
     size_t m_maxErrors;                     // Max number of errors to ignore
 
     // This flag indicates whether the minibatches are allowed to overlap the boundary
