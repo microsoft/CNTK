@@ -84,6 +84,10 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         m_packingMode = PackingMode::sequence;
     }
 
+    m_rightSplice = config(L"rightSplice", 0);
+    if (m_rightSplice >= m_truncationLength)
+        InvalidArgument("rightSplice should be less than truncation length");
+
     m_precision = config("precision", "float");
 
     // Creating deserializers.
@@ -356,6 +360,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg, const std::m
     if (m_packingMode == PackingMode::truncated)
     {
         config.m_truncationSize = m_truncationLength;
+        config.m_rightSplice = m_rightSplice;
     }
 
     ReaderBase::StartEpoch(config, inputDescriptions);
