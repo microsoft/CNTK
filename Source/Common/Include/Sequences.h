@@ -199,7 +199,7 @@ public:
         m_writable = true;
     }
 
-    void Init(size_t numParallelSequences, size_t numTimeSteps, size_t rightSplice = 0)
+    void Init(size_t numParallelSequences, size_t numTimeSteps, size_t rightSplice)
     {
         Init(numParallelSequences, numTimeSteps, true);
         m_rightSplice = rightSplice;
