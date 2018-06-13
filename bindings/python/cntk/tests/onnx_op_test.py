@@ -94,7 +94,7 @@ def test_Add(tmpdir, dtype):
         verify_two_input(model, data1, data2, tmpdir, 'Add_2')
 
 #And
-def test_And(tmpdir, dtype):
+def test_And(tmpdir):
     pytest.skip('Need to support new ONNX spec.')
     data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], dtype)
     data2 = np.asarray([1, 0, 1, 0], dtype)
@@ -112,7 +112,7 @@ def test_And(tmpdir, dtype):
     verify_two_input(model, data1, data2, tmpdir, 'And_2')
 
 #Or
-def test_Or(tmpdir, dtype):
+def test_Or(tmpdir):
     pytest.skip('Need to support new ONNX spec.')
     data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
     data2 = np.asarray([1, 0, 1, 0], np.float32)
@@ -148,16 +148,18 @@ def test_Xor(tmpdir):
     verify_two_input(model, data1, data2, tmpdir, 'Xor_2')
 
 #Not
+@pytest.mark.parametrize("dtype", DType_Config)
 def test_Not(tmpdir, dtype):
-    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]])
+    with C.default_options(dtype = dtype):
+        data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]]).astype(dtype)
 
-    model = C.element_not(data1)
-    verify_no_input(model, tmpdir, 'Not_0')
+        model = C.element_not(data1)
+        verify_no_input(model, tmpdir, 'Not_0')
 
-    x = C.input_variable(np.shape(data1))
+        x = C.input_variable(np.shape(data1))
 
-    model = C.element_not(x)
-    verify_one_input(model, data1, tmpdir, 'Not_1')
+        model = C.element_not(x)
+        verify_one_input(model, data1, tmpdir, 'Not_1')
 
 #ArgMax
 @pytest.mark.parametrize("dtype", DType_Config)

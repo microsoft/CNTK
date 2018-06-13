@@ -448,7 +448,7 @@ void AddDataElementArrayViewToTensorProto(const NDArrayViewPtr src, int srcIndex
         *(dst.mutable_float_data()->Add()) = data[srcIndex];
     }
     break;
-	case CNTK::DataType::Float16:
+    case CNTK::DataType::Float16:
     {
         auto data = reinterpret_cast<const uint16_t*>(src->DataBuffer<float16>());
         *(dst.mutable_int32_data()->Add()) = data[srcIndex];
@@ -510,7 +510,7 @@ void AppendCNTKBiasWeightToONNXTensor(DType *data, const NDShape &shape, onnx::T
             *(dst.mutable_float_data()->Add()) = 0;
         else if (typeid(DType) == typeid(uint16_t))
             *(dst.mutable_int32_data()->Add()) = 0;
-		else if (typeid(DType) == typeid(double))
+        else if (typeid(DType) == typeid(double))
             *(dst.mutable_double_data()->Add()) = 0;
         else
             NOT_IMPLEMENTED;
@@ -581,7 +581,7 @@ void SetTensorType(onnx::TensorProto& dst, CNTK::DataType dataType)
     case CNTK::DataType::Float:
         dst.set_data_type(onnx::TensorProto_DataType_FLOAT);
         break;
-	case CNTK::DataType::Float16:
+    case CNTK::DataType::Float16:
         dst.set_data_type(onnx::TensorProto_DataType_FLOAT16);
         break;
     case CNTK::DataType::Double:
@@ -911,18 +911,18 @@ void CNTKToONNXHelper::CopyTensor(const NDArrayViewPtr src, onnx::TensorProto& d
             }
         break;
     }
-	case CNTK::DataType::Float16:
-	{
-		if (!inputArgType->has_tensor_type())
-			dst.set_data_type(onnx::TensorProto_DataType_FLOAT16);
-		else
-			dst.set_data_type(inputArgType->tensor_type().elem_type());
+    case CNTK::DataType::Float16:
+    {
+        if (!inputArgType->has_tensor_type())
+            dst.set_data_type(onnx::TensorProto_DataType_FLOAT16);
+        else
+            dst.set_data_type(inputArgType->tensor_type().elem_type());
 
-		auto data = reinterpret_cast<const uint16_t*>(srcTemp->DataBuffer<float16>());
-		for (size_t index = 0; index < totalSize; index++)
-			*(dst.mutable_int32_data()->Add()) = data[index];
-		break;
-	}
+        auto data = reinterpret_cast<const uint16_t*>(srcTemp->DataBuffer<float16>());
+        for (size_t index = 0; index < totalSize; index++)
+            *(dst.mutable_int32_data()->Add()) = data[index];
+        break;
+    }
     case CNTK::DataType::Double:
     {
         // TODO: ONNX data types other than float and double are
@@ -1905,7 +1905,7 @@ ONNXIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
     lstmNode->AddAttribute("activations", activations);
     lstmNode->AddAttribute("direction", direction);
     lstmNode->AddAttribute("hidden_size", (int64_t)hidden_size);
-    lstmNode->AddAttribute("output_sequence", (int64_t)output_sequence);
+    //lstmNode->AddAttribute("output_sequence", (int64_t)output_sequence);
 
     // TODO: make bidirectional LSTM work by figuring out output data
     // layout transpose in InsertReshapeNodeToCNTKFunction.
@@ -2189,7 +2189,7 @@ ONNXIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
     gruNode->AddAttribute("activations", activations);
     gruNode->AddAttribute("direction", direction);
     gruNode->AddAttribute("hidden_size", (int64_t)hidden_size);
-    gruNode->AddAttribute("output_sequence", (int64_t)output_sequence);
+    //gruNode->AddAttribute("output_sequence", (int64_t)output_sequence);
 
     // TODO: make bidirectional GRU work by figuring out output data
     // layout transpose in InsertReshapeNodeToCNTKFunction.
@@ -2399,7 +2399,7 @@ ONNXIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
     rnnNode->AddAttribute("activations", activations);
     rnnNode->AddAttribute("direction", direction);
     rnnNode->AddAttribute("hidden_size", (int64_t)hidden_size);
-    rnnNode->AddAttribute("output_sequence", (int64_t)output_sequence);
+    //rnnNode->AddAttribute("output_sequence", (int64_t)output_sequence);
 
     //// TODO: make bidirectional RNN work by figuring out output data
     //// layout transpose in InsertReshapeNodeToCNTKFunction.

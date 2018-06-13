@@ -39,10 +39,11 @@ private:
     static Constant CreateConstant(const Node *node, const DeviceDescriptor &computeDevice);
     static Constant CreateConstant(const onnx::TensorProto &valueProto, const std::string &nodeName,
                                    const DeviceDescriptor &computeDevice);
-    template <typename TDest, typename TSource>
+    template<typename TDst, typename TSrc>
     static const CNTK::Constant CreateConstantWithTensorData(CNTK::NDShape &shape, onnx::TensorProto_DataType tensorProtoDataType,
-        CNTK::DataType cntkDataType, const TSource *srcData, CNTK::NDShape &reversedShape, 
+        CNTK::DataType cntkDataType, const TSrc *srcData, CNTK::NDShape &reversedShape, 
         const CNTK::DeviceDescriptor &computeDevice, const std::string &nodeName);
+
     static Variable CreateLeafVariableOrConstant(const NodeArg *nodeArg, const Node *parentNode, const Graph *graph,
                                                  const DeviceDescriptor &computeDevice);
     static std::vector<Variable> CreateRNNLeafVariableOrConstant(const NodeArg *nodeArg,
@@ -433,7 +434,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
         for (int i = 0; i < shape.TotalSize(); i++)
             srcFloatData[i] = srcData[i];
 
-		return CreateConstantWithTensorData<float, float> (shape, tensorProtoDataType, CNTK::DataType::Float,
+        return CreateConstantWithTensorData<float, float> (shape, tensorProtoDataType, CNTK::DataType::Float,
             &srcFloatData[0], reversedShape, computeDevice, nodeName);
     }
     break;
@@ -450,13 +451,13 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     break;
     case TensorProto_DataType_FLOAT16:
     {
-		if (valueProto.int32_data().empty())
-		{
-			NOT_IMPLEMENTED;
-		}
+        if (valueProto.int32_data().empty())
+        {
+            NOT_IMPLEMENTED;
+        }
 
-		return CreateConstantWithTensorData<uint16_t, int>(shape, tensorProtoDataType, CNTK::DataType::Float16,
-			&(valueProto.int32_data()[0]), reversedShape, computeDevice, nodeName);
+        return CreateConstantWithTensorData<uint16_t, int>(shape, tensorProtoDataType, CNTK::DataType::Float16,
+            &(valueProto.int32_data()[0]), reversedShape, computeDevice, nodeName);
     }
     break;
     case TensorProto_DataType_DOUBLE:
@@ -476,12 +477,49 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     }
 }
 
-template <typename TDest, typename TSource>
+template<typename T>
+void CopyFromProto(const onnx::TensorProto &src, T &dst, vector<int> &srcIndexRange, int dstIndex)
+{
+    dst[dstIndex] = 0;
+    auto dtype = src.data_type();
+    if (dtype == onnx::TensorProto_DataType_FLOAT16)
+    {
+        for (int i = 0; i < srcIndexRange.size(); i++)
+        {
+            dst[dstIndex] += src.int32_data()[srcIndexRange[i]];
+        }
+    }
+    else
+    {
+        for (int i = 0; i < srcIndexRange.size(); i++)
+        {
+            dst[dstIndex] += src.float_data()[srcIndexRange[i]];
+        }
+    }
+
+}
+
+template<typename T>
+void CopyFromProto(const onnx::TensorProto &src, T &dst, int srcIndex, int dstIndex)
+{
+    auto dtype = src.data_type();
+    if (dtype == onnx::TensorProto_DataType_FLOAT16)
+    {
+        dst[dstIndex] = src.int32_data()[srcIndex];
+    }
+    else
+    {
+        dst[dstIndex] = src.float_data()[srcIndex];
+    }
+}
+
+
+template <typename TDst, typename TSrc>
 const CNTK::Constant CNTK::ONNXToCNTKHelper::CreateConstantWithTensorData(CNTK::NDShape &shape, onnx::TensorProto_DataType tensorProtoDataType, 
-    CNTK::DataType cntkDataType, const TSource *srcData, CNTK::NDShape &reversedShape, const CNTK::DeviceDescriptor &computeDevice, const std::string &nodeName)
+    CNTK::DataType cntkDataType, const TSrc *srcData, CNTK::NDShape &reversedShape, const CNTK::DeviceDescriptor &computeDevice, const std::string &nodeName)
 {
     auto totalSize = shape.TotalSize();
-	TDest *data = new TDest[totalSize];
+    TDst *data = new TDst[totalSize];
 
     if (shape.Rank() <= 2)
     {
@@ -511,7 +549,7 @@ const CNTK::Constant CNTK::ONNXToCNTKHelper::CreateConstantWithTensorData(CNTK::
     }
 
     NDArrayViewPtr dstFinal(new NDArrayView(cntkDataType, reversedShape, &data[0],
-                                            totalSize * sizeof(TDest), computeDevice.CPUDevice()));
+                                            totalSize * sizeof(TDst), computeDevice.CPUDevice()));
 
     if (computeDevice.Type() == DeviceKind::CPU)
     {
@@ -726,14 +764,7 @@ std::vector<Variable> CreateRNNConstantHelper(
 
                     int sourceIndex = dir * totalSizePerDirection + count;
                     int targetIndex = col * cell_size * 4 + row;
-                    if (dataType == TensorProto_DataType_FLOAT16)
-                    {
-                        data[targetIndex] = valueProto.int32_data()[sourceIndex];
-                    }
-                    else
-                    {
-                        data[targetIndex] = valueProto.float_data()[sourceIndex];
-                    }
+                    CopyFromProto(valueProto, data, sourceIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(&data[0], weightShape, nodeName, computeDevice);
@@ -780,18 +811,11 @@ std::vector<Variable> CreateRNNConstantHelper(
                     int src_index = row;
 
                     // "fuse"
-                    if (dataType == TensorProto_DataType_FLOAT16)
-                    {
-                        data[targetIndex] =
-                            valueProto.int32_data()[dir * 2 * totalSizePerDirection + src_index] +
-                            valueProto.int32_data()[dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index];
-                    }
-                    else
-                    {
-                        data[targetIndex] =
-                            valueProto.float_data()[dir * 2 * totalSizePerDirection + src_index] +
-                            valueProto.float_data()[dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index];
-                    }
+                    vector<int> srcIndexRange = {
+                        dir * 2 * totalSizePerDirection + src_index,
+                        dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index };
+
+                    CopyFromProto(valueProto, data, srcIndexRange, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
@@ -829,14 +853,7 @@ std::vector<Variable> CreateRNNConstantHelper(
                 DType *data = new DType[cell_size];
                 for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
                 {
-                    if (dataType == TensorProto_DataType_FLOAT16)
-                    {
-                        data[targetIndex] = valueProto.int32_data()[dir * cell_size + targetIndex];
-                    }
-                    else
-                    {
-                        data[targetIndex] = valueProto.float_data()[dir * cell_size + targetIndex];
-                    }
+                    CopyFromProto(valueProto, data, dir * cell_size + targetIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
@@ -860,14 +877,7 @@ std::vector<Variable> CreateRNNConstantHelper(
                     NDShape weightShape({ (size_t)(cell_size) });
                     for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
                     {
-                        if (dataType == TensorProto_DataType_FLOAT16)
-                        {
-                            data[targetIndex] = valueProto.int32_data()[(dir * 3 + i) * cell_size + targetIndex];
-                        }
-                        else
-                        {
-                            data[targetIndex] = valueProto.float_data()[(dir * 3 + i) * cell_size + targetIndex];
-                        }
+                        CopyFromProto(valueProto, data, (dir * 3 + i) * cell_size + targetIndex, targetIndex);
                     }
 
                     Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
@@ -913,14 +923,8 @@ std::vector<Variable> CreateRNNConstantHelper(
                     int col = count % input_size;
                     int sourceIndex = dir * totalSizePerDirection + count;
                     int targetIndex = col * cell_size * GRUWeightDimensionHiddenMultiplier + row;
-                    if (dataType == TensorProto_DataType_FLOAT16)
-                    {
-                        data[targetIndex] = valueProto.int32_data()[sourceIndex];
-                    }
-                    else
-                    {
-                        data[targetIndex] = valueProto.float_data()[sourceIndex];
-                    }
+
+                    CopyFromProto(valueProto, data, sourceIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(&data[0], weightShape, nodeName, computeDevice);
@@ -959,26 +963,14 @@ std::vector<Variable> CreateRNNConstantHelper(
                     if (block < CNTKGRUZRWeightMultiplier)
                     {
                         int targetIndex = col * cell_size * CNTKGRUZRWeightMultiplier + row;
-                        if (dataType == TensorProto_DataType_FLOAT16)
-                        {
-                            hData[targetIndex] = valueProto.int32_data()[sourceIndex];
-                        }
-                        else
-                        {
-                            hData[targetIndex] = valueProto.float_data()[sourceIndex];
-                        }
+
+                        CopyFromProto(valueProto, hData, sourceIndex, targetIndex);
                     }
                     else
                     {
                         int targetIndex = col * cell_size + row - cell_size * CNTKGRUZRWeightMultiplier;
-                        if (dataType == TensorProto_DataType_FLOAT16)
-                        {
-                            h1Data[targetIndex] = valueProto.int32_data()[sourceIndex];
-                        }
-                        else
-                        {
-                            h1Data[targetIndex] = valueProto.float_data()[sourceIndex];
-                        }
+
+                        CopyFromProto(valueProto, h1Data, sourceIndex, targetIndex);
                     }
                 }
 
@@ -1009,18 +1001,12 @@ std::vector<Variable> CreateRNNConstantHelper(
                     // source is column major
                     int src_index = row;
                     // "fuse"
-                    if (dataType == TensorProto_DataType_FLOAT16)
-                    {
-                        data[targetIndex] =
-                            valueProto.int32_data()[dir * 2 * totalSizePerDirection + src_index] +
-                            valueProto.int32_data()[dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index];
-                    }
-                    else
-                    {
-                        data[targetIndex] =
-                            valueProto.float_data()[dir * 2 * totalSizePerDirection + src_index] +
-                            valueProto.float_data()[dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index];
-                    }
+                    vector<int> sourceIndexRange = {
+                        dir * 2 * totalSizePerDirection + src_index,
+                        dir * 2 * totalSizePerDirection + totalSizePerDirection + src_index
+                    };
+
+                    CopyFromProto(valueProto, data, sourceIndexRange, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
@@ -1043,14 +1029,7 @@ std::vector<Variable> CreateRNNConstantHelper(
                 DType *data = new DType[cell_size];
                 for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
                 {
-                    if (dataType == TensorProto_DataType_FLOAT16)
-                    {
-                        data[targetIndex] = valueProto.int32_data()[dir * cell_size + targetIndex];
-                    }
-                    else
-                    {
-                        data[targetIndex] = valueProto.float_data()[dir * cell_size + targetIndex];
-                    }
+                    CopyFromProto(valueProto, data, dir * cell_size + targetIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
@@ -1097,14 +1076,8 @@ std::vector<Variable> CreateRNNConstantHelper(
                     int col = count % input_size;
                     int sourceIndex = dir * totalSizePerDirection + count;
                     int targetIndex = col * cell_size + row;
-                    if (dataType == TensorProto_DataType_FLOAT16)
-                    {
-                        data[targetIndex] = valueProto.int32_data()[sourceIndex];
-                    }
-                    else
-                    {
-                        data[targetIndex] = valueProto.float_data()[sourceIndex];
-                    }
+
+                    CopyFromProto(valueProto, data, sourceIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(&data[0], weightShape, nodeName, computeDevice);
@@ -1137,18 +1110,13 @@ std::vector<Variable> CreateRNNConstantHelper(
                     // of projected input and hidden states. Therefore we need to fuse two biases
                     // in ONNX into one.
                     // RNNBiasMultiplier = 2
-                    if (dataType == TensorProto_DataType_FLOAT16)
-                    {
-                        data[targetIndex] =
-                            valueProto.int32_data()[dir * RNNBiasMultiplier * totalSizePerDirection + src_index] +
-                            valueProto.int32_data()[dir * RNNBiasMultiplier * totalSizePerDirection + totalSizePerDirection + src_index];
-                    }
-                    else
-                    {
-                        data[targetIndex] =
-                            valueProto.float_data()[dir * RNNBiasMultiplier * totalSizePerDirection + src_index] +
-                            valueProto.float_data()[dir * RNNBiasMultiplier * totalSizePerDirection + totalSizePerDirection + src_index];
-                    }
+
+                    vector<int> srcIndexRange = {
+                        dir * RNNBiasMultiplier * totalSizePerDirection + src_index,
+                        dir * RNNBiasMultiplier * totalSizePerDirection + totalSizePerDirection + src_index
+                    };
+
+                    CopyFromProto(valueProto, data, srcIndexRange, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
@@ -1171,14 +1139,7 @@ std::vector<Variable> CreateRNNConstantHelper(
                 DType *data = new DType[cell_size];
                 for (size_t targetIndex = 0; targetIndex < cell_size; targetIndex++)
                 {
-                    if (dataType == TensorProto_DataType_FLOAT16)
-                    {
-                        data[targetIndex] = valueProto.int32_data()[dir * cell_size + targetIndex];
-                    }
-                    else
-                    {
-                        data[targetIndex] = valueProto.float_data()[dir * cell_size + targetIndex];
-                    }
+                    CopyFromProto(valueProto, data, dir * cell_size + targetIndex, targetIndex);
                 }
 
                 Constant constant = CreateConstantWithRawData(data, weightShape, nodeName, computeDevice);
