@@ -1366,6 +1366,11 @@ std::tuple<std::pair<std::vector<int>, std::vector<int>>, bool, int, bool> CNTKT
         LogicError("Shapes of elementwise binary operation are not compatible.");
     }
 
+    // Pad the shape with trailing 1s when axis > 0 for ONNX 1.2.
+    if (broadcast && axis > 0) {
+        dims2.insert(dims2.end(), dims1.size() - axis - 1, 1);
+    }
+
     return make_tuple(std::pair<std::vector<int>, std::vector<int>>(dims1, dims2), broadcast, axis, swapInput || swapInputDueToDims);
 }
 
