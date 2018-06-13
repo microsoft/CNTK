@@ -123,7 +123,7 @@ namespace CNTK
             return DataType::Int8;
         else if (std::is_same<ElementType, int16_t>())
             return DataType::Int16;
-		else if (std::is_same<ElementType, uint16_t>()) // In ONNX, float16 values must be converted to an uint16_t to prior writing to the buffer.
+        else if (std::is_same<ElementType, uint16_t>()) // In ONNX, float16 values must be converted to an uint16_t to prior writing to the buffer.
             return DataType::Float16;
         else
             NOT_IMPLEMENTED;
