@@ -6931,7 +6931,11 @@ void _assignRNNTScore2(
                 for (int k = 0; k < totalPhoneNum; k++)
                 {
                     size_t ktuID = tuID*totalPhoneNum + k;  //ID for P(k|t,u)
-                    if (t<uttFrameNum[uttId] - 1 && k == blankTokenId)
+                    if (t == uttFrameNum[uttId] - 1 && u == phoneNum - 1 && k == blankTokenId)
+                    {
+                        RNNTscore[ktuID] = -exp(alphaScore[alphaId] - P_lx);
+                    }
+                    else if (t<uttFrameNum[uttId] - 1 && k == blankTokenId)
                     {
                         //grads_tuk[grads_tuk_index + k] = -(alphas[alphas_index + u] / pr_yx)*beta_t_u;
                         size_t betaId = alphaId + numChannels * maxPhoneNum; //beta if for (t+1,u)
@@ -6966,7 +6970,7 @@ void _assignRNNTScore2(
                     for (int k_tmp = 0; k_tmp<totalPhoneNum; k_tmp++)
                     {
                         size_t ktuID = tuID*totalPhoneNum + k_tmp;
-                        derivativeF[timeId*totalPhoneNum + k] += RNNTscore[ktuID] * exp(prob[ktuID]) * (k == k_tmp ? 1 : 0 - exp(prob[tuID*totalPhoneNum+k]));
+                        derivativeF[timeId*totalPhoneNum + k] += RNNTscore[ktuID] * exp(prob[ktuID]) * (k == k_tmp ? 1 - exp(prob[tuID*totalPhoneNum + k]): 0 - exp(prob[tuID*totalPhoneNum+k]));
                     }
 
                 }
@@ -6986,7 +6990,7 @@ void _assignRNNTScore2(
                     for (int k_tmp = 0; k_tmp<totalPhoneNum; k_tmp++)
                     {
                         size_t ktuID = tuID*totalPhoneNum + k_tmp;
-                        derivativeG[timeId*totalPhoneNum + k] += RNNTscore[ktuID] * exp(prob[ktuID]) * (k == k_tmp ? 1 : 0 - exp(prob[tuID*totalPhoneNum + k]));
+                        derivativeG[timeId*totalPhoneNum + k] += RNNTscore[ktuID] * exp(prob[ktuID]) * (k == k_tmp ? 1 - exp(prob[tuID*totalPhoneNum + k]): 0 - exp(prob[tuID*totalPhoneNum + k]));
                     }
                 }
             }

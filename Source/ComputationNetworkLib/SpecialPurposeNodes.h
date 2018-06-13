@@ -840,7 +840,7 @@ public:
 #endif  
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
         Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues); 
-
+        //inputGradientValues.Print("gradient");
 #if DUMPOUTPUT
         inputGradientValues.Print("ForwardBackwardNode Partial-Right");
 #endif

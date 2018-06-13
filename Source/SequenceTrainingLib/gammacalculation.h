@@ -283,7 +283,6 @@ public:
         int maxPhoneNum = 0;
         std::vector<size_t> phoneSeq;
         std::vector<size_t> phoneBound;
-        std::vector<size_t> phoneBound_backup;
 
         if (blankTokenId == SIZE_MAX)
             blankTokenId = numRows - 1;
@@ -321,8 +320,6 @@ public:
             phoneSeq.push_back(SIZE_MAX);
             phoneBound.clear();
             phoneBound.push_back(0);
-            phoneBound_backup.clear();
-            phoneBound_backup.push_back(0);
             int prevPhoneId = -1;
             size_t startFrameInd = seq.tBegin * numParallelSequences + seq.s;
             size_t endFrameInd   = seq.tEnd   * numParallelSequences + seq.s;
@@ -336,29 +333,20 @@ public:
                 if (maxValues(0, frameInd) == 2) 
                 {
                     prevPhoneId = (size_t)maxIndexes(0, frameInd);
-                    if (prevPhoneId == 0 || prevPhoneId == 1)
-                    {
+
                         phoneSeq.push_back(blankTokenId);
                         phoneBound.push_back(frameCounter);
-                    }
                     phoneSeq.push_back(prevPhoneId);
                     phoneBound.push_back(frameCounter);
                 }
             }
-            //phoneSeq.push_back(blankTokenId);
-            //phoneBound.push_back(numFrames);
+            phoneSeq.push_back(blankTokenId);
+            phoneBound.push_back(numFrames);
             phoneSeq.push_back(SIZE_MAX);
             phoneBound.push_back(numFrames);
-            for (size_t i = 1; i < phoneSeq.size()-1; i++)
-            {
-                if (phoneSeq[i] == blankTokenId)
-                    phoneBound_backup.push_back(phoneBound[i + 2]);
-                else
-                    phoneBound_backup.push_back(phoneBound[i + 1]);
-            }
-            phoneBound_backup.push_back(numFrames);
+
             allUttPhoneSeqs.push_back(phoneSeq);
-            allUttPhoneBounds.push_back(phoneBound_backup);
+            allUttPhoneBounds.push_back(phoneBound);
 
             uttPhoneNum.push_back(phoneSeq.size());
 
@@ -385,7 +373,7 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
         CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, totalScore, uttToChanInd, uttBeginFrame,
-            uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, -1, /*isColWise=*/true );
+            uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, /*isColWise=*/true );
         /*ElemType finalscore = 0;
         finalscore += -1 * beta.Get00Element();
         fprintf(stderr, "finalscore:%f\n", finalscore);
@@ -536,6 +524,28 @@ public:
 
         //compute f+g
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixOutputDistribution(m_deviceid_gpu);
+        /*G.TransferFromDeviceToDevice(m_deviceid_gpu, CPUDEVICE);
+        for (size_t uttId = 0; uttId < numSequences; uttId++)
+        {
+            for (size_t u = 0; u < uttPhoneNum[uttId]; u++)
+            {
+                size_t phonePosInMB = (u + uttPhoneBeginIdx[uttId])*numPhoneParallelSequences + uttPhoneToChanInd[uttId];
+                size_t phoneId = allUttPhoneSeqs[uttId][u];
+                for (size_t k = 0; k < G.GetNumRows(); k++)
+                {
+                    if (k == phoneId)
+                        G.SetValue(k, phonePosInMB, 0.0);
+                    else
+                        G.SetValue(k, phonePosInMB, (float)LZERO);
+                }
+            }
+            
+        }
+        G.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);*/
+        //G.SetValue(0.0);
+        //F.Print("H");
+        //G.Print("G");
+        
         //matrixOutputDistribution.Resize(numRows, totalcol);
         matrixOutputDistribution.AssignUserOp1(F, G, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, 
            totalcol, numParallelSequences, numPhoneParallelSequences);

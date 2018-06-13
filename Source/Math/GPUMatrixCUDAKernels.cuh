@@ -5525,7 +5525,6 @@ __global__ void _assignAlphaScore(
 
     // Current and previous phone indices in phoneSeq matrix
     LONG64 labelid = uttId*maxPhoneNum + phoneSeqId;
-    LONG64 labelid_1 = labelid - 1;
     LONG64 labelid_2 = labelid - 2;
 
     // Actual current phone label
@@ -5547,12 +5546,10 @@ __global__ void _assignAlphaScore(
     if (t == 0)
     {
         // Initialize recursion
-        if (phoneSeqId == 1)
+        if (phoneSeqId == 1 || phoneSeqId == 2)
         {
             alphaScore[alphaId] = prob[probId];
         }
-        else if( phoneSeqId == 2 && (LONG64)(phoneSeq[labelid_1]) == blankTokenId)
-            alphaScore[alphaId] = prob[probId];
     }
     else
     {
@@ -5564,50 +5561,35 @@ __global__ void _assignAlphaScore(
             if (phoneSeqId > 2)
             {
                 // if current label is not blank and not equal prev non-blank label
-                if (phoneId != blankTokenId && (LONG64)(phoneSeq[labelid_1]) == blankTokenId && phoneId != (LONG64)(phoneSeq[labelid_2]))
+                if ((LONG64)(phoneSeq[labelid]) != blankTokenId && phoneId != (LONG64)(phoneSeq[labelid_2]))
                 {
                     x = logaddk(x, alphaScore[alphaId_2]);
-                   /* if (t == 43 && phoneSeqId == 4)
-                        printf("x:%f alphascore2:%f t:%d phoneseq2:%ld\n", x, alphaScore[alphaId_2], t, phoneSeqId);*/
                 }
             }
 
-            if (phoneSeqId > 1 )
+            if (phoneSeqId > 1)
             {
                 x = logaddk(x, alphaScore[alphaId_1]);
-               /* if (t == 43 && phoneSeqId == 4)
-                    printf("x:%f alphascore: %f t:%d phoneseq: %ld\n", x, alphaScore[alphaId_1],t, phoneSeqId);*/
             }
-            
-           /* if (t == 43 && phoneSeqId == 4)
-                printf("before 2 x:%f alphascore: %f t:%d phoneseq: %ld\n", x, alphaScore[alphaId_0], t, phoneSeqId);*/
-            if (phoneSeqId <= 1 || phoneId != (LONG64)(phoneSeq[labelid_1]))
-                x = logaddk(x, alphaScore[alphaId_0]);
-          /*  if (t == 43 && phoneSeqId == 4)
-                printf("2 x:%f alphascore: %f t:%d phoneseq: %ld\n", x, alphaScore[alphaId_0], t, phoneSeqId);*/
+
+            x = logaddk(x, alphaScore[alphaId_0]);
+
             if (phoneId != SIZE_MAX)
                 ascore = prob[probId]; // Probability of observing given label at given time
             else
                 ascore = 0;
             alphaScore[alphaId] = (ElemType)x + ascore;
-            //if (alphaScore[alphaId] > 0)
-         /*   if (t == 43 && phoneSeqId == 4)
+            if (delayConstraint != -1)
             {
-                printf("score x:%f score ascore:%f time %d, phoneid:%lu\n", x, ascore, t, phoneSeqId);
-                //printf("time %d, phoneid:%d\n", t, phoneSeqId);
-            }*/
-            if (delayConstraint != -1 && phoneSeqId <= phoneNum - 2)
-            {
-                //LONG64 labelid_r = labelid + 2;
-                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid]);
-                LONG64 phoneid_r = (LONG64)(phoneSeq[labelid + 1]);
-                if (phoneId == blankTokenId && (phoneid_r == 0 || phoneid_r == 1))
+                LONG64 labelid_r = labelid + 2;
+                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_r]);
+                if (phoneId == blankTokenId)
                 {
                     // only constraint right side
                     if (t > phoneBoundId_r + delayConstraint - 1)
                         alphaScore[alphaId] = LZERO;
                 }
-                else if (phoneId ==0 || phoneId == 1)
+                else if (phoneId != blankTokenId)
                 {
                     if (t > phoneBoundId_r + delayConstraint)
                         alphaScore[alphaId] = LZERO;
@@ -5646,7 +5628,6 @@ __global__ void _assignBetaScore(
     if (uttId >= uttNum || phoneSeqId >= phoneNum - 1 || t >= frameNum || phoneSeqId == 0) return;
 
     LONG64 labelid = uttId*maxPhoneNum + phoneSeqId;
-    LONG64 labelid_1 = labelid + 1;
     LONG64 labelid_2 = labelid + 2;
     LONG64 phoneId = (LONG64)(phoneSeq[labelid]);
     LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
@@ -5659,12 +5640,10 @@ __global__ void _assignBetaScore(
 
     if (t == frameNum - 1)
     {
-        if ( phoneSeqId == phoneNum - 2)
+        if (phoneSeqId == phoneNum - 3 || phoneSeqId == phoneNum - 2)
         {
             betaScore[betaid] = prob[probId];
         }
-        else if(phoneSeqId == phoneNum - 3 && (LONG64)(phoneSeq[labelid_1]) == blankTokenId)
-            betaScore[betaid] = prob[probId];
     }
     else
     {
@@ -5674,7 +5653,7 @@ __global__ void _assignBetaScore(
             ElemType ascore;
             if (phoneSeqId < phoneNum - 3)
             {
-                if (phoneId != blankTokenId && phoneSeq[labelid_1] == blankTokenId && phoneId != phoneSeq[labelid_2])
+                if (phoneSeq[labelid] != blankTokenId && phoneId != phoneSeq[labelid_2])
                 {
                     x = logaddk(x, betaScore[betaid_2]);
                 }
@@ -5684,24 +5663,23 @@ __global__ void _assignBetaScore(
             {
                 x = logaddk(x, betaScore[betaid_1]);
             }
-            if (phoneSeqId >= phoneNum - 2 || phoneId != phoneSeq[labelid_1])
-                x = logaddk(x, betaScore[betaid_0]);
+
+            x = logaddk(x, betaScore[betaid_0]);
 
             if (phoneId != SIZE_MAX)
                 ascore = prob[probId];
             else
                 ascore = 0;
             betaScore[betaid] = (ElemType)x + ascore;
-            if (delayConstraint != -1 && phoneSeqId <= phoneNum -2)
+            if (delayConstraint != -1)
             {
-                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid]);
-                LONG64 phoneid_r = (LONG64)(phoneSeq[labelid + 1]);
-                if (phoneId == blankTokenId && (phoneid_r==0 || phoneid_r == 1))
+                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_2]);
+                if (phoneId == blankTokenId)
                 {
                     if (t > phoneBoundId_r + delayConstraint - 1)
                         betaScore[betaid] = LZERO;
                 }
-                else if (phoneId == 0 || phoneId == 1)
+                else if (phoneId != blankTokenId)
                 {
                     if (t > phoneBoundId_r + delayConstraint)
                         betaScore[betaid] = LZERO;
@@ -5772,20 +5750,14 @@ __global__ void _assignTotalScore(ElemType *betaScore,
     const size_t *uttToChanInd,
     const size_t *uttBeginFrame,
     const size_t numChannels,
-    const size_t maxPhoneNum,
-    ElemType *phoneSeq,
-    const size_t blankTokenId)
+    const size_t maxPhoneNum)
 {
     LONG64 uttId = blockIdx.x;
-    LONG64 labelid = uttId*maxPhoneNum + 1;
-    LONG64 phoneId = (LONG64)(phoneSeq[labelid]);
     if (uttId < uttNum)
     {
         LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
-        if (phoneId == blankTokenId)
-            betaScore[alphaId_0] = logaddk(betaScore[alphaId_0 + 1], betaScore[alphaId_0 + 2]);
-        else
-            betaScore[alphaId_0] = betaScore[alphaId_0 + 1];
+
+        betaScore[alphaId_0] = logaddk(betaScore[alphaId_0 + 1], betaScore[alphaId_0 + 2]);
         // Negative sum
         atomicAdd(&totalScore[0], -1 * betaScore[alphaId_0]);
     }
