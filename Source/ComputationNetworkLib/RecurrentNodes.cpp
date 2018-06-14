@@ -358,6 +358,13 @@ template<class ElemType, int direction>
             src = TensorView<ElemType>(m_delayedValue, tensorShape);
         }
         else
+            LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
+    }
+    else if (t_delayed >= GetNumTimeSteps())
+    {
+        if (!m_inputAnySeqValid[fr.t()])
+            ; // none valid: leave it uninitialized
+        else  // truncated BPTT goes left-to-right only
         {
             if (m_pMBLayout->RightSplice() > 0)
             {
@@ -366,16 +373,9 @@ template<class ElemType, int direction>
             }
             else
             {
-                LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
+                LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
             }
         }
-    }
-    else if (t_delayed >= GetNumTimeSteps())
-    {
-        if (!m_inputAnySeqValid[fr.t()])
-            ; // none valid: leave it uninitialized
-        else  // truncated BPTT goes left-to-right only
-            LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
     }
     else // regular case
         src = InputRef(0).ValueTensorFor(rank, frDelayed);
