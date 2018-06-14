@@ -12,4 +12,3 @@ testCases:
   Test run must be completed:
     patterns:
       - Train completes.
-Tests\EndToEndTests\CNTKv2CSharp\ExampleTests\CifarResNetClassifierTest\testcases.yml
