@@ -202,7 +202,7 @@ RUN _CUDNN_VERSION=$(echo $CUDNN_VERSION | cut -d. -f1-2) && \
     ln -s /usr/include/cudnn.h /usr/local/cudnn-$_CUDNN_VERSION/cuda/include/cudnn.h && \
     mkdir -p /usr/local/cudnn-$_CUDNN_VERSION/cuda/lib64 && \
     ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn-$_CUDNN_VERSION/cuda/lib64/libcudnn.so && \
-    ln -s /usr/local/cudnn{-$_CUDNN_VERSION,} && \
+    ln -s /usr/local/cudnn-$_CUDNN_VERSION && \
     mkdir -p /usr/src/gdk/nvml/lib && \
     cp -av /usr/local/cuda/lib64/stubs/libnvidia-ml* /usr/src/gdk/nvml/lib && \
     cp -av /usr/local/cuda/lib64/stubs/libnvidia-ml.so /usr/src/gdk/nvml/lib/libnvidia-ml.so.1 && \
