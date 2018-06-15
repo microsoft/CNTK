@@ -366,15 +366,9 @@ template<class ElemType, int direction>
             ; // none valid: leave it uninitialized
         else  // truncated BPTT goes left-to-right only
         {
-            if (m_pMBLayout->RightSplice() > 0)
-            {
-                // init using inititalMatrix zero init for latency control blstm
-                src = TensorView<ElemType>(m_zeroMatrix, TensorShape(1));
-            }
-            else
-            {
-                LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
-            }
+            // LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
+            // init using inititalMatrix zero init for latency control blstm
+            src = TensorView<ElemType>(m_zeroMatrix, TensorShape(1));
         }
     }
     else // regular case
