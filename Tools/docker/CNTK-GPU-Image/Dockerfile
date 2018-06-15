@@ -44,10 +44,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         # For Java Bindings
         openjdk-8-jdk \
         # For SWIG
-        libpcre3-dev && \
-		# .NET Core SDK
-		apt-transport-https && \
-    rm -rf /var/lib/apt/lists/*
+        libpcre3-dev \
+        # .NET Core SDK
+        apt-transport-https && \
+        # Cleanup
+        rm -rf /var/lib/apt/lists/*
 
 RUN OPENMPI_VERSION=1.10.3 && \
     wget -q -O - https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-${OPENMPI_VERSION}.tar.gz | tar -xzf - && \
@@ -112,7 +113,7 @@ RUN PROTOBUF_VERSION=3.1.0 \
 ARG MKLDNN_VERSION=0.14
 ARG MKLDNN_LONG_VERSION=mklml_lnx_2018.0.3.20180406
 RUN mkdir /usr/local/mklml && \
-    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/v${MKLDNN_VERSION}/${MKLDNN_LONG_VERSION.tgz} | \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/v${MKLDNN_VERSION}/${MKLDNN_LONG_VERSION}.tgz | \
     tar -xzf - -C /usr/local/mklml && \
     MKLDNN_STRING=mkl-dnn-${MKLDNN_VERSION} && \
     wget --no-verbose -O - https://github.com/01org/mkl-dnn/archive/v${MKLDNN_VERSION}.tar.gz | tar -xzf - && \
