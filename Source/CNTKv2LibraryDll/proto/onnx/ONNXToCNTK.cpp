@@ -1345,17 +1345,7 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     // only if it outputs to an RNN op along the path.
     // This requires support from LotusIR.
     // Now traversing starts from arbitray nodes which may miss the RNN op.
-    bool hasSequenceAxis = false;
-    const GraphNodes &nodes = graph->Nodes();
-    for (GraphNodes::ConstNodeIterator it = nodes.cbegin(); it != nodes.cend(); ++it)
-    {
-        const Node &node = *it;
-        if (Operators::IsRNNOp(node.OpType()))
-        {
-            hasSequenceAxis = true;
-            break;
-        }
-    }
+    bool hasSequenceAxis = nodeArg->Shape()->dim(0).dim_value() == 0;
 
     if (hasSequenceAxis)
     {

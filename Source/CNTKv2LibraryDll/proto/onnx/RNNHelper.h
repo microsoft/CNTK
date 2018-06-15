@@ -30,12 +30,6 @@ const std::string GRUInputInitialHNameHint = "_initial_h_";
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#attributes-18
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#attributes-27
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#attributes-39
-// CNTK RNN ops always output sequence. 
-// ONNX requires to set the output_sequence attribute to 1 to output sequence. 
-enum
-{
-    RNNOutputSequence = 1
-};
 
 enum
 {

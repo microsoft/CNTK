@@ -456,7 +456,6 @@ def test_Greater(tmpdir, dtype):
 
 #GRU
 def test_GRU(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     def MakeGRUNameFromConfig(backward, initial_state, activition):
         model_name = 'GRU.' + activition.__name__
         if (initial_state != 0):
@@ -609,7 +608,6 @@ def test_LRN(tmpdir, dtype):
 #LSTM
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LSTM(tmpdir, dtype):
-    pytest.skip('Need to support new ONNX spec.')
 
     with C.default_options(dtype = dtype):
         def CreateLSTMModel(activation, 
@@ -934,7 +932,6 @@ def test_Reshape(tmpdir, dtype):
 #RNN
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_RNN(tmpdir, dtype):
-    pytest.skip('Need to support new ONNX spec.')
 
     with C.default_options(dtype = dtype):
         def CreatRNN(cell_dim, 

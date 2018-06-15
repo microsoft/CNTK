@@ -492,6 +492,12 @@ public:
                     //        LOTUS_ENFORCE(shape->dim()[dim].dim_value() == tensorShapeProto.dim()[dim].dim_value());
                     //    }
                     //}
+                    if (a->Shape()->dim_size() == 0 && p_arg_type->has_tensor_type())
+                    {
+                        const ::onnx::TypeProto_Tensor& typeProto_Tensor = p_arg_type->tensor_type();
+                        const ::onnx::TensorShapeProto& tensorShapeProto = typeProto_Tensor.shape();
+                        a->SetShape(tensorShapeProto);
+                    }
                     return *a;
                 }
             }
