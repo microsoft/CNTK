@@ -1121,16 +1121,27 @@ Status Graph::InferAndVerifyTypeMatch(Node& node,
                               ") does not match expected type (" + *inferred_type + ").");
         }
 
-        if (existing_type == nullptr)
-            output_def->SetType(inferred_type);
+        // Caching shape information (if available) for output_def 
+        // before setting type to inferred_type as inferred_type may
+        // not have shape information.
+        auto output_def_shape_ptr = output_def->Shape();
+        TensorShapeProto output_def_shape;
+        if (output_def_shape_ptr != nullptr)
+            output_def_shape.CopyFrom(*output_def_shape_ptr);
+
+        output_def->SetType(inferred_type);
 
         // Update output-shape if it was inferred:
-        if (onnx_inferred_type.has_tensor_type()) {
+        if (onnx_inferred_type.has_tensor_type())
+        {
             auto& tensor_type = onnx_inferred_type.tensor_type();
-            if (tensor_type.has_shape() && (output_def->Shape() == nullptr)) {
-                // We update the shape only if it doesn't already exist.
-                // TODO: if a shape already exists, we should merge information from both shapes
+            if (tensor_type.has_shape())
+            {
                 output_def->SetShape(tensor_type.shape());
+            }
+            else if (output_def_shape_ptr != nullptr)
+            {
+                output_def->SetShape(output_def_shape);
             }
         }
     }
