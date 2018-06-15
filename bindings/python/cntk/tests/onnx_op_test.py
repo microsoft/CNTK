@@ -196,9 +196,8 @@ def test_AveragePool(tmpdir, dtype):
 #BatchNormalization
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_BatchNormalization(tmpdir, dtype):
-    if dtype == np.float16:
-        pytest.skip("To Be Fixed")
-
+    if (dtype == np.float16):
+        pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
         sample = [  # 5 samples having 4 classes
             [1, 1, 2, 3],
@@ -229,32 +228,38 @@ def test_BatchNormalization(tmpdir, dtype):
         verify_one_input(op_node, t, tmpdir, 'BatchNormalization')
 
 # Ceil
-def test_Ceil(tmpdir):
-    data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], np.float32)
-    model = C.ceil(data)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Ceil(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], dtype)
+        model = C.ceil(data)
 
-    verify_no_input(model, tmpdir, 'ceil_0')
+        verify_no_input(model, tmpdir, 'ceil_0')
 
-    x = C.input_variable(data.shape)
+        x = C.input_variable(data.shape)
 
-    model = C.ceil(x)
+        model = C.ceil(x)
 
-    verify_one_input(model, data, tmpdir, 'ceil_1')
+        verify_one_input(model, data, tmpdir, 'ceil_1')
 
 #Clip
-def test_Clip(tmpdir):
-    data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], np.float32)
-    min_v = 2
-    max_v = 4
-    model = C.clip(data, min_v, max_v)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Clip(tmpdir, dtype):
+    if (dtype == np.float16):
+        pytest.skip("TO BE FIXED")
+    with C.default_options(dtype = dtype):
+        data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], dtype)
+        min_v = 2
+        max_v = 4
+        model = C.clip(data, min_v, max_v)
 
-    verify_no_input(model, tmpdir, 'clip_0')
+        verify_no_input(model, tmpdir, 'clip_0')
 
-    x = C.input_variable(data.shape)
+        x = C.input_variable(data.shape)
 
-    model = C.clip(x, min_v, max_v)
+        model = C.clip(x, min_v, max_v)
 
-    verify_one_input(model, data, tmpdir, 'clip_1')
+        verify_one_input(model, data, tmpdir, 'clip_1')
 
 #Concat
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -370,21 +375,25 @@ def test_Elu(tmpdir, dtype):
         verify_one_input(model, data, tmpdir, 'Elu_1')
 
 #Equal
-def test_Equal(tmpdir):
-    data0 = np.asarray([41., 42., 43.], dtype=np.float32)
-    data1 = np.asarray([42., 42., 42.], dtype=np.float32)
-    model = C.equal(data0, data1)
-    verify_no_input(model, tmpdir, 'Equal_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Equal(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data0 = np.asarray([41., 42., 43.], dtype=dtype)
+        data1 = np.asarray([42., 42., 42.], dtype=dtype)
+        model = C.equal(data0, data1)
+        verify_no_input(model, tmpdir, 'Equal_0')
 
 #Exp
-def test_Exp(tmpdir):
-    data = np.asarray([0., 1.], dtype=np.float32)
-    model = C.exp(data)
-    verify_no_input(model, tmpdir, 'Exp_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Exp(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([0., 1.], dtype=dtype)
+        model = C.exp(data)
+        verify_no_input(model, tmpdir, 'Exp_0')
 
-    x = C.input_variable(data.shape)
-    model = C.exp(x)
-    verify_one_input(model, data, tmpdir, 'Exp_1')
+        x = C.input_variable(data.shape)
+        model = C.exp(x)
+        verify_one_input(model, data, tmpdir, 'Exp_1')
 
 #Flatten
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -400,38 +409,50 @@ def test_Flatten(tmpdir, dtype):
         verify_one_input(model, data, tmpdir, 'Flatten_1')
 
 #Floor
-def test_Floor(tmpdir):
-    data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], dtype=np.float32)
-    model = C.floor(data)
-    verify_no_input(model, tmpdir, 'Floor_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Floor(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], dtype=dtype)
+        model = C.floor(data)
+        verify_no_input(model, tmpdir, 'Floor_0')
 
-    x = C.input_variable(data.shape)
-    model = C.floor(x)
-    verify_one_input(model, data, tmpdir, 'Floor_1')
-
-#Gather
-def test_Gather(tmpdir):
-    c = np.asarray([[[0],[1]],[[4],[5]]]).astype('f')
-    x = C.input_variable((2,1))
-    d = np.arange(12).reshape(6,2).astype('f')
-    y = C.constant(d)
-    model = C.gather(y, x)
-    verify_one_input(model, c, tmpdir, 'Gather_1')
+        x = C.input_variable(data.shape)
+        model = C.floor(x)
+        verify_one_input(model, data, tmpdir, 'Floor_1')
 
 #Gather
-def test_Gather_With_Axis(tmpdir):
-    data = np.asarray( [[ [111, 112], [121, 122], [131, 132], ],[ [211, 212], [221, 222], [231, 232], ]]).astype('f')
-    indices = np.asarray( [ [0, 1, 1], [1, 1, 1]])
-    x = C.input_variable(np.shape(data))
-    y = C.input_variable(np.shape(indices))
-    axis = 1
-    model = C.gather(data, y, axis)
-    verify_one_input(model, indices, tmpdir, 'Gather_With_Axis_1')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Gather(tmpdir, dtype):
+    if (dtype == np.float16):
+        pytest.skip("TO BE FIXED")
+    with C.default_options(dtype = dtype):
+        c = np.asarray([[[0],[1]],[[4],[5]]]).astype(dtype)
+        x = C.input_variable((2,1))
+        d = np.arange(12).reshape(6,2).astype(dtype)
+        y = C.constant(d)
+        model = C.gather(y, x)
+        verify_one_input(model, c, tmpdir, 'Gather_1')
+
+#Gather
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Gather_With_Axis(tmpdir, dtype):
+    if (dtype == np.float16):
+        pytest.skip("TO BE FIXED")
+    with C.default_options(dtype = dtype):
+        data = np.asarray( [[ [111, 112], [121, 122], [131, 132], ],[ [211, 212], [221, 222], [231, 232], ]]).astype(dtype)
+        indices = np.asarray([[0, 1, 1], [1, 1, 1]])
+        x = C.input_variable(np.shape(data))
+        y = C.input_variable(np.shape(indices))
+        axis = 1
+        model = C.gather(data, y, axis)
+        verify_one_input(model, indices, tmpdir, 'Gather_With_Axis_1')
 
 #Greater
-def test_Greater(tmpdir):
-    model = C.greater([41., 42., 43.], [42., 42., 42.])
-    verify_no_input(model, tmpdir, 'Greater_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Greater(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.greater([41., 42., 43.], [42., 42., 42.])
+        verify_no_input(model, tmpdir, 'Greater_0')
 
 #GRU
 def test_GRU(tmpdir):
@@ -472,60 +493,71 @@ def test_GRU(tmpdir):
 
 
 #Hardmax
-def test_Hardmax(tmpdir):
-    data = np.asarray([1., 1., 2., 3.], dtype=np.float32)
-    model = C.hardmax(data)
-    verify_no_input(model, tmpdir, 'Hardmax_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Hardmax(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([1., 1., 2., 3.], dtype=dtype)
+        model = C.hardmax(data)
+        verify_no_input(model, tmpdir, 'Hardmax_0')
 
 #HardSigmiod
-def test_HardSigmiod(tmpdir):
-    shape = (2,3)
-    x = C.input_variable(shape=shape, dtype=np.float32)
-    alpha = 1.2
-    beta = 2.5
-    model = C.hard_sigmoid(x, alpha, beta, 'hardSigmoid')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_HardSigmiod(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        shape = (2,3)
+        x = C.input_variable(shape=shape, dtype=dtype)
+        alpha = 1.2
+        beta = 2.5
+        model = C.hard_sigmoid(x, alpha, beta, 'hardSigmoid')
 
-    data = np.random.rand(*shape).astype(np.float32)
-    verify_one_input(model, data, tmpdir, 'HardSigmoid_1')
+        data = np.random.rand(*shape).astype(dtype)
+        verify_one_input(model, data, tmpdir, 'HardSigmoid_1')
 
 #ImageScaler
-def test_ImageScaler(tmpdir):
-    input_height = 32
-    input_width = 32
-    channels = 3
-    image = np.ones([channels, input_height, input_width]).astype(np.float32)
-    scalar = 1.5
-    bias = [10, 20, 30]
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ImageScaler(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        input_height = 32
+        input_width = 32
+        channels = 3
+        image = np.ones([channels, input_height, input_width]).astype(dtype)
+        scalar = 1.5
+        bias = [10, 20, 30]
 
-    model = C.image_scaler(image, scalar, bias);
-    verify_no_input(model, tmpdir, 'ImageScaler_0')
+        model = C.image_scaler(image, scalar, bias);
+        verify_no_input(model, tmpdir, 'ImageScaler_0')
 
-    x = C.input_variable(np.shape(image)) 
-    model = C.image_scaler(x, scalar, bias);
-    verify_one_input(model, image, tmpdir, 'ImageScaler_1')
+        x = C.input_variable(np.shape(image)) 
+        model = C.image_scaler(x, scalar, bias);
+        verify_one_input(model, image, tmpdir, 'ImageScaler_1')
 
 #LayerNormalization
-def test_LayerNormalization(tmpdir):
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LayerNormalization(tmpdir, dtype):
+    if (dtype == np.float16):
+        pytest.skip("TO BE FIXED")
+
     # This test point tests the LayerNormalization round trip with defaultepsilon. We loose always the epsilon value when 
     # exporting to ONNX (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back 
     # from ONNX, CNTK always uses the default eposilon value (0.00001). That's why test below has the default epsilon 
     # value. It is not expected to pass with any other epsilon value until something changes.
-    test_shapes = [(3, 5, 7), (10, ), (20, 31)]
-    for shape in test_shapes:
-        data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
-        input_operand = C.input_variable(shape=shape)        
-        model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.00001)(input_operand)
-        verify_one_input(model0, data, tmpdir, 'LayerNorm_0')
+    with C.default_options(dtype = dtype):
+        test_shapes = [(3, 5, 7), (10, ), (20, 31)]
+        for shape in test_shapes:
+            data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
+            input_operand = C.input_variable(shape=shape)        
+            model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.00001)(input_operand)
+            verify_one_input(model0, data, tmpdir, 'LayerNorm_0')
 
-    # This test point tests especially with epsilon = 0, because that creates a graph with 
-    # different number of ops. However, we don't expect the numbers to match in round trip
-    # because we only support default epislon (0.00001) when loading from ONNX. Therefore,
-    # this is just a load/save test.
-    model1 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
-    filename = os.path.join(str(tmpdir), R'LayerNorm_1.onnx')
-    model1.save(filename, format=C.ModelFormat.ONNX)
-    loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
-    assert model1.shape == loaded_model.shape
+        # This test point tests especially with epsilon = 0, because that creates a graph with 
+        # different number of ops. However, we don't expect the numbers to match in round trip
+        # because we only support default epislon (0.00001) when loading from ONNX. Therefore,
+        # this is just a load/save test.
+        model1 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
+        filename = os.path.join(str(tmpdir), R'LayerNorm_1.onnx')
+        model1.save(filename, format=C.ModelFormat.ONNX)
+        loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+        assert model1.shape == loaded_model.shape
 
 #LeakyRelu
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -536,32 +568,43 @@ def test_LeakyRelu(tmpdir, dtype):
         verify_no_input(model, tmpdir, 'LeakyRelu_0')
 
 #Less
-def test_Less(tmpdir):
-    data0 = np.asarray([41., 42., 43.], dtype=np.float32)
-    data1 = np.asarray([42., 42., 42.], dtype=np.float32)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Less(tmpdir, dtype):
+    if (dtype == np.float16):
+        pytest.skip("TO BE FIXED")
 
-    model = C.less(data0, data1)
-    verify_no_input(model, tmpdir, 'Less_0')
+    with C.default_options(dtype = dtype):
+        data0 = np.asarray([41., 42., 43.], dtype=dtype)
+        data1 = np.asarray([42., 42., 42.], dtype=dtype)
+
+        model = C.less(data0, data1)
+        verify_no_input(model, tmpdir, 'Less_0')
 
 #Log
-def test_Log(tmpdir):
-    data = np.asarray([1., 2.], dtype=np.float32)
-    model = C.log(data)
-    verify_no_input(model, tmpdir, 'Log_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Log(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([1., 2.], dtype=dtype)
+        model = C.log(data)
+        verify_no_input(model, tmpdir, 'Log_0')
 
 #LogSoftmax
-def test_LogSoftmax(tmpdir):
-    model = C.log_softmax([[1, 1, 2, 3]])
-    verify_no_input(model, tmpdir, 'LogSoftmax_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LogSoftmax(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.log_softmax(np.array([[1, 1, 2, 3]]).astype(dtype))
+        verify_no_input(model, tmpdir, 'LogSoftmax_0')
 
 
 #LRN
-def test_LRN(tmpdir):
-    img_shape = (64, 32, 32)
-    img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=np.float32)
-    x_r = C.input_variable(shape=img_shape, dtype=np.float32)
-    model = C.local_response_normalization(x_r, 2, 1.0, 0.0001, 0.75)
-    verify_one_input(model, img, tmpdir, 'LRN_1')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LRN(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        img_shape = (64, 32, 32)
+        img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
+        x_r = C.input_variable(shape=img_shape, dtype=dtype)
+        model = C.local_response_normalization(x_r, 2, 1.0, 0.0001, 0.75)
+        verify_one_input(model, img, tmpdir, 'LRN_1')
 
 #LSTM
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -630,46 +673,52 @@ def test_MatMul(tmpdir, dtype):
         verify_no_input(model, tmpdir, 'MatMul_0')
 
 #Max
-def test_Max(tmpdir):
-    data0 = np.asarray([1., 1., 1., 1.], dtype=np.float32)
-    data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=np.float32)
-    model = C.element_max(data0, data1)
-    verify_no_input(model, tmpdir, 'Max_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Max(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data0 = np.asarray([1., 1., 1., 1.], dtype=dtype)
+        data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=dtype)
+        model = C.element_max(data0, data1)
+        verify_no_input(model, tmpdir, 'Max_0')
 
 #MaxPool
-def test_MaxPool(tmpdir):
-    img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-    x = C.input_variable(img.shape)
-    model = C.pooling(x, C.MAX_POOLING, (2,2), (3,3))
-    verify_one_input(model, img, tmpdir, 'MaxPool_1')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MaxPool(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
+        x = C.input_variable(img.shape)
+        model = C.pooling(x, C.MAX_POOLING, (2,2), (3,3))
+        verify_one_input(model, img, tmpdir, 'MaxPool_1')
 
 #MaxRoiPool
-def test_MaxRoiPool(tmpdir):
-    input_map = [[[1., 2., 3.],       # (1, 3, 3) input operand (conv feature map)
-           [4., 5., 6.],
-           [7., 8., 9.]]]
-    input_rois = [[1, 1, 2, 2]]
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MaxRoiPool(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        input_map = [[[1., 2., 3.],       # (1, 3, 3) input operand (conv feature map)
+               [4., 5., 6.],
+               [7., 8., 9.]]]
+        input_rois = [[1, 1, 2, 2]]
 
-    conv_input = np.asarray(input_map, dtype=np.float32)
-    roi_input = np.asarray(input_rois, dtype=np.float32)
+        conv_input = np.asarray(input_map, dtype=dtype)
+        roi_input = np.asarray(input_rois, dtype=dtype)
 
-    a = C.input_variable(shape=conv_input.shape,
-                dtype=np.float32,
-                needs_gradient=True,
-                name='a')
+        a = C.input_variable(shape=conv_input.shape,
+                    dtype=dtype,
+                    needs_gradient=True,
+                    name='a')
 
-    b = C.input_variable(shape=roi_input.shape,
-                dtype=np.float32,
-                needs_gradient=False,
-                name='b')
+        b = C.input_variable(shape=roi_input.shape,
+                    dtype=dtype,
+                    needs_gradient=False,
+                    name='b')
 
-    # adding batch and sequence axis
-    conv_input.shape     = (1,) + conv_input.shape
-    roi_input.shape      = (1,) + roi_input.shape
+        # adding batch and sequence axis
+        conv_input.shape     = (1,) + conv_input.shape
+        roi_input.shape      = (1,) + roi_input.shape
 
-    model = C.roipooling(a, b, C.MAX_POOLING, (3,3), 1.)
+        model = C.roipooling(a, b, C.MAX_POOLING, (3,3), 1.)
 
-    verify_two_input(model, conv_input, roi_input, tmpdir, 'MaxRoiPool_1')
+        verify_two_input(model, conv_input, roi_input, tmpdir, 'MaxRoiPool_1')
 
 #Mean
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -685,47 +734,55 @@ def test_Mean(tmpdir, dtype):
         verify_two_input(model, in1_data, in2_data, tmpdir, 'Mean_2')
     
 #MeanVarianceNormalization
-def test_MeanVarianceNormalization(tmpdir):
-    shape = (3, 5, 7)
-    data = np.reshape(np.arange(np.prod(shape), dtype = np.float32), shape)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MeanVarianceNormalization(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        shape = (3, 5, 7)
+        data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
 
-    input_operand = C.input_variable(shape=shape)
+        input_operand = C.input_variable(shape=shape)
 
-    model0 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=True)
-    verify_one_input(model0, data, tmpdir, 'MVN_0')
+        model0 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=True)
+        verify_one_input(model0, data, tmpdir, 'MVN_0')
 
-    model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
-    verify_one_input(model1, data, tmpdir, 'MVN_1')
+        model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
+        verify_one_input(model1, data, tmpdir, 'MVN_1')
 
-    model2 = C.mean_variance_normalization(input_operand, use_stats_across_channels=True, do_variance_scaling=True)
-    verify_one_input(model2, data, tmpdir, 'MVN_2')
+        model2 = C.mean_variance_normalization(input_operand, use_stats_across_channels=True, do_variance_scaling=True)
+        verify_one_input(model2, data, tmpdir, 'MVN_2')
 
-    # The test below tests the round trip with epsilon. We loose always the epsilon value when exporting to ONNX
-    # (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back from ONNX, CNTK
-    # always uses the default eposilon value (0.00001). That's why test below has the default epsilon value. It is 
-    # not expected to pass with any other epsilon value until something changes.
-    model3 = C.mean_variance_normalization(input_operand, epsilon=0.00001, use_stats_across_channels=False, do_variance_scaling=True) 
-    verify_one_input(model3, data, tmpdir, 'MVN_3')
+        # The test below tests the round trip with epsilon. We loose always the epsilon value when exporting to ONNX
+        # (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back from ONNX, CNTK
+        # always uses the default eposilon value (0.00001). That's why test below has the default epsilon value. It is 
+        # not expected to pass with any other epsilon value until something changes.
+        model3 = C.mean_variance_normalization(input_operand, epsilon=0.00001, use_stats_across_channels=False, do_variance_scaling=True) 
+        verify_one_input(model3, data, tmpdir, 'MVN_3')
 
 #Min
-def test_Min(tmpdir):
-    data0 = np.asarray([1., 1., 1., 1.], dtype=np.float32)
-    data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=np.float32)
-    model = C.element_min(data0, data1)
-    verify_no_input(model, tmpdir, 'Min_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Min(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data0 = np.asarray([1., 1., 1., 1.], dtype=dtype)
+        data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=dtype)
+        model = C.element_min(data0, data1)
+        verify_no_input(model, tmpdir, 'Min_0')
 
 #Mul
-def test_Mul(tmpdir):
-    data0 = np.asarray([1., 1., 1., 1.], dtype=np.float32)
-    data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=np.float32)
-    model = C.element_times(data0, data1)
-    verify_no_input(model, tmpdir, 'ElementTimes_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Mul(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data0 = np.asarray([1., 1., 1., 1.], dtype=dtype)
+        data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=dtype)
+        model = C.element_times(data0, data1)
+        verify_no_input(model, tmpdir, 'ElementTimes_0')
 
 #Neg
-def test_Neg(tmpdir):
-    data0 = np.asarray([1., -1., -2., 1.], dtype=np.float32)
-    model = C.negate(data0)
-    verify_no_input(model, tmpdir, 'Neg_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Neg(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data0 = np.asarray([1., -1., -2., 1.], dtype=dtype)
+        model = C.negate(data0)
+        verify_no_input(model, tmpdir, 'Neg_0')
 
 #OptimizedRNNStack
 OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
@@ -770,70 +827,92 @@ def test_Pad(tmpdir, dtype):
 #    verify_no_input(model, tmpdir, 'PRelu_0')
 
 #Pow
-def test_Pow(tmpdir):
-    model = C.pow([1, 2, -2], [3, -2, 3])
-    verify_no_input(model, tmpdir, 'Pow_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Pow(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.pow(np.array([1, 2, -2]).astype(dtype), np.array([3, -2, 3]).astype(dtype))
+        verify_no_input(model, tmpdir, 'Pow_0')
 
 #Reciprocal
-def test_Reciprocal(tmpdir):
-    model = C.reciprocal([-1/3, 1/5, -2, 3])
-    verify_no_input(model, tmpdir, 'Reciprocal_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Reciprocal(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.reciprocal(np.array([-1/3, 1/5, -2, 3]).astype(dtype))
+        verify_no_input(model, tmpdir, 'Reciprocal_0')
 
-def test_ReduceL1(tmpdir):
-    data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=np.float32)
-    model = C.reduce_l1(data, 1)
-    verify_no_input(model, tmpdir, 'ReduceL1_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ReduceL1(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=dtype)
+        model = C.reduce_l1(data, 1)
+        verify_no_input(model, tmpdir, 'ReduceL1_0')
 
-    x = C.input_variable(np.shape(data))
-    model = C.reduce_l1(x, 1)
-    verify_one_input(model, data, tmpdir, 'ReduceL1_1')
+        x = C.input_variable(np.shape(data))
+        model = C.reduce_l1(x, 1)
+        verify_one_input(model, data, tmpdir, 'ReduceL1_1')
 
-def test_ReduceL2(tmpdir):
-    data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=np.float32)
-    model = C.reduce_l2(data, 0)
-    verify_no_input(model, tmpdir, 'ReduceL2_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ReduceL2(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=dtype)
+        model = C.reduce_l2(data, 0)
+        verify_no_input(model, tmpdir, 'ReduceL2_0')
 
-def test_ReduceSumSquare(tmpdir):
-    data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=np.float32)
-    model = C.reduce_sum_square(data, 0)
-    verify_no_input(model, tmpdir, 'ReduceSumSquare_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ReduceSumSquare(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=dtype)
+        model = C.reduce_sum_square(data, 0)
+        verify_no_input(model, tmpdir, 'ReduceSumSquare_0')
 
 #ReduceLogSum
-def test_ReduceLogSum(tmpdir):
-    data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
-    model = C.reduce_log_sum_exp(data, axis=0)
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ReduceLogSum(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
+        model = C.reduce_log_sum_exp(data, axis=0)
 
     verify_no_input(model, tmpdir, 'ReduceLogSum_0')
 
 #ReduceMax
-def test_ReduceMax(tmpdir):
-    data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
-    model = C.reduce_max(data, 0)
-    verify_no_input(model, tmpdir, 'ReduceMax_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ReduceMax(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
+        model = C.reduce_max(data, 0)
+        verify_no_input(model, tmpdir, 'ReduceMax_0')
 
 #ReduceMean
-def test_ReduceMean(tmpdir):
-    data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
-    model = C.reduce_mean(data, 0)
-    verify_no_input(model, tmpdir, 'ReduceMean_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ReduceMean(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
+        model = C.reduce_mean(data, 0)
+        verify_no_input(model, tmpdir, 'ReduceMean_0')
 
 #ReduceMin
-def test_ReduceMin(tmpdir):
-    data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
-    model = C.reduce_min(data, 0)
-    verify_no_input(model, tmpdir, 'ReduceMin_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ReduceMin(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
+        model = C.reduce_min(data, 0)
+        verify_no_input(model, tmpdir, 'ReduceMin_0')
 
 #ReduceProd
-def test_ReduceProd(tmpdir):
-    data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
-    model = C.reduce_prod(data, 0)
-    verify_no_input(model, tmpdir, 'ReduceProd_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ReduceProd(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
+        model = C.reduce_prod(data, 0)
+        verify_no_input(model, tmpdir, 'ReduceProd_0')
 
 #ReduceSum
-def test_ReduceSum(tmpdir):
-    data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=np.float32)
-    model = C.reduce_sum(data, 0)
-    verify_no_input(model, tmpdir, 'ReduceSum_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ReduceSum(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
+        model = C.reduce_sum(data, 0)
+        verify_no_input(model, tmpdir, 'ReduceSum_0')
 
 #Relu
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -932,43 +1011,55 @@ def test_RNN(tmpdir, dtype):
             verify_one_input(RNNModel, data, tmpdir, model_filename)
 
 #Selu
-def test_Selu(tmpdir):
-    model = C.selu([[-1, -0.5, 0, 1, 2]])
-    verify_no_input(model, tmpdir, 'Selu_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Selu(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.selu(np.array([[-1, -0.5, 0, 1, 2]]).astype(dtype))
+        verify_no_input(model, tmpdir, 'Selu_0')
 
 #Sigmoid
-def test_Sigmoid(tmpdir):
-    model = C.sigmoid([-2, -1., 0., 1., 2.])
-    verify_no_input(model, tmpdir, 'Sigmoid_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Sigmoid(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.sigmoid(np.array([-2, -1., 0., 1., 2.]).astype(dtype))
+        verify_no_input(model, tmpdir, 'Sigmoid_0')
 
 #Slice
-def test_Slice(tmpdir):
-    data = np.asarray([[1,2,-3], [4, 5, 6]],dtype=np.float32)
-    x1 = C.input_variable((2,3))
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Slice(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([[1,2,-3], [4, 5, 6]],dtype=dtype)
+        x1 = C.input_variable((2,3))
 
-    model = C.slice(data, 0, 1, 2)
-    verify_no_input(model, tmpdir, 'Slice_0')
+        model = C.slice(data, 0, 1, 2)
+        verify_no_input(model, tmpdir, 'Slice_0')
 
-    model = C.slice(x1, 0, 1, 2)
-    verify_one_input(model, data, tmpdir, 'Slice_1')
+        model = C.slice(x1, 0, 1, 2)
+        verify_one_input(model, data, tmpdir, 'Slice_1')
 
-    model = C.slice(x1, [0,1], [1,0], [2,1]);
-    verify_one_input(model, data, tmpdir, 'Slice2_1')
+        model = C.slice(x1, [0,1], [1,0], [2,1]);
+        verify_one_input(model, data, tmpdir, 'Slice2_1')
 
 #Softmax
-def test_Softmax(tmpdir):
-    model = C.softmax([[1, 1, 2, 3]])
-    verify_no_input(model, tmpdir, 'Softmax_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Softmax(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.softmax(np.array([[1, 1, 2, 3]]).astype(dtype))
+        verify_no_input(model, tmpdir, 'Softmax_0')
 
 #Softplus
-def test_Softplus(tmpdir):
-    model = C.softplus([[-1, -0.5, 0, 1, 2]])
-    verify_no_input(model, tmpdir, 'Softplus_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Softplus(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.softplus([[-1, -0.5, 0, 1, 2]])
+        verify_no_input(model, tmpdir, 'Softplus_0')
 
 #Softsign
-def test_Softsign(tmpdir):
-    model = C.softsign([[-1, -0.5, 0, 1, 2]])
-    verify_no_input(model, tmpdir, 'Softsign_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Softsign(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.softsign(np.array([[-1, -0.5, 0, 1, 2]]).astype(dtype))
+        verify_no_input(model, tmpdir, 'Softsign_0')
 
 #Squeeze
 #def test_Squeeze(tmpdir):
@@ -1006,21 +1097,25 @@ def test_SpaceToDepth(tmpdir, dtype):
         verify_one_input(model, input_val, tmpdir, 'SpaceToDepth')
 
 #Sqrt
-def test_Sqrt(tmpdir):
-    model = C.sqrt([0., 4.])
-    verify_no_input(model, tmpdir, 'Sqrt_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Sqrt(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.sqrt(np.array([0., 4.]).astype(dtype))
+        verify_no_input(model, tmpdir, 'Sqrt_0')
 
 #Sub
-def test_Sub(tmpdir):
-    model = C.minus([1, 2, 3], [4, 5, 6])
-    verify_no_input(model, tmpdir, 'Sub_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Sub(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        model = C.minus(np.array([1, 2, 3]).astype(dtype), np.array([4, 5, 6]).astype(dtype))
+        verify_no_input(model, tmpdir, 'Sub_0')
 
 #Tanh
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Tanh(tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        model = C.tanh([[1,2],[3,4]])
+        model = C.tanh(np.array([[1,2],[3,4]]).astype(dtype))
         verify_no_input(model, tmpdir, 'Tanh_0')
 
 #Transpose
@@ -1040,10 +1135,12 @@ def test_Transpose(tmpdir, dtype):
         verify_one_input(model, data, tmpdir, 'Transpose_1_2')
 
 #Transpose
-def test_TransposeAxes(tmpdir):
-    data = [[[0,1],[2,3],[4,5]]]
-    model = C.swapaxes(data, 1, 2)
-    verify_no_input(model, tmpdir, 'TransposeAxes_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_TransposeAxes(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.array([[[0,1],[2,3],[4,5]]]).astype(dtype)
+        model = C.swapaxes(data, 1, 2)
+        verify_no_input(model, tmpdir, 'TransposeAxes_0')
 
     # TODO: there is probably a bug in C.swapaxes which does not allow 
     # evaluation of model with data

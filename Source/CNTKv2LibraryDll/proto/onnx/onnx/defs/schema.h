@@ -433,6 +433,7 @@ class OpSchema final {
         "tensor(int32)",
         "tensor(int64)",
         "tensor(float)",
+        "tensor(float16)",
         "tensor(double)"};
     return high_precision_numeric_types;
   }
