@@ -1576,16 +1576,23 @@ endif
 ########################################
 # C# Support
 ########################################
+
 ifeq ("$(CSHARP_SUPPORT)","true")
-	
+
 # This is a short-term hack to shoehorn cmake into our build system. In the near future, we will fully migrate
 # to a cmake-based system and this hack will no longer be necessary.
+ifeq ("$(findstring debug,$(BUILDTYPE))","debug")
 
-ifeq ("$(BUILDTYPE)","debug")
-	CSHARP_BUILDTYPE:=Debug
-endif
-ifeq ("$(BUILDTYPE)","release")
-	CSHARP_BUILDTYPE:=Release
+CSHARP_BUILDTYPE:=Debug
+
+else ifeq ("$(findstring release,$(BUILDTYPE))","release")
+
+CSHARP_BUILDTYPE:=Release
+
+else
+
+$(error '$(BUILDTYPE)' does not resemble 'debug' or 'release')
+
 endif
 
 .PHONY: csharp
@@ -1594,11 +1601,11 @@ csharp: $(CSHARP_LIBS)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
 	mkdir -p bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE)
 	cd bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE) && \
-		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) && \
+		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) -DCNTK_BUILD_LIB_DIR_HACK=$(LIBDIR) && \
 		make
 	mkdir -p bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)
 	cd bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE) && \
-		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) && \
+		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) -DCNTK_BUILD_LIB_DIR_HACK=$(LIBDIR) && \
 		make
 	cp --recursive bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/* $(LIBDIR)
 
