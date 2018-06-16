@@ -313,7 +313,7 @@ FunctionPtr GRUCell(Variable input,
 
     FunctionPtr ct = gActivationOp(ct_proj + Times(H1, rs));
 
-    Constant one = W.GetDataType() == CNTK::DataType::Float ? Constant::Scalar<float>(1.0f) : Constant::Scalar<double>(1.0);
+    Constant one = Constant::Scalar(W.GetDataType(), 1.0);
 
     FunctionPtr ht = ElementTimes(one - zt, ct) + ElementTimes(zt, prevOutput);
 

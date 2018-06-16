@@ -185,7 +185,9 @@ def test_ArgMin(tmpdir, dtype):
 
 #AveragePool
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_AveragePool(tmpdir, dtype):
+def test_AveragePool(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype is np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
     with C.default_options(dtype = dtype):
         img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
         x = C.input_variable(img.shape)
@@ -285,7 +287,9 @@ def test_Concat(tmpdir, dtype):
         verify_one_input(model, data1, tmpdir, 'Concat_1')
 
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_ConvTranspose(tmpdir, dtype):
+def test_ConvTranspose(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype is np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
     with C.default_options(dtype = dtype):
         # Keep the shapes below as they are, because this tests an earlier bug.
         input_shape = (48, 16, 16) 
@@ -455,40 +459,40 @@ def test_Greater(tmpdir, dtype):
         verify_no_input(model, tmpdir, 'Greater_0')
 
 #GRU
-def test_GRU(tmpdir):
-    def MakeGRUNameFromConfig(backward, initial_state, activition):
-        model_name = 'GRU.' + activition.__name__
-        if (initial_state != 0):
-            model_name += '.initial'
-        if (backward):        
-            model_name += '.backward'
-        else:    
-            model_name += '.forward'
-        return model_name 
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_GRU(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        def MakeGRUNameFromConfig(backward, initial_state, activition):
+            model_name = 'GRU.' + activition.__name__
+            if (initial_state != 0):
+                model_name += '.initial'
+            if (backward):
+                model_name += '.backward'
+            else:    
+                model_name += '.forward'
+            return model_name 
 
-    direction_options = [False, True]
-    activation_options = [C.tanh]
-    initial_state_options = [0]
+        direction_options = [False, True]
+        activation_options = [C.tanh]
+        initial_state_options = [0]
 
-    input_dim = 2
-    cell_dim = 3
-    batch_size = 1
-    sequence_len = 5
+        input_dim = 2
+        cell_dim = 3
+        batch_size = 1
+        sequence_len = 5
 
-    for config in list(product(direction_options, initial_state_options, activation_options)):
-        model_filename = MakeGRUNameFromConfig(*config)
-        print(model_filename)
-        backward, initial_state, activation =  config
+        for config in list(product(direction_options, initial_state_options, activation_options)):
+            model_filename = MakeGRUNameFromConfig(*config)
+            print(model_filename)
+            backward, initial_state, activation =  config
     
-        x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
-        GRUModel = C.layers.Recurrence(C.layers.GRU(cell_dim,     
-                                                    activation = activation),   
-                                       initial_state = initial_state,    
-                                       go_backwards=backward)(x)
-        #CLG.plot(GRUModel, filename=cntk_pdf_filename)
-        #plot_block_internals(GRUModel, 'GRU', model_filename)
-        data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
-        verify_one_input(GRUModel, data, tmpdir, model_filename)
+            x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
+            GRUModel = C.layers.Recurrence(C.layers.GRU(cell_dim,     
+                                                        activation = activation),   
+                                           initial_state = initial_state,    
+                                           go_backwards=backward)(x)
+            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+            verify_one_input(GRUModel, data, tmpdir, model_filename)
 
 
 #Hardmax
@@ -597,7 +601,9 @@ def test_LogSoftmax(tmpdir, dtype):
 
 #LRN
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_LRN(tmpdir, dtype):
+def test_LRN(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype is np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
     with C.default_options(dtype = dtype):
         img_shape = (64, 32, 32)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
@@ -681,7 +687,9 @@ def test_Max(tmpdir, dtype):
 
 #MaxPool
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_MaxPool(tmpdir, dtype):
+def test_MaxPool(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype is np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
     with C.default_options(dtype = dtype):
         img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
         x = C.input_variable(img.shape)

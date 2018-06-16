@@ -6,6 +6,7 @@
 import os
 import numpy as np
 import cntk as C
+from cntk.ops.tests.ops_test_utils import cntk_device
 import pytest
 
 def test_load_save_constant(tmpdir):
@@ -75,7 +76,9 @@ def test_convolution(tmpdir, auto_padding):
 
 DType_Config = (np.float32, np.float16)    
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_convolution_transpose(tmpdir, dtype):
+def test_convolution_transpose(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype is np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
     with C.default_options(dtype = dtype):
         img_shape = (1, 3, 3)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
@@ -120,7 +123,9 @@ POOLING_TEST_DATA = [
 # and loads it back to check that the same results are produced.
 @pytest.mark.parametrize("auto_padding, pooling_type", POOLING_TEST_DATA)
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_pooling(tmpdir, auto_padding, pooling_type, dtype):
+def test_pooling(tmpdir, auto_padding, pooling_type, dtype, device_id):
+    if device_id == -1 and dtype is np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
     with C.default_options(dtype = dtype):
         img_shape = (1, 5, 5)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
@@ -366,7 +371,9 @@ def test_resnet_model(tmpdir):
 
 
 @pytest.mark.parametrize("dtype", DType_Config)    
-def test_conv_with_freedim_model(tmpdir, dtype):    
+def test_conv_with_freedim_model(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype is np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
     with C.default_options(dtype = dtype):
         img_shape = (3, 32, 32)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
