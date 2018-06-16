@@ -79,7 +79,6 @@ DType_Config = (np.float32, np.float16)
 def test_convolution_transpose(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test only runs on GPU')
-
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype, device=device):
         img_shape = (1, 3, 3)
@@ -125,8 +124,11 @@ POOLING_TEST_DATA = [
 # and loads it back to check that the same results are produced.
 @pytest.mark.parametrize("auto_padding, pooling_type", POOLING_TEST_DATA)
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_pooling(tmpdir, auto_padding, pooling_type, dtype):
-    with C.default_options(dtype = dtype):
+def test_pooling(tmpdir, auto_padding, pooling_type, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test only runs on GPU')
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype, device=device):
         img_shape = (1, 5, 5)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
 
@@ -370,9 +372,12 @@ def test_resnet_model(tmpdir):
     loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
 
 
-@pytest.mark.parametrize("dtype", DType_Config)    
-def test_conv_with_freedim_model(tmpdir, dtype):    
-    with C.default_options(dtype = dtype):
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_conv_with_freedim_model(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test only runs on GPU')
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype, device=device):
         img_shape = (3, 32, 32)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
 
