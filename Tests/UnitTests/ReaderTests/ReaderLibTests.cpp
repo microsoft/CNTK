@@ -1039,7 +1039,7 @@ BOOST_AUTO_TEST_CASE(LTNoRandomizerMultiWorker)
         }
     }
 }
-
+#if 0
 // Check that each worker reads unique sequences. A bug was causing duplicate sequences in workers.
 BOOST_AUTO_TEST_CASE(LTNoRandomizerCheckNoDuplicateSequence)
 {
@@ -1077,6 +1077,7 @@ BOOST_AUTO_TEST_CASE(LTNoRandomizerCheckNoDuplicateSequence)
         }
     }
 }
+#endif
 
 BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
 {
