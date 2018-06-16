@@ -186,9 +186,10 @@ def test_ArgMin(tmpdir, dtype):
 #AveragePool
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_AveragePool(tmpdir, dtype, device_id):
-    if device_id == -1 and dtype is np.float16:
+    if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
-    with C.default_options(dtype = dtype):
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype, device=device):
         img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
         x = C.input_variable(img.shape)
         model = C.pooling(x, C.AVG_POOLING, (2,2), (2,2))
@@ -288,9 +289,10 @@ def test_Concat(tmpdir, dtype):
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ConvTranspose(tmpdir, dtype, device_id):
-    if device_id == -1 and dtype is np.float16:
+    if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
-    with C.default_options(dtype = dtype):
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype, device=device):
         # Keep the shapes below as they are, because this tests an earlier bug.
         input_shape = (48, 16, 16) 
         img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape) 
@@ -602,9 +604,10 @@ def test_LogSoftmax(tmpdir, dtype):
 #LRN
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LRN(tmpdir, dtype, device_id):
-    if device_id == -1 and dtype is np.float16:
+    if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
-    with C.default_options(dtype = dtype):
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype, device=device):
         img_shape = (64, 32, 32)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
         x_r = C.input_variable(shape=img_shape, dtype=dtype)
@@ -688,9 +691,10 @@ def test_Max(tmpdir, dtype):
 #MaxPool
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_MaxPool(tmpdir, dtype, device_id):
-    if device_id == -1 and dtype is np.float16:
+    if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
-    with C.default_options(dtype = dtype):
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype, device=device):
         img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
         x = C.input_variable(img.shape)
         model = C.pooling(x, C.MAX_POOLING, (2,2), (3,3))
