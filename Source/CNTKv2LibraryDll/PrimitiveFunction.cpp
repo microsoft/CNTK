@@ -171,6 +171,11 @@ namespace CNTK
         {
             reduceAxis(Axis::OperandSequenceAxis(), inputs[0], outputDynamicAxes);
         }
+        else if (op == PrimitiveOpType::ConvolutionSequenceShape)
+        {
+            // There is no sequence axis for ConvolutionSequenceShape output, since the output is length of every sequence. 
+            reduceAxis(Axis::OperandSequenceAxis(), inputs[1], outputDynamicAxes);
+        }
         else if ((op == PrimitiveOpType::Where) || (op == PrimitiveOpType::ToSequence))
         {
             if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewDynamicAxes))
@@ -830,7 +835,7 @@ namespace CNTK
                                 tmpShape = m_attributes[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                             auto sharing = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
                             auto autoPadding = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-                            bool transpose = m_attributes[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
+                            bool transpose = m_attributes[PrimitiveFunction::AttributeNameTranspose].Value<bool>();                            
                             if (m_inputs[0].Shape().Rank() < m_inputs[1].Shape().Rank())
                                 InvalidArgument("The convolution map operand '%S' rank (%d) should be >= rank (%d) of the shape of the input operand '%S'.",
                                                 m_inputs[0].AsString().c_str(), (int)m_inputs[0].Shape().Rank(), (int)m_inputs[1].Shape().Rank(), m_inputs[1].AsString().c_str());
@@ -869,6 +874,55 @@ namespace CNTK
                             m_attributes[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
                             m_attributes[PrimitiveFunction::AttributeNameDilation] = dilation;
                             m_attributes[PrimitiveFunction::AttributeNameKernelShape] = kernelShape;
+                            break;
+                        }
+                        case PrimitiveOpType::ConvolutionSequenceShape:
+                        {
+                            assert(m_inputs.size() == 2);
+                            auto& strides = m_attributes[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                            NDShape dilation = { 1 };
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameDilation))
+                                dilation = m_attributes[PrimitiveFunction::AttributeNameDilation].Value<NDShape>();
+                            auto& lowerPad = m_attributes[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                            auto& upperPad = m_attributes[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                            NDShape tmpShape = NDShape::Unknown();
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameOutputShape))
+                                tmpShape = m_attributes[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
+                            auto sharing = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
+                            auto autoPadding = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                            bool transpose = m_attributes[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
+                            if (transpose)
+                                InvalidArgument("Transpose is currently not supported for sequential convolution. ");
+                            // +1 for operand rank, as the real operand should have an additional unpacked sequence axis. 
+                            if (m_inputs[0].Shape().Rank() < m_inputs[1].Shape().Rank() + 1)
+                                InvalidArgument("The convolution map operand '%S' rank (%d) should be > rank (%d) of the shape of the input operand '%S'.",
+                                    m_inputs[0].AsString().c_str(), (int)m_inputs[0].Shape().Rank(), (int)m_inputs[1].Shape().Rank(), m_inputs[1].AsString().c_str());
+                            NDShape outputMapCount, kernelShape;
+                            auto inputShape = m_inputs[1].Shape();
+                            // insert NDShape::FreeDimension to index Rank() - 2.(on the left of channel axis)
+                            inputShape = inputShape.SubShape(0, inputShape.Rank()-1).AppendShape({NDShape::FreeDimension}).AppendShape({inputShape[inputShape.Rank() - 1]});
+                            std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(m_inputs[0].Shape(), inputShape, transpose);
+                            auto originalKernelShape = kernelShape;
+                            auto groups = PrimitiveFunction::convolutionOpDefaultValueForGroups;
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameGroups))
+                                groups = m_attributes[PrimitiveFunction::AttributeNameGroups].Value<size_t>();
+                            if (tmpShape.IsUnknown() || tmpShape[0] == 0)
+                                outputShape = ConvolutionOpOutputShape(m_op, inputShape, kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, true, dilation, groups);
+                            auto kernelRank = kernelShape.Rank();
+                            if (originalKernelShape != kernelShape)
+                            {
+                                for (size_t i2 = 0; i2 < kernelRank; ++i2)
+                                    m_inputs[0].m_dataFields->m_shape[i2] = kernelShape[i2];
+                            }
+                            if (transpose && (m_inputs[0].Shape().Rank() > kernelRank) && (m_inputs[0].Shape()[kernelRank] == NDShape::InferredDimension))
+                                m_inputs[0].m_dataFields->m_shape[kernelRank] = outputMapCount[outputMapCount.Rank() - 1];
+
+                            m_attributes[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+                            m_attributes[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+                            m_attributes[PrimitiveFunction::AttributeNameDilation] = dilation;
+                            m_attributes[PrimitiveFunction::AttributeNameKernelShape] = kernelShape;
+                            // output shape is simply {1}: 1D denoting sequence length for each sequence. 
+                            outputShape = NDShape({1});
                             break;
                         }
                         case PrimitiveOpType::CrossEntropyWithSoftmax:

@@ -269,6 +269,202 @@ def _pad_to_shape(filter_shape, param, what):
         raise ValueError("{} parameter ({}) must be a scalar or have same number of elements as the filter_shape parameter ({})".format(what, param, filter_shape))
     return param
 
+# Sequential Convolution -- create a sequential convolution layer with optional non-linearity
+# This is the newer version that supports ND sequential convolution with arbitrary strides. 
+#             ( (sample shape) +  (output shape) +  (reduction shape) + (spatial shape)   )
+#    in     : ( (sample shape) +                 +  (reduction shape) + (spatial shape)   )
+#    kernel : (                +  (output shape) +  (reduction shape) + (rec field shape) )
+#    out    : ( (sample shape) +  (output shape) +                    + (spatial shape)   )
+def SequentialConvolution(filter_shape,     # shape of receptive field, e.g. (3,3). filter_shape[0] is for sequence axis. 
+                          num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
+                          activation=default_override_or(identity),
+                          init=default_override_or(C.glorot_uniform()),
+                          pad=default_override_or(False),
+                          strides=1,
+                          sharing=True,     # (must be True currently)
+                          bias=default_override_or(True),
+                          init_bias=default_override_or(0),
+                          reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)  --TODO: call it item_rank?
+                          transpose_weight=False,  # (must be False currently)
+                          dilation=1,
+                          groups = 1,
+                          max_temp_mem_size_in_samples=0,
+                          op_name='Convolution', name=''):
+    '''
+    SequentialConvolution(filter_shape, num_filters=None, activation=identity, init=glorot_uniform(), pad=False, strides=1, sharing=True, bias=True, init_bias=0, reduction_rank=1, transpose_weight=False, dilation=1, groups=1, max_temp_mem_size_in_samples=0, op_name='Convolution', name='')
+
+    Layer factory function to create a sequential convolution layer.
+
+    This implements a sequential convolution operation pretty much almost the same as convolution operation, except that this operation convolves
+    also on the dynamic axis(sequence), and filter_shape[0] is applied to that axis. 
+
+    The dimension of the input items (input feature-map depth) is not to be specified. It is known from the input.
+    The dimension of the output items (output feature-map depth) generated for each item position is given by ``num_filters``.
+
+    This is useful for variable-length inputs, such as video
+    or natural-language processing (word n-grams).
+    Note, however, that convolution does not support sparse inputs.
+
+    Both input and output items can be scalars intead of vectors. For scalar-valued input items,
+    such as pixels on a black-and-white image, or samples of an audio clip, specify ``reduction_rank=0``.
+    If the output items are scalar, pass ``num_filters=()`` or ``None``.
+
+    A ``Convolution`` instance owns its weight parameter tensors `W` and `b`, and exposes them as an attributes ``.W`` and ``.b``.
+    The weights will have the shape ``(num_filters, input_feature_map_depth, *filter_shape)``
+
+    Example:
+     >>> # 2D sequential convolution of 5x4 receptive field with output feature-map depth 128:
+     >>> f = Convolution((5,4), 128, activation=C.relu)
+     >>> x = C.input_variable(**Sequence[Tensor[3,640]])  # 3-channel color image, the real shape would be [width] x [channel, height], where now width is at sequence axis and can take arbitrary length.  
+     >>> h = f(x)
+     >>> h.shape
+         (128, 637)
+     >>> f.W.shape  # will have the form (num_filters, input_depth, *filter_shape)
+         (128, 3, 5, 4)
+
+     >>> # 2D sequential convolution over a one-channel black-and-white image, padding, and stride 2 along width dimension
+     >>> f = Convolution((3,3), 128, reduction_rank=0, pad=True, strides=(1,2), activation=C.relu)
+     >>> x = C.input_variable(**Sequence[Tensor[640]]) # similar to the above example, the image height is 640. Image width is arbitrary and takes the sequence axis. 
+     >>> h = f(x)
+     >>> h.shape
+         (128, 320)
+     >>> f.W.shape
+         (128, 1, 3, 3)
+
+    Args:
+     filter_shape (`int` or `tuple` of `ints`): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+     num_filters (int, defaults to `None`): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
+     activation (:class:`~cntk.ops.functions.Function`, defaults to `identity`): optional function to apply at the end, e.g. `relu`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to :func:`~cntk.initializer.glorot_uniform` ): initial value of weights `W`
+     pad (`bool` or `tuple` of `bools`, defaults to `False`): if `False`, then the filter will be shifted over the "valid"
+      area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
+      the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
+      Use a `tuple` to specify a per-axis value.
+     strides (`int` or `tuple` of `ints`, defaults to 1): stride of the convolution (increment when sliding the filter over the input). Use a `tuple` to specify a per-axis value.
+     sharing (bool, defaults to `True`): When `True`, every position uses the same Convolution kernel.  When `False`, you can have a different Convolution kernel per position, but `False` is not supported.
+     bias (bool, optional, defaults to `True`): the layer will have no bias if `False` is passed here
+     init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
+     reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
+      that is stored with tensor shape (H,W) instead of (1,H,W)
+     transpose_weight (bool, defaults to `False`): When this is `True` this is convolution, otherwise this is correlation (which is common for most toolkits)
+     dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
+     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1,
+      which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
+      divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
+      Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
+     max_temp_mem_size_in_samples (int, defaults to 0): Limits the amount of memory for intermediate convolution results.  A value of 0 means, memory is automatically managed.
+     name (str, defaults to ''): the name of the function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        A function that accepts one argument and applies the sequential convolution operation to it
+    '''
+
+    activation = get_default_override(SequentialConvolution, activation=activation)
+    init       = get_default_override(SequentialConvolution, init=init)
+    pad        = get_default_override(SequentialConvolution, pad=pad)
+    bias       = get_default_override(SequentialConvolution, bias=bias)
+    init_bias  = get_default_override(SequentialConvolution, init_bias=init_bias)
+
+    # tuplify all tuple inputs that can also be given as scalars if rank 1
+    filter_shape = _as_tuple(filter_shape)
+    num_filters  = _as_tuple(num_filters or ())
+    filter_rank  = len(filter_shape)
+    strides      = _pad_to_shape(filter_shape, strides, 'strides')
+    sharing      = _pad_to_shape(filter_shape, sharing, 'sharing')
+    pad          = _pad_to_shape(filter_shape, pad, 'pad')
+    dilation     = _pad_to_shape(filter_shape, dilation, 'dilation')
+
+    if (reduction_rank != 0) and (reduction_rank != 1):
+        raise NotImplementedError("Convolution: reduction_rank must be 0 or 1")
+    if transpose_weight:
+        raise NotImplementedError("Convolution: transpose_weight option currently not supported")
+    if not sharing:
+        raise NotImplementedError("Convolution: sharing option currently must be True")
+    if (groups <= 0):
+        raise ValueError("Convolution: groups must be strictly positive, i.e. groups > 0.")
+    if (groups > 1):
+        raise ValueError("Convolution: groups > 1, is not currently supported by Convolution layer. For group convolution with groups > 1, use CNTK's low-level convolution node (cntk.convolution).")
+    # The convolution() function currently requires exactly one input and one output depth axis.
+    # So we emulate those dimensions on this level. TODO: Once this is suppored by the C++ code, remove the emulation here.
+    emulating_output_depth = num_filters == ()
+    emulating_input_depth  = reduction_rank == 0
+
+    actual_output_channels_shape = num_filters                if not emulating_output_depth else (1,)
+    actual_reduction_shape       = _INFERRED
+    actual_filter_shape          = filter_shape
+
+    # add the dimension to the options as well
+    num_emulated_axes = emulating_input_depth
+    strides = (1,)     * num_emulated_axes + strides
+    sharing = (True,)  * num_emulated_axes + sharing
+    pad     = (False,) * num_emulated_axes + pad
+
+    kernel_shape = actual_reduction_shape + actual_filter_shape # kernel := filter plus reductionDims
+
+    # init can be an np.array, which must have the correct dimensions subject to faking depth
+    # Once we no longer fake depth at this outer level, we can remove this.
+    if isinstance(init, np.ndarray):
+        if reduction_rank != 0:
+            raise ValueError("a constant initializer can currently only used without reduction dimension")
+        # TODO: Test whether this is needed. We should instead just take whatever reduction dimension is given here as that of the input.
+        nominal_W_shape = num_filters + filter_shape
+        if init.shape != nominal_W_shape:
+            raise ValueError("a constant initializer was passed that is of wrong shape")
+        init_kernel = init.reshape(actual_output_channels_shape + kernel_shape) # make it fit
+    else:
+        init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-len(actual_output_channels_shape)))
+
+    # parameters bound to this Function
+    # For sequential we must reduce bias filter rank by 1, as we get the rank from kernel filter shape, and that contains the seq axis which should be omitted. 
+    bias_filter_rank = len(actual_filter_shape) - 1
+    W = Parameter(actual_output_channels_shape + kernel_shape,            init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
+    b = Parameter(actual_output_channels_shape + (1,) * bias_filter_rank, init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
+    # TODO: Should we cater to the special case of 1D convolution for text? I.e. sequential only (filter_shape=()).
+    #       In that case, the convolution is the embedding, and we should use a matrix product to support sparse inputs.
+    #       Or add sparse support to splice().
+
+    # expression
+    @BlockFunction('Convolution', name)
+    def convolve(x):
+        # insert additional axes for various purposes
+        filter_rank_without_seq = filter_rank - 1    # spatial_shape has filter_rank except the first axis of filter_rank belongs to sequential dimension, must subtract
+        num_inserted_axes = num_emulated_axes # sequential reshape is handled at c++ side now.
+        if num_inserted_axes != 0:
+            # x: (in_depth, spatial_shape)
+
+            x = reshape(x, (1,) * num_inserted_axes,    # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+                        begin_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else C.Axis.new_leading_axis(),
+                        end_axis  =-filter_rank_without_seq if filter_rank_without_seq != 0 else None)
+            # x: (in_depth or emulated_in_depth, emulated_1D_extra, seq_filter_shape, spatial_shape)
+        # actual convolution
+        print(x.shape)
+        r = convolution (W, x,
+                         strides=strides, sharing=sharing,
+                         auto_padding=pad,
+                         sequential=True,
+                         dilation=dilation,
+                         groups=groups,
+                         max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+        if bias:
+            r = r + b
+        # if no output dimension is desired, then strip it
+        # also need to strip the fake singleton axes, since they are not reduced away
+        # TODO: We still have those axes in the kernel. Solve this once the C++ implementation supports 1D directly.
+        num_axes_to_remove = emulating_output_depth
+        if num_axes_to_remove > 0:
+            # (out_depth, emulated axes, spatial_shape)
+            r = reshape(r, (),    # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
+                        begin_axis=-filter_rank_without_seq - num_axes_to_remove,  # no need for Axis.new_leading_axis() since expression < 0 guaranteed
+                        end_axis  =-filter_rank_without_seq if filter_rank_without_seq != 0 else None)
+            # (out_depth, spatial_shape)
+        if activation is not None:
+            r = activation(r)
+        return r
+
+    return convolve
+
+
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (spatial shape)   )
 #    in     : ( (sample shape) +                 +  (reduction shape) + (spatial shape)   )
@@ -281,7 +477,6 @@ def _pad_to_shape(filter_shape, param, what):
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
-# TODO: stride not supported for sequential
 # TODO: add a test case for passing a numpy array as initial values
 def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
                 num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
@@ -379,7 +574,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
       that is stored with tensor shape (H,W) instead of (1,H,W)
      transpose_weight (bool, defaults to `False`): When this is `True` this is convolution, otherwise this is correlation (which is common for most toolkits)
      dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
-     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1,
       which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
       divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
       Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
@@ -551,7 +746,7 @@ def Convolution1D(filter_shape,     # shape of receptive field, e.g. (3)
     init_bias  = get_default_override(Convolution1D, init_bias=init_bias)
     if len(_as_tuple(filter_shape)) != 1:
          raise ValueError('Convolution1D: filter_shape must be a scalar')
-    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, dilation=dilation, op_name='Convolution1D', name=name)
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, sequential=False, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, dilation=dilation, op_name='Convolution1D', name=name)
 
 
 def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must be a 2-element tuple.
@@ -588,7 +783,7 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
       that is stored with tensor shape (H,W) instead of (1,H,W)
      dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
-     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1,
       which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
       divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
       Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
@@ -608,7 +803,7 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
     if len(_as_tuple(filter_shape)) > 2:
          raise ValueError('Convolution2D: filter_shape must be a scalar or a 2D tuple, e.g. 3 or (3,3)')
     filter_shape = _pad_to_shape((0,0), filter_shape, 'filter_shape')
-    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad,
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, sequential=False,
                        strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank,
                        dilation=dilation, groups=groups, op_name='Convolution2D', name=name)
 
@@ -647,7 +842,7 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
       that is stored with tensor shape (H,W) instead of (1,H,W)
      dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
-     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1,
       which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
       divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
       Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
@@ -667,8 +862,8 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
     if len(_as_tuple(filter_shape)) > 3:
          raise ValueError('Convolution3D: filter_shape must be a scalar or a 3D tuple, e.g. 3 or (3,3,3)')
     filter_shape = _pad_to_shape((0,0,0), filter_shape, 'filter_shape')
-    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad,
-                       strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, 
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, sequential=False,
+                       strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank,
                        dilation=dilation, groups=groups, op_name='Convolution3D', name=name)
 
 
@@ -781,7 +976,7 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     pad     = (False,) * num_emulated_axes + pad
 
     output_channels_shape = _as_tuple(num_filters)
-    kernel_shape = _INFERRED + output_channels_shape + filter_shape # [I × O × m1 × m2 ×… × mn] 
+    kernel_shape = _INFERRED + output_channels_shape + filter_shape # [I × O × m1 × m2 ×… × mn]
 
     output_full_shape = output_shape
     if output_shape is not None:
@@ -1252,7 +1447,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     # for fp16 batch_normalization, we need to use fp32 statistics
     dtype = get_default_override(None, dtype=default_override_or(np.float32))
     stat_dtype = np.float32 if dtype == np.float16 or dtype == 'float16' else dtype
-    
+
     # parameters bound to this Function
     norm_shape  = _INFERRED
     if map_rank is not None and map_rank != 1:

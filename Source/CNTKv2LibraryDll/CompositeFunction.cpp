@@ -1102,10 +1102,37 @@ namespace CNTK
                         groups = functionConfig[PrimitiveFunction::AttributeNameGroups].Value<size_t>();
                     auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
                     ASSIGN_NEW_NODE(ConvolutionNode, network->GetDeviceId(), internalNodeName,
-                                                                           AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
-                                                                           sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
-                                                                           outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
-                                                                           ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
+                                    AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
+                                    sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
+                                    outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
+                                    ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
+                    break;
+                }
+                case PrimitiveOpType::ConvolutionSequenceShape:
+                {
+                    auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                    NDShape dilation = { 1 };
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameDilation))
+                        dilation = functionConfig[PrimitiveFunction::AttributeNameDilation].Value<NDShape>();
+                    auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                    auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                    auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
+                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                    auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
+                    NDShape outputMapCount, kernelShape;
+                    std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose);
+                    NDShape outputShape = NDShape::Unknown();
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
+                        outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
+                    auto groups = PrimitiveFunction::convolutionOpDefaultValueForGroups;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameGroups))
+                        groups = functionConfig[PrimitiveFunction::AttributeNameGroups].Value<size_t>();
+                    auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
+                    ASSIGN_NEW_NODE(ConvolutionSequenceShapeNode, network->GetDeviceId(), internalNodeName,
+                        AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
+                        sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
+                        outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
+                        ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
                     break;
                 }
                 case PrimitiveOpType::CosDistance:

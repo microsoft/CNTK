@@ -2455,25 +2455,69 @@ namespace CNTK
         size_t reductionRank,
         size_t groups,
         size_t maxTempMemSizeInSamples,
+        bool sequential,
         const std::wstring& name)
     {
         if ((reductionRank != 0) && (reductionRank != 1))
             LogicError("reductionRank: must be 1 or 0.");
         if (groups == 0)
             LogicError("groups: Must be strictly positive, i.e. groups > 0.");
-
-        if (reductionRank == 0)
+        if (reductionRank == 0 && groups > 1)
         {
-            if (groups > 1)
-                LogicError("groups: groups > 1 is not supported when reductionRank is 0.");
-            return Internal::SpatialConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
-                maxTempMemSizeInSamples, name);
+            LogicError("groups: groups > 1 is not supported when reductionRank is 0.");
+        }
+        
+        if (sequential)
+        {
+            // unpack sequence axis to static axes:   [ H_in, W_in, c ] x [*] -> [ H_in, W_in, c, * ] x [1]
+            // for reduction rank == 0:               [ H_in, W_in    ] x [*] -> [ H_in, W_in,    * ] x [1]
+            auto unpackOperandPair = Sequence::Unpack(operand, 0.0f, /*supressMaskOutput*/true);
+            auto unpackOperand = unpackOperandPair->Outputs()[0];
+
+            if (reductionRank != 0)
+                // transpose out the channel axis if reduction rank > 0: [ H_in, W_in, c, * ] x [1] -> [ H_in, W_in, *, c ] x [1]
+                unpackOperand = TransposeAxes(unpackOperand, Axis(-1), Axis(-2));
+
+            FunctionPtr conv;
+            FunctionPtr convSeqDim;
+            std::tie(conv, convSeqDim) = [&]() -> std::pair<FunctionPtr, FunctionPtr> {
+                if (reductionRank != 0)
+                {
+                    auto conv = Internal::Convolution(convolutionMap, unpackOperand, strides, sharing, autoPadding, dilation, false,
+                        { 0 }, groups, maxTempMemSizeInSamples, name);
+                    // compute the output length of sequences. passing in operand here as we are interested in the original MBLayout.
+                    auto convSeqDim = Internal::ConvolutionSequenceShape(convolutionMap, operand, strides, sharing, autoPadding, dilation, false,
+                        { 0 }, groups, maxTempMemSizeInSamples, name + L"_sequence_shape");
+                    return std::pair<FunctionPtr, FunctionPtr>(conv, convSeqDim);
+                }
+                else
+                {
+                    auto conv = Internal::SpatialConvolution(convolutionMap, unpackOperand, strides, sharing, autoPadding,
+                        dilation, maxTempMemSizeInSamples, name);
+                    // compute the output length of sequences. passing in operand here as we are interested in the original MBLayout.
+                    // we need unpackOperand for SpatialConvolutionSequenceShape because 
+                    auto convSeqDim = Internal::SpatialConvolutionSequenceShape(convolutionMap, operand, strides, sharing, autoPadding,
+                        dilation, maxTempMemSizeInSamples, name + L"_sequence_shape");
+                    return std::pair<FunctionPtr, FunctionPtr>(conv, convSeqDim);
+                }
+            }();
+
+            // transpose back sequence axis to the outer of output depth axis: 
+            // [ H_out, W_out, *_out, c_out ] x [1] -> [ H_out, W_out, c_out, *_out ] x [1]
+            conv = TransposeAxes(conv, Axis(-1), Axis(-2));
+            // pack back to sequence axis with their corresponding sizes: 
+            // [ H_out, W_out, c_out, *_out ] x [1] -> [ H_out, W_out, c_out ] x [*_out]
+            return ToSequence(conv, StopGradient(convSeqDim), L"ConvOverSequenceAxisPrefix");
         }
         else
         {
+            if (reductionRank == 0)
+                return Internal::SpatialConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
+                    maxTempMemSizeInSamples, name);
             return Internal::Convolution(convolutionMap, operand, strides, sharing, autoPadding, dilation, false,
                 { 0 }, groups, maxTempMemSizeInSamples, name);
         }
+
     }
 
     FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
@@ -3293,19 +3337,33 @@ namespace CNTK
                 LogicError("Convolution currently requires the main operand to have dynamic axes");
 
             auto additionalProperties = Dictionary();
-            additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
-            additionalProperties[PrimitiveFunction::AttributeNameDilation] = dilation;
-            additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
-            additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
-            additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});
-            additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
-            additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
-            additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
-            additionalProperties[PrimitiveFunction::AttributeNameKernelShape] = NDShape({0});
-            additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
-            additionalProperties[PrimitiveFunction::AttributeNameGroups] = groups;
+            SetConvolutionProperties(additionalProperties, strides, sharing, autoPadding, dilation, /*sequential =*/false, transpose, outputShape, groups, maxTempMemSizeInSamples);
 
-            return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
+            return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);          
+        }
+
+        FunctionPtr ConvolutionSequenceShape(const Variable& convolutionMap,
+            const Variable& operand,
+            const NDShape& strides,
+            const std::vector<bool>& sharing,
+            const std::vector<bool>& autoPadding,
+            const NDShape& dilation,
+            bool transpose,
+            const NDShape& outputShape,
+            size_t groups,
+            size_t maxTempMemSizeInSamples,
+            const std::wstring& name)
+        {
+            // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
+            // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as
+            // the sample shape and considering the rest to be part of the batch axis
+            if (operand.DynamicAxes().empty())
+                LogicError("Convolution currently requires the main operand to have dynamic axes");
+
+            auto additionalProperties = Dictionary();
+            SetConvolutionProperties(additionalProperties, strides, sharing, autoPadding, dilation, /*sequential =*/true, transpose, outputShape, groups, maxTempMemSizeInSamples);
+
+            return BinaryOp(PrimitiveOpType::ConvolutionSequenceShape, convolutionMap, operand, std::move(additionalProperties), name);
         }
 
         FunctionPtr SpatialConvolution(const Variable& convolutionMap,
@@ -3349,6 +3407,51 @@ namespace CNTK
                 maxTempMemSizeInSamples,
                 name);
             return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Convolution", name);
+        }
+
+        FunctionPtr SpatialConvolutionSequenceShape(const Variable& convolutionMap,
+            const Variable& operand,
+            const NDShape& strides,
+            const std::vector<bool>& sharing,
+            const std::vector<bool>& autoPadding,
+            const NDShape& dilation,
+            size_t maxTempMemSizeInSamples,
+            const std::wstring& name)
+        {
+            // reductionRank is assumed 0.
+            auto operandPlaceholder = PlaceholderVariable();
+            // Plus 1 here for the additional unpacked sequence axis. 
+            auto inputRank = static_cast<int>(operand.Shape().Rank() + 1);
+            auto filterRank = static_cast<int>(convolutionMap.Shape().Rank());
+            auto padding = autoPadding;
+            auto expandedStrides = strides;
+
+            if ((filterRank - inputRank) == 1)
+                --filterRank;
+            else if (filterRank != inputRank)
+                LogicError("convolutionMap: Invalid shape, convolutionMap must have the same rank as the input or greater by 1.");
+
+            if (padding.size() == filterRank)
+                padding.push_back(false);
+
+            if (expandedStrides.Rank() == filterRank)
+                expandedStrides = expandedStrides.AppendShape({ 1 });
+
+            auto weights = Reshape(convolutionMap, { 1 }, Axis(filterRank), Axis(filterRank));
+            // Axis index for operandReshape is 1 less than unpackedOperandReshape since the latter should have precisely 1 more static axis(unpacked seq axis) than the former. 
+            auto operandReshape = Reshape(operandPlaceholder, { 1 }, Axis(filterRank - 1), Axis(filterRank - 1));
+
+            return Internal::ConvolutionSequenceShape(weights,
+                operandReshape,
+                expandedStrides,
+                sharing,
+                padding,
+                dilation,
+                false,
+                { 0 },
+                PrimitiveFunction::convolutionOpDefaultValueForGroups,
+                maxTempMemSizeInSamples,
+                name);
         }
     }
 }
