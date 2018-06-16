@@ -11,6 +11,7 @@
 #include "RecurrentNodes.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
+#include "SpecialPurposeNodes.h"
 #include <string>
 #include <vector>
 #include <list>
@@ -767,9 +768,23 @@ bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalV
     auto nodeNeedsDynamicValidation = node->NeedsDynamicValidation();
     node->m_needsDynamicValidation |= node->ForceDynamicValidation();
     auto needsGradient = node->m_needsGradient;
-    for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
+
+	// check if this is StopGradientNode. For this node it is ok to not backprop gradient. 
+	bool isNodeStopGradient = false;
+	let nodeStopGradientF = dynamic_pointer_cast<StopGradientNode<float>>(node);
+    if (nodeStopGradientF)
+        isNodeStopGradient = true;
+    let nodeStopGradientD = dynamic_pointer_cast<StopGradientNode<double>>(node);
+    if (nodeStopGradientD)
+        isNodeStopGradient = true;
+    let nodeStopGradientH = dynamic_pointer_cast<StopGradientNode<half>>(node);
+    if (nodeStopGradientH)
+        isNodeStopGradient = true;
+	
+	for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
     {
-        node->m_needsGradient |= child->m_needsGradient;
+        if (!isNodeStopGradient)
+			node->m_needsGradient |= child->m_needsGradient;
         node->m_needsDynamicValidation |= child->m_needsDynamicValidation;
     }
 

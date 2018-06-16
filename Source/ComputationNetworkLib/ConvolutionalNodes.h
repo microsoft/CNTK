@@ -302,11 +302,19 @@ public:
 // ConvolutionNode (convolutionWeights, inputFeature)
 // -----------------------------------------------------------------------
 
+// forward declaration. 
+template <class ElemType>
+class ConvolutionOverSequenceAxis;
+
 template <class ElemType>
 class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName() { return L"Convolution"; }
+
+	// Needs access to m_dilations and m_groups which are private members. 
+	template <class ElementType>
+	friend class ConvolutionOverSequenceAxis;
 public:
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_dilation(TensorShape(1)), m_groups(1)
@@ -355,7 +363,7 @@ public:
     }
 
 public:
-    void Save(File& fstream) const override
+	void Save(File& fstream) const override
     {
         Base::Save(fstream);
         fstream << m_convolution2D;
@@ -670,13 +678,119 @@ private:
             Base::NeedsDynamicValidation(), isFinalValidationPass);
     }
 
-    TensorShape m_dilation;
+	TensorShape m_dilation;
     size_t m_groups;
 
-protected:
+protected:    
     // Flag that indicates whether the node is created using 2D-syntax.
     bool m_convolution2D;
 };
+
+
+template <class ElemType>
+class ConvolutionOverSequenceAxis : public ConvolutionNode<ElemType>, public NumInputs<3>, public MultiOutputNode<ElemType>
+{
+	typedef ConvolutionNode<ElemType> Base; UsingConvolutionNodeBaseMembers;
+private:
+    using Base::m_dilation;
+    using Base::m_groups;
+
+public:
+    static const std::wstring TypeName() { return L"ConvolutionOverSequence"; }
+
+public:
+    ConvolutionOverSequenceAxis(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), MultiOutputNode<ElemType>(2)
+    {
+    }
+
+	ConvolutionOverSequenceAxis(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+								const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+								bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1),
+								size_t groups = 1)
+		: Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation, groups),
+		MultiOutputNode<ElemType>(2)
+	{
+	}
+
+	ConvolutionOverSequenceAxis(const ScriptableObjects::IConfigRecordPtr configp)
+        : Base(configp), MultiOutputNode<ElemType>(2)
+	{
+	}
+
+public:
+    
+	void ForwardProp(const FrameRange& fr) override
+	{
+        Base::ForwardProp(fr);
+
+        size_t operandInputIdx = 1;
+        size_t seqAxisDimInputIdx = 2;
+        Matrix<ElemType> sliceInput2Value = InputRef(seqAxisDimInputIdx).ValueFor(fr);
+		
+		if (!m_transpose)
+		{
+			// Same computing logic in ConvolveGeometry. 
+			// Rewritten here so as to avoid creating another ConvolveGeometry object, and converting from Matrix to TensorShape and back.
+            size_t seqAxisIdx = GetInputSampleLayout(operandInputIdx).GetRank() - 2;
+            size_t kernelShape_i = m_kernelShape[seqAxisIdx];
+            size_t delta = m_stride[seqAxisIdx];
+            size_t dil = m_dilation[seqAxisIdx];
+            bool autoPadCur = m_autoPad[seqAxisIdx];
+            size_t lo = m_lowerPad[seqAxisIdx];
+            size_t hi = m_upperPad[seqAxisIdx];
+            size_t effectiveKernelShape = (kernelShape_i - 1) * dil + 1;
+
+            if (autoPadCur)
+            {
+                sliceInput2Value += (ElemType)dil * (kernelShape_i - 1);
+            }
+            else
+            {
+                sliceInput2Value += (ElemType)lo + hi;
+            }
+
+			sliceInput2Value = (sliceInput2Value - (ElemType)effectiveKernelShape) / (ElemType)delta + (ElemType)1;
+			
+			TensorView<ElemType> sliceInput2ValueTensorView = TensorView<ElemType>(std::make_shared<Matrix<ElemType>>(std::move(sliceInput2Value)), {1, sliceInput2Value.GetNumCols()});
+            sliceInput2ValueTensorView.DoUnaryOpOf(0, sliceInput2ValueTensorView, 1, opFloor, opSum);
+
+			this->m_outputsValue[1]->SetValue(*(sliceInput2ValueTensorView.AsMatrix()));
+		}
+		else
+		{
+			// TODO:
+            InvalidArgument("Convolution over sequence axis currently does not support transpose. ");
+		}
+	}
+
+	void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+	{
+        if (inputIndex < 2)
+			Base::BackpropTo(inputIndex, fr);
+	}
+
+	void Validate(bool isFinalValidationPass) override
+	{
+        Base::Validate(isFinalValidationPass);
+
+		// update conv output seq dim shape.
+		TensorShape outputShape = GetInputSampleLayout(2);
+
+		if (m_outputsShape[1].GetRank() > 0 && m_outputsShape[1] != TensorShape(0))
+		{
+			if (m_outputsShape[1] != outputShape)
+			{
+                InvalidArgument("%ls %ls the shape of the specified convolution out sequence axis dim %ls is different from the result using provided options %ls",
+                                NodeName().c_str(), OperationName().c_str(), static_cast<std::wstring>(m_outputsShape[1]).c_str(), static_cast<std::wstring>(outputShape).c_str());
+			}
+		}
+
+		this->m_outputsMBLayout[1] = GetMBLayout();
+        this->m_outputsShape[1] = outputShape;
+	}
+};
+
 
 // -----------------------------------------------------------------------
 // ROIPoolingNode (inputFeatures, inputROIs)--pooling for object detection.

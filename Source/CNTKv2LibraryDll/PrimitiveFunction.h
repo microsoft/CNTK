@@ -236,6 +236,7 @@ namespace CNTK
         static const std::wstring AttributeNameDilation;
         static const std::wstring AttributeNameSharing;
         static const std::wstring AttributeNameAutoPadding;
+        static const std::wstring AttributeNameSequential;
         static const std::wstring AttributeNameLowerPad;
         static const std::wstring AttributeNameUpperPad;
         static const std::wstring AttributeNameCeilOutDim;

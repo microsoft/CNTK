@@ -1289,6 +1289,11 @@ public:
         // Do nothing to short circuit the gradient backward propagation
     }
 
+	void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override
+	{
+		// Do nothing to short circuit the gradient backward propagation
+	}
+
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
 };

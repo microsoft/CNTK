@@ -815,7 +815,9 @@ namespace CNTK
                         }
                         case PrimitiveOpType::Convolution:
                         {
-                            assert(m_inputs.size() == 2);
+                            bool sequential = m_attributes[PrimitiveFunction::AttributeNameSequential].Value<bool>();
+                            assert((!sequential && m_inputs.size() == 2) || (sequential && m_inputs.size() == 3));
+                            UNUSED(sequential);
                             auto& strides = m_attributes[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
                             NDShape dilation = { 1 };
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameDilation))
@@ -827,7 +829,7 @@ namespace CNTK
                                 tmpShape = m_attributes[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                             auto sharing = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
                             auto autoPadding = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-                            bool transpose = m_attributes[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
+                            bool transpose = m_attributes[PrimitiveFunction::AttributeNameTranspose].Value<bool>();                            
                             if (m_inputs[0].Shape().Rank() < m_inputs[1].Shape().Rank())
                                 InvalidArgument("The convolution map operand '%S' rank (%d) should be >= rank (%d) of the shape of the input operand '%S'.",
                                                 m_inputs[0].AsString().c_str(), (int)m_inputs[0].Shape().Rank(), (int)m_inputs[1].Shape().Rank(), m_inputs[1].AsString().c_str());
@@ -1150,6 +1152,18 @@ namespace CNTK
                 auto IndexOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_TopKIndexMask");
                 outputs.push_back(IndexOutput);
             }
+			else if (m_op == PrimitiveOpType::Convolution)
+			{
+                auto sequential = m_attributes[PrimitiveFunction::AttributeNameSequential].Value<bool>();
+				if (sequential)
+				{
+					//						 real sample shape		x unpacked seq  x  dynamic axis
+					// Output shape:		[ output sample shape ] x fake_sequence x [ 1 x batch ]
+					// outSeqAxisDim shape:	[ 1 ]					x 1				x [ 1 x batch ]
+                    auto outSeqAxisDimOutput = OutputVariable({1}, outputDataType, outputDynamicAxes, /*needsGradient =*/false, Name().empty() ? L"" : Name() + L"_ConvolutionOutSeqAxisDim");
+                    outputs.push_back(outSeqAxisDimOutput);
+				}
+			}
         }
     }
 

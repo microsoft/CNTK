@@ -237,6 +237,23 @@ namespace CNTK
         return !(*this == other);    
     }
 
+	void SetConvolutionProperties(Dictionary& additionalProperties, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
+                                  const NDShape& dilation, bool sequential, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples)
+    {
+        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunction::AttributeNameDilation] = dilation;
+        additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[PrimitiveFunction::AttributeNameSequential] = sequential;
+        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});
+        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
+        additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
+        additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
+        additionalProperties[PrimitiveFunction::AttributeNameKernelShape] = NDShape({0});
+        additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
+        additionalProperties[PrimitiveFunction::AttributeNameGroups] = groups;
+    }
+
     std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType)
     {
         std::wstring uid, name;
@@ -539,6 +556,7 @@ namespace CNTK
     }
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
     {
+		// TODO : Might need to make some change here as now sequence axis is actually used as data, replace time steps with 1?
         size_t maxNumTimeSteps = 1;
         size_t numSequences = 1;
         if (maskShape.Rank() > 1)

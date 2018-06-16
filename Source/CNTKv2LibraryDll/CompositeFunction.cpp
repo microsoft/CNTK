@@ -1082,6 +1082,7 @@ namespace CNTK
                     auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                     auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
                     auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                    auto sequential = functionConfig[PrimitiveFunction::AttributeNameSequential].Value<bool>();
                     auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
                     NDShape outputMapCount, kernelShape;
                     std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose);
@@ -1092,11 +1093,18 @@ namespace CNTK
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameGroups))
                         groups = functionConfig[PrimitiveFunction::AttributeNameGroups].Value<size_t>();
                     auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
-                    ASSIGN_NEW_NODE(ConvolutionNode, network->GetDeviceId(), internalNodeName,
-                                                                           AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
-                                                                           sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
-                                                                           outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
-                                                                           ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
+                    if (!sequential)
+                        ASSIGN_NEW_NODE(ConvolutionNode, network->GetDeviceId(), internalNodeName,
+                                        AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
+                                        sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
+                                        outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
+                                        ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
+                    else
+                        ASSIGN_NEW_NODE(ConvolutionOverSequenceAxis, network->GetDeviceId(), internalNodeName,
+                                        AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
+                                        sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
+                                        outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
+                                        ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
                     break;
                 }
                 case PrimitiveOpType::CosDistance:

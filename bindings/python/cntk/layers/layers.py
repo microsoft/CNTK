@@ -459,36 +459,29 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     def convolve(x):
         # insert additional axes for various purposes
         filter_rank_without_seq = filter_rank - sequential    # spatial_shape has filter_rank except if sequential: then first axis of filter_rank belongs to sequential dimension, must subtract
-        num_inserted_axes = sequential + num_emulated_axes
+        num_inserted_axes = num_emulated_axes # sequential reshape is handled at c++ side now.
         if num_inserted_axes != 0:
             # x: (in_depth, spatial_shape)
+            
             x = reshape(x, (1,) * num_inserted_axes,    # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
                         begin_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else C.Axis.new_leading_axis(),
                         end_axis  =-filter_rank_without_seq if filter_rank_without_seq != 0 else None)
             # x: (in_depth or emulated_in_depth, emulated_1D_extra, seq_filter_shape, spatial_shape)
-        # sequential convolution is implemented through explicit stacking for now, since the C++ cannot handle it
-        # TODO: if reduction_rank==0 and sequential, we don't need the fake reduction axis, just use the sequential axis instead
-        if sequential:
-            lpad = (filter_shape[-filter_rank]-1) // 2  # even frames: take from right; odd frames: symmetric
-            x = _window(x, axis=-filter_rank, begin=-lpad, end=-lpad+filter_shape[-filter_rank], step=1, stride=strides[-filter_rank], initial_state=None)
         # actual convolution
-        sequential_emulated_axis = len(pad) - filter_rank if sequential else None # static-axis convolution must not pad the simulated sequential dimension (it must reduce to 1)
+        sequential_emulated_axis = None
         r = convolution (W, x,
                          strides=strides, sharing=sharing,
-                         auto_padding=(False,) * reduction_rank  # convolution() currently has no reduction_rank parameter, so we must pass an explicit False for the reduction axis
-                                      + tuple(p if i != sequential_emulated_axis else False for i, p in enumerate(pad)),
+                         auto_padding=pad,
+                         sequential=sequential,
                          dilation=dilation,
                          groups=groups,
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
-        # if sequential and not padding, then strip the extraneous boundary values
-        if sequential and not pad[-filter_rank]:
-            r = sequence.slice(r, begin_index=lpad, end_index=-(filter_shape[-filter_rank]-1-lpad))
         if bias:
             r = r + b
         # if no output dimension is desired, then strip it
         # also need to strip the fake singleton axes, since they are not reduced away
         # TODO: We still have those axes in the kernel. Solve this once the C++ implementation supports 1D directly.
-        num_axes_to_remove = sequential + emulating_output_depth
+        num_axes_to_remove = emulating_output_depth
         if num_axes_to_remove > 0:
             # (out_depth, emulated axes, spatial_shape)
             r = reshape(r, (),    # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
@@ -551,7 +544,7 @@ def Convolution1D(filter_shape,     # shape of receptive field, e.g. (3)
     init_bias  = get_default_override(Convolution1D, init_bias=init_bias)
     if len(_as_tuple(filter_shape)) != 1:
          raise ValueError('Convolution1D: filter_shape must be a scalar')
-    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, dilation=dilation, op_name='Convolution1D', name=name)
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, sequential=False, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, dilation=dilation, op_name='Convolution1D', name=name)
 
 
 def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must be a 2-element tuple.
@@ -608,7 +601,7 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
     if len(_as_tuple(filter_shape)) > 2:
          raise ValueError('Convolution2D: filter_shape must be a scalar or a 2D tuple, e.g. 3 or (3,3)')
     filter_shape = _pad_to_shape((0,0), filter_shape, 'filter_shape')
-    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad,
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, sequential=False,
                        strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank,
                        dilation=dilation, groups=groups, op_name='Convolution2D', name=name)
 
@@ -667,7 +660,7 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
     if len(_as_tuple(filter_shape)) > 3:
          raise ValueError('Convolution3D: filter_shape must be a scalar or a 3D tuple, e.g. 3 or (3,3,3)')
     filter_shape = _pad_to_shape((0,0,0), filter_shape, 'filter_shape')
-    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad,
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, sequential=False,
                        strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, 
                        dilation=dilation, groups=groups, op_name='Convolution3D', name=name)
 
