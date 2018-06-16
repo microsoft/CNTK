@@ -2846,7 +2846,7 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::ve
         strides,
         sharing,
         cntkConvAutoPadding,
-		false, // TODO : Setting to default not convolving over sequential axis for now. 
+        false, // TODO : Setting to default not convolving over sequential axis for now. 
         dilation,
         reductionRank,
         groups,

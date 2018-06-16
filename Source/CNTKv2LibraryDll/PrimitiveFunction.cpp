@@ -1152,18 +1152,18 @@ namespace CNTK
                 auto IndexOutput = OutputVariable(outputShape, outputDataType, outputDynamicAxes, /*needsGradient =*/ false, Name().empty() ? L"" : Name() + L"_TopKIndexMask");
                 outputs.push_back(IndexOutput);
             }
-			else if (m_op == PrimitiveOpType::Convolution)
-			{
+            else if (m_op == PrimitiveOpType::Convolution)
+            {
                 auto sequential = m_attributes[PrimitiveFunction::AttributeNameSequential].Value<bool>();
-				if (sequential)
-				{
-					//						 real sample shape		x unpacked seq  x  dynamic axis
-					// Output shape:		[ output sample shape ] x fake_sequence x [ 1 x batch ]
-					// outSeqAxisDim shape:	[ 1 ]					x 1				x [ 1 x batch ]
+                if (sequential)
+                {
+                    //                         real sample shape    x unpacked seq  x  dynamic axis
+                    // Output shape:        [ output sample shape ] x fake_sequence x [ 1 x batch ]
+                    // outSeqAxisDim shape: [ 1 ]                   x 1             x [ 1 x batch ]
                     auto outSeqAxisDimOutput = OutputVariable({1}, outputDataType, outputDynamicAxes, /*needsGradient =*/false, Name().empty() ? L"" : Name() + L"_ConvolutionOutSeqAxisDim");
                     outputs.push_back(outSeqAxisDimOutput);
-				}
-			}
+                }
+            }
         }
     }
 

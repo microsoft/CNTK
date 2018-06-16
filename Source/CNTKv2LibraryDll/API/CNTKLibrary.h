@@ -4586,7 +4586,7 @@ namespace CNTK
                                      const NDShape& strides = { 1 },
                                      const std::vector<bool>& sharing = { true },
                                      const std::vector<bool>& autoPadding = { true },
-									 bool sequential = false,
+                                     bool sequential = false,
                                      const NDShape& dilation = { 1 },
                                      size_t reductionRank = 1,
                                      size_t groups = 1,
