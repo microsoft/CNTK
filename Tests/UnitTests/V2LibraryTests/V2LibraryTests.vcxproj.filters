@@ -63,6 +63,9 @@
     <ClCompile Include="..\..\EndToEndTests\CNTKv2Library\Common\Common.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ConvolutionFunctionTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">

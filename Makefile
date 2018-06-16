@@ -1429,6 +1429,7 @@ CNTKLIBRARY_TESTS_SRC =\
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/TensorTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/ValueTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/SerializationTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/ConvolutionFunctionTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/LearnerTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/FunctionTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/DeviceSelectionTests.cpp \

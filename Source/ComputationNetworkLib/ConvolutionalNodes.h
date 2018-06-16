@@ -274,8 +274,7 @@ protected:
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
 };
 
-#define UsingConvolutionNodeBaseMembers     \
-    UsingComputationNodeMembersBoilerplate; \
+#define UsingConvolutionNodeBaseMembersNonInstantiate \
 protected:                                  \
     using Base::m_kernelShape;              \
     using Base::m_mapCount;                 \
@@ -298,60 +297,63 @@ protected:                                  \
     using Base::InferReductionDims;         \
 public:
 
+#define UsingConvolutionNodeBaseMembers     \
+    UsingComputationNodeMembersBoilerplate; \
+    UsingConvolutionNodeBaseMembersNonInstantiate; \
+public:
+
+
 // -----------------------------------------------------------------------
-// ConvolutionNode (convolutionWeights, inputFeature)
+// ConvolutionNodeBaseExtended (convolutionWeights, inputFeature) is a base class for ConvolutionNode and ConvolutionSequenceShapeNode.
 // -----------------------------------------------------------------------
 
+// This class initializes the additional attributes and parameters for ConvolutionNode and ConvolutionSequenceShapeNode, 
+// other than the common ones shared with PoolingNode.
+//
 template <class ElemType>
-class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
+class ConvolutionNodeBaseExtended : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
 {
-    typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
-    static const std::wstring TypeName() { return L"Convolution"; }
+    typedef ConvolutionNodeBase<ElemType> Base; UsingComputationNodeMembers; 
+    UsingConvolutionNodeBaseMembersNonInstantiate;
+    
 public:
-    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
+    ConvolutionNodeBaseExtended(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_dilation(TensorShape(1)), m_groups(1)
     {
     }
-    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
-                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                    bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1),
-                    size_t groups=1)
+    ConvolutionNodeBaseExtended(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+        const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+        bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1),
+        size_t groups = 1)
         : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, false, transpose, outputShape, false, imageLayout, maxTempMemSizeInSamples),
         m_convolution2D(false), m_dilation(dilation), m_groups(groups)
     {
         // Make sure not using dilation on CPU
-        if(deviceId < 0)
+        if (deviceId < 0)
         {
-            for(int i = 0; i < dilation.size(); i++)
+            for (int i = 0; i < dilation.size(); i++)
             {
-                if(1 != dilation[i])
+                if (1 != dilation[i])
                     RuntimeError("Dilated convolution on CPU is not yet implemented.");
             }
         }
     }
-    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
-                    const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
-                    bool zeroPadding, size_t maxTempMemSizeInSamples)
-                    : ConvolutionNode(deviceId, name, TensorShape(kernelWidth, kernelHeight, 1), TensorShape(1, 1, outputChannels),
-                                      TensorShape(horizontalSubsample, verticalSubsample, 1), vector<bool>{true},
-                                      vector<bool>{zeroPadding}, TensorShape(0), TensorShape(0),
-                                      false, TensorShape(0), imageLayout, maxTempMemSizeInSamples)
+    ConvolutionNodeBaseExtended(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+        const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
+        bool zeroPadding, size_t maxTempMemSizeInSamples)
+        : ConvolutionNodeBaseExtended(deviceId, name, TensorShape(kernelWidth, kernelHeight, 1), TensorShape(1, 1, outputChannels),
+            TensorShape(horizontalSubsample, verticalSubsample, 1), vector<bool>{true},
+            vector<bool>{zeroPadding}, TensorShape(0), TensorShape(0),
+            false, TensorShape(0), imageLayout, maxTempMemSizeInSamples)
     {
         m_convolution2D = true;
     }
-    ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
-                          configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-                          configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"))
+    ConvolutionNodeBaseExtended(const ScriptableObjects::IConfigRecordPtr configp)
+        : ConvolutionNodeBaseExtended(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
+            configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
+            configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
-    }
-
-    // TODO: the check for NeedsDynamicValidation() is a temporary resolution and needs to be properly handled when we look at support for free dimension convolution inputs.
-    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
-    {
-        bool overwrite = Base::NeedsDynamicValidation() ? false : m_convEng->ImplementsGradientOverwriteOptimization();
-        return overwrite ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None;
     }
 
 public:
@@ -387,8 +389,8 @@ public:
             m_kernelShape = TensorShape(kW, kH, 1);
             m_mapCount = TensorShape(mapCount);
             m_stride = TensorShape(sW, sH, 1);
-            m_sharing = vector<bool>{true};
-            m_autoPad = vector<bool>{pad};
+            m_sharing = vector<bool>{ true };
+            m_autoPad = vector<bool>{ pad };
             m_lowerPad = TensorShape(0);
             m_upperPad = TensorShape(0);
         }
@@ -411,11 +413,80 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<ConvolutionNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<ConvolutionNodeBaseExtended<ElemType>>(nodeP);
             node->m_convolution2D = m_convolution2D;
         }
     }
 
+    void SetmMaxTempMemSizeInSamples(const size_t maxTempMemSizeInSamples)
+    {
+        m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
+        if (m_convEng != nullptr)
+            m_convEng->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
+    }
+
+    bool IsConvolution2D() const { return m_convolution2D; }
+
+    bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+protected:
+    TensorShape m_dilation;
+    size_t m_groups;
+    // Flag that indicates whether the node is created using 2D-syntax.
+    bool m_convolution2D;
+};
+
+#define UsingConvolutionBaseNodeMembers     \
+    UsingConvolutionNodeBaseMembers;        \
+protected:                                  \
+    using Base::m_dilation;                 \
+    using Base::m_groups;                   \
+    using Base::m_convolution2D;            \
+public:
+
+// -----------------------------------------------------------------------
+// ConvolutionNode (convolutionWeights, inputFeature)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class ConvolutionNode : public ConvolutionNodeBaseExtended<ElemType>, public TransformerNode
+{
+    typedef ConvolutionNodeBaseExtended<ElemType> Base; UsingConvolutionBaseNodeMembers;
+    static const std::wstring TypeName() { return L"Convolution"; }
+
+public:
+    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                    bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation=TensorShape(1),
+                    size_t groups=1)
+        : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation, groups)
+    {
+    }
+    ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels,
+                    const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayout,
+                    bool zeroPadding, size_t maxTempMemSizeInSamples)
+                    : Base(deviceId, name, kernelWidth, kernelHeight, outputChannels, horizontalSubsample, verticalSubsample, imageLayout, zeroPadding, maxTempMemSizeInSamples)
+    {
+    }
+    ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : Base(configp)
+    {
+        // we need to notify TransformerNode about number of inputs.
+        TransformerNode::SetNumberOfInputs(m_inputs.size());
+    }
+
+    // TODO: the check for NeedsDynamicValidation() is a temporary resolution and needs to be properly handled when we look at support for free dimension convolution inputs.
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        bool overwrite = Base::NeedsDynamicValidation() ? false : m_convEng->ImplementsGradientOverwriteOptimization();
+        return overwrite ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None;
+    }
+
+public:
     void ForwardProp(const FrameRange& fr) override
     {
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
@@ -470,7 +541,7 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-        size_t inputIdx = GetExpectedNumInputs() - 1;
+        size_t inputIdx = Base::GetExpectedNumInputs() - 1;
         TensorShape inputShape;
         TensorShape outputShape;
         // If 2D convolution syntax is used then some of the tensor dimensions need to be inferred.
@@ -626,17 +697,6 @@ public:
         ReleaseMatrixToPool(m_tempMatrixBackward, matrixPool);
     }
 
-    void SetmMaxTempMemSizeInSamples(const size_t maxTempMemSizeInSamples)
-    {
-        m_maxTempMemSizeInSamples = maxTempMemSizeInSamples;
-        if (m_convEng != nullptr)
-            m_convEng->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
-    }
-
-    bool IsConvolution2D() const { return m_convolution2D; }
-
-    bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-
 private:
     using TransformerNode::m_transforms;
     using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
@@ -662,21 +722,188 @@ private:
         return (inputIndex == 1);
     }
 
-    virtual TensorShape /*ConvolutionNode::*/ComputeOutputShape(const TensorShape& inputShape, 
+    virtual TensorShape /*ConvolutionNode::*/ComputeOutputShape(const TensorShape& inputShape,
         const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
     {
         return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
             m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, m_groups, ceilOutDim,
             Base::NeedsDynamicValidation(), isFinalValidationPass);
     }
+};
 
-    TensorShape m_dilation;
-    size_t m_groups;
+
+// -----------------------------------------------------------------------
+// ConvolutionSequenceShapeNode -- for convolution over sequence axis
+//
+// The purpose of this node is to compute the correct sequence size for every output sequences.
+// For convolution over sequence axis, the size of different original sequences varies, so the unpacked
+// sequence axis has dim as the longest sequence size while shorter sequences have their values padded with 0.
+// Thus in order to restore the output sequence axis after convolution, in this node we compute separately the correct size for output sequences.
+// This output, together with the traditional ConvolutionNode output will serve as inputs to ToSequence(convResult, seqSizes), 
+// converting sequence axes back with correct sizes. 
+//
+// The input features variable(Input1) is the original input that has not been unpacked.
+// The reason for that is we require the original MBLayout to compute the output sequence lengths. 
+//
+// Input0: kernels
+// Input1: Input features           [i_0 x i_1 x ... x i_n x C]             x [S x #]
+// output: output sequence size     [1]                                     x [1(*) x #]
+//
+// where i_k = dim of k-th input feature, S = sequence axis,
+//       C = input channel dim, # = batch size, * denotes the sequence axis.
+// -----------------------------------------------------------------------
+template <class ElemType>
+class ConvolutionSequenceShapeNode : public ConvolutionNodeBaseExtended<ElemType>
+{
+    typedef ConvolutionNodeBaseExtended<ElemType> Base; UsingConvolutionBaseNodeMembers;
+private:
+    static const size_t SentinelUnspecifiedSeqAxisIdx = (size_t) -1;
+
+    enum InputIndices : size_t
+    {
+        InputConvolutionMapIdx = 0,
+        InputOperandIdx = 1,
+    };
+
+public:
+    static const std::wstring TypeName() { return L"ConvolutionSequenceShape"; }
+
+public:
+    ConvolutionSequenceShapeNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx)
+    {
+    }
+
+    ConvolutionSequenceShapeNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+                                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                    bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1),
+                                    size_t groups = 1)
+        : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation, groups),
+          m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx)
+    {
+    }
+
+    ConvolutionSequenceShapeNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : Base(configp)
+    {
+    }
+
+public:
+    void ForwardProp(const FrameRange& fr) override
+    {
+        auto inputMBLayout = InputRef(1).GetMBLayout();
+
+        if (inputMBLayout->HasSequenceBeyondBegin() || inputMBLayout->HasSequenceBeyondEnd())
+            LogicError("%ls: %ls truncated sequence is not supported by sequential convolution.", NodeName().c_str(), OperationName().c_str());
+
+        const size_t numSequences = inputMBLayout->GetNumSequences();
+        let& inputSequences = inputMBLayout->GetAllSequences();
+        std::vector<size_t> inputSequenceLengths(numSequences, 0);
+        size_t j = 0;
+        for (size_t i = 0; i < inputSequences.size(); ++i)
+        {
+            let& seq = inputSequences[i];
+            if (seq.seqId == GAP_SEQUENCE_ID)
+                continue;
+
+            inputSequenceLengths[j] = seq.GetNumTimeSteps();
+            j++;
+        }
+        assert(j == numSequences);
+        std::vector<ElemType> outputSequenceLengths = UpdateOutputSequenceLengths(inputSequenceLengths);
+
+        // Update output MBlayout. 
+        // Input1: Packed input features    [i_1 x i_2 x ... x i_n x C]     x [S x #]
+        // Output: Sequence lengths         [1]                             x [1 x #]
+        GetMBLayout()->InitAsFrameMode(numSequences);
+        // Allocate Matrix on CPU. Since most computations associated with this data happen on the CPU side.
+        Value().SetValue(1, inputSequenceLengths.size(), /*deviceId*/-1, outputSequenceLengths.data(), matrixFormatRowMajor);
+    }
+
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // We don't need backprop for sequence sizes.
+    }
+
+    void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        // Output is sequence length for each sequence. So the sample layout should simply be 1. 
+        TensorShape outputShape = TensorShape(1);
+
+        if (m_outputShape.GetRank() > 0 && m_outputShape != TensorShape(0))
+        {
+            if (m_outputShape != outputShape)
+            {
+                InvalidArgument("%ls %ls the shape of the specified convolution out sequence axis dim %ls is different from the result using provided options %ls",
+                    NodeName().c_str(), OperationName().c_str(), static_cast<std::wstring>(m_outputShape).c_str(), static_cast<std::wstring>(outputShape).c_str());
+            }
+        }
+
+        if (!m_pMBLayout)
+        {
+            // generate a new layout.
+            // Input1: Packed input features    [i_1 x i_2 x ... x i_n x C]     x [S x #]
+            // Output: Sequence lengths         [1]                             x [1 x #]
+            m_pMBLayout = make_shared<MBLayout>();
+        }
+        SetDims(outputShape, HasMBLayout());
+
+        if (isFinalValidationPass)
+        {
+            const size_t inputOperandIdx = InputIndices::InputOperandIdx;
+            // Input1: Input features           [i_1 x i_2 x ... x i_n x C]             x [S x #]
+            // The unpacked input features      [i_1 x i_2 x ... x i_n x max(S) x C]    x [1(*) x #]
+            // The input sample layout rank should always >= 1 (n in the above example could be 0).
+            size_t inputOperandRank = GetInputSampleLayout(inputOperandIdx).GetRank();
+            m_seqAxisIdx = inputOperandRank - 1;
+            if (inputOperandRank < 1)
+                InvalidArgument("%ls %ls the input sample layout rank for sequential convolution should always >= 1. The provided input has sample layout rank %zu",
+                                NodeName().c_str(), OperationName().c_str(), inputOperandRank);
+        }
+    }
 
 protected:
-    // Flag that indicates whether the node is created using 2D-syntax.
-    bool m_convolution2D;
+    std::vector<ElemType> UpdateOutputSequenceLengths(const std::vector<size_t>& inputSequenceLengths)
+    {
+        std::vector<ElemType> outputSequenceLengths(inputSequenceLengths.size(), 0.0);
+        // Same computing logic in ConvolveGeometry.
+        // Rewritten here because TensorShape uses SmallVector which cannot exceed size of 12, a size too small for sequence count.
+        const size_t kernelShape_i = m_kernelShape[m_seqAxisIdx];
+        const size_t delta = m_stride[m_seqAxisIdx];
+        const size_t dil = m_dilation[m_seqAxisIdx];
+        const bool autoPadCur = m_autoPad[m_seqAxisIdx];
+        const size_t lo = m_lowerPad[m_seqAxisIdx];
+        const size_t hi = m_upperPad[m_seqAxisIdx];
+        const size_t effectiveKernelShape = (kernelShape_i - 1) * dil + 1;
+
+        size_t dimAdjust = 0;
+
+        if (autoPadCur)
+        {
+            dimAdjust += dil * (kernelShape_i - 1);
+        }
+        else
+        {
+            dimAdjust += lo + hi;
+        }
+
+        dimAdjust -= effectiveKernelShape;
+
+        for (size_t i = 0; i < inputSequenceLengths.size(); ++i)
+        {
+            float preciseDimOut = (float)(inputSequenceLengths[i] + dimAdjust) / delta + 1;
+            outputSequenceLengths[i] = static_cast<ElemType>(floor(preciseDimOut));
+        }
+
+        return outputSequenceLengths;
+    }
+
+private:
+    size_t m_seqAxisIdx;
 };
+
 
 // -----------------------------------------------------------------------
 // ROIPoolingNode (inputFeatures, inputROIs)--pooling for object detection.
