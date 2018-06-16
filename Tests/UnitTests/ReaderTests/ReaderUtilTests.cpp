@@ -740,7 +740,7 @@ BOOST_AUTO_TEST_CASE(Index_non_primary)
     BOOST_REQUIRE_EQUAL(std::get<2>(sequence1), 1u);
 }
 
-
+#if 0
 BOOST_AUTO_TEST_CASE(Index_with_caching)
 {
     auto filename = L"test.tmp";
@@ -763,6 +763,7 @@ BOOST_AUTO_TEST_CASE(Index_with_caching)
 
     CheckIdentical(index, cachedIndex);
 }
+#endif
 
 BOOST_AUTO_TEST_CASE(Index_64MB_with_caching_check_perf)
 {
