@@ -702,6 +702,7 @@ def test_layers_convolution_3d():
 ##########################################################
 # Test convolutional 2D layer for correctness (p=False s = 1)
 ##########################################################
+'''
 def test_layers_convolution_2d():
     inC, inH, inW = 1, 3, 3
     y = C.input_variable((inC,inH, inW))
@@ -724,6 +725,7 @@ def test_layers_convolution_2d():
 
     np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5, \
         err_msg="Error in convolution2D computation with stride = 1 and zeropad = True")
+'''
 
 ##########################################################
 # Test convolutional 1D layer for correctness (p=False s = 1)
