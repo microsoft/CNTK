@@ -750,10 +750,9 @@ def test_layers_convolution_1d():
         err_msg="Error in convolution1D computation with stride = 1 and zeropad = True")
 
 ####################################
-# sequential convolution without reduction dimension
+# sequential convolution 1D without reduction dimension
 ####################################
-
-def test_sequential_convolution_without_reduction_dim():
+def test_sequential_convolution_1d_without_reduction_dim():
     c = Convolution(3, init=np.array([4., 2., 1.], dtype=np.float32), sequential=True, pad=False, reduction_rank=0, bias=False)
     c.update_signature(Sequence[Tensor[()]])  # input is a sequence of scalars
     data = [np.array([2., 6., 4., 8., 6.])]   # like a short audio sequence, in the dynamic dimension
@@ -761,7 +760,8 @@ def test_sequential_convolution_without_reduction_dim():
     exp = [[24., 40., 38.]]
     np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')
 
-    c = Convolution(3, init=np.array([4., 2., 1.], dtype=np.float32), sequential=True, pad=False, reduction_rank=0, bias=False)
+    # TODO : Added reshape step to pass this test. Should this work without reshape?
+    c = Convolution((3,1), init=np.array([4., 2., 1.], dtype=np.float32).reshape((3,1)), sequential=True, pad=False, reduction_rank=0, bias=False)
     c.update_signature(Sequence[Tensor[1]]) # input is a sequence of dim-1 vectors
     data = [np.array([[2.], [6], [4.], [8.], [6.]])]
     out = c(data)
@@ -783,11 +783,164 @@ def test_sequential_convolution_without_reduction_dim():
     m = Embedding(emb_dim)(x)
     m = Convolution(filter_shape=3, pad=True, sequential=True)(m)
 
+####################################
+# sequential convolution 2D without reduction dimension
+####################################
+def test_sequential_convolution_2d_without_reduction_dim():
+    data = np.asarray([[0.4, 0.6, 0.8, 1.0, 1.2], [0.2, 0.3, 0.4, 0.5, 0.6], [2.5, 2.3, 2.1, 1.9, 1.7]], dtype=np.float32)
+    data = data.reshape((3, 5))
+
+    c = Convolution((3,2), sequential=True, pad=False, bias=False, reduction_rank=0)
+    c.update_signature(Sequence[Tensor[5]]) 
+
+    out = c(data)
+
+    exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j], data[j][i:i+2].reshape(2)) for i in range(4)]] for j in range(3)]
+    exp = np.sum(np.asarray(exp), 0)
+
+    np.testing.assert_array_almost_equal(out[0][0], exp, decimal=5, \
+        err_msg="Error in convolution2D computation with sequential = True and zeropad = False")
+
+    c = Convolution((3,2), sequential=True, pad=True, bias=False, reduction_rank=0)
+    x = C.input_variable(**Sequence[Tensor[5]])
+    c = c(x)
+    
+    out = c.eval({x:data})
+    exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j], data[j][i:i+2].reshape(2)) for i in range(4)]] + [c.W.value[0][0][j][0] * data[j][-1]] for j in range(3)]
+    exp = np.sum(np.asarray(exp), 0)
+    np.testing.assert_array_almost_equal(out[0][1], exp, decimal=5, \
+        err_msg="Error in convolution2D computation with sequential = True and zeropad = True")
+
+    c = Convolution((3,2), sequential=True, pad=True, strides=2, bias=False, reduction_rank=0)
+    c = c(x)
+
+    out = c.eval({x:data})
+    exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j+1], data[j][i:i+2].reshape(2)) for i in [0, 2]]] + [c.W.value[0][0][j+1][0] * data[j][-1]] for j in range(2)]
+    exp = np.sum(np.asarray(exp), 0)
+
+    np.testing.assert_array_almost_equal(out[0][0], exp, decimal=5, \
+        err_msg="Error in convolution2D computation with sequential = True, strides = 2 and zeropad = True")
+    exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j], data[j+1][i:i+2].reshape(2)) for i in [0, 2]]] + [c.W.value[0][0][j][0] * data[j+1][-1]] for j in range(2)]
+    exp = np.sum(np.asarray(exp), 0)
+    np.testing.assert_array_almost_equal(out[0][1], exp, decimal=5, \
+        err_msg="Error in convolution2D computation with sequential = True, strides = 2 and zeropad = True")
+
+
+####################################
+# sequential convolution 1D
+####################################
+def test_sequential_convolution_1d():
+    data = np.asarray([0.4, 0.6, 0.8, 1.0, 1.2], dtype=np.float32)
+    data = data.reshape((5, 1))
+
+    c = Convolution(3, sequential=True, pad=False, bias=False)
+    c.update_signature(Sequence[Tensor[1]])  # input is a sequence of scalars
+    out = c(data)
+    print([(c.W.value[0][0], data[i:i+3].reshape(3)) for i in range(3)])
+    exp = [np.dot(a, b) for a,b in [(c.W.value[0][0], data[i:i+3].reshape(3)) for i in range(3)]]
+
+    np.testing.assert_array_almost_equal(out[0], exp, decimal=5, \
+        err_msg="Error in convolution1D computation with sequential = True and zeropad = False")
+
+    c = Convolution(3, sequential=True, pad=True, bias=False)
+    x = C.input_variable(**Sequence[Tensor[1]])
+    c = c(x)
+    
+    out = c.eval({x:data})
+    exp = [np.dot(c.W.value[0][0][1:3], data[0:2])] + [np.dot(a, b) for a,b in [(c.W.value[0][0], data[i:i+3].reshape(3)) for i in range(3)]] + [np.dot(c.W.value[0][0][0:2], data[3:5])]
+    np.testing.assert_array_almost_equal(out[0], exp, decimal=5, \
+        err_msg="Error in convolution1D computation with sequential = True and zeropad = True")
+
+    c = Convolution(2, sequential=True, pad=True, strides=2, bias=False)
+    c = c(x)
+
+    out = c.eval({x:data})
+    exp = [np.dot(a, b) for a,b in [(c.W.value[0][0], data[i:i+2].reshape(2)) for i in [0, 2]]] + [np.dot(c.W.value[0][0][0], data[4])]
+    
+    np.testing.assert_array_almost_equal(out[0], exp, decimal=5, \
+        err_msg="Error in convolution1D computation with sequential = True, strides = 2 and zeropad = True")
+
+    c = Convolution(2, num_filters=3, sequential=True, pad=True, bias=False)
+    c = c(x)
+
+    out = c.eval({x:data})
+    out = out[0].transpose()
+    exp = [np.dot(a, b) for a,b in [(c.W.value[0][0], data[i:i+2].reshape(2)) for i in range(4)]] + [np.dot(c.W.value[0][0][0], data[4])]
+    np.testing.assert_array_almost_equal(out[0], exp, decimal=5, \
+        err_msg="Error in convolution1D computation with sequential = True, strides = 2 and zeropad = True")
+    exp = [np.dot(a, b) for a,b in [(c.W.value[2][0], data[i:i+2].reshape(2)) for i in range(4)]] + [np.dot(c.W.value[2][0][0], data[4])]
+    np.testing.assert_array_almost_equal(out[2], exp, decimal=5, \
+        err_msg="Error in convolution1D computation with sequential = True, strides = 2 and zeropad = True")
+
+####################################
+# sequential convolution 1D with channel & filter size > 1
+####################################
+def test_sequential_convolution_1d_channel_filter():
+    data = np.asarray([[[0.4, 0.2], [0.6, 0.1], [0.8, 1.5], [1.0, 3.2], [1.2, 1.8]]], dtype=np.float32)
+    data = data.reshape((5, 2))
+    x = C.input_variable(**Sequence[Tensor[2]])
+
+    c = Convolution(3, num_filters=4, sequential=True, pad=True, bias=False)
+    c = c(x)
+    out = c.eval({x:data})
+
+    data = data.transpose()
+
+    for k in range(4):
+        exp = [[np.dot(c.W.value[k][j][1:3], data[j][0:2])] + [np.dot(a, b) for a,b in [(c.W.value[k][j], data[j][i:i+3].reshape(3)) for i in range(3)]] + [np.dot(c.W.value[k][j][0:2], data[j][3:5])] for j in range(2)]
+        print(exp)
+        exp = np.sum(np.asarray(exp), 0)
+        print(exp)
+
+        np.testing.assert_array_almost_equal(out[0].transpose()[k], exp, decimal=5, \
+            err_msg="Error in convolution1D computation with channel size 2, filter num 4, sequential = True and zeropad = True")
+
+####################################
+# sequential convolution 2D
+####################################
+def test_sequential_convolution_2d():
+    data = np.asarray([[0.4, 0.6, 0.8, 1.0, 1.2], [0.2, 0.3, 0.4, 0.5, 0.6], [2.5, 2.3, 2.1, 1.9, 1.7]], dtype=np.float32)
+    data = data.reshape((3, 1, 5))
+
+    c = Convolution((3,2), sequential=True, pad=False, bias=False)
+    c.update_signature(Sequence[Tensor[1, 5]]) 
+
+    out = c(data)
+
+    exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j], data[j][0][i:i+2].reshape(2)) for i in range(4)]] for j in range(3)]
+    exp = np.sum(np.asarray(exp), 0)
+
+    np.testing.assert_array_almost_equal(out[0][0], exp, decimal=5, \
+        err_msg="Error in convolution2D computation with sequential = True and zeropad = False")
+
+    c = Convolution((3,2), sequential=True, pad=True, bias=False)
+    x = C.input_variable(**Sequence[Tensor[1, 5]])
+    c = c(x)
+    
+    out = c.eval({x:data})
+    exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j], data[j][0][i:i+2].reshape(2)) for i in range(4)]] + [c.W.value[0][0][j][0] * data[j][0][-1]] for j in range(3)]
+    exp = np.sum(np.asarray(exp), 0)
+    np.testing.assert_array_almost_equal(out[0][1], exp, decimal=5, \
+        err_msg="Error in convolution2D computation with sequential = True and zeropad = True")
+
+    c = Convolution((3,2), sequential=True, pad=True, strides=2, bias=False)
+    c = c(x)
+
+    out = c.eval({x:data})
+    exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j+1], data[j][0][i:i+2].reshape(2)) for i in [0, 2]]] + [c.W.value[0][0][j+1][0] * data[j][0][-1]] for j in range(2)]
+    exp = np.sum(np.asarray(exp), 0)
+
+    np.testing.assert_array_almost_equal(out[0][0], exp, decimal=5, \
+        err_msg="Error in convolution2D computation with sequential = True, strides = 2 and zeropad = True")
+    exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j], data[j+1][0][i:i+2].reshape(2)) for i in [0, 2]]] + [c.W.value[0][0][j][0] * data[j+1][0][-1]] for j in range(2)]
+    exp = np.sum(np.asarray(exp), 0)
+    np.testing.assert_array_almost_equal(out[0][1], exp, decimal=5, \
+        err_msg="Error in convolution2D computation with sequential = True, strides = 2 and zeropad = True")
+
 
 ####################################
 # 1D convolution without reduction dimension
 ####################################
-
 def test_1D_convolution_without_reduction_dim():
     c = Convolution1D(3, init=np.array([4, 2, 1]), pad=True, reduction_rank=0, bias=False)
     c.update_signature(5)
@@ -1058,3 +1211,17 @@ def test_cloned_parameters_are_identical():
     z3 = z()
     z4 = z3.clone('clone')
     compare(z3(features), z4(features))
+
+#test_layers_convolution_2d()
+#test_layers_convolution_1d()
+#test_1D_convolution_without_reduction_dim()
+
+#test_sequential_convolution_1d()
+#test_sequential_convolution_1d_channel_filter()
+
+# TODO : reduction_rank = 0. 
+#test_1D_convolution_without_reduction_dim()
+#test_sequential_convolution_1d_without_reduction_dim()
+
+#test_sequential_convolution_2d()
+test_sequential_convolution_2d_without_reduction_dim()

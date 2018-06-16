@@ -112,6 +112,7 @@
   <ItemGroup>
     <ClCompile Include="BlockTests.cpp" />
     <ClCompile Include="..\..\EndToEndTests\CNTKv2Library\Common\Common.cpp" />
+    <ClCompile Include="ConvolutionFunctionTests.cpp" />
     <ClCompile Include="DeviceSelectionTests.cpp" />
     <ClCompile Include="LearnerTests.cpp" />
     <ClCompile Include="LoadLegacyModelTests.cpp" />
