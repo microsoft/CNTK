@@ -714,6 +714,7 @@ BOOST_AUTO_TEST_CASE(Index_with_multi_line_sequences)
     }
 }
 
+#if 0
 BOOST_AUTO_TEST_CASE(Index_non_primary)
 {
     auto size = s_textData.size();
@@ -740,7 +741,6 @@ BOOST_AUTO_TEST_CASE(Index_non_primary)
     BOOST_REQUIRE_EQUAL(std::get<2>(sequence1), 1u);
 }
 
-#if 0
 BOOST_AUTO_TEST_CASE(Index_with_caching)
 {
     auto filename = L"test.tmp";
