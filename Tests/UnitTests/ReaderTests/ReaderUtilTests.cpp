@@ -651,6 +651,7 @@ BOOST_AUTO_TEST_CASE(Index_with_non_numeric_sequence_ids)
     Check((*index)[0][1], ANY, 5, firstSeqSize, size - firstSeqSize);
 }
 
+#if 0
 BOOST_AUTO_TEST_CASE(Index_with_multi_line_sequences)
 {
     size_t count = 0;
@@ -713,6 +714,7 @@ BOOST_AUTO_TEST_CASE(Index_with_multi_line_sequences)
         Check((*index)[0], count, 2*count, 0, size);
     }
 }
+#endif
 
 #if 0
 BOOST_AUTO_TEST_CASE(Index_non_primary)
