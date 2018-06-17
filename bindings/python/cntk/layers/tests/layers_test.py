@@ -793,7 +793,7 @@ def test_sequential_convolution_without_reduction_dim():
 ####################################
 # 1D convolution without reduction dimension
 ####################################
-
+'''
 def test_1D_convolution_without_reduction_dim():
     c = Convolution1D(3, init=np.array([4, 2, 1]), pad=True, reduction_rank=0, bias=False)
     c.update_signature(5)
@@ -805,7 +805,7 @@ def test_1D_convolution_without_reduction_dim():
     # Failing call
     with pytest.raises(ValueError):
         Convolution1D((2,3))
-
+'''
 ##########################################################
 # Test Convolution Transpose layer for correctness
 ##########################################################
