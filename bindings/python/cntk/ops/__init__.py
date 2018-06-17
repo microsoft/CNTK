@@ -287,11 +287,12 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 ##########################################################################
 # convolution ops
 ##########################################################################
-
+'''
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                 auto_padding=[True], dilation=(1,), reduction_rank=1, groups=1, max_temp_mem_size_in_samples=0, name=''):
-    '''
+'''
+'''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
     This operation is used in image and language processing applications. It supports arbitrary
@@ -346,14 +347,15 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
-    '''
+'''
+'''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
     strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
     dilation = sanitize_shape(dilation)
     return convolution(convolution_map, operand, strides, sharing, auto_padding, dilation,
                        reduction_rank, groups, max_temp_mem_size_in_samples, name)
-
+'''
 @typemap
 def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
                           auto_padding=[True], output_shape=None, dilation=(1,), reduction_rank=1, max_temp_mem_size_in_samples=0, name=''):
