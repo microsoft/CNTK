@@ -584,6 +584,7 @@ BOOST_AUTO_TEST_CASE(Index_with_non_empty_main_stream_1)
     Check((*index)[0][1], 1, 5, firstSeqSize, size - firstSeqSize);
 }
 
+#if 0
 BOOST_AUTO_TEST_CASE(Index_with_non_empty_main_stream_2)
 {
     for (const string input : {"1 |features 1.0\r\n", "1 |features ", "1 |features\n", "1 |features"}) 
@@ -623,7 +624,6 @@ BOOST_AUTO_TEST_CASE(Index_with_non_empty_main_stream_2)
     }
 }
 
-#if 0
 BOOST_AUTO_TEST_CASE(Index_with_non_numeric_sequence_ids)
 {
     auto index = GetIndexBuilder(s_textData)->SetCorpus(std::make_shared<CorpusDescriptor>(true, false)).Build();
@@ -650,8 +650,7 @@ BOOST_AUTO_TEST_CASE(Index_with_non_numeric_sequence_ids)
     Check((*index)[0][0], ANY, 5, 0, firstSeqSize);
     Check((*index)[0][1], ANY, 5, firstSeqSize, size - firstSeqSize);
 }
-#endif
-#if 0
+
 BOOST_AUTO_TEST_CASE(Index_with_multi_line_sequences)
 {
     size_t count = 0;
@@ -714,9 +713,7 @@ BOOST_AUTO_TEST_CASE(Index_with_multi_line_sequences)
         Check((*index)[0], count, 2*count, 0, size);
     }
 }
-#endif
 
-#if 0
 BOOST_AUTO_TEST_CASE(Index_non_primary)
 {
     auto size = s_textData.size();
