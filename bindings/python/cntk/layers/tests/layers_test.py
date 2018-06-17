@@ -758,7 +758,7 @@ def test_layers_convolution_1d():
 ####################################
 # sequential convolution without reduction dimension
 ####################################
-
+'''
 def test_sequential_convolution_without_reduction_dim():
     c = Convolution(3, init=np.array([4., 2., 1.], dtype=np.float32), sequential=True, pad=False, reduction_rank=0, bias=False)
     c.update_signature(Sequence[Tensor[()]])  # input is a sequence of scalars
@@ -788,7 +788,7 @@ def test_sequential_convolution_without_reduction_dim():
 
     m = Embedding(emb_dim)(x)
     m = Convolution(filter_shape=3, pad=True, sequential=True)(m)
-
+'''
 
 ####################################
 # 1D convolution without reduction dimension
