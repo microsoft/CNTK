@@ -6,6 +6,10 @@
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
 #include <device_launch_parameters.h>
+#ifdef _MSC_VER
+#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
+#pragma warning(disable : 4515) // 'namespace': namespace uses itself
+#endif
 #include <cub/cub.cuh>
 
 #include "Constants.h"

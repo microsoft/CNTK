@@ -65,7 +65,7 @@ namespace CNTK
 
         virtual ~MPICommunicatorImpl() {}
 
-    private:
+    protected:
         void Initialize(const std::vector<NDArrayViewPtr>& values);
 
         void AggregateImpl(
@@ -98,7 +98,7 @@ namespace CNTK
 
         std::vector<Buffer> m_intermediateSBCIndexCPUBuffers;
         std::vector<Buffer> m_intermediateSBCValueCPUBuffers;
-    protected:
+
         DeviceDescriptor GetNonCPUDevice(const std::vector<NDArrayViewPtr>& values)
         {
             auto device = std::find_if(values.begin(), values.end(), [](const NDArrayViewPtr v) { return v->Device().Type() != DeviceKind::CPU; });

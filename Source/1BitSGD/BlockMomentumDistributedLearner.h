@@ -514,7 +514,8 @@ namespace CNTK
             return false;
         }
 
-        void Reset(const std::vector<NDArrayViewPtr>& parameters)
+    protected:
+        virtual void Reset(const std::vector<NDArrayViewPtr>& parameters)
         {
             for (size_t i = 0; i < parameters.size(); ++i)
             {
@@ -559,6 +560,11 @@ namespace CNTK
             }
         }
 
+        virtual void AggregateBlockGradientsInPlace()
+        {
+            m_communicator->AggregateInPlace(m_tempBlockGradient, m_communicator->Workers());
+        }
+
         template<class ElemType>
         void SynchronizeModel(const std::vector<NDArrayViewPtr>& parameterValues)
         {
@@ -577,7 +583,7 @@ namespace CNTK
             }
 
             // Send block gradient over MPI nodes.
-            m_communicator->AggregateInPlace(m_tempBlockGradient, m_communicator->Workers());
+            AggregateBlockGradientsInPlace();
 
             // 2. Let's update the model
             for (size_t i = 0; i < parameterValues.size(); ++i)
@@ -623,6 +629,7 @@ namespace CNTK
                 return exp(-((double)syncPeroid) / timeConstant);
         }
 
+    protected:
         static double Momentum2TimeConstant(double bm, size_t syncPeroid)
         {
             if (bm >= 1.0 || bm < 0.0)

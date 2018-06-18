@@ -13,11 +13,18 @@
 #include "QuantizedDistributedCommunicator.h"
 #include "QuantizedDataParallelDistributedLearner.h"
 #include "BlockMomentumDistributedLearner.h"
+#include "TopKDistributedCommunicator.h"
+#include "TopKBlockMomentumDistributedLearner.h"
 #endif
 
 namespace CNTK
 {
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
+    TopkDistributedCommunicatorPtr TopkMPICommunicator(size_t topK)
+    {
+        return MakeSharedObject<TopkMPICommunicatorImpl>(topK);
+    }
+
     QuantizedDistributedCommunicatorPtr QuantizedMPICommunicator(bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, size_t numQuantizationBits)
     {
         return MakeSharedObject<QuantizedMPICommunicatorImpl>(zeroThresholdFor1Bit, useQuantizationForSelfStripe, numQuantizationBits);
@@ -72,7 +79,51 @@ namespace CNTK
             blockMomentumAsTimeConstant);
     }
 
+    DistributedLearnerPtr CreateTopkBlockMomentumDistributedLearner(
+        TopkDistributedCommunicatorPtr communicator,
+        LearnerPtr learner,
+        size_t distributeAfterSamples,
+        size_t blockSize,
+        bool useNestrovMomentum,
+        bool resetSGDMomentumAfterAggregation,
+        double blockLearningRate)
+    {
+        return MakeSharedObject<TopkBlockMomentumDistributedLearner>(
+            communicator,
+            learner,
+            distributeAfterSamples,
+            blockSize,
+            useNestrovMomentum,
+            resetSGDMomentumAfterAggregation,
+            blockLearningRate);
+    }
+
+    DistributedLearnerPtr CreateTopkBlockMomentumDistributedLearner(
+        TopkDistributedCommunicatorPtr communicator,
+        LearnerPtr learner,
+        size_t distributeAfterSamples,
+        size_t blockSize,
+        double blockMomentumAsTimeConstant,
+        bool useNestrovMomentum,
+        bool resetSGDMomentumAfterAggregation,
+        double blockLearningRate)
+    {
+        return MakeSharedObject<TopkBlockMomentumDistributedLearner>(
+            communicator,
+            learner,
+            distributeAfterSamples,
+            blockSize,
+            useNestrovMomentum,
+            resetSGDMomentumAfterAggregation,
+            blockLearningRate,
+            blockMomentumAsTimeConstant);
+}
+
 #else
+    TopkDistributedCommunicatorPtr TopkMPICommunicator(size_t)
+    {
+        LogicError("TopK MPI Communicator is not supported for this build. The GPU build is needed, see CNTK wiki for details.");
+    }
     QuantizedDistributedCommunicatorPtr QuantizedMPICommunicator(bool, bool, size_t)
     {
         LogicError("Quantized MPI Communicator is not supported for this build. The GPU build is needed, see CNTK wiki for details.");
@@ -97,6 +148,31 @@ namespace CNTK
 
     DistributedLearnerPtr CreateBlockMomentumDistributedLearner(
         DistributedCommunicatorPtr /*communicator*/,
+        LearnerPtr,
+        size_t /*distributeAfterSamples*/,
+        size_t /*blockSize*/,
+        double /*blockMomentumAsTimeConstant*/,
+        bool /*useNestrovMomentum*/,
+        bool /*resetSGDMomentumAfterAggregation*/,
+        double /*blockLearningRate*/)
+    {
+        LogicError("Block Momentum Distributed Trainer is not supported for this build. The GPU build is needed, see CNTK wiki for details.");
+    }
+
+    DistributedLearnerPtr CreateTopkBlockMomentumDistributedLearner(
+        TopkDistributedCommunicatorPtr /*communicator*/,
+        LearnerPtr,
+        size_t /*distributeAfterSamples*/,
+        size_t /*blockSize*/,
+        bool /*useNestrovMomentum*/,
+        bool /*resetSGDMomentumAfterAggregation*/,
+        double /*blockLearningRate*/)
+    {
+        LogicError("Block Momentum Distributed Trainer is not supported for this build. The GPU build is needed, see CNTK wiki for details.");
+    }
+
+    DistributedLearnerPtr CreateTopkBlockMomentumDistributedLearner(
+        TopkDistributedCommunicatorPtr /*communicator*/,
         LearnerPtr,
         size_t /*distributeAfterSamples*/,
         size_t /*blockSize*/,

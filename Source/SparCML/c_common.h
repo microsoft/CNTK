@@ -62,7 +62,11 @@ template<class IdxType, class ValType> void split_stream(const struct stream *st
 
     unsigned idx = 0;
     for(size_t i = 0; i < worldsize; ++i) {
+#if defined(_MSC_VER) 
+      unsigned offset = (unsigned) (step*i);
+#else
       unsigned offset = step*i;
+#endif
       unsigned maxsize = step; 
       if(i == worldsize - 1) {
         maxsize = lastsize;

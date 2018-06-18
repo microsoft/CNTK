@@ -1495,6 +1495,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::Chunk)
 %shared_ptr(CNTK::DistributedCommunicator)
 %shared_ptr(CNTK::QuantizedDistributedCommunicator)
+%shared_ptr(CNTK::TopkDistributedCommunicator)
 %shared_ptr(CNTK::DistributedLearner)
 %shared_ptr(CNTK::Internal::TensorBoardFileWriter)
 %shared_ptr(CNTK::ProgressWriter)

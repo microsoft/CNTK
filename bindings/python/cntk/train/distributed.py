@@ -197,6 +197,39 @@ def block_momentum_distributed_learner(learner, block_size, block_momentum_as_ti
             block_learning_rate)
 
 @typemap
+def topk_block_momentum_distributed_learner(learner, block_size, topk=0, block_momentum_as_time_constant=None, use_nestrov_momentum=True, reset_sgd_momentum_after_aggregation=True, block_learning_rate=1.0, distributed_after=0):
+    if topk <= 0:
+        # fall back to normal bm learner
+        return block_momentum_distributed_learner(
+            learner,
+            block_size,
+            block_momentum_as_time_constant,
+            use_nestrov_momentum,
+            reset_sgd_momentum_after_aggregation,
+            block_learning_rate,
+            distributed_after)
+
+    if block_momentum_as_time_constant == None:
+        return cntk_py.create_topk_block_momentum_distributed_learner(
+            cntk_py.topk_mpicommunicator(topk),
+            learner,
+            distributed_after,
+            block_size,
+            use_nestrov_momentum,
+            reset_sgd_momentum_after_aggregation,
+            block_learning_rate)
+    else:
+        return cntk_py.create_topk_block_momentum_distributed_learner(
+            cntk_py.topk_mpicommunicator(topk),
+            learner,
+            distributed_after,
+            block_size,
+            block_momentum_as_time_constant,
+            use_nestrov_momentum,
+            reset_sgd_momentum_after_aggregation,
+            block_learning_rate)
+
+@typemap
 def mpi_communicator():
     '''
     Creates a non quantized MPI communicator.

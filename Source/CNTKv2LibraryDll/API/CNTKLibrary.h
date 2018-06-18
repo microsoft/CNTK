@@ -761,6 +761,7 @@ namespace CNTK
         {
             SetValue(value);
             m_isReadOnly = readOnly;
+            m_isPacked = false;
         }
 
         ///
@@ -793,6 +794,7 @@ namespace CNTK
             }
 
             m_isReadOnly = readOnly;
+            m_isPacked = false;
         }
 
         ///
@@ -864,6 +866,8 @@ namespace CNTK
         /// Returns a boolean indicating if 'this' view is read-only.
         ///
         bool IsReadOnly() const { return m_isReadOnly; }
+        bool IsPacked() const { return m_isPacked; }
+        void SetIsPacked(bool value) { m_isPacked = value; }
 
         ///
         /// Returns a boolean indicating if 'this' view is slice.
@@ -1021,6 +1025,7 @@ namespace CNTK
         ::CNTK::StorageFormat m_storageFormat;
         NDShape m_viewShape;
         bool m_isReadOnly;
+        bool m_isPacked;
 
         std::shared_ptr<void> m_tensorView; // Microsoft::MSR::CNTK::TensorView<ElemType>*
     };
@@ -5423,6 +5428,25 @@ namespace CNTK
         bool resetSGDMomentumAfterAggregation = true,
         double blockLearningRate = 1.0);
 
+    CNTK_API DistributedLearnerPtr CreateTopkBlockMomentumDistributedLearner(
+        TopkDistributedCommunicatorPtr communicator,
+        LearnerPtr learner,
+        size_t distributeAfterSamples,
+        size_t blockSize,
+        double blockMomentumAsTimeConstant,
+        bool useNestrovMomentum = true,
+        bool resetSGDMomentumAfterAggregation = true,
+        double blockLearningRate = 1.0);
+
+    CNTK_API DistributedLearnerPtr CreateTopkBlockMomentumDistributedLearner(
+        TopkDistributedCommunicatorPtr communicator,
+        LearnerPtr learner,
+        size_t distributeAfterSamples,
+        size_t blockSize,
+        bool useNestrovMomentum = true,
+        bool resetSGDMomentumAfterAggregation = true,
+        double blockLearningRate = 1.0);
+
     ///
     /// Evaluator is a top-level abstraction for evaluating a model's performance with specified error criterion.
     ///
@@ -6185,6 +6209,21 @@ namespace CNTK
     };
 
     ///
+    /// A distributed communicator that supports TopK aggreagtion of values.
+    ///
+    class TopkDistributedCommunicator : public DistributedCommunicator
+    {
+    public:
+        CNTK_API virtual void TopKAggregateInPlace(
+            std::vector<NDArrayViewPtr>& inValues,
+            std::vector<NDArrayViewPtr>& residues,
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
+
+    protected:
+        TopkDistributedCommunicator() {};
+    };
+
+    ///
     /// Built-in MPI-based communicator.
     ///
     CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = Internal::GetMPIPackThreshold());
@@ -6193,6 +6232,11 @@ namespace CNTK
     /// Distributed communicator that allows quantized aggregations.
     ///
     CNTK_API QuantizedDistributedCommunicatorPtr QuantizedMPICommunicator(bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, size_t numQuantizationBits);
+
+    ///
+    /// Distributed communicator that allows topK aggregations.
+    ///
+    CNTK_API TopkDistributedCommunicatorPtr TopkMPICommunicator(size_t topK);
 
     ///
     /// Cross validation configuration
