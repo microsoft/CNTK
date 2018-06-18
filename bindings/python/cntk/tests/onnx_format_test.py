@@ -80,7 +80,7 @@ def test_convolution_transpose(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test only runs on GPU')
     device = cntk_device(device_id)
-    with C.default_options(dtype=dtype, device=device):
+    with C.default_options(dtype=dtype):
         img_shape = (1, 3, 3)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
 
@@ -96,7 +96,7 @@ def test_convolution_transpose(tmpdir, dtype, device_id):
         assert root_node.shape == loaded_node.shape
 
         x_ = loaded_node.arguments[0]
-        assert np.allclose(loaded_node.eval({x_:[img]}), root_node.eval({x:[img]}))
+        assert np.allclose(loaded_node.eval({x_:[img]}, device=device), root_node.eval({x:[img]}, device=device))
 
 POOLING_TEST_DATA = [
     # auto_padding: Value for the auto_adding parameter to pooling. 
@@ -128,7 +128,7 @@ def test_pooling(tmpdir, auto_padding, pooling_type, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test only runs on GPU')
     device = cntk_device(device_id)
-    with C.default_options(dtype=dtype, device=device):
+    with C.default_options(dtype=dtype):
         img_shape = (1, 5, 5)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
 
@@ -143,7 +143,7 @@ def test_pooling(tmpdir, auto_padding, pooling_type, dtype, device_id):
         assert root_node.shape == loaded_node.shape
 
         x_ = loaded_node.arguments[0]
-        assert np.allclose(loaded_node.eval({x_:[img]}), root_node.eval({x:[img]}))
+        assert np.allclose(loaded_node.eval({x_:[img]}, device=device), root_node.eval({x:[img]}, device=device))
 
 def test_conv_model(tmpdir):
     def create_model(input):
@@ -377,7 +377,7 @@ def test_conv_with_freedim_model(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test only runs on GPU')
     device = cntk_device(device_id)
-    with C.default_options(dtype=dtype, device=device):
+    with C.default_options(dtype=dtype):
         img_shape = (3, 32, 32)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
 
@@ -402,7 +402,7 @@ def test_conv_with_freedim_model(tmpdir, dtype, device_id):
         assert root_node.shape == loaded_node.shape
 
         x_ = loaded_node.arguments[0]
-        assert np.allclose(loaded_node.eval({x_:img}), root_node.eval({x:img}))
+        assert np.allclose(loaded_node.eval({x_:img}, device=device), root_node.eval({x:img}, device=device))
 
         # Additional test to ensure that loaded_node can be saved as both ONNX and CNTKv2 again.
         filename2 = os.path.join(str(tmpdir), R'conv_with_freedim2.onnx')

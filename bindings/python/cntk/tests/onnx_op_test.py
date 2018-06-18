@@ -24,15 +24,19 @@ def verify_no_input(model, tmpdir, name):
     o_ = loaded_model.eval()
     assert np.allclose(o_, o)
     
-def verify_one_input(model, data, tmpdir, name):
+def verify_one_input(model, data, tmpdir, name, device=None):
     filename = os.path.join(str(tmpdir), name + R'.onnx')
     model.save(filename, format=C.ModelFormat.ONNX)
 
     loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
     assert model.shape == loaded_model.shape
 
-    o0 = model.eval({model.arguments[0]:data})
-    o1 = loaded_model.eval({loaded_model.arguments[0]:data})
+    if device:
+        o0 = model.eval({model.arguments[0]:data}, device=device)
+        o1 = loaded_model.eval({loaded_model.arguments[0]:data}, device=device)
+    else:
+        o0 = model.eval({model.arguments[0]:data})
+        o1 = loaded_model.eval({loaded_model.arguments[0]:data})
 
     if (type(o0) is list):
         o0 = o0[0]
@@ -191,12 +195,12 @@ def test_AveragePool(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
-    with C.default_options(dtype=dtype, device=device):
+    with C.default_options(dtype=dtype):
         img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
         x = C.input_variable(img.shape)
         model = C.pooling(x, C.AVG_POOLING, (2,2), (2,2))
 
-        verify_one_input(model, img, tmpdir, 'AveragePool_1')
+        verify_one_input(model, img, tmpdir, 'AveragePool_1', device)
 
 #BatchNormalization
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -294,7 +298,7 @@ def test_ConvTranspose(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
-    with C.default_options(dtype=dtype, device=device):
+    with C.default_options(dtype=dtype):
         # Keep the shapes below as they are, because this tests an earlier bug.
         input_shape = (48, 16, 16) 
         img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape) 
@@ -306,7 +310,7 @@ def test_ConvTranspose(tmpdir, dtype, device_id):
 
         conv_trans_model = C.convolution_transpose(kernel, x, strides=(2, 2), output_shape=(32, 32, 32), auto_padding = [False, True, True])
 
-        verify_one_input(conv_trans_model, img, tmpdir, 'ConvTranspose_0')
+        verify_one_input(conv_trans_model, img, tmpdir, 'ConvTranspose_0', device)
 
 # DepthToSpace
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -611,12 +615,12 @@ def test_LRN(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
-    with C.default_options(dtype=dtype, device=device):
+    with C.default_options(dtype=dtype):
         img_shape = (64, 32, 32)
         img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
         x_r = C.input_variable(shape=img_shape, dtype=dtype)
         model = C.local_response_normalization(x_r, 2, 1.0, 0.0001, 0.75)
-        verify_one_input(model, img, tmpdir, 'LRN_1')
+        verify_one_input(model, img, tmpdir, 'LRN_1', device)
 
 #LSTM
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -698,11 +702,11 @@ def test_MaxPool(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
-    with C.default_options(dtype=dtype, device=device):
+    with C.default_options(dtype=dtype):
         img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
         x = C.input_variable(img.shape)
         model = C.pooling(x, C.MAX_POOLING, (2,2), (3,3))
-        verify_one_input(model, img, tmpdir, 'MaxPool_1')
+        verify_one_input(model, img, tmpdir, 'MaxPool_1', device)
 
 #MaxRoiPool
 @pytest.mark.parametrize("dtype", DType_Config)
