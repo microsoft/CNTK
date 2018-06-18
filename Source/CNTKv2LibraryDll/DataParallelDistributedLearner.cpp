@@ -14,7 +14,7 @@
 #include "QuantizedDataParallelDistributedLearner.h"
 #include "BlockMomentumDistributedLearner.h"
 #include "TopKDistributedCommunicator.h"
-#include "TopKBlockMomentumDistributedLearner.h"
+#include "TopkBlockMomentumDistributedLearner.h"
 #endif
 
 namespace CNTK
