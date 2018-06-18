@@ -8,6 +8,7 @@
 #include "ColumnQuantizer.h"
 #include "QuantizedMatrix.h"
 #include "MatrixQuantizerImpl.h"
+#include "c_allreduce_ring.h"
 
 namespace Microsoft {namespace MSR {namespace CNTK {
 // TopK
