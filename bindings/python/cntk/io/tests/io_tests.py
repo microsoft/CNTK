@@ -435,7 +435,7 @@ def test_full_sweep_minibatch(tmpdir):
             [[2, 1, 1],
              [2, 1, 0]])
 
-
+'''
 def test_max_samples(tmpdir):
     mb_source = MinibatchSource(
         create_ctf_deserializer(tmpdir), max_samples=1)
@@ -450,7 +450,6 @@ def test_max_samples(tmpdir):
     mb = mb_source.next_minibatch(10, input_map)
 
     assert not mb
-
 
 def test_max_sweeps(tmpdir):
     # set max sweeps to 3 (12 samples altogether).
@@ -500,7 +499,6 @@ def test_max_samples_over_several_sweeps(tmpdir):
 
     assert not mb
 
-
 def test_one_sweep(tmpdir):
     ctf = create_ctf_deserializer(tmpdir)
     sources = [MinibatchSource(ctf, max_sweeps=1),
@@ -541,7 +539,7 @@ def test_random_seed(tmpdir):
     # after the first sweep (= 4 samples), the first reader is seeded
     # with 1, and should produce results identical to the last reader.
     assert (data[0][4:] == data[3][:-4]).all()
-
+'''
 
 def test_large_minibatch(tmpdir):
     tmpfile = _write_data(tmpdir, MBDATA_DENSE_2)

@@ -342,6 +342,7 @@ def test_recurrent_block(block_type, block_outputs_count, block_size, W_mult, H_
 ####################################
 
 def test_layers_dense(device_id):
+    warnings.warn("Hey hey - I am in Dense!")
     y = C.input_variable(2)
     dat = np.array([[-1., 1.]], dtype=np.float32)
 
@@ -391,6 +392,7 @@ def test_layers_dense(device_id):
 # Test Embedding layer for correctness
 ########################################
 def test_layers_embedding():
+    warnings.warn("Hey hey - I am in Embedding!")
     embDim = 3
     y = C.input_variable(2)
 
