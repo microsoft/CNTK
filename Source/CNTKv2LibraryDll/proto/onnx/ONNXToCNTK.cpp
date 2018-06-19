@@ -350,6 +350,39 @@ void RetrieveRawDataAsDouble(const onnx::TensorProto &valueProto)
     }
 }
 
+float16 UnpackFloat16(const char *buf, int i)
+{
+    float16 temp = 0;
+
+    if (IsLittleEndianOrder())
+    {
+        memcpy((void *)&temp, (void *)buf, sizeof(char) * 2);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+    return temp;
+}
+
+void RetrieveRawDataAsFloat16(const onnx::TensorProto &valueProto)
+{
+    if (!valueProto.int32_data().empty())
+        return;
+    auto raw_data = valueProto.raw_data();
+    onnx::TensorProto &mutableProto = const_cast<onnx::TensorProto &>(valueProto);
+    ::google::protobuf::RepeatedField<int> *p_mutable_int32_data = mutableProto.mutable_int32_data();
+    if (!raw_data.empty())
+    {
+        auto buff = raw_data.c_str();
+        for (int i = 0; i < raw_data.size(); i += 2)
+        {
+            auto v = UnpackFloat16(buff + i, i);
+            p_mutable_int32_data->Add(*reinterpret_cast<const uint16_t*>(&v));
+        }
+    }
+}
+
 std::vector<size_t> ONNXToCNTKHelper::GetNodeDims(const Node *node)
 {
     NodeAttributes::const_iterator itValue = node->GetAttributes().find("value");
@@ -453,7 +486,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     {
         if (valueProto.int32_data().empty())
         {
-            NOT_IMPLEMENTED;
+            RetrieveRawDataAsFloat16(valueProto);
         }
 
         return CreateConstantWithTensorData<uint16_t, int>(shape, tensorProtoDataType, CNTK::DataType::Float16,
