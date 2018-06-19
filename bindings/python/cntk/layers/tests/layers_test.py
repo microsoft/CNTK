@@ -588,6 +588,7 @@ def test_layers_convolution_value():
     ptf(str(model))
     ptf('------------------')
     ptf("convolution computation with stride = 1 and zeropad = False: layer created.")
+    ptf(str(dat))
     res = model(y).eval({y: dat})
     ptf("convolution computation with stride = 1 and zeropad = False: model evaluated.")
     ptf(str(res))

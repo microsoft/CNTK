@@ -7,6 +7,7 @@
 #include "ConvolutionEngine.h"
 #include "CuDnnFactories.h"
 #include "MklDnnCommon.h"
+#include <fstream> 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -613,10 +614,20 @@ protected:
     //    In case minibatch size == 1 this step is not required and step 2 writes results directly to output (out).
     void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace) override
     {
+        std::ofstream outfile;
 #ifdef USE_MKL2017DNN
-        if (ForwardCoreMKL(in, kernel, out)) return;
+        
+        outfile.open("/home/ubuntu/workspace/output.txt", std::ios_base::app);
+        outfile << "In GemmConv ForwardCore MKL version\n";
+        if (ForwardCoreMKL(in, kernel, out))
+        {
+            outfile << "In GemmConv ForwardCoreMKL successfully executed.\n";
+            return;
+        }
 #endif
 
+        outfile.open("/home/ubuntu/workspace/output.txt", std::ios_base::app);
+        outfile << "In GemmConv ForwardCore non-mkl version\n";
         size_t batchSize = in.GetNumCols();
         size_t subBatchSize = m_maxTempMemSizeInSamples == 0 ? batchSize : min(batchSize, m_maxTempMemSizeInSamples);
 
@@ -673,6 +684,7 @@ protected:
                 outSlice.AssignTransposeOf(outTempSlice);
             }
         }
+        outfile << "In GemmConv ForwardCore non-mkl version - successfully completed.\n";
     }
 
     // The backward data method works by representing this operation as a "reverse" convolution
@@ -1155,6 +1167,9 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
                                                                                  bool forceDeterministicAlgorithms, bool poolIncludePad,
                                                                                  bool inputHasFreeDimension)
 {
+    std::ofstream outfile;
+    outfile.open("/home/ubuntu/workspace/output.txt", std::ios_base::app);
+
     if (!logPrefix.empty())
         logPrefix += L": ";
 
@@ -1188,11 +1203,12 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
 
     if (geometry->Groups() == 1)
     {
+        outfile << "In geometry->Groups() == 1 block\n";
         if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
         {
             if (GetMathLibTraceLevel() > 0)
                 fprintf(stderr, "%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
-
+            outfile << "Returning GemmConv engine - 1\n";
             return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
         }
 
@@ -1202,10 +1218,12 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "%lsusing reference convolution engine for geometry, could be VERY SLOW: %s.\n", logPrefix.c_str(), engStr.c_str());
 
+        outfile << "Returning ReferenceConv engine - 2\n";
         return std::make_unique<ReferenceConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
     }
     else if (geometry->Groups() > 1)
     {
+        outfile << "In geometry->Groups() > 3 block.\n";
         if (!(geometry->InputShape().GetRank() < 4))
         {
             RuntimeError("Group convolution, i.e. groups > 1, for 3-dimensional convolution or higher is not supported on the CPU. Please use GPU, if possible.");
@@ -1213,11 +1231,13 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
         // For group convolution, MKL 2017 is required. If it is not enabled, we throw an error.
         if (GemmConvolutionEngine<ElemType>::IsMklEnabled())
         {
+            outfile << "MKL is enabled. 4.\n";
             if (isEnabled(ConvolutionEngineKind::Gemm) && GemmConvolutionEngine<ElemType>::IsSupported(deviceId, geometry))
             {
                 if (GetMathLibTraceLevel() > 0)
                     fprintf(stderr, "%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
+                outfile << "Returning GemmConv engine - 2\n";
                 return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
             }
             RuntimeError("Gemm convolution is not supported/enabled. Cannot execute group convolution (groups > 1) on CPU.");
