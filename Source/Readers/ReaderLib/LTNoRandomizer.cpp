@@ -19,8 +19,14 @@ LTNoRandomizer::LTNoRandomizer(DataDeserializerPtr deserializer, bool multithrea
 {
 }
 
+LTNoRandomizer::~LTNoRandomizer()
+{
+    StopPrefetch();
+}
+
 void LTNoRandomizer::Prefetch() const
 {
+
     auto chunkId = m_originalChunkDescriptions[m_currentChunkPosition].m_id;
     m_prefetchedChunk.m_info = m_originalChunkDescriptions[m_currentChunkPosition];
     m_prefetchedChunk.m_data = m_deserializer->GetChunk(chunkId);

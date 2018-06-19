@@ -8,7 +8,8 @@
 #include <vector>
 #include "LocalTimelineRandomizerBase.h"
 
-namespace CNTK {
+namespace CNTK
+{
 
 // LT - LocalTimeline
 // A randomizer that does not randomize input (identity function over the original timeline).
@@ -22,7 +23,10 @@ public:
         bool multithreadedGetNextSequences = false,
         size_t maxNumberOfInvalidSequences = 0); // per worker
 
-    std::map<std::wstring, size_t> GetInnerState() override;
+    virtual ~LTNoRandomizer();
+
+        std::map<std::wstring, size_t>
+        GetInnerState() override;
     void SetInnerState(const std::map<std::wstring, size_t>& state) override;
 
     void RefillSequenceWindow(SequenceWindow& window) override;
@@ -46,5 +50,4 @@ private:
 
     mutable PrefetchedChunk m_prefetchedChunk;
 };
-
 }
