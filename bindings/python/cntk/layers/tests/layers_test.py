@@ -561,6 +561,7 @@ def test_layers_convolution_value():
     ##########################################################
     # Test convolutional layer for correctness (p=False s = 1)
     ##########################################################
+    print("convolution computation with stride = 1 and zeropad = False")
     y = C.input_variable((inC, inH, inW))
     zeropad = False
     in_strides = 1
@@ -570,8 +571,10 @@ def test_layers_convolution_value():
                         activation=None,
                         pad=zeropad,
                         strides=in_strides, name='foo')
+    print("convolution computation with stride = 1 and zeropad = False: layer created.")
     res = model(y).eval({y: dat})
-
+    print("convolution computation with stride = 1 and zeropad = False: model evaluated.")
+    print(res)
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value)
 
@@ -583,14 +586,16 @@ def test_layers_convolution_value():
     ##########################################################
     zeropad = False
     in_strides = 2
-
+    print("Error in convolution computation with stride = 2 and zeropad = False")
     model = Convolution(in_filter_shape,
                         num_filters=out_num_filters,
                         activation=None,
                         pad=zeropad,
                         strides=in_strides, name='foo')
+    print("Error in convolution computation with stride = 2 and zeropad = False: layer created")
     res = model(y).eval({y: dat})
-
+    print("Error in convolution computation with stride = 2 and zeropad = False: model evaluated")
+    print(res)
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value)
 
@@ -602,13 +607,16 @@ def test_layers_convolution_value():
     ##########################################################
     zeropad = True
     in_strides = 1
-
+    print("Error in convolution computation with stride = 1 and zeropad = True")
     model = Convolution(in_filter_shape,
                         num_filters=out_num_filters,
                         activation=None,
                         pad=zeropad,
                         strides=in_strides, name='foo')
+    print("Error in convolution computation with stride = 1 and zeropad = True: layer created")
     res = model(y).eval({y: dat})
+    print("Error in convolution computation with stride = 1 and zeropad = True: model evaluated")
+    print(res)
 
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value)
@@ -635,13 +643,17 @@ def test_layers_convolution_value():
     ##########################################################
     zeropad = True
     in_strides = 2
+    print("Error in convolution computation with stride = 2 and zeropad = True")
 
     model = Convolution(in_filter_shape,
                         num_filters=out_num_filters,
                         activation=None,
                         pad=zeropad,
                         strides=in_strides, name='foo')
+    print("Error in convolution computation with stride = 2 and zeropad = True: layer created")
     res = model(y).eval({y: dat})
+    print("Error in convolution computation with stride = 2 and zeropad = True: model evaluated")
+    print(res)
 
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value[0,:,1:,1:])
