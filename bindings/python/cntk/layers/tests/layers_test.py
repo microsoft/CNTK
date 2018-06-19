@@ -552,6 +552,7 @@ def test_layers_convolution_shape():
         "Error in convolution with stride > 1 and padding")
 
 def test_layers_convolution_value():
+    import warnings
     # Common parameters
     inC, inH, inW = 3, 10, 10
     in_filter_shape = (3, 3)
@@ -561,153 +562,153 @@ def test_layers_convolution_value():
     ##########################################################
     # Test convolutional layer for correctness (p=False s = 1)
     ##########################################################
-    print("convolution computation with stride = 1 and zeropad = False")
+    # print("convolution computation with stride = 1 and zeropad = False")
+    warnings.warn("convolution computation with stride = 1 and zeropad = False")
     y = C.input_variable((inC, inH, inW))
     zeropad = False
     in_strides = 1
-    print('------Parameter values------')
-    print(in_filter_shape)
-    print(out_num_filters)
-    print(zeropad)
-    print(in_strides)
-    print('------------------')
+    warnings.warn('------Parameter values------')
+    warnings.warn(str(in_filter_shape))
+    warnings.warn(str(out_num_filters))
+    warnings.warn(str(zeropad))
+    warnings.warn(str(in_strides))
+    warnings.warn('------------------')
     model = Convolution(in_filter_shape,
                         num_filters=out_num_filters,
                         activation=None,
                         pad=zeropad,
                         strides=in_strides, name='foo')
-    print('-------Model-----')
-    print(model)
-    print('------------------')
-    print("convolution computation with stride = 1 and zeropad = False: layer created.")
+    warnings.warn('-------Model-----')
+    warnings.warn(str(model))
+    warnings.warn('------------------')
+    warnings.warn("convolution computation with stride = 1 and zeropad = False: layer created.")
     res = model(y).eval({y: dat})
-    print("convolution computation with stride = 1 and zeropad = False: model evaluated.")
-    print(res)
+    warnings.warn("convolution computation with stride = 1 and zeropad = False: model evaluated.")
+    warnings.warn(str(res))
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value)
-    print('-----------')
-    print(expected_res)
+    warnings.warn('-----------')
+    warnings.warn(str(expected_res))
 
     np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = False")
-    print('======================================')
+    warnings.warn('======================================')
     ##########################################################
     # Test convolutional layer for correctness (p=False s = 2)
     ##########################################################
     zeropad = False
     in_strides = 2
-    print("convolution computation with stride = 2 and zeropad = False")
-    print('------Parameter values------')
-    print(in_filter_shape)
-    print(out_num_filters)
-    print(zeropad)
-    print(in_strides)
-    print('------------------')
+    warnings.warn("convolution computation with stride = 2 and zeropad = False")
+    warnings.warn('------Parameter values------')
+    warnings.warn(str(in_filter_shape))
+    warnings.warn(str(out_num_filters))
+    warnings.warn(str(zeropad))
+    warnings.warn(str(in_strides))
+    warnings.warn('------------------')
     model = Convolution(in_filter_shape,
                         num_filters=out_num_filters,
                         activation=None,
                         pad=zeropad,
                         strides=in_strides, name='foo')
-    print('-------Model-----')
-    print(model)
-    print('------------------')
-    print("convolution computation with stride = 2 and zeropad = False: layer created")
+    warnings.warn('-------Model-----')
+    warnings.warn(str(model))
+    warnings.warn('------------------')
+    warnings.warn("convolution computation with stride = 2 and zeropad = False: layer created")
     res = model(y).eval({y: dat})
-    print("convolution computation with stride = 2 and zeropad = False: model evaluated")
-    print(res)
+    warnings.warn("convolution computation with stride = 2 and zeropad = False: model evaluated")
+    warnings.warn(str(res))
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value)
-    print('-----------')
-    print(expected_res)
+    warnings.warn('-----------')
+    warnings.warn(str(expected_res))
 
     np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5, \
         err_msg="Error in convolution computation with stride = 2 and zeropad = False")
-    print('======================================')
+    warnings.warn('======================================')
     ##########################################################
     # Test convolutional layer for correctness (p=True s = 1)
     ##########################################################
     zeropad = True
     in_strides = 1
-    print("convolution computation with stride = 1 and zeropad = True")
-    print('------Parameter values------')
-    print(in_filter_shape)
-    print(out_num_filters)
-    print(zeropad)
-    print(in_strides)
-    print('------------------')
+    warnings.warn('------Parameter values------')
+    warnings.warn(str(in_filter_shape))
+    warnings.warn(str(out_num_filters))
+    warnings.warn(str(zeropad))
+    warnings.warn(str(in_strides))
+    warnings.warn('------------------')
     model = Convolution(in_filter_shape,
                         num_filters=out_num_filters,
                         activation=None,
                         pad=zeropad,
                         strides=in_strides, name='foo')
-    print('-------Model-----')
-    print(model)
-    print('------------------')
-    print("convolution computation with stride = 1 and zeropad = True: layer created")
+    warnings.warn('-------Model-----')
+    warnings.warn(str(model))
+    warnings.warn('------------------')
+    warnings.warn("convolution computation with stride = 1 and zeropad = True: layer created")
     res = model(y).eval({y: dat})
-    print("convolution computation with stride = 1 and zeropad = True: model evaluated")
-    print(res)
+    warnings.warn("convolution computation with stride = 1 and zeropad = True: model evaluated")
+    warnings.warn(str(res))
 
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value)
-    print('-----------')
-    print(expected_res)
+    warnings.warn('-----------')
+    warnings.warn(str(expected_res))
 
     # Compare the center of the res with the sum of the weights
     np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=6, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = True")
-    print('======================================')
+    warnings.warn('======================================')
     ##########################################################
     # Test convolutional layer for second invocation/parameter sharing
     ##########################################################
-    print("convolution computation with stride = 1 and zeropad = True, second invocation")
+    warnings.warn("convolution computation with stride = 1 and zeropad = True, second invocation")
     y1 = C.input_variable((inC, inH, inW))
     res = model(y1).eval({y1: dat}) # this re-clones 'model'
-    print("convolution computation with stride = 1 and zeropad = True, second invocation: model evaluated")
-    print(res)
+    warnings.warn("convolution computation with stride = 1 and zeropad = True, second invocation: model evaluated")
+    warnings.warn(str(res))
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value)
-    print('-----------')
-    print(expected_res)
+    warnings.warn('-----------')
+    warnings.warn(str(expected_res))
 
     # Compare the center of the res with the sum of the weights
     np.testing.assert_array_almost_equal(res[0][0][1][1], expected_res, decimal=6, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = True, second invocation")
-    print('======================================')
+    warnings.warn('======================================')
     ##########################################################
     # Test convolutional layer for correctness (p=True s = 2)
     ##########################################################
     zeropad = True
     in_strides = 2
-    print("convolution computation with stride = 2 and zeropad = True")
-    print('------Parameter values------')
-    print(in_filter_shape)
-    print(out_num_filters)
-    print(zeropad)
-    print(in_strides)
-    print('------------------')
+    warnings.warn("convolution computation with stride = 2 and zeropad = True")
+    warnings.warn('------Parameter values------')
+    warnings.warn(str(in_filter_shape))
+    warnings.warn(str(out_num_filters))
+    warnings.warn(str(zeropad))
+    warnings.warn(str(in_strides))
+    warnings.warn('------------------')
     model = Convolution(in_filter_shape,
                         num_filters=out_num_filters,
                         activation=None,
                         pad=zeropad,
                         strides=in_strides, name='foo')
-    print('-------Model-----')
-    print(model)
-    print('------------------')
-    print("convolution computation with stride = 2 and zeropad = True: layer created")
+    warnings.warn('-------Model-----')
+    warnings.warn(str(model))
+    warnings.warn('------------------')
+    warnings.warn("convolution computation with stride = 2 and zeropad = True: layer created")
     res = model(y).eval({y: dat})
-    print("convolution computation with stride = 2 and zeropad = True: model evaluated")
-    print(res)
+    warnings.warn("convolution computation with stride = 2 and zeropad = True: model evaluated")
+    warnings.warn(str(res))
 
     # Extract the W weight matrix
     expected_res = np.sum(model.foo.W.value[0,:,1:,1:])
-    print('-----------')
-    print(expected_res)
+    warnings.warn('-----------')
+    warnings.warn(str(expected_res))
 
     # Compare at the top-left corner, to see the effect of zero-padding.
     np.testing.assert_array_almost_equal(res[0][0][0][0], expected_res, decimal=5,
         err_msg="Error in convolution computation with stride = 2 and zeropad = True")
-    print('======================================')
+    warnings.warn('======================================')
 
 def test_convolution_consistency_in_different_evals():
     inC, inH, inW = 1,4,4
