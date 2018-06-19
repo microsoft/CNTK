@@ -25,8 +25,7 @@ public:
 
     virtual ~LTNoRandomizer();
 
-        std::map<std::wstring, size_t>
-        GetInnerState() override;
+    std::map<std::wstring, size_t> GetInnerState() override;
     void SetInnerState(const std::map<std::wstring, size_t>& state) override;
 
     void RefillSequenceWindow(SequenceWindow& window) override;
