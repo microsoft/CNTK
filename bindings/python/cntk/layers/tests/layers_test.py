@@ -14,6 +14,7 @@ from cntk.layers import Convolution, Convolution1D, Convolution2D, Convolution3D
 from cntk.layers.typing import Sequence, Signature, Tensor, SequenceOver
 
 import pytest
+import warnings
 
 # Note: We do not test gradients here, assuming that those are tested elsewhere.
 # Forward outputs are tested to verify that the structure of the layer is as expected.
@@ -555,7 +556,6 @@ def test_layers_convolution_shape():
 '''
 
 def test_layers_convolution_value():
-    import warnings
     # Common parameters
     inC, inH, inW = 3, 10, 10
     in_filter_shape = (3, 3)
