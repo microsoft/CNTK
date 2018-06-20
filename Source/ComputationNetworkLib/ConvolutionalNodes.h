@@ -731,7 +731,7 @@ public:
         if (!m_transpose)
         {
             // Same computing logic in ConvolveGeometry. 
-            // Rewritten here so as to avoid creating another ConvolveGeometry object, and converting from Matrix to TensorShape and back.
+            // Rewritten here to avoid constructing TensorShape parameters, and avoid converting from Matrix to TensorShape and back.
             size_t seqAxisIdx = GetInputSampleLayout(operandInputIdx).GetRank() - 2;
             size_t kernelShape_i = m_kernelShape[seqAxisIdx];
             size_t delta = m_stride[seqAxisIdx];
