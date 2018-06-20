@@ -25,10 +25,15 @@ void ConvolutionEngine<ElemType>::Forward(const Mat& in, const Mat& kernel, Mat&
     UNUSED(g);
     UNUSED(batchSize);
 #endif
-
+    std::ofstream outfile;
+    outfile.open("/home/ubuntu/workspace/output.txt", std::ios_base::app);
+    outfile << "In ConvolutionEngine Forward() method. \n";
     EnsureCompatible();
+    outfile << "In ConvolutionEngine Forward() method - after EnsureCompatible. \n";
     EnsureConvolutionInitialized();
+    outfile << "In ConvolutionEngine Forward() method - after EnsureConvolutionInitialized. \n";
     ForwardCore(in, kernel, out, workspace);
+    outfile << "In ConvolutionEngine Forward() method - after ForwardCore. \n";
 }
 
 template <class ElemType>
@@ -148,6 +153,9 @@ public:
         m_isConvGeometryComputed(geometry->ComputeConvGeometryExplicit()), // IMP NOTE: m_isConvGeometryComputed MUST be initialized before m_mpRowCol here in this list.
         m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
     {
+        std::ofstream outfile;
+        outfile.open("/home/ubuntu/workspace/output.txt", std::ios_base::app);
+        outfile << "In ReferenceConvolutionEngine (base) ctor. \n";
         assert(m_isConvGeometryComputed);
     }
 
@@ -569,6 +577,9 @@ public:
     GemmConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
         : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad)
     {
+        std::ofstream outfile;
+        outfile.open("/home/ubuntu/workspace/output.txt", std::ios_base::app);
+        outfile << "In GemmConvolutionEngine ctor. \n";
     }
 
 protected:

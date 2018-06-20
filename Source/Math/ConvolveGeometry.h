@@ -103,6 +103,10 @@ public:
 
     bool ComputeConvGeometryExplicit()
     {
+        std::ofstream outfile;
+        outfile.open("/home/ubuntu/workspace/output.txt", std::ios_base::app);
+        outfile << "In ConvolutionGeometry ComputeConvGeometryExplicit() method - 1. \n";
+
         size_t dimCount = m_inputShape.GetRank();
         size_t kernelSize = m_kernelShape.GetNumElements();
 
@@ -142,6 +146,7 @@ public:
             m_originIndex = m_originIndex * (int)m_inputShape[i] + ((int)m_kernelShape[i] - 1) / 2;
         }
 
+        outfile << "In ConvolutionGeometry ComputeConvGeometryExplicit() - 2 method. \n";
         // Compute support, mapping from the index into the kernel to offset into source.
         // Support consists of the column deltas of the kernels, as offsets from MpRowCol[row].
         IntVec support(kernelSize);
@@ -167,7 +172,7 @@ public:
             assert(ivSrc < m_inputShape.GetNumElements());
             support[idx] = ivSrc - m_originIndex;
         }
-
+        outfile << "In ConvolutionGeometry ComputeConvGeometryExplicit() - 3 method. \n";
         size_t outputSize = m_outputShape.GetNumElements();
         // Compute the mappings (where row = output node index, col = source node index):
         // * from row to the index of the first weight to use for that row.
@@ -264,7 +269,7 @@ public:
             assert(kern < m_kernelCount);
             assert(0 <= col);
             assert(col < m_inputShape.GetNumElements());
-
+            outfile << "In ConvolutionGeometry ComputeConvGeometryExplicit() - 3 method. \n";
             auto startsIter = mpkeystarts.find(key);
             if (startsIter == mpkeystarts.end())
             {
@@ -342,6 +347,7 @@ public:
             m_mpRowCol[row] = col;
             m_mpRowIwht[row] = kern * (int)kernelSize;
         }
+        outfile << "In ConvolutionGeometry ComputeConvGeometryExplicit() - 4 method - getting out. \n";
         return true;
     }
 
