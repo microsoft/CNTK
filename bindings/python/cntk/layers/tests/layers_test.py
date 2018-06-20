@@ -838,7 +838,6 @@ def test_sequential_convolution_1d():
     c = Convolution(3, sequential=True, pad=False, bias=False)
     c.update_signature(Sequence[Tensor[1]])  # input is a sequence of scalars
     out = c(data)
-    print([(c.W.value[0][0], data[i:i+3].reshape(3)) for i in range(3)])
     exp = [np.dot(a, b) for a,b in [(c.W.value[0][0], data[i:i+3].reshape(3)) for i in range(3)]]
 
     np.testing.assert_array_almost_equal(out[0], exp, decimal=5, \
@@ -873,6 +872,20 @@ def test_sequential_convolution_1d():
     exp = [np.dot(a, b) for a,b in [(c.W.value[2][0], data[i:i+2].reshape(2)) for i in range(4)]] + [np.dot(c.W.value[2][0][0], data[4])]
     np.testing.assert_array_almost_equal(out[2], exp, decimal=5, \
         err_msg="Error in convolution1D computation with sequential = True, strides = 2 and zeropad = True")
+
+
+    c = Convolution(2, num_filters=3, sequential=True, pad=True, init_bias=np.asarray([1,2,3], dtype=np.float32))
+    c = c(x)
+
+    out = c.eval({x:data})
+    out = out[0].transpose()
+    exp = [np.dot(a, b) + 1 for a,b in [(c.W.value[0][0], data[i:i+2].reshape(2)) for i in range(4)]] + [np.dot(c.W.value[0][0][0], data[4]) + 1]
+    np.testing.assert_array_almost_equal(out[0], exp, decimal=5, \
+        err_msg="Error in convolution1D computation with sequential = True, strides = 2, zeropad = True and bias = (1,2,3)")
+    exp = [np.dot(a, b) + 3 for a,b in [(c.W.value[2][0], data[i:i+2].reshape(2)) for i in range(4)]] + [np.dot(c.W.value[2][0][0], data[4]) + 3]
+    np.testing.assert_array_almost_equal(out[2], exp, decimal=5, \
+        err_msg="Error in convolution1D computation with sequential = True, strides = 2, zeropad = True and bias = (1,2,3)")
+
 
 ####################################
 # sequential convolution 1D with channel & filter size > 1
@@ -938,6 +951,17 @@ def test_sequential_convolution_2d():
     exp = np.sum(np.asarray(exp), 0)
     np.testing.assert_array_almost_equal(out[0][1], exp, decimal=5, \
         err_msg="Error in convolution2D computation with sequential = True, strides = 2 and zeropad = True")
+
+    data = np.ones((3,1,5), dtype=np.float32)
+    
+    c = Convolution((3,2), sequential=True, pad=False, num_filters=4, init_bias=np.asarray([1,2,3,4], dtype=np.float32))
+    c = c(x)
+
+    out = c.eval({x:data})
+
+    for i in range(4):
+        np.testing.assert_array_almost_equal(out[0][0][i], [np.sum(c.W.value[i]) + j + 1 for j in range(4)], \
+            err_msg="Error in convolution2D computation with sequential = True, num_filters = 4 and init_bias = [1,2,3,4]")
 
 
 ####################################
@@ -1288,27 +1312,3 @@ def test_cloned_parameters_are_identical():
     z3 = z()
     z4 = z3.clone('clone')
     compare(z3(features), z4(features))
-
-#test_layers_convolution_2d()
-#test_layers_convolution_1d()
-#test_1D_convolution_without_reduction_dim()
-
-#test_sequential_convolution_1d()
-#test_sequential_convolution_1d_channel_filter()
-
-# reduction_rank = 0. 
-#test_1D_convolution_without_reduction_dim()
-#test_sequential_convolution_1d_without_reduction_dim()
-
-#test_sequential_convolution_2d()
-#test_sequential_convolution_2d_without_reduction_dim()
-
-# buggy
-#test_layers_convolution_value()
-
-
-# dilation
-#test_1D_convolution_with_dilation()
-#test_1D_sequential_convolution_with_dilation()
-#test_2D_convolution_with_dilation()
-#test_2D_sequential_convolution_with_dilation()
