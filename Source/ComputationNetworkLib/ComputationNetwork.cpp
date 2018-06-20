@@ -1624,8 +1624,11 @@ template void ComputationNetwork::Read<half>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<half>(size_t modelVersion, File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<half>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<half>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
+/* guoye: start: mask this */
+/*
 template void ComputationNetwork::SetSeqParam<half>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
     const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
+*/
 template void ComputationNetwork::SaveToDbnFile<half>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
 // register ComputationNetwork with the ScriptableObject system
