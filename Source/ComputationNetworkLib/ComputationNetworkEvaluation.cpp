@@ -769,21 +769,10 @@ bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalV
     node->m_needsDynamicValidation |= node->ForceDynamicValidation();
     auto needsGradient = node->m_needsGradient;
 
-    // check if this is StopGradientNode. For this node it is ok to not backprop gradient. 
-    bool isNodeStopGradient = false;
-    let nodeStopGradientF = dynamic_pointer_cast<StopGradientNode<float>>(node);
-    if (nodeStopGradientF)
-        isNodeStopGradient = true;
-    let nodeStopGradientD = dynamic_pointer_cast<StopGradientNode<double>>(node);
-    if (nodeStopGradientD)
-        isNodeStopGradient = true;
-    let nodeStopGradientH = dynamic_pointer_cast<StopGradientNode<half>>(node);
-    if (nodeStopGradientH)
-        isNodeStopGradient = true;
-    
     for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
     {
-        if (!isNodeStopGradient)
+        // check if this is StopGradientNode. For this node it is ok to not backprop gradient.
+        if (node->OperationName() != OperationNameOf(StopGradientNode))
             node->m_needsGradient |= child->m_needsGradient;
         node->m_needsDynamicValidation |= child->m_needsDynamicValidation;
     }

@@ -378,7 +378,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
       that is stored with tensor shape (H,W) instead of (1,H,W)
      transpose_weight (bool, defaults to `False`): When this is `True` this is convolution, otherwise this is correlation (which is common for most toolkits)
      dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
-     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1,
       which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
       divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
       Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
@@ -461,13 +461,12 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         num_inserted_axes = num_emulated_axes # sequential reshape is handled at c++ side now.
         if num_inserted_axes != 0:
             # x: (in_depth, spatial_shape)
-            
+
             x = reshape(x, (1,) * num_inserted_axes,    # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
                         begin_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else C.Axis.new_leading_axis(),
                         end_axis  =-filter_rank_without_seq if filter_rank_without_seq != 0 else None)
             # x: (in_depth or emulated_in_depth, emulated_1D_extra, seq_filter_shape, spatial_shape)
         # actual convolution
-        sequential_emulated_axis = None
         r = convolution (W, x,
                          strides=strides, sharing=sharing,
                          auto_padding=pad,
@@ -580,7 +579,7 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
       that is stored with tensor shape (H,W) instead of (1,H,W)
      dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
-     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1,
       which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
       divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
       Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
@@ -639,7 +638,7 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
       that is stored with tensor shape (H,W) instead of (1,H,W)
      dilation (tuple, optional): the dilation value along each axis, default 1 mean no dilation.
-     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1, 
+     groups (`int`, default 1): number of groups during convolution, that controls the connections between input and output channels. Deafult value is 1,
       which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
       divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
       Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0.
@@ -660,7 +659,7 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
          raise ValueError('Convolution3D: filter_shape must be a scalar or a 3D tuple, e.g. 3 or (3,3,3)')
     filter_shape = _pad_to_shape((0,0,0), filter_shape, 'filter_shape')
     return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, sequential=False,
-                       strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, 
+                       strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank,
                        dilation=dilation, groups=groups, op_name='Convolution3D', name=name)
 
 
@@ -773,7 +772,7 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     pad     = (False,) * num_emulated_axes + pad
 
     output_channels_shape = _as_tuple(num_filters)
-    kernel_shape = _INFERRED + output_channels_shape + filter_shape # [I × O × m1 × m2 ×… × mn] 
+    kernel_shape = _INFERRED + output_channels_shape + filter_shape # [I × O × m1 × m2 ×… × mn]
 
     output_full_shape = output_shape
     if output_shape is not None:
@@ -1244,7 +1243,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     # for fp16 batch_normalization, we need to use fp32 statistics
     dtype = get_default_override(None, dtype=default_override_or(np.float32))
     stat_dtype = np.float32 if dtype == np.float16 or dtype == 'float16' else dtype
-    
+
     # parameters bound to this Function
     norm_shape  = _INFERRED
     if map_rank is not None and map_rank != 1:

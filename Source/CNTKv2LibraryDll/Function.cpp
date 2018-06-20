@@ -2454,12 +2454,14 @@ namespace CNTK
         
         if (sequential)
         {
-
+            // unpack sequence axis to static axes:   [ H_in, W_in, c ] x [*] -> [ H_in, W_in, c, * ] x [1]
+            // for reduction rank == 0:               [ H_in, W_in    ] x [*] -> [ H_in, W_in,    * ] x [1]
             auto unpackOperandPair = Sequence::Unpack(operand, 0.0f, false);
             auto unpackOperand = unpackOperandPair->Outputs()[0];
             auto unpackOperandMask = unpackOperandPair->Outputs()[1];
 
             if (reductionRank != 0)
+                // transpose out the channel axis if reduction rank > 0: [ H_in, W_in, c, * ] x [1] -> [ H_in, W_in, *, c ] x [1]
                 unpackOperand = TransposeAxes(unpackOperand, Axis(-1), Axis(-2));
 
             auto convInputSeqDim = ReduceSum(unpackOperandMask, Axis(-1));
@@ -2475,7 +2477,11 @@ namespace CNTK
             auto convOutput = conv->Outputs()[0];
             auto convOutputSeqDim = StopGradient(conv->Outputs()[1]);
 
+            // transpose back sequence axis to the outer of output depth axis: 
+            // [ H_out, W_out, *_out, c_out ] x [1] -> [ H_out, W_out, c_out, *_out ] x [1]
             convOutput = TransposeAxes(convOutput, Axis(-1), Axis(-2));
+            // pack back to sequence axis with their corresponding sizes: 
+            // [ H_out, W_out, c_out, *_out ] x [1] -> [ H_out, W_out, c_out ] x [*_out]
             return ToSequence(convOutput, convOutputSeqDim, L"ConvOverSequenceAxisPrefix");
         }
         else

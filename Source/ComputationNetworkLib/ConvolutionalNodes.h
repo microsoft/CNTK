@@ -302,7 +302,7 @@ public:
 // ConvolutionNode (convolutionWeights, inputFeature)
 // -----------------------------------------------------------------------
 
-// forward declaration. 
+// forward declaration.
 template <class ElemType>
 class ConvolutionOverSequenceAxisNode;
 
@@ -312,7 +312,7 @@ class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName() { return L"Convolution"; }
 
-    // Needs access to m_dilations and m_groups which are private members. 
+    // Needs access to m_dilations and m_groups which are private members.
     template <class ElementType>
     friend class ConvolutionOverSequenceAxisNode;
 public:
@@ -670,7 +670,7 @@ private:
         return (inputIndex == 1);
     }
 
-    virtual TensorShape /*ConvolutionNode::*/ComputeOutputShape(const TensorShape& inputShape, 
+    virtual TensorShape /*ConvolutionNode::*/ComputeOutputShape(const TensorShape& inputShape,
         const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
     {
         return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
@@ -681,7 +681,7 @@ private:
     TensorShape m_dilation;
     size_t m_groups;
 
-protected:    
+protected:
     // Flag that indicates whether the node is created using 2D-syntax.
     bool m_convolution2D;
 };
@@ -719,7 +719,7 @@ public:
     }
 
 public:
-    
+
     void ForwardProp(const FrameRange& fr) override
     {
         Base::ForwardProp(fr);
@@ -727,10 +727,10 @@ public:
         size_t operandInputIdx = 1;
         size_t seqAxisDimInputIdx = 2;
         Matrix<ElemType> sliceInput2Value = InputRef(seqAxisDimInputIdx).ValueFor(fr);
-        
+
         if (!m_transpose)
         {
-            // Same computing logic in ConvolveGeometry. 
+            // Same computing logic in ConvolveGeometry.
             // Rewritten here to avoid constructing TensorShape parameters, and avoid converting from Matrix to TensorShape and back.
             size_t seqAxisIdx = GetInputSampleLayout(operandInputIdx).GetRank() - 2;
             size_t kernelShape_i = m_kernelShape[seqAxisIdx];
@@ -751,7 +751,7 @@ public:
             }
 
             sliceInput2Value = (sliceInput2Value - (ElemType)effectiveKernelShape) / (ElemType)delta + (ElemType)1;
-            
+
             TensorView<ElemType> sliceInput2ValueTensorView = TensorView<ElemType>(std::make_shared<Matrix<ElemType>>(std::move(sliceInput2Value)), {1, sliceInput2Value.GetNumCols()});
             sliceInput2ValueTensorView.DoUnaryOpOf(0, sliceInput2ValueTensorView, 1, opFloor, opSum);
 

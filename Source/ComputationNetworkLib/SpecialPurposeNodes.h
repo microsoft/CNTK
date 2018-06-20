@@ -1292,6 +1292,10 @@ public:
     void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override
     {
         // Do nothing to short circuit the gradient backward propagation
+        // In Base(ComputationNode), Backprop validates m_needsgradient == true if any child needs gradient, and calls BackpropTo. We can short circuit this process altogether. 
+        // In current implementation we set m_needsgradient = false for StopGradientNode, so that we can pass validate check from nodes that don't 
+        // support input with gradient (e.g. ToSequenceNode does not support gradient propgation to its Input(1) denoting sequence lengths), 
+        // as well as short circuit some unnecessary gradient backprop. 
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }

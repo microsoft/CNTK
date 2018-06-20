@@ -762,7 +762,7 @@ def test_sequential_convolution_1d_without_reduction_dim():
 
     # Filter shape (3, 1) instead of 3 should be more reasonable.
     # e.g. Input shape [#] x [1] matches filter shape [3, 1], where as input shape [#] x [] matches filter shape [3].
-    #      Input shape [#] x [3] matches filter shape [3, 2]. 
+    #      Input shape [#] x [3] matches filter shape [3, 2].
     c = Convolution((3,1), init=np.array([4., 2., 1.], dtype=np.float32).reshape((3,1)), sequential=True, pad=False, reduction_rank=0, bias=False)
     c.update_signature(Sequence[Tensor[1]]) # input is a sequence of dim-1 vectors
     data = [np.array([[2.], [6], [4.], [8.], [6.]])]
@@ -793,10 +793,10 @@ def test_sequential_convolution_2d_without_reduction_dim():
     data_ = data.reshape((1, 3, 5))
 
     c = Convolution((3,2), sequential=True, pad=False, bias=False, reduction_rank=0)
-    c.update_signature(Sequence[Tensor[5]]) 
+    c.update_signature(Sequence[Tensor[5]])
 
     out = c(data_)
-    
+
     exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j], data[j][i:i+2].reshape(2)) for i in range(4)]] for j in range(3)]
     exp = np.sum(np.asarray(exp), 0)
 
@@ -806,7 +806,7 @@ def test_sequential_convolution_2d_without_reduction_dim():
     c = Convolution((3,2), sequential=True, pad=True, bias=False, reduction_rank=0)
     x = C.input_variable(**Sequence[Tensor[5]])
     c = c(x)
-    
+
     out = c.eval({x:data_})
     exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j], data[j][i:i+2].reshape(2)) for i in range(4)]] + [c.W.value[0][0][j][0] * data[j][-1]] for j in range(3)]
     exp = np.sum(np.asarray(exp), 0)
@@ -846,7 +846,7 @@ def test_sequential_convolution_1d():
     c = Convolution(3, sequential=True, pad=True, bias=False)
     x = C.input_variable(**Sequence[Tensor[1]])
     c = c(x)
-    
+
     out = c.eval({x:data})
     exp = [np.dot(c.W.value[0][0][1:3], data[0:2])] + [np.dot(a, b) for a,b in [(c.W.value[0][0], data[i:i+3].reshape(3)) for i in range(3)]] + [np.dot(c.W.value[0][0][0:2], data[3:5])]
     np.testing.assert_array_almost_equal(out[0], exp, decimal=5, \
@@ -857,7 +857,7 @@ def test_sequential_convolution_1d():
 
     out = c.eval({x:data})
     exp = [np.dot(a, b) for a,b in [(c.W.value[0][0], data[i:i+2].reshape(2)) for i in [0, 2]]] + [np.dot(c.W.value[0][0][0], data[4])]
-    
+
     np.testing.assert_array_almost_equal(out[0], exp, decimal=5, \
         err_msg="Error in convolution1D computation with sequential = True, strides = 2 and zeropad = True")
 
@@ -903,9 +903,7 @@ def test_sequential_convolution_1d_channel_filter():
 
     for k in range(4):
         exp = [[np.dot(c.W.value[k][j][1:3], data[j][0:2])] + [np.dot(a, b) for a,b in [(c.W.value[k][j], data[j][i:i+3].reshape(3)) for i in range(3)]] + [np.dot(c.W.value[k][j][0:2], data[j][3:5])] for j in range(2)]
-        print(exp)
         exp = np.sum(np.asarray(exp), 0)
-        print(exp)
 
         np.testing.assert_array_almost_equal(out[0].transpose()[k], exp, decimal=5, \
             err_msg="Error in convolution1D computation with channel size 2, filter num 4, sequential = True and zeropad = True")
@@ -918,7 +916,7 @@ def test_sequential_convolution_2d():
     data = data.reshape((3, 1, 5))
 
     c = Convolution((3,2), sequential=True, pad=False, bias=False)
-    c.update_signature(Sequence[Tensor[1, 5]]) 
+    c.update_signature(Sequence[Tensor[1, 5]])
 
     out = c(data)
 
@@ -931,7 +929,7 @@ def test_sequential_convolution_2d():
     c = Convolution((3,2), sequential=True, pad=True, bias=False)
     x = C.input_variable(**Sequence[Tensor[1, 5]])
     c = c(x)
-    
+
     out = c.eval({x:data})
     exp = [[np.dot(a, b) for a,b in [(c.W.value[0][0][j], data[j][0][i:i+2].reshape(2)) for i in range(4)]] + [c.W.value[0][0][j][0] * data[j][0][-1]] for j in range(3)]
     exp = np.sum(np.asarray(exp), 0)
@@ -953,7 +951,7 @@ def test_sequential_convolution_2d():
         err_msg="Error in convolution2D computation with sequential = True, strides = 2 and zeropad = True")
 
     data = np.ones((3,1,5), dtype=np.float32)
-    
+
     c = Convolution((3,2), sequential=True, pad=False, num_filters=4, init_bias=np.asarray([1,2,3,4], dtype=np.float32))
     c = c(x)
 
@@ -1020,7 +1018,7 @@ def test_2D_convolution_with_dilation():
     data = data.reshape((1, 1, 3, 5))
 
     c = Convolution((3,2), pad=True, bias=False, dilation=2)
-    c.update_signature(Sequence[Tensor[1, 3, 5]]) 
+    c.update_signature(Sequence[Tensor[1, 3, 5]])
 
     out = c(data)
     data = data.reshape((3, 5))
@@ -1042,7 +1040,7 @@ def test_2D_sequential_convolution_with_dilation():
     data = data.reshape((1, 3, 1, 5))
 
     c = Convolution((3,2), pad=True, bias=False, dilation=2, sequential=True)
-    c.update_signature(Sequence[Tensor[1, 5]]) 
+    c.update_signature(Sequence[Tensor[1, 5]])
 
     out = c(data)
     data = data.reshape((3, 5))
@@ -1295,7 +1293,7 @@ def test_cloned_parameters_are_identical():
     def clone_and_compare(z):
             compare(z, z.clone('clone'))
 
-    # first, verify that when cloning un-initialized parameters, 
+    # first, verify that when cloning un-initialized parameters,
     # the seed value is properly copied, so that after the
     # initialization cloned and original value are the same.
     z1 = z()(features)
