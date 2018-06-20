@@ -113,6 +113,14 @@ public:
         wp = (float) gammarParam.wp;
         seqsMBRmode = gammarParam.sMBRmode;
         boostmmifactor = (float) gammarParam.bMMIfactor;
+    }
+    void SetGammarCalculationParamsEMBR(const SeqGammarCalParam& gammarParam)
+    {
+        lmf = (float) gammarParam.lmf;
+        amf = (float) gammarParam.amf;
+        wp = (float) gammarParam.wp;
+        seqsMBRmode = gammarParam.sMBRmode;
+        boostmmifactor = (float) gammarParam.bMMIfactor;
         /* guoye: start */
         EMBR = gammarParam.EMBR;
         EMBRUnit = gammarParam.EMBRUnit;
@@ -127,7 +135,6 @@ public:
         numRawPathsEMBR = gammarParam.numRawPathsEMBR;
         /* guoye: end */
     }
-
     // ========================================
     // Sec. 3 calculation functions
     // ========================================

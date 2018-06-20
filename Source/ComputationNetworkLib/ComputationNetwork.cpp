@@ -703,7 +703,7 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
             /* guoye: start */
             // node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR);
             node->SetMBR(sMBR || EMBR);
-            node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, showWERMode, excludeSpecialWords, wordNbest, useAccInNbest, accWeightInNbest, numRawPathsEMBR);
+            node->SetGammarCalculationParamEMBR(amf, lmf, wp, bMMIfactor, sMBR, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, showWERMode, excludeSpecialWords, wordNbest, useAccInNbest, accWeightInNbest, numRawPathsEMBR);
             /* guoye: end */
         }
     }
