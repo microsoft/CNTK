@@ -304,7 +304,7 @@ public:
 
 // forward declaration. 
 template <class ElemType>
-class ConvolutionOverSequenceAxis;
+class ConvolutionOverSequenceAxisNode;
 
 template <class ElemType>
 class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
@@ -314,7 +314,7 @@ class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2
 
     // Needs access to m_dilations and m_groups which are private members. 
     template <class ElementType>
-    friend class ConvolutionOverSequenceAxis;
+    friend class ConvolutionOverSequenceAxisNode;
 public:
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_dilation(TensorShape(1)), m_groups(1)
@@ -688,7 +688,7 @@ protected:
 
 
 template <class ElemType>
-class ConvolutionOverSequenceAxis : public ConvolutionNode<ElemType>, public NumInputs<3>, public MultiOutputNode<ElemType>
+class ConvolutionOverSequenceAxisNode : public ConvolutionNode<ElemType>, public NumInputs<3>, public MultiOutputNode<ElemType>
 {
     typedef ConvolutionNode<ElemType> Base; UsingConvolutionNodeBaseMembers;
 private:
@@ -699,12 +699,12 @@ public:
     static const std::wstring TypeName() { return L"ConvolutionOverSequence"; }
 
 public:
-    ConvolutionOverSequenceAxis(DEVICEID_TYPE deviceId, const wstring& name)
+    ConvolutionOverSequenceAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), MultiOutputNode<ElemType>(2)
     {
     }
 
-    ConvolutionOverSequenceAxis(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+    ConvolutionOverSequenceAxisNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                                 const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                 bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1),
                                 size_t groups = 1)
@@ -713,7 +713,7 @@ public:
     {
     }
 
-    ConvolutionOverSequenceAxis(const ScriptableObjects::IConfigRecordPtr configp)
+    ConvolutionOverSequenceAxisNode(const ScriptableObjects::IConfigRecordPtr configp)
         : Base(configp), MultiOutputNode<ElemType>(2)
     {
     }

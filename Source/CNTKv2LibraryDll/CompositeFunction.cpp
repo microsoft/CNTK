@@ -1100,7 +1100,7 @@ namespace CNTK
                                         outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
                                         ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
                     else
-                        ASSIGN_NEW_NODE(ConvolutionOverSequenceAxis, network->GetDeviceId(), internalNodeName,
+                        ASSIGN_NEW_NODE(ConvolutionOverSequenceAxisNode, network->GetDeviceId(), internalNodeName,
                                         AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
                                         sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
                                         outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),

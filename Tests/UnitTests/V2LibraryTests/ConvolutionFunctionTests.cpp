@@ -785,7 +785,8 @@ BOOST_AUTO_TEST_CASE(ConvolutionNetworkDifferentRankInGPU)
 
 BOOST_AUTO_TEST_CASE(ConvolutionNetwork1DFreeDimensionInGPU)
 {
-    // TODO: Currently failing on GPU.
+    // TODO: Currently failing on GPU. CUDNN_STATUS_EXECUTION_FAILED. 
+    // This failure is not related to free dimension though, but to the specific setting(shapes) of the test. 
     if (ShouldRunOnGpu())
     {
         auto device = DeviceDescriptor::GPUDevice(0);
