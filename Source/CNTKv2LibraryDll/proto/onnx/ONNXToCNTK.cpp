@@ -2699,6 +2699,26 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         FunctionPtr cntkFunction = Alias(inputs[0], ToWString(node->Name()));
         return cntkFunction;
     }
+    else if (onnxOpName == "Sin")
+    {
+        FunctionPtr cntkFunction = Sin(inputs[0], ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Asin")
+    {
+        FunctionPtr cntkFunction = Asin(inputs[0], ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Cos")
+    {
+        FunctionPtr cntkFunction = Cos(inputs[0], ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Acos")
+    {
+        FunctionPtr cntkFunction = Acos(inputs[0], ToWString(node->Name()));
+        return cntkFunction;
+    }
     else
     {
         LogicError("ONNX (%s) is not supported in CNTK", onnxOpName.c_str());
