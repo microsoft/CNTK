@@ -694,9 +694,9 @@ public:
         param.accWeightInNbest = accWeightInNbest;
         param.numRawPathsEMBR = numRawPathsEMBR;        
         m_gammaCalculator.SetGammarCalculationParamsEMBR(param);
-		/* guoye: end */
+        /* guoye: end */
     }
-	
+    
     void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR)
     {
         msra::lattices::SeqGammarCalParam param;
