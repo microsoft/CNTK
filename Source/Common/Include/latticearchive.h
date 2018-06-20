@@ -1108,7 +1108,7 @@ public:
             freadvector(f, "EDGS", edges2, info.numedges); // uniqued edges
             freadvector(f, "ALNS", uniquededgedatatokens); // uniqued alignments
             fcheckTag(f, "END ");
-            ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap, specialwordids);
+            ProcessV2EMBRLattice(spunit, info, uniquededgedatatokens, idmap, specialwordids);
         }
         else
             RuntimeError("fread: unsupported lattice format version");
@@ -1133,37 +1133,11 @@ public:
         ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap);
     }
 
+    
     // Helper method to process v2 Lattice format
     template <class IDMAP>
-    void ProcessV2Lattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap, std::set<int>& specialwordids = NULL ) 
+    void ProcessV2Lattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap) 
     {
-        /* guoye: start */
-        vt_node_out_edge_indices.resize(info.numnodes);
-        for (size_t j = 0; j < info.numedges; j++)
-        {
-            // an edge with !NULL pointing to not <s>
-            // this code make sure if you always start from <s> in the sampled path. 
-            // mask here: we delay the processing in EMBRsamplepaths controlled by flag: enforceValidPathEMBR
-            // if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
-
-            vt_node_out_edge_indices[edges2[j].S].push_back(j);
-
-        }
-
-        is_special_words.resize(info.numnodes);
-        for (size_t i = 0; i < info.numnodes; i++)
-        {
-            /*
-            if (nodes[i].wid == 0xfffff)
-            {
-                nodes[i].wid;
-            }
-            */
-            if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
-            else is_special_words[i] = false;
-        }
-
-        /* guoye: end */
         // check if we need to map
         if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size()) // we have buggy lattices like that--what do they mean??
         {
@@ -1230,6 +1204,40 @@ public:
         // reconstruct old lattice format from this   --TODO: remove once we change to new data representation
         rebuildedges(info.impliedspunitid != spunit /*to be able to read somewhat broken V2 lattice archives*/);
 
+    }
+    
+        template <class IDMAP>
+    void ProcessV2EMBRLattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap, std::set<int>& specialwordids) 
+    {
+        /* guoye: start */
+        vt_node_out_edge_indices.resize(info.numnodes);
+        for (size_t j = 0; j < info.numedges; j++)
+        {
+            // an edge with !NULL pointing to not <s>
+            // this code make sure if you always start from <s> in the sampled path. 
+            // mask here: we delay the processing in EMBRsamplepaths controlled by flag: enforceValidPathEMBR
+            // if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
+
+            vt_node_out_edge_indices[edges2[j].S].push_back(j);
+
+        }
+
+        is_special_words.resize(info.numnodes);
+        for (size_t i = 0; i < info.numnodes; i++)
+        {
+            /*
+            if (nodes[i].wid == 0xfffff)
+            {
+                nodes[i].wid;
+            }
+            */
+            if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
+            else is_special_words[i] = false;
+        }
+
+        /* guoye: end */
+        
+        ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap); 
     }
 /* guoye: end */
 
