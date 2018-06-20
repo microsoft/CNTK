@@ -281,7 +281,6 @@ def _pad_to_shape(filter_shape, param, what):
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
-# TODO: stride not supported for sequential
 # TODO: add a test case for passing a numpy array as initial values
 def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
                 num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)

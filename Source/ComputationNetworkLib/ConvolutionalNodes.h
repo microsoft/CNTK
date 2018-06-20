@@ -759,7 +759,6 @@ public:
         }
         else
         {
-            // TODO:
             InvalidArgument("Convolution over sequence axis currently does not support transpose. ");
         }
     }

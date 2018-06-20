@@ -556,7 +556,6 @@ namespace CNTK
     }
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
     {
-        // TODO : Might need to make some change here as now sequence axis is actually used as data, replace time steps with 1?
         size_t maxNumTimeSteps = 1;
         size_t numSequences = 1;
         if (maskShape.Rank() > 1)

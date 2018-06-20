@@ -2481,20 +2481,14 @@ namespace CNTK
         else
         {
             if (reductionRank == 0)
-            {
-                if (groups > 1)
-                    LogicError("groups: groups > 1 is not supported when reductionRank is 0.");
                 return Internal::SpatialConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
                     maxTempMemSizeInSamples, name);
-            }
-
             return Internal::Convolution(convolutionMap, operand, strides, sharing, autoPadding, dilation, false,
                 { 0 }, groups, maxTempMemSizeInSamples, name);
         }
 
     }
 
-    // TODO : Do we need sequential for this? Not supported for the moment. 
     FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
         const Variable& operand,
         const NDShape& strides,

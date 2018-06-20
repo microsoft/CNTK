@@ -760,7 +760,9 @@ def test_sequential_convolution_1d_without_reduction_dim():
     exp = [[24., 40., 38.]]
     np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')
 
-    # TODO : Added reshape step to pass this test. Should this work without reshape?
+    # Filter shape (3, 1) instead of 3 should be more reasonable.
+    # e.g. Input shape [#] x [1] matches filter shape [3, 1], where as input shape [#] x [] matches filter shape [3].
+    #      Input shape [#] x [3] matches filter shape [3, 2]. 
     c = Convolution((3,1), init=np.array([4., 2., 1.], dtype=np.float32).reshape((3,1)), sequential=True, pad=False, reduction_rank=0, bias=False)
     c.update_signature(Sequence[Tensor[1]]) # input is a sequence of dim-1 vectors
     data = [np.array([[2.], [6], [4.], [8.], [6.]])]
@@ -1286,3 +1288,27 @@ def test_cloned_parameters_are_identical():
     z3 = z()
     z4 = z3.clone('clone')
     compare(z3(features), z4(features))
+
+#test_layers_convolution_2d()
+#test_layers_convolution_1d()
+#test_1D_convolution_without_reduction_dim()
+
+#test_sequential_convolution_1d()
+#test_sequential_convolution_1d_channel_filter()
+
+# reduction_rank = 0. 
+#test_1D_convolution_without_reduction_dim()
+#test_sequential_convolution_1d_without_reduction_dim()
+
+#test_sequential_convolution_2d()
+#test_sequential_convolution_2d_without_reduction_dim()
+
+# buggy
+#test_layers_convolution_value()
+
+
+# dilation
+#test_1D_convolution_with_dilation()
+#test_1D_sequential_convolution_with_dilation()
+#test_2D_convolution_with_dilation()
+#test_2D_sequential_convolution_with_dilation()
