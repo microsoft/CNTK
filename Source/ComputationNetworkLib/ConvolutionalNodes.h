@@ -802,8 +802,6 @@ public:
             TensorView<ElemType> outputSeqAxisDimTensorView = TensorView<ElemType>(
                 std::make_shared<Matrix<ElemType>>(outputSeqAxisDimValue.AsReference()), outputSeqAxisDimTensorShape);
             outputSeqAxisDimTensorView.DoUnaryOpOf(0, outputSeqAxisDimTensorView, 1, opFloor, opSum);
-
-            outputSeqAxisDimValue.SetValue(*(outputSeqAxisDimTensorView.AsMatrix()));
         }
         else
         {
