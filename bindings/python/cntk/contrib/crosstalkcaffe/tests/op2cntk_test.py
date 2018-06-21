@@ -43,9 +43,9 @@ def _install_test_layer(op_type, parameters, weights, input_data):
         inputs_variable.append(cntk.input(input_tensor.shape))
     return layer_def, inputs_variable
 
-# TODO: It has been temporarily disabled due to a bug (https://msasg.visualstudio.com/Shared%20Data/_workitems/edit/1303842)
-#   that causes any convolution test (../../../layers/) to fail after op2cntk_test.py:test_conv_setup() is executed ALONG WITH
-#   ../../deeprl/tests/policy_gradient_test.py:test_update_policy_and_value_function()
+# TODO: It has been temporarily disabled due to a bug that causes any convolution test
+#    (../../../layers/) to fail after op2cntk_test.py:test_conv_setup() is executed ALONG WITH
+#    ../../deeprl/tests/policy_gradient_test.py:test_update_policy_and_value_function()
 API_SETUP_CONV_DATA = [
     # The test case of conv ops
     (
