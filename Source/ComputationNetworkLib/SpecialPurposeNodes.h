@@ -1287,6 +1287,8 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // Do nothing to short circuit the gradient backward propagation
+        // Update: Short circuit from Backprop now, so we shouldn't reach here.
+        RuntimeError("Unexpected method called in StopGradientNode: BackpropTo. ");
     }
 
     void Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) override

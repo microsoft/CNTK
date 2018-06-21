@@ -687,6 +687,28 @@ protected:
 };
 
 
+// -----------------------------------------------------------------------
+// ConvolutionOverSequenceAxisNode -- for convolution over sequence axis
+//
+// The purpose of this node is to extend the original convolution node to also output
+// the correct sequence size for every output sequences.
+//
+// The input features variable(Input1) has already been converted such that the original sequence axis is
+// unpacked to static axis. The size of different original sequences varies, so the unpacked
+// sequence axis has dim as the longest sequence size while shorter sequences have their values padded with 0.
+// Thus in order to restore the output sequence axis after convolution, we compute the correct size for output sequences here as a seperate output.
+// Both outputs will serve as inputs to ToSequence(convResult, seqSizes), converting sequence axes back with correct sizes. 
+//
+// Input0: kernels
+// Input1: Input features           [i_0 x i_1 x ... x i_n x max(S) x C]    x [1(*) x #]
+// Input2: Input sequence size      [1]                                     x [1(*) x #]
+// output0: Conv output             [o_0 x o_1 x ... x o_n x O(max(S)) x D] x [1(*) x #]
+// output1: output sequence size    [1]                                     x [1(*) x #]
+//
+// where i_k = dim of k-th input feature, o_k = dim of k-th output feature,
+//       O() = output dim given input dim and other convolution attributes, S = set of originial sequence sizes,
+//       C = input channel dim, D = output depth dim, # = batch size, * denotes the sequence axis.
+// -----------------------------------------------------------------------
 template <class ElemType>
 class ConvolutionOverSequenceAxisNode : public ConvolutionNode<ElemType>, public NumInputs<3>, public MultiOutputNode<ElemType>
 {
@@ -695,77 +717,106 @@ private:
     using Base::m_dilation;
     using Base::m_groups;
 
+    static const size_t SentinelUnspecifiedSeqAxisIdx = (size_t) -1;
+
+    enum InputIndices : size_t
+    {
+        InputConvolutionMapIdx = 0,
+        InputOperandIdx = 1,
+        InputSeqAxisDimIdx = 2,
+    };
+
+    enum OutputIndices : size_t
+    {
+        OutputOperandIdx = 0,
+        OutputSeqAxisDimIdx = 1,
+    };
+
 public:
     static const std::wstring TypeName() { return L"ConvolutionOverSequence"; }
 
 public:
     ConvolutionOverSequenceAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), MultiOutputNode<ElemType>(2)
+        : Base(deviceId, name), MultiOutputNode<ElemType>(2), m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx)
     {
     }
 
     ConvolutionOverSequenceAxisNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
-                                const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1),
-                                size_t groups = 1)
+                                    const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                    bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1),
+                                    size_t groups = 1)
         : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation, groups),
-        MultiOutputNode<ElemType>(2)
+          MultiOutputNode<ElemType>(2),
+          m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx)
     {
     }
 
     ConvolutionOverSequenceAxisNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : Base(configp), MultiOutputNode<ElemType>(2)
+        : Base(configp), MultiOutputNode<ElemType>(2), m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx)
     {
     }
 
 public:
-
     void ForwardProp(const FrameRange& fr) override
     {
         Base::ForwardProp(fr);
 
-        size_t operandInputIdx = 1;
-        size_t seqAxisDimInputIdx = 2;
-        Matrix<ElemType> sliceInput2Value = InputRef(seqAxisDimInputIdx).ValueFor(fr);
+        const size_t inputOperandIdx = InputIndices::InputOperandIdx;
+        const size_t inputSeqAxisDimIdx = InputIndices::InputSeqAxisDimIdx;
+        const size_t outputSeqAxisDimIdx = OutputIndices::OutputSeqAxisDimIdx;
+
+        auto& inputSeqAxisDimValue = Input(inputSeqAxisDimIdx)->Value();
+        auto& outputSeqAxisDimValue = *m_outputsValue[outputSeqAxisDimIdx];
+        outputSeqAxisDimValue.SetValue(inputSeqAxisDimValue);
 
         if (!m_transpose)
         {
             // Same computing logic in ConvolveGeometry.
             // Rewritten here to avoid constructing TensorShape parameters, and avoid converting from Matrix to TensorShape and back.
-            size_t seqAxisIdx = GetInputSampleLayout(operandInputIdx).GetRank() - 2;
-            size_t kernelShape_i = m_kernelShape[seqAxisIdx];
-            size_t delta = m_stride[seqAxisIdx];
-            size_t dil = m_dilation[seqAxisIdx];
-            bool autoPadCur = m_autoPad[seqAxisIdx];
-            size_t lo = m_lowerPad[seqAxisIdx];
-            size_t hi = m_upperPad[seqAxisIdx];
+            size_t kernelShape_i = m_kernelShape[m_seqAxisIdx];
+            size_t delta = m_stride[m_seqAxisIdx];
+            size_t dil = m_dilation[m_seqAxisIdx];
+            bool autoPadCur = m_autoPad[m_seqAxisIdx];
+            size_t lo = m_lowerPad[m_seqAxisIdx];
+            size_t hi = m_upperPad[m_seqAxisIdx];
             size_t effectiveKernelShape = (kernelShape_i - 1) * dil + 1;
 
             if (autoPadCur)
             {
-                sliceInput2Value += (ElemType)dil * (kernelShape_i - 1);
+                outputSeqAxisDimValue += (ElemType) dil * (kernelShape_i - 1);
             }
             else
             {
-                sliceInput2Value += (ElemType)lo + hi;
+                outputSeqAxisDimValue += (ElemType) lo + hi;
             }
 
-            sliceInput2Value = (sliceInput2Value - (ElemType)effectiveKernelShape) / (ElemType)delta + (ElemType)1;
+            outputSeqAxisDimValue = (outputSeqAxisDimValue - (ElemType) effectiveKernelShape) / (ElemType) delta + (ElemType) 1;
 
-            TensorView<ElemType> sliceInput2ValueTensorView = TensorView<ElemType>(std::make_shared<Matrix<ElemType>>(std::move(sliceInput2Value)), {1, sliceInput2Value.GetNumCols()});
-            sliceInput2ValueTensorView.DoUnaryOpOf(0, sliceInput2ValueTensorView, 1, opFloor, opSum);
+            TensorShape outputSeqAxisDimTensorShape{outputSeqAxisDimValue.GetNumRows(), outputSeqAxisDimValue.GetNumCols()};
+            if (outputSeqAxisDimTensorShape.GetDim(0) != 1)
+            {
+                RuntimeError("%ls %ls sequential convolution should output sequence sizes of shape [1 x #sequences], instead of [%d x #sequences]",
+                    NodeName().c_str(), OperationName().c_str(), outputSeqAxisDimTensorShape.GetDim(0));
+            }
 
-            this->m_outputsValue[1]->SetValue(*(sliceInput2ValueTensorView.AsMatrix()));
+            TensorView<ElemType> outputSeqAxisDimTensorView = TensorView<ElemType>(
+                std::make_shared<Matrix<ElemType>>(outputSeqAxisDimValue.AsReference()), outputSeqAxisDimTensorShape);
+            outputSeqAxisDimTensorView.DoUnaryOpOf(0, outputSeqAxisDimTensorView, 1, opFloor, opSum);
+
+            outputSeqAxisDimValue.SetValue(*(outputSeqAxisDimTensorView.AsMatrix()));
         }
         else
         {
-            InvalidArgument("Convolution over sequence axis currently does not support transpose. ");
+            InvalidArgument("%ls %ls convolution over sequence axis currently does not support transpose. ",
+                NodeName().c_str(), OperationName().c_str());
         }
     }
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        if (inputIndex < 2)
+        // We don't need backprop for the 3rd input, i.e. the sequence sizes.
+        const size_t inputSeqAxisDimIdx = InputIndices::InputSeqAxisDimIdx;
+        if (inputIndex < inputSeqAxisDimIdx)
             Base::BackpropTo(inputIndex, fr);
     }
 
@@ -773,21 +824,39 @@ public:
     {
         Base::Validate(isFinalValidationPass);
 
-        // update conv output seq dim shape.
-        TensorShape outputShape = GetInputSampleLayout(2);
+        const size_t inputSeqAxisDimIdx = InputIndices::InputSeqAxisDimIdx;
+        const size_t outputSeqAxisDimIdx = OutputIndices::OutputSeqAxisDimIdx;
 
-        if (m_outputsShape[1].GetRank() > 0 && m_outputsShape[1] != TensorShape(0))
+        // update conv output seq dim shape.
+        TensorShape outputShape = GetInputSampleLayout(inputSeqAxisDimIdx);
+
+        if (m_outputsShape[outputSeqAxisDimIdx].GetRank() > 0 && m_outputsShape[outputSeqAxisDimIdx] != TensorShape(0))
         {
-            if (m_outputsShape[1] != outputShape)
+            if (m_outputsShape[outputSeqAxisDimIdx] != outputShape)
             {
                 InvalidArgument("%ls %ls the shape of the specified convolution out sequence axis dim %ls is different from the result using provided options %ls",
-                                NodeName().c_str(), OperationName().c_str(), static_cast<std::wstring>(m_outputsShape[1]).c_str(), static_cast<std::wstring>(outputShape).c_str());
+                    NodeName().c_str(), OperationName().c_str(), static_cast<std::wstring>(m_outputsShape[outputSeqAxisDimIdx]).c_str(), static_cast<std::wstring>(outputShape).c_str());
             }
         }
 
-        this->m_outputsMBLayout[1] = GetMBLayout();
-        this->m_outputsShape[1] = outputShape;
+        this->m_outputsMBLayout[outputSeqAxisDimIdx] = GetMBLayout();
+        this->m_outputsShape[outputSeqAxisDimIdx] = outputShape;
+
+        if (isFinalValidationPass)
+        {
+            const size_t inputOperandIdx = InputIndices::InputOperandIdx;
+            // Input1: Input features           [i_1 x i_2 x ... x i_n x max(S) x C]    x [1(*) x #]
+            // The input sample layout rank should always >= 2.
+            size_t inputOperandRank = GetInputSampleLayout(inputOperandIdx).GetRank();
+            m_seqAxisIdx = inputOperandRank - 2;
+            if (inputOperandRank < 2)
+                InvalidArgument("%ls %ls the input sample layout rank for sequential convolution should always >= 2. The provided input has sample layout rank %d",
+                                NodeName().c_str(), OperationName().c_str(), inputOperandRank);
+        }
     }
+
+private:
+    size_t m_seqAxisIdx;
 };
 
 
