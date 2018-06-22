@@ -446,9 +446,10 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-len(actual_output_channels_shape)))
 
     # parameters bound to this Function
-    W = Parameter(actual_output_channels_shape + kernel_shape,                    init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
-    b = Parameter(actual_output_channels_shape + (1,) * len(actual_filter_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
-
+    # For sequential we must reduce bias filter rank by 1, as we get the rank from kernel filter shape, and that contains the seq axis which should be omitted. 
+    bias_filter_rank = len(actual_filter_shape) - 1 if sequential else len(actual_filter_shape)
+    W = Parameter(actual_output_channels_shape + kernel_shape,            init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
+    b = Parameter(actual_output_channels_shape + (1,) * bias_filter_rank, init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
     # TODO: Should we cater to the special case of 1D convolution for text? I.e. sequential only (filter_shape=()).
     #       In that case, the convolution is the embedding, and we should use a matrix product to support sparse inputs.
     #       Or add sparse support to splice().

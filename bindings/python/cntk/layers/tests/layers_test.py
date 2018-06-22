@@ -954,13 +954,17 @@ def test_sequential_convolution_2d():
 
     c = Convolution((3,2), sequential=True, pad=False, num_filters=4, init_bias=np.asarray([1,2,3,4], dtype=np.float32))
     c = c(x)
-
     out = c.eval({x:data})
-
     for i in range(4):
         np.testing.assert_array_almost_equal(out[0][0][i], [np.sum(c.W.value[i]) + j + 1 for j in range(4)], \
             err_msg="Error in convolution2D computation with sequential = True, num_filters = 4 and init_bias = [1,2,3,4]")
 
+    c = Convolution(filter_shape=(3,2), sequential=True, pad=True, strides=(2,2), num_filters=4)
+    c = c(x)
+    out = c.eval({x:data})
+    # output shape: [out_seq, out_num_filters(omitted if = 1), out_feats]
+    np.testing.assert_equal(out[0].shape, (2,4,3), \
+        err_msg="Error in convolution2D computation with sequential = True, num_filters = 4 and bias = True: wrong output shape")
 
 ####################################
 # 1D convolution without reduction dimension
@@ -1310,3 +1314,5 @@ def test_cloned_parameters_are_identical():
     z3 = z()
     z4 = z3.clone('clone')
     compare(z3(features), z4(features))
+
+test_sequential_convolution_2d()
