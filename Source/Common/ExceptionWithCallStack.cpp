@@ -156,6 +156,20 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
 
 #ifdef _WIN32
 #ifndef CNTK_UWP
+    // Callstack generation on Windows is occasionally failing; disabling this functionality for now. Additional info:
+    //
+    // <extracted from email>
+    // NetworkTests.exe is hung creating a call stack for an expected exception thrown in the test code. A bit of googling suggests that the 
+    // problem could be due to an incompatibility between `programs linked with fastlink pdbs and older versions of DbgHelp.dll <https://developercommunity.visualstudio.com/content/problem/38625/debug-help-library-hangs-up.html>`_.
+    // On this machine it looks like we are using DbgHelp.dll version 10.0.14321.1024.
+    //
+    // TODO: WE SHOULD REMOVE THIS HACK ASAP.
+    //
+    char* const flagValue(std::getenv("CNTK_CI_NO_STACKTRACE"));
+
+    if (flagValue != nullptr && _strcmpi(flagValue, "1") == 0)
+        return write("Stack trace generation has been explicitly disabled\n");
+    // End hack
 
     // RtlCaptureStackBackTrace() is a kernel API without default binding, we must manually determine its function pointer.
     typedef USHORT(WINAPI * CaptureStackBackTraceType)(__in ULONG, __in ULONG, __out PVOID*, __out_opt PULONG);
