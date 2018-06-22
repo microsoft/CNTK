@@ -358,7 +358,7 @@ namespace CNTK
                 assert(dataType == outputValue->GetDataType());
                 assert(inputValue->Device() == outputValue->Device());
 
-                if (!ShouldCopyDataToCPU(inputValue) || ShouldUseTopK(inputValue))
+                if (!ShouldCopyDataToCPU(inputValue) || !ShouldUseTopK(inputValue))
                 {
                     // NO TOPK
                     void* inputData = (ShouldCopyDataToCPU(inputValue)) ? m_intermediateCPUBuffers[i].data.get() : GetDataBuffer(inputValue);
