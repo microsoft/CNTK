@@ -405,11 +405,12 @@ __global__ void _selectK(
     curandState state;
     curand_init((unsigned long long)clock() + linindex, 0, 0, &state);
     float prob = 0.0;
-    if (oneNorm > 1e-5) {
-      // > 0
-      prob = topK / oneNorm;
-      //prob = topK / (oneNorm + DEFAULT_BUCKET_SIZE * eps);
-    }
+    prob = topK / (oneNorm + DEFAULT_BUCKET_SIZE);
+    //if (oneNorm > 1e-5) {
+    //  // > 0
+    //  prob = topK / oneNorm;
+    //  //prob = topK / (oneNorm + DEFAULT_BUCKET_SIZE * eps);
+    //}
 
     int take[ITEMS_PER_THREAD];
     int indices[ITEMS_PER_THREAD];
