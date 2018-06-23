@@ -7,6 +7,7 @@
 
 #include "CNTKLibrary.h"
 #include "DistributedLearnerBase.h"
+#include <vector>
 
 namespace CNTK
 {
@@ -20,5 +21,8 @@ namespace CNTK
 
         // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
         bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& trainingSampleCount) override;
+    
+    protected:
+        virtual void AggregateInPlace(std::vector<NDArrayViewPtr>& valuesToAggregate);
     };
 }

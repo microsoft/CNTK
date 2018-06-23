@@ -237,6 +237,7 @@ IGNORE_FUNCTION CNTK::CreateDataParallelDistributedLearner;
 IGNORE_FUNCTION CNTK::CreateQuantizedDataParallelDistributedLearner;
 IGNORE_FUNCTION CNTK::CreateBlockMomentumDistributedLearner;
 IGNORE_FUNCTION CNTK::CreateTopkBlockMomentumDistributedLearner;
+IGNORE_FUNCTION CNTK::CreateTopkDataParallelDistributedLearner;
 IGNORE_STRUCT std::hash<::CNTK::StreamInformation>;
 %ignore operator==(const StreamInformation& left, const StreamInformation& right);
 IGNORE_STRUCT CNTK::DistributedWorkerDescriptor;

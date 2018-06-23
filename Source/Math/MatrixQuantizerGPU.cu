@@ -240,6 +240,12 @@ MatrixQuantizerGPU<ElemType>::~MatrixQuantizerGPU()
         m_tempGPUQuantizedMatrix = nullptr;
     }
 
+    if (nullptr != m_tempBuffer)
+    {
+        delete m_tempBuffer;
+        m_tempBuffer = nullptr;
+    }
+
     // BUGBUG: we don't destroy our streams (they are static variables); we need a static destructor, I am too lazy now
     // TODO: Check for error code and throw if !std::uncaught_exception()
     cudaEventDestroy(m_assignCompleteEvent);

@@ -515,7 +515,7 @@ namespace CNTK
         }
 
     protected:
-        virtual void Reset(const std::vector<NDArrayViewPtr>& parameters)
+        void Reset(const std::vector<NDArrayViewPtr>& parameters)
         {
             for (size_t i = 0; i < parameters.size(); ++i)
             {

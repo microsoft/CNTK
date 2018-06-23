@@ -84,36 +84,6 @@ namespace CNTK
             dynamic_cast<TopkDistributedCommunicator*>(m_communicator.get())->TopKAggregateInPlace(m_tempBlockGradient, m_residuals, m_communicator->Workers());
         }
 
-        void Reset(const std::vector<NDArrayViewPtr>& parameters) override
-        {
-            if (m_residuals.size() != m_tempBlockGradient.size())
-                m_residuals.resize(m_tempBlockGradient.size());
-
-
-            Base::Reset(parameters);
-
-            for (size_t i = 0; i < parameters.size(); ++i)
-            {
-                auto& p = parameters[i];
-
-                if (p->GetDataType() == DataType::Double)
-                    ResetBuffer1<double>(i, p);
-                else if (p->GetDataType() == DataType::Float)
-                    ResetBuffer1<float>(i, p);
-                else
-                    RuntimeError("Unsupported type.");
-            }
-        }
-
-        template<class ElemType>
-        void ResetBuffer1(size_t index, const NDArrayViewPtr& p)
-        {
-            if (!m_residuals[index])
-            {
-                m_residuals[index] = std::make_shared<NDArrayView>(AsDataType<ElemType>(), p->Shape(), AsDeviceDescriptor(p->Device().Id()));
-            }
-        }
-
     private:
         // Residuals of topK gradients.
         std::vector<NDArrayViewPtr> m_residuals;

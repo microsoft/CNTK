@@ -15,6 +15,7 @@
 #include "BlockMomentumDistributedLearner.h"
 #include "TopKDistributedCommunicator.h"
 #include "TopkBlockMomentumDistributedLearner.h"
+#include "TopkDataParallelDistributedLearner.h"
 #endif
 
 namespace CNTK
@@ -117,7 +118,12 @@ namespace CNTK
             resetSGDMomentumAfterAggregation,
             blockLearningRate,
             blockMomentumAsTimeConstant);
-}
+    }
+
+    DistributedLearnerPtr CreateTopkDataParallelDistributedLearner(TopkDistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributedAfterSamples, bool useAsyncBufferedParameterUpdate)
+    {
+        return MakeSharedObject<TopkDataParallelDistributedLearner>(communicator, learner, distributedAfterSamples, useAsyncBufferedParameterUpdate);
+    }
 
 #else
     TopkDistributedCommunicatorPtr TopkMPICommunicator(size_t)
@@ -183,6 +189,11 @@ namespace CNTK
     {
         LogicError("Block Momentum Distributed Trainer is not supported for this build. The GPU build is needed, see CNTK wiki for details.");
     }
+
+    DistributedLearnerPtr CreateTopkDataParallelDistributedLearner(TopkDistributedCommunicatorPtr, LearnerPtr, size_t, bool)
+    {
+        LogicError("Topk Data Parallel Distributed Trainer is not supported for this build. The GPU build is needed, see CNTK wiki for details.");
+    }
 #endif
 
     DistributedLearnerPtr CreateDataParallelDistributedLearner(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributedAfterSamples, bool useAsyncBufferedParameterUpdate)
@@ -243,7 +254,7 @@ namespace CNTK
             auto value = MakeSharedObject<NDArrayView>(static_cast<double>(info.numberOfSamples), NDShape{}, DeviceDescriptor::CPUDevice());
             valuesToAggregate.push_back(value);
 
-            m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers());
+            AggregateInPlace(valuesToAggregate);
             info.numberOfSamples = static_cast<size_t>(*valuesToAggregate.back()->WritableDataBuffer<double>());
 
             if (!sparseValuesToAggregate.empty())
@@ -263,5 +274,10 @@ namespace CNTK
             return false;
 
         return m_learner->Update(convertedGradientValues, info.numberOfSamples, info.atEndOfSweep);
+    }
+
+    void DataParallelDistributedLearner::AggregateInPlace(std::vector<NDArrayViewPtr>& valuesToAggregate)
+    {
+        m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers());
     }
 }

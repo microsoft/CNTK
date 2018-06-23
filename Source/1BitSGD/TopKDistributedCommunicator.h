@@ -104,7 +104,7 @@ namespace CNTK
     public:
         TopkMPICommunicatorImpl(size_t topK = 0) : m_topK(topK)
         {
-            std::cerr << "Constructing TopkMPICommunicatorImpl with topk = " << m_topK << endl;
+            std::cout << "Constructing TopkMPICommunicatorImpl with topk = " << m_topK << endl;
         }
 
         void TopKAggregateInPlace(
@@ -112,6 +112,7 @@ namespace CNTK
             std::vector<NDArrayViewPtr>& residues,
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override
         {
+            InitializeResiduesIfEmpty(inValues, residues);
             TopKAggregateImpl(inValues, residues, inValues, residues, sendToWorkers);
         }
 
@@ -163,6 +164,37 @@ namespace CNTK
         }
 
     private:
+
+        void InitializeResiduesIfEmpty(
+            const std::vector<NDArrayViewPtr>& values,
+            vector<NDArrayViewPtr>& residues)
+        {
+            if (!residues.empty())
+                return;
+
+            cout << "InitializeResiduesIfEmpty" << endl;
+            residues.resize(values.size());
+
+            for (auto i = 0; i < values.size(); ++i)
+            {
+                auto view = values[i];
+                auto device = view->Device();
+
+                if (view->GetDataType() == DataType::Float)
+                    InitializeResidue<float>(view, residues[i]);
+                else if (view->GetDataType() == DataType::Double)
+                    InitializeResidue<double>(view, residues[i]);
+            }
+        }
+
+        template<class ElemType>
+        void InitializeResidue(const NDArrayViewPtr& view, NDArrayViewPtr& residue)
+        {
+            auto v = GetMatrix<ElemType>(view);
+            size_t nRow = v->GetNumRows();
+            size_t nCol = v->GetNumCols();
+            residue = MakeSharedObject<NDArrayView>(AsDataType<ElemType>(), NDShape{ nRow, nCol }, AsDeviceDescriptor(v->GetDeviceId()));
+        }
 
         void Initialize(const std::vector<NDArrayViewPtr>& values)
         {
@@ -227,7 +259,9 @@ namespace CNTK
             size_t dim = nRow * nCol;
 
             size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
-            size_t numBuckets = dim / DEFAULT_BUCKET_SIZE;
+        
+            // size_t numBuckets = dim / DEFAULT_BUCKET_SIZE;
+            size_t numBuckets = (dim + (DEFAULT_BUCKET_SIZE - 1)) / DEFAULT_BUCKET_SIZE;
 
             m_preAggregatedGradientCompressors[i] = std::make_shared<MatrixCompressor<ElemType>>(view->Device().Id(), true);
 
@@ -574,12 +608,12 @@ namespace CNTK
         template<class ElemType>
         void DoAllReduceAndUnTopKAsync(size_t i, NDArrayViewPtr& inputValue, NDArrayViewPtr& outputValue)
         {
-            DoAllReduce<ElemType>(i, inputValue, outputValue);
+            DoAllReduce<ElemType>(i, inputValue);
             UnTopKAsync<ElemType>(i, outputValue);
         }
 
         template<class ElemType>
-        void DoAllReduce(size_t i, NDArrayViewPtr& inputValue, NDArrayViewPtr&)
+        void DoAllReduce(size_t i, NDArrayViewPtr& inputValue)
         {
             auto v = GetMatrix<ElemType>(inputValue);
             size_t dim = v->GetNumRows() * v->GetNumCols();

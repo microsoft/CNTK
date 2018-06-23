@@ -230,6 +230,29 @@ def topk_block_momentum_distributed_learner(learner, block_size, topk=0, block_m
             block_learning_rate)
 
 @typemap
+def topk_data_parallel_distributed_learner(learner, topk=0, distributed_after=0, num_quantization_bits=32, use_async_buffered_parameter_update=False):
+    '''
+    Creates a data parallel distributed learner
+
+    Args:
+        learner: a local learner (i.e. sgd)
+        distributed_after (int): number of samples after which distributed training starts
+        num_quantization_bits (int): number of bits for quantization (1 to 32)
+        use_async_buffered_parameter_update (bool): use async buffered parameter update, currently must be False
+    Returns:
+        a distributed learner instance
+    '''
+    if (topk <= 0) or (num_quantization_bits < 32):
+        # Fallback to normal learner
+        return data_parallel_distributed_learner(learner, distributed_after, num_quantization_bits, use_async_buffered_parameter_update);
+    else:
+        return cntk_py.create_topk_data_parallel_distributed_learner(
+            cntk_py.topk_mpicommunicator(topk),
+            learner,
+            distributed_after,
+            use_async_buffered_parameter_update)
+
+@typemap
 def mpi_communicator():
     '''
     Creates a non quantized MPI communicator.
