@@ -5428,6 +5428,8 @@ namespace CNTK
         bool resetSGDMomentumAfterAggregation = true,
         double blockLearningRate = 1.0);
 
+    CNTK_API DistributedLearnerPtr CreateTopkDataParallelDistributedLearner(TopkDistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples, bool useAsyncBufferedParameterUpdate = false);
+
     CNTK_API DistributedLearnerPtr CreateTopkBlockMomentumDistributedLearner(
         TopkDistributedCommunicatorPtr communicator,
         LearnerPtr learner,
