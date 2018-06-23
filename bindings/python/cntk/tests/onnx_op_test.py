@@ -1125,7 +1125,6 @@ def test_Sub(tmpdir, dtype):
         verify_no_input(model, tmpdir, 'Sub_0')
 
 #Tanh
-
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Tanh(tmpdir, dtype):
     with C.default_options(dtype = dtype):
@@ -1195,3 +1194,31 @@ def test_Select(flag, if_true, if_false, tmpdir):
 
     model = C.element_select(flag, if_true, if_false_var)
     verify_one_input(model, if_false, tmpdir, 'Select_1_if_false')
+
+# Cos
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Cos(tmpdir, dtype):
+    data = np.asarray([0.0, -0.5, 0.5, 10, 20], dtype)
+    model = C.cos(data)
+    verify_no_input(model, tmpdir, 'Cos_0')
+
+# Sin
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Sin(tmpdir, dtype):
+    data = np.asarray([0.0, -0.5, 0.5, 10, 20], dtype)
+    model = C.sin(data)
+    verify_no_input(model, tmpdir, 'Sin_0')
+
+# Acos
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Arccos(tmpdir, dtype):
+    data = np.asarray([0.0, -0.5, 0.5, 1, -1], dtype)
+    model = C.acos(data)
+    verify_no_input(model, tmpdir, 'Acos_0')
+
+# Asin
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Sin(tmpdir, dtype):
+    data = np.asarray([0.0, -0.5, 0.5, 1, -1], dtype)
+    model = C.asin(data)
+    verify_no_input(model, tmpdir, 'Asin_0')
