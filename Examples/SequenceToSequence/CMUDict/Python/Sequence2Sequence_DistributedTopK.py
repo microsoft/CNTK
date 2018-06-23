@@ -13,7 +13,7 @@ import _cntk_py
 import cntk
 
 from cntk import Trainer
-from cntk.train.distributed import Communicator, data_parallel_distributed_learner, block_momentum_distributed_learner, topk_block_momentum_distributed_learner
+from cntk.train.distributed import Communicator, data_parallel_distributed_learner, block_momentum_distributed_learner, topk_block_momentum_distributed_learner, topk_data_parallel_distributed_learner
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learners import fsadagrad, learning_parameter_schedule_per_sample, momentum_schedule, momentum_schedule_per_sample
 from cntk.train.training_session import *
@@ -55,11 +55,11 @@ def train_and_test(s2smodel, train_reader, test_reader, block_size, num_quantiza
                         gradient_clipping_threshold_per_sample=2.3,
                         gradient_clipping_with_truncation=True)
 
+    print("topk=" + str(topk) +"\n")
     if block_size != None:
-        print("topk=" + str(topk) +"\n")
         learner = topk_block_momentum_distributed_learner(local_learner, block_size=block_size, topk=topk)
     else:
-        learner = data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
+        learner = topk_data_parallel_distributed_learner(local_learner, topk=topk, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
 
     trainer = Trainer(None, criterion, learner, progress_printer)
 
