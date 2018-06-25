@@ -1,12 +1,12 @@
+isPythonTest: No
+
 dataDir: .
 
 tags:
-  # Temporarily disabling tests for weekend build
-  # 
-  # # CPU-only for now.
-  # - bvt-i (build_sku == 'cpu') and (os == 'windows')
-  # - nightly-i (build_sku == 'cpu') and (os == 'windows')
-  # - weekly-i (build_sku == 'cpu') and (os == 'windows')
+  # CPU-only for now.
+  - bvt-i (build_sku == 'cpu') and (os == 'windows')
+  - nightly-i (build_sku == 'cpu') and (os == 'windows')
+  - weekly-i (build_sku == 'cpu') and (os == 'windows')
 
 testCases:
   Each test passes:
