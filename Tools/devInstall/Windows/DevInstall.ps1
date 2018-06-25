@@ -33,7 +33,7 @@
  This optional parameter allows you to specify the location of an Anaconda installation to be used or created on your 
  machine. If the directory exists on your machine, the script will continue under the assumption that this is a working 
  Anaconda 3 (4.1.1) (or compatible) installation, and will create the CNTK Python environment in that location.
- By default a version of Anaconda3 will be installed into [C:\local\Anaconda3-4.1.1-Windows-x86_64]
+ By default a version of Anaconda3 will be installed into [C:\local\Anaconda3-5.2.0]
 
   .PARAMETER PyVersion
  This is an optional parameter and can be used to specify the Python version used in the CNTK Python environment.
@@ -57,9 +57,9 @@
  
  Run the installer and see what operations would be performed, without actually performing these actions
 .EXAMPLE
- .\devInstall.ps1 -Execute -AnacondaBasePath d:\mytools\Anaconda34
+ .\devInstall.ps1 -Execute -AnacondaBasePath d:\mytools\Anaconda3-5.2.0
 
- If the directory [d:\mytools\Anaconda34] exists, the installer will assume it contains a complete Anaconda installation. 
+ If the directory [d:\mytools\Anaconda3-5.2.0] exists, the installer will assume it contains a complete Anaconda installation. 
  If the directory doesn't exist, Anaconda will be installed into this directory.
 
 #>
@@ -78,7 +78,7 @@ Param(
 $roboCopyCmd = "robocopy.exe"
 
 if (-not $AnacondaBasePath) {
-    $AnacondaBasePath = Join-Path $InstallLocation Anaconda3-4.1.1-Windows-x86_64
+    $AnacondaBasePath = Join-Path $InstallLocation Anaconda3-5.2.0
 }
 
 #just make sure the supplied parameter don't end on a backslash
@@ -151,7 +151,7 @@ Function main
         $operation += OpZlibVS17 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
         $operation += OpZlibVS17Prebuild -cache $localCache -targetFolder $localDir
         $operation += OpOpenCV31 -cache $localCache -targetFolder $localDir
-        $operation += OpAnaconda3411 -cache $localCache -AnacondaBasePath $AnacondaBasePath
+        $operation += OpAnaconda3520 -cache $localCache -AnacondaBasePath $AnacondaBasePath
         if (-not $NoPythonEnvironment) {
             $operation += OpAnacondaEnv -AnacondaBasePath $AnacondaBasePath -repoDir $repositoryRootDir -repoName $reponame -environmentName $PyEnvironmentName -pyVersion $PyVersion
         }

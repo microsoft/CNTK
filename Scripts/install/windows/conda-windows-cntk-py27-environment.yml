@@ -1,38 +1,41 @@
 name: cntk-py27
 channels:
 - defaults
-# For imageio:
+# For imageio and dlib:
 - conda-forge
 dependencies:
-- enum34=1.1.6=py27_0
-- h5py=2.6.0=np111py27_2
-- imageio=2.2.0=py27_0
-- jupyter=1.0.0=py27_3
-- matplotlib=1.5.3=np111py27_0
-- mock=2.0.0=py27_0
-- numpy=1.11.2=py27_0
-- pandas=0.19.1=np111py27_0
-- pandas-datareader=0.2.1=py27_0
-- pandoc=1.19.2.1
-- pillow=3.4.2=py27_0
-- pip=8.1.2=py27_0
-- python=2.7.11=5
-- pyyaml=3.12=py27_0
-- scikit-image=0.12.3=np111py27_1
-- scikit-learn=0.18.1=np111py27_0
-- scipy=0.18.1=np111py27_0
-- seaborn=0.7.1=py27_0
-- setuptools=27.2.0=py27_1
-- six=1.10.0=py27_0
-- wheel=0.29.0=py27_0
+- h5py
+- jupyter
+- matplotlib
+- mock
+- numpy
+- pandas
+# Downgrade to 0.5.0 due to https://github.com/pydata/pandas-datareader/issues/495
+- pandas-datareader==0.5.0
+- pandoc
+- pip
+- python==2.7.15
+- pyyaml
+- scipy
+- seaborn
+- setuptools
+- six
+- wheel
+- cython
+- dlib
 - pip:
-  - gym==0.5.2
+  - easydict
+  - gym
   - keras==2.0.6
-  - pydot-ng==1.0.0
-  - pygame==1.9.3
-  - pytest==3.0.3
-  - sphinx-rtd-theme==0.2.4
-  - sphinx==1.5.4
-  - nbsphinx==0.2.14
-  - twine==1.8.1
-  - protobuf==3.2.0
+  - pydot-ng
+  - pygame
+  - pytest==3.5.1
+  - sphinx-rtd-theme
+  - sphinx
+  - nbsphinx
+  - twine
+  - protobuf
+  - pillow
+  - imageio
+  - scikit-image
+  - scikit-learn

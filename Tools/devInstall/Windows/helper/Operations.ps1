@@ -2,19 +2,19 @@
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
-function OpAnaconda3411(
+function OpAnaconda3520(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $AnacondaBasePath)
 {
     $targetFolder = Split-Path $AnacondaBasePath -Parent
     $prodSubDir = Split-Path $AnacondaBasePath -Leaf
-    $prodName = "Anaconda3-4.1.1"
-    $prodFile = "Anaconda3-4.1.1-Windows-x86_64.exe"
+    $prodName = "Anaconda3-5.2.0"
+    $prodFile = "Anaconda3-5.2.0-Windows-x86_64.exe"
     $targetPath = join-path $targetFolder $prodSubDir
-    $downloadSource = "https://repo.continuum.io/archive/Anaconda3-4.1.1-Windows-x86_64.exe"
-    $expectedHash = "B4889513DC574F9D6F96DB089315D69D293F8B17635DA4D2E6EEE118DC105F38"
+    $downloadSource = "https://repo.continuum.io/archive/Anaconda3-5.2.0-Windows-x86_64.exe"
+    $expectedHash = "2672F6537E2C8A79AE9540CF3C49B18BB9BA35CAEC649191B5FA1E759F15B4C3"
 
-    @( @{ShortName = "ANA3-411"; Name = $prodName;  VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
+    @( @{ShortName = "ANA3-520"; Name = $prodName;  VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath; } );
          Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
          # command line parameters for Anaconda installer: /D=$targetPath must be the last parameter and can not be surrounded by quotes
