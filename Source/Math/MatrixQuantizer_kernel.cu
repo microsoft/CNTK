@@ -406,8 +406,8 @@ __global__ void _selectK(
     //    //    printf("EPSILON: %f\n", eps);
     //}
 
-    curandState state;
-    curand_init((unsigned long long)clock() + linindex, 0, 0, &state);
+    //curandState state;
+    //curand_init((unsigned long long)clock() + linindex, 0, 0, &state);
     float prob = topK / DEFAULT_BUCKET_SIZE;
     //if (oneNorm > 1e-5) {
     //  // > 0
@@ -420,7 +420,7 @@ __global__ void _selectK(
 
     for(int i = 0; i < ITEMS_PER_THREAD; ++i) {
         if(idx + i < totalNumElements) {
-            take[i] = (curand_uniform(&state) <= (prob * absVals[i])) ? 1 : 0;
+            take[i] = ((0.1 / prob) <= absVals[i]) ? 1 : 0;
             //take[i] = (curand_uniform(&state) <= (prob * (absVals[i] + eps))) ? 1 : 0;
             //printf("Taking: %d - %d\n", idx + i, take[i]);
         } else {
