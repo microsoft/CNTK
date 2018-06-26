@@ -767,6 +767,8 @@ def runCommand(args):
             sys.stdout.write("Running test {0} ({1} {2}{3}) - ".format(test.fullName, flavor, device, pyTestLabel));
             if args.dry_run:
               print("[SKIPPED] (dry-run)")
+              continue
+              
             # in verbose mode, terminate the line, since there will be a lot of output
             if args.verbose:
               sys.stdout.write("\n");
@@ -803,6 +805,9 @@ def runCommand(args):
             if not result.succeeded and not args.verbose and result.logFile:
               print("  See log file for details: " + result.logFile)
 
+  if args.dry_run:
+    sys.exit(1)
+    
   if args.update_baseline:
     print("{0}/{1} baselines updated, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount))
   else:

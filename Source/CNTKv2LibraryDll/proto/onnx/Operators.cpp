@@ -274,6 +274,18 @@ namespace ONNX
             { L"axis ", "axis" }, 
             { L"broadcast", "broadcast" }, 
         } } },
+        { L"Cos",{ {
+            { L"Cos", "Cos" },
+            } } },
+        { L"Sin",{ {
+            { L"Sin", "Sin" },
+        } } },
+        { L"Acos",{ {
+            { L"Acos", "Acos" },
+        } } },
+        { L"Asin",{ {
+            { L"Asin", "Asin" },
+        } } },
 
         // From reduction
         { L"ReduceElements", { {
@@ -385,7 +397,7 @@ namespace ONNX
             } } },
         { L"Alias",{ {
             { L"Alias", "Identity" },
-            } } },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
