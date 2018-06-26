@@ -33,6 +33,15 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
+#define _PERF_TOSEQ 1
+#if _PERF_TOSEQ
+#define _PERF_INIT_DUR(tag)                                \
+    auto duration_##tag = std::chrono::duration<float>(0); \
+    auto start_##tag = std::chrono::system_clock::now()
+#define _PERF_SET_DUR(tag) duration_##tag += (std::chrono::system_clock::now() - start_##tag)
+        
+        _PERF_INIT_DUR(toseq);
+#endif
         let& inMBLayout = InputRef(0).GetMBLayout();
         if (inMBLayout->GetNumTimeSteps() != 1)
             InvalidArgument("%ls %ls operation can only operate on non-sequence input data.", NodeName().c_str(), OperationName().c_str());
@@ -41,6 +50,9 @@ public:
         auto inputSampleLayout = InputRef(0).GetSampleLayout();
         auto inputDataTensorShape = inputSampleLayout;
         inputDataTensorShape.AppendInPlace(inputDataTensorShape.GetRank(), numSequences);
+#if _PERF_TOSEQ
+        _PERF_INIT_DUR(get_input);
+#endif
         let& inputDataMatrix = InputRef(0).Value();
         auto inputDataNDArrayView = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(),
             ::CNTK::AsDeviceDescriptor(inputDataMatrix.GetDeviceId()),
@@ -48,21 +60,48 @@ public:
             ::CNTK::AsNDShape(inputDataTensorShape),
             /*readOnly =*/ true,
             new TensorView<ElemType>(InputRef(0).ValuePtr(), inputDataTensorShape));
+#if _PERF_TOSEQ
+        _PERF_SET_DUR(get_input);
+
+        _PERF_INIT_DUR(get_seq_len);
+#endif
 
         std::vector<size_t> sequenceLengths = GetSequenceLengths();
+#if _PERF_TOSEQ
+        _PERF_SET_DUR(get_seq_len);
+
+        _PERF_INIT_DUR(get_masked_value);
+#endif
         auto inputDataValue = ::CNTK::MakeSharedObject<::CNTK::Value>(inputDataNDArrayView, ::CNTK::CreateMask(sequenceLengths));
+#if _PERF_TOSEQ
+        _PERF_SET_DUR(get_masked_value);
+#endif
         auto dummyVar = ::CNTK::InputVariable(::CNTK::AsNDShape(GetSampleLayout()), this->IsValueSparse(), ::CNTK::AsDataType<ElemType>());
 #ifdef _MSC_VER
         auto& outputValuePtrRef = ValuePtrRef();
 #else
         auto& outputValuePtrRef = this->template ValuePtrRef();
 #endif
+#if _PERF_TOSEQ
+        _PERF_INIT_DUR(gen_layout);
+#endif
         auto packedMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(dummyVar, inputDataValue, nullptr, outputValuePtrRef, m_tempGatherIndices);
-
+#if _PERF_TOSEQ
+        _PERF_SET_DUR(gen_layout);
+        _PERF_INIT_DUR(copy_layout);
+#endif
         let& outMBLayout = GetMBLayout();
         outMBLayout->CopyFrom(packedMatrixAndLayout.second, /*keepName=*/true);
         if (packedMatrixAndLayout.first != outputValuePtrRef)
             Value().AssignValuesOf(*packedMatrixAndLayout.first);
+
+#if _PERF_TOSEQ
+        _PERF_SET_DUR(copy_layout);
+        _PERF_SET_DUR(toseq);
+        fprintf(stderr, "forward toseq: %07fs\n  forward toseq detail:: get_input: %07fs, get_seq_len: %07fs, get_masked_value: %07fs, gen_layout: %07fs, copy_layout: %07fs\n",
+            duration_toseq.count(), duration_get_input.count(), duration_get_seq_len.count(), duration_get_masked_value.count(),
+            duration_gen_layout.count(), duration_copy_layout.count());
+#endif
     }
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override
@@ -318,6 +357,14 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
+#define _PERF_UNPACK 0
+#if _PERF_UNPACK
+        auto duration_out0 = std::chrono::duration<float>(0);
+        auto duration_out1 = std::chrono::duration<float>(0);
+
+        auto start_out0 = std::chrono::system_clock::now();
+#endif
+
         auto inputMBLayout = InputRef(0).GetMBLayout();
         if (inputMBLayout->HasSequenceBeyondBegin() || inputMBLayout->HasSequenceBeyondEnd())
             LogicError("%ls: %s node cannot perform sequence axis reduction for truncated sequence.", Base::NodeDescription().c_str(), typeid(*this).name());
@@ -339,7 +386,10 @@ public:
             Value().AssignValuesOf(*unpackedInput.GetSOBPtr());
 
         Value().Reshape(valueMatrixNumRows, valueMatrixNumCols);
-
+#if _PERF_UNPACK
+        duration_out0 += (std::chrono::system_clock::now() - start_out0);
+        auto start_out1 = std::chrono::system_clock::now();
+#endif
         if (!m_suppressMaskOutput)
         {
             auto numSequences = GetMBLayout()->GetNumSequences();
@@ -362,6 +412,11 @@ public:
 
             this->m_outputsValue[1]->SetValue(maxSequenceLength, numSequences, outputValuePtrRef->GetDeviceId(), maskValues.data());
         }
+#if _PERF_UNPACK
+        duration_out1 += (std::chrono::system_clock::now() - start_out1);
+
+        fprintf(stderr, "forward unpack out0: %07fs, out1: %07fs\n", duration_out0.count(), duration_out1.count());
+#endif    
     }
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override
