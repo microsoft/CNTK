@@ -383,7 +383,7 @@ __global__ void _selectK(
 
     // Calc statistics
     //__shared__ ElemType infNorm;
-    __shared__ ElemType oneNorm;
+    //__shared__ ElemType oneNorm;
 
     //ElemType redVal = BlockReduceT(temp_storage.reduce).Reduce(absVals, cub::Max());
     //if(threadIdx.x == 0) {
@@ -392,12 +392,12 @@ __global__ void _selectK(
     //}
     //__syncthreads();
 
-    ElemType redVal = BlockReduceT(temp_storage.reduce).Sum(absVals);
-    if(threadIdx.x == 0) {
-        oneNorm = redVal;
-        //printf("One-Norm: %f\n", oneNorm);
-    }
-    __syncthreads();
+    //ElemType redVal = BlockReduceT(temp_storage.reduce).Sum(absVals);
+    //if(threadIdx.x == 0) {
+    //    oneNorm = redVal;
+    //    //printf("One-Norm: %f\n", oneNorm);
+    //}
+    //__syncthreads();
 
     //// Calc epsilon if needed
     //if(infNorm > oneNorm / topK) {
@@ -408,12 +408,12 @@ __global__ void _selectK(
 
     curandState state;
     curand_init((unsigned long long)clock() + linindex, 0, 0, &state);
-    float prob = 0.0;
-    if (oneNorm > 1e-5) {
-      // > 0
-      prob = topK / oneNorm;
-      //prob = topK / (oneNorm + DEFAULT_BUCKET_SIZE * eps);
-    }
+    float prob = topK / DEFAULT_BUCKET_SIZE;
+    //if (oneNorm > 1e-5) {
+    //  // > 0
+    //  prob = topK / oneNorm;
+    //  //prob = topK / (oneNorm + DEFAULT_BUCKET_SIZE * eps);
+    //}
 
     int take[ITEMS_PER_THREAD];
     int indices[ITEMS_PER_THREAD];
