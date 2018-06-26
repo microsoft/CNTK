@@ -759,7 +759,25 @@ public:
 public:
     void ForwardProp(const FrameRange& fr) override
     {
+#define _PERF_CONV 0
+#if _PERF_CONV
+        auto duration_conv = std::chrono::duration<float>(0);
+        auto duration_size = std::chrono::duration<float>(0);
+
+        auto duration_size_pre = std::chrono::duration<float>(0);
+        auto duration_size_attr = std::chrono::duration<float>(0);
+        auto duration_size_value = std::chrono::duration<float>(0);
+        auto duration_size_tensor = std::chrono::duration<float>(0);
+
+        auto conv_start = std::chrono::system_clock::now();
+#endif
         Base::ForwardProp(fr);
+#if _PERF_CONV
+        duration_conv += (std::chrono::system_clock::now() - conv_start);
+
+        auto size_start = std::chrono::system_clock::now();
+        auto size_pre_start = std::chrono::system_clock::now();
+#endif
 
         const size_t inputOperandIdx = InputIndices::InputOperandIdx;
         const size_t inputSeqAxisDimIdx = InputIndices::InputSeqAxisDimIdx;
@@ -768,9 +786,17 @@ public:
         auto& inputSeqAxisDimValue = Input(inputSeqAxisDimIdx)->Value();
         auto& outputSeqAxisDimValue = *m_outputsValue[outputSeqAxisDimIdx];
         outputSeqAxisDimValue.SetValue(inputSeqAxisDimValue);
-
+#if _PERF_CONV
+        duration_size_pre += (std::chrono::system_clock::now() - size_pre_start);
+#endif
         if (!m_transpose)
         {
+#if _PERF_CONV
+            auto size_attr_start = std::chrono::system_clock::now();
+#endif
+            // TODO: add shape check here. 
+            // TODO: add matrix storage assumption check here (dense vs sparse etc).
+
             // Same computing logic in ConvolveGeometry.
             // Rewritten here to avoid constructing TensorShape parameters, and avoid converting from Matrix to TensorShape and back.
             size_t kernelShape_i = m_kernelShape[m_seqAxisIdx];
@@ -780,7 +806,10 @@ public:
             size_t lo = m_lowerPad[m_seqAxisIdx];
             size_t hi = m_upperPad[m_seqAxisIdx];
             size_t effectiveKernelShape = (kernelShape_i - 1) * dil + 1;
-
+#if _PERF_CONV
+            duration_size_attr += (std::chrono::system_clock::now() - size_attr_start);
+            auto size_value_start = std::chrono::system_clock::now();
+#endif
             if (autoPadCur)
             {
                 outputSeqAxisDimValue += (ElemType) dil * (kernelShape_i - 1);
@@ -790,8 +819,15 @@ public:
                 outputSeqAxisDimValue += (ElemType) lo + hi;
             }
 
-            outputSeqAxisDimValue = (outputSeqAxisDimValue - (ElemType) effectiveKernelShape) / (ElemType) delta + (ElemType) 1;
-
+            //outputSeqAxisDimValue = (outputSeqAxisDimValue - (ElemType) effectiveKernelShape) / (ElemType) delta + (ElemType) 1;
+            // test theory
+            outputSeqAxisDimValue -= (ElemType) effectiveKernelShape;
+            outputSeqAxisDimValue /= (ElemType) delta;
+            outputSeqAxisDimValue += 1;
+#if _PERF_CONV
+            duration_size_value += (std::chrono::system_clock::now() - size_value_start);
+            auto size_tensor_start = std::chrono::system_clock::now();
+#endif
             TensorShape outputSeqAxisDimTensorShape{outputSeqAxisDimValue.GetNumRows(), outputSeqAxisDimValue.GetNumCols()};
             if (outputSeqAxisDimTensorShape.GetDim(0) != 1)
             {
@@ -802,12 +838,22 @@ public:
             TensorView<ElemType> outputSeqAxisDimTensorView = TensorView<ElemType>(
                 std::make_shared<Matrix<ElemType>>(outputSeqAxisDimValue.AsReference()), outputSeqAxisDimTensorShape);
             outputSeqAxisDimTensorView.DoUnaryOpOf(0, outputSeqAxisDimTensorView, 1, opFloor, opSum);
+#if _PERF_CONV
+            duration_size_tensor += (std::chrono::system_clock::now() - size_tensor_start);
+#endif
         }
         else
         {
             InvalidArgument("%ls %ls convolution over sequence axis currently does not support transpose. ",
                 NodeName().c_str(), OperationName().c_str());
         }
+#if _PERF_CONV
+        duration_size += std::chrono::system_clock::now() - size_start;
+
+        fprintf(stderr, "forward convolution: %07fs, seq size: %07fs\nPre: %09fs, attr: %09fs, val: %09fs, tensor: %09fs\n", 
+            duration_conv.count(), duration_size.count(),
+            duration_size_pre.count(), duration_size_attr.count(), duration_size_value.count(), duration_size_tensor.count());
+#endif
     }
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
