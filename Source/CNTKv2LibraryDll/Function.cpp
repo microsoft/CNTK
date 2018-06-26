@@ -2037,8 +2037,8 @@ namespace CNTK
                 LogicError("DepthToSpace: Number of channels in the operand (%zu) must be divisible by (blocksize x blocksize), i.e., (%zu x %zu).", inputShape[2], blockSize, blockSize);
         }
 
-        FunctionPtr inputView = Reshape(inputPlaceholder, { blockSize, blockSize, NDShape::InferredDimension }, Axis(2), Axis(3));
-        std::vector<Axis> axisShufflePermutation({ Axis(2), Axis(0), Axis(3), Axis(1), Axis(4) });
+        FunctionPtr inputView = Reshape(inputPlaceholder, { NDShape::InferredDimension, blockSize, blockSize }, Axis(2), Axis(3));
+        std::vector<Axis> axisShufflePermutation({ Axis(3), Axis(0), Axis(4), Axis(1), Axis(2) });
         auto shuffleOut = Transpose(inputView, axisShufflePermutation);
         auto merge23Out = Reshape(shuffleOut, { NDShape::InferredDimension }, Axis(2), Axis(4));
         auto merge01Out = Reshape(merge23Out, { NDShape::InferredDimension }, Axis(0), Axis(2));
@@ -2064,7 +2064,7 @@ namespace CNTK
 
         FunctionPtr reshape01out = Reshape(inputPlaceholder, { blockSize, NDShape::InferredDimension }, Axis(0), Axis(1));
         FunctionPtr reshape23out = Reshape(reshape01out, { blockSize, NDShape::InferredDimension }, Axis(2), Axis(3));
-        std::vector<Axis> axisShufflePermutation({ Axis(1), Axis(3), Axis(0), Axis(2), Axis(4) });
+        std::vector<Axis> axisShufflePermutation({ Axis(1), Axis(3), Axis(4), Axis(0), Axis(2) });
         auto shuffleOut = Transpose(reshape23out, axisShufflePermutation);
         auto merge234Out = Reshape(shuffleOut, { NDShape::InferredDimension }, Axis(2), Axis::EndStaticAxis());
 

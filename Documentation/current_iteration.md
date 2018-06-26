@@ -19,6 +19,10 @@ The comparison numbers for this single node are as follows:
 | Speedup/savings	Approx.  | 30%	Approx.  | 65-75%	Approx.  | 87% |
 
 ## Operators
+### depth_to_space and space_to_depth
+There is a breaking change in the **depth_to_space** and **space_to_depth** operators. These have been updated to match ONNX specification, specifically
+the permutation for how the depth dimension is placed as blocks in the spatial dimensions, and vice-versa, has been changed. Please refer to the updated doc
+examples for these two ops to see the change.
 
 
 ## Bug fixes
