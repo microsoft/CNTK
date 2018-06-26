@@ -11,6 +11,6 @@
 //const std::size_t DEFAULT_PACK_THRESHOLD_SIZE_IN_KB = 32;
 const std::size_t DEFAULT_PACK_THRESHOLD_SIZE_IN_KB = 32 * 1024;
 const std::size_t DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES = DEFAULT_PACK_THRESHOLD_SIZE_IN_KB * 1024;
-const std::size_t DEFAULT_BUCKET_SIZE = 512; // If you change this -> change the preprocessor instruction in MatrixQuantizer_kernel.cu as well!
+const std::size_t DEFAULT_BUCKET_SIZE = 2048; // If you change this -> change the preprocessor instruction in MatrixQuantizer_kernel.cu as well!
 
 #endif
