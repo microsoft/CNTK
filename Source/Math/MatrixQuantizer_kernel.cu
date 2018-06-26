@@ -327,8 +327,8 @@ __device__ void _unpackValueAndPosition(unsigned int &integerRepresentation, uns
 //caller: griddim and blockdim should be both 1d
 //total thread number is: totalNumQWordsAlMatrix = numCols() * numQWordsPerCol
 //called to quantize a GPU matrix
-#define WARP_SIZE 128 // Best with that value!
 #define ITEMS_PER_THREAD 4 // TODO: As arguemnt ?!?
+#define WARP_SIZE (DEFAULT_BUCKET_SIZE / ITEMS_PER_THREAD) // Best with that value!
 template <class ElemType>
 __global__ void _selectK(
     const ElemType* us,
