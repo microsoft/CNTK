@@ -66,6 +66,7 @@ namespace CNTK
         {PrimitiveOpType::LatticeSequenceWithSoftmax, L"LatticeSequenceWithSoftmax" },
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
+		{PrimitiveOpType::TranscriptionError, L"TranscriptionError"},
         {PrimitiveOpType::ForwardBackward, L"ForwardBackward" },
         {PrimitiveOpType::LabelsToGraph, L"LabelsToGraph" },
         {PrimitiveOpType::PastValue, L"PastValue"},
@@ -838,7 +839,8 @@ namespace CNTK
         // Version 19: Add TopK
         // Version 20: Add squeeze, expand dims, zeros like, ones like
         // Version 21: Add EyeLikeOp
-        static const size_t s_serializationVersion = 21;
+        // Version 22: Add TranscriptionError
+        static const size_t s_serializationVersion = 22;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

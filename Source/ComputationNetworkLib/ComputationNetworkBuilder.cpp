@@ -446,6 +446,12 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::EditD
 }
 
 template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::TranscriptionError(const ComputationNodePtr a, const ComputationNodePtr b, bool squashInputs, vector<size_t> tokensToIgnore, const std::wstring nodeName)
+{
+	return net.AddNodeToNetAndAttachInputs(New<TranscriptionErrorNode<ElemType>>(net.GetDeviceId(), nodeName, squashInputs, tokensToIgnore), { a, b });
+}
+
+template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::StopGradient(const ComputationNodePtr a, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<StopGradientNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
