@@ -752,6 +752,12 @@ namespace CNTK
                 case PrimitiveOpType::Sin:
                     ASSIGN_NEW_NODE(SinNode, network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::Atan:
+                    ASSIGN_NEW_NODE(AtanNode, network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Tan:
+                    ASSIGN_NEW_NODE(TanNode, network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::Cosh:
                     ASSIGN_NEW_NODE(CoshNode, network->GetDeviceId(), internalNodeName);
                     break;

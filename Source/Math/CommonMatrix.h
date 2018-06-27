@@ -95,7 +95,8 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opAtanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opAcos, opAsin, opCosh, opSinh, opAsinh, opExponentialLinearUnit, opStableSigmoid, opStraightThrough,
+    opSigmoid, opTanh, opAtanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier,
+    opCosine, opSin, opTan, opAcos, opAsin, opAtan, opCosh, opSinh, opAsinh, opExponentialLinearUnit, opStableSigmoid, opStraightThrough,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative, opStableSigmoidDerivative, opStraightThroughDerivative,
     // binary
@@ -105,8 +106,8 @@ enum ElementWiseOperator
     opAnd, opOr, opXor, opMaskNegative,
     opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
     opElementwiseProductWithLinearRectifierDerivativeFromOutput, opElementwiseProductWithLogDerivativeFromOutput,
-    opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative,
-    opElementwiseProductWithAcosDerivative, opElementwiseProductWithAsinDerivative,
+    opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative, opElementwiseProductWithTanDerivative,
+    opElementwiseProductWithAcosDerivative, opElementwiseProductWithAsinDerivative, opElementwiseProductWithAtanDerivative,
     opElementwiseProductWithCoshDerivative, opElementwiseProductWithSinhDerivative,
     opElementwiseProductWithAtanhDerivative, opElementwiseProductWithAsinhDerivative,
     opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative,
@@ -148,8 +149,10 @@ enum ElementWiseOperator
     Macro(LinearRectifier);       \
     Macro(Cosine);                \
     Macro(Sin);                   \
+    Macro(Tan);                   \
     Macro(Acos);                  \
     Macro(Asin);                  \
+    Macro(Atan);                  \
     Macro(Cosh);                  \
     Macro(Sinh);                  \
     Macro(Asinh);                 \
@@ -185,8 +188,10 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithLogDerivativeFromOutput);                    \
     Macro(ElementwiseProductWithCosDerivative);                              \
     Macro(ElementwiseProductWithSinDerivative);                              \
+    Macro(ElementwiseProductWithTanDerivative);                              \
     Macro(ElementwiseProductWithAcosDerivative);                             \
     Macro(ElementwiseProductWithAsinDerivative);                             \
+    Macro(ElementwiseProductWithAtanDerivative);                             \
     Macro(ElementwiseProductWithCoshDerivative);                             \
     Macro(ElementwiseProductWithSinhDerivative);                             \
     Macro(ElementwiseProductWithAsinhDerivative);                            \

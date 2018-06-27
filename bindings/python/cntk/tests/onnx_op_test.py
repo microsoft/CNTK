@@ -1210,16 +1210,30 @@ def test_Sin(tmpdir, dtype):
     model = C.sin(data)
     verify_no_input(model, tmpdir, 'Sin_0')
 
+# Tan
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Tan(tmpdir, dtype):
+    data = np.asarray([0.0, -0.5, 0.5, 10, 20], dtype)
+    model = C.tan(data)
+    verify_no_input(model, tmpdir, 'Tan_0')
+
 # Acos
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_Arccos(tmpdir, dtype):
+def test_Acos(tmpdir, dtype):
     data = np.asarray([0.0, -0.5, 0.5, 1, -1], dtype)
     model = C.acos(data)
     verify_no_input(model, tmpdir, 'Acos_0')
 
 # Asin
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_Sin(tmpdir, dtype):
+def test_Asin(tmpdir, dtype):
     data = np.asarray([0.0, -0.5, 0.5, 1, -1], dtype)
     model = C.asin(data)
     verify_no_input(model, tmpdir, 'Asin_0')
+
+# Atan
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Atan(tmpdir, dtype):
+    data = np.asarray([0.0, -0.5, 0.5, 1, -1], dtype)
+    model = C.atan(data)
+    verify_no_input(model, tmpdir, 'Atan_0')

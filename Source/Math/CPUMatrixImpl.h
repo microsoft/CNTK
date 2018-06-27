@@ -87,7 +87,7 @@ enum class MatrixTranspose : char
 enum class SymMatrixType : char
 {
     Up = 'U',          // symmetric matrix is stored in the upper part
-    Low = 'L',         // symmetric matrix is stored in thelower part
+    Low = 'L',         // symmetric matrix is stored in the lower part
     Full = 'F',        // full populated
     NotSymmetric = 'N' // not a symmetric matrix
 };
@@ -2782,7 +2782,7 @@ template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNegativeSineOf(const CPUMatrix<ElemType>& a)
 {
     if (a.IsEmpty())
-        LogicError("AssignCosineOf: Matrix a is empty.");
+        LogicError("AssignNegativeSineOf: Matrix a is empty.");
 
     auto& us = *this;
     if (this != &a)
@@ -2793,6 +2793,33 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNegativeSineOf(const CPUMatrix<E
     {
         const ElemType v = a(i, j);
         us(i, j) = -sin(v);
+    }
+
+    return *this;
+}
+
+//[this]=tan([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTan()
+{
+    return AssignTanOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTanOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignTanOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord(i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = tan(v);
     }
 
     return *this;
@@ -2847,6 +2874,33 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAsinOf(const CPUMatrix<ElemType>
     {
         const ElemType v = a(i, j);
         us(i, j) = asin(v);
+    }
+
+    return *this;
+}
+
+//[this]=atan([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAtan()
+{
+    return AssignAtanOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAtanOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAtanOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord(i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = atan(v);
     }
 
     return *this;

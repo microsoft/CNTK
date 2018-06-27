@@ -155,6 +155,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
          if (EqualInsensitive(nodeType, OperationNameOf(AbsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AcosNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AsinNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AtanNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AsinhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AtanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
@@ -239,6 +240,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(SquareErrorNode), L"SE")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SumColumnElementsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SumElementsNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(TanNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TimesNode))) ret = true;
     //else if (EqualInsensitive(nodeType, OperationNameOf(TransposeDimensionsNode))) ret = true; // not supported from NDL, use Transpose()
