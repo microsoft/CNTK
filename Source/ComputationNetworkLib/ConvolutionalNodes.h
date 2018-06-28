@@ -965,8 +965,9 @@ public:
         // TODO: optimized version of Unpack Forward + Base Forward + ToSequence Forward should happen here.
         
         /// Unpack input operand
+        const size_t inputIdx = 1;
 
-        auto inputMBLayout = InputRef(1).GetMBLayout();
+        auto inputMBLayout = InputRef(inputIdx).GetMBLayout();
         if (inputMBLayout->HasSequenceBeyondBegin() || inputMBLayout->HasSequenceBeyondEnd())
             LogicError("%ls: %s truncated sequence not supported.", Base::NodeDescription().c_str(), typeid(*this).name());
 
@@ -981,15 +982,31 @@ public:
         // UpdateFunctionValuesSize();
         UpdateFunctionValuesSize(*m_unpackedOperandData, m_unpackedOperandShape, m_unpackedpMBLayout);
 
-        auto unpackedMatrixNumRows = m_unpackedOperandData->GetNumRows();
-        auto unpackedMatrixNumCols = m_unpackedOperandData->GetNumCols();
+        //auto unpackedMatrixNumRows = m_unpackedOperandData->GetNumRows();
+        //auto unpackedMatrixNumCols = m_unpackedOperandData->GetNumCols();
         ElemType paddingValue = 0.0;
-        auto unpackedInput = ComputationNode<ElemType>::Unpack(InputRef(1).GetSampleLayout(), InputRef(1).Value(), InputRef(1).GetMBLayout(), 
+        TensorView<ElemType> unpackedInput = ComputationNode<ElemType>::Unpack(InputRef(1).GetSampleLayout(), InputRef(1).Value(), InputRef(1).GetMBLayout(), 
             m_unpackedOperandData, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ false, &paddingValue);
-        if (unpackedInput.GetSOBPtr() != m_unpackedOperandData)
-            m_unpackedOperandData->AssignValuesOf(*unpackedInput.GetSOBPtr());
+        //if (unpackedInput.GetSOBPtr() != m_unpackedOperandData)
+        //    m_unpackedOperandData->AssignValuesOf(*unpackedInput.GetSOBPtr());
+        //m_unpackedOperandData->Reshape(unpackedMatrixNumRows, unpackedMatrixNumCols);
 
-        m_unpackedOperandData->Reshape(unpackedMatrixNumRows, unpackedMatrixNumCols);
+        TensorShape transposedUnpackedOperandShape = m_unpackedOperandShape;
+        size_t transposedUnpackedOperandShapeRank = transposedUnpackedOperandShape.GetRank();
+        transposedUnpackedOperandShape.AppendInPlace(transposedUnpackedOperandShapeRank++, m_unpackedpMBLayout->GetNumParallelSequences());
+        transposedUnpackedOperandShape.AppendInPlace(transposedUnpackedOperandShapeRank++, m_unpackedpMBLayout->GetNumTimeSteps());
+        const size_t inputRank = GetInputSampleLayout(inputIdx).GetRank();
+        transposedUnpackedOperandShape.SwapDimsInPlace(inputRank - 1, inputRank);
+
+        UpdateFunctionValuesSize(*m_transposedUnpackedOperandData, m_unpackedOperandShape, m_unpackedpMBLayout);
+
+        unpackedInput = unpackedInput.Reshaped(transposedUnpackedOperandShape);
+        TensorView<ElemType> transposedUnpackedInput(m_transposedUnpackedOperandData, transposedUnpackedOperandShape.GetDims());
+        transposedUnpackedInput.AssignCopyOf(unpackedInput);
+
+
+        // transpose
+        // auto transposedUnpackedOperandData = TensorView<ElemType>(m_unpackedOperandData, m_unpackedOperandShape);
 
         // Get original sequence lengths
         auto numSequences = inputMBLayout->GetNumSequences();
@@ -1014,17 +1031,18 @@ public:
 
         Matrix<ElemType> sliceOutputValue = m_unpackedConvResultData->AsReference();
         const Matrix<ElemType>& input0 = InputRef(0).ValueAsMatrix();
-        Matrix<ElemType> sliceInput1Value = m_unpackedOperandData->AsReference();
+        Matrix<ElemType> sliceInput1Value = m_transposedUnpackedOperandData->AsReference();
 
         m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward);
 
         /// tosequence sliceOutputValue
+        m_transposedUnpackedConvResultShape.AppendInPlace(m_transposedUnpackedConvResultShape.GetRank(), numSequences);
         auto unpackedConvResultDataNDArrayView = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(),
             ::CNTK::AsDeviceDescriptor(m_unpackedConvResultData->GetDeviceId()),
             ::CNTK::AsStorageFormat(m_unpackedConvResultData->GetFormat()),
-            ::CNTK::AsNDShape(m_unpackedConvResultShape),
+            ::CNTK::AsNDShape(m_transposedUnpackedConvResultShape),
             /*readOnly =*/ true,
-            new TensorView<ElemType>(m_unpackedConvResultData, m_unpackedConvResultShape));
+            new TensorView<ElemType>(m_unpackedConvResultData, m_transposedUnpackedConvResultShape));
 
         auto convResultDataValue = ::CNTK::MakeSharedObject<::CNTK::Value>(unpackedConvResultDataNDArrayView, ::CNTK::CreateMask(convResultSequenceLengths));
         auto dummyVar = ::CNTK::InputVariable(::CNTK::AsNDShape(GetSampleLayout()), this->IsValueSparse(), ::CNTK::AsDataType<ElemType>());
@@ -1118,6 +1136,7 @@ public:
         m_tempMask = std::make_shared<Matrix<char>>(Base::m_deviceId); // why? => Matrix<char> not in matrixPool ... 
         const size_t estimatedNumElements = InputRef(1).GetMBLayout()->GetNumTimeSteps() * InputRef(1).GetSampleLayout().GetNumElements();
         RequestMatrixFromPool(m_unpackedOperandData, matrixPool, estimatedNumElements, true);
+        RequestMatrixFromPool(m_transposedUnpackedOperandData, matrixPool, estimatedNumElements, true);
         RequestMatrixFromPool(m_unpackedConvResultData, matrixPool, estimatedNumElements, true);
         RequestMatrixFromPool(m_tempUnpackedData, matrixPool, estimatedNumElements, true);
         RequestMatrixFromPool(m_tempPackedGradientData, matrixPool, estimatedNumElements, true);
@@ -1139,6 +1158,7 @@ public:
         ReleaseMatrixToPool(m_tempGatherIndices, matrixPool);
         ReleaseMatrixToPool(m_tempScatterIndices, matrixPool);
         ReleaseMatrixToPool(m_unpackedOperandData, matrixPool);
+        ReleaseMatrixToPool(m_transposedUnpackedOperandData, matrixPool);
         ReleaseMatrixToPool(m_unpackedConvResultData, matrixPool);
         ReleaseMatrixToPool(m_tempUnpackedData, matrixPool);
         ReleaseMatrixToPool(m_tempPackedGradientData, matrixPool);
@@ -1220,7 +1240,7 @@ private:
         return outputSequenceLengths;
     }
 
-    TensorShape EmulateInputShape(bool isFinalValidationPass, size_t& emulatedAxisIdx)
+    TensorShape EmulateInputShape(bool isFinalValidationPass, size_t& emulatedAxisIdx, bool transposed = true)
     {
         const size_t inputIdx = GetExpectedNumInputs() - 1;
         TensorShape inputShape = GetInputSampleLayout(inputIdx);
@@ -1235,20 +1255,41 @@ private:
             if (!inputMBLayout)
                 InvalidArgument("%ls %ls operation can only operate on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
             if (inputMBLayout->GetNumTimeSteps() == 0)
-                LogicError("%ls %ls operation's final validation pass must not be invoked before the input MBLayout has been initialized and populated.", NodeName().c_str(), OperationName().c_str());
+                LogicError("%ls %ls operation's final validation pass must not be invoked before the input MBLayout has been initialized and populated.", 
+                    NodeName().c_str(), OperationName().c_str());
 
             emulatedInputShape.AppendInPlace(inputRank, inputMBLayout->GetNumTimeSteps());
         }
-        emulatedInputShape.SwapDimsInPlace(inputRank - 1, inputRank);
+        if (transposed)
+            emulatedInputShape.SwapDimsInPlace(inputRank - 1, inputRank);
+        // BUGGY here. Swap seems wrong as m_strides is incorrect. At least for this case. 
+        // Update: it seems the m_strides unmatching is intended. The problem seems we must append dynamic axes first and then do swaps. 
+        //SmallVector<size_t> dims = emulatedInputShape.GetDims();
+        //std::swap(dims[inputRank - 1], dims[inputRank]);
+        //emulatedInputShape = TensorShape(dims);
         
         emulatedAxisIdx = inputRank - 1;
         return emulatedInputShape;
     }
 
-    TensorShape EmulateInputShape(bool isFinalValidationPass)
+    TensorShape EmulateInputShape(bool isFinalValidationPass, bool transposed = true)
     {
         size_t unusedEmulatedAxisIdx = 0;
-        return EmulateInputShape(isFinalValidationPass, unusedEmulatedAxisIdx);
+        return EmulateInputShape(isFinalValidationPass, unusedEmulatedAxisIdx, transposed);
+    }
+
+    TensorShape GetTransposedShapeFromEmulatedOutputShape(const TensorShape& outputShape, size_t emulatedAxisIdx)
+    {
+        if (emulatedAxisIdx + 1 >= outputShape.GetRank())
+            RuntimeError("%ls %ls operation shouldn't have transpose index (%d) >= rank (%d). ",
+                NodeName().c_str(), OperationName().c_str(), emulatedAxisIdx + 1, outputShape.GetRank());
+        //TensorShape transposedOutputShape = outputShape;
+        //transposedOutputShape.SwapDimsInPlace(emulatedAxisIdx, emulatedAxisIdx + 1);
+        SmallVector<size_t> dims = outputShape.GetDims();
+        std::swap(dims[emulatedAxisIdx], dims[emulatedAxisIdx + 1]);
+        TensorShape transposedOutputShape(dims);
+
+        return transposedOutputShape;
     }
 
     TensorShape GetOutputShapeFromEmulatedOutputShape(const TensorShape& outputShape, size_t emulatedAxisIdx)
@@ -1262,6 +1303,7 @@ private:
             if (i != emulatedAxisIdx)
                 dims.push_back(outputShape[i]);
         }
+        // TODO : here might have bug as I'm not sure if strides are set correctly for this shape. 
         return dims;
     }
 
@@ -1273,7 +1315,7 @@ private:
             m_unpackedpMBLayout = std::make_shared<MBLayout>();
             m_unpackedpMBLayout->SetUniqueAxisName(Base::DefaultNoSequenceAxisName);
         }
-        m_unpackedOperandShape = EmulateInputShape(isFinalValidationPass);
+        m_unpackedOperandShape = EmulateInputShape(isFinalValidationPass, false);
     }
 
     void ValidateConvolution(bool isFinalValidationPass)
@@ -1300,8 +1342,9 @@ private:
 
         // Update member with computed emulated output shape. 
         m_unpackedConvResultShape = GetSampleLayout();
+        m_transposedUnpackedConvResultShape = GetTransposedShapeFromEmulatedOutputShape(m_unpackedConvResultShape, emulatedAxisIdx);
         // The outputShape contains the emulated static axis for sequence axis. We need to remove that as now we convert back to sequence. 
-        TensorShape outputShape = GetOutputShapeFromEmulatedOutputShape(GetSampleLayout(), emulatedAxisIdx);
+        TensorShape outputShape = GetOutputShapeFromEmulatedOutputShape(m_unpackedConvResultShape, emulatedAxisIdx);
         Base::SetDims(outputShape, HasMBLayout());
 
         if (checkUserDefinedOutputShape)
@@ -1333,8 +1376,10 @@ private:
     size_t m_seqAxisIdx;
     TensorShape m_unpackedOperandShape;
     TensorShape m_unpackedConvResultShape;
+    TensorShape m_transposedUnpackedConvResultShape;
     MBLayoutPtr m_unpackedpMBLayout;
     shared_ptr<Matrix<ElemType>> m_unpackedOperandData;
+    shared_ptr<Matrix<ElemType>> m_transposedUnpackedOperandData;
     shared_ptr<Matrix<ElemType>> m_unpackedConvResultData;
 
     // shared by unpack and tosequence
