@@ -2338,11 +2338,6 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
             // we first take the sum in log domain to avoid numerical issues
             auto &dengammas = result; // result is denominator gammas
             mmierrorsignal(parallelstate, minlogpp, origlogpps, abcs, softalignstates, logpps, hset, thisedgealignments, dengammas);
-            /*
-              for (size_t j = 0; j < (dengammas).cols(); j++)
-                        for (size_t i = 0; i < (dengammas).rows(); i++)
-                            fprintf(stderr, "i = %d, j = %d, dengammas(i, j) = %f, \n", int(i), int(j), float(dengammas(i, j)));
-              */                
 
             return totalfwscore / numframes; // return value is av. posterior
         }
