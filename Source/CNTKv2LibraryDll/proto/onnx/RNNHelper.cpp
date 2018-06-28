@@ -3,14 +3,9 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-#include "RNNHelper.h"
-
-// both CNTK and Lotus define make_unique causing redefined conflict in linux build.
-// use this flag to avoid the conflict.
-#define CNTK_make_unique_already_defined = 1
-
 #include "proto/onnx/core/graph/model.h"
 
+#include "RNNHelper.h"
 #include "Operators.h"
 #include "Utils.h"
 
@@ -448,7 +443,7 @@ Variable GetInitialStateVariable(const std::vector<Variable> &inputs, int numDir
     return initialVariable;
 }
 
-FunctionPtr CreateLSTM(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
@@ -532,7 +527,7 @@ FunctionPtr CreateLSTM(const ONNXIR::Node *node, const std::vector<Variable> &in
     }
 }
 
-FunctionPtr CreateGRU(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
@@ -591,7 +586,7 @@ FunctionPtr CreateGRU(const ONNXIR::Node *node, const std::vector<Variable> &inp
     }
 }
 
-FunctionPtr CreateRNN(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;

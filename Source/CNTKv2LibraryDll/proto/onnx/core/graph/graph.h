@@ -7,18 +7,19 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "proto/onnx/core/common/common.h"
+#include "core/common/CommonSTD.h"
 
 // #include "gsl/pointers"
 #include "gsl/gsl_util"
 
-#include "proto/onnx/core/common/status.h"
-#include "proto/onnx/core/common/const_pointer_container.h"
-#include "proto/onnx/core/graph/constants.h"
-#include "proto/onnx/core/graph/graph_nodes.h"
-#include "proto/onnx/onnx/defs/schema.h"
-#include "proto/onnx/core/graph/utils.h"
-#include "proto/onnx/onnx/onnx_pb.h"
+#include "core/common/common.h"
+#include "core/common/status.h"
+#include "core/common/const_pointer_container.h"
+#include "core/graph/constants.h"
+#include "core/graph/graph_nodes.h"
+#include "onnx/defs/schema.h"
+#include "core/graph/utils.h"
+#include "onnx/onnx_pb.h"
 
 using namespace onnx;
 
@@ -27,25 +28,23 @@ using namespace onnx;
 // converting to std::string, but requires conversion to std::map<std::string, foo, std::less<>>
 // instead of std::unordered_map<std::string, foo, [std::less<foo>]>.
 
-typedef std::unordered_map<std::string, AttributeProto> NodeAttributes;
+using NodeAttributes = std::unordered_map<std::string, AttributeProto>;
 
-namespace ONNXIR
-{
-typedef size_t NodeIndex;
-typedef int64_t Version;
-typedef ValueInfoProto NodeArgInfo;
-typedef std::unordered_map<std::string, const TensorProto*> InitializedTensorSet;
-typedef std::unordered_map<std::string, TypeProto> ArgNameToTypeMap;
-typedef const std::string& ProviderType;
+namespace LotusIR {
+using NodeIndex = size_t;
+using Version = int64_t;
+using NodeArgInfo = ValueInfoProto;
+using InitializedTensorSet = std::unordered_map<std::string, const TensorProto*>;
+using ArgNameToTypeMap = std::unordered_map<std::string, TypeProto>;
+using ProviderType = const std::string&;
 
 class Graph;
 class GraphBase;
 class Node;
 class OpSignature;
-class LotusOpSchemaRegistry;
+class ILotusOpSchemaCollection;
 
-namespace Test
-{
+namespace Test {
 struct NodeTestHelper;
 }
 
@@ -65,335 +64,316 @@ struct NodeTestHelper;
 // will fail. Because shape is located in a TypeProto.
 // Thoughts?
 //
-class NodeArg
-{
-public:
-    // Constructor by specifying node arg name and type&shape which is
-    // optional. This is called when loading a <Graph> from <GraphProto>
-    // normally.
-    NodeArg(const std::string& name,
-            const TypeProto* p_arg_type);
+class NodeArg {
+ public:
+  // Constructor by specifying node arg name and type&shape which is
+  // optional. This is called when loading a <Graph> from <GraphProto>
+  // normally.
+  NodeArg(const std::string& name,
+          const TypeProto* p_arg_type);
 
-    NodeArg(NodeArg&& other) = default;
+  NodeArg(NodeArg&& other) = default;
 
-    // Get node arg name.
-    const std::string& Name() const noexcept;
+  // Get node arg name.
+  const std::string& Name() const noexcept;
 
-    // Get node arg type.
-    const DataType Type() const noexcept;
-    const TypeProto* TypeAsProto() const noexcept;
+  // Get node arg type.
+  DataType Type() const noexcept;
+  const TypeProto* TypeAsProto() const noexcept;
 
-    // Get node arg shape.
-    // Return null pointer if there's no shape specified.
-    const TensorShapeProto* Shape() const;
+  // Get node arg shape.
+  // Return null pointer if there's no shape specified.
+  const TensorShapeProto* Shape() const;
 
-    // Set node arg shape.
-    // Shape could only be set after setting type since shape information
-    // now is part of TypeProto.
-    void SetShape(const TensorShapeProto& shape);
+  // Set node arg shape.
+  // Shape could only be set after setting type since shape information
+  // now is part of TypeProto.
+  void SetShape(const TensorShapeProto& shape);
 
-    // Get node arg info proto.
-    const NodeArgInfo& ToProto() const noexcept
-    {
-        return node_arg_info_;
-    }
+  // Get node arg info proto.
+  const NodeArgInfo& ToProto() const noexcept { return node_arg_info_; }
 
-    // Indicates whether <*this> node arg exists or not.
-    // Optional inputs are allowed in ONNX. Empty arg name represents
-    // a non-existing input argument.
-    bool Exists() const noexcept;
+  // Indicates whether <*this> node arg exists or not.
+  // Optional inputs are allowed in ONNX. Empty arg name represents
+  // a non-existing input argument.
+  bool Exists() const noexcept;
 
-private:
-    LOTUS_DISALLOW_COPY_AND_ASSIGN(NodeArg);
-    friend class Graph;
+ private:
+  LOTUS_DISALLOW_COPY_AND_ASSIGN(NodeArg);
+  friend class Graph;
 
-    void SetType(DataType p_type);
-    void SetType(const TypeProto& type_proto);
+  void SetType(DataType p_type);
+  void SetType(const TypeProto& type_proto);
 
-    NodeArg& operator=(NodeArg&& other) = delete;
+  NodeArg& operator=(NodeArg&& other) = delete;
 
-    // Node arg PType.
-    DataType type_;
+  // Node arg PType.
+  DataType type_;
 
-    // Node arg name, type and shape.
-    NodeArgInfo node_arg_info_;
+  // Node arg name, type and shape.
+  NodeArgInfo node_arg_info_;
 
-    // Flag indicates whether <*this> node arg exists or not.
-    bool exists_;
+  // Flag indicates whether <*this> node arg exists or not.
+  bool exists_;
 };
 
 // A node representation class.
-class Node
-{
-public:
-    ~Node() = default;
+class Node {
+ public:
+  ~Node() = default;
 
-    // An edge end. It could be input or output edge end of a node.
-    // For node's input edge end, it's the source end, as the destination
-    // end is the node itself.
-    // For node's ouput edge end, it's the destination end, as the source
-    // end is the node itself.
-    class EdgeEnd
-    {
-    public:
-        // Constructor.
-        // An EdgeEnd contains a Node and NodeArg.
-        // TODO: Can these values ever be null?
-        EdgeEnd(const Node& node, const NodeArg& node_arg) noexcept;
+  // An edge end. It could be input or output edge end of a node.
+  // For node's input edge end, it's the source end, as the destination
+  // end is the node itself.
+  // For node's ouput edge end, it's the destination end, as the source
+  // end is the node itself.
+  class EdgeEnd {
+   public:
+    // Constructor.
+    // An EdgeEnd contains a Node and NodeArg.
+    // TODO: Can these values ever be null?
+    EdgeEnd(const Node& node, const NodeArg& node_arg) noexcept;
 
-        // Get the <Node*> that this edge end refers to.
-        const Node& GetNode() const noexcept;
+    // Get the <Node*> that this edge end refers to.
+    const Node& GetNode() const noexcept;
 
-        // Get the <NodeArg*> that this edge end refers to.
-        const NodeArg& GetNodeArg() const noexcept;
+    // Get the <NodeArg*> that this edge end refers to.
+    const NodeArg& GetNodeArg() const noexcept;
 
-    private:
-        const Node* node_;
-        const NodeArg* node_arg_;
-    };
+   private:
+    const Node* node_;
+    const NodeArg* node_arg_;
+  };
 
-    // Get node index.
-    NodeIndex Index() const noexcept;
+  // Get node index.
+  NodeIndex Index() const noexcept;
 
-    // Get node name.
-    const std::string& Name() const noexcept;
+  // Get node name.
+  const std::string& Name() const noexcept;
 
-    // Get node operator type.
-    const std::string& OpType() const noexcept;
+  // Get node operator type.
+  const std::string& OpType() const noexcept;
 
-    // Get the domain of the OperatorSet that specifies the operator named by <op_type_>.
-    const std::string& Domain() const noexcept;
+  // Get the domain of the OperatorSet that specifies the operator named by <op_type_>.
+  const std::string& Domain() const noexcept;
 
-    // Get the OperatorSchema this node refers to. ValidateOpType() must have been called previously.
-    // May be null in the future.
-    const OpSchema* Op() const noexcept;
+  // Get the OperatorSchema this node refers to. ValidateOpType() must have been called previously.
+  // May be null in the future.
+  const OpSchema* Op() const noexcept;
 
-    // Get node description.
-    const std::string& Description() const noexcept;
+  // Get node description.
+  const std::string& Description() const noexcept;
 
-    // read only access. requires special wrapper to apply const to the NodeArg
-    const ConstPointerContainer<std::vector<NodeArg*>> InputDefs() const noexcept
-    {
-        return ConstPointerContainer<std::vector<NodeArg*>>(definitions_.input_defs);
+  // Iterate through Input/OutputDefs() with index, note the loop early terminates with error
+  static Lotus::Common::Status ForEachWithIndex(
+      const ConstPointerContainer<std::vector<NodeArg*>>& nodeArgVec,
+      std::function<Lotus::Common::Status(const NodeArg& arg, int index)> func) {
+    for (int index = 0; index < nodeArgVec.size(); ++index) {
+      auto arg = nodeArgVec[index];
+      if (!arg->Exists())
+        continue;
+      LOTUS_RETURN_IF_ERROR(func(*arg, index));
+    }
+    return Lotus::Common::Status::OK();
+  }
+
+  // read only access. requires special wrapper to apply const to the NodeArg
+  const ConstPointerContainer<std::vector<NodeArg*>> InputDefs() const noexcept {
+    return ConstPointerContainer<std::vector<NodeArg*>>(definitions_.input_defs);
+  }
+
+  const std::vector<int>& InputArgCount() const noexcept { return definitions_.input_arg_count; }
+
+  // read only access. requires special wrapper to apply const to the NodeArg
+  const ConstPointerContainer<std::vector<NodeArg*>> OutputDefs() const noexcept {
+    return ConstPointerContainer<std::vector<NodeArg*>>(definitions_.output_defs);
+  }
+
+  using NodeConstIterator = std::set<const Node*>::const_iterator;
+
+  // Functions defined to traverse a Graph as below.
+  // Read all input nodes of <*this>.
+
+  // Beginning of input nodes. Iterator should have no nullptr values.
+  NodeConstIterator InputNodesBegin() const noexcept { return relationships_.input_nodes.cbegin(); };
+  // End of input nodes.
+  NodeConstIterator InputNodesEnd() const noexcept { return relationships_.input_nodes.cend(); }
+
+  // Beginning of output nodes. Iterator should have no nullptr values.
+  NodeConstIterator OutputNodesBegin() const noexcept { return relationships_.output_nodes.cbegin(); }
+  // End of output nodes.
+  NodeConstIterator OutputNodesEnd() const noexcept { return relationships_.output_nodes.cend(); }
+
+  const std::set<std::string>& ControlInputs() const noexcept { return relationships_.control_inputs; }
+
+  // Add a node attribute with specified attribute name and value.
+  void AddAttribute(const std::string& attr_name, const AttributeProto& value);
+
+#define ADD_ATTR_INTERFACES(TypeName)             \
+  void AddAttribute(const std::string& attr_name, \
+                    const TypeName& value);       \
+  void AddAttribute(const std::string& attr_name, \
+                    const std::vector<TypeName>& values);
+
+  ADD_ATTR_INTERFACES(int64_t)
+  ADD_ATTR_INTERFACES(float)
+  ADD_ATTR_INTERFACES(std::string)
+  ADD_ATTR_INTERFACES(TensorProto)
+  ADD_ATTR_INTERFACES(GraphProto)
+
+  // Clear specified node attribute.
+  bool ClearAttribute(const std::string& attr_name);
+
+  // Get node attributes.
+  const NodeAttributes& GetAttributes() const noexcept;
+
+  // Indicates on which we will run this node in runtime.
+  // Executor will decide which device that this node will run against
+  // and set it properly.
+  // TODO: may change the return value type to be an ENUM.
+  ProviderType GetExecutionProviderType() const noexcept;
+  void SetExecutionProviderType(ProviderType execution_provider_type);
+
+  // Get the corresponding <NodeProto>.
+  void ToProto(NodeProto& proto) const;
+
+  // iterate through all input/output defs
+  void ForEachDef(std::function<void(const LotusIR::NodeArg*, bool is_input)> func) const;
+
+  // iterate through all input defs
+  void ForEachInputDef(std::function<void(const LotusIR::NodeArg*)> func) const;
+
+  // iterate through all output defs
+  void ForEachOutputDef(std::function<void(const LotusIR::NodeArg*)> func) const;
+
+  // Replaces defs
+  void ReplaceDefs(const std::map<const LotusIR::NodeArg*, LotusIR::NodeArg*>& replacements);
+
+  // Node definitions. Really a struct but we want to prevent accidental copies.
+  class Definitions {
+   public:
+    Definitions() noexcept = default;
+
+    // Node inputs' definition.
+    std::vector<NodeArg*> input_defs;
+    // The number of inputs for each argument of the operator or function which
+    // this node refers.
+    // For example, <input_defs_> has 10 elements (inputs), and <input_arg_count_>
+    // is {4, 6}. This means that 4 elements (inputs) of <input_defs_> map to the
+    // first argument of the operator or function, and the other 6 map to the
+    // second argument.
+    std::vector<int> input_arg_count;
+
+    // Node outputs' definition.
+    std::vector<NodeArg*> output_defs;
+
+   private:
+    LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Definitions);
+  };
+
+  class Relationships {
+   public:
+    Relationships() noexcept {};
+
+    void Clear() noexcept {
+      input_edges.clear();
+      output_edges.clear();
+      input_nodes.clear();
+      output_nodes.clear();
+      control_inputs.clear();
     }
 
-    const std::vector<int>& InputArgCount() const noexcept
-    {
-        return definitions_.input_arg_count;
-    }
+    // Node input edges.
+    std::set<EdgeEnd*> input_edges;
+    // Node output edges.
+    std::set<EdgeEnd*> output_edges;
 
-    // read only access. requires special wrapper to apply const to the NodeArg
-    const ConstPointerContainer<std::vector<NodeArg*>> OutputDefs() const noexcept
-    {
-        return ConstPointerContainer<std::vector<NodeArg*>>(definitions_.output_defs);
-    }
+    // Node input nodes, besides input nodes mentioned in <inputs_> above,
+    // it also contains all control input nodes;
+    std::set<const Node*> input_nodes;
+    // Control input nodes' names.
+    std::set<std::string> control_inputs;
+    // Node's output nodes.
+    std::set<const Node*> output_nodes;
 
-    // CNTK_TODO: need a way to edit a graph - e.g. to insert a node.
-    std::vector<NodeArg*>& Mutable_OutputDefs()
-    {
-        return definitions_.output_defs;
-    }
+   private:
+    LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Relationships);
+  };
 
-    using NodeConstIterator = std::set<const Node*>::const_iterator;
+ private:
+  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Node);
 
-    // Functions defined to traverse a Graph as below.
-    // Read all input nodes of <*this>.
+  // NOTE: These friendship relationships should ONLY be used for calling the following methods
+  // so that the Node can maintain its internal invariants as well as possible.
+  // Node::Node
+  // Node::Init
+  // Node::MutableDefinitions
+  // Node::MutableRelationships
+  // Node::ValdiateVersion
+  // All other calls should be made through the public Node interface.
+  // Friend classes should NOT be directly accessing any member variables.
+  friend class GraphBase;
+  friend class Graph;
+  friend struct Test::NodeTestHelper;
 
-    // Beginning of input nodes. Iterator should have no nullptr values.
-    NodeConstIterator InputNodesBegin() const noexcept
-    {
-        return relationships_.input_nodes.cbegin();
-    };
-    // End of input nodes.
-    NodeConstIterator InputNodesEnd() const noexcept
-    {
-        return relationships_.input_nodes.cend();
-    }
+  Node(NodeIndex index, GraphBase& graph)
+      : index_(index),
+        graph_(&graph) {}
 
-    // Beginning of output nodes. Iterator should have no nullptr values.
-    NodeConstIterator OutputNodesBegin() const noexcept
-    {
-        return relationships_.output_nodes.cbegin();
-    }
-    // End of output nodes.
-    NodeConstIterator OutputNodesEnd() const noexcept
-    {
-        return relationships_.output_nodes.cend();
-    }
+  void Init(const std::string& name,
+            const std::string& op_type,
+            const std::string& description,
+            const std::vector<NodeArg*>& input_args,
+            const std::vector<NodeArg*>& output_args,
+            const NodeAttributes* attributes,
+            const std::string& domain);
 
-    const std::set<std::string>& ControlInputs() const noexcept
-    {
-        return relationships_.control_inputs;
-    }
+  // internal only method to allow selected classes to directly alter
+  // the input/output definitions and arg counts
+  Definitions& MutableDefinitions() noexcept;
 
-    // Add a node attribute with specified attribute name and value.
-    void AddAttribute(const std::string& attr_name, const AttributeProto& value);
+  // internal only method to allow selected classes to directly alter
+  // the links between nodes.
+  Relationships& MutableRelationships() noexcept;
 
-#define ADD_ATTR_INTERFACES(TypeName)               \
-    void AddAttribute(const std::string& attr_name, \
-                      const TypeName& value);       \
-    void AddAttribute(const std::string& attr_name, \
-                      const std::vector<TypeName>& values);
+  const Definitions& GetDefinitions() const noexcept { return definitions_; }
+  const Relationships& GetRelationships() const noexcept { return relationships_; }
 
-    ADD_ATTR_INTERFACES(int64_t)
-    ADD_ATTR_INTERFACES(float)
-    ADD_ATTR_INTERFACES(std::string)
-    ADD_ATTR_INTERFACES(TensorProto)
-    ADD_ATTR_INTERFACES(GraphProto)
+  // validate and update the input arg count
+  Lotus::Common::Status UpdateInputArgCount();
 
-    // Clear specified node attribute.
-    bool ClearAttribute(const std::string& attr_name);
+  // Node index. Default to impossible value rather than 0.
+  NodeIndex index_ = std::numeric_limits<NodeIndex>::max();
 
-    // Get node attributes.
-    const NodeAttributes& GetAttributes() const noexcept;
+  // Node name.
+  std::string name_;
 
-    // Indicates on which we will run this node in runtime.
-    // Executor will decide which device that this node will run against
-    // and set it properly.
-    // TODO: may change the return value type to be an ENUM.
-    ProviderType GetExecutionProviderType() const noexcept;
-    void SetExecutionProviderType(ProviderType execution_provider_type);
+  // Node operator type.
+  std::string op_type_;
 
-    // Get the corresponding <NodeProto>.
-    void ToProto(NodeProto& proto) const;
+  // OperatorSet domain of <op_type_).
+  std::string domain_;
 
-    // iterate through all input/output defs
-    void ForEachDef(std::function<void(const ONNXIR::NodeArg*, bool is_input)> func) const;
+  // OperatorSchema that <*this> node refers to.
+  const OpSchema* op_ = nullptr;
 
-    // iterate through all input defs
-    void ForEachInputDef(std::function<void(const ONNXIR::NodeArg*)> func) const;
+  // Node doc string.
+  std::string description_;
 
-    // iterate through all output defs
-    void ForEachOutputDef(std::function<void(const ONNXIR::NodeArg*)> func) const;
+  // input/output defs and arg count
+  Definitions definitions_;
 
-    // Replaces defs
-    void ReplaceDefs(const std::map<ONNXIR::NodeArg*, ONNXIR::NodeArg*>& replacements);
+  // Relationships between this node and others in the graph
+  Relationships relationships_;
 
-    // Node definitions. Really a struct but we want to prevent accidental copies.
-    class Definitions
-    {
-    public:
-        Definitions() noexcept {}
+  // Device.
+  std::string execution_provider_type_;
 
-        // Node inputs' definition.
-        std::vector<NodeArg*> input_defs;
-        // The number of inputs for each argument of the operator or function which
-        // this node refers.
-        // For example, <input_defs_> has 10 elements (inputs), and <input_arg_count_>
-        // is {4, 6}. This means that 4 elements (inputs) of <input_defs_> map to the
-        // first argument of the operator or function, and the other 6 map to the
-        // second argument.
-        std::vector<int> input_arg_count;
+  // Map from attribute name to attribute.
+  // This allows attribute adding and removing.
+  NodeAttributes attributes_;
 
-        // Node outputs' definition.
-        std::vector<NodeArg*> output_defs;
-
-    private:
-        LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Definitions);
-    };
-
-    class Relationships
-    {
-    public:
-        Relationships() noexcept {}
-
-        // Node input edges.
-        std::set<EdgeEnd*> input_edges;
-        // Node output edges.
-        std::set<EdgeEnd*> output_edges;
-
-        // Node input nodes, besides input nodes mentioned in <inputs_> above,
-        // it also contains all control input nodes;
-        std::set<const Node*> input_nodes;
-        // Control input nodes' names.
-        std::set<std::string> control_inputs;
-        // Node's output nodes.
-        std::set<const Node*> output_nodes;
-
-    private:
-        LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Relationships);
-    };
-
-private:
-    LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Node);
-
-    // NOTE: These friendship relationships should ONLY be used for calling the following methods
-    // so that the Node can maintain its internal invariants as well as possible.
-    // Node::Node
-    // Node::Init
-    // Node::MutableDefinitions
-    // Node::MutableRelationships
-    // Node::ValdiateVersion
-    // All other calls should be made through the public Node interface.
-    // Friend classes should NOT be directly accessing any member variables.
-    friend class GraphBase;
-    friend class Graph;
-    friend struct Test::NodeTestHelper;
-
-    Node(NodeIndex index, GraphBase& graph)
-        : index_(index),
-          graph_(&graph) {}
-
-    void Init(const std::string& name,
-              const std::string& op_type,
-              const std::string& description,
-              const std::vector<NodeArg*>& input_args,
-              const std::vector<NodeArg*>& output_args,
-              const NodeAttributes* attributes,
-              const std::string& domain);
-
-    // internal only method to allow selected classes to directly alter
-    // the input/output definitions and arg counts
-    Definitions& MutableDefinitions() noexcept;
-
-    // internal only method to allow selected classes to directly alter
-    // the links between nodes.
-    Relationships& MutableRelationships() noexcept;
-
-    const Definitions& GetDefinitions() const noexcept
-    {
-        return definitions_;
-    }
-    const Relationships& GetRelationships() const noexcept
-    {
-        return relationships_;
-    }
-
-    // validate and update the input arg count
-    Status UpdateInputArgCount();
-
-    // Node index. Default to impossible value rather than 0.
-    NodeIndex index_ = std::numeric_limits<NodeIndex>::max();
-
-    // Node name.
-    std::string name_;
-
-    // Node operator type.
-    std::string op_type_;
-
-    // OperatorSet domain of <op_type_).
-    std::string domain_;
-
-    // OperatorSchema that <*this> node refers to.
-    const OpSchema* op_ = nullptr;
-
-    // Node doc string.
-    std::string description_;
-
-    // input/output defs and arg count
-    Definitions definitions_;
-
-    // Relationships between this node and others in the graph
-    Relationships relationships_;
-
-    // Device.
-    std::string execution_provider_type_;
-
-    // Map from attribute name to attribute.
-    // This allows attribute adding and removing.
-    NodeAttributes attributes_;
-
-    GraphBase* graph_;
+  GraphBase* graph_;
 };
 
 // TODO: Graph base class.
@@ -402,476 +382,421 @@ private:
 // 1. Graph does not have attributes, while function has.
 // 2. Graph does have initializers, while function does not.
 // 3. Graph does have value_info, while function does not.
-class GraphBase
-{
-public:
-    // Resolve <*this> graph to ensure it's in a good shape with full
-    // functionality.
-    // 1. Run through all validation rules.
-    //    a. Node name and node output's names should be unique.
-    //    b. Attribute match between node and op definition.
-    //    c. Input/Output match between node and op definition.
-    //    d. Graph is acyclic and sort nodes in topological order.
-    // 2. Check & Setup inner nodes' dependency.
-    // 3. Cleanup function definition lists.
-    // Returns resolving status.
-    virtual Status Resolve() = 0;
+class GraphBase {
+ public:
+  // Resolve <*this> graph to ensure it's in a good shape with full
+  // functionality.
+  // 1. Run through all validation rules.
+  //    a. Node name and node output's names should be unique.
+  //    b. Attribute match between node and op definition.
+  //    c. Input/Output match between node and op definition.
+  //    d. Graph is acyclic and sort nodes in topological order.
+  // 2. Check & Setup inner nodes' dependency.
+  // 3. Cleanup function definition lists.
+  // Returns resolving status.
+  virtual Lotus::Common::Status Resolve() = 0;
 
-    // Getter and Setter for graph name.
-    virtual const std::string& Name() const noexcept = 0;
-    virtual void SetName(const std::string& name) = 0;
+  // Getter and Setter for graph name.
+  virtual const std::string& Name() const noexcept = 0;
+  virtual void SetName(const std::string& name) = 0;
 
-    virtual const std::string& Description() const noexcept = 0;
-    virtual void SetDescription(const std::string& description) = 0;
+  virtual const std::string& Description() const noexcept = 0;
+  virtual void SetDescription(const std::string& description) = 0;
 
-    // Graph inputs. Should have no nullptr values.
-    const std::vector<const NodeArg*>& GetInputs() const noexcept
-    {
-        return graph_inputs_;
-    }
+  // Graph inputs. Should have no nullptr values.
+  const std::vector<const NodeArg*>& GetInputs() const noexcept { return graph_inputs_; }
 
-    // Graph outputs. Should have no nullptr values.
-    const std::vector<const NodeArg*>& GetOutputs() const noexcept
-    {
-        return graph_outputs_;
-    }
+  // Graph outputs. Should have no nullptr values.
+  const std::vector<const NodeArg*>& GetOutputs() const noexcept { return graph_outputs_; }
 
-    // Get const Node given specific node index. May return nullptr if node as been freed.
-    const Node* GetNode(NodeIndex node_index) const
-    {
-        return NodeAtIndexImpl(node_index);
-    }
+  // Get const Node given specific node index. May return nullptr if node as been freed.
+  const Node* GetNode(NodeIndex node_index) const { return NodeAtIndexImpl(node_index); }
 
-    // Mutable node at index. May return nullptr if node has been freed.
-    Node* GetNode(NodeIndex node_index)
-    {
-        return NodeAtIndexImpl(node_index);
-    }
+  // Mutable node at index. May return nullptr if node has been freed.
+  Node* GetNode(NodeIndex node_index) { return NodeAtIndexImpl(node_index); }
 
-    GraphNodes& Nodes() noexcept
-    {
-        return iterable_nodes_;
-    }
+  GraphNodes& Nodes() noexcept { return iterable_nodes_; }
 
-    const GraphNodes& Nodes() const noexcept
-    {
-        return iterable_nodes_;
-    }
+  const GraphNodes& Nodes() const noexcept { return iterable_nodes_; }
 
-    // Max NodeIndex in the Graph
-    int MaxNodeIndex() const noexcept
-    {
-        return gsl::narrow_cast<int>(nodes_.size());
-    }
+  // Max NodeIndex in the Graph
+  int MaxNodeIndex() const noexcept { return gsl::narrow_cast<int>(nodes_.size()); }
 
-    // Number of nodes in the <Graph>.
-    // This is smaller than MaxNodeIndex(), since there may be nodes
-    // removed during optimization.
-    int NumberOfNodes() const noexcept
-    {
-        return num_of_nodes_;
-    }
+  // Number of nodes in the <Graph>.
+  // This is smaller than MaxNodeIndex(), since there may be nodes
+  // removed during optimization.
+  int NumberOfNodes() const noexcept { return num_of_nodes_; }
 
-    // Create NodeArg owned by the graph
-    NodeArg& CreateOwnedNodeArg(const std::string& name, const TypeProto* p_arg_type)
-    {
-        if (p_arg_type != nullptr)
-        {
-            for (auto& a : owned_node_args_)
-            {
-                if (a->Name() == name)
-                {
-                    //const TensorShapeProto* shape = a->Shape();
-                    //if (p_arg_type->has_tensor_type())
-                    //{
-                    //    const ::onnx::TypeProto_Tensor& typeProto_Tensor = p_arg_type->tensor_type();
-                    //    const ::onnx::TensorShapeProto& tensorShapeProto = typeProto_Tensor.shape();
-                    //    LOTUS_ENFORCE(shape->dim_size() == tensorShapeProto.dim_size());
-                    //    for (int dim = 0; dim < shape->dim_size(); dim++)
-                    //    {
-                    //        LOTUS_ENFORCE(shape->dim()[dim].dim_value() == tensorShapeProto.dim()[dim].dim_value());
-                    //    }
-                    //}
-                    if (a->Shape()->dim_size() == 0 && p_arg_type->has_tensor_type())
-                    {
-                        const ::onnx::TypeProto_Tensor& typeProto_Tensor = p_arg_type->tensor_type();
-                        const ::onnx::TensorShapeProto& tensorShapeProto = typeProto_Tensor.shape();
-                        a->SetShape(tensorShapeProto);
-                    }
-                    return *a;
-                }
-            }
-        }
-        owned_node_args_.push_back(std::make_unique<NodeArg>(name, p_arg_type));
-        return *owned_node_args_.back();
-    }
+  // Get NodeArg by name, or create NodeArg owned by the graph if not found
+  NodeArg& GetOrCreateNodeArg(const std::string& name, const TypeProto* p_arg_type) {
+    auto iter = node_args_.find(name);
+    if (iter != node_args_.end())
+      return *(iter->second);
 
-    // Add node to <*this> graph.
-    Node* AddNode(const std::string& name,
-                  const std::string& op_type,
-                  const std::string& description,
-                  const std::vector<NodeArg*>& input_args,
-                  const std::vector<NodeArg*>& output_args,
-                  const NodeAttributes* attributes = nullptr,
-                  const std::string& domain = "");
+    owned_node_args_.push_back(std::make_unique<NodeArg>(name, p_arg_type));
+    NodeArg* new_arg = owned_node_args_.back().get();
+    auto ignored = node_args_.insert(std::make_pair(name, new_arg));
+    return *new_arg;
+  }
 
-    /**
-  Copy node and add to graph.
-  @param other Node to copy
-  @param returns Pointer to node that was created and inserted.
-  */
-    Node* AddNode(const Node& other);
+  // find node arg by name
+  const NodeArg* FindNodeArg(const std::string& name) const;
+  NodeArg* FindNodeArg(const std::string& name);
 
-    /**
-  Remove node and free it.
-  */
-    bool RemoveNode(NodeIndex node_index);
+  // create a unique name for NodeArg
+  std::string GenerateNodeArgName(const std::string& base_name);
 
-    // Convenience method for adding a constant op
-    Node* AddConstantNode(const std::string& name,
-                          const std::string& description,
-                          const std::vector<NodeArg*>& output_args,
-                          const TensorProto& tensor_proto);
+  // create a unique name for Node
+  std::string GenerateNodeName(const std::string& base_name);
 
-    // Add control edge into <*this> graph.
-    // The <dst_node_index> node does not consume any data output by
-    // <src_node_index>, but it's designed to be executed behind.
-    bool AddControlEdge(NodeIndex src_node_index, NodeIndex dst_node_index);
+  // Add node to <*this> graph.
+  Node* AddNode(const std::string& name,
+                const std::string& op_type,
+                const std::string& description,
+                const std::vector<NodeArg*>& input_args,
+                const std::vector<NodeArg*>& output_args,
+                const NodeAttributes* attributes = nullptr,
+                const std::string& domain = "");
 
-    bool IsSourceNode(NodeIndex index) const noexcept;
-    bool IsSinkNode(NodeIndex index) const noexcept;
+  /**
+    Copy node and add to graph.
+    @param other Node to copy
+    @param returns Pointer to node that was created and inserted.
+    */
+  Node* AddNode(const Node& other);
 
-    bool IsSourceNode(const Node& node) const noexcept
-    {
-        return source_node_index_ == node.Index();
-    }
+  /**
+    Remove node and free it.
+    */
+  bool RemoveNode(NodeIndex node_index);
 
-    bool IsSinkNode(const Node& node) const noexcept
-    {
-        return sink_node_index_ == node.Index();
-    }
+  // Add control edge into <*this> graph.
+  // The <dst_node_index> node does not consume any data output by
+  // <src_node_index>, but it's designed to be executed behind.
+  bool AddControlEdge(NodeIndex src_node_index, NodeIndex dst_node_index);
 
-    const Node* SourceNode() const;
-    const Node* SinkNode() const;
+  bool IsSourceNode(NodeIndex index) const noexcept;
+  bool IsSinkNode(NodeIndex index) const noexcept;
 
-    // TODO(Task:135) See if GraphBase::GetNodesInTopologicalOrder can be made more correctly const
-    // by forcing Resolve to have been called directly previously. Simple change is to return error if
-    // GraphResolveNeeded is true.
-    Status GetNodesInTopologicalOrder(/*out*/ const std::vector<NodeIndex>** pp_nodes) const;
+  bool IsSourceNode(const Node& node) const noexcept {
+    return source_node_index_ == node.Index();
+  }
 
-    // Mark Graph as needing Resolve() to be called
-    GraphBase& SetGraphResolveNeeded() noexcept
-    {
-        graph_resolve_needed_ = true;
-        return *this;
-    }
+  bool IsSinkNode(const Node& node) const noexcept {
+    return sink_node_index_ == node.Index();
+  }
 
-    bool GraphResolveNeeded() const noexcept
-    {
-        return graph_resolve_needed_;
-    }
+  const Node* SourceNode() const;
+  const Node* SinkNode() const;
 
-    GraphBase& SetGraphProtoSyncNeeded() noexcept
-    {
-        graph_proto_sync_needed_ = true;
-        return *this;
-    }
+  // TODO(Task:135) See if GraphBase::GetNodesInTopologicalOrder can be made more correctly const
+  // by forcing Resolve to have been called directly previously. Simple change is to return error if
+  // GraphResolveNeeded is true.
+  Lotus::Common::Status GetNodesInTopologicalOrder(/*out*/ const std::vector<NodeIndex>** pp_nodes) const;
 
-    bool GraphProtoSyncNeeded() const noexcept
-    {
-        return graph_proto_sync_needed_;
-    }
+  // Mark Graph as needing Resolve() to be called
+  GraphBase& SetGraphResolveNeeded() noexcept {
+    graph_resolve_needed_ = true;
+    return *this;
+  }
 
-    // Performs reverse DFS traversal from a set of nodes in 'from' up to
-    // the SOURCE node. 'enter' is a visit function that will be invoked
-    // on a node when it is visited but its parents haven't been. 'leave'
-    // is the visit function invoked on the node after its parents have
-    // all been visited. 'comp' is used to stable the traversal order.
-    void ReverseDFSFrom(const std::vector<NodeIndex>& from,
-                        const std::function<void(const Node*)>& enter,
-                        const std::function<void(const Node*)>& leave,
-                        const std::function<bool(const Node*, const Node*)>& comp = {}) const;
+  bool GraphResolveNeeded() const noexcept {
+    return graph_resolve_needed_;
+  }
 
-    void ReverseDFSFrom(const std::vector<const Node*>& from,
-                        const std::function<void(const Node*)>& enter,
-                        const std::function<void(const Node*)>& leave,
-                        const std::function<bool(const Node*, const Node*)>& comp = {}) const;
+  GraphBase& SetGraphProtoSyncNeeded() noexcept {
+    graph_proto_sync_needed_ = true;
+    return *this;
+  }
 
-    virtual ~GraphBase() = default;
+  bool GraphProtoSyncNeeded() const noexcept {
+    return graph_proto_sync_needed_;
+  }
 
-protected:
-    GraphBase() = default;
-    GraphBase(bool graph_resolve_needed,
-              bool graph_proto_sync_needed,
-              const std::unordered_map<std::string, int>& domain_to_version,
-              Version ir_version)
-        : graph_resolve_needed_(graph_resolve_needed),
-          graph_proto_sync_needed_(graph_proto_sync_needed),
-          domain_to_version_(domain_to_version),
-          ir_version_(ir_version) {}
+  // Performs reverse DFS traversal from a set of nodes in 'from' up to
+  // the SOURCE node. 'enter' is a visit function that will be invoked
+  // on a node when it is visited but its parents haven't been. 'leave'
+  // is the visit function invoked on the node after its parents have
+  // all been visited. 'comp' is used to stable the traversal order.
+  void ReverseDFSFrom(const std::vector<NodeIndex>& from,
+                      const std::function<void(const Node*)>& enter,
+                      const std::function<void(const Node*)>& leave,
+                      const std::function<bool(const Node*, const Node*)>& comp = {}) const;
 
-    // Add source/sink nodes to <*this> graph.
-    void AddSourceSinkNodes();
+  void ReverseDFSFrom(const std::vector<const Node*>& from,
+                      const std::function<void(const Node*)>& enter,
+                      const std::function<void(const Node*)>& leave,
+                      const std::function<bool(const Node*, const Node*)>& comp = {}) const;
 
-    // Add node with specified <node_proto>.
-    Node* AddNode(const NodeProto& node_proto,
-                  const ArgNameToTypeMap& name_to_type);
+  virtual ~GraphBase() = default;
 
-    NodeIndex SourceNodeIndex() const noexcept
-    {
-        return source_node_index_;
-    }
+ protected:
+  GraphBase() = default;
+  GraphBase(bool graph_resolve_needed,
+            bool graph_proto_sync_needed,
+            const std::unordered_map<std::string, int>& domain_to_version,
+            Version ir_version)
+      : graph_resolve_needed_(graph_resolve_needed),
+        graph_proto_sync_needed_(graph_proto_sync_needed),
+        domain_to_version_(domain_to_version),
+        ir_version_(ir_version) {}
 
-    NodeIndex SinkNodeIndex() const noexcept
-    {
-        return sink_node_index_;
-    }
+  // Add source/sink nodes to <*this> graph.
+  void AddSourceSinkNodes();
 
-    // The topological order of node index as last set by Resolve()
-    const std::vector<NodeIndex>& NodesInTopologicalOrder() const noexcept
-    {
-        return nodes_in_topological_order_;
-    }
+  // Add node with specified <node_proto>.
+  Node* AddNode(const NodeProto& node_proto,
+                const ArgNameToTypeMap& name_to_type);
 
-    std::vector<NodeIndex>& NodesInTopologicalOrder() noexcept
-    {
-        return nodes_in_topological_order_;
-    }
+  NodeIndex SourceNodeIndex() const noexcept { return source_node_index_; }
 
-    // Mutable graph inputs.
-    std::vector<const NodeArg*>& MutableInputs() noexcept
-    {
-        return graph_inputs_;
-    }
+  NodeIndex SinkNodeIndex() const noexcept { return sink_node_index_; }
 
-    // Mutable graph outputs.
-    std::vector<const NodeArg*>& MutableOutputs() noexcept
-    {
-        return graph_outputs_;
-    }
+  // The topological order of node index as last set by Resolve()
+  const std::vector<NodeIndex>& NodesInTopologicalOrder() const noexcept {
+    return nodes_in_topological_order_;
+  }
 
-    const std::unordered_map<std::string, int>& DomainToVersionMap() const noexcept
-    {
-        return domain_to_version_;
-    }
+  std::vector<NodeIndex>& NodesInTopologicalOrder() noexcept {
+    return nodes_in_topological_order_;
+  }
 
-    Version IrVersion() const noexcept
-    {
-        return ir_version_;
-    }
+  // Mutable graph inputs.
+  std::vector<const NodeArg*>& MutableInputs() noexcept {
+    return graph_inputs_;
+  }
 
-    GraphBase& GraphResolveNeeded(bool needed) noexcept
-    {
-        graph_resolve_needed_ = needed;
-        return *this;
-    }
+  // Mutable graph outputs.
+  std::vector<const NodeArg*>& MutableOutputs() noexcept {
+    return graph_outputs_;
+  }
 
-    GraphBase& GraphProtoSyncNeeded(bool needed) noexcept
-    {
-        graph_proto_sync_needed_ = needed;
-        return *this;
-    }
+  const std::unordered_map<std::string, int>& DomainToVersionMap() const noexcept {
+    return domain_to_version_;
+  }
 
-    // Build and verify node connection (edges).
-    // Verify NodeArg name/type/shape matching correctly.
-    Status BuildConnections(
-        const std::unordered_map<std::string, Node*>& output_args,
-        const std::unordered_map<std::string, NodeIndex>& node_name_to_index);
+  Version IrVersion() const noexcept {
+    return ir_version_;
+  }
 
-    Status VerifyNoDuplicateName(
-        /*out*/ std::unordered_map<std::string, Node*>& output_args,
-        /*out*/ std::unordered_map<std::string, NodeIndex>& node_name_to_index);
+  GraphBase& GraphResolveNeeded(bool needed) noexcept {
+    graph_resolve_needed_ = needed;
+    return *this;
+  }
 
-    // Check whether <*this> graph is acyclic.
-    // Depth-first going thru the graph and check whether there's any back
-    // edge.
-    // <nodes_in_topological_order> returns nodes' indexes in toplogical
-    // order if <Status> returned is "OK", otherwise it's undefined.
-    Status CheckIsAcyclic(
-        /*out*/ std::vector<NodeIndex>& nodes_in_topological_order) const;
+  GraphBase& GraphProtoSyncNeeded(bool needed) noexcept {
+    graph_proto_sync_needed_ = needed;
+    return *this;
+  }
 
-    // Apply shape/type inference to a single node. This is a wrapper for
-    // invoking ONNX-defined shape+type inference for a single node.
-    // Returns the inferred shape+type for every output of the node in
-    // output parameter inferredShapes.
-    Status InferOutputTypesAndShapes(ONNXIR::Node& node,
-                                     /*out*/ std::vector<TypeProto>& inferred_shapes);
+  // Build and verify node connection (edges).
+  // Verify NodeArg name/type/shape matching correctly.
+  Lotus::Common::Status BuildConnections(
+      const std::unordered_map<std::string, Node*>& output_args,
+      const std::unordered_map<std::string, NodeIndex>& node_name_to_index);
 
-private:
-    // need custom versions to handle the unique_ptr's in nodes_
-    LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(GraphBase);
+  Lotus::Common::Status VerifyNoDuplicateName(
+      /*in*/ const std::unordered_set<std::string>& inputs_and_initializers,
+      /*out*/ std::unordered_map<std::string, Node*>& output_args,
+      /*out*/ std::unordered_map<std::string, NodeIndex>& node_name_to_index);
 
-    Node* AllocateNode();
+  // Check whether <*this> graph is acyclic.
+  // Depth-first going thru the graph and check whether there's any back
+  // edge.
+  // <nodes_in_topological_order> returns nodes' indexes in toplogical
+  // order if <Status> returned is "OK", otherwise it's undefined.
+  Lotus::Common::Status CheckIsAcyclic(
+      /*out*/ std::vector<NodeIndex>& nodes_in_topological_order) const;
 
-    /**
-  Release the node. 
-  @returns false if node_index was invalid.
-  */
-    bool ReleaseNode(NodeIndex node_index);
+  // Apply shape/type inference to a single node. This is a wrapper for
+  // invoking ONNX-defined shape+type inference for a single node.
+  // Returns the inferred shape+type for every output of the node in
+  // output parameter inferredShapes.
+  Lotus::Common::Status InferOutputTypesAndShapes(LotusIR::Node& node,
+                                                  /*out*/ std::vector<TypeProto>& inferred_shapes);
 
-    Node* NodeAtIndexImpl(NodeIndex node_index) const
-    {
-        // if we are trying to access a node that doesn't exist there's (most likely) either a logic issue
-        // or a graph consistency/correctness issue. use LOTUS_ENFORCE to prove that or uncover scenarios
-        // where we actually expect attempts to retrieve a non-existent node.
-        LOTUS_ENFORCE(node_index < nodes_.size(), "Validating no unexpected access using an invalid node_index.");
-        return nodes_[node_index].get();
-    }
+ private:
+  // need custom versions to handle the unique_ptr's in nodes_
+  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(GraphBase);
 
-    // Graph nodes.
-    // Element in <nodes_> may be nullptr due to graph optimization.
-    std::vector<std::unique_ptr<Node>> nodes_;
+  Node* AllocateNode();
 
-    // Wrapper of Graph nodes to provide iteration services that hide nullptr entries
-    GraphNodes iterable_nodes_{nodes_};
+  /**
+    Release the node.
+    @returns false if node_index was invalid.
+    */
+  bool ReleaseNode(NodeIndex node_index);
 
-    // Number of nodes.
-    // Normally this is smaller than the size of <m_nodes>, as some
-    // elements in <m_nodes> may be removed when doing graph optimization,
-    // or some elements may be merged, etc.
-    int num_of_nodes_ = 0;
+  Node* NodeAtIndexImpl(NodeIndex node_index) const {
+    // if we are trying to access a node that doesn't exist there's (most likely) either a logic issue
+    // or a graph consistency/correctness issue. use LOTUS_ENFORCE to prove that or uncover scenarios
+    // where we actually expect attempts to retrieve a non-existent node.
+    LOTUS_ENFORCE(node_index < nodes_.size(), "Validating no unexpected access using an invalid node_index.");
+    return nodes_[node_index].get();
+  }
 
-    // default to impossible value and not 0
-    NodeIndex source_node_index_ = std::numeric_limits<NodeIndex>::max();
-    NodeIndex sink_node_index_ = std::numeric_limits<NodeIndex>::max();
+  // Graph nodes.
+  // Element in <nodes_> may be nullptr due to graph optimization.
+  std::vector<std::unique_ptr<Node>> nodes_;
 
-    // A flag indicates whether <*this> graph needs to be resolved.
-    bool graph_resolve_needed_ = false;
+  // Wrapper of Graph nodes to provide iteration services that hide nullptr entries
+  GraphNodes iterable_nodes_{nodes_};
 
-    bool graph_proto_sync_needed_ = false;
+  // Number of nodes.
+  // Normally this is smaller than the size of <m_nodes>, as some
+  // elements in <m_nodes> may be removed when doing graph optimization,
+  // or some elements may be merged, etc.
+  int num_of_nodes_ = 0;
 
-    // The topological order of node index.
-    std::vector<NodeIndex> nodes_in_topological_order_;
+ protected:
+  // default to impossible value and not 0
+  NodeIndex source_node_index_ = std::numeric_limits<NodeIndex>::max();
+  NodeIndex sink_node_index_ = std::numeric_limits<NodeIndex>::max();
 
-    // Graph inputs.
-    std::vector<const NodeArg*> graph_inputs_;
+ private:
+  // A flag indicates whether <*this> graph needs to be resolved.
+  bool graph_resolve_needed_ = false;
 
-    // Graph outputs.
-    std::vector<const NodeArg*> graph_outputs_;
+  bool graph_proto_sync_needed_ = false;
 
-    // Store NodeArg in this graph
-    // QUESTION: what does the key represent here?
-    std::unordered_map<std::string, NodeArg*> node_args_;
+  // The topological order of node index.
+  std::vector<NodeIndex> nodes_in_topological_order_;
 
-    // NodeArg instances that we own
-    std::vector<std::unique_ptr<NodeArg>> owned_node_args_;
+  // Graph inputs.
+  std::vector<const NodeArg*> graph_inputs_;
 
-    // Node::EdgeEnd instances that we own
-    std::vector<std::unique_ptr<Node::EdgeEnd>> owned_edges_;
+  // Graph outputs.
+  std::vector<const NodeArg*> graph_outputs_;
 
-    const std::unordered_map<std::string, int> domain_to_version_;
+  // Store NodeArg in this graph
+  // QUESTION: what does the key represent here?
+  std::unordered_map<std::string, NodeArg*> node_args_;
 
-    // Model IR version.
-    Version ir_version_;
+  // NodeArg instances that we own
+  std::vector<std::unique_ptr<NodeArg>> owned_node_args_;
+
+  // Node::EdgeEnd instances that we own
+  std::vector<std::unique_ptr<Node::EdgeEnd>> owned_edges_;
+
+  const std::unordered_map<std::string, int> domain_to_version_;
+
+  // Model IR version.
+  Version ir_version_;
+
+  int name_generator_ = 0;
 };
 
 // A graph representation class.
-class Graph : public GraphBase
-{
-public:
-    // Resolve <*this> graph to ensure it's in a good shape with full
-    // functionality.
-    // 1. Run through all validation rules.
-    //    a. Node name and node output's names should be unique.
-    //    b. Attribute match between node and op definition.
-    //    c. Input/Output match between node and op definition.
-    //    d. Graph is acyclic and sort nodes in topological order.
-    // 2. Check & Setup inner nodes' dependency.
-    // 3. Cleanup function definition lists.
-    // Returns resolving status.
-    Status Resolve() override;
+class Graph : public GraphBase {
+ public:
+  // Resolve <*this> graph to ensure it's in a good shape with full
+  // functionality.
+  // 1. Run through all validation rules.
+  //    a. Node name and node output's names should be unique.
+  //    b. Attribute match between node and op definition.
+  //    c. Input/Output match between node and op definition.
+  //    d. Graph is acyclic and sort nodes in topological order.
+  // 2. Check & Setup inner nodes' dependency.
+  // 3. Cleanup function definition lists.
+  // Returns resolving status.
+  Lotus::Common::Status Resolve() override;
 
-    // Getter and Setter for graph name.
-    const std::string& Name() const noexcept override;
-    void SetName(const std::string& name) override;
+  // Getter and Setter for graph name.
+  const std::string& Name() const noexcept override;
+  void SetName(const std::string& name) override;
 
-    const std::string& Description() const noexcept override;
-    void SetDescription(const std::string& description) override;
+  const std::string& Description() const noexcept override;
+  void SetDescription(const std::string& description) override;
 
-    // Add/Remove/Get initial tensors for some graph inputs.
-    void AddInitializedTensor(const TensorProto& tensor_proto);
-    void RemoveInitializedTensor(const std::string& tensor_name);
-    bool GetInitializedTensor(const std::string& tensor_name, const TensorProto** value) const;
-    const InitializedTensorSet& GetAllInitializedTensors() const noexcept;
-    void CleanAllInitializedTensors() noexcept;
+  // Add/Remove/Get initial tensors for some graph inputs.
+  void AddInitializedTensor(const TensorProto& tensor_proto);
+  void RemoveInitializedTensor(const std::string& tensor_name);
+  bool GetInitializedTensor(const std::string& tensor_name, const TensorProto** value) const;
+  const InitializedTensorSet& GetAllInitializedTensors() const noexcept;
+  void CleanAllInitializedTensors() noexcept;
 
-    // Get graph value infos.
-    const std::vector<const NodeArg*>& GetValueInfo() const noexcept;
+  // Get graph value infos.
+  const std::vector<const NodeArg*>& GetValueInfo() const noexcept;
 
-    // Serialize the <Graph> into <GraphProto>.
-    const GraphProto& ToGraphProto();
+  // Serialize the <Graph> into <GraphProto>.
+  const GraphProto& ToGraphProto();
 
-private:
-    LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Graph);
+ private:
+  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Graph);
 
-    // This friendship relationship should only be used to call Graph::Graph and Graph::LoadGraph
-    // All other access should be via the public API.
-    friend class Model;
+  // This friendship relationship should only be used to call Graph::Graph and Graph::LoadGraph
+  // All other access should be via the public API.
+  friend class Model;
 
-    // Constructor: Given a <GraphProto> loaded from model file, construct
-    // a <Graph> object.
-    Graph(GraphProto* graph_proto,
-          const std::unordered_map<std::string, int>& domain_to_version,
-          Version ir_version,
-          const LotusOpSchemaRegistry* local_registry = nullptr);
+  // Constructor: Given a <GraphProto> loaded from model file, construct
+  // a <Graph> object.
+  Graph(GraphProto* graph_proto,
+        const std::unordered_map<std::string, int>& domain_to_version,
+        Version ir_version,
+        const ILotusOpSchemaCollection* local_registry = nullptr);
 
-    // Constructor: Given a <GraphProto> loaded from model file, construct
-    // a <Graph> object and Resolve() it.
-    /*static Status LoadGraph(const GraphProto& graph_proto,
+  // Constructor: Given a <GraphProto> loaded from model file, construct
+  // a <Graph> object and Resolve() it.
+  /*static Lotus::Common::Status LoadGraph(const GraphProto& graph_proto,
                           const std::unordered_map<std::string, int>& domain_to_version,
                           Version ir_version,
                           std::unique_ptr<Graph>& new_graph);*/
 
-    Graph() = delete;
+  Graph() = delete;
 
-    enum class Type
-    {
-        // A main graph.
-        Main = 1,
-        // A sub graph (function).
-        Sub = 2,
-    };
+  enum class Type {
+    // A main graph.
+    Main = 1,
+    // A sub graph (function).
+    Sub = 2,
+  };
 
-    Status Resolve(bool no_proto_sync_required);
+  Lotus::Common::Status Resolve(bool no_proto_sync_required);
 
-    Status InferAndVerifyTypeMatch(Node& node,
-                                   const OpSchema& op,
-                                   const std::unordered_map<std::string, Node*>& output_args);
+  Lotus::Common::Status InferAndVerifyTypeMatch(Node& node,
+                                                const OpSchema& op);
 
-    // Given nodes in topological order, infer and set type information
-    // across <*this> graph if needed, and verify type/attribute
-    // information match between node and op.
-    Status VerifyNodeAndOpMatch(const std::vector<NodeIndex>& nodes_in_topological_order,
-                                const std::unordered_map<std::string, Node*>& output_args);
+  // Apply type-inference and type-checking to all inputs and initializers:
+  Lotus::Common::Status TypeCheckInputsAndInitializers();
 
-    // Set graph inputs/outputs when resolving a graph..
-    Status SetGraphInputsOutputs();
+  // Compute set of input and initializer names and checking for duplicate names
+  Lotus::Common::Status VerifyInputAndInitializerNames(
+      /*OUT*/ std::unordered_set<std::string>& inputs_and_initializers);
 
-    // Sync graph inputs/outputs when serializing to proto.
-    void SyncGraphInputsOutputs();
+  // Given nodes in topological order, infer and set type information
+  // across <*this> graph if needed, and verify type/attribute
+  // information match between node and op.
+  Lotus::Common::Status VerifyNodeAndOpMatch(const std::vector<NodeIndex>& nodes_in_topological_order,
+                                             const std::unordered_map<std::string, Node*>& output_args);
 
-    //Verify if all the initializers are valid inputs
-    void CleanInitializers();
+  // Set graph inputs/outputs when resolving a graph..
+  Lotus::Common::Status SetGraphInputsOutputs();
 
-    // GraphProto to store name, version, initializer.
-    // When serializing <*this> Graph to a GraphProto, the nodes and
-    // functions in <Graph> will also be fed into <graph_proto_> so that
-    // it's consistent with <*this> graph.
-    // This pointer is owned by parent model.
-    GraphProto* graph_proto_;
+  // Sync graph inputs/outputs when serializing to proto.
+  void SyncGraphInputsOutputs();
 
-    // The node which refers to <*this> graph (Function).
-    // Node* node_;
+  // Clear all unused initializers
+  void CleanUnusedInitializers();
 
-    std::unordered_map<std::string, int> name_to_initial_tensorIndex_;
-    InitializedTensorSet name_to_initial_tensor_;
-    std::vector<int> removed_initializer_indexes_;
+  // GraphProto to store name, version, initializer.
+  // When serializing <*this> Graph to a GraphProto, the nodes and
+  // functions in <Graph> will also be fed into <graph_proto_> so that
+  // it's consistent with <*this> graph.
+  // This pointer is owned by parent model.
+  GraphProto* graph_proto_;
 
-    Type graph_type_ = Type::Main;
+  // The node which refers to <*this> graph (Function).
+  // Node* node_;
 
-    // Graph value_info.
-    std::vector<const NodeArg*> value_info_;
+  std::unordered_map<std::string, int> name_to_initial_tensorIndex_;
+  InitializedTensorSet name_to_initial_tensor_;
+  std::vector<int> removed_initializer_indexes_;
 
-    const LotusOpSchemaRegistry* local_registry_;
+  Type graph_type_ = Type::Main;
+
+  // Graph value_info.
+  std::vector<const NodeArg*> value_info_;
+
+  const ILotusOpSchemaCollection* local_registry_;
 };
-} // namespace ONNXIR
+}  // namespace LotusIR

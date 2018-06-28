@@ -2,14 +2,12 @@
 
 #include <cstdarg>
 
-#include "proto/onnx/core/common/common.h"
-#include "proto/onnx/core/common/code_location.h"
-#include "proto/onnx/core/common/logging/severity.h"
+#include "core/common/common.h"
+#include "core/common/code_location.h"
+#include "core/common/logging/severity.h"
 
-namespace ONNX
-{
-namespace Logging
-{
+namespace Lotus {
+namespace Logging {
 
 class Logger;
 enum class DataType;
@@ -17,10 +15,9 @@ enum class DataType;
 /**
 Class to capture the details of a log message.
 */
-class Capture
-{
-public:
-    /**
+class Capture {
+ public:
+  /**
   Initializes a new instance of the Capture class.
   @param logger The logger.
   @param severity The severity.
@@ -28,30 +25,28 @@ public:
   @param dataType Type of the data.
   @param location The file location the log message is coming from.
   */
-    Capture(const Logger &logger, Logging::Severity severity, const char *category,
-            Logging::DataType dataType, const CodeLocation &location)
-        : logger_{&logger}, severity_{severity}, category_{category}, data_type_{dataType}, location_{location}
-    {
-    }
+  Capture(const Logger &logger, Logging::Severity severity, const char *category,
+          Logging::DataType dataType, const CodeLocation &location)
+      : logger_{&logger}, severity_{severity}, category_{category}, data_type_{dataType}, location_{location} {
+  }
 
-    /**
+  /**
   The stream that can capture the message via operator<<.
   @returns Output stream.
   */
-    std::ostream &Stream() noexcept
-    {
-        return stream_;
-    }
+  std::ostream &Stream() noexcept {
+    return stream_;
+  }
 
 #ifdef _MSC_VER
 // add SAL annotation for printf format string. requires Code Analysis to run to validate usage.
 #define msvc_printf_check _Printf_format_string_
-#define __attribute__(x) // Disable for MSVC. Supported by GCC and CLang.
+#define __attribute__(x)  // Disable for MSVC. Supported by GCC and CLang.
 #else
 #define msvc_printf_check
 #endif
 
-    /**
+  /**
   Captures a printf style log message.
   @param name="format">The printf format.
   @param name="">Arguments to the printf format if needed.  
@@ -59,9 +54,9 @@ public:
   A maximum of 2K of output will be captured currently.
   Non-static method, so 'this' is implicit first arg, and we use format(printf(2,3)
   */
-    void CapturePrintf(msvc_printf_check const char *format, ...) __attribute__((format(printf, 2, 3)));
+  void CapturePrintf(msvc_printf_check const char *format, ...) __attribute__((format(printf, 2, 3)));
 
-    /**
+  /**
   Process a printf style log message.
   @param format The printf format.
   @param ... Arguments to the printf format if needed.
@@ -71,54 +66,47 @@ public:
   so that something like "One string: %s", "the string" does not consider "the string"
   to be the va_list.
   */
-    void ProcessPrintf(msvc_printf_check const char *format, va_list args);
+  void ProcessPrintf(msvc_printf_check const char *format, va_list args);
 
-    Logging::Severity Severity() const noexcept
-    {
-        return severity_;
+  Logging::Severity Severity() const noexcept {
+    return severity_;
+  }
+
+  char SeverityPrefix() const noexcept {
+    // Carefully setup so severity_ is a valid index
+    GSL_SUPPRESS(bounds .2) {
+      return Logging::SEVERITY_PREFIX[static_cast<int>(severity_)];
     }
+  }
 
-    const char SeverityPrefix() const noexcept
-    {
-        // Carefully setup so severity_ is a valid index
-        GSL_SUPPRESS(bounds .2)
-        {
-            return Logging::SEVERITY_PREFIX[static_cast<int>(severity_)];
-        }
-    }
+  const char *Category() const noexcept {
+    return category_;
+  }
 
-    const char *Category() const noexcept
-    {
-        return category_;
-    }
+  Logging::DataType DataType() const noexcept {
+    return data_type_;
+  }
 
-    const Logging::DataType DataType() const noexcept
-    {
-        return data_type_;
-    }
+  const CodeLocation &Location() const noexcept {
+    return location_;
+  }
 
-    const CodeLocation &Location() const noexcept
-    {
-        return location_;
-    }
+  std::string Message() const noexcept {
+    return stream_.str();
+  }
 
-    std::string Message() const noexcept
-    {
-        return stream_.str();
-    }
+  ~Capture();
 
-    ~Capture();
+ private:
+  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Capture);
 
-private:
-    LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Capture);
+  const Logger *logger_;
+  const Logging::Severity severity_;
+  const char *category_;
+  const Logging::DataType data_type_;
+  const CodeLocation location_;
 
-    const Logger *logger_;
-    const Logging::Severity severity_;
-    const char *category_;
-    const Logging::DataType data_type_;
-    const CodeLocation location_;
-
-    std::ostringstream stream_;
+  std::ostringstream stream_;
 };
-} // namespace Logging
-} // namespace ONNX
+}  // namespace Logging
+}  // namespace Lotus

@@ -15,7 +15,7 @@
 
 using namespace std;
 
-namespace ONNXIR
+namespace LotusIR
 {
     class Node;
 }
@@ -158,13 +158,13 @@ const string RNNDirectionBidirection = "bidirectional";
 const string RNNDirectionReverse = "reverse";
 const string RNNDirectionForward = "forward";
 
-CNTK::FunctionPtr CreateLSTM(const ONNXIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
+CNTK::FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
     const std::vector<std::string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
 
-CNTK::FunctionPtr CreateGRU(const ONNXIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
+CNTK::FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
 
-CNTK::FunctionPtr CreateRNN(const ONNXIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
+CNTK::FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
 
 void TraceLSTMPathes(const CNTK::FunctionPtr& src, string &f_activation, string &g_activation, string &h_activation,

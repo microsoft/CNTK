@@ -2,17 +2,16 @@
 
 #include <functional>
 #include <unordered_map>
-#include "proto/onnx/onnx/defs/schema.h"
-#include "proto/onnx/core/common/status.h"
-#include "proto/onnx/core/graph/constants.h"
+#include "onnx/defs/schema.h"
+#include "core/common/status.h"
+#include "core/graph/constants.h"
 
 using namespace onnx;
-using namespace ONNX::Common;
+using namespace Lotus::Common;
 
-namespace ONNXIR
-{
-typedef AttributeProto_AttributeType AttrType;
-typedef std::unordered_map<std::string, AttributeProto> NodeAttributes;
+namespace LotusIR {
+using AttrType = AttributeProto_AttributeType;
+using NodeAttributes = std::unordered_map<std::string, AttributeProto>;
 
 // This string array should exactly match the AttrType defined above.
 /*
@@ -42,27 +41,24 @@ static constexpr const char* kAttrTypeStrings[] =
         "TENSORS",
         "GRAPHS"};
 
-class TypeUtils
-{
-public:
-    // Get attribute type given attribute proto data.
-    static Status GetType(const AttributeProto& attr, AttrType& type);
-    static bool IsValidAttribute(const AttributeProto& attribute);
+class TypeUtils {
+ public:
+  // Get attribute type given attribute proto data.
+  static Status GetType(const AttributeProto& attr, AttrType& type);
+  static bool IsValidAttribute(const AttributeProto& attribute);
 };
 
-class MsOpRegistry
-{
-public:
-    static Status RegisterMsOps()
-    {
-        // Ms domain ops should be registered here. Example:
-        // RETURN_IF_ERROR(RegisterMsNNOps());
-        return Status::OK();
-    }
+class MsOpRegistry {
+ public:
+  static Status RegisterMsOps() {
+    // Ms domain ops should be registered here. Example:
+    // LOTUS_RETURN_IF_ERROR(RegisterMsNNOps());
+    return Status::OK();
+  }
 
-private:
-    // Example to register ms domain ops.
-    // static Status RegisterMsNNOps();
+ private:
+  // Example to register ms domain ops.
+  // static Status RegisterMsNNOps();
 };
 
-} // namespace ONNXIR
+}  // namespace LotusIR

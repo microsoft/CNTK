@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace ONNXIR {
+namespace LotusIR {
 
 class Node;
 
@@ -20,7 +20,7 @@ class GraphNodes {
   class NodeIterator;
 
   // construct a wrapper of the nodes that provides iteration services
-  GraphNodes(TNodesContainer& nodes) noexcept : nodes_(nodes) {}
+  explicit GraphNodes(TNodesContainer& nodes) noexcept : nodes_(nodes) {}
 
   using ConstNodeIterator = NodeIterator<TNodesContainer::const_iterator>;
   using MutableNodeIterator = NodeIterator<TNodesContainer::iterator>;
@@ -99,4 +99,4 @@ class GraphNodes {
   TNodesContainer& nodes_;
 };
 
-}  // namespace ONNXIR
+}  // namespace LotusIR

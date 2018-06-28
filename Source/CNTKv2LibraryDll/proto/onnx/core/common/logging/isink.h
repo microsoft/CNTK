@@ -2,35 +2,31 @@
 
 #include <string>
 
-#include "proto/onnx/core/common/logging/logging.h"
+#include "core/common/logging/logging.h"
 
-namespace ONNX
-{
-namespace Logging
-{
-class ISink
-{
-public:
-    ISink() = default;
+namespace Lotus {
+namespace Logging {
+class ISink {
+ public:
+  ISink() = default;
 
-    /**
+  /**
   Sends the message to the sink.
   @param timestamp The timestamp.
   @param logger_id The logger identifier.
   @param message The captured message.
   */
-    void Send(const Timestamp &timestamp, const std::string &logger_id, const Capture &message)
-    {
-        SendImpl(timestamp, logger_id, message);
-    }
+  void Send(const Timestamp &timestamp, const std::string &logger_id, const Capture &message) {
+    SendImpl(timestamp, logger_id, message);
+  }
 
-    virtual ~ISink() = default;
+  virtual ~ISink() = default;
 
-private:
-    // Make Code Analysis happy by disabling all for now. Enable as needed.
-    LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(ISink);
+ private:
+  // Make Code Analysis happy by disabling all for now. Enable as needed.
+  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(ISink);
 
-    virtual void SendImpl(const Timestamp &timestamp, const std::string &logger_id, const Capture &message) = 0;
+  virtual void SendImpl(const Timestamp &timestamp, const std::string &logger_id, const Capture &message) = 0;
 };
-} // namespace Logging
-} // namespace ONNX
+}  // namespace Logging
+}  // namespace Lotus

@@ -23,43 +23,44 @@
 #include <algorithm>
 #include <functional>
 #include <map>
+#include <memory>
 #include <numeric>
 #include <set>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
+#include <chrono>
 
-#include "proto/onnx/core/common/code_location.h"
-#include "proto/onnx/core/common/exceptions.h"
-#include "proto/onnx/core/common/status.h"
+#include "core/common/CommonSTD.h"
+#include "core/common/code_location.h"
+#include "core/common/exceptions.h"
+#include "core/common/status.h"
 
-namespace ONNX
-{
+namespace Lotus {
 
 template <typename Key, typename Value>
 using LotusMap = std::unordered_map<Key, Value>;
 
+using TimePoint = std::chrono::high_resolution_clock::time_point;
+
 // Using statements for common classes that we refer to in lotus very often.
 // TODO(Task:137) Remove 'using' statements from header files
+using Common::Status;
+using Common::StatusCategory;
+using Common::StatusCode;
+using std::make_unique;
 using std::set;
 using std::string;
 using std::unique_ptr;
 using std::vector;
 
-using Common::Status;
-using Common::StatusCategory;
-using Common::StatusCode;
-
+#ifdef _WIN32
 #define UNUSED_PARAMETER(x) (x)
-
-#pragma warning(push)
-#pragma warning(disable : 4505)
-static std::vector<std::string> GetStackTrace()
-{
-    return { "<stacktrace not implemented>" };
-}
-#pragma warning(pop)
+#else
+#define UNUSED_PARAMETER(x)
+#endif
 
 // __PRETTY_FUNCTION__ isn't a macro on gcc, so use a check for _MSC_VER
 // so we only define it as one for MSVC
@@ -69,28 +70,27 @@ static std::vector<std::string> GetStackTrace()
 
 // Capture where a message is coming from. Use __FUNCTION__ rather than the much longer __PRETTY_FUNCTION__
 #define WHERE \
-    ONNX::CodeLocation(__FILE__, __LINE__, __FUNCTION__)
+  Lotus::CodeLocation(__FILE__, __LINE__, __FUNCTION__)
 
 #define WHERE_WITH_STACK \
-    ONNX::CodeLocation(__FILE__, __LINE__, __PRETTY_FUNCTION__, ONNX::GetStackTrace())
+  Lotus::CodeLocation(__FILE__, __LINE__, __FUNCTION__) // Lotus::CodeLocation(__FILE__, __LINE__, __PRETTY_FUNCTION__, Lotus::GetStackTrace())
 
 // Throw an exception with optional message.
 // NOTE: The arguments get streamed into a string via ostringstream::operator<<
 // DO NOT use a printf format string, as that will not work as you expect.
-#define LOTUS_THROW(...) throw ONNX::LotusException(WHERE_WITH_STACK, ONNX::MakeString(__VA_ARGS__))
+#define LOTUS_THROW(...) throw Lotus::LotusException(WHERE_WITH_STACK, Lotus::MakeString(__VA_ARGS__))
 
 // Just in order to mark things as not implemented. Do not use in final code.
-#define LOTUS_NOT_IMPLEMENTED(...) throw ONNX::NotImplementedException(ONNX::MakeString(__VA_ARGS__))
+#define LOTUS_NOT_IMPLEMENTED(...) throw Lotus::NotImplementedException(Lotus::MakeString(__VA_ARGS__))
 
 // Check condition.
 // NOTE: The arguments get streamed into a string via ostringstream::operator<<
 // DO NOT use a printf format string, as that will not work as you expect.
 #define LOTUS_ENFORCE(condition, ...) \
-    if (!(condition))                 \
-    throw ONNX::LotusException(WHERE_WITH_STACK, #condition, ONNX::MakeString(__VA_ARGS__))
+  if (!(condition)) throw Lotus::LotusException(WHERE_WITH_STACK, #condition, Lotus::MakeString(__VA_ARGS__))
 
 #define LOTUS_MAKE_STATUS(category, code, ...) \
-    Status(category, code, ONNX::MakeString(__VA_ARGS__))
+  Status(category, code, Lotus::MakeString(__VA_ARGS__))
 
 // Macros to disable the copy and/or move ctor and assignment methods
 // These are usually placed in the private: declarations for a class.
@@ -100,24 +100,22 @@ static std::vector<std::string> GetStackTrace()
 #define LOTUS_DISALLOW_ASSIGN(TypeName) TypeName& operator=(const TypeName&) = delete
 
 #define LOTUS_DISALLOW_COPY_AND_ASSIGN(TypeName) \
-    LOTUS_DISALLOW_COPY(TypeName);               \
-    LOTUS_DISALLOW_ASSIGN(TypeName)
+  LOTUS_DISALLOW_COPY(TypeName);                 \
+  LOTUS_DISALLOW_ASSIGN(TypeName)
 
 #define LOTUS_DISALLOW_MOVE(TypeName) \
-    TypeName(TypeName&&) = delete;    \
-    TypeName& operator=(TypeName&&) = delete
+  TypeName(TypeName&&) = delete;      \
+  TypeName& operator=(TypeName&&) = delete
 
 #define LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(TypeName) \
-    LOTUS_DISALLOW_COPY_AND_ASSIGN(TypeName);         \
-    LOTUS_DISALLOW_MOVE(TypeName)
+  LOTUS_DISALLOW_COPY_AND_ASSIGN(TypeName);           \
+  LOTUS_DISALLOW_MOVE(TypeName)
 
-#define LOTUS_RETURN_IF_ERROR(expr) \
-    do                              \
-    {                               \
-        auto _status = (expr);      \
-        if ((!_status.IsOK()))      \
-            return _status;         \
-    } while (0)
+#define LOTUS_RETURN_IF_ERROR(expr)        \
+  do {                                     \
+    auto _status = (expr);                 \
+    if ((!_status.IsOK())) return _status; \
+  } while (0)
 
 // C++ Core Guideline check suppression
 #ifdef _MSC_VER
@@ -136,40 +134,60 @@ static std::vector<std::string> GetStackTrace()
 #define LOTUS_EXPORT
 #endif
 
-inline void MakeStringInternal(std::stringstream& /*ss*/) noexcept
-{
-}
+inline void MakeStringInternal(std::stringstream& /*ss*/) noexcept {}
 
 template <typename T>
-inline void MakeStringInternal(std::stringstream& ss, const T& t) noexcept
-{
-    ss << t;
+inline void MakeStringInternal(std::stringstream& ss, const T& t) noexcept {
+  ss << t;
 }
 
 template <typename T, typename... Args>
-inline void MakeStringInternal(std::stringstream& ss, const T& t, const Args&... args) noexcept
-{
-    ::ONNX::MakeStringInternal(ss, t);
-    ::ONNX::MakeStringInternal(ss, args...);
+inline void MakeStringInternal(std::stringstream& ss, const T& t, const Args&... args) noexcept {
+  ::Lotus::MakeStringInternal(ss, t);
+  ::Lotus::MakeStringInternal(ss, args...);
 }
 
 template <typename... Args>
-string MakeString(const Args&... args)
-{
-    std::stringstream ss;
-    ::ONNX::MakeStringInternal(ss, args...);
-    return string(ss.str());
+string MakeString(const Args&... args) {
+  std::stringstream ss;
+  ::Lotus::MakeStringInternal(ss, args...);
+  return string(ss.str());
 }
 
 // Specializations for already-a-string types.
 template <>
-inline string MakeString(const string& str)
-{
-    return str;
+inline string MakeString(const string& str) {
+  return str;
 }
-inline string MakeString(const char* p_str)
-{
-    return string(p_str);
+inline string MakeString(const char* p_str) {
+  return string(p_str);
 }
 
-} // namespace ONNX
+inline long long TimeDiffMicroSeconds(TimePoint start_time) {
+  auto end_time = std::chrono::high_resolution_clock::now();
+  return std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+}
+
+inline long long TimeDiffMicroSeconds(TimePoint start_time, TimePoint end_time) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+}
+
+inline std::string GetCurrentTimeString() {
+  auto now = std::chrono::system_clock::now();
+  auto in_time_t = std::chrono::system_clock::to_time_t(now);
+  std::tm local_tm;
+
+#ifdef _WIN32
+  localtime_s(&local_tm, &in_time_t);
+#else
+  localtime_r(&in_time_t, &local_tm);
+#endif
+
+  char time_str[32];
+  strftime(time_str, sizeof(time_str), "%Y-%m-%d_%H-%M-%S", &local_tm);
+  return std::string(time_str);
+}
+
+struct null_type {};
+
+}  // namespace Lotus

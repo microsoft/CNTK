@@ -11,7 +11,10 @@
 #include <vector>
 #include <memory>
 
-typedef const char* MLConstStringParam;
+// Disable formatting, which is incorrect for ML_API macros
+// clang-format off
+namespace Lotus {
+using MLConstStringParam = const char*;
 
 class MLOpKernelContext;
 
@@ -40,6 +43,7 @@ class MLStatusException : public std::exception {
     }                             \
   }
 
+// TODO - consume error code to be returned upon failure
 #define ML_CHECK_BOOL(x)                       \
   {                                            \
     if ((x) == false) {                        \
@@ -94,6 +98,13 @@ struct MLTypeTraits<int64_t> {
 };
 
 template <>
+struct MLTypeTraits<bool> {
+  static const MLTensorDataType TensorType = MLTensorDataType::kBool;
+};
+
+// TODO - non-primitive traits classes: string, float16, complex64, complex128
+
+template <>
 struct MLTypeTraits<double> {
   static const MLTensorDataType TensorType = MLTensorDataType::kDouble;
 };
@@ -108,19 +119,64 @@ struct MLTypeTraits<uint64_t> {
   static const MLTensorDataType TensorType = MLTensorDataType::kUInt64;
 };
 
+template <>
+struct MLTypeTraits<MLFloat16> {
+  static const MLTensorDataType TensorType = MLTensorDataType::kFloat16;
+};
+
 //
 // Wrappers for ABI objects consumed by kernels.
 // These wrappers provide typesafe methods which use STL types and convert
 // return values to exceptions.
 //
 
-class MLOpKernelInfo {
+class MLOpKernelTensorShapeInfo {
  public:
-  MLOpKernelInfo(const IMLOpKernelInfo* impl) : impl_(impl) {}
+  MLOpKernelTensorShapeInfo(const IMLOpKernelTensorShapeInfo* impl) : impl_(impl) {}
 
-  // For cases of interop where the caller needs to pass the unwrapped class across a boundary.
-  const IMLOpKernelInfo* GetInterface() const noexcept {
-    return impl_;
+  uint32_t GetInputTensorDimensionCount(uint32_t input_index) const {
+    uint32_t ret;
+    ML_CHECK_STATUS(impl_->GetInputTensorDimensionCount(input_index, &ret));
+    return ret;
+  }
+
+  std::vector<int64_t> GetInputTensorShape(uint32_t input_index) const {
+    std::vector<int64_t> ret;
+    uint32_t dimension_count = GetInputTensorDimensionCount(input_index);
+    ret.resize(dimension_count);
+
+    ML_CHECK_STATUS(impl_->GetInputTensorShape(input_index, dimension_count, ret.data()));
+    return ret;
+  }
+
+  bool HasOutputShapeInfo() const noexcept {
+    return impl_->HasOutputShapeInfo();
+  }
+
+  uint32_t GetOutputTensorDimensionCount(uint32_t output_index) const {
+    uint32_t ret;
+    ML_CHECK_STATUS(impl_->GetOutputTensorDimensionCount(output_index, &ret));
+    return ret;
+  }
+
+  std::vector<int64_t> GetOutputTensorShape(uint32_t output_index) const {
+    std::vector<int64_t> ret;
+    uint32_t dimension_count = GetOutputTensorDimensionCount(output_index);
+    ret.resize(dimension_count);
+
+    ML_CHECK_STATUS(impl_->GetOutputTensorShape(output_index, dimension_count, ret.data()));
+    return ret;
+  }
+
+  const IMLOpKernelTensorShapeInfo* GetInterface() const { return impl_; }
+
+ protected:
+  const IMLOpKernelTensorShapeInfo* impl_ = nullptr;
+};
+
+class MLOperatorAttributes {
+ public:
+  MLOperatorAttributes(const IMLOperatorAttributes* impl) : impl_(impl) {
   }
 
   uint32_t GetAttributeElementCount(
@@ -194,12 +250,136 @@ class MLOpKernelInfo {
     return value;
   }
 
+ private:
+  const IMLOperatorAttributes* impl_;
+};
+
+class MLOpKernelInfo : public MLOperatorAttributes {
+ public:
+  MLOpKernelInfo(const IMLOpKernelInfo* impl) : impl_(impl), MLOperatorAttributes(impl) {}
+
+  // For cases of interop where the caller needs to pass the unwrapped class across a boundary.
+  const IMLOpKernelInfo* GetInterface() const noexcept {
+    return impl_;
+  }
+
   const void* GetExecutionHandle() const noexcept {
     return impl_->GetExecutionHandle();
   }
 
+  uint32_t GetInputCount() const noexcept {
+    return impl_->GetInputCount();
+  }
+
+  uint32_t GetOutputCount() const noexcept {
+    return impl_->GetOutputCount();
+  }
+
+  MLEdgeType GetInputEdgeType(uint32_t input_index) const {
+    MLEdgeType ret;
+    ML_CHECK_STATUS(impl_->GetInputEdgeType(input_index, &ret));
+
+    return ret;
+  }
+
+  MLEdgeType GetOutputEdgeType(uint32_t output_index) const {
+    MLEdgeType ret = {};
+    ML_CHECK_STATUS(impl_->GetOutputEdgeType(output_index, &ret));
+
+    return ret;
+  }
+
+  bool HasTensorShapeInfo() const noexcept {
+    return impl_->HasTensorShapeInfo();
+  }
+
+  MLOpKernelTensorShapeInfo GetTensorShapeInfo() const {
+    const IMLOpKernelTensorShapeInfo* ret = nullptr;
+    ML_CHECK_STATUS(impl_->GetTensorShapeInfo(&ret));
+    return MLOpKernelTensorShapeInfo(ret);
+  }
+
  private:
   const IMLOpKernelInfo* impl_;
+};
+
+class MLShapeInferenceContext : public MLOperatorAttributes {
+ public:
+  MLShapeInferenceContext(IMLShapeInferenceContext* impl) : impl_(impl), MLOperatorAttributes(impl) {}
+
+  // For cases of interop where the caller needs to pass the unwrapped class across a boundary.
+  const IMLShapeInferenceContext* GetInterface() const noexcept {
+    return impl_;
+  }
+
+  uint32_t GetInputCount() const noexcept {
+    return impl_->GetInputCount();
+  }
+
+  uint32_t GetOutputCount() const noexcept {
+    return impl_->GetOutputCount();
+  }
+
+  MLEdgeType GetInputEdgeType(uint32_t input_index) const {
+    MLEdgeType ret;
+    ML_CHECK_STATUS(impl_->GetInputEdgeType(input_index, &ret));
+
+    return ret;
+  }
+
+  uint32_t GetInputTensorDimensionCount(uint32_t input_index) const {
+    uint32_t ret;
+    ML_CHECK_STATUS(impl_->GetInputTensorDimensionCount(input_index, &ret));
+    return ret;
+  }
+
+  std::vector<int64_t> GetInputTensorShape(uint32_t input_index) const {
+    std::vector<int64_t> ret;
+    uint32_t dimension_count = GetInputTensorDimensionCount(input_index);
+    ret.resize(dimension_count);
+
+    ML_CHECK_STATUS(impl_->GetInputTensorShape(input_index, dimension_count, ret.data()));
+    return ret;
+  }
+
+  void SetOutputTensorShape(uint32_t output_index, const std::vector<int64_t>& output_dimensions) {
+    ML_CHECK_STATUS(impl_->SetOutputTensorShape(output_index, static_cast<uint32_t>(output_dimensions.size()), output_dimensions.data()));
+  }
+
+ private:
+  IMLShapeInferenceContext* impl_;
+};
+
+class MLTypeInferenceContext : public MLOperatorAttributes {
+ public:
+  MLTypeInferenceContext(IMLTypeInferenceContext* impl) : impl_(impl), MLOperatorAttributes(impl) {}
+
+  // For cases of interop where the caller needs to pass the unwrapped class across a boundary.
+  const IMLTypeInferenceContext* GetInterface() const noexcept {
+    return impl_;
+  }
+
+  uint32_t GetInputCount() const noexcept {
+    return impl_->GetInputCount();
+  }
+
+  uint32_t GetOutputCount() const noexcept {
+    return impl_->GetOutputCount();
+  }
+
+  MLEdgeType GetInputEdgeType(uint32_t input_index) const {
+    MLEdgeType type;
+    ML_CHECK_STATUS(impl_->GetInputEdgeType(input_index, &type));
+
+    return type;
+  }
+
+  void SetOutputEdgeType(uint32_t output_index, const MLEdgeType* edge_type) const {
+    ML_CHECK_STATUS(impl_->SetOutputEdgeType(output_index, edge_type));
+  }
+
+ private:
+  IMLTypeInferenceContext* impl_;
 };
 
 class MLOpTensor {
@@ -220,12 +400,9 @@ class MLOpTensor {
   MLOpTensor(const MLOpTensor&) = default;
   MLOpTensor(MLOpTensor&&) = default;
   MLOpTensor& operator=(const MLOpTensor&) = default;
-
+  // TODO rename to shape to match other methods
   uint32_t GetDimensionCount() const {
-    uint32_t dimension_count = 0;
-
-    ML_CHECK_STATUS(impl_->GetDimensionCount(&dimension_count));
-    return dimension_count;
+    return impl_->GetDimensionCount();
   }
 
   const std::vector<int64_t>& GetDimensions() const {
@@ -294,6 +471,10 @@ class MLOpTensor {
     return impl_->GetData();
   }
 
+  bool IsUnused() const noexcept {
+    return impl_->IsUnused();
+  }
+
  private:
   IMLOpTensor* impl_;
 
@@ -312,7 +493,7 @@ class MLTemporaryDataDeleter {
   const MLOpKernelContext* context_;
 };
 
-typedef std::unique_ptr<void, MLTemporaryDataDeleter> MLTemporaryDataUniquePtr;
+using MLTemporaryDataUniquePtr = std::unique_ptr<void, MLTemporaryDataDeleter>;
 
 class MLOpKernelContext {
  public:
@@ -323,48 +504,26 @@ class MLOpKernelContext {
   // across a boundary. e.g. Operator implementations may use the helper classes so that
   // they can use exceptions without checking every return value, but then they need to pass
   // results onward to a different component which expects the lower level currency.
-  IMLOpKernelContext* GetInterface() noexcept {
+  IMLOpKernelContext* GetInterface() const noexcept {
     return impl_;
-  }
-
-  const IMLOpKernelContext* GetInterface() const noexcept {
-    return impl_;
-  }
-
-  MLEdgeType GetInputEdgeType(uint32_t input_index) const {
-    MLEdgeType edge_type;
-    ML_CHECK_STATUS(impl_->GetInputEdgeType(input_index, &edge_type));
-    return edge_type;
-  }
-
-  MLEdgeType GetOutputEdgeType(uint32_t output_index) const {
-    MLEdgeType edge_type;
-    ML_CHECK_STATUS(impl_->GetInputEdgeType(output_index, &edge_type));
-    return edge_type;
   }
 
   const MLOpTensor GetInputTensor(uint32_t input_index) const {
-    ML_CHECK_BOOL(GetInputEdgeType(input_index) == MLEdgeType::kTensor);
-
     const IMLOpTensor* tensor = nullptr;
     ML_CHECK_STATUS(impl_->GetInputTensor(input_index, &tensor));
     return const_cast<IMLOpTensor*>(tensor);
   }
 
-  MLOpTensor GetOutputTensor(uint32_t output_index, const std::vector<int64_t> dimension_sizes) const {
-    ML_CHECK_BOOL(GetOutputEdgeType(output_index) == MLEdgeType::kTensor);
+  MLOpTensor GetOutputTensor(uint32_t output_index) const {
+    IMLOpTensor* tensor = nullptr;
+    ML_CHECK_STATUS(impl_->GetOutputTensor(output_index, &tensor));
+    return const_cast<IMLOpTensor*>(tensor);
+  }
 
+  MLOpTensor GetOutputTensor(uint32_t output_index, const std::vector<int64_t> dimension_sizes) const {
     IMLOpTensor* tensor = nullptr;
     ML_CHECK_STATUS(impl_->GetOutputTensor(output_index, dimension_sizes.data(), static_cast<uint32_t>(dimension_sizes.size()), &tensor));
     return MLOpTensor(tensor);
-  }
-
-  uint32_t GetInputCount() const noexcept {
-    return impl_->GetInputCount();
-  }
-
-  uint32_t GetOutputCount() const noexcept {
-    return impl_->GetOutputCount();
   }
 
   MLTemporaryDataUniquePtr AllocateTemporaryData(uint64_t size) const {
@@ -373,26 +532,28 @@ class MLOpKernelContext {
     return MLTemporaryDataUniquePtr(data, this);
   }
 
-  const IMLOpKernelContext* GetImpl() const { return impl_; }
+  const void* GetExecutionHandle() const noexcept {
+    return impl_->GetExecutionHandle();
+  }
 
  private:
-  IMLOpKernelContext* impl_;
+  IMLOpKernelContext* impl_ = nullptr;
 };
 
 inline void MLTemporaryDataDeleter::operator()(void* p) const {
   if (context_)
-    context_->GetImpl()->FreeTemporaryData(p);
+    context_->GetInterface()->FreeTemporaryData(p);
 }
 
 // Helper class for operator implementations, templatized by the
 // implementation type. This class converts ABI types to wrappers,
-// supports STL / GSL types, and converts exceptions to return values.
+// supports STL types, and converts exceptions to return values.
 template <class T>
 class MLOpKernel : public IMLOpKernel, public T {
  public:
-  static ML_API_IMP(CreateInstance)(const IMLOpKernelInfo& info, IMLOpKernel** opKernel) noexcept {
+  static ML_API_IMP(CreateInstance)(const IMLOpKernelInfo& info, IMLOpKernel** op_kernel) noexcept {
     try {
-      *opKernel = new MLOpKernel(MLOpKernelInfo(&info));
+      *op_kernel = new MLOpKernel(MLOpKernelInfo(&info));
       return MLStatus::OK;
     } catch (const MLStatusException& ex) {
       return ex.GetStatus();
@@ -407,19 +568,13 @@ class MLOpKernel : public IMLOpKernel, public T {
   virtual ~MLOpKernel() {
   }
 
-  ML_API_IMP_(void, Release)
-  () noexcept override {
+  ML_API_IMP_(void, Release)() noexcept override {
     delete this;
   }
 
-  ML_API_IMP(Compute)
-  (
-      const IMLOpKernelInfo* info,
-      IMLOpKernelContext* context) noexcept override {
+  ML_API_IMP(Compute)(IMLOpKernelContext* context) noexcept override {
     try {
-      T::Compute(
-          MLOpKernelInfo(info),
-          MLOpKernelContext(context));
+      T::Compute(MLOpKernelContext(context));
 
       return MLStatus::OK;
     } catch (const MLStatusException& ex) {
@@ -431,3 +586,5 @@ class MLOpKernel : public IMLOpKernel, public T {
 
   using T::Compute;
 };
+
+} // namespace Lotus

@@ -92,11 +92,15 @@ PROTOC = $(PROTOBUF_PATH)/bin/protoc
 
 SOURCEDIR:= Source
 GSL_PATH:=$(SOURCEDIR)/../external/gsl
+ONNX_PATH:=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx
+ONNX_REPO_PATH:=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo
 INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/Generated/Linux CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 INCLUDEPATH+=$(GSL_PATH)/include
+INCLUDEPATH+=$(ONNX_PATH)
+INCLUDEPATH+=$(ONNX_REPO_PATH)
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
-COMMON_FLAGS:= $(COMMON_FLAGS) -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11 -DCUDA_NO_HALF -D__CUDA_NO_HALF_OPERATORS__
+COMMON_FLAGS:= $(COMMON_FLAGS) -DONNX_NAMESPACE=onnx -DONNX_ML=1 -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11 -DCUDA_NO_HALF -D__CUDA_NO_HALF_OPERATORS__
 CPPFLAGS:=
 CXXFLAGS:= $(SSE_FLAGS) $(CXXFLAGS) -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
@@ -517,35 +521,35 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardFileWriter.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardUtils.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/logging/capture.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/logging/logging.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/status.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph_transformer.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/model.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/op.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/tensorutils.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/controlflow/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/experiments/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/generator/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/logical/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/logical/old.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/math/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/math/old.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/nn/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/nn/old.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/reduction/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/rnn/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/rnn/old.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/tensor/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/tensor/old.cpp \
-    $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/traditionalml/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/data_type_utils.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/schema.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/common/assertions.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-ml.pb.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-operators-ml.pb.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/checker.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/logging/capture.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/logging/logging.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/status.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph_transformer.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/model.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/op.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/tensorutils.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/checker.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/common/assertions.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/controlflow/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/experiments/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/generator/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/logical/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/logical/old.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/math/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/math/old.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/nn/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/nn/old.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/reduction/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/rnn/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/rnn/old.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/tensor/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/tensor/old.cc \
+    $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/traditionalml/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/data_type_utils.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/schema.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.pb.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.pb.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/Operators.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/RNNHelper.cpp \
     $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/CNTKToONNX.cpp \
@@ -567,7 +571,8 @@ CNTKLIBRARY:=Cntk.Core-$(CNTK_COMPONENT_VERSION)
 CNTKLIBRARY_OBJ:=\
 	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(CNTKLIBRARY_SRC))) \
 	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(CNTKLIBRARY_SRC))) \
-	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTKLIBRARY_SRC)))
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTKLIBRARY_SRC))) \
+	$(patsubst %.cc, $(OBJDIR)/%.o, $(filter %.cc, $(CNTKLIBRARY_SRC)))
 
 CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
 ALL_LIBS+=$(CNTKLIBRARY_LIB)
@@ -680,7 +685,8 @@ EVAL_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 EVAL_OBJ:=\
 	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(EVAL_SRC))) \
 	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(EVAL_SRC))) \
-	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(EVAL_SRC)))
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(EVAL_SRC))) \
+	$(patsubst %.cc, $(OBJDIR)/%.o, $(filter %.cc, $(CNTKLIBRARY_SRC)))
 
 EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL_LIBS+=$(EVAL_LIB)
@@ -1186,7 +1192,8 @@ CNTK_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 CNTK_OBJ :=\
 	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(CNTK_SRC))) \
 	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(CNTK_SRC))) \
-	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTK_SRC)))
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTK_SRC))) \
+	$(patsubst %.cc, $(OBJDIR)/%.o, $(filter %.cc, $(CNTKLIBRARY_SRC)))
 
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
@@ -1258,7 +1265,8 @@ UNITTEST_EVAL_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/EvalTests/EvalExtendedTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/EvalTests/stdafx.cpp
 
-UNITTEST_EVAL_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_EVAL_SRC))
+UNITTEST_EVAL_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_EVAL_SRC)) \
+					 $(patsubst %.cc, $(OBJDIR)/%.o, $(filter %.cc, $(CNTKLIBRARY_SRC)))
 
 UNITTEST_EVAL := $(BINDIR)/evaltests
 
@@ -1325,7 +1333,8 @@ UNITTEST_NETWORK_SRC += $(SGDLIB_SRC)
 UNITTEST_NETWORK_OBJ :=\
 	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(UNITTEST_NETWORK_SRC))) \
 	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(UNITTEST_NETWORK_SRC))) \
-	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(UNITTEST_NETWORK_SRC)))
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(UNITTEST_NETWORK_SRC))) \
+	$(patsubst %.cc, $(OBJDIR)/%.o, $(filter %.cc, $(CNTKLIBRARY_SRC)))
 
 UNITTEST_NETWORK := $(BINDIR)/networktests
 
@@ -1645,6 +1654,12 @@ $(OBJDIR)/%.pb.o : %.pb.cc $(BUILD_CONFIGURATION)
 	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
 $(OBJDIR)/%.o : %.cpp $(BUILD_CONFIGURATION)
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	@mkdir -p $(dir $@)
+	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
+
+$(OBJDIR)/%.o : %.cc $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)

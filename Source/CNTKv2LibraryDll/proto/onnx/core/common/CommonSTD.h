@@ -2,16 +2,12 @@
 #include <memory>
 #include <type_traits>
 
-#if defined(__GNUC__) && !defined(__cpp_lib_make_unique)
+// to get make_unique definition
+#include "Platform.h"
+
+// to add what is missing in gsl 
+#if defined(__GNUC__)
 namespace std {
-
-    // make_unique was added in GCC 4.9.0. Requires using -std=c++11.
-    template <typename T, typename... Args>
-    unique_ptr<T> make_unique(Args &&... args)
-    {
-        return unique_ptr<T>(new T(forward<Args>(args)...));
-    }
-
     template<bool _Test,
         class _Ty = void>
         using enable_if_t = typename enable_if<_Test, _Ty>::type;

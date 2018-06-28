@@ -3,16 +3,16 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-#include "ONNX.h"
-#include "CNTKToONNX.h"
 #include "proto/onnx/core/graph/model.h"
 #include "proto/onnx/core/graph/graph.h"
+
+#include "ONNX.h"
+#include "CNTKToONNX.h"
+#include "ONNXToCNTK.h"
 #include "Utils.h"
 
 #include <iostream>
 #include <memory>
-
-#include "ONNXToCNTK.h"
 
 using namespace CNTK;
 
@@ -62,20 +62,20 @@ void ONNXFormat::Save(const FunctionPtr& src, const std::wstring& filepath)
 {
     auto model = CNTKToONNX::CreateModel(src);
 #ifdef _WIN32
-    ONNXIR::Model::Save(*model, filepath);
+    LotusIR::Model::Save(*model, filepath);
 #else
-    ONNXIR::Model::Save(*model, ToString(filepath));
+    LotusIR::Model::Save(*model, ToString(filepath));
 #endif
 }
 
 FunctionPtr ONNXFormat::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice)
 {
-    std::shared_ptr<ONNXIR::Model> model;
+    std::shared_ptr<LotusIR::Model> model;
 
 #ifdef _WIN32
-    Status loadStatus = ONNXIR::Model::Load(filepath, &model);
+    Lotus::Common::Status loadStatus = LotusIR::Model::Load(filepath, model);
 #else
-    Status loadStatus = ONNXIR::Model::Load(ToString(filepath), &model);
+    Lotus::Common::Status loadStatus = LotusIR::Model::Load(ToString(filepath), model);
 #endif
     if (!loadStatus.IsOK())
         LogicError("Failed to load model: '%s'", loadStatus.ErrorMessage().c_str());
