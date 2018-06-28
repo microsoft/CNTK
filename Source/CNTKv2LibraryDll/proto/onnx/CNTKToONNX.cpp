@@ -2882,7 +2882,9 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
         }
         else if (src->OpName() == L"ELU")
         {
-            auto alpha = 1.0f;
+            float alpha = 1.0f;
+            if (src->Attributes().Contains(L"alpha"))
+                alpha = (float)src->Attributes()[L"alpha"].Value<double>();
             node->AddAttribute("alpha", alpha);
         }
         else if (src->OpName() == L"LeakyReLU")

@@ -2749,6 +2749,19 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
     }
 
+    FunctionPtr ELU(const Variable& operand, double alpha, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
+
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero, 
+            ElementTimes(Constant::Scalar(operand.GetDataType(), alpha), ELU(operandPlaceholder, name + L"_ELU")),
+            operandPlaceholder);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"ELU", name);
+    }
+
     FunctionPtr SELU(const Variable& operand, double gamma, double alpha, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();

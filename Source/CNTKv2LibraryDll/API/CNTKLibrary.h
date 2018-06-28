@@ -4760,6 +4760,11 @@ namespace CNTK
     CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with specified alpha and with the specified input operand.
+    ///
+    CNTK_API FunctionPtr ELU(const Variable& operand, double alpha, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise scaled exponential linear unit operation with the specified input operand.
     ///
     CNTK_API FunctionPtr SELU(const Variable& operand, double gamma = 1.0507009873554804934193349852946, double alpha = 1.6732632423543772848170429916717, const std::wstring& name = L"");

@@ -380,9 +380,13 @@ def test_Elu(tmpdir, dtype):
         model = C.elu(data)
         verify_no_input(model, tmpdir, 'Elu_0')
 
-        x = C.input_variable(data.shape)
-        model = C.elu(x)
+        x1 = C.input_variable(data.shape)
+        model = C.elu(x1)
         verify_one_input(model, data, tmpdir, 'Elu_1')
+
+        x2 = C.input_variable(data.shape)
+        model = C.elu(x2, alpha=2.0)
+        verify_one_input(model, data, tmpdir, 'Elu_2')
 
 #Equal
 @pytest.mark.parametrize("dtype", DType_Config)

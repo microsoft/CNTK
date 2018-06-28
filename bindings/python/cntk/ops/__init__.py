@@ -1363,10 +1363,10 @@ def relu(x, name=''):
 
 
 @typemap
-def elu(x, name=''):
+def elu(x, alpha=1.0, name=''):
     '''
     Exponential linear unit operation. Computes the element-wise exponential linear
-    of ``x``: ``max(x, 0)`` for ``x >= 0`` and ``x``: ``exp(x)-1`` otherwise.
+    of ``x``: ``max(x, 0)`` for ``x >= 0`` and ``x``: ``alpha * (exp(x)-1)`` otherwise.
 
     The output tensor has the same shape as ``x``.
 
@@ -1384,7 +1384,7 @@ def elu(x, name=''):
     '''
     from cntk.cntk_py import elu
     x = sanitize_input(x)
-    return elu(x, name)
+    return elu(x, alpha, name)
 
 @typemap
 def selu(x, scale=1.0507009873554804934193349852946, alpha=1.6732632423543772848170429916717, name=''):

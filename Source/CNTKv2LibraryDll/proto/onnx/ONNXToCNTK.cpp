@@ -2306,7 +2306,8 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Elu")
     {
-        FunctionPtr cntkFunction = ELU(inputs[0], ToWString(node->Name()));
+        double alpha = static_cast<double>(GetNamedAttributeAsFloat(node, "alpha", 1.0f));
+        FunctionPtr cntkFunction = ELU(inputs[0], alpha, ToWString(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "Exp")
