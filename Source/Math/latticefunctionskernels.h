@@ -1017,7 +1017,7 @@ struct latticefunctionskernels
             for (size_t t = ts; t < te; t++)
             {
                 const size_t s = (size_t)alignstateids[t - ts + offset];
-				// use atomic function for lock the value
+                // use atomic function for lock the value
                     atomicAdd(&errorsignal(s, t), weight); 
             }
         }
