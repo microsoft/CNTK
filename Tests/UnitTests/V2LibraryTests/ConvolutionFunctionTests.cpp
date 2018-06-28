@@ -256,9 +256,10 @@ std::vector<std::vector<ElementType>> RunConvSeqByUnpack_byhand(const DeviceDesc
 {
     const size_t numFilters = 2;
 
-    auto input = InputVariable({10, 1}, AsDataType<ElementType>(), L"features");
-    auto convParam = Parameter({3, 2, 1}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
-    auto unpackInputOutputs = Sequence::Unpack(input, (ElementType) 0.0f, false, L"unpack input");
+    auto input = InputVariable({20, 1}, AsDataType<ElementType>(), L"features");
+    auto input_ = Reshape(input, {10, 2});
+    auto convParam = Parameter({3, 2, 2}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
+    auto unpackInputOutputs = Sequence::Unpack(input_, (ElementType) 0.0f, false, L"unpack input");
     auto unpackInput = unpackInputOutputs->Outputs()[0];
     auto unpackInputMask = unpackInputOutputs->Outputs()[1];
     auto transposeInput = TransposeAxes(unpackInput, Axis(-1), Axis(-2), L"transpose axis input");
@@ -272,10 +273,10 @@ std::vector<std::vector<ElementType>> RunConvSeqByUnpack_byhand(const DeviceDesc
 
     auto resPack = ToSequence(transOut, convOutputSeqSize, L"pack output axis", L"pack output"); // provide sequence length as parameter.
 
-    const size_t channelSize = 1;
+    const size_t channelSize = 2;
     const std::vector<size_t> sequenceSize = {4, 5, 2, 2};
     const size_t batchSize = sequenceSize.size();
-    const std::vector<size_t> sampleSizes = {10, 10, 10, 10};
+    const std::vector<size_t> sampleSizes = {10 * channelSize, 10 * channelSize, 10 * channelSize, 10 * channelSize };
     size_t dataSize = 0;
     for (size_t i = 0; i < sequenceSize.size(); i++)
     {
@@ -313,14 +314,15 @@ std::vector<std::vector<ElementType>> RunConvSeqByUnpack(const DeviceDescriptor&
 {
     const size_t numFilters = 2;
 
-    auto input = InputVariable({10, 1}, AsDataType<ElementType>(), L"features");
-    auto convParam = Parameter({3, 2, 1}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
-    auto conv = Convolution(convParam, input, {2, 2}, /*sharing = */ {true}, /*autoPadding = */ {true}, /*sequential = */ true);
+    auto input = InputVariable({20, 1}, AsDataType<ElementType>(), L"features");
+    auto input_ = Reshape(input, {10, 2});
+    auto convParam = Parameter({3, 2, 2}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
+    auto conv = Convolution(convParam, input_, {2, 2}, /*sharing = */ {true}, /*autoPadding = */ {true}, /*sequential = */ true);
 
-    const size_t channelSize = 1;
+    const size_t channelSize = 2;
     const std::vector<size_t> sequenceSize = {4, 5, 2, 2};
     const size_t batchSize = sequenceSize.size();
-    const std::vector<size_t> sampleSizes = {10, 10, 10, 10};
+    const std::vector<size_t> sampleSizes = {10 * channelSize, 10 * channelSize, 10 * channelSize, 10 * channelSize };
     size_t dataSize = 0;
     for (size_t i = 0; i < sequenceSize.size(); i++)
     {
@@ -356,11 +358,10 @@ std::vector<std::vector<ElementType>> RunConvSeqByUnpack(const DeviceDescriptor&
 template <typename ElementType>
 std::vector<std::vector<ElementType>> RunConvSeqByUnpackTestMaskReduce(const DeviceDescriptor& device)
 {
-    const size_t numFilters = 2;
-
-    auto input = InputVariable({10, 1}, AsDataType<ElementType>(), L"features");
-    auto convParam = Parameter({3, 2, 1}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
-    auto unpackInputOutputs = Sequence::Unpack(input, (ElementType) 0.0f, false, L"unpack input");
+    auto input = InputVariable({20, 1}, AsDataType<ElementType>(), L"features");
+    auto input_ = Reshape(input, {10, 2});
+    auto convParam = Parameter({3, 2, 2}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
+    auto unpackInputOutputs = Sequence::Unpack(input_, (ElementType) 0.0f, false, L"unpack input");
     auto unpackInputMask = unpackInputOutputs->Outputs()[1]; // TODO : can we compute output mask by input mask, and convert output back to sequence using mask?
 
     auto unpackInputMaskReduceSum = ReduceSum(unpackInputMask, Axis(-1));
@@ -368,10 +369,10 @@ std::vector<std::vector<ElementType>> RunConvSeqByUnpackTestMaskReduce(const Dev
 
     auto convOutputSeqSize = Ceil(ElementDivide(unpackInputMaskReduceSum, Constant::Scalar((ElementType) seqKernelSize)));
 
-    const size_t channelSize = 1;
+    const size_t channelSize = 2;
     const std::vector<size_t> sequenceSize = {4, 5, 2, 2};
     const size_t batchSize = sequenceSize.size();
-    const std::vector<size_t> sampleSizes = {10, 10, 10, 10};
+    const std::vector<size_t> sampleSizes = {10 * channelSize, 10 * channelSize, 10 * channelSize, 10 * channelSize };
     size_t dataSize = 0;
     for (size_t i = 0; i < sequenceSize.size(); i++)
     {
@@ -407,16 +408,15 @@ std::vector<std::vector<ElementType>> RunConvSeqByUnpackTestMaskReduce(const Dev
 template <typename ElementType>
 std::vector<std::vector<ElementType>> RunConvMatchResSeqByUnpack(const DeviceDescriptor& device)
 {
-    const size_t numFilters = 2;
+    auto input = InputVariable({10, 2, 5}, AsDataType<ElementType>(), L"features");
+    auto input_ = TransposeAxes(input, Axis(1), Axis(2));
+    auto convParam = Parameter({3, 2, 2}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
+    auto conv = Convolution(convParam, input_, {2, 2});
 
-    auto input = InputVariable({10, 5, 1}, AsDataType<ElementType>(), L"features");
-    auto convParam = Parameter({3, 2, 1}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
-    auto conv = Convolution(convParam, input, {2, 2});
-
-    const size_t channelSize = 1;
+    const size_t channelSize = 2;
     const std::vector<size_t> sequenceSize = {4, 5, 2, 2};
     const size_t batchSize = sequenceSize.size();
-    const std::vector<size_t> sampleSizes = {10, 10, 10, 10};
+    const std::vector<size_t> sampleSizes = {10 * channelSize, 10 * channelSize, 10 * channelSize, 10 * channelSize};
     size_t dataSize = 0;
     for (size_t i = 0; i < sequenceSize.size(); i++)
     {
@@ -430,7 +430,7 @@ std::vector<std::vector<ElementType>> RunConvMatchResSeqByUnpack(const DeviceDes
     {
         for (size_t j = 0; j < 5; ++j)
         {
-            for (size_t z = 0; z < 10; ++z)
+            for (size_t z = 0; z < 20; ++z)
             {
                 if (j >= sequenceSize[i])
                     inputData[k] = static_cast<ElementType>(0);
@@ -446,7 +446,7 @@ std::vector<std::vector<ElementType>> RunConvMatchResSeqByUnpack(const DeviceDes
 
     //const std::vector<size_t> sampleSizes_ = {50, 50, 50, 50};
 
-    auto inputVal = CreateBatchWithVariableSequence(NDShape({10, 5, 1}), batchSize, {1, 1, 1, 1}, inputData, device);
+    auto inputVal = CreateBatchWithVariableSequence(NDShape({10, 2, 5}), batchSize, {1, 1, 1, 1}, inputData, device);
     auto outputVar = conv->Output();
     std::unordered_map<Variable, ValuePtr> inputDataMap = {{input, inputVal}};
 
