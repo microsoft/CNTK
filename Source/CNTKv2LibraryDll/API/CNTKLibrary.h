@@ -4794,7 +4794,12 @@ namespace CNTK
     /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
- 
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise scaled exponential linear unit operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
     ///

@@ -95,9 +95,9 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opAtanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opAcos, opAsin, opCosh, opSinh, opAsinh, opExponentialLinearUnit, opStableSigmoid,
+    opSigmoid, opTanh, opAtanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opAcos, opAsin, opCosh, opSinh, opAsinh, opExponentialLinearUnit, opStableSigmoid, opStraightThrough,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
-    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative, opStableSigmoidDerivative,
+    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative, opStableSigmoidDerivative, opStraightThroughDerivative,
     // binary
     opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum, opPow,
     opMax, opMin, opArgmax, opArgmin,
@@ -112,6 +112,7 @@ enum ElementWiseOperator
     opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative,
     opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
     opElementwiseProductWithExponentialLinearUnitDerivativeFromOutput,
+    opElementwiseProductWithStraightThroughDerivative,
     // binary ops for indexing
     // opIndex,
     // ternary
@@ -153,7 +154,8 @@ enum ElementWiseOperator
     Macro(Sinh);                  \
     Macro(Asinh);                 \
     Macro(ExponentialLinearUnit); \
-    Macro(StableSigmoid);
+    Macro(StableSigmoid);         \
+    Macro(StraightThrough);
 
 #define ForAllBinaryOps(Macro)                                               \
     Macro(CopyIf);                                                           \
@@ -192,7 +194,8 @@ enum ElementWiseOperator
     Macro(ElementwiseProductWithReciprocalDerivative);                       \
     Macro(ElementwiseProductWithSqrtDerivative);                             \
     Macro(SqrOfDifference);                                                  \
-    Macro(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput);
+    Macro(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput);  \
+    Macro(ElementwiseProductWithStraightThroughDerivative); 
     //Macro(Index);
 
 #define ForAllTernaryOps(Macro)                         \

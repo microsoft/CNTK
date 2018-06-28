@@ -266,6 +266,12 @@ DECL ElemType Sigmoid(ElemType z)
 #endif
 }
 
+template <class ElemType>
+DECL ElemType StraightThrough(ElemType z)
+{
+    return z > (ElemType)0 ? (ElemType)1 : (ElemType)-1;
+}
+
 // Numerically stable Sigmoid, we can't remove the old one due to Speech dependency.
 template <class ElemType>
 DECL ElemType StableSigmoid(ElemType z)
@@ -284,6 +290,12 @@ DECL ElemType SigmoidDerivative(ElemType z)
 {
     ElemType v = Sigmoid(z);
     return v * (1 - v);
+}
+
+template <class ElemType>
+DECL ElemType StraightThroughDerivative(ElemType z)
+{
+    return fabs_(z) > (ElemType)1 ? (ElemType)0 : (ElemType)1;
 }
 
 template <class ElemType>
@@ -415,6 +427,7 @@ DefUnaryOp(Sinh, sinh_(a));
 DefUnaryOp(Cosh, cosh_(a));
 DefUnaryOp(Asinh, asinh_(a));
 DefUnaryOp(Atanh, atanh_(a));
+DefUnaryOp(StraightThrough, StraightThrough(a));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
@@ -462,6 +475,7 @@ DefBinaryOp(ElementwiseProductWithSinhDerivative, a * cosh_(b)); // note: b = in
 DefBinaryOp(ElementwiseProductWithCoshDerivative, a * sinh_(b)); // note: b = input for cosh()
 DefBinaryOp(ElementwiseProductWithAsinhDerivative, a / sqrt_(1 + b * b)); // note: b = input for asinh()
 DefBinaryOp(ElementwiseProductWithAtanhDerivative, a / (1 - b * b)); // note: b = input for atanh()
+DefBinaryOp(ElementwiseProductWithStraightThroughDerivative, fabs_(b) <= (ElemType)1 ? a : (ElemType)0); // note: b = input for straightthrough()
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")

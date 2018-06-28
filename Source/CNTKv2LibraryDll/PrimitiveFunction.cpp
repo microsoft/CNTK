@@ -382,6 +382,7 @@ namespace CNTK
                         case PrimitiveOpType::StableSigmoid:
                         case PrimitiveOpType::ConstantOp:
                         case PrimitiveOpType::Cast:
+                        case PrimitiveOpType::StraightThrough:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
