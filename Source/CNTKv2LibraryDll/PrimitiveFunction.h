@@ -757,6 +757,10 @@ namespace CNTK
                                                 std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
                                                 bool transpose, bool inferDimensions, NDShape& dilation, size_t groups=1, bool ceilOutputDim = false);
 
+        static NDShape ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
+                                                std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
+                                                bool transpose, bool inferDimensions, NDShape& dilation, bool sequential, size_t groups = 1, bool ceilOutputDim = false);
+
         static NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions)
         {
             NDShape mainOperandShape = operands[0].Shape();

@@ -2454,35 +2454,37 @@ namespace CNTK
         
         if (sequential)
         {
-            // unpack sequence axis to static axes:   [ H_in, W_in, c ] x [*] -> [ H_in, W_in, c, * ] x [1]
-            // for reduction rank == 0:               [ H_in, W_in    ] x [*] -> [ H_in, W_in,    * ] x [1]
-            auto unpackOperandPair = Sequence::Unpack(operand, 0.0f, false);
-            auto unpackOperand = unpackOperandPair->Outputs()[0];
-            auto unpackOperandMask = unpackOperandPair->Outputs()[1];
+            //// unpack sequence axis to static axes:   [ H_in, W_in, c ] x [*] -> [ H_in, W_in, c, * ] x [1]
+            //// for reduction rank == 0:               [ H_in, W_in    ] x [*] -> [ H_in, W_in,    * ] x [1]
+            //auto unpackOperandPair = Sequence::Unpack(operand, 0.0f, false);
+            //auto unpackOperand = unpackOperandPair->Outputs()[0];
+            //auto unpackOperandMask = unpackOperandPair->Outputs()[1];
 
-            if (reductionRank != 0)
-                // transpose out the channel axis if reduction rank > 0: [ H_in, W_in, c, * ] x [1] -> [ H_in, W_in, *, c ] x [1]
-                unpackOperand = TransposeAxes(unpackOperand, Axis(-1), Axis(-2));
+            //if (reductionRank != 0)
+            //    // transpose out the channel axis if reduction rank > 0: [ H_in, W_in, c, * ] x [1] -> [ H_in, W_in, *, c ] x [1]
+            //    unpackOperand = TransposeAxes(unpackOperand, Axis(-1), Axis(-2));
 
-            auto convInputSeqDim = ReduceSum(unpackOperandMask, Axis(-1));
+            //auto convInputSeqDim = ReduceSum(unpackOperandMask, Axis(-1));
 
-            FunctionPtr conv;
-            if (reductionRank != 0)
-                conv = Internal::Convolution(convolutionMap, unpackOperand, convInputSeqDim, strides, sharing, autoPadding, dilation, false,
-                    {0}, groups, maxTempMemSizeInSamples, name);
-            else 
-                conv = Internal::SpatialConvolution(convolutionMap, unpackOperand, convInputSeqDim, strides, sharing, autoPadding, 
-                    dilation, maxTempMemSizeInSamples, name);
+            //FunctionPtr conv;
+            //if (reductionRank != 0)
+            //    conv = Internal::Convolution(convolutionMap, unpackOperand, convInputSeqDim, strides, sharing, autoPadding, dilation, false,
+            //        {0}, groups, maxTempMemSizeInSamples, name);
+            //else 
+            //    conv = Internal::SpatialConvolution(convolutionMap, unpackOperand, convInputSeqDim, strides, sharing, autoPadding, 
+            //        dilation, maxTempMemSizeInSamples, name);
 
-            auto convOutput = conv->Outputs()[0];
-            auto convOutputSeqDim = StopGradient(conv->Outputs()[1]);
+            //auto convOutput = conv->Outputs()[0];
+            //auto convOutputSeqDim = StopGradient(conv->Outputs()[1]);
 
-            // transpose back sequence axis to the outer of output depth axis: 
-            // [ H_out, W_out, *_out, c_out ] x [1] -> [ H_out, W_out, c_out, *_out ] x [1]
-            convOutput = TransposeAxes(convOutput, Axis(-1), Axis(-2));
-            // pack back to sequence axis with their corresponding sizes: 
-            // [ H_out, W_out, c_out, *_out ] x [1] -> [ H_out, W_out, c_out ] x [*_out]
-            return ToSequence(convOutput, convOutputSeqDim, L"ConvOverSequenceAxisPrefix");
+            //// transpose back sequence axis to the outer of output depth axis: 
+            //// [ H_out, W_out, *_out, c_out ] x [1] -> [ H_out, W_out, c_out, *_out ] x [1]
+            //convOutput = TransposeAxes(convOutput, Axis(-1), Axis(-2));
+            //// pack back to sequence axis with their corresponding sizes: 
+            //// [ H_out, W_out, c_out, *_out ] x [1] -> [ H_out, W_out, c_out ] x [*_out]
+            //return ToSequence(convOutput, convOutputSeqDim, L"ConvOverSequenceAxisPrefix");
+            return Internal::SequentialConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation, false,
+                { 0 }, groups, maxTempMemSizeInSamples, name);
         }
         else
         {
@@ -3328,6 +3330,30 @@ namespace CNTK
 
             std::vector<Variable> operands = {convolutionMap, operand, operandSeqAxisDim};
             return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Convolution, operands, std::move(additionalProperties), name), name);
+        }
+
+        FunctionPtr SequentialConvolution(const Variable& convolutionMap,
+            const Variable& operand,
+            const NDShape& strides,
+            const std::vector<bool>& sharing,
+            const std::vector<bool>& autoPadding,
+            const NDShape& dilation,
+            bool transpose,
+            const NDShape& outputShape,
+            size_t groups,
+            size_t maxTempMemSizeInSamples,
+            const std::wstring& name)
+        {
+            // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
+            // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as
+            // the sample shape and considering the rest to be part of the batch axis
+            if (operand.DynamicAxes().size() != 2)
+                LogicError("Sequential convolution requires the main operand to have sequence axis. ");
+
+            auto additionalProperties = Dictionary();
+            SetConvolutionProperties(additionalProperties, strides, sharing, autoPadding, dilation, /*sequential =*/true, transpose, outputShape, groups, maxTempMemSizeInSamples);
+
+            return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
         }
 
         FunctionPtr SpatialConvolution(const Variable& convolutionMap,

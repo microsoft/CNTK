@@ -33,7 +33,7 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-#define _PERF_TOSEQ 1
+#define _PERF_TOSEQ 0
 #if _PERF_TOSEQ
 #define _PERF_INIT_DUR(tag)                                \
     auto duration_##tag = std::chrono::duration<float>(0); \

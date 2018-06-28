@@ -1074,6 +1074,7 @@ namespace CNTK
                 }
                 case PrimitiveOpType::Convolution:
                 {
+                    // TODO : do we check unsupported transpose & sequential case here?
                     auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
                     NDShape dilation = { 1 };
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameDilation))
@@ -1085,7 +1086,7 @@ namespace CNTK
                     auto sequential = functionConfig[PrimitiveFunction::AttributeNameSequential].Value<bool>();
                     auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
                     NDShape outputMapCount, kernelShape;
-                    std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose);
+                    std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose, sequential);
                     NDShape outputShape = NDShape::Unknown();
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
                         outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
@@ -1100,7 +1101,7 @@ namespace CNTK
                                         outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
                                         ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
                     else
-                        ASSIGN_NEW_NODE(ConvolutionOverSequenceAxisNode, network->GetDeviceId(), internalNodeName,
+                        ASSIGN_NEW_NODE(ConvolutionOverSequenceAxisNodeV2, network->GetDeviceId(), internalNodeName,
                                         AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
                                         sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
                                         outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),

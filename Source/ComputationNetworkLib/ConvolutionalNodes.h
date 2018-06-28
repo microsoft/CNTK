@@ -305,6 +305,8 @@ public:
 // forward declaration.
 template <class ElemType>
 class ConvolutionOverSequenceAxisNode;
+template <class ElemType>
+class ConvolutionOverSequenceAxisNodeV2;
 
 template <class ElemType>
 class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
@@ -315,6 +317,8 @@ class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2
     // Needs access to m_dilations and m_groups which are private members.
     template <class ElementType>
     friend class ConvolutionOverSequenceAxisNode;
+    template <class ElementType>
+    friend class ConvolutionOverSequenceAxisNodeV2;
 public:
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_dilation(TensorShape(1)), m_groups(1)
@@ -798,7 +802,7 @@ public:
             // TODO: add matrix storage assumption check here (dense vs sparse etc).
 
             // Same computing logic in ConvolveGeometry.
-            // Rewritten here to avoid constructing TensorShape parameters, and avoid converting from Matrix to TensorShape and back.
+            // Rewritten here because TensorShape uses SmallVector which cannot exceed size of 12, a size too small for sequence count.
             size_t kernelShape_i = m_kernelShape[m_seqAxisIdx];
             size_t delta = m_stride[m_seqAxisIdx];
             size_t dil = m_dilation[m_seqAxisIdx];
@@ -902,6 +906,448 @@ public:
 private:
     size_t m_seqAxisIdx;
 };
+
+// -----------------------------------------------------------------------
+//
+//
+//
+// -----------------------------------------------------------------------
+template <class ElemType>
+class ConvolutionOverSequenceAxisNodeV2 : public ConvolutionNode<ElemType>
+{
+    typedef ConvolutionNode<ElemType> Base; UsingConvolutionNodeBaseMembers;
+private:
+    using Base::m_dilation;
+    using Base::m_groups;
+
+public:
+    static const std::wstring TypeName() { return L"ConvolutionOverSequenceV2"; }
+
+public:
+    ConvolutionOverSequenceAxisNodeV2(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    ConvolutionOverSequenceAxisNodeV2(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
+        const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+        bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1),
+        size_t groups = 1)
+        : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation, groups)
+    {
+    }
+
+    ConvolutionOverSequenceAxisNodeV2(const ScriptableObjects::IConfigRecordPtr configp)
+        : Base(configp)
+    {
+    }
+
+public:
+    void Save(File& fstream) const override
+    {
+        // TODO
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        // TODO
+    }
+
+    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        // TODO
+    }
+
+    void ForwardProp(const FrameRange& fr) override
+    {
+        // TODO: I think we need to check if fr is happening for fullframerange here.
+        //       current implementation uses unpack and pack, which is nonlooping. 
+        // TODO: optimized version of Unpack Forward + Base Forward + ToSequence Forward should happen here.
+        
+        /// Unpack input operand
+
+        auto inputMBLayout = InputRef(1).GetMBLayout();
+        if (inputMBLayout->HasSequenceBeyondBegin() || inputMBLayout->HasSequenceBeyondEnd())
+            LogicError("%ls: %s truncated sequence not supported.", Base::NodeDescription().c_str(), typeid(*this).name());
+
+        // create output MBLayout. one parallel sequence per sample.
+        //auto intermediateLayout = std::make_shared<MBLayout>();
+        m_unpackedpMBLayout->InitAsFrameMode(inputMBLayout->GetNumSequences());
+
+        // TODO : Here unpack use this function to update output value matrix size.
+        //        Problem is they the sampleLayout seems wrong as you don't have the sequence static axis dim. (or do they managed to have that at validate?). 
+        //        Update: confirmed, sample layout is updated at validate. 
+        // TODO : member function uses m_pMBLayout. we need to rewrite the whole thing and duplicate logic. can we not perform this op?
+        // UpdateFunctionValuesSize();
+        UpdateFunctionValuesSize(*m_unpackedOperandData, m_unpackedOperandShape, m_unpackedpMBLayout);
+
+        auto unpackedMatrixNumRows = m_unpackedOperandData->GetNumRows();
+        auto unpackedMatrixNumCols = m_unpackedOperandData->GetNumCols();
+        ElemType paddingValue = 0.0;
+        auto unpackedInput = ComputationNode<ElemType>::Unpack(InputRef(1).GetSampleLayout(), InputRef(1).Value(), InputRef(1).GetMBLayout(), 
+            m_unpackedOperandData, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ false, &paddingValue);
+        if (unpackedInput.GetSOBPtr() != m_unpackedOperandData)
+            m_unpackedOperandData->AssignValuesOf(*unpackedInput.GetSOBPtr());
+
+        m_unpackedOperandData->Reshape(unpackedMatrixNumRows, unpackedMatrixNumCols);
+
+        // Get original sequence lengths
+        auto numSequences = inputMBLayout->GetNumSequences();
+        std::vector<size_t> inputSequenceLengths(numSequences, 0);
+        let& inputSequences = inputMBLayout->GetAllSequences();
+        size_t j = 0;
+        for (size_t i = 0; i < inputSequences.size(); ++i)
+        {
+            let& seq = inputSequences[i];
+            if (seq.seqId == GAP_SEQUENCE_ID)
+                continue;
+
+            inputSequenceLengths[j] = seq.GetNumTimeSteps();
+            j++;
+        }
+        assert(j == numSequences);
+
+        std::vector<size_t> convResultSequenceLengths = GetOutputSequenceLengths(inputSequenceLengths);
+
+        /// Forward
+        UpdateFunctionValuesSize(*m_unpackedConvResultData, m_unpackedConvResultShape, m_unpackedpMBLayout);
+
+        Matrix<ElemType> sliceOutputValue = m_unpackedConvResultData->AsReference();
+        const Matrix<ElemType>& input0 = InputRef(0).ValueAsMatrix();
+        Matrix<ElemType> sliceInput1Value = m_unpackedOperandData->AsReference();
+
+        m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward);
+
+        /// tosequence sliceOutputValue
+        auto unpackedConvResultDataNDArrayView = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(),
+            ::CNTK::AsDeviceDescriptor(m_unpackedConvResultData->GetDeviceId()),
+            ::CNTK::AsStorageFormat(m_unpackedConvResultData->GetFormat()),
+            ::CNTK::AsNDShape(m_unpackedConvResultShape),
+            /*readOnly =*/ true,
+            new TensorView<ElemType>(m_unpackedConvResultData, m_unpackedConvResultShape));
+
+        auto convResultDataValue = ::CNTK::MakeSharedObject<::CNTK::Value>(unpackedConvResultDataNDArrayView, ::CNTK::CreateMask(convResultSequenceLengths));
+        auto dummyVar = ::CNTK::InputVariable(::CNTK::AsNDShape(GetSampleLayout()), this->IsValueSparse(), ::CNTK::AsDataType<ElemType>());
+#ifdef _MSC_VER
+        auto& outputValuePtrRef = ValuePtrRef();
+#else
+        auto& outputValuePtrRef = this->template ValuePtrRef();
+#endif
+        auto packedMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(dummyVar, convResultDataValue, nullptr, outputValuePtrRef, m_tempGatherIndices);
+        let& outMBLayout = GetMBLayout();
+        outMBLayout->CopyFrom(packedMatrixAndLayout.second, /*keepName=*/ true);
+        if (packedMatrixAndLayout.first != outputValuePtrRef)
+            Value().AssignValuesOf(*packedMatrixAndLayout.first);
+    }
+
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // TODO: optimized version of ToSequence Backward + Base Backward + Unpack Backward should happen here. 
+        /*
+        auto sliceOutputGrad = GradientFor(fr);
+
+        // this potentially computes over time, so we must mask gaps to 0
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+        if (inputIndex == 0) // derivative with respect to the weight matrix
+        {
+            auto& grad = InputRef(0).GradientAsMatrix();
+            auto sliceInput1Value = InputRef(1).ValueFor(fr);
+            m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward);
+        }
+        else if (inputIndex == 1) // derivative with respect to the input feature
+        {
+            auto& input0 = InputRef(0).ValueAsMatrix();
+            auto sliceInput1Grad = InputRef(1).GradientFor(fr);
+            m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->IsGradientInitializedBy(this), *m_tempMatrixBackward);
+        }
+        */
+    }
+
+    // Note: for sequence lengths. 
+    bool ForceDynamicValidation() const override { return true; }
+
+    void Validate(bool isFinalValidationPass) override
+    {
+        // TODO: we can't use Base(ConvolutionNode) validate as we shouldn't feed seq conv input to base right?
+        //       must write new version of validate. 
+        ConvolutionNodeBase<ElemType>::Validate(isFinalValidationPass);
+        // TODO : check if we need this dense vs sparse. 
+        // ComputationNodeBase::m_isValueSparse = Input(1)->IsValueSparse();
+        
+        // We need to initialize the following things before Forward. 
+        //     m_unpackedOperandData. we need to setup the correct shape. 
+        //     All other setups in ConvolutionNode::Validate() 
+        //     All other setups in UnpackSequenceNode::Validate()
+        //     All other setups in ToSequence::Validate()
+
+        // UnpackSequenceNode::Validate
+        // Prepare MBLayout and Shape for intermediate unpack result. 
+        ValidateUnpack(isFinalValidationPass);
+
+        // ConvolutionNode::Validate
+        // Need to insert seq axis into input shape. Run ConvolutionNode::Validate with emulated inputOperandShape. 
+        ValidateConvolution(isFinalValidationPass);
+
+        // ToSequenceNode::Validate
+        ValidateToSequence(isFinalValidationPass);
+
+        if (isFinalValidationPass)
+        {
+            const size_t inputIdx = GetExpectedNumInputs() - 1;
+            // Input1: Input features           [i_1 x i_2 x ... x i_n x C         ]    x [S(*) x #]
+            // Emulated Input:                  [i_1 x i_2 x ... x i_n x max(S) x C]    x [1(*) x #]
+            // The input sample layout rank should always >= 2.
+            size_t inputOperandRank = GetInputSampleLayout(inputIdx).GetRank();
+            // setup emulated static axis index for sequence axis. i.e. index of (max(S)) in above example. 
+            m_seqAxisIdx = inputOperandRank - 1;
+            if (inputOperandRank < 1)
+                InvalidArgument("%ls %ls the input sample layout rank for sequential convolution should always >= 1. The provided input has sample layout rank %d",
+                    NodeName().c_str(), OperationName().c_str(), inputOperandRank);
+        }
+    }
+
+    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, true);
+        RequestMatrixFromPool(m_tempScatterIndices, matrixPool, 1, true);
+        m_tempMask = std::make_shared<Matrix<char>>(Base::m_deviceId); // why? => Matrix<char> not in matrixPool ... 
+        const size_t estimatedNumElements = InputRef(1).GetMBLayout()->GetNumTimeSteps() * InputRef(1).GetSampleLayout().GetNumElements();
+        RequestMatrixFromPool(m_unpackedOperandData, matrixPool, estimatedNumElements, true);
+        RequestMatrixFromPool(m_unpackedConvResultData, matrixPool, estimatedNumElements, true);
+        RequestMatrixFromPool(m_tempUnpackedData, matrixPool, estimatedNumElements, true);
+        RequestMatrixFromPool(m_tempPackedGradientData, matrixPool, estimatedNumElements, true);
+    }
+
+    void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+    }
+
+    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+    }
+
+    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_tempGatherIndices, matrixPool);
+        ReleaseMatrixToPool(m_tempScatterIndices, matrixPool);
+        ReleaseMatrixToPool(m_unpackedOperandData, matrixPool);
+        ReleaseMatrixToPool(m_unpackedConvResultData, matrixPool);
+        ReleaseMatrixToPool(m_tempUnpackedData, matrixPool);
+        ReleaseMatrixToPool(m_tempPackedGradientData, matrixPool);
+    }
+
+private:
+
+    void UpdateFunctionValuesSize(Matrix<ElemType>& m, const TensorShape& shape, const MBLayoutPtr& pMBLayout)
+    {
+        // Same computing logic in ComputationNode.
+        // The original method only computes and updates its own output matrix. Here we need for arbitrary ones. 
+        size_t rows, cols;
+
+        if (m_isValueSparse && !!pMBLayout)
+        {
+            size_t rank = shape.GetRank();
+            rows = rank > 0 ? shape[0] : 1;
+
+            cols = 1;
+            for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                cols *= shape[k];
+
+            cols *= pMBLayout->GetNumCols();
+        }
+        else
+        {
+            if (!!pMBLayout)
+            {
+                rows = shape.GetNumElements();
+                cols = pMBLayout->GetNumCols();
+            }
+            else
+            {
+                size_t rank = shape.GetRank();
+                rows = rank > 0 ? shape[0] : 1;
+                cols = 1;
+                for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                    cols *= shape[k];
+            }
+        }
+
+        m.Resize(rows, cols, /*keepValue*/false);
+        m.CollapseDataLocation();
+    }
+
+    std::vector<size_t> GetOutputSequenceLengths(const std::vector<size_t>& inputSequenceLengths)
+    {
+        // Same computing logic in ConvolveGeometry.
+        // Rewritten here because TensorShape uses SmallVector which cannot exceed size of 12, a size too small for sequence count.
+        size_t kernelShape_i = m_kernelShape[m_seqAxisIdx];
+        size_t delta = m_stride[m_seqAxisIdx];
+        size_t dil = m_dilation[m_seqAxisIdx];
+        bool autoPadCur = m_autoPad[m_seqAxisIdx];
+        size_t lo = m_lowerPad[m_seqAxisIdx];
+        size_t hi = m_upperPad[m_seqAxisIdx];
+        size_t effectiveKernelShape = (kernelShape_i - 1) * dil + 1;
+
+        size_t dimAdjust = 0;
+
+        if (autoPadCur)
+        {
+            dimAdjust += dil * (kernelShape_i - 1);
+        }
+        else
+        {
+            dimAdjust += lo + hi;
+        }
+
+        dimAdjust -= effectiveKernelShape;
+
+        std::vector<size_t> outputSequenceLengths(inputSequenceLengths);
+        for (size_t i = 0; i < outputSequenceLengths.size(); ++i)
+        {
+            float preciseDimOut = (float)(outputSequenceLengths[i] + dimAdjust) / delta + 1;
+            // TODO: ceilOutDim?
+            outputSequenceLengths[i] = static_cast<size_t>(floor(preciseDimOut));
+        }
+
+        return outputSequenceLengths;
+    }
+
+    TensorShape EmulateInputShape(bool isFinalValidationPass, size_t& emulatedAxisIdx)
+    {
+        const size_t inputIdx = GetExpectedNumInputs() - 1;
+        TensorShape inputShape = GetInputSampleLayout(inputIdx);
+        TensorShape outputShape;
+        TensorShape emulatedInputShape = inputShape;
+        const size_t inputRank = inputShape.GetRank();
+        if (!isFinalValidationPass)
+            emulatedInputShape.AppendInPlace(inputRank, ::CNTK::NDShape::FreeDimension);
+        else
+        {
+            auto inputMBLayout = Input(inputIdx)->GetMBLayout();
+            if (!inputMBLayout)
+                InvalidArgument("%ls %ls operation can only operate on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
+            if (inputMBLayout->GetNumTimeSteps() == 0)
+                LogicError("%ls %ls operation's final validation pass must not be invoked before the input MBLayout has been initialized and populated.", NodeName().c_str(), OperationName().c_str());
+
+            emulatedInputShape.AppendInPlace(inputRank, inputMBLayout->GetNumTimeSteps());
+        }
+        emulatedInputShape.SwapDimsInPlace(inputRank - 1, inputRank);
+        
+        emulatedAxisIdx = inputRank - 1;
+        return emulatedInputShape;
+    }
+
+    TensorShape EmulateInputShape(bool isFinalValidationPass)
+    {
+        size_t unusedEmulatedAxisIdx = 0;
+        return EmulateInputShape(isFinalValidationPass, unusedEmulatedAxisIdx);
+    }
+
+    TensorShape GetOutputShapeFromEmulatedOutputShape(const TensorShape& outputShape, size_t emulatedAxisIdx)
+    {
+        if (outputShape.GetRank() <= emulatedAxisIdx)
+            LogicError("%ls %ls operation's emulated output shape should have rank(%d) >= emulated static axis index(%d).",
+                NodeName().c_str(), OperationName().c_str(), outputShape.GetRank(), emulatedAxisIdx);
+        SmallVector<size_t> dims;
+        for (size_t i = 0; i < outputShape.GetRank(); i++)
+        {
+            if (i != emulatedAxisIdx)
+                dims.push_back(outputShape[i]);
+        }
+        return dims;
+    }
+
+    void ValidateUnpack(bool isFinalValidationPass)
+    {
+        // Prepare MBLayout and Shape for intermediate unpack result. 
+        if (!m_unpackedpMBLayout)
+        {
+            m_unpackedpMBLayout = std::make_shared<MBLayout>();
+            m_unpackedpMBLayout->SetUniqueAxisName(Base::DefaultNoSequenceAxisName);
+        }
+        m_unpackedOperandShape = EmulateInputShape(isFinalValidationPass);
+    }
+
+    void ValidateConvolution(bool isFinalValidationPass)
+    {
+        // Need to insert seq axis into input shape. Run ConvolutionNode::Validate with emulated inputOperandShape. 
+        const size_t inputIdx = GetExpectedNumInputs() - 1;
+        size_t emulatedAxisIdx = 0;
+        TensorShape inputShape = GetInputSampleLayout(inputIdx);
+        TensorShape emulatedInputShape = EmulateInputShape(isFinalValidationPass, emulatedAxisIdx);
+
+        Input(inputIdx)->SetDims(emulatedInputShape, Input(inputIdx)->HasMBLayout());
+        // ConvolutionNode::Validate checks computed output shape against user defined output shape. 
+        // We cannot emulate static sequence axis for them because in different stages it might be NDShape::FreeDimension or size_t.
+        // We move the check out of Base::Validate by setting m_outputShape to rank 0 now, and check here later. 
+        TensorShape tempOutputShape;
+        bool checkUserDefinedOutputShape = (m_outputShape.GetRank() > 0 && m_outputShape != TensorShape(0));
+        if (checkUserDefinedOutputShape)
+        {
+            tempOutputShape = m_outputShape;
+            m_outputShape = TensorShape();
+        }
+        Base::Validate(isFinalValidationPass);
+        Input(inputIdx)->SetDims(inputShape, Input(inputIdx)->HasMBLayout());
+
+        // Update member with computed emulated output shape. 
+        m_unpackedConvResultShape = GetSampleLayout();
+        // The outputShape contains the emulated static axis for sequence axis. We need to remove that as now we convert back to sequence. 
+        TensorShape outputShape = GetOutputShapeFromEmulatedOutputShape(GetSampleLayout(), emulatedAxisIdx);
+        Base::SetDims(outputShape, HasMBLayout());
+
+        if (checkUserDefinedOutputShape)
+        {
+            m_outputShape = tempOutputShape;
+            if (m_outputShape != outputShape)
+            {
+                InvalidArgument("%ls %ls the shape of the specified convolution output %ls is different from "
+                    "the result of convoluting the input argument using the provided options %ls. It is recommended "
+                    "that the output shape is not specified for convolution.", NodeName().c_str(), OperationName().c_str(),
+                    static_cast<std::wstring>(m_outputShape).c_str(),
+                    static_cast<std::wstring>(outputShape).c_str());
+            }
+        }
+    }
+
+    void ValidateToSequence(bool isFinalValidationPass)
+    {
+        const size_t inputIdx = GetExpectedNumInputs() - 1;
+        ComputationNodeBase::m_isValueSparse = Input(inputIdx)->IsValueSparse();
+
+        if (!m_pMBLayout)
+        {
+            m_pMBLayout = std::make_shared<MBLayout>();
+        }
+    }
+
+private:
+    size_t m_seqAxisIdx;
+    TensorShape m_unpackedOperandShape;
+    TensorShape m_unpackedConvResultShape;
+    MBLayoutPtr m_unpackedpMBLayout;
+    shared_ptr<Matrix<ElemType>> m_unpackedOperandData;
+    shared_ptr<Matrix<ElemType>> m_unpackedConvResultData;
+
+    // shared by unpack and tosequence
+    shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
+    shared_ptr<Matrix<ElemType>> m_tempScatterIndices;
+
+    // unpack
+    shared_ptr<Matrix<ElemType>> m_tempUnpackedData;
+    // tosequence
+    shared_ptr<Matrix<char>> m_tempMask;
+    shared_ptr<Matrix<ElemType>> m_tempPackedGradientData;
+};
+
 
 
 // -----------------------------------------------------------------------

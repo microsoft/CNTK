@@ -357,6 +357,34 @@ namespace CNTK
         return{ paddedOutputMapCount, kernelShape };
     }
 
+    inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape, bool transpose, bool sequential)
+    {
+        if (sequential)
+        {
+            // transpose currently not supported for sequential convolution. 
+            // TODO : need careful checking here. logic might not be correct. 
+            //        currently we only emulate input. output kernelshape contains the axis used on sequence axis.
+            //        we are not cropping it here as we need that complete shape in the input for computationNode. 
+            assert(!(transpose && sequential));
+            
+            // Here we reuse the code for non-sequential convolution to get outputMapCount and kernelShape from convolutionMapShape and operandShape.
+            // The key is that all parameters except operandShape and outputShape should not be aware of the sequential setting,
+            // and they should have the same value if this is a non-sequential convolution. 
+
+            // Since we convolve over sequence axis, there is mismatch between convolutionMapShape and operandShape.
+            // convolutionMapShape contains the filter dim for sequence axis, while operandShape does not contain that. 
+            // Here we emulate the input to get the desired shapes. 
+            // 1. We insert seq axis as a fake static axis, to operandShape at index operandShape.Rank() - 2. (The last axis is channel axis)
+            // 2. Run previous GetConvolutionOutputMapCountAndKernelShape to get the correct outputMapCount, and kernelShape.
+            NDShape seqOperandShape = operandShape.SubShape(0, operandShape.Rank() - 1);
+            seqOperandShape = seqOperandShape.AppendShape({ NDShape::FreeDimension, operandShape[operandShape.Rank() - 1] });
+            
+            return GetConvolutionOutputMapCountAndKernelShape(convolutionMapShape, seqOperandShape, /*transpose=*/false);
+        }
+        else
+            return GetConvolutionOutputMapCountAndKernelShape(convolutionMapShape, operandShape, transpose);
+    }
+
     void SetConvolutionProperties(Dictionary& additionalProperties, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
                                   const NDShape& dilation, bool sequential, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples);
 
