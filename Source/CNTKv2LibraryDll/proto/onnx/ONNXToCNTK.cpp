@@ -2664,6 +2664,17 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         auto blockSize = GetNamedAttributeAsInt64(node, "blocksize", 1);
         return SpaceToDepth(inputs[0], static_cast<size_t>(blockSize), ToWString(node->Name()));
     }
+    else if (onnxOpName == "TopK")
+    {
+        const Variable &operand = inputs[0];
+        auto k = static_cast<size_t>(GetNamedAttributeAsInt64(node, "k"));
+
+        auto axisIndex = GetNamedAttributeAsInt64(node, "axis", 0);
+        Axis axis = ConvertONNXAxisToCNTKCppApi(axisIndex, operand);
+
+        FunctionPtr cntkFunction = TopK(operand, k, axis, ToWString(node->Name()));
+        return cntkFunction;
+    }
     else if (onnxOpName == "Squeeze")
     {
         std::vector<Axis> axes = GetNamedAttributeAsAxes(node, "axes");

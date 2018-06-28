@@ -398,6 +398,11 @@ namespace ONNX
         { L"Alias",{ {
             { L"Alias", "Identity" },
         } } },
+        { L"TopK",{ {
+            { L"TopK", "TopK" },
+            { L"axis", "axis" },
+            { L"k", "k" },
+            } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,

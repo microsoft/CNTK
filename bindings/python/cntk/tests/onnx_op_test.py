@@ -1131,6 +1131,15 @@ def test_Tanh(tmpdir, dtype):
         model = C.tanh(np.array([[1,2],[3,4]]).astype(dtype))
         verify_no_input(model, tmpdir, 'Tanh_0')
 
+#Tanh
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_TopK(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        x = C.input_variable(10)
+        model= C.top_k(-x * C.log(x), 3)
+        data = np.arange(10,dtype=np.float32)*0.1
+        verify_one_input(model, data, tmpdir, 'TopK_1')
+
 #Transpose
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Transpose(tmpdir, dtype):

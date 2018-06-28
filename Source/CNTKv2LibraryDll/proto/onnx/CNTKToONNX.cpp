@@ -3114,6 +3114,15 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, ONNXIR::Node* node
             size_t blockSize = src->Attributes()[L"blockSize"].Value<size_t>();
             node->AddAttribute("blocksize", static_cast<int64_t>(blockSize));
         }
+        else if (src->OpName() == L"TopK")
+        {
+            size_t numItems = src->Attributes()[L"numItems"].Value<size_t>();
+            node->AddAttribute("k", static_cast<int64_t>(numItems));
+            int64_t axis = -1;
+            if (src->Attributes().Contains(L"axis"))
+                axis = static_cast<int64_t>(ToIndex((Axis)(src->Attributes()[L"axis"].Value<Axis>())));
+            node->AddAttribute(attributesMap[L"axis"], axis);
+        }
         else if (src->OpName() == L"Softmax" || src->OpName() == L"LogSoftmax")
         {
             Axis axis = Axis(0);
