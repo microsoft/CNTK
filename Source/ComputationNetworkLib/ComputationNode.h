@@ -1959,11 +1959,6 @@ protected:
     template<typename ValueType>
     void TypedRequestMatrixFromPool(shared_ptr<Matrix<ValueType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false, bool aliasing=false)
     {
-        /* guoye: start */
-        // fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 0 \n");
-        
-        // fprintf(stderr, "\n computationnode.h:RequestMatrixFromPool, debug 1 \n");
-        /* guoye: end */
         if (matrixPtr == nullptr)
         {
             if (aliasing)

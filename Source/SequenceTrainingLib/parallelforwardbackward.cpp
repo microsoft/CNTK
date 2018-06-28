@@ -855,7 +855,6 @@ void lattice::parallelstate::getedgealignments(std::vector<unsigned short>& edge
 {
     pimpl->getedgealignments(edgealignments);
 }
-/* guoye: start */
 void lattice::parallelstate::getlogbetas(std::vector<double>& logbetas)
 {
     pimpl->getlogbetas(logbetas);
@@ -877,7 +876,6 @@ void lattice::parallelstate::setedgeweights(const std::vector<double>& edgeweigh
 
 
 
-/* guoye: end */
 //template<class ElemType>
 void lattice::parallelstate::setloglls(const Microsoft::MSR::CNTK::Matrix<float>& loglls)
 {
@@ -1062,10 +1060,6 @@ double lattice::parallelforwardbackwardlattice(parallelstate& parallelstate, con
     return totalfwscore;
 }
 
-/* guoye: start */
-
-
-// parallelforwardbackwardlattice() -- compute the latticelevel logpps using forwardbackward
 double lattice::parallelbackwardlatticeEMBR(parallelstate& parallelstate, const std::vector<float>& edgeacscores,
                                                const float lmf, const float wp, const float amf, 
                                                std::vector<double>& edgelogbetas, std::vector<double>& logbetas) const
@@ -1128,7 +1122,6 @@ double lattice::parallelbackwardlatticeEMBR(parallelstate& parallelstate, const 
     }
     return totalbwscore;
 }
-/* guoye: end */
 // ------------------------------------------------------------------------
 // parallel implementations of sMBR error updating step
 // ------------------------------------------------------------------------
@@ -1168,7 +1161,6 @@ void lattice::parallelsMBRerrorsignal(parallelstate& parallelstate, const edgeal
     }
 }
 
-/* guoye: start */
 // ------------------------------------------------------------------------
 void lattice::parallelEMBRerrorsignal(parallelstate& parallelstate, const edgealignments& thisedgealignments,
     const std::vector<double>& edgeweights, 
@@ -1196,8 +1188,6 @@ void lattice::parallelEMBRerrorsignal(parallelstate& parallelstate, const edgeal
         emulateEMBRerrorsignal(thisedgealignments.getalignmentsbuffer(), thisedgealignments.getalignoffsets(), edges, nodes, edgeweights, errorsignal);
     }
 }
-/* guoye: end */
-
 // ------------------------------------------------------------------------
 // parallel implementations of MMI error updating step
 // ------------------------------------------------------------------------
