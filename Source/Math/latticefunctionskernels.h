@@ -302,8 +302,6 @@ struct latticefunctionskernels
         // note: critically, ^^ this comparison must copare the bits ('int') instead of the converted float values, since this will fail for NaNs (NaN != NaN is true always)
         return bitsasfloat(old);
     }
-    /* guoye: start */
-
     template <typename FLOAT>                                       // adapted from [http://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#ixzz32EuzZjxV]
     static __device__ FLOAT atomicAdd(FLOAT *address, FLOAT val) // direct adaptation from NVidia source code
     {
@@ -320,7 +318,6 @@ struct latticefunctionskernels
         // note: critically, ^^ this comparison must copare the bits ('int') instead of the converted float values, since this will fail for NaNs (NaN != NaN is true always)
         return bitsasfloat(old);
     }
-    /* guoye: end */
 #else // this code does not work because (assumed != old) will not compare correctly in case of NaNs
     // same pattern as atomicAdd(), but performing the log-add operation instead
     template <typename FLOAT>
@@ -908,7 +905,6 @@ struct latticefunctionskernels
             logEframescorrect[j] = logEframescorrectj;
     }
 
-    /* guoye: start */
     template <typename edgeinforvector, typename nodeinfovector, typename floatvector, typename doublevector>
     static inline __device__ void backwardlatticejEMBR(size_t j, const floatvector &edgeacscores,
         const edgeinforvector &edges, const nodeinfovector &nodes, doublevector & edgelogbetas,
@@ -964,10 +960,6 @@ struct latticefunctionskernels
         
 
     }
-
-    /* guoye: end */
-
-
     template <typename ushortvector, typename uintvector, typename edgeinfowithscoresvector, typename nodeinfovector, typename doublevector, typename matrix>
     static inline __device__ void sMBRerrorsignalj(size_t j, const ushortvector &alignstateids, const uintvector &alignoffsets,
                                                    const edgeinfowithscoresvector &edges,
@@ -1009,7 +1001,6 @@ struct latticefunctionskernels
         }
     }
 
-    /* guoye: start */
     template <typename ushortvector, typename uintvector, typename edgeinfowithscoresvector, typename nodeinfovector, typename doublevector, typename matrix>
     static inline __device__ void EMBRerrorsignalj(size_t j, const ushortvector &alignstateids, const uintvector &alignoffsets,
         const edgeinfowithscoresvector &edges,
@@ -1020,51 +1011,18 @@ struct latticefunctionskernels
         size_t te = nodes[edges[j].E].t;
         if (ts != te)
         {
-
-
             const float weight = (float)(edgeweights[j]);
             size_t offset = alignoffsets[j];
-             
-            /*
-            if (weight <= 1)
-            {
-            */
-                // size_t k = 0;
+         
             for (size_t t = ts; t < te; t++)
             {
                 const size_t s = (size_t)alignstateids[t - ts + offset];
-
-                    /* 
-                    errorsignal(0, k) = float(t);
-                    k = k + 1;
-                    errorsignal(0, k) = float(s);
-                    k = k + 1;
-                    */
-                    // atomicLogAdd(&errorsignal(s, t), weight);
-                // use atomic function for lock the value
+				// use atomic function for lock the value
                     atomicAdd(&errorsignal(s, t), weight); 
-                    //errorsignal(s, t) = errorsignal(s, t) + weight;
-                    // errorsignal(s, t) = errorsignal(s, t) + (float)(ts);
             }
-             // }
-
-            
-            /* guoye: start */
-            /*
-            if (weight > 1)
-            {
-                for (size_t t = 63; t < 71; t++)
-                    errorsignal(7, t) = errorsignal(7, t) + ts;
-                errorsignal(8, 71) = errorsignal(8, 71) + te;
-
-            }
-            */
-            /* guoye: end */
-        
         }
     }
 
-    /* guoye: end */
 
     // accumulate a per-edge quantity into the states that the edge is aligned with
     // Use this for MMI passing the edge posteriors logpps[] as logq, or for sMBR passing logEframescorrect[].

@@ -26,10 +26,8 @@
 #include "ScriptableObjects.h"
 #include "HTKMLFReader.h"
 #include "TimerUtility.h"
-/* guoye: start */
 #include "fileutil.h"
 #include <string>
-/* guoye: end */
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
 #endif
@@ -103,7 +101,6 @@ void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
     }
 }
 
-/* guoye: start */
 void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string, int>& wordidmap, int start_id)
 {
     std::unordered_map<std::string, int>::iterator mp_itr;
@@ -129,7 +126,6 @@ void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string,
     fclose(f);
 }
 
-/* guoye: end */
 // Load all input and output data.
 // Note that the terms features imply be real-valued quantities and
 // labels imply categorical quantities, irrespective of whether they
@@ -147,9 +143,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     vector<vector<wstring>> infilesmulti;
     size_t numFiles;
     wstring unigrampath(L"");
-    /* guoye: start */
     wstring wordidmappath(L"");
-    /* guoye: end */
 
     size_t randomize = randomizeAuto;
     size_t iFeat, iLabel;
@@ -477,30 +471,22 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (readerConfig.Exists(L"unigram"))
         unigrampath = (const wstring&) readerConfig(L"unigram");
 
-    /*guoye: start */
     if (readerConfig.Exists(L"wordidmap"))
         wordidmappath = (const wstring&)readerConfig(L"wordidmap");
-    /*guoye: end */
 
     // load a unigram if needed (this is used for MMI training)
     msra::lm::CSymbolSet unigramsymbols;
-    /* guoye: start */
     std::set<int> specialwordids;
     std::vector<string> specialwords;
     std::unordered_map<std::string, int> wordidmap;
     std::unordered_map<std::string, int>::iterator wordidmap_itr;
-    /* guoye: end */
     
     std::unique_ptr<msra::lm::CMGramLM> unigram;
     size_t silencewordid = SIZE_MAX;
     size_t startwordid = SIZE_MAX;
     size_t endwordid = SIZE_MAX;
-    /* guoye: debug */
     if (unigrampath != L"")
- //   if(true)
     {
-        // RuntimeError("should not come here.");
-        /* guoye: start (this code order must be consistent with dbn.exe in main.cpp */
        
         unigram.reset(new msra::lm::CMGramLM());
        
@@ -510,20 +496,12 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         unigramsymbols["!sent_start"];
         unigramsymbols["!sent_end"];
         unigramsymbols["!silence"];
-      
-        /* guoye: end */
-        
+             
         unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
-
-        /* guoye: end  */
-       
-        
+   
         silencewordid = unigramsymbols["!silence"]; // give this an id (even if not in the LM vocabulary)
         startwordid = unigramsymbols["<s>"];
         endwordid = unigramsymbols["</s>"];
-        
-
-        /* guoye: start */
         
         specialwordids.clear();
         

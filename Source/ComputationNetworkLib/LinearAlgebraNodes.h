@@ -1893,21 +1893,9 @@ public:
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
-        /* guoye: start */
-        // fprintf(stderr, "\n linearalgebranodes.h: RequestMatricesBeforeBackprop: debug 1 \n");
-        /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        /* guoye: start */
-        // fprintf(stderr, "\n linearalgebranodes.h: RequestMatricesBeforeBackprop: debug 2 \n");
-        /* guoye: end */
         RequestMatrixFromPool(m_invNormSquare, matrixPool);
-        /* guoye: start */
-        // fprintf(stderr, "\n linearalgebranodes.h: RequestMatricesBeforeBackprop: debug 3 \n");
-        /* guoye: end */
         RequestMatrixFromPool(m_temp, matrixPool);
-        /* guoye: start */
-        // fprintf(stderr, "\n linearalgebranodes.h: RequestMatricesBeforeBackprop: debug 4 \n");
-        /* guoye: end */
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.

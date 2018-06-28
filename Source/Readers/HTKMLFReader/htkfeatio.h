@@ -864,21 +864,15 @@ public:
         setdata(ts, te, uid);
     }
 };
-/* guoye: start */
+
 template <class ENTRY, class WORDSEQUENCE>
 
 // vector<ENTRY> stores the state-level label, vector<size_t> stores the word-level label
-// template <class ENTRY>
 class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigned int>>> // [key][i] the data
-// class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
-/* guoye: end */
 {
     wstring curpath;                                 // for error messages
     unordered_map<std::string, size_t> statelistmap; // for state <=> index
-    /* guoye: start */
     map<wstring, WORDSEQUENCE> wordsequences;        // [key] word sequences (if we are building word entries as well, for MMI)
-
-    /* guoye: end */
     std::unordered_map<std::string, size_t> symmap;
 
     void strtok(char* s, const char* delim, vector<char*>& toks)
@@ -912,11 +906,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
     // template <typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
     template <typename WORDSYMBOLTABLE>
     void parseentry(const vector<std::string>& lines, size_t line, const set<wstring>& restricttokeys,
-        /* guoye: start */
                     const WORDSYMBOLTABLE* wordmap, /* const UNITSYMBOLTABLE* unitmap, */
-
-                    // vector<typename WORDSEQUENCE::word>& wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo>& alignseqbuffer,
-        /* guoye: end */
                     const double htkTimeToFrame)
     {
         size_t idx = 0;
@@ -949,25 +939,16 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
         // don't parse unused entries (this is supposed to be used for very small debugging setups with huge MLFs)
         if (!restricttokeys.empty() && restricttokeys.find(key) == restricttokeys.end())
             return;
-        /* guoye: start */
-        // vector<ENTRY>& entries = (*this)[key]; // this creates a new entry
-
         vector<ENTRY>& entries = (*this)[key].first; // this creates a new entry
         if (!entries.empty())
-            /* guoye: start */
-            // malformed(msra::strfun::strprintf("duplicate entry '%ls'", key.c_str()));
             // do not want to die immediately
         fprintf(stderr,
             "Warning: duplicate entry: %ls \n",
             key.c_str());
-        /* guoye: end */
         entries.resize(e - s);
 
-        // wordseqbuffer.resize(0);
-        // alignseqbuffer.resize(0);
         vector<size_t>& wordids = (*this)[key].second;
         wordids.resize(0);
-        /* guoye: end */
         vector<char*> toks;
         for (size_t i = s; i < e; i++)
         {
@@ -999,14 +980,11 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
      }
      
                     const char* w = toks[6]; // the word name
-                    /* guoye: start */
                     // For some alignment MLF the sentence start and end are both represented by <s>, we change sentence end <s> to be </s>
                     if (i > s && strcmp(w, "<s>") == 0)
                     {
                         w = "</s>";
                     }
-                    /* guoye: end */
-                    /*guoye: start */
                     /* skip the words that are not used in WER computation */
                     /* ugly hard code, will improve later */
                     if (strcmp(w, "<s>") != 0 
@@ -1034,74 +1012,17 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                     )
                     {
                         int wid = (*wordmap)[w]; // map to word id --may be -1 for unseen words in the transcript (word list typically comes from a test LM)
-                        /* guoye: start */
-                        // size_t wordindex = (wid == -1) ? WORDSEQUENCE::word::unknownwordindex : (size_t)wid;
-                        // wordseqbuffer.push_back(typename WORDSEQUENCE::word(wordindex, entries[i - s].firstframe, alignseqbuffer.size()));
                         static const unsigned int unknownwordindex = 0xfffff;
-
-                        // TNed the word, to try one more time if there is an OOV
-                        /*
-                        if (wid == -1)
-                        {
-                            // remove / \ * _ - to see if a match could be found
-                            char tnw[200];
-                            size_t i = 0, j = 0;
-                            while (w[i] != '\0')
-                            {
-                                if (w[i] != '\\' && w[i] != '/'  && w[i] != '*' && w[i] != '-' && w[i] != '_')
-                                {
-                                    tnw[j] = w[i]; j++;
-                                }
-                                i++;
-                            }
-                            tnw[j] = '\0';
-
-                            wid = (*wordmap)[tnw];
-
-                            fprintf(stderr,
-                                "Warning: parseentry: wid = %d, new wid = %d, w = %s, tnw = %s \n",
-                                -1, wid, w, tnw);
-
-                        }
-                        */
 
                         size_t wordindex = (wid == -1) ? unknownwordindex : (size_t)wid;
                         wordids.push_back(wordindex);
-                        /* guoye: end  */
                     }
-                    /*guoye: end */
                 }
-                /* guoye: start */
-                /*
-                if (unitmap)
-                {
-                   
-                    if (toks.size() > 4)
-                    {
-                        const char* u = toks[4];      // the triphone name
-                        auto iter = unitmap->find(u); // map to unit id
-                        if (iter == unitmap->end())
-                            RuntimeError("parseentry: unknown unit %s in utterance %ls", u, key.c_str());
-                        const size_t uid = iter->second;
-                        alignseqbuffer.push_back(typename WORDSEQUENCE::aligninfo(uid, 0 /*#frames--we accumulate*/  /* ));
-                    }
-                    
-                    if (alignseqbuffer.empty())
-                        RuntimeError("parseentry: lonely senone entry at start without phone/word entry found, for utterance %ls", key.c_str());
-                    alignseqbuffer.back().frames += entries[i - s].numframes; // (we do not have an overflow check here, but should...)
-                   
-                }
-                */
-                /* guoye: end */
             }
         }
         if (wordmap) // if reading word sequences as well (for MMI), then record it (in a separate map)
         {
-            /* guoye: start  */
-            // if (!entries.empty() && wordseqbuffer.empty())
             if (!entries.empty() && wordids.empty())
-            /* guoye: end */
-                // RuntimeError("parseentry: got state alignment but no word-level info, although being requested, for utterance %ls", key.c_str());
             {
                 fprintf(stderr,
                 "Warning: parseentry: got state alignment but no word-level info, although being requested, for utterance %ls \n",
@@ -1119,41 +1040,21 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                     int sentstart = (*wordmap)["!sent_start"]; // these must have been created
                     int sentend = (*wordmap)["!sent_end"];
                     // map first and last !silence to !sent_start and !sent_end, respectively
-                    /* guoye: start */
-                    /*
-                    if (sentstart >= 0 && wordseqbuffer.front().wordindex == (size_t) silence)
-                        wordseqbuffer.front().wordindex = sentstart;
-                    if (sentend >= 0 && wordseqbuffer.back().wordindex == (size_t) silence)
-                        wordseqbuffer.back().wordindex = sentend;
-                      */
                     if (sentstart >= 0 && wordids.front() == (size_t)silence)
                         wordids.front() = sentstart;
                     if (sentend >= 0 && wordids.back() == (size_t)silence)
                         wordids.back() = sentend;
-                    /* guoye: end */
                 }
             }
-            /* guoye: end */
             // if (sentstart < 0 || sentend < 0 || silence < 0)
             //    LogicError("parseentry: word map must contain !silence, !sent_start, and !sent_end");
             // implant
-            /* guoye: start */
-            /*
-            auto& wordsequence = wordsequences[key]; // this creates the map entry
-            wordsequence.words = wordseqbuffer;      // makes a copy
-            wordsequence.align = alignseqbuffer;
-            */
-            /* guoye: end */
         }
     }
-    /* guoye: start */
-    // template <typename UNITSYMBOLTABLE>
     void parseentry(const vector<std::string>& lines, size_t line, const set<wstring>& restricttokeys,
-        /* guoye: start */
         const std::unordered_map<std::string, int>& wordidmap, /* const UNITSYMBOLTABLE* unitmap,
         vector<typename WORDSEQUENCE::word>& wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo>& alignseqbuffer,
         */
-        /* guoye: end */
         const double htkTimeToFrame)
     {
         
@@ -1189,11 +1090,8 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
         // don't parse unused entries (this is supposed to be used for very small debugging setups with huge MLFs)
         if (!restricttokeys.empty() && restricttokeys.find(key) == restricttokeys.end())
             return;
-        /* guoye: start */
-        // vector<ENTRY>& entries = (*this)[key]; // this creates a new entry
         vector<ENTRY>& entries = (*this)[key].first;
         if (!entries.empty())
-            //malformed(msra::strfun::strprintf("duplicate entry '%ls'", key.c_str()));
             // do not want to die immediately
             fprintf(stderr,
                 "Warning: duplicate entry : %ls \n",
@@ -1203,11 +1101,6 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
 
         vector<unsigned int>& wordids = (*this)[key].second;
         wordids.resize(0);
-        /*
-        wordseqbuffer.resize(0);
-        alignseqbuffer.resize(0);
-        */
-        /* guoye: end */
         vector<char*> toks;
         for (size_t i = s; i < e; i++)
         {
@@ -1216,10 +1109,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
             if (statelistmap.size() == 0)
                 entries[i - s].parse(toks, htkTimeToFrame);
             else
-                /* guoye: star */
-                // entries[i - s].parsewithstatelist(toks, statelistmap, htkTimeToFrame, symmap);
                 entries[i - s].parsewithstatelist(toks, statelistmap, htkTimeToFrame);
-                /* guoye: end */
             // if we also read word entries, do it here
             if (wordidmap.size() != 0)
             {
@@ -1242,14 +1132,11 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
       }
      }
                     const char* w = toks[6]; // the word name
-                                             /* guoye: start */
                                              // For some alignment MLF the sentence start and end are both represented by <s>, we change sentence end <s> to be </s>
                     if (i > s && strcmp(w, "<s>") == 0)
                     {
                         w = "</s>";
                     }
-                    /* guoye: end */
-                    /*guoye: start */
                     /* skip the words that are not used in WER computation */
                     /* ugly hard code, will improve later */
                     if (strcmp(w, "<s>") != 0
@@ -1276,87 +1163,18 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                         && strcmp(w, ".]") != 0
                         )
                     {
-                        // int wid = (*wordmap)[w]; // map to word id --may be -1 for unseen words in the transcript (word list typically comes from a test LM)
-                        
                         mp_itr = wordidmap.find(std::string(w));
-                        int wid = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
-                        
-                        // debug
-                        // int wid = -1;
-
-                        /* guoye: start */
-                        // size_t wordindex = (wid == -1) ? WORDSEQUENCE::word::unknownwordindex : (size_t)wid;
-                        
-                        // guoye: debug
-                        // wordseqbuffer.push_back(typename WORDSEQUENCE::word(wordindex, entries[i - s].firstframe, alignseqbuffer.size()));
-
-
-                        // TNed the word, to try one more time if there is an OOV
-                        /**/
-                        /*
-                        if (wid == -1)
-                        {
-                            // remove / \ * _ - to see if a match could be found
-                            char tnw[200];
-                            size_t i1 = 0, j = 0;
-                            while (w[i1] != '\0')
-                            {
-                            if (w[i1] != '\\' && w[i1] != '/'  && w[i1] != '*' && w[i1] != '-' && w[i1] != '_')
-                            {
-                            tnw[j] = w[i1]; j++;
-                            }
-                            i1++;
-                            }
-                            tnw[j] = '\0';
-
-                         
-                            mp_itr = wordidmap.find(std::string(tnw));
-                            wid = ((mp_itr == wordidmap.end()) ? -1 : mp_itr->second);
-                         
-
-                        }
-                        
-                        */
-
-
+                        int wid = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);                        
                         static const unsigned int unknownwordindex = 0xfffff;
                         unsigned int wordindex = (wid == -1) ? unknownwordindex : (unsigned int)wid;
                         wordids.push_back(wordindex);
-                        /* guoye: end */
                     }
-                    /*guoye: end */
                 }
-                /* guoye: start */
-                /*
-                if (unitmap)
-                {
-                    
-                    if (toks.size() > 4)
-                    {
-                        const char* u = toks[4];      // the triphone name
-                        auto iter = unitmap->find(u); // map to unit id
-                        if (iter == unitmap->end())
-                            RuntimeError("parseentry: unknown unit %s in utterance %ls", u, key.c_str());
-                        const size_t uid = iter->second;
-                        alignseqbuffer.push_back(typename WORDSEQUENCE::aligninfo(uid, 0 /*#frames--we accumulate*/ /*  )); 
-                        
-                    }
-                    if (alignseqbuffer.empty())
-                        RuntimeError("parseentry: lonely senone entry at start without phone/word entry found, for utterance %ls", key.c_str());
-                    alignseqbuffer.back().frames += entries[i - s].numframes; // (we do not have an overflow check here, but should...)
-                    
-                }
-              */
-                /* guoye: end */
             }
         }
         if (wordidmap.size() != 0) // if reading word sequences as well (for MMI), then record it (in a separate map)
         {
-            /* guoye: start  */
-            // if (!entries.empty() && wordseqbuffer.empty())
             if (!entries.empty() && wordids.empty())
-                /* guoye: end */
-                // RuntimeError("parseentry: got state alignment but no word-level info, although being requested, for utterance %ls", key.c_str());
             {
                 
                 fprintf(stderr,
@@ -1390,42 +1208,19 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                     int sentend = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
 
                     // map first and last !silence to !sent_start and !sent_end, respectively
-                    /* guoye: start */
-                    /*
-                    if (sentstart >= 0 && wordseqbuffer.front().wordindex == (size_t)silence)
-                        wordseqbuffer.front().wordindex = sentstart;
-                    if (sentend >= 0 && wordseqbuffer.back().wordindex == (size_t)silence)
-                        wordseqbuffer.back().wordindex = sentend;
-                    */
                     if (sentstart >= 0 && wordids.front() == (size_t)silence)
                         wordids.front() = sentstart;
                     if (sentend >= 0 && wordids.back() == (size_t)silence)
                         wordids.back() = sentend;
-                    /* guoye: end */
                 }
             }
-            /* guoye: end */
             // if (sentstart < 0 || sentend < 0 || silence < 0)
             //    LogicError("parseentry: word map must contain !silence, !sent_start, and !sent/_end");
             // implant
             
-            /* guoye: start */
-            /*
-            wordseqbuffer.resize(0);
-            alignseqbuffer.resize(0);
-
-            auto& wordsequence = wordsequences[key]; // this creates the map entry
-                                                     
-            wordsequence.words = wordseqbuffer;      // makes a copy
-            
-        
-            wordsequence.align = alignseqbuffer;
-            */
-            /* guoye: end */
         }
     }
 
-    /* guoye: end */
 public:
     // return if input statename is sil state (hard code to compared first 3 chars with "sil")
     bool issilstate(const string& statename) const // (later use some configuration table)
@@ -1433,14 +1228,6 @@ public:
         return (statename.size() > 3 && statename.at(0) == 's' && statename.at(1) == 'i' && statename.at(2) == 'l');
     }
 
-    /* guoye: start */
-    /*
-    map<wstring, WORDSEQUENCE>  get_wordlabels()
-    {
-        return wordsequences;
-    }
-    */
-    /* guoye: end */
     vector<bool> issilstatetable; // [state index] => true if is sil state (cached)
 
     // return if input stateid represent sil state (by table lookup)
@@ -1473,15 +1260,7 @@ public:
     }
 
 
-    /* guoye: start */
-
-
-    // alternate constructor that takes wordidmap
-    // template <typename UNITSYMBOLTABLE>
-    /* guoye: start */
-    // htkmlfreader(const vector<wstring>& paths, const set<wstring>& restricttokeys, const wstring& stateListPath, const std::unordered_map<std::string, int>& wordidmap, const UNITSYMBOLTABLE* unitmap, const double htkTimeToFrame)
     htkmlfreader(const vector<wstring>& paths, const set<wstring>& restricttokeys, const wstring& stateListPath, const std::unordered_map<std::string, int>& wordidmap, const double htkTimeToFrame)
-        /* guoye: end */
     {
         // read state list
         if (stateListPath != L"")
@@ -1489,12 +1268,8 @@ public:
 
         // read MLF(s) --note: there can be multiple, so this is a loop
         foreach_index(i, paths)
-            /* guoye: start */
-            // read(paths[i], restricttokeys, wordidmap, unitmap, htkTimeToFrame);
             read(paths[i], restricttokeys, wordidmap, htkTimeToFrame);
-        /* guoye: end */
     }
-    /* guoye: end */
 
     // phone boundary
     template <typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
@@ -1508,12 +1283,8 @@ public:
             read(paths[i], restricttokeys, wordmap, unitmap, htkTimeToFrame);
     }
     // note: this function is not designed to be pretty but to be fast
-    /* guoye: start */
-    // template <typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
     template <typename WORDSYMBOLTABLE>
-    // void read(const wstring& path, const set<wstring>& restricttokeys, const WORDSYMBOLTABLE* wordmap, const UNITSYMBOLTABLE* unitmap, const double htkTimeToFrame)
     void read(const wstring& path, const set<wstring>& restricttokeys, const WORDSYMBOLTABLE* wordmap,  const double htkTimeToFrame)
-    /* guoye: end */
     {
         if (!restricttokeys.empty() && this->size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
             return;
@@ -1527,12 +1298,6 @@ public:
             malformed("header missing");
 
         // Read the file in blocks and parse MLF entries
-        /* guoye: start */
-        /*
-        std::vector<typename WORDSEQUENCE::word> wordsequencebuffer;
-        std::vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
-        */
-        /* guoye: end */
         size_t readBlockSize = 1000000;
         std::vector<char> currBlockBuf(readBlockSize + 1);
         size_t currLineNum = 1;
@@ -1562,10 +1327,7 @@ public:
                 {
                     if (restricttokeys.empty() || (this->size() < restricttokeys.size()))
                     {
-                        /* guoye: start */
-                        // parseentry(currMLFLines, currLineNum - currMLFLines.size(), restricttokeys, wordmap, unitmap, wordsequencebuffer, alignsequencebuffer, htkTimeToFrame);
                         parseentry(currMLFLines, currLineNum - currMLFLines.size(), restricttokeys, wordmap, htkTimeToFrame);
-                        /* guoye: end */
                     }
 
                     currMLFLines.clear();
@@ -1609,9 +1371,6 @@ public:
     }
 
     // note: this function is not designed to be pretty but to be fast
-    /* guoye: start */
-    // template <typename UNITSYMBOLTABLE>
-    // void read(const wstring& path, const set<wstring>& restricttokeys, const std::unordered_map<std::string, int>& wordidmap, const UNITSYMBOLTABLE* unitmap, const double htkTimeToFrame)
     void read(const wstring& path, const set<wstring>& restricttokeys, const std::unordered_map<std::string, int>& wordidmap,  const double htkTimeToFrame)
     {
         if (!restricttokeys.empty() && this->size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
@@ -1626,12 +1385,6 @@ public:
             malformed("header missing");
 
         // Read the file in blocks and parse MLF entries
-        /* guoye: start */
-        /*
-        std::vector<typename WORDSEQUENCE::word> wordsequencebuffer;
-        std::vector<typename WORDSEQUENCE::aligninfo> alignsequencebuffer;
-        */
-        /* guoye: end */
         size_t readBlockSize = 1000000;
         std::vector<char> currBlockBuf(readBlockSize + 1);
         size_t currLineNum = 1;
@@ -1704,7 +1457,6 @@ public:
         curpath.clear();
         fprintf(stderr, " total %lu entries\n", (unsigned long)this->size());
     }
-    /* guoye: end */
 
     // read state list, index is from 0
     void readstatelist(const wstring& stateListPath = L"")
@@ -1740,14 +1492,10 @@ public:
     }
 
     // access to word sequences
-    /* guoye: start */
-
     const map<wstring, WORDSEQUENCE>& allwordtranscripts() const
     {
         return wordsequences;
     }
-
-    /* guoye: end */
 };
 };
 }; // namespaces

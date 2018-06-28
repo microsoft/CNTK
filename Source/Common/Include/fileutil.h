@@ -34,22 +34,6 @@
 #include <fcntl.h>
 
 #define FCLOSE_SUCCESS 0
-/* guoye: start */
-/*
-#include "basetypes.h" //for attemp()
-#include "ProgressTracing.h"
-#include <unistd.h>
-#include <glob.h>
-#include <dirent.h>
-#include <sys/sendfile.h>
-#include <stdio.h>
-#include <ctype.h>
-#include <limits.h>
-#include <memory>
-#include <cwctype>
-*/
-// using namespace Microsoft::MSR::CNTK;
-/* guoye: end */
 
 // ----------------------------------------------------------------------------
 // fopenOrDie(): like fopen() but terminate with err msg in case of error.
@@ -249,13 +233,7 @@ template <class CHAR>
 CHAR* fgetline(FILE* f, CHAR* buf, int size)
 {
     // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
-    /* guoye: end */
     CHAR* p = fgets(buf, size, f);
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
-    /* guoye: end */
     if (p == NULL) // EOF reached: next time feof() = true
     {
         if (ferror(f))
@@ -269,10 +247,7 @@ CHAR* fgetline(FILE* f, CHAR* buf, int size)
 
     if (n >= (size_t)size - 1)
     {
-        /* guoye: start */
-        // basic_string<CHAR> example(p, n < 100 ? n : 100);
         std::basic_string<CHAR> example(p, n < 100 ? n : 100);
-        /* guoye: end */
         uint64_t filepos = fgetpos(f); // (for error message only)
         RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int)filepos, (int)size - 1, msra::strfun::utf8(example).c_str());
     }
@@ -303,13 +278,7 @@ template <class CHAR>
 CHAR* fgetlinew(FILE* f, CHAR* buf, int size)
 {
     // TODO: we should redefine this to write UTF-16 (which matters on GCC which defines wchar_t as 32 bit)
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 0\n");
-    /* guoye: end */
     CHAR* p = fgets(buf, size, f);
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.cpp: fgetline: debug 1\n");
-    /* guoye: end */
     if (p == NULL) // EOF reached: next time feof() = true
     {
         if (ferror(f))
@@ -323,10 +292,7 @@ CHAR* fgetlinew(FILE* f, CHAR* buf, int size)
 
     if (n >= (size_t)size - 1)
     {
-        /* guoye: start */
-        // basic_string<CHAR> example(p, n < 100 ? n : 100);
         std::basic_string<CHAR> example(p, n < 100 ? n : 100);
-        /* guoye: end */
         uint64_t filepos = fgetpos(f); // (for error message only)
         RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int)filepos, (int)size - 1, msra::strfun::utf8(example).c_str());
     }
@@ -355,20 +321,13 @@ CHAR* fgetlinew(FILE* f, CHAR* buf, int size)
 template <class CHAR, size_t n>
 CHAR* fgetlinew(FILE* f, CHAR(&buf)[n])
 {
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.h: fgetline(FILE* f, CHAR(&buf)[n]): debug 0\n");
     return fgetlinew(f, buf, n);
-    /* guoye: end */
 }
 
-/* guoye: end */
 template <class CHAR, size_t n>
 CHAR* fgetline(FILE* f, CHAR(&buf)[n])
 {
-    /* guoye: start */
-    // fprintf(stderr, "\n fileutil.h: fgetline(FILE* f, CHAR(&buf)[n]): debug 0\n");
     return fgetline(f, buf, n);
-    /* guoye: end */
 }
 std::string fgetline(FILE* f);
 std::wstring fgetlinew(FILE* f);
@@ -1037,19 +996,13 @@ static inline String& trim(String& s)
 {
     return ltrim(rtrim(s));
 }
-/* guoye: start */
-
 template<class String>
 // move from fileutil.h, the definition and declartion should be at the same file.
 
 // vector<String> SplitString(const String& str, const String& sep)
 std::vector<String> SplitString(const String& str, const String& sep)
-/* guoye: end */
 {
-    /* guoye: start */
-    // vector<String> vstr;
     std::vector<String> vstr;
-    /* guoye: end */
     String csub;
     size_t ifound = 0;
     size_t ifoundlast = ifound;
@@ -1070,7 +1023,7 @@ std::vector<String> SplitString(const String& str, const String& sep)
 
     return vstr;
 }
-/* guoye: end */
+
 template<class String, class Char>
 std::vector<String> SplitString(const String& str, const Char* sep) { return SplitString(str, String(sep)); }
 
@@ -1078,8 +1031,4 @@ std::wstring s2ws(const std::string& str);
 
 std::string ws2s(const std::wstring& wstr);
 
-
-/* guoye: start */
-// #include "../fileutil.cpp"
-/* guoye: end */
 #endif // _FILEUTIL_

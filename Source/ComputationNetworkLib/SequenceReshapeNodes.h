@@ -128,21 +128,9 @@ public:
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
-        /* guoye: start */
-        //fprintf(stderr, "\n sequencereshapenodes.h: RequestMatricesBeforeBackprop: debug 1 \n");
-        /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        /* guoye: start */
-        // fprintf(stderr, "\n sequencereshapenodes.h: RequestMatricesBeforeBackprop: debug 2 \n");
-        /* guoye: end */
         RequestMatrixFromPool(m_tempScatterIndices, matrixPool, 1, HasMBLayout());
-        /* guoye: start */
-        // fprintf(stderr, "\n sequencereshapenodes.h: RequestMatricesBeforeBackprop: debug 3 \n");
-        /* guoye: end */
         RequestMatrixFromPool(m_tempUnpackedData, matrixPool, InputRef(0).GetSampleLayout().GetNumElements(), InputRef(0).HasMBLayout());
-        /* guoye: start */
-        // fprintf(stderr, "\n sequencereshapenodes.h: RequestMatricesBeforeBackprop: debug 4 \n");
-        /* guoye: end */
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
@@ -476,21 +464,9 @@ public:
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
-        /* guoye: start */
-        // fprintf(stderr, "\n sequencereshapenodes.h: RequestMatricesBeforeBackprop: debug 5 \n");
-        /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        /* guoye: start */
-        // fprintf(stderr, "\n sequencereshapenodes.h: RequestMatricesBeforeBackprop: debug 6 \n");
-        /* guoye: end */
         RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, HasMBLayout());
-        /* guoye: start */
-        // fprintf(stderr, "\n sequencereshapenodes.h: RequestMatricesBeforeBackprop: debug 7 \n");
-        /* guoye: end */
         RequestMatrixFromPool(m_tempPackedGradientData, matrixPool, InputRef(0).GetSampleLayout().GetNumElements(), InputRef(0).HasMBLayout());
-        /* guoye: start */
-        // fprintf(stderr, "\n sequencereshapenodes.h: RequestMatricesBeforeBackprop: debug 8 \n");
-        /* guoye: end */
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override

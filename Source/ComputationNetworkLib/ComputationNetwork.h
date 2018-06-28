@@ -554,8 +554,6 @@ public:
                             const double& lmf = 14.0f,
                             const double& wp = 0.0f,
                             const double& bMMIfactor = 0.0f,
-                            /* guoye: start */
-                            // const bool& sMBR = false);
                             const bool& sMBR = false,
                             const bool& EMBR = false,
                             const string& EMBRUnit = "word",
@@ -569,7 +567,6 @@ public:
                             const float& accWeightInNbest = 1.0f,
                             const size_t& numRawPathsEMBR = 100
                             );
-                            /* guoye: end */
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------
