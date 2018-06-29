@@ -89,20 +89,20 @@ introduced, overloaded operators can be applied to them to form an operator grap
 
   # Evaluate the op using test_input
   >>> print(op.eval({ x: test_input }))
-  [array([[[  20.,   40.,   60.],
-          [  80.,  100.,  120.]]], dtype=float32)]
+  [array([[[ 20.,  40.,  60.],
+          [ 80., 100., 120.]]], dtype=float32)]
 
   # Same as above (2 will be converted to constant)
   >>> op2 = x * 2
   >>> print(op2.eval({ x: test_input }))
-  [array([[[  20.,   40.,   60.],
-          [  80.,  100.,  120.]]], dtype=float32)]
+  [array([[[ 20.,  40.,  60.],
+          [ 80., 100., 120.]]], dtype=float32)]
 
   #  Elementwise multiplication of two 2x3 matrices
   >>> op3 = x * [[1,2,3], [4,5,6]]
   >>> print(op3.eval({ x: test_input}))
-  [array([[[  10.,   40.,   90.],
-          [ 160.,  250.,  360.]]], dtype=float32)]
+  [array([[[ 10.,  40.,  90.],
+          [ 160., 250., 360.]]], dtype=float32)]
 
 
 Broadcasting
