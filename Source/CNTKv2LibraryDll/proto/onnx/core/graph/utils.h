@@ -30,7 +30,7 @@ inline Status FileOpenRd(const std::wstring& path, /*out*/ int* p_fd) {
 }
 
 inline Status FileOpenWr(const std::wstring& path, /*out*/ int* p_fd) {
-  _wsopen_s(p_fd, path.c_str(), _O_CREAT | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+  _wsopen_s(p_fd, path.c_str(), _O_CREAT | O_TRUNC | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
   if (0 > *p_fd) {
     return Status(SYSTEM, errno);
   }
@@ -52,7 +52,7 @@ inline Status FileOpenRd(const std::string& path, /*out*/ int* p_fd) {
 
 inline Status FileOpenWr(const std::string& path, /*out*/ int* p_fd) {
 #ifdef _WIN32
-  _sopen_s(p_fd, path.c_str(), _O_CREAT | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+  _sopen_s(p_fd, path.c_str(), _O_CREAT | O_TRUNC | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
 #else
   *p_fd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
 #endif

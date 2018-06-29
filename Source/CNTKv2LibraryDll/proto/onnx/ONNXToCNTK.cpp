@@ -1911,17 +1911,27 @@ std::pair<std::vector<size_t>, std::vector<size_t>> ONNXToCNTKHelper::AdjustONNX
     return SplitAndReverseVec(pads);
 }
 
+CNTK::DataType ConvertDataTypeTensorProtoToCNTK(TensorProto_DataType newDataType)
+{
+    // to TensorProto_DataType
+    switch (newDataType)
+    {
+    case TensorProto_DataType::TensorProto_DataType_FLOAT:
+        return CNTK::DataType::Float;
+    case TensorProto_DataType::TensorProto_DataType_DOUBLE:
+        return CNTK::DataType::Double;
+    case TensorProto_DataType::TensorProto_DataType_FLOAT16:
+        return CNTK::DataType::Float16;
+    default:
+        NOT_IMPLEMENTED;
+    }
+}
+
 FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector<Variable> &inputs, const Graph *graph)
 {
     string onnxOpName = node->OpType();
 
-    if (onnxOpName == "Cast" && inputs[0].GetDataType() == CNTK::DataType::Float && inputs[0].Owner() != nullptr)
-    {
-        // CNTK does not support cast op. Only float is available with ONNX support.
-        // Question for having a cast op: Why not cast data as necessary internally.
-        return inputs[0].Owner();
-    }
-    else if (onnxOpName == "LSTM")
+    if (onnxOpName == "LSTM")
     {
         const string direction = GetNamedAttributeAsString(node, "direction");
         std::vector<float> activation_alpha = GetNamedAttributeAsFloatVec(node, "activation_alpha", std::vector<float>());
@@ -2718,6 +2728,13 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "Acos")
     {
         FunctionPtr cntkFunction = Acos(inputs[0], ToWString(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Cast")
+    {
+        TensorProto_DataType newDataType = static_cast<TensorProto_DataType>(GetNamedAttributeAsInt64(node, "to"));
+        DataType cntkNewDataType = ConvertDataTypeTensorProtoToCNTK(newDataType);
+        FunctionPtr cntkFunction = Cast(inputs[0], cntkNewDataType, ToWString(node->Name()));
         return cntkFunction;
     }
     else

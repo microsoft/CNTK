@@ -346,7 +346,10 @@ namespace ONNX
         } } },
 
         // From tensor
-        // { L"", "Cast" },
+        { L"Cast", { {
+            { L"Cast", "Cast" },
+            { L"newDataType", "to" },
+            } } },
         { L"Splice", { {
             { L"Splice", "Concat" },
             { L"axis", "axis" },
