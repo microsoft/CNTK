@@ -920,12 +920,14 @@ private:
     using Base::m_dilation;
     using Base::m_groups;
 
+    static const size_t SentinelUnspecifiedSeqAxisIdx = (size_t)-1;
+
 public:
     static const std::wstring TypeName() { return L"ConvolutionOverSequenceV2"; }
 
 public:
     ConvolutionOverSequenceAxisNodeV2(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+        : Base(deviceId, name), m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx), isGradientUnpackedAndTransposed(false)
     {
     }
 
@@ -933,12 +935,14 @@ public:
         const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
         bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, const TensorShape& dilation = TensorShape(1),
         size_t groups = 1)
-        : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation, groups)
+        : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation, groups),
+        m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx),
+        isGradientUnpackedAndTransposed(false)
     {
     }
 
     ConvolutionOverSequenceAxisNodeV2(const ScriptableObjects::IConfigRecordPtr configp)
-        : Base(configp)
+        : Base(configp), m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx), isGradientUnpackedAndTransposed(false)
     {
     }
 
@@ -1096,6 +1100,42 @@ public:
             m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->IsGradientInitializedBy(this), *m_tempMatrixBackward);
         }
         */
+
+
+        // Unpack and transpose Gradient(). We might need to store it somewhere as we need it for both input index. use a m_gradientUnpacked?
+
+        if (!isGradientUnpackedAndTransposed)
+        {
+            UnpackAndTransposeGradient();
+            isGradientUnpackedAndTransposed = true;
+        }
+
+        auto unpackedOutputGrad = m_unpackedGradientView.GetSOBPtr()->AsReference();
+
+        if (inputIndex == 0)
+        {
+            // kernel gradient
+            auto& grad = InputRef(0).GradientAsMatrix();
+            auto unpackedOperandValue = m_unpackedOperandData->AsReference();
+            // TODO : watch out for 1. IsGradientInitializedBy(this) 2. fr.IsAllFrames().
+            //          1. is 'this' safe and correct?
+            //          2. in forward fr.IsAllFrames() is always true, not sure for backward. And if it is always true, why bother with this flag anyway??
+            // Update: Ok... checked ConvolutionEngine.cpp.     fr.IsAllFrames()    AKA allowReuse is used in legacy.
+            //                                                  IsGradInitBy(this)  AKA accumulateGradient is used in MKL and cudnn.
+            m_convEng->BackwardKernel(unpackedOutputGrad, unpackedOperandValue, grad, !Input(inputIndex)->IsGradientInitializedBy(this), fr.IsAllFrames(), *m_tempMatrixBackward);
+        }
+        else
+        {
+            // feature gradient
+            auto& input0 = InputRef(0).ValueAsMatrix();
+            auto unpackedOperandGrad = m_unpackedOperandGrad->AsReference();
+            m_convEng->BackwardData(unpackedOutputGrad, input0, unpackedOperandGrad, /*accumulateGradient*/false, *m_tempMatrixBackward);
+
+            // transpose gradient
+
+
+
+        }
     }
 
     // Note: for sequence lengths. 
@@ -1180,6 +1220,35 @@ public:
     }
 
 private:
+
+    void UnpackAndTransposeGradient()
+    {
+        // Uh... This is gradient to sequence actually ........ 
+        //auto numSequences = GetMBLayout()->GetNumSequences();
+        //auto gradientSampleLayout = GetSampleLayout();
+        //auto gradientDataTensorShape = gradientSampleLayout;
+        //gradientDataTensorShape.AppendInPlace(gradientDataTensorShape.GetRank(), numSequences);
+        //let& gradientDataMatrix = Gradient();
+        //auto gradientDataNDArrayView = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(),
+        //    ::CNTK::AsDeviceDescriptor(gradientDataMatrix.GetDeviceId()),
+        //    ::CNTK::AsStorageFormat(gradientDataMatrix.GetFormat()),
+        //    ::CNTK::AsNDShape(gradientDataTensorShape),
+        //    /*readOnly =*/true,
+        //    new TensorView<ElemType>(GradientPtr(), gradientDataTensorShape));
+
+        //std::vector<size_t> sequenceLengths(numSequences);
+        //let& inputSequences = m_unpackedpMBLayout->GetAllSequences();
+
+        ElemType gapPadValue = 0;
+        TensorView<ElemType> unpackedGradientView = ComputationNode<ElemType>::Unpack(GetSampleLayout(), Gradient(), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, 
+            std::shared_ptr<Matrix<char>>(nullptr), /*batchMajor=*/ false, &gapPadValue);
+
+        // TODO : set transposed unpacked gradient shape. 
+
+        unpackedGradientView.Reshaped(transposedUnpackedGradientShape);
+        m_transposedUnpackedGradientView = TensorView<ElemType>(m_transposedUnpackedGradientData, transposedUnpackedGradientShape.GetDims());
+        m_transposedUnpackedGradientView.AssignCopyOf(unpackedGradientView);
+    }
 
     void UpdateFunctionValuesSize(Matrix<ElemType>& m, const TensorShape& shape, const MBLayoutPtr& pMBLayout)
     {
@@ -1389,6 +1458,8 @@ private:
 
 private:
     size_t m_seqAxisIdx;
+    bool m_isGradientUnpacked;
+
     TensorShape m_unpackedOperandShape;
     TensorShape m_unpackedConvResultShape;
     TensorShape m_transposedUnpackedConvResultShape;
@@ -1397,6 +1468,9 @@ private:
     shared_ptr<Matrix<ElemType>> m_transposedUnpackedOperandData;
     shared_ptr<Matrix<ElemType>> m_unpackedConvResultData;
     shared_ptr<Matrix<ElemType>> m_transposedUnpackedConvResultData;
+
+    TensorView<ElemType> m_transposedUnpackedGradientView;
+    shared_ptr<Matrix<ElemType>> m_unpackedOperandGrad;
 
     // shared by unpack and tosequence
     shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
