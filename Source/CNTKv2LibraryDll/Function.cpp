@@ -3347,8 +3347,8 @@ namespace CNTK
             // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
             // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as
             // the sample shape and considering the rest to be part of the batch axis
-            if (operand.DynamicAxes().size() != 2)
-                LogicError("Sequential convolution requires the main operand to have sequence axis. ");
+            if (operand.DynamicAxes().empty())
+                LogicError("Convolution currently requires the main operand to have dynamic axes");
 
             auto additionalProperties = Dictionary();
             SetConvolutionProperties(additionalProperties, strides, sharing, autoPadding, dilation, /*sequential =*/true, transpose, outputShape, groups, maxTempMemSizeInSamples);

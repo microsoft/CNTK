@@ -1004,7 +1004,6 @@ public:
         TensorView<ElemType> transposedUnpackedInput(m_transposedUnpackedOperandData, transposedUnpackedOperandShape.GetDims());
         transposedUnpackedInput.AssignCopyOf(unpackedInput);
 
-
         // transpose
         // auto transposedUnpackedOperandData = TensorView<ElemType>(m_unpackedOperandData, m_unpackedOperandShape);
 
@@ -1035,14 +1034,28 @@ public:
 
         m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward);
 
+        // transpose output
+        UpdateFunctionValuesSize(*m_transposedUnpackedConvResultData, m_unpackedConvResultShape, m_unpackedpMBLayout);
+
+        TensorShape transposedUnpackedConvResultShape = m_unpackedConvResultShape;
+        size_t transposedUnpackedConvResultShapeRank = transposedUnpackedConvResultShape.GetRank();
+        transposedUnpackedConvResultShape.AppendInPlace(transposedUnpackedConvResultShapeRank++, m_unpackedpMBLayout->GetNumParallelSequences());
+        transposedUnpackedConvResultShape.AppendInPlace(transposedUnpackedConvResultShapeRank++, m_unpackedpMBLayout->GetNumTimeSteps());
+        transposedUnpackedConvResultShape.SwapDimsInPlace(inputRank - 1, inputRank);
+        
+        TensorView<ElemType> unpackedConvResult(m_unpackedConvResultData, transposedUnpackedConvResultShape);
+        TensorView<ElemType> transposedUnpackedConvResult(m_transposedUnpackedConvResultData, transposedUnpackedConvResultShape.GetDims());
+        transposedUnpackedConvResult.AssignCopyOf(unpackedConvResult);
+
+
         /// tosequence sliceOutputValue
         m_transposedUnpackedConvResultShape.AppendInPlace(m_transposedUnpackedConvResultShape.GetRank(), numSequences);
         auto unpackedConvResultDataNDArrayView = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(),
-            ::CNTK::AsDeviceDescriptor(m_unpackedConvResultData->GetDeviceId()),
-            ::CNTK::AsStorageFormat(m_unpackedConvResultData->GetFormat()),
+            ::CNTK::AsDeviceDescriptor(m_transposedUnpackedConvResultData->GetDeviceId()),
+            ::CNTK::AsStorageFormat(m_transposedUnpackedConvResultData->GetFormat()),
             ::CNTK::AsNDShape(m_transposedUnpackedConvResultShape),
             /*readOnly =*/ true,
-            new TensorView<ElemType>(m_unpackedConvResultData, m_transposedUnpackedConvResultShape));
+            new TensorView<ElemType>(m_transposedUnpackedConvResultData, m_transposedUnpackedConvResultShape));
 
         auto convResultDataValue = ::CNTK::MakeSharedObject<::CNTK::Value>(unpackedConvResultDataNDArrayView, ::CNTK::CreateMask(convResultSequenceLengths));
         auto dummyVar = ::CNTK::InputVariable(::CNTK::AsNDShape(GetSampleLayout()), this->IsValueSparse(), ::CNTK::AsDataType<ElemType>());
@@ -1137,7 +1150,8 @@ public:
         const size_t estimatedNumElements = InputRef(1).GetMBLayout()->GetNumTimeSteps() * InputRef(1).GetSampleLayout().GetNumElements();
         RequestMatrixFromPool(m_unpackedOperandData, matrixPool, estimatedNumElements, true);
         RequestMatrixFromPool(m_transposedUnpackedOperandData, matrixPool, estimatedNumElements, true);
-        RequestMatrixFromPool(m_unpackedConvResultData, matrixPool, estimatedNumElements, true);
+        RequestMatrixFromPool(m_unpackedConvResultData, matrixPool, estimatedNumElements, true); 
+        RequestMatrixFromPool(m_transposedUnpackedConvResultData, matrixPool, estimatedNumElements, true);
         RequestMatrixFromPool(m_tempUnpackedData, matrixPool, estimatedNumElements, true);
         RequestMatrixFromPool(m_tempPackedGradientData, matrixPool, estimatedNumElements, true);
     }
@@ -1160,6 +1174,7 @@ public:
         ReleaseMatrixToPool(m_unpackedOperandData, matrixPool);
         ReleaseMatrixToPool(m_transposedUnpackedOperandData, matrixPool);
         ReleaseMatrixToPool(m_unpackedConvResultData, matrixPool);
+        ReleaseMatrixToPool(m_transposedUnpackedConvResultData, matrixPool);
         ReleaseMatrixToPool(m_tempUnpackedData, matrixPool);
         ReleaseMatrixToPool(m_tempPackedGradientData, matrixPool);
     }
@@ -1381,6 +1396,7 @@ private:
     shared_ptr<Matrix<ElemType>> m_unpackedOperandData;
     shared_ptr<Matrix<ElemType>> m_transposedUnpackedOperandData;
     shared_ptr<Matrix<ElemType>> m_unpackedConvResultData;
+    shared_ptr<Matrix<ElemType>> m_transposedUnpackedConvResultData;
 
     // shared by unpack and tosequence
     shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
