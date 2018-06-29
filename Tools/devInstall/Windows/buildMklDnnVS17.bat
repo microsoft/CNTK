@@ -96,7 +96,7 @@ echo The script requires two parameter
 echo   Parameter 1: The complete path to the mkl-dnn source directory 
 echo                e.g. C:\local\src\mkl-dnn-0.14
 echo   Parameter 2: The target path for the created binaries
-echo                e.g. C:\local\mkl-dnn-0.12, or c:\local\mklml\mklml_win_2018.0.1.20171227
+echo                e.g. C:\local\mkl-dnn-0.14, or c:\local\mklml\mklml_win_2018.0.3.20180406
 echo Note: mkl-dnn could be built with or without MKLML (a trimmed version of Intel MKL).
 echo       If the target path is mklml path, or if environment variable MKLML_PATH is defined,
 echo       this script builds mkl-dnn using mklml. Otherwise, it builds mkl-dnn without mklml.

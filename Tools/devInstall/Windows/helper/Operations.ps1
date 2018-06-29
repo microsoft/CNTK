@@ -96,21 +96,21 @@ function OpCMake362(
         } )
 }
 
-function OpMKLDNN012(
+function OpMKLDNN014(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "MKLML and MKL-DNN 0.12 CNTK Prebuild"
-    $prodFile = "mklml-mkldnn-0.12.zip"
-    $prodSubDir =  "mklml-mkldnn-0.12"
+    $prodName = "MKLML and MKL-DNN 0.14 CNTK Prebuild"
+    $prodFile = "mklml-mkldnn-0.14.zip"
+    $prodSubDir =  "mklml-mkldnn-0.14"
 
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "MKL_PATH"
     $envValue = $targetPath
-    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/mkldnn/mklml-mkldnn-0.12.zip"
-    $expectedHash = "13C3D485CF96C216B6460188CE6E120847F1BB16B9F66A4134E56EB5D3A37857"
+    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/mkldnn/mklml-mkldnn-0.14.zip"
+    $expectedHash = "BD1075998BEE697E8E5EF070C7078B5E1AF39E53A4D2CE1483AABA611EF1B681"
 
-    @( @{ShortName = "MKLDNN012"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
+    @( @{ShortName = "MKLDNN014"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash} );

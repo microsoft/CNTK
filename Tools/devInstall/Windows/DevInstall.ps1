@@ -144,7 +144,7 @@ Function main
         $operation += OpMSMPI70 -cache $localCache
         $operation += OpMSMPI70SDK -cache $localCache
         $operation += OpBoost160VS15 -cache $localCache -targetFolder $localDir
-        $operation += OpMKLDNN012 -cache $localCache -targetFolder $localDir
+        $operation += OpMKLDNN014 -cache $localCache -targetFolder $localDir
         $operation += OpSwig3010 -cache $localCache -targetFolder $localDir
         $operation += OpProtoBuf310VS17 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
         $operation += OpProtoBuf310VS17Prebuild -cache $localCache -targetFolder $localDir
