@@ -232,8 +232,11 @@ def _merge_regions(r1, r2):
     return rt
 
 def mycmp(x, y): 
-    return cmp(x[1],y[1])
-    
+    x_float=x[1].astype(numpy.float32)
+    y_float=y[1].astype(numpy.float32)
+
+    return cmp(x_float,y_float)
+
 def cmp_to_key(mycmp):
     'Convert a cmp= function into a key= function'
     class K(object):
