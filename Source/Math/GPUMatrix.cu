@@ -472,10 +472,14 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
         return _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opNegativeSine:
         return _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opTan:
+        return _elementWiseTanOnCuda<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(src, Data(), N);
     case ElementWiseOperator::opAcos:
         return _elementWiseAcosOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opAsin:
         return _elementWiseAsinOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opAtan:
+        return _elementWiseAtanOnCuda<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(src, Data(), N);
     case ElementWiseOperator::opCosh:
         return _elementWiseCoshOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opSinh:
@@ -2332,11 +2336,17 @@ DEF_ELEMWISE_ASSIGN_FUNC(Cosine)
 DEF_ELEMWISE_INPLACE_FUNC(NegativeSine)
 DEF_ELEMWISE_ASSIGN_FUNC(NegativeSine)
 
+DEF_ELEMWISE_INPLACE_FUNC(Tan)
+DEF_ELEMWISE_ASSIGN_FUNC(Tan)
+
 DEF_ELEMWISE_INPLACE_FUNC(Acos)
 DEF_ELEMWISE_ASSIGN_FUNC(Acos)
 
 DEF_ELEMWISE_INPLACE_FUNC(Asin)
 DEF_ELEMWISE_ASSIGN_FUNC(Asin)
+
+DEF_ELEMWISE_INPLACE_FUNC(Atan)
+DEF_ELEMWISE_ASSIGN_FUNC(Atan)
 
 DEF_ELEMWISE_INPLACE_FUNC(Cosh)
 DEF_ELEMWISE_ASSIGN_FUNC(Cosh)

@@ -51,10 +51,12 @@ OverloadUnaryMathFns(sqrt);
 OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
+OverloadUnaryMathFns(tan);
 OverloadUnaryMathFns(floor);
 OverloadUnaryMathFns(log1p);
 OverloadUnaryMathFns(asin);
 OverloadUnaryMathFns(acos);
+OverloadUnaryMathFns(atan);
 OverloadUnaryMathFns(sinh);
 OverloadUnaryMathFns(cosh);
 OverloadUnaryMathFns(asinh);
@@ -418,11 +420,13 @@ DefUnaryOp(Log, ClippedLog(a));
 DefUnaryOp(LinearRectifier, a > 0 ? a : (ElemType)0);
 DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Sin, sin_(a));
+DefUnaryOp(Tan, tan_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
 DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (ElemType)(exp_(a)-1));
 DefUnaryOp(StableSigmoid, StableSigmoid(a));
 DefUnaryOp(Asin, asin_(a));
 DefUnaryOp(Acos, acos_(a));
+DefUnaryOp(Atan, atan_(a));
 DefUnaryOp(Sinh, sinh_(a));
 DefUnaryOp(Cosh, cosh_(a));
 DefUnaryOp(Asinh, asinh_(a));
@@ -464,7 +468,9 @@ DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > (Elem
 DefBinaryOp(ElementwiseProductWithLogDerivativeFromOutput, a* exp_(-b));
 DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b)); // note: b = input for cos()
 DefBinaryOp(ElementwiseProductWithSinDerivative, a * cos_(b)); // note: b = input for sin()
+DefBinaryOp(ElementwiseProductWithTanDerivative, a * (1 + tan_(b) * tan_(b))); // note: b = input for tan()
 DefBinaryOp(ElementwiseProductWithAsinDerivative, a / sqrt_(1 - b * b)); // note: b = input for asin()
+DefBinaryOp(ElementwiseProductWithAtanDerivative, a / (1 + b * b)); // note: b = input for atan()
 DefBinaryOp(ElementwiseProductWithAcosDerivative, -a / sqrt_(1 - b * b)); // note: b = input for acos()
 DefBinaryOp(ElementwiseProductWithAbsDerivative, a * Sgn(b)); // note: b = input for abs()
 DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = output

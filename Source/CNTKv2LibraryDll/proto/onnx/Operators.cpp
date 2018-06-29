@@ -281,11 +281,17 @@ namespace ONNX
         { L"Sin",{ {
             { L"Sin", "Sin" },
         } } },
+        { L"Tan",{ {
+            { L"Tan", "Tan" },
+            } } },
         { L"Acos",{ {
             { L"Acos", "Acos" },
         } } },
         { L"Asin",{ {
             { L"Asin", "Asin" },
+        } } },
+        { L"Atan",{ {
+            { L"Atan", "Atan" },
         } } },
 
         // From reduction

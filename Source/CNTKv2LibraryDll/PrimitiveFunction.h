@@ -120,6 +120,8 @@ namespace CNTK
         { PrimitiveOpType::EyeLikeOp, L"EyeLikeOp" },
         { PrimitiveOpType::CustomProxyOp, L"CustomProxyOp" },
         {PrimitiveOpType::StraightThrough, L"StraightThrough"},
+        { PrimitiveOpType::Tan, L"Tan" },
+        { PrimitiveOpType::Atan, L"Atan" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -840,7 +842,8 @@ namespace CNTK
         // Version 20: Add squeeze, expand dims, zeros like, ones like
         // Version 21: Add EyeLikeOp
         // Version 22: Add StraightThrough
-        static const size_t s_serializationVersion = 22;
+        // Version 23: Add Tan and Atan.
+        static const size_t s_serializationVersion = 23;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

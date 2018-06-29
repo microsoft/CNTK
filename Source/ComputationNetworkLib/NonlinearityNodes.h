@@ -115,8 +115,10 @@ public:
 // FloorNode (input)
 // CosineNode (input)
 // SinNode (input)
+// TanNode (input)
 // AsinNode (input)
 // AcosNode (input)
+// AtanNode (input)
 // CoshNode (input)
 // AsinhNode (input)
 // SinhNode (input)
@@ -156,6 +158,7 @@ DeclareUnaryElementWiseWithOpCodeNode(Abs,                   Abs,               
 DeclareUnaryElementWiseWithOpCodeNode(Acos,                  Acos,                  ElementwiseProductWithAcosDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Asin,                  Asin,                  ElementwiseProductWithAsinDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Asinh,                 Asinh,                 ElementwiseProductWithAsinhDerivative,                           binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Atan,                  Atan,                  ElementwiseProductWithAtanDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Atanh,                 Atanh,                 ElementwiseProductWithAtanhDerivative,                           binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosh,                  Cosh,                  ElementwiseProductWithCoshDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Cosine,                Cosine,                ElementwiseProductWithCosDerivative,                             binaryWithInputGradient);
@@ -171,6 +174,7 @@ DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,               Sigmoid,           
 DeclareUnaryElementWiseWithOpCodeNode(Sin,                   Sin,                   ElementwiseProductWithSinDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sinh,                  Sinh,                  ElementwiseProductWithSinhDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,                  Sqrt,                  ElementwiseProductWithSqrtDerivative,                            binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Tan,                   Tan,                   ElementwiseProductWithTanDerivative,                             binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Tanh,                  Tanh,                  ElementwiseProductWithTanhDerivativeFromOutput,                  binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(ExponentialLinearUnit, ExponentialLinearUnit, ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(StableSigmoid,         StableSigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,               binaryWithOutputGradient);
