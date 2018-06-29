@@ -25,7 +25,7 @@ def test_deep_q_neural_network(device_id):
     dqn = __import__("DeepQNeuralNetwork")
 
     # 1. Make environment:
-    ENV_NAME = 'Pong-v3'
+    ENV_NAME = 'Pong-v4'
     env = gym.make(ENV_NAME)
 
     # 2. Make agent
