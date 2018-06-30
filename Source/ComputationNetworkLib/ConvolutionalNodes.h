@@ -975,11 +975,12 @@ public:
         //       current implementation uses unpack and pack, which is nonlooping. 
         // TODO: optimized version of Unpack Forward + Base Forward + ToSequence Forward should happen here.
         m_isGradientUnpackedAndTransposed = false;
-
+#define _CONV_SEQ_DEBUG 0
+#if _CONV_SEQ_DEBUG
         fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
             NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(), 
             InputRef(1).GetMBLayout()->GetNumCols());
-
+#endif
         /// Unpack input operand
         const size_t inputIdx = 1;
 
@@ -1006,11 +1007,11 @@ public:
         //if (unpackedInput.GetSOBPtr() != m_unpackedOperandData)
         //    m_unpackedOperandData->AssignValuesOf(*unpackedInput.GetSOBPtr());
         //m_unpackedOperandData->Reshape(unpackedMatrixNumRows, unpackedMatrixNumCols);
-
+#if _CONV_SEQ_DEBUG
         fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
             NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(),
             InputRef(1).GetMBLayout()->GetNumCols());
-
+#endif
 
         TensorShape transposedUnpackedOperandShape = m_unpackedOperandShape;
         size_t transposedUnpackedOperandShapeRank = transposedUnpackedOperandShape.GetRank();
@@ -1025,10 +1026,11 @@ public:
         TensorView<ElemType> transposedUnpackedInput(m_transposedUnpackedOperandData, transposedUnpackedOperandShape.GetDims());
         transposedUnpackedInput.AssignCopyOf(unpackedInput);
 
+#if _CONV_SEQ_DEBUG
         fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
             NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(),
             InputRef(1).GetMBLayout()->GetNumCols());
-
+#endif
 
         // transpose
         // auto transposedUnpackedOperandData = TensorView<ElemType>(m_unpackedOperandData, m_unpackedOperandShape);
@@ -1060,10 +1062,11 @@ public:
 
         m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward);
 
+#if _CONV_SEQ_DEBUG
         fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
             NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(),
             InputRef(1).GetMBLayout()->GetNumCols());
-
+#endif
         // transpose output
         UpdateFunctionValuesSize(*m_transposedUnpackedConvResultData, m_unpackedConvResultShape, m_unpackedpMBLayout);
 
@@ -1077,10 +1080,11 @@ public:
         TensorView<ElemType> transposedUnpackedConvResult(m_transposedUnpackedConvResultData, transposedUnpackedConvResultShape.GetDims());
         transposedUnpackedConvResult.AssignCopyOf(unpackedConvResult);
 
+#if _CONV_SEQ_DEBUG
         fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
             NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(),
             InputRef(1).GetMBLayout()->GetNumCols());
-
+#endif
 
         /// tosequence sliceOutputValue
         m_transposedUnpackedConvResultShape.AppendInPlace(m_transposedUnpackedConvResultShape.GetRank(), numSequences);
@@ -1098,10 +1102,11 @@ public:
 #else
         auto& outputValuePtrRef = this->template ValuePtrRef();
 #endif
+#if _CONV_SEQ_DEBUG
         fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
             NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(),
             InputRef(1).GetMBLayout()->GetNumCols());
-
+#endif
         auto packedMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(dummyVar, convResultDataValue, nullptr, outputValuePtrRef, m_tempGatherIndices);
         let& outMBLayout = GetMBLayout();
         outMBLayout->CopyFrom(packedMatrixAndLayout.second, /*keepName=*/ true);
@@ -1112,9 +1117,11 @@ public:
         if (packedMatrixAndLayout.first != outputValuePtrRef)
             Value().AssignValuesOf(*packedMatrixAndLayout.first);
 
+#if _CONV_SEQ_DEBUG
         fprintf(stderr, "%ls %ls forward final value shape (%zu, %zu) outMBLayout has num cols (%zu). And input has value shape (%zu, %zu) with layout num cols (%zu)\n",
             NodeName().c_str(), OperationName().c_str(), Value().GetNumRows(), Value().GetNumCols(), outMBLayout->GetNumCols(),
             InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(), InputRef(1).GetMBLayout()->GetNumCols());
+#endif
     }
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -1142,17 +1149,18 @@ public:
             m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->IsGradientInitializedBy(this), *m_tempMatrixBackward);
         }
         */
+#if _CONV_SEQ_DEBUG
         fprintf(stderr, "%ls %ls backward gradient value shape (%zu, %zu)\n",
             NodeName().c_str(), OperationName().c_str(), Gradient().GetNumRows(), Gradient().GetNumCols());
-
+#endif
         // this potentially computes over time, so we must mask gaps to 0
         // TODO : Huge buggy potential here. Not sure if this is needed, as in sequential conv cases there shouldn't be 'gaps' for the conv operation,
         //        as we are convolving over the constructed layout, where every sequence has length only 1, and the orignial gaps if any are all padded with 0. 
         //        On top of that, the gradients in those positions should be masked away when we transform the gradient shape back and assign to input gradient. 
-        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
-            MaskMissingGradientColumnsToZero(fr);
-        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
-            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+        //if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+        //    MaskMissingGradientColumnsToZero(fr);
+        //if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+        //    Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
         // Unpack and transpose Gradient(). We might need to store it somewhere as we need it for both input index. use a m_gradientUnpacked?
 
@@ -1162,7 +1170,7 @@ public:
             m_isGradientUnpackedAndTransposed = true;
         }
 
-        auto unpackedOutputGrad = m_transposedUnpackedGradientView.GetSOBPtr()->AsReference();
+        auto unpackedOutputGrad = m_transposedUnpackedGrad->AsReference();
 
         if (inputIndex == 0)
         {
@@ -1186,13 +1194,15 @@ public:
 
             // transpose gradient, now gradient should have input unpacked transposed shape.
             // need to transpose to input unpacked shape. 
-            TransposeSequenceChannelAxisWithTransposedDims(m_unpackedOperandData, m_transposedUnpackedOperandGrad, m_unpackedOperandShape.GetDims(), m_unpackedpMBLayout);
+            TransposeSequenceChannelAxisWithTransposedDims(m_unpackedOperandGrad, m_transposedUnpackedOperandGrad, m_unpackedOperandShape.GetDims(), m_unpackedpMBLayout);
 
             // to sequence gradient. 
             ToSequenceGradient();
 
+#if _CONV_SEQ_DEBUG
             fprintf(stderr, "%ls %ls backward final gradient value shape (%zu, %zu)\n",
                 NodeName().c_str(), OperationName().c_str(), InputRef(1).Gradient().GetNumRows(), InputRef(1).Gradient().GetNumCols());
+#endif
         }
     }
 
