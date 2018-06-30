@@ -480,7 +480,7 @@ public:
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        InferMBLayoutFromInputs(isFinalValidationPass);
 
         size_t inputIdx = GetExpectedNumInputs() - 1;
         TensorShape inputShape;
@@ -648,6 +648,12 @@ public:
     bool IsConvolution2D() const { return m_convolution2D; }
 
     bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+protected:
+    virtual void /*ConvolutionNode::*/InferMBLayoutFromInputs(bool isFinalValidationPass)
+    {
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+    }
 
 private:
     using TransformerNode::m_transforms;
@@ -921,13 +927,14 @@ private:
     using Base::m_groups;
 
     static const size_t SentinelUnspecifiedSeqAxisIdx = (size_t)-1;
+    static const size_t OperandInputIdx = 1;
 
 public:
     static const std::wstring TypeName() { return L"ConvolutionOverSequenceV2"; }
 
 public:
     ConvolutionOverSequenceAxisNodeV2(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx), isGradientUnpackedAndTransposed(false)
+        : Base(deviceId, name), m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx), m_isGradientUnpackedAndTransposed(false)
     {
     }
 
@@ -937,12 +944,12 @@ public:
         size_t groups = 1)
         : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation, groups),
         m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx),
-        isGradientUnpackedAndTransposed(false)
+        m_isGradientUnpackedAndTransposed(false)
     {
     }
 
     ConvolutionOverSequenceAxisNodeV2(const ScriptableObjects::IConfigRecordPtr configp)
-        : Base(configp), m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx), isGradientUnpackedAndTransposed(false)
+        : Base(configp), m_seqAxisIdx(SentinelUnspecifiedSeqAxisIdx), m_isGradientUnpackedAndTransposed(false)
     {
     }
 
@@ -967,7 +974,12 @@ public:
         // TODO: I think we need to check if fr is happening for fullframerange here.
         //       current implementation uses unpack and pack, which is nonlooping. 
         // TODO: optimized version of Unpack Forward + Base Forward + ToSequence Forward should happen here.
-        
+        m_isGradientUnpackedAndTransposed = false;
+
+        fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
+            NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(), 
+            InputRef(1).GetMBLayout()->GetNumCols());
+
         /// Unpack input operand
         const size_t inputIdx = 1;
 
@@ -995,6 +1007,11 @@ public:
         //    m_unpackedOperandData->AssignValuesOf(*unpackedInput.GetSOBPtr());
         //m_unpackedOperandData->Reshape(unpackedMatrixNumRows, unpackedMatrixNumCols);
 
+        fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
+            NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(),
+            InputRef(1).GetMBLayout()->GetNumCols());
+
+
         TensorShape transposedUnpackedOperandShape = m_unpackedOperandShape;
         size_t transposedUnpackedOperandShapeRank = transposedUnpackedOperandShape.GetRank();
         transposedUnpackedOperandShape.AppendInPlace(transposedUnpackedOperandShapeRank++, m_unpackedpMBLayout->GetNumParallelSequences());
@@ -1008,12 +1025,17 @@ public:
         TensorView<ElemType> transposedUnpackedInput(m_transposedUnpackedOperandData, transposedUnpackedOperandShape.GetDims());
         transposedUnpackedInput.AssignCopyOf(unpackedInput);
 
+        fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
+            NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(),
+            InputRef(1).GetMBLayout()->GetNumCols());
+
+
         // transpose
         // auto transposedUnpackedOperandData = TensorView<ElemType>(m_unpackedOperandData, m_unpackedOperandShape);
 
         // Get original sequence lengths
         auto numSequences = inputMBLayout->GetNumSequences();
-        std::vector<size_t> inputSequenceLengths(numSequences, 0);
+        m_inputSequenceLengths = std::vector<size_t>(numSequences, 0);
         let& inputSequences = inputMBLayout->GetAllSequences();
         size_t j = 0;
         for (size_t i = 0; i < inputSequences.size(); ++i)
@@ -1022,12 +1044,12 @@ public:
             if (seq.seqId == GAP_SEQUENCE_ID)
                 continue;
 
-            inputSequenceLengths[j] = seq.GetNumTimeSteps();
+            m_inputSequenceLengths[j] = seq.GetNumTimeSteps();
             j++;
         }
         assert(j == numSequences);
 
-        std::vector<size_t> convResultSequenceLengths = GetOutputSequenceLengths(inputSequenceLengths);
+        std::vector<size_t> convResultSequenceLengths = GetOutputSequenceLengths(m_inputSequenceLengths);
 
         /// Forward
         UpdateFunctionValuesSize(*m_unpackedConvResultData, m_unpackedConvResultShape, m_unpackedpMBLayout);
@@ -1037,6 +1059,10 @@ public:
         Matrix<ElemType> sliceInput1Value = m_transposedUnpackedOperandData->AsReference();
 
         m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward);
+
+        fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
+            NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(),
+            InputRef(1).GetMBLayout()->GetNumCols());
 
         // transpose output
         UpdateFunctionValuesSize(*m_transposedUnpackedConvResultData, m_unpackedConvResultShape, m_unpackedpMBLayout);
@@ -1050,6 +1076,10 @@ public:
         TensorView<ElemType> unpackedConvResult(m_unpackedConvResultData, transposedUnpackedConvResultShape);
         TensorView<ElemType> transposedUnpackedConvResult(m_transposedUnpackedConvResultData, transposedUnpackedConvResultShape.GetDims());
         transposedUnpackedConvResult.AssignCopyOf(unpackedConvResult);
+
+        fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
+            NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(),
+            InputRef(1).GetMBLayout()->GetNumCols());
 
 
         /// tosequence sliceOutputValue
@@ -1068,11 +1098,23 @@ public:
 #else
         auto& outputValuePtrRef = this->template ValuePtrRef();
 #endif
+        fprintf(stderr, "%ls %ls forward value shape (%zu, %zu), layout num columns %zu\n",
+            NodeName().c_str(), OperationName().c_str(), InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(),
+            InputRef(1).GetMBLayout()->GetNumCols());
+
         auto packedMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(dummyVar, convResultDataValue, nullptr, outputValuePtrRef, m_tempGatherIndices);
         let& outMBLayout = GetMBLayout();
         outMBLayout->CopyFrom(packedMatrixAndLayout.second, /*keepName=*/ true);
+        // Previously, mblayout are linked, that is, as ptr and shared across many nodes: layout should stay the same for all nodes. 
+        // Here we need to generate new layout. 
+        // Update: we can't generate new layout here as it is too late: other nodes may already linked to our layout here.
+        //         thus we must generate new layout at validation step. 
         if (packedMatrixAndLayout.first != outputValuePtrRef)
             Value().AssignValuesOf(*packedMatrixAndLayout.first);
+
+        fprintf(stderr, "%ls %ls forward final value shape (%zu, %zu) outMBLayout has num cols (%zu). And input has value shape (%zu, %zu) with layout num cols (%zu)\n",
+            NodeName().c_str(), OperationName().c_str(), Value().GetNumRows(), Value().GetNumCols(), outMBLayout->GetNumCols(),
+            InputRef(1).Value().GetNumRows(), InputRef(1).Value().GetNumCols(), InputRef(1).GetMBLayout()->GetNumCols());
     }
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -1100,23 +1142,33 @@ public:
             m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->IsGradientInitializedBy(this), *m_tempMatrixBackward);
         }
         */
+        fprintf(stderr, "%ls %ls backward gradient value shape (%zu, %zu)\n",
+            NodeName().c_str(), OperationName().c_str(), Gradient().GetNumRows(), Gradient().GetNumCols());
 
+        // this potentially computes over time, so we must mask gaps to 0
+        // TODO : Huge buggy potential here. Not sure if this is needed, as in sequential conv cases there shouldn't be 'gaps' for the conv operation,
+        //        as we are convolving over the constructed layout, where every sequence has length only 1, and the orignial gaps if any are all padded with 0. 
+        //        On top of that, the gradients in those positions should be masked away when we transform the gradient shape back and assign to input gradient. 
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
         // Unpack and transpose Gradient(). We might need to store it somewhere as we need it for both input index. use a m_gradientUnpacked?
 
-        if (!isGradientUnpackedAndTransposed)
+        if (!m_isGradientUnpackedAndTransposed)
         {
             UnpackAndTransposeGradient();
-            isGradientUnpackedAndTransposed = true;
+            m_isGradientUnpackedAndTransposed = true;
         }
 
-        auto unpackedOutputGrad = m_unpackedGradientView.GetSOBPtr()->AsReference();
+        auto unpackedOutputGrad = m_transposedUnpackedGradientView.GetSOBPtr()->AsReference();
 
         if (inputIndex == 0)
         {
             // kernel gradient
             auto& grad = InputRef(0).GradientAsMatrix();
-            auto unpackedOperandValue = m_unpackedOperandData->AsReference();
+            auto unpackedOperandValue = m_transposedUnpackedOperandData->AsReference();
             // TODO : watch out for 1. IsGradientInitializedBy(this) 2. fr.IsAllFrames().
             //          1. is 'this' safe and correct?
             //          2. in forward fr.IsAllFrames() is always true, not sure for backward. And if it is always true, why bother with this flag anyway??
@@ -1128,13 +1180,19 @@ public:
         {
             // feature gradient
             auto& input0 = InputRef(0).ValueAsMatrix();
+            UpdateFunctionValuesSize(*m_unpackedOperandGrad, m_unpackedOperandShape, m_unpackedpMBLayout);
             auto unpackedOperandGrad = m_unpackedOperandGrad->AsReference();
             m_convEng->BackwardData(unpackedOutputGrad, input0, unpackedOperandGrad, /*accumulateGradient*/false, *m_tempMatrixBackward);
 
-            // transpose gradient
+            // transpose gradient, now gradient should have input unpacked transposed shape.
+            // need to transpose to input unpacked shape. 
+            TransposeSequenceChannelAxisWithTransposedDims(m_unpackedOperandData, m_transposedUnpackedOperandGrad, m_unpackedOperandShape.GetDims(), m_unpackedpMBLayout);
 
+            // to sequence gradient. 
+            ToSequenceGradient();
 
-
+            fprintf(stderr, "%ls %ls backward final gradient value shape (%zu, %zu)\n",
+                NodeName().c_str(), OperationName().c_str(), InputRef(1).Gradient().GetNumRows(), InputRef(1).Gradient().GetNumCols());
         }
     }
 
@@ -1193,6 +1251,9 @@ public:
         RequestMatrixFromPool(m_unpackedConvResultData, matrixPool, estimatedNumElements, true); 
         RequestMatrixFromPool(m_transposedUnpackedConvResultData, matrixPool, estimatedNumElements, true);
         RequestMatrixFromPool(m_tempUnpackedData, matrixPool, estimatedNumElements, true);
+        RequestMatrixFromPool(m_transposedUnpackedGrad, matrixPool, estimatedNumElements, true);
+        RequestMatrixFromPool(m_unpackedOperandGrad, matrixPool, estimatedNumElements, true);
+        RequestMatrixFromPool(m_transposedUnpackedOperandGrad, matrixPool, estimatedNumElements, true);
         RequestMatrixFromPool(m_tempPackedGradientData, matrixPool, estimatedNumElements, true);
     }
 
@@ -1216,37 +1277,114 @@ public:
         ReleaseMatrixToPool(m_unpackedConvResultData, matrixPool);
         ReleaseMatrixToPool(m_transposedUnpackedConvResultData, matrixPool);
         ReleaseMatrixToPool(m_tempUnpackedData, matrixPool);
+        ReleaseMatrixToPool(m_transposedUnpackedGrad, matrixPool);
+        ReleaseMatrixToPool(m_unpackedOperandGrad, matrixPool);
+        ReleaseMatrixToPool(m_transposedUnpackedOperandGrad, matrixPool);
         ReleaseMatrixToPool(m_tempPackedGradientData, matrixPool);
+    }
+
+protected:
+    virtual void /*ConvolutionNode::*/InferMBLayoutFromInputs(bool isFinalValidationPass) override
+    {
+        if (!m_pMBLayout)
+            m_pMBLayout = std::make_shared<MBLayout>();
     }
 
 private:
 
-    void UnpackAndTransposeGradient()
+    void TransposeSequenceChannelAxisWithTransposedDims(const shared_ptr<Matrix<ElemType>>& untransposedData, const shared_ptr<Matrix<ElemType>>& toTransposedData,
+        const SmallVector<size_t>& transposedDims, const MBLayoutPtr& pMBLayout)
+    {
+        TensorView<ElemType> untransposedView(untransposedData, transposedDims);
+        TransposeSequenceChannelAxisWithTransposedDims(untransposedView, toTransposedData, transposedDims, pMBLayout);
+    }
+
+    void TransposeSequenceChannelAxisWithUntransposedDims(const shared_ptr<Matrix<ElemType>>& untransposedData, const shared_ptr<Matrix<ElemType>>& toTransposedData,
+        const SmallVector<size_t>& untransposedDims, const MBLayoutPtr& pMBLayout)
+    {
+        const size_t inputRank = GetInputSampleLayout(OperandInputIdx).GetRank();
+        SmallVector<size_t> transposedDims(untransposedDims);
+        std::swap(transposedDims[inputRank], transposedDims[inputRank - 1]);
+
+        TransposeSequenceChannelAxisWithTransposedDims(untransposedData, toTransposedData, transposedDims, pMBLayout);
+    }
+
+    void TransposeSequenceChannelAxisWithTransposedDims(TensorView<ElemType>& untransposedView, const shared_ptr<Matrix<ElemType>>& toTransposedData,
+        const SmallVector<size_t>& transposedDims, const MBLayoutPtr& pMBLayout)
+    {
+        const size_t inputRank = GetInputSampleLayout(OperandInputIdx).GetRank();
+        SmallVector<size_t> untransposedDims(transposedDims);
+        std::swap(untransposedDims[inputRank], untransposedDims[inputRank - 1]);
+        TransposeSequenceChannelAxisWithUntransposedDims(untransposedView, toTransposedData, untransposedDims, pMBLayout);
+    }
+
+    void TransposeSequenceChannelAxisWithUntransposedDims(TensorView<ElemType>& untransposedView, const shared_ptr<Matrix<ElemType>>& toTransposedData,
+        const SmallVector<size_t>& untransposedDims, const MBLayoutPtr& pMBLayout)
+    {
+        TensorShape transposedShape(untransposedDims);
+        size_t rank = transposedShape.GetRank();
+        UpdateFunctionValuesSize(*toTransposedData, transposedShape, pMBLayout);
+
+        transposedShape.AppendInPlace(rank++, pMBLayout->GetNumParallelSequences());
+        transposedShape.AppendInPlace(rank++, pMBLayout->GetNumTimeSteps());
+        const size_t inputRank = GetInputSampleLayout(OperandInputIdx).GetRank();
+        transposedShape.SwapDimsInPlace(inputRank - 1, inputRank);
+
+        untransposedView = untransposedView.Reshaped(transposedShape);
+
+        TensorView<ElemType> transposedView(toTransposedData, transposedShape.GetDims());
+        transposedView.AssignCopyOf(untransposedView);
+    }
+
+    void ToSequenceGradient()
     {
         // Uh... This is gradient to sequence actually ........ 
-        //auto numSequences = GetMBLayout()->GetNumSequences();
-        //auto gradientSampleLayout = GetSampleLayout();
-        //auto gradientDataTensorShape = gradientSampleLayout;
-        //gradientDataTensorShape.AppendInPlace(gradientDataTensorShape.GetRank(), numSequences);
-        //let& gradientDataMatrix = Gradient();
-        //auto gradientDataNDArrayView = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(),
-        //    ::CNTK::AsDeviceDescriptor(gradientDataMatrix.GetDeviceId()),
-        //    ::CNTK::AsStorageFormat(gradientDataMatrix.GetFormat()),
-        //    ::CNTK::AsNDShape(gradientDataTensorShape),
-        //    /*readOnly =*/true,
-        //    new TensorView<ElemType>(GradientPtr(), gradientDataTensorShape));
+        auto numSequences = GetMBLayout()->GetNumSequences();
+        auto gradientSampleLayout = m_unpackedOperandShape; // TODO : change to transposed unpacked gradient sample layout
+        auto gradientDataTensorShape = gradientSampleLayout;
+        gradientDataTensorShape.AppendInPlace(gradientDataTensorShape.GetRank(), numSequences);
+        let& gradientDataMatrix = *m_transposedUnpackedOperandGrad;
+        auto gradientDataNDArrayView = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(),
+            ::CNTK::AsDeviceDescriptor(gradientDataMatrix.GetDeviceId()),
+            ::CNTK::AsStorageFormat(gradientDataMatrix.GetFormat()),
+            ::CNTK::AsNDShape(gradientDataTensorShape),
+            /*readOnly =*/true,
+            new TensorView<ElemType>(m_transposedUnpackedOperandGrad, gradientDataTensorShape));
 
-        //std::vector<size_t> sequenceLengths(numSequences);
-        //let& inputSequences = m_unpackedpMBLayout->GetAllSequences();
+        auto gradientDataValue = ::CNTK::MakeSharedObject<::CNTK::Value>(gradientDataNDArrayView, ::CNTK::CreateMask(m_inputSequenceLengths));
+        auto dummyVar = ::CNTK::InputVariable(::CNTK::AsNDShape(InputRef(1).GetSampleLayout()), gradientDataNDArrayView->IsSparse(), ::CNTK::AsDataType<ElemType>());
+        auto packedGradientMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(dummyVar, gradientDataValue, nullptr, m_tempPackedGradientData, m_tempGatherIndices);
 
+        if (*packedGradientMatrixAndLayout.second != *InputRef(1).GetMBLayout())
+            LogicError("%ls: %s node unpacked gradient MBLayout does not match input MBLayout.", Base::NodeDescription().c_str(), typeid(*this).name());
+
+        InputRef(1).Gradient() += (*packedGradientMatrixAndLayout.first);
+    }
+
+    void UnpackAndTransposeGradient()
+    {
         ElemType gapPadValue = 0;
         TensorView<ElemType> unpackedGradientView = ComputationNode<ElemType>::Unpack(GetSampleLayout(), Gradient(), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, 
             std::shared_ptr<Matrix<char>>(nullptr), /*batchMajor=*/ false, &gapPadValue);
 
         // TODO : set transposed unpacked gradient shape. 
+        // We have m_unpackedConvResultShape, which is the desired transpose output shape for gradient (with the appending dynamic axes shape).
+        // however, we need to obtain the shape for input from method SwapDimsInPlace result, which is crucial for the strides setup.
+        // and the SwapDimsInPlace requires us computing the original shape for unpacked gradient first. So we swap back, construct shape, and swap again. 
+        TensorShape unpackedGradientShape(m_unpackedConvResultShape);
+        const size_t inputRank = GetInputSampleLayout(OperandInputIdx).GetRank();
+        unpackedGradientShape.SwapDimsInPlace(inputRank - 1, inputRank);
+        TensorShape transposedUnpackedGradientShape(unpackedGradientShape.GetDims());
 
-        unpackedGradientView.Reshaped(transposedUnpackedGradientShape);
-        m_transposedUnpackedGradientView = TensorView<ElemType>(m_transposedUnpackedGradientData, transposedUnpackedGradientShape.GetDims());
+        size_t unpackedGradientShapeRank = transposedUnpackedGradientShape.GetRank();
+        transposedUnpackedGradientShape.AppendInPlace(unpackedGradientShapeRank++, m_unpackedpMBLayout->GetNumParallelSequences());
+        transposedUnpackedGradientShape.AppendInPlace(unpackedGradientShapeRank++, m_unpackedpMBLayout->GetNumTimeSteps());
+        transposedUnpackedGradientShape.SwapDimsInPlace(inputRank - 1, inputRank);
+        unpackedGradientView = unpackedGradientView.Reshaped(transposedUnpackedGradientShape);
+
+        UpdateFunctionValuesSize(*m_transposedUnpackedGrad, unpackedGradientShape, m_unpackedpMBLayout);
+        
+        m_transposedUnpackedGradientView = TensorView<ElemType>(m_transposedUnpackedGrad, transposedUnpackedGradientShape.GetDims());
         m_transposedUnpackedGradientView.AssignCopyOf(unpackedGradientView);
     }
 
@@ -1421,6 +1559,8 @@ private:
             tempOutputShape = m_outputShape;
             m_outputShape = TensorShape();
         }
+
+        // TODO : since output mblayout differs from input, we need to create new mblayout. This is different from Base. 
         Base::Validate(isFinalValidationPass);
         Input(inputIdx)->SetDims(inputShape, Input(inputIdx)->HasMBLayout());
 
@@ -1458,7 +1598,9 @@ private:
 
 private:
     size_t m_seqAxisIdx;
-    bool m_isGradientUnpacked;
+    bool m_isGradientUnpackedAndTransposed;
+
+    std::vector<size_t> m_inputSequenceLengths;
 
     TensorShape m_unpackedOperandShape;
     TensorShape m_unpackedConvResultShape;
@@ -1470,7 +1612,10 @@ private:
     shared_ptr<Matrix<ElemType>> m_transposedUnpackedConvResultData;
 
     TensorView<ElemType> m_transposedUnpackedGradientView;
+    shared_ptr<Matrix<ElemType>> m_transposedUnpackedGrad;
     shared_ptr<Matrix<ElemType>> m_unpackedOperandGrad;
+    shared_ptr<Matrix<ElemType>> m_transposedUnpackedOperandGrad;
+    //shared_ptr<Matrix<ElemType>> 
 
     // shared by unpack and tosequence
     shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
