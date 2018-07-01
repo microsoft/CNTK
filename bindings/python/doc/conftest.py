@@ -47,7 +47,7 @@ def pytest_generate_tests(metafunc):
 import numpy
 # Because of difference in precision across platforms, we restrict the output
 # precision and don't write in scientific notation
-numpy.set_printoptions(precision=6, suppress=True, sign='legacy')
+numpy.set_printoptions(precision=6, suppress=True, legacy='1.13')
 import cntk
 
 
