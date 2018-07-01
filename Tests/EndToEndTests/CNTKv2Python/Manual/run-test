@@ -2,7 +2,7 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
-py.test --verbose --deviceid $TEST_DEVICE --is1bitsgd $TEST_1BIT_SGD
+py.test --verbose --deviceid $TEST_DEVICE
 
 if [ "$?" -eq "0" ]; then
   echo "__COMPLETED__"

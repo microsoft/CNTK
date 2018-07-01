@@ -124,6 +124,7 @@ public:
     ComputationNodePtr Acos(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Asin(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Asinh(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr Atan(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Atanh(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Less(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Equal(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
@@ -198,7 +199,9 @@ public:
     ComputationNodePtr Sqrt(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr SquareError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr Tan(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Tanh(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr StraightThrough(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Times(const ComputationNodePtr a, const ComputationNodePtr b, size_t outputRank = 1, const std::wstring nodeName = L"");
     ComputationNodePtr TransposeDimensions(const ComputationNodePtr matrix, int dim1, int dim2, const std::wstring nodeName = L"");
     ComputationNodePtr TransposeTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");

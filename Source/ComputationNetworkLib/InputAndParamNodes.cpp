@@ -11,6 +11,9 @@
 
 #include <string>
 
+//
+// Note: Some template specializations have not been implemented in this file.
+//
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
@@ -346,6 +349,48 @@ void LearnableParameter<ElemType>::InitBilinear(Matrix<ElemType>& valueMatrix, c
     }
 
     valueMatrix.TransferToDeviceIfNotThere(deviceId, true);
+}
+
+// Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
+template<>
+void LearnableParameter<char>::InitBilinear(Matrix<char>& valueMatrix, const TensorShape& sampleShape, size_t kernelWidth, size_t kernelHeight, DEVICEID_TYPE deviceId)
+{
+    RuntimeError("Unsupported template argument(char) in InitBilinear");
+}
+
+// Initialize with bilinear interpolation coefficients (useful for deconvolution layer).
+template<>
+void LearnableParameter<short>::InitBilinear(Matrix<short>& valueMatrix, const TensorShape& sampleShape, size_t kernelWidth, size_t kernelHeight, DEVICEID_TYPE deviceId)
+{
+    RuntimeError("Unsupported template argument(short) in InitBilinear");
+}
+
+template <>
+std::tuple<size_t, size_t, char> LearnableParameter<char>::InitRandom(Matrix<char>& valueMatrix,
+    const TensorShape& sampleShape,
+    const wstring& type,
+    const unsigned long randomSeed,
+    const char initValueScale,
+    const size_t initFilterRank,
+    const int initOutputRank,
+    const bool initOnCPUOnly,
+    DEVICEID_TYPE deviceId)
+{
+    RuntimeError("Unsupported template argument(char) in InitRandom");
+}
+
+template <>
+std::tuple<size_t, size_t, short> LearnableParameter<short>::InitRandom(Matrix<short>& valueMatrix,
+    const TensorShape& sampleShape,
+    const wstring& type,
+    const unsigned long randomSeed,
+    const short initValueScale,
+    const size_t initFilterRank,
+    const int initOutputRank,
+    const bool initOnCPUOnly,
+    DEVICEID_TYPE deviceId)
+{
+    RuntimeError("Unsupported template argument(short) in InitRandom");
 }
 
 // initialize by reading a matrix from a text file

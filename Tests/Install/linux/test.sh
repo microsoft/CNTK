@@ -12,7 +12,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --py-version)
       case "$2" in
-        27 | 34 | 35 | 36)
+        27 | 35 | 36)
           PY_VERSION="$2"
           ;;
         *)
@@ -78,7 +78,7 @@ for drop in $*; do
   ln -s "$DROP_FILE" "$DROP_RESERVED"
 
   IMAGE=cntk:installtest
-  for base in Ubuntu16 Ubuntu14; do
+  for base in Ubuntu16; do
     docker build --build-arg PY_VERSION=$PY_VERSION --build-arg WHEEL_BASE_URL=$WHEEL_BASE_URL -t $IMAGE -f Dockerfile-$base-$DOCKERFILE_SUFFIX .
     $DOCKER_TO_RUN run --rm $IMAGE su - testuser -c "./run-test.sh $TEST_DEVICE"
     docker rmi $IMAGE

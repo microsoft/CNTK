@@ -3,10 +3,10 @@ CPU info:
     Hardware threads: 12
     Total Memory: 57691188 kB
 -------------------------------------------------------------------
-=== Running /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple/cntk.cntk currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple OutputDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true makeMode=true
+=== Running /home/ubuntu/workspace/build/gpu/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple/cntk.cntk currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple OutputDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true makeMode=true
 CNTK 2.3.1+ (HEAD b7b3e4, Jan 17 2018 02:42:45) at 2018/01/17 06:13:18
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple/cntk.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple  OutputDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  makeMode=true
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple/cntk.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple  OutputDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  makeMode=true
 Changed current directory to /home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data
 01/17/2018 06:13:18: -------------------------------------------------------------------
 01/17/2018 06:13:18: Build info: 
@@ -15,7 +15,6 @@ Changed current directory to /home/ubuntu/workspace/Tests/EndToEndTests/Speech/D
 01/17/2018 06:13:18: 		Last modified date: Wed Jan 17 02:34:37 2018
 01/17/2018 06:13:18: 		Build type: release
 01/17/2018 06:13:18: 		Build target: GPU
-01/17/2018 06:13:18: 		With 1bit-SGD: yes
 01/17/2018 06:13:18: 		With ASGD: yes
 01/17/2018 06:13:18: 		Math lib: mkl
 01/17/2018 06:13:18: 		CUDA version: 9.0.0
@@ -950,10 +949,10 @@ Total Samples Evaluated = 603
 01/17/2018 06:13:21: __COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
-=== Running /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple/cntk.cntk currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple OutputDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true makeMode=true
+=== Running /home/ubuntu/workspace/build/gpu/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple/cntk.cntk currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple OutputDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu DeviceId=0 timestamping=true forceDeterministicAlgorithms=true makeMode=true
 CNTK 2.3.1+ (HEAD b7b3e4, Jan 17 2018 02:42:45) at 2018/01/17 06:13:21
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple/cntk.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple  OutputDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  makeMode=true
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple/cntk.cntk  currentDirectory=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu  DataDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Speech/Simple  OutputDir=/tmp/cntk-test-20180117061317.742222/Speech_Simple@release_gpu  DeviceId=0  timestamping=true  forceDeterministicAlgorithms=true  makeMode=true
 Changed current directory to /home/ubuntu/workspace/Tests/EndToEndTests/Speech/Data
 01/17/2018 06:13:21: -------------------------------------------------------------------
 01/17/2018 06:13:21: Build info: 
@@ -962,7 +961,6 @@ Changed current directory to /home/ubuntu/workspace/Tests/EndToEndTests/Speech/D
 01/17/2018 06:13:21: 		Last modified date: Wed Jan 17 02:34:37 2018
 01/17/2018 06:13:21: 		Build type: release
 01/17/2018 06:13:21: 		Build target: GPU
-01/17/2018 06:13:21: 		With 1bit-SGD: yes
 01/17/2018 06:13:21: 		With ASGD: yes
 01/17/2018 06:13:21: 		Math lib: mkl
 01/17/2018 06:13:21: 		CUDA version: 9.0.0

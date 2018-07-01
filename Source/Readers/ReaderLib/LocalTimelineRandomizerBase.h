@@ -91,10 +91,15 @@ protected:
         return it->second;
     }
 
-    ~LocalTimelineRandomizerBase()
+    void StopPrefetch()
     {
         if (m_prefetch.valid())
             m_prefetch.wait_for(std::chrono::seconds(60));
+    }
+
+    ~LocalTimelineRandomizerBase()
+    {
+        StopPrefetch();
     }
 
     const static SequenceInfo s_endOfSweep; // Marker indicating end of the sweep.
@@ -112,6 +117,9 @@ protected:
 private:
     // Refills the current window of sequences.
     void Refill();
+
+    // Refill and wait for data. Does not issue the next async refill.
+    void RefillCurrentWindowNow();
 
     // Gets next sequences not exceeding localSampleCount for this worker and globalSampleCount across workers.
     void GetNextSequenceDescriptions(size_t maxSampleCount, Sequences& result);

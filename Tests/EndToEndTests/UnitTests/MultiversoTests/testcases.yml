@@ -1,9 +1,9 @@
 dataDir: .
 
 tags:
-  - bvt-p (build_sku == 'cpu') or (build_sku == '1bitsgd')
-  - nightly-p (build_sku == 'cpu') or (build_sku == '1bitsgd')
-  - weekly-p (build_sku == 'cpu') or (build_sku == '1bitsgd')
+  - bvt-p (build_sku == 'cpu') or (build_sku == 'gpu')
+  - nightly-p (build_sku == 'cpu') or (build_sku == 'gpu')
+  - weekly-p (build_sku == 'cpu') or (build_sku == 'gpu')
 
 testCases:
   Test cases pass:

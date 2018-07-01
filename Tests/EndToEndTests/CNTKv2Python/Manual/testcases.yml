@@ -4,9 +4,9 @@ dataDir: .
 
 tags:
     # Python only in Release builds.
-    - bvt-j (build_sku == '1bitsgd') and (flavor == 'release')
-    - nightly-j (build_sku == '1bitsgd') and (flavor == 'release')
-    - weekly-j (build_sku == '1bitsgd') and (flavor == 'release')
+    - bvt-j (build_sku == 'gpu') and (flavor == 'release')
+    - nightly-j (build_sku == 'gpu') and (flavor == 'release')
+    - weekly-j (build_sku == 'gpu') and (flavor == 'release')
 
 testCases:
   Run must finish with error code 0 (outputs __COMPLETED__ in that case):

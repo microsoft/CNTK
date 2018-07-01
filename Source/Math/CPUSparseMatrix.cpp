@@ -178,6 +178,60 @@ CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
 }
 
 template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
+{
+    if (NzCount() > 0)
+        //So far only support SetDiagonalValue for zero sparse matrix for now
+        LogicError("Not implemented: SetDiagonalValue is not implemented for non-zero sparse CPU matrices.");
+
+    RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetDiagSize(), true, false);
+    CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+    CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+    ElemType* data = Data();
+    for (CPUSPARSE_INDEX_TYPE j = 0; j < GetDiagSize(); j++)
+    {
+        //The same logic for both CSC and CSR format:
+        data[j] = v;
+        secondaryIndices[j] = j;
+        majorIndices[j] = j;
+    }
+    for (size_t j = GetDiagSize(); j < SecondaryIndexCount(); ++j)
+        secondaryIndices[j] = (CPUSPARSE_INDEX_TYPE)GetDiagSize();
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::SetDiagonalValue(const CPUMatrix<ElemType>& vector)
+{
+    if (NzCount() > 0)
+        //So far only support SetDiagonalValue for zero sparse matrix for now
+        NOT_IMPLEMENTED;
+
+    if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
+        LogicError("SetDiagonalValue: input vector must be a vector.");
+
+    if (vector.GetNumElements() == 1) // reduce to simple form
+        SetDiagonalValue(vector(0, 0));
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
+        LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
+    else
+    {
+        RequireSizeAndAllocate(GetNumRows(), GetNumCols(), GetDiagSize(), true, false);
+        CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+        CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+        ElemType* data = Data();
+        //The same logic for both CSC and CSR format:
+        for (CPUSPARSE_INDEX_TYPE j = 0; j < GetDiagSize(); j++)
+        {
+            data[j] = vector.Data()[j];
+            secondaryIndices[j] = j;
+            majorIndices[j] = j;
+        }
+        for (size_t j = GetDiagSize(); j < SecondaryIndexCount(); ++j)
+            secondaryIndices[j] = (CPUSPARSE_INDEX_TYPE)GetDiagSize();
+    }
+}
+
+template <class ElemType>
 CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
 {
     if (a.IsEmpty())
@@ -1849,6 +1903,8 @@ template CPUMatrix<char> CPUSparseMatrix<char>::CopyColumnSliceToDense(size_t st
 template void CPUSparseMatrix<char>::AssignColumnSliceToDense(CPUMatrix<char>&, size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(const CPUSparseMatrix<char>& deepCopyFrom);
 template void CPUSparseMatrix<char>::ScaleAndAdd(char, class Microsoft::MSR::CNTK::CPUSparseMatrix<char> const &, class Microsoft::MSR::CNTK::CPUMatrix<char> &);
+template void CPUSparseMatrix<char>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const char* h_Val,
+    const size_t nz, const size_t numRows, const size_t numCols);
 
 // Support <short>
 template CPUSparseMatrix<short>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
@@ -1872,6 +1928,8 @@ template CPUMatrix<short> CPUSparseMatrix<short>::CopyColumnSliceToDense(size_t 
 template void CPUSparseMatrix<short>::AssignColumnSliceToDense(CPUMatrix<short>&, size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<short>& CPUSparseMatrix<short>::operator=(const CPUSparseMatrix<short>& deepCopyFrom);
 template void CPUSparseMatrix<short>::ScaleAndAdd(short, class Microsoft::MSR::CNTK::CPUSparseMatrix<short> const &, class Microsoft::MSR::CNTK::CPUMatrix<short> &);
+template void CPUSparseMatrix<short>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const short* h_Val,
+    const size_t nz, const size_t numRows, const size_t numCols);
 
 template CPUSparseMatrix<int>::CPUSparseMatrix(const MatrixFormat, const size_t, const size_t, const size_t);
 template CPUSparseMatrix<int>::~CPUSparseMatrix();

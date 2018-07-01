@@ -22,7 +22,6 @@ namespace CNTK.CNTKLibraryCSTrainingTest
 #else
             Console.WriteLine("======== Train model using GPU build ========");
 #endif
-
             List<DeviceDescriptor> devices = new List<DeviceDescriptor>();
             if (ShouldRunOnCpu())
             {
@@ -35,7 +34,6 @@ namespace CNTK.CNTKLibraryCSTrainingTest
 
             string runTest = args.Length == 0 ? string.Empty : args[0];
 
-                
             foreach (var device in devices)
             {
                 /// Data folders of example classes are set for non-CNTK test runs.
@@ -47,33 +45,47 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                         LogisticRegression.TrainAndEvaluate(device);
                         break;
                     case "SimpleFeedForwardClassifierTest":
-                        SimpleFeedForwardClassifierTest.DataFolder = ".";
                         Console.WriteLine($"======== running SimpleFeedForwardClassifierTest.TrainSimpleFeedForwardClassifier using {device.Type} ========");
                         SimpleFeedForwardClassifierTest.TrainSimpleFeedForwardClassifier(device);
                         break;
                     case "CifarResNetClassifierTest":
-                        CifarResNetClassifier.CifarDataFolder = "./cifar-10-batches-py";
                         Console.WriteLine($"======== running CifarResNet.TrainAndEvaluate using {device.Type} ========");
+
+                        if (args.Length > 1)
+                        {
+                            Console.WriteLine($"-------- running with test data in {args[1]} --------");
+                            CifarResNetClassifier.CifarDataFolder = args[1];
+                        }
+
                         CifarResNetClassifier.TrainAndEvaluate(device, true);
                         break;
                     case "LSTMSequenceClassifierTest":
-                        LSTMSequenceClassifier.DataFolder = "../../../Text/SequenceClassification/Data";
                         Console.WriteLine($"======== running LSTMSequenceClassifier.Train using {device.Type} ========");
                         LSTMSequenceClassifier.Train(device);
                         break;
                     case "MNISTClassifierTest":
-                        MNISTClassifier.ImageDataFolder = "../../../Image/Data/";
                         Console.WriteLine($"======== running MNISTClassifier.TrainAndEvaluate with Convnet using {device.Type} ========");
                         MNISTClassifier.TrainAndEvaluate(device, true, true);
                         break;
                     case "TransferLearningTest":
-                        TransferLearning.ExampleImageFoler = ".";
                         TransferLearning.BaseResnetModelFile = "ResNet_18.model";
                         Console.WriteLine($"======== running TransferLearning.TrainAndEvaluate with animal data using {device.Type} ========");
+
+                        if (args.Length > 1)
+                        {
+                            Console.WriteLine($"-------- running with test data in {args[1]} --------");
+                            TransferLearning.ExampleImageFoler = args[1];
+                        }
+
                         TransferLearning.TrainAndEvaluateWithAnimalData(device, true);
                         break;
-                    default:
+
+                    case "":
                         RunAllExamples(device);
+                        break;
+
+                    default:
+                        Console.WriteLine("'{0}' is not a valid test name.", runTest);
                         break;
                 }
             }

@@ -37,6 +37,7 @@ public:
     const BoolVec& AutoPad() const { return m_autoPad; }
     const TensorShape& LowerPad() const { return m_lowerPad; }
     const TensorShape& UpperPad() const { return m_upperPad; }
+    size_t Groups() const { return m_groups; }
 
     // Maps from a "row" (index of output cell) to its base "col" (index of input cell). For a given row,
     // the cols that contribute to it are { MpRowCol[row] + Indices[i0 + 1 + i] | 0 <= i < Indices[i0] },
@@ -77,9 +78,10 @@ public:
     size_t KernelCount() const { return m_kernelCount; }
 
     ConvolveGeometry(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
-        const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad, const TensorShape& dilation = TensorShape(1), const bool ceilOutDim = false)
+        const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad, const TensorShape& dilation = TensorShape(1),
+        const bool ceilOutDim = false, const size_t groups = 1)
         : m_inputShape(inputShape), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(stride), m_sharing(sharing),
-        m_autoPad(autoPad), m_lowerPad(lowerPad), m_upperPad(upperPad), m_dilation(dilation)
+        m_autoPad(autoPad), m_lowerPad(lowerPad), m_upperPad(upperPad), m_dilation(dilation), m_groups(groups)
     {
         assert(m_inputShape.GetRank() == m_kernelShape.GetRank());
         assert(m_mapCount.GetRank() == 1 || m_mapCount.GetRank() == m_inputShape.GetRank());
@@ -90,7 +92,7 @@ public:
         assert(m_upperPad.GetRank() == 1 || m_upperPad.GetRank() == m_inputShape.GetRank());
 
         m_outputShape = ComputeOutputShape(m_inputShape, m_kernelShape, m_mapCount, m_stride,
-            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, ceilOutDim);
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, m_groups, ceilOutDim);
         assert(m_inputShape.GetRank() == m_outputShape.GetRank());
 
         // Compute the total number of kernels.
@@ -422,7 +424,7 @@ public:
     // Computes output shape given input shape and other convolution parameters.
     static TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
                                           const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                          const TensorShape& dilation=TensorShape(1), const bool ceilOutDim = false, const bool needsDynamicValidation = false,
+                                          const TensorShape& dilation=TensorShape(1), const size_t groups=1, const bool ceilOutDim = false, const bool needsDynamicValidation = false,
                                           const bool isFinalValidationPass = false)
     {
         if (inputShape.GetRank() != kernelShape.GetRank())
@@ -444,10 +446,11 @@ public:
         for (size_t i = 0; i < inputShape.GetRank(); i++)
         {
             assert(inputShape[i] >= 1);
-            if (kernelShape[i] > inputShape[i])
+            auto kernelShape_i = (i == kernelShape.GetRank() - 1) ? kernelShape[i] * groups : kernelShape[i];
+            if (kernelShape_i > inputShape[i])
             {
                 if(isFinalValidationPass || !needsDynamicValidation)
-                    InvalidArgument("Convolution operation requires that kernel dim %d <= input dim %d.", (int)kernelShape[i], (int)inputShape[i]);
+                    InvalidArgument("Convolution operation requires that kernel dim %d <= input dim %d.", (int)kernelShape_i, (int)inputShape[i]);
                 else
                 {
                     dimsOutput[i] = 1; // 1 is a placeholder till all shapes are resolved.
@@ -463,21 +466,21 @@ public:
             size_t dil = dilation[dilation.GetRank() == 1 ? 0 : i];
             if (autoPadCur)
             {
-                dim += dil * (kernelShape[i] - 1);
+                dim += dil * (kernelShape_i - 1);
             }
             else
             {
                 dim += lo + hi;
             }
 
-            size_t effectiveKernelShape = (kernelShape[i] - 1) * dil + 1;
+            size_t effectiveKernelShape = (kernelShape_i - 1) * dil + 1;
             float preciseDimOut = (float)(dim - effectiveKernelShape) / delta + 1;
             size_t dimOut = static_cast<size_t>(ceilOutDim ? ceil(preciseDimOut) : floor(preciseDimOut));
             // When LowerPad and/or UpperPad are specified (i.e. > 0), we insist that the kernel applications
             // fill the entire space.
             if (!autoPadCur && (lo > 0 || hi > 0))
             {
-                size_t size = (dimOut - 1) * delta + kernelShape[i];
+                size_t size = (dimOut - 1) * delta + kernelShape_i;
                 if (size != dim)
                     InvalidArgument("Convolution requires that kernel fills the entire space if auto-padding is disabled.");
             }
@@ -505,11 +508,12 @@ public:
     // Used in deconvolution operation.
     static TensorShape ComputeInputShape(const TensorShape& outputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
                                          const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad, 
-                                         const TensorShape& dilation=TensorShape(1), bool ceilOutDim = false, const bool needsDynamicValidation = false,
+                                         const TensorShape& dilation=TensorShape(1), const size_t groups=1, bool ceilOutDim = false, const bool needsDynamicValidation = false,
                                          const bool isFinalValidationPass = false)
     {
         UNUSED(ceilOutDim);
         UNUSED(dilation);
+        UNUSED(groups);
         UNUSED(needsDynamicValidation);
         UNUSED(isFinalValidationPass);
         if (outputShape.GetRank() != kernelShape.GetRank())
@@ -639,6 +643,7 @@ private:
     int m_originIndex;
 
     size_t m_kernelCount;
+    size_t m_groups;
 };
 
 using ConvolveGeometryPtr = std::shared_ptr<ConvolveGeometry>;

@@ -27,7 +27,7 @@ The script will analyse your machine and will determine which components are req
 The required components will be downloaded in [$localCache]
 Repeated operation of this script will reuse already downloaded components.
 
- - If required VS2015 Runtime will be installed
+ - If required VS2017 Runtime will be installed
  - If required MSMPI will be installed
  - Anaconda3 will be installed into [$AnacondaBasePath]
  - A CNTK-PY$PyVersion environment will be created or updated in [$AnacondaBasePath\envs]

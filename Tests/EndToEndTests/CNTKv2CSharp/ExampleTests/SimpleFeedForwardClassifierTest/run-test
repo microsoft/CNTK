@@ -4,7 +4,10 @@
 
 if [ "$OS" == "Windows_NT" ]; then
   cp $TEST_DIR/../../../../../Tests/EndToEndTests/Simple2d/Data/SimpleDataTrain_cntk_text.txt $TEST_DIR || exit $?
-  $TEST_BIN_DIR/CNTKLibraryCSTrainingTest.exe SimpleFeedForwardClassifierTest
+  
+  pushd $TEST_BIN_DIR > /dev/null
+  dotnet CNTKLibraryCSTrainingTest.dll SimpleFeedForwardClassifierTest
+  popd > /dev/null
 else
   echo Cannot run CNTKLibraryCSTrainingTest on Linux.
   exit 1

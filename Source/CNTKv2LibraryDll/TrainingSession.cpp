@@ -149,6 +149,7 @@ namespace CNTK
             auto distributed = std::dynamic_pointer_cast<DistributedLearner>(l);
             if (distributed)
             {
+                // This is always enforced now in the Learners class.
                 m_parallelAfterSamples = std::max(m_parallelAfterSamples, distributed->ParallelizationAfter());
                 m_workerRank = distributed->GetCommunicator()->CurrentWorker().m_globalRank;
                 m_numberOfWorkers = distributed->GetCommunicator()->Workers().size();

@@ -151,6 +151,7 @@ public:
     using Base::Buffer;
     using Base::GetNumRows;
     using Base::GetNumCols;
+    using Base::GetDiagSize;
     using Base::GetNumElements;
     using Base::OwnBuffer;
     using Base::GetFormat;
@@ -297,7 +298,7 @@ public:
     GPUMatrix<ElemType>& AssignTransposeOf(const GPUMatrix<ElemType>& a);
 
     GPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha);
-    GPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha);
+    GPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha, bool idxHaveDups);
 
     GPUMatrix<ElemType>& operator+=(const ElemType alpha);
     GPUMatrix<ElemType> operator+(const ElemType alpha) const;
@@ -390,11 +391,17 @@ public:
     GPUMatrix<ElemType>& InplaceNegativeSine();
     GPUMatrix<ElemType>& AssignNegativeSineOf(const GPUMatrix<ElemType>& a);
 
+    GPUMatrix<ElemType>& InplaceTan();
+    GPUMatrix<ElemType>& AssignTanOf(const GPUMatrix<ElemType>& a);
+
     GPUMatrix<ElemType>& InplaceAcos();
     GPUMatrix<ElemType>& AssignAcosOf(const GPUMatrix<ElemType>& a);
 
     GPUMatrix<ElemType>& InplaceAsin();
     GPUMatrix<ElemType>& AssignAsinOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& InplaceAtan();
+    GPUMatrix<ElemType>& AssignAtanOf(const GPUMatrix<ElemType>& a);
 
     GPUMatrix<ElemType>& InplaceCosh();
     GPUMatrix<ElemType>& AssignCoshOf(const GPUMatrix<ElemType>& a);

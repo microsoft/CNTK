@@ -19,8 +19,14 @@ LTNoRandomizer::LTNoRandomizer(DataDeserializerPtr deserializer, bool multithrea
 {
 }
 
+LTNoRandomizer::~LTNoRandomizer()
+{
+    StopPrefetch();
+}
+
 void LTNoRandomizer::Prefetch() const
 {
+
     auto chunkId = m_originalChunkDescriptions[m_currentChunkPosition].m_id;
     m_prefetchedChunk.m_info = m_originalChunkDescriptions[m_currentChunkPosition];
     m_prefetchedChunk.m_data = m_deserializer->GetChunk(chunkId);
@@ -45,7 +51,7 @@ void LTNoRandomizer::RefillSequenceWindow(SequenceWindow& window)
                 std::swap(window.m_sequences[workerSequencePosition++], window.m_sequences[i]);
         }
 
-        window.m_sequences.erase(window.m_sequences.begin() + workerSequencePosition);
+        window.m_sequences.erase(window.m_sequences.begin() + workerSequencePosition, window.m_sequences.end());
     }
 
     // If last chunk, add the sweep marker.

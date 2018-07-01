@@ -49,30 +49,6 @@ bool ShouldRunOnGpu()
 #endif
 }
 
-bool Is1bitSGDAvailable()
-{
-    static bool is1bitSGDAvailable;
-    static bool isInitialized = false;
-
-    if (!isInitialized)
-    {
-        const char* p = getenv("TEST_1BIT_SGD");
-
-        // Check the environment variable TEST_1BIT_SGD to decide whether to run 1-bit SGD tests.
-        if (p != nullptr && 0 == strcmp(p, "0"))
-        {
-            is1bitSGDAvailable = false;
-        }
-        else
-        {
-            is1bitSGDAvailable = true;
-        }
-        isInitialized = true;
-    }
-
-    return is1bitSGDAvailable;
-}
-
 MinibatchSourceConfig GetHTKMinibatchSourceConfig(size_t featureDim, size_t numOutputClasses, size_t epochSize, bool randomize = true)
 {
     auto featuresFilePath = L"glob_0000.scp";

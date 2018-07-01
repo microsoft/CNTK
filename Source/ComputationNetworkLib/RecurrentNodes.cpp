@@ -244,6 +244,7 @@ template<class ElemType, int direction>
         let& inMBLayout = InputRef(1).GetMBLayout();
         // loop over all sequences (of the initial state)
         let& inSequences = inMBLayout->GetAllSequences();
+        m_packedIndexHaveDups = false;
         for (size_t i = 0; i < inSequences.size(); i++)
         {
             let& inSeq = inSequences[i];
@@ -253,6 +254,7 @@ template<class ElemType, int direction>
             let& outSeq = outMBLayout->FindMatchingSequence(inSequences, i);
             let Tout = outSeq.GetNumTimeSteps(); // length of this output sequence
             let Tin  =  inSeq.GetNumTimeSteps(); // length of initial state's sequence. 1 means broadcasting in case m_timeStep > 1.
+            m_packedIndexHaveDups = m_packedIndexHaveDups || (Tin == 1 && m_timeStep > 1);
             // unless we are broadcasting, we will need m_timeStep values from the initial-state sequence
             if (Tin != 1 && Tin < m_timeStep)
                 InvalidArgument("%ls %ls operation requires second argument (initialState) sequences to be either of length 1 or at least as long as the timestep (%d).", NodeName().c_str(), OperationName().c_str(), (int)m_timeStep);
@@ -443,7 +445,7 @@ template<class ElemType, int direction>
             let&  idx  =                 DataFor(*m_packedIndexMatrix, fr); // column indices that guide the copy operation
             let&  src  =             GradientFor                      (fr); // gradient as received from top = source
             auto& init = InputRef(1).Gradient();                            // target is the initial state. Not sliced, but we only copy parts.
-            init.DoScatterColumnsOf(/*beta=*/1, idx, src, /*alpha=*/1);
+            init.DoScatterColumnsOf(/*beta=*/1, idx, src, /*alpha=*/1, /*idxHaveDups*/ m_packedIndexHaveDups);
         }
     }
     else if (inputIndex == 0)

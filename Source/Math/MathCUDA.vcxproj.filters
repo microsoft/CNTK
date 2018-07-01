@@ -11,10 +11,10 @@
       <Filter>GPU</Filter>
     </CudaCompile>
     <CudaCompile Include="MatrixQuantizerGPU.cu">
-      <Filter>GPU\1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </CudaCompile>
     <CudaCompile Include="MatrixQuantizer_kernel.cu">
-      <Filter>GPU\1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </CudaCompile>
     <CudaCompile Include="cudalatticeops.cu">
       <Filter>GPU\SequenceTraining</Filter>
@@ -63,13 +63,13 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="ColumnQuantizer.h">
-      <Filter>GPU\1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </ClInclude>
     <ClInclude Include="MatrixQuantizerGPU.h">
-      <Filter>GPU\1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </ClInclude>
     <ClInclude Include="ValueQuantizer.h">
-      <Filter>GPU\1bitSGD</Filter>
+      <Filter>GPU</Filter>
     </ClInclude>
     <ClInclude Include="cudabasetypes.h">
       <Filter>GPU\SequenceTraining</Filter>
@@ -158,9 +158,6 @@
     </Filter>
     <Filter Include="GPU">
       <UniqueIdentifier>{cc9a219d-d8ab-484a-b253-fd2a29ad7c7c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="GPU\1bitSGD">
-      <UniqueIdentifier>{3415233d-9ef7-41c6-abbb-cec1b4f8d14c}</UniqueIdentifier>
     </Filter>
     <Filter Include="GPU\SequenceTraining">
       <UniqueIdentifier>{6a3569b1-6c9e-47b3-870f-bb581349e75e}</UniqueIdentifier>

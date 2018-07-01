@@ -95,9 +95,12 @@ readarray -t versionInfo < "$CNTK_VERSION_PATH" ||
   die "Malformed version information in version file, ${versionInfo[0]}."
 
 DASHED_VERSION="${BASH_REMATCH[1]}"
-DOTTED_VERSION="${DASHED_VERSION//-/.}"
 
-[[ ${versionInfo[2]} =~ ^(GPU|CPU-Only|GPU-1bit-SGD)$ ]] ||
+# WHL package name for RC builds is of format *-2.5rc0-* but DASHED_VERSION is "2-5-rc0-*"
+DOTTED_VERSION="${DASHED_VERSION//-/.}"
+DOTTED_VERSION="${DOTTED_VERSION/\.rc/rc}"
+
+[[ ${versionInfo[2]} =~ ^(GPU|CPU-Only)$ ]] ||
   die "Malformed target configuration file, ${versionInfo[2]}."
 
 TARGET_CONFIGURATION="${BASH_REMATCH[1]}"
@@ -135,15 +138,21 @@ fi
 
 PYWHEEL_QUALIFIER=cp$PY_VERSION-cp${PY_VERSION}m
 [ $PY_VERSION = 27 ] && PYWHEEL_QUALIFIER+=u
-CNTK_WHEEL_NAME="cntk-$DOTTED_VERSION-$PYWHEEL_QUALIFIER-linux_x86_64.whl"
+CNTK_WHEEL_NAME="cntk"
+if [[ "${TARGET_CONFIGURATION^^}" = "GPU" ]]; then
+  CNTK_WHEEL_NAME="cntk_gpu"
+fi
+CNTK_WHEEL_NAME="${CNTK_WHEEL_NAME}-${DOTTED_VERSION}-${PYWHEEL_QUALIFIER}-linux_x86_64.whl"
 CNTK_WHEEL_PATH="cntk/python/$CNTK_WHEEL_NAME"
 
 # Check online if there is no wheel locally
 if ! test -f "$CNTK_WHEEL_PATH"; then
   CNTK_WHEEL_PATH="$WHEEL_BASE_URL/$TARGET_CONFIGURATION/$CNTK_WHEEL_NAME"
 
-  wget -q --spider "$CNTK_WHEEL_PATH" ||
-    die "Python wheel not available locally and cannot reach $CNTK_WHEEL_PATH for Python\nwheel installation online. Please double-check Internet connectivity."
+  if ! test -f "$CNTK_WHEEL_PATH"; then
+    wget -q --spider "$CNTK_WHEEL_PATH" ||
+      die "Python wheel not available locally and cannot reach $CNTK_WHEEL_PATH for Python\nwheel installation online. Please double-check Internet connectivity."
+  fi
 
 fi
 

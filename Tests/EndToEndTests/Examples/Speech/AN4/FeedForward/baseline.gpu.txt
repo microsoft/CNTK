@@ -11,7 +11,6 @@ Build info:
 		Last modified date: Fri Aug 12 05:28:23 2016
 		Build type: Release
 		Build target: GPU
-		With 1bit-SGD: yes
 		Math lib: mkl
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 		CUB_PATH: c:\src\cub-1.4.1
@@ -38,7 +37,6 @@ ping [mpihelper]: all 1 nodes responded
 08/16/2016 03:20:17: 		Last modified date: Fri Aug 12 05:28:23 2016
 08/16/2016 03:20:17: 		Build type: Release
 08/16/2016 03:20:17: 		Build target: GPU
-08/16/2016 03:20:17: 		With 1bit-SGD: yes
 08/16/2016 03:20:17: 		Math lib: mkl
 08/16/2016 03:20:17: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 08/16/2016 03:20:17: 		CUB_PATH: c:\src\cub-1.4.1

@@ -138,7 +138,7 @@ namespace CNTK
         proto::NDShape* CreateProto(const NDShape& src, Arena* arena = nullptr);
 
         void Copy(const DictionaryValue& src, proto::DictionaryValue& dst, Arena* arena = nullptr);
-        
+
         void CopyNDArrayViewDataToProtos();
         void WriteNDArrayViewData(io::CodedOutputStream& output);
 
@@ -158,7 +158,7 @@ namespace CNTK
 
         bool ReadNDArrayViewData(io::ZeroCopyInputStream& input);
 
-        size_t GetTotalByteSize() 
+        size_t GetTotalByteSize()
         {
             return m_byteSize + m_proto->ByteSizeLong();
         }
@@ -231,7 +231,7 @@ namespace CNTK
             return DictionaryValue::Type(type);
         }
 
-        template <typename SrcT, typename DstT=SrcT>
+        template <typename SrcT, typename DstT = SrcT>
         static void CopyData(const NDArrayView& src, RepeatedField<DstT>* dst)
         {
             auto size = src.Shape().TotalSize();
@@ -242,6 +242,25 @@ namespace CNTK
             else
                 for (size_t i = 0; i < size; i++)
                     dst->mutable_data()[i] = (DstT)buffer[i];
+        }
+
+        static void WriteInt8Data(const NDArrayView& src, io::CodedOutputStream& output)
+        {
+            // Write raw bytes.
+            auto size = src.Shape().TotalSize();
+            const int8_t* buffer = src.DataBuffer<int8_t>();
+            output.WriteRaw(buffer, size);
+        }
+
+        static void WriteInt16Data(const NDArrayView& src, io::CodedOutputStream& output)
+        {
+            auto size = src.Shape().TotalSize();
+            const int16_t* buffer = src.DataBuffer<int16_t>();
+            for (auto i = 0; i < size; i++)
+            {
+                auto value = buffer[i];
+                output.WriteVarint32SignExtended(Encode<int16_t, int16_t>(value));
+            }
         }
 
         template <typename T>
@@ -279,6 +298,29 @@ namespace CNTK
             return true;
         }
 
+        static bool ReadInt8Data(io::ZeroCopyInputStream& input, NDArrayView& dst)
+        {
+            const void* temp;
+            int readSize;
+            size_t totalSize = 0;
+            bool success;
+            do {
+                success = input.Next(&temp, &readSize);
+                totalSize += readSize;
+            } while (success && readSize == 0);
+
+            if (!success)
+                return false;
+            
+            auto size = dst.Shape().TotalSize();
+            if (totalSize != size)
+                return false;
+
+            int8_t* buffer = dst.WritableDataBuffer<int8_t>();
+            memcpy(buffer, temp, size);
+            return true;
+        }
+
         template <typename SrcT, typename DstT = SrcT>
         static void CopyData(const RepeatedField<SrcT>& src, NDArrayView* dst)
         {
@@ -294,7 +336,13 @@ namespace CNTK
             }
         }
 
-        
+        static void CopyInt8Data(const std::string& src, NDArrayView* dst)
+        {
+            auto size = src.length();
+            assert(size == dst->Shape().TotalSize());
+            auto* buffer = dst->WritableDataBuffer<int8_t>();
+            memcpy(buffer, src.data(), size * sizeof(int8_t));
+        }
 
         UsingUTF8 m_locale;
         Arena m_arena;
@@ -332,6 +380,17 @@ namespace CNTK
             {
                 CopyData<float16, float>(src, dst->mutable_float_values()->mutable_value());
             }
+            else if (src.GetDataType() == DataType::Int8)
+            {
+                // Directly copy the data as a byte array.
+                auto size = src.Shape().TotalSize();
+                const int8_t* buffer = src.DataBuffer<int8_t>();
+                dst->mutable_bytes_value()->set_value(buffer, size);
+            }
+            else if (src.GetDataType() == DataType::Int16)
+            {
+               CopyData<int16_t, int32>(src, dst->mutable_sint32_values()->mutable_value());
+            }
         }
     }
 
@@ -351,6 +410,14 @@ namespace CNTK
             else if (src.GetDataType() == DataType::Float16)
             {
                 WriteData<float16>(src, output);
+            }
+            else if (src.GetDataType() == DataType::Int8)
+            {
+                WriteInt8Data(src, output);
+            }
+            else if (src.GetDataType() == DataType::Int16)
+            {
+                WriteInt16Data(src, output);
             }
         }
     }
@@ -372,12 +439,22 @@ namespace CNTK
             else if (dst.GetDataType() == DataType::Double)
             {
                 if (!ReadData<double>(wrapper, dst))
-                    return false;                
+                    return false;
             }
             else if (dst.GetDataType() == DataType::Float16)
             {
                 if (!ReadData<float, float16>(wrapper, dst))
                     return false;
+            }
+            else if (dst.GetDataType() == DataType::Int8)
+            {
+                if (!ReadInt8Data(input, dst))
+                    return false;
+            }
+            else if (dst.GetDataType() == DataType::Int16)
+            {
+                if (!ReadData<int16_t, int16_t>(wrapper, dst))
+                     return false;
             }
         }
         return true;
@@ -481,6 +558,20 @@ namespace CNTK
                 CopyData<float, float16>(src.float_values().value(), dst);
             else
                 m_arrayViews.push_back({ dst, nullptr });
+        }
+        else if (dataType == DataType::Int8)
+        {
+            if (src.bytes_value().value().size() == shape->TotalSize())
+                CopyInt8Data(src.bytes_value().value(), dst);
+            else
+                m_arrayViews.push_back({ dst, nullptr });
+        }
+        else if (dataType == DataType::Int16)
+        {
+            if (src.sint32_values().value().size() == shape->TotalSize())
+                 CopyData<int32, int16_t>(src.sint32_values().value(), dst);
+            else
+                 m_arrayViews.push_back({ dst, nullptr });
         }
         return dst;
     }
@@ -719,7 +810,6 @@ namespace CNTK
 
         io::CodedInputStream codedInput(&input);
         codedInput.SetTotalBytesLimit(limit, limit);
-
         return msg.ParseFromCodedStream(&codedInput) && codedInput.ConsumedEntireMessage();
     }
 

@@ -21,6 +21,8 @@ set p_CNTK_VERSION_BANNER=%~4
 shift
 set p_CNTK_COMPONENT_VERSION=%~4
 set p_SWIG_PATH=%~5
+set p_CNTK_PYTHON_WITH_DEPS=%~6
+shift
 set p_CNTK_PY_VERSIONS=%~6
 set p_CNTK_PY27_PATH=%~7
 set p_CNTK_PY34_PATH=%~8
@@ -55,7 +57,23 @@ if defined nothingToBuild echo Python support not configured to build.&exit /b 0
 
 if "%p_DebugBuild%" == "true" echo Currently no Python build for Debug configurations, exiting.&exit /b 0
 
-call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall" amd64
+if not defined VS2017INSTALLDIR (
+  @echo Environment variable VS2017INSTALLDIR not defined.
+  @echo Make sure Visual Studion 2017 is installed.
+  exit /b 1
+)
+
+REM vcvarsall.bat scripts changes current working directory,
+REM   so we need to save it and restore it afterwards
+pushd .
+if not exist "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" (
+  echo Error: "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" not found.
+  echo Make sure you have installed Visual Studion 2017 correctly.
+  exit /b 1
+)
+call "%VS2017INSTALLDIR%\VC\Auxiliary\build\vcvarsall.bat" amd64 -vcvars_ver=14.11
+popd
+
 set CNTK_LIB_PATH=%p_OutDir%
 
 set DIST_DIR=%p_OutDir%\Python
@@ -79,7 +97,7 @@ for %%D in (
   Cntk.Math-%CNTK_COMPONENT_VERSION%.dll
   Cntk.ExtensibilityExamples-%CNTK_COMPONENT_VERSION%.dll  
   Cntk.PerformanceProfiler-%CNTK_COMPONENT_VERSION%.dll
-  Cntk.ImageWriter-%CNTK_COMPONENT_VERSION%.dll
+  Cntk.DelayLoadedExtensions-%CNTK_COMPONENT_VERSION%.dll
   libiomp5md.dll
   mklml.dll
 ) do (
@@ -119,6 +137,16 @@ if /i %p_GpuBuild% equ true for %%D in (
   set CNTK_LIBRARIES=!CNTK_LIBRARIES!;%CNTK_LIB_PATH%\%%D
 )
 
+set PYTHON_PROJECT_NAME=cntk
+if /i %p_GpuBuild% equ true (
+  set PYTHON_PROJECT_NAME=cntk-gpu
+)
+
+set PYTHON_WITH_DEPS=
+if /i %p_CNTK_PYTHON_WITH_DEPS% equ true (
+  set PYTHON_WITH_DEPS="--with-deps"
+)
+
 popd
 if errorlevel 1 echo Cannot restore directory.&exit /b 1
 
@@ -128,7 +156,7 @@ for %%p in (%p_CNTK_PY_VERSIONS%) do (
   call set extraPath=!p_CNTK_PY%%~p_PATH!
   echo Building for Python version '%%~p', extra path is !extraPath!
   set PATH=!extraPath!;!oldPath!
-  python.exe .\setup.py ^
+  python.exe .\setup.py --project-name %PYTHON_PROJECT_NAME% %PYTHON_WITH_DEPS% ^
       build_ext --inplace --force --compiler msvc --plat-name=win-amd64 ^
       bdist_wheel --dist-dir "%DIST_DIR%"
   if errorlevel 1 exit /b 1

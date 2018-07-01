@@ -472,10 +472,14 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
         return _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opNegativeSine:
         return _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opTan:
+        return _elementWiseTanOnCuda<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(src, Data(), N);
     case ElementWiseOperator::opAcos:
         return _elementWiseAcosOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opAsin:
         return _elementWiseAsinOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    case ElementWiseOperator::opAtan:
+        return _elementWiseAtanOnCuda<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(src, Data(), N);
     case ElementWiseOperator::opCosh:
         return _elementWiseCoshOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
     case ElementWiseOperator::opSinh:
@@ -1024,7 +1028,7 @@ static void Peek(const GPUMatrix<ElemType>& m, const char* which)
 #define ALLOW_ATOMIC_SCATTER // allow to disable this, until we know atomicAdd() works properly here
 
 template <class ElemType>
-__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements)
+__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements, bool useAtomicAdd)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
 
@@ -1050,7 +1054,10 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     ElemType res = (comp_t)ra * (comp_t)alpha; // TODO_NV: investigate atomicAdd
     if (res != 0)             // avoid memory conflict if e.g. an entire column has no gradient
 #ifdef ALLOW_ATOMIC_SCATTER
-        atomicAdd(&rus, res); // rus += res;
+        if (useAtomicAdd)
+            atomicAdd(&rus, res); // rus += res;
+        else
+            rus += res;
 #else
         rus += res;
 #endif
@@ -1059,7 +1066,7 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
 
 // *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha, bool useAtomicAdd)
 {
     if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
@@ -1103,7 +1110,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     CUDA_LONG NN = (CUDA_LONG)(a.GetNumElements()); // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
-    _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
+    _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN, useAtomicAdd);
 
     //SyncGuard syncGuard;
     //_doScatterColumnsOf<ElemType><<<a.GetNumCols(), a.GetNumRows(), 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
@@ -1288,7 +1295,7 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
 template <class ElemType>
 void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
 {
-    CUDA_LONG N = (CUDA_LONG) GetNumRows();
+    CUDA_LONG N = (CUDA_LONG) GetDiagSize();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
     SyncGuard syncGuard;
@@ -1301,24 +1308,21 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
     if (IsEmpty() || vector.IsEmpty())
         LogicError("SetDiagonalValue: Matrix is empty.");
 
-    if (GetNumRows() != GetNumCols())
-        LogicError("SetDiagonalValue: NumRows and NumCols do not agree.");
-
     if (vector.GetNumRows() != 1 && vector.GetNumCols() != 1)
         LogicError("SetDiagonalValue: input vector must be a vector.");
 
     if (vector.GetNumElements() == 1) // reduce to simple form
         SetDiagonalValue(vector.Data()[0]);
 
-    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
+    else if (vector.GetNumRows() != GetDiagSize() && vector.GetNumCols() != GetDiagSize())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
-        CUDA_LONG N = (CUDA_LONG) GetNumRows();
+        CUDA_LONG N = (CUDA_LONG) GetDiagSize();
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
         SyncGuard syncGuard;
-        _setDiagonalValueFromVector<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), vector.Data(), N);
+        _setDiagonalValueFromVector<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), vector.Data(), N, (CUDA_LONG) GetNumRows());
     }
 }
 
@@ -2332,11 +2336,17 @@ DEF_ELEMWISE_ASSIGN_FUNC(Cosine)
 DEF_ELEMWISE_INPLACE_FUNC(NegativeSine)
 DEF_ELEMWISE_ASSIGN_FUNC(NegativeSine)
 
+DEF_ELEMWISE_INPLACE_FUNC(Tan)
+DEF_ELEMWISE_ASSIGN_FUNC(Tan)
+
 DEF_ELEMWISE_INPLACE_FUNC(Acos)
 DEF_ELEMWISE_ASSIGN_FUNC(Acos)
 
 DEF_ELEMWISE_INPLACE_FUNC(Asin)
 DEF_ELEMWISE_ASSIGN_FUNC(Asin)
+
+DEF_ELEMWISE_INPLACE_FUNC(Atan)
+DEF_ELEMWISE_ASSIGN_FUNC(Atan)
 
 DEF_ELEMWISE_INPLACE_FUNC(Cosh)
 DEF_ELEMWISE_ASSIGN_FUNC(Cosh)
@@ -4398,6 +4408,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>
     return *this;
 }
 
+
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::GatherFromTarget(const GPUMatrix<ElemType>& indices, const GPUMatrix<ElemType>& target, size_t row_elements)
 {
@@ -5015,6 +5026,10 @@ template void GPUMatrix<char>::CopySection(size_t numRows, size_t numCols, char*
 template void GPUMatrix<char>::Reshape(const size_t, const size_t);
 template GPUMatrix<char>& GPUMatrix<char>::operator*=(char);
 template DEVICEID_TYPE GPUMatrix<char>::PrepareDevice(DEVICEID_TYPE deviceId) const;
+template void GPUMatrix<char>::SetUniformRandomValue(const char low, const char high, unsigned long seed);
+template void GPUMatrix<char>::SetUniformRandomValue(RNGHandle& rngHandle, const char low, const char high);
+template void GPUMatrix<char>::SetGaussianRandomValue(const char mean, const char sigma, unsigned long seed);
+template void GPUMatrix<char>::SetGaussianRandomValue(RNGHandle& rngHandle, const char mean, const char stdev);
 
 // Support <short>
 template GPUMatrix<short>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
@@ -5040,6 +5055,10 @@ template void GPUMatrix<short>::CopySection(size_t numRows, size_t numCols, shor
 template void GPUMatrix<short>::Reshape(const size_t, const size_t);
 template GPUMatrix<short>& GPUMatrix<short>::operator*=(short);
 template DEVICEID_TYPE GPUMatrix<short>::PrepareDevice(DEVICEID_TYPE deviceId) const;
+template void GPUMatrix<short>::SetUniformRandomValue(const short low, const short high, unsigned long seed);
+template void GPUMatrix<short>::SetUniformRandomValue(RNGHandle& rngHandle, const short low, const short high);
+template void GPUMatrix<short>::SetGaussianRandomValue(const short mean, const short sigma, unsigned long seed);
+template void GPUMatrix<short>::SetGaussianRandomValue(RNGHandle& rngHandle, const short mean, const short stdev);
 
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();

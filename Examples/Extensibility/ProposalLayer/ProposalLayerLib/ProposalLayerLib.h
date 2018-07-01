@@ -125,8 +125,8 @@ private:
         if (scoresShape[scoresShape.Rank() - 1] != 1)
            throw std::runtime_error("ProposalLayer: only single item batches are supported");
 
-        auto height = scoresShape[0];
-        auto width = scoresShape[1];
+        auto width = scoresShape[0];
+        auto height = scoresShape[1];
         // the first set of N (= m_anchors.size()) channels are bg probs
         // the second set are the fg probs, which we want
         std::vector<size_t> offsets{ 0,0,0,0 };

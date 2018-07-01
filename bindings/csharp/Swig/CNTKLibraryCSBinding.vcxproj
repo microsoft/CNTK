@@ -104,19 +104,29 @@
   <ItemGroup>
     <CustomBuild Include="cntk_cs.i">
       <FileType>Document</FileType>
-      <Command>$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(SolutionDir)bindings\csharp\CNTKLibraryManagedDll\SwigProxyClasses -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i</Command>
+      <Command>$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(SolutionDir)bindings\csharp\CNTKLibraryManagedDll\SwigProxyClasses\GeneratedCode\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i</Command>
       <Outputs>cntk_cs_wrap.cxx; cntk_cs_warp.h</Outputs>
       <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h;$(SolutionDir)Source\Common\Include\ExceptionWithCallStack.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;$(SolutionDir)bindings\common\CNTKExceptionHandling.i;$(SolutionDir)bindings\common\CNTKManagedCommon.i;std_unordered_map.i</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -Werror -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(ProjectDir)\Generated\Windows\$(FlavorName) -dllimport Cntk.Core.CSBinding-$(CntkComponentVersion).dll cntk_cs.i &amp;&amp; move /Y $(ProjectDir)\cntk_cs_wrap.* $(ProjectDir)\Generated</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">Generated\cntk_cs_wrap.cxx;Generated\cntk_cs_warp.h</Outputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cntk_cs_wrap.cxx">
+    <ClCompile Include="Generated\cntk_cs_wrap.cxx">
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibrary.h" />
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h" />
-    <ClInclude Include="cntk_cs_wrap.h" />
+    <ClInclude Include="Generated\cntk_cs_wrap.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\common\CNTKManagedCommon.i" />

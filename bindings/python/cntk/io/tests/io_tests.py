@@ -1226,6 +1226,73 @@ def test_compare_cbf_and_ctf(input_pair, device_id, tmpdir):
         for (num_mbs, mb_size) in zip([1, 1, 3, 10], [1, 10, 100, 2]):
             compare_cbf_and_ctf(num_mbs, mb_size, randomize)
 
+
+class SimpleDeserailizer(UserDeserializer):
+    def __init__(self, stream_infos, chunk_data):
+        super(SimpleDeserailizer, self).__init__()
+        self._streams = stream_infos
+        self._chunk_data = chunk_data
+
+    def stream_infos(self):
+        return self._streams
+
+    def num_chunks(self):
+        return len(self._chunk_data)
+
+    def get_chunk(self, chunk_id):
+        return self._chunk_data[chunk_id % self.num_chunks()]
+
+def test_user_deserializer():
+    N = 5
+    N_seq = 3
+    chunk_data = [
+        {'x': [d for d in np.arange(N * N_seq * 3).reshape((N, N_seq, 3)).astype(np.float32)],
+         'y': [d for d in np.arange(N * 1).reshape((N, 1)).astype(np.float32)],
+         },
+        {'x': [d for d in np.arange(N * N_seq * 3).reshape((N, N_seq, 3)).astype(np.float32)],
+         'y': [d for d in np.arange(N * 1).reshape((N, 1)).astype(np.float32)],
+         }
+    ]
+    x = C.sequence.input_variable(3, name='x')
+    y = C.input_variable(1, name='y')
+
+    #test StreamInformation with defines_mb_size set
+    d = SimpleDeserailizer(stream_infos=[StreamInformation('x', 0, 'dense', np.float32, (3,)),
+                                         StreamInformation('y', 1, 'dense', np.float32, (1,), True)],
+                           chunk_data=chunk_data)
+    mbs = MinibatchSource([d], randomize=False)
+    input_map = {x: mbs['x'], y: mbs['y']}
+    mb_size = 5
+    batch = mbs.next_minibatch(mb_size, input_map)
+    assert(batch[x].number_of_sequences == mb_size)
+    assert(batch[x].number_of_samples == mb_size * N_seq)
+    assert(batch[y].number_of_sequences == mb_size)
+    assert(batch[y].number_of_samples == mb_size)
+
+
+    #test StreamInformation without defines_mb_size set
+    d = SimpleDeserailizer(stream_infos=[StreamInformation('x', 0, 'dense', np.float32, (3,)),
+                                         StreamInformation('y', 1, 'dense', np.float32, (1,))],
+                           chunk_data=chunk_data)
+    mbs = MinibatchSource([d], randomize=False)
+    input_map = {x: mbs['x'], y: mbs['y']}
+    batch = mbs.next_minibatch(mb_size, input_map)
+    # one sequence with 3 samples is retrieved
+    assert(batch[x].number_of_sequences == 1)
+    assert(batch[x].number_of_samples == N_seq)
+    assert(batch[y].number_of_sequences == 1)
+    assert(batch[y].number_of_samples == 1)
+
+    #test more than one defines_mb_size set
+    with pytest.raises(Exception):
+        d = SimpleDeserailizer(stream_infos=[StreamInformation('x', 0, 'dense', np.float32, (3,), True),
+                                             StreamInformation('y', 1, 'dense', np.float32, (1,), True)],
+                               chunk_data=chunk_data)
+        mbs = MinibatchSource([d], randomize=False)
+        input_map = {x: mbs['x'], y: mbs['y']}
+        batch = mbs.next_minibatch(5, input_map)
+
+
 # Helper generator
 class GenDeserializer(UserDeserializer):
     def __init__(self, stream_infos, num_chunks, num_sequences, max_sequence_len = 1):
@@ -1234,6 +1301,7 @@ class GenDeserializer(UserDeserializer):
         self._num_chunks = num_chunks
         self._num_sequences = num_sequences
         self._max_sequence_len = max_sequence_len
+        self._chunk_list = []
 
     def stream_infos(self):
         return self._streams;
@@ -1269,7 +1337,55 @@ class GenDeserializer(UserDeserializer):
                 result[stream.name] = chunk if self._max_sequence_len != 1 else np.stack(chunk)
             else: # sparse
                 result[stream.name] = chunk if self._max_sequence_len != 1 else sp.csr_matrix(sp.vstack(chunk))
+
+        self._chunk_list.append(result)
         return result
+
+    def get_chunks_list(self):
+        """
+        Get the list of all chunks returned so far.
+        :return:
+        """
+        return self._chunk_list
+
+def test_user_deserializer_memory_leak():
+    """
+    Test to check that reference counts of chunk objects and their members aren't increased in swig userdeserializer code.
+    :return:
+    """
+    import sys
+    streams = [StreamInformation('x', 0, 'dense', np.float32, (2, 3)), StreamInformation('y', 1, 'sparse', np.float32, (1, 3))]
+
+    d = GenDeserializer(stream_infos=streams, num_chunks=5, num_sequences=100)
+    mbs = MinibatchSource([d], randomize=False, max_sweeps=2)
+
+    while True:
+        batch = mbs.next_minibatch(20)
+        if not batch:
+            break
+
+    all_chunks = d.get_chunks_list()
+
+    for chunk in all_chunks:
+        chunk_refs = sys.getrefcount(chunk)
+        # 5, 4 or 3= list member + local variable  + getrefcount argument. + (sometimes) upto 2 global optimization reference
+        assert chunk_refs <= 5
+
+        for stream in streams:
+            stream_refs = sys.getrefcount(chunk[stream.name])
+            assert stream_refs == 2
+            if stream.storage_format == 'sparse':
+                indices_refs = sys.getrefcount(chunk[stream.name].indices)
+                indptr_refs = sys.getrefcount(chunk[stream.name].indptr)
+                data_refs = sys.getrefcount(chunk[stream.name].data)
+                # 2 = reference within sparse object + getrefcount argument
+                assert indices_refs == 2
+                assert indptr_refs == 2
+                assert data_refs == 2
+            else:
+                data_refs = sys.getrefcount(chunk[stream.name].data)
+                # 1 = getrefcount argument. A new memoryview object is created on every call to data, so no count from within object.
+                assert data_refs == 1
 
 def test_user_deserializer_sample_mode():
     import scipy.sparse as sp
@@ -1280,6 +1396,7 @@ def test_user_deserializer_sample_mode():
         sample_x_values = np.zeros(num_chunks, dtype=np.int32)
         sample_y_values = np.zeros(num_chunks, dtype=np.int32)
         mb_count = 0
+
         while True:
             if mb_count % 10 == 1: # perform checkpointing
                 checkpoint_state = minibatch_source.get_checkpoint_state()

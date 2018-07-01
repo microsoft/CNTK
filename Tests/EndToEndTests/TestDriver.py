@@ -268,13 +268,12 @@ class Test:
 
       tempPath = os.path.join(args.build_location, args.build_sku, flavor, "bin", "cntk")
       if not os.path.isfile(tempPath):
-        for bsku in ["/build/gpu/", "/build/cpu/", "/build/1bitsgd/"]:
+        for bsku in ["/build/gpu/", "/build/cpu/"]:
           if tempPath.find(bsku) >= 0:
             tempPath = tempPath.replace(bsku, "/build/")
             break
       os.environ["TEST_CNTK_BINARY"] = tempPath
       os.environ["MPI_BINARY"] = "mpiexec"
-    os.environ["TEST_1BIT_SGD"] = ("1" if args.build_sku == "1bitsgd" else "0")
     # N.B. no cntk.exe in UWP build
     if args.build_sku != "uwp" and not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
       raise ValueError("the cntk executable does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"])
@@ -640,19 +639,47 @@ class TestCaseRunResult:
     self.diagnostics = diagnostics
     self.expectedLines = [] # list of remaining unmatched expected lines from the baseline file for this test case run
 
+def enumerateCommandLineTests(args):
+  """Enumerates tests on the command line."""
+  if not args.test:
+    return
+
+  if len(args.test) == 1 and args.test[0].startswith('@'):
+    filename = os.path.realpath(args.test[0][1:])
+    if not os.path.isfile(filename):
+      print("ERROR: file not found", filename, file=sys.stderr)
+      sys.exit(1)
+
+    with open(filename) as f:
+      for line in f.readlines():
+        line = line.strip()
+        if not line:
+          continue
+       
+        if line.startswith('#'):
+          continue
+
+        yield line.rstrip('/')
+
+    return
+
+  for arg in args.test:
+    yield arg.rstrip('/')
+
 # Lists all available tests
 def listCommand(args):
   testsByTag = {}
-  args.test = [t.rstrip('/').lower() for t in args.test]
+  args.test = [ arg.lower() for arg in enumerateCommandLineTests(args) ]
+
   for test in list(Test.allTestsIndexedByFullName.values()):
      if not args.test or test.fullName.lower() in args.test:
         for flavor in args.flavors:
            for device in args.devices:
-              for os in args.oses:
+              for operating_system in args.oses:
                 for build_sku in args.buildSKUs:
                   if build_sku=="cpu" and device=="gpu":
                     continue
-                  tag = test.matchesTag(args.tag, flavor, device, os, build_sku) if args.tag else '*'
+                  tag = test.matchesTag(args.tag, flavor, device, operating_system, build_sku) if args.tag else '*'
                   if tag:
                     if tag in list(testsByTag.keys()):
                       testsByTag[tag].add(test.fullName)
@@ -666,19 +693,20 @@ def listCommand(args):
 
 # Runs given test(s) or all tests
 def runCommand(args):
-  if len(args.test) > 0:
-     testsToRun = []
-     for name in args.test:
-       if name[len(name)-1] == '/':
-         name = name[:-1]
-       if name.lower() in Test.allTestsIndexedByFullName:
-         testsToRun.append(Test.allTestsIndexedByFullName[name.lower()])
-       else:
-         print("ERROR: test not found", name, file=sys.stderr)
-         sys.exit(1)
-  else:
-     testsToRun = list(sorted(Test.allTestsIndexedByFullName.values(), key=lambda test: test.fullName))
+  testsToRun = []
 
+  for arg in enumerateCommandLineTests(args):
+    arg_lower = arg.lower()
+
+    if arg_lower not in Test.allTestsIndexedByFullName:
+      print("ERROR: test not found", arg, file=sys.stderr)
+      sys.exit(1)
+
+    testsToRun.append(Test.allTestsIndexedByFullName[arg_lower])
+
+  if not testsToRun:
+    testsToRun = list(sorted(Test.allTestsIndexedByFullName.values(), key=lambda test: test.fullName))
+  
   devices = args.devices
   flavors = args.flavors
 
@@ -739,6 +767,8 @@ def runCommand(args):
             sys.stdout.write("Running test {0} ({1} {2}{3}) - ".format(test.fullName, flavor, device, pyTestLabel));
             if args.dry_run:
               print("[SKIPPED] (dry-run)")
+              continue
+              
             # in verbose mode, terminate the line, since there will be a lot of output
             if args.verbose:
               sys.stdout.write("\n");
@@ -775,6 +805,9 @@ def runCommand(args):
             if not result.succeeded and not args.verbose and result.logFile:
               print("  See log file for details: " + result.logFile)
 
+  if args.dry_run:
+    sys.exit(1)
+    
   if args.update_baseline:
     print("{0}/{1} baselines updated, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount))
   else:
@@ -790,7 +823,10 @@ if __name__ == "__main__":
   runSubparser.add_argument("test", nargs="*",
                             help="optional test name(s) to run, specified as Suite/TestName. "
                                  "Use list command to list available tests. "
-                                 "If not specified then all tests will be run.")
+                                 "If not specified then all tests will be run."
+                                 " "
+                                 "'@<filename>' can be used to specify a line-delimited list "
+                                 "of tests.")
 
   defaultBuildSKU = "gpu"
 
@@ -798,7 +834,7 @@ if __name__ == "__main__":
   runSubparser.add_argument("-t", "--tag", help="runs tests which match the specified tag")
   runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
   runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
-  runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - run tests only for a specified build SKU")
+  runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu - run tests only for a specified build SKU")
   runSubparser.add_argument("--py27-paths", help="comma-separated paths to prepend when running a test against Python 2.7")
   runSubparser.add_argument("--py34-paths", help="comma-separated paths to prepend when running a test against Python 3.4")
   runSubparser.add_argument("--py35-paths", help="comma-separated paths to prepend when running a test against Python 3.5")
@@ -817,10 +853,13 @@ if __name__ == "__main__":
   listSubparser.add_argument("-t", "--tag", help="limits a resulting list to tests matching the specified tag")
   listSubparser.add_argument("-d", "--device", help="cpu|gpu - tests for a specified device")
   listSubparser.add_argument("-f", "--flavor", help="release|debug - tests for specified flavor")
-  listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - list tests only for a specified build SKU")
+  listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu - list tests only for a specified build SKU")
   listSubparser.add_argument("--os", help="windows|linux - tests for a specified operating system")
   listSubparser.add_argument("test", nargs="*",
-                             help="optional test name(s) to list, specified as Suite/TestName. ")
+                             help="optional test name(s) to list, specified as Suite/TestName. "
+                                  " "
+                                  "'@<filename>' can be used to specify a line-delimited list "
+                                  "of tests.")
 
   listSubparser.set_defaults(func=listCommand)
 
@@ -847,7 +886,7 @@ if __name__ == "__main__":
       sys.exit(1)
     args.flavors = [args.flavor]
 
-  args.buildSKUs = ["cpu", "gpu", "1bitsgd", "uwp"]
+  args.buildSKUs = ["cpu", "gpu", "uwp"]
   if (args.build_sku):
     args.build_sku = args.build_sku.lower()
     if not args.build_sku in args.buildSKUs:

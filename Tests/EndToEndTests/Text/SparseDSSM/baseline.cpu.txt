@@ -3,19 +3,19 @@ CPU info:
     Hardware threads: 12
     Total Memory: 57700428 kB
 -------------------------------------------------------------------
-=== Running mpiexec -n 4 /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/ OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu DeviceId=-1 timestamping=true numCPUThreads=3 stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+=== Running mpiexec -n 4 /home/ubuntu/workspace/build/gpu/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/ OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu DeviceId=-1 timestamping=true numCPUThreads=3 stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:01:41
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:01:41
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:01:41
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:01:41
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 Changed current directory to /tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData
 Changed current directory to /tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData
 Changed current directory to /tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData
@@ -54,7 +54,7 @@ ping [mpihelper]: 4 nodes pinging each other
 [fdb4dbbde386:19456] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
 MPI Rank 0: CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:01:41
 MPI Rank 0: 
-MPI Rank 0: /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+MPI Rank 0: /home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 MPI Rank 0: 12/12/2017 17:01:41: -------------------------------------------------------------------
 MPI Rank 0: 12/12/2017 17:01:41: Build info: 
 MPI Rank 0: 
@@ -62,7 +62,6 @@ MPI Rank 0: 12/12/2017 17:01:41: 		Built time: Dec 11 2017 18:28:39
 MPI Rank 0: 12/12/2017 17:01:41: 		Last modified date: Wed Nov 15 09:27:10 2017
 MPI Rank 0: 12/12/2017 17:01:41: 		Build type: release
 MPI Rank 0: 12/12/2017 17:01:41: 		Build target: GPU
-MPI Rank 0: 12/12/2017 17:01:41: 		With 1bit-SGD: yes
 MPI Rank 0: 12/12/2017 17:01:41: 		With ASGD: yes
 MPI Rank 0: 12/12/2017 17:01:41: 		Math lib: mkl
 MPI Rank 0: 12/12/2017 17:01:41: 		CUDA version: 9.0.0
@@ -264,7 +263,7 @@ MPI Rank 0:
 MPI Rank 0: 12/12/2017 17:03:43: __COMPLETED__
 MPI Rank 1: CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:01:41
 MPI Rank 1: 
-MPI Rank 1: /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+MPI Rank 1: /home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 MPI Rank 1: 12/12/2017 17:01:42: -------------------------------------------------------------------
 MPI Rank 1: 12/12/2017 17:01:42: Build info: 
 MPI Rank 1: 
@@ -272,7 +271,6 @@ MPI Rank 1: 12/12/2017 17:01:42: 		Built time: Dec 11 2017 18:28:39
 MPI Rank 1: 12/12/2017 17:01:42: 		Last modified date: Wed Nov 15 09:27:10 2017
 MPI Rank 1: 12/12/2017 17:01:42: 		Build type: release
 MPI Rank 1: 12/12/2017 17:01:42: 		Build target: GPU
-MPI Rank 1: 12/12/2017 17:01:42: 		With 1bit-SGD: yes
 MPI Rank 1: 12/12/2017 17:01:42: 		With ASGD: yes
 MPI Rank 1: 12/12/2017 17:01:42: 		Math lib: mkl
 MPI Rank 1: 12/12/2017 17:01:42: 		CUDA version: 9.0.0
@@ -471,7 +469,7 @@ MPI Rank 1:
 MPI Rank 1: 12/12/2017 17:03:43: __COMPLETED__
 MPI Rank 2: CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:01:41
 MPI Rank 2: 
-MPI Rank 2: /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+MPI Rank 2: /home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 MPI Rank 2: 12/12/2017 17:01:42: -------------------------------------------------------------------
 MPI Rank 2: 12/12/2017 17:01:42: Build info: 
 MPI Rank 2: 
@@ -479,7 +477,6 @@ MPI Rank 2: 12/12/2017 17:01:42: 		Built time: Dec 11 2017 18:28:39
 MPI Rank 2: 12/12/2017 17:01:42: 		Last modified date: Wed Nov 15 09:27:10 2017
 MPI Rank 2: 12/12/2017 17:01:42: 		Build type: release
 MPI Rank 2: 12/12/2017 17:01:42: 		Build target: GPU
-MPI Rank 2: 12/12/2017 17:01:42: 		With 1bit-SGD: yes
 MPI Rank 2: 12/12/2017 17:01:42: 		With ASGD: yes
 MPI Rank 2: 12/12/2017 17:01:42: 		Math lib: mkl
 MPI Rank 2: 12/12/2017 17:01:42: 		CUDA version: 9.0.0
@@ -678,7 +675,7 @@ MPI Rank 2:
 MPI Rank 2: 12/12/2017 17:03:43: __COMPLETED__
 MPI Rank 3: CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:01:41
 MPI Rank 3: 
-MPI Rank 3: /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+MPI Rank 3: /home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 MPI Rank 3: 12/12/2017 17:01:43: -------------------------------------------------------------------
 MPI Rank 3: 12/12/2017 17:01:43: Build info: 
 MPI Rank 3: 
@@ -686,7 +683,6 @@ MPI Rank 3: 12/12/2017 17:01:43: 		Built time: Dec 11 2017 18:28:39
 MPI Rank 3: 12/12/2017 17:01:43: 		Last modified date: Wed Nov 15 09:27:10 2017
 MPI Rank 3: 12/12/2017 17:01:43: 		Build type: release
 MPI Rank 3: 12/12/2017 17:01:43: 		Build target: GPU
-MPI Rank 3: 12/12/2017 17:01:43: 		With 1bit-SGD: yes
 MPI Rank 3: 12/12/2017 17:01:43: 		With ASGD: yes
 MPI Rank 3: 12/12/2017 17:01:43: 		Math lib: mkl
 MPI Rank 3: 12/12/2017 17:01:43: 		CUDA version: 9.0.0
@@ -885,19 +881,19 @@ MPI Rank 3:
 MPI Rank 3: 12/12/2017 17:03:43: __COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
-=== Running mpiexec -n 4 /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/ OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu DeviceId=-1 timestamping=true numCPUThreads=3 stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+=== Running mpiexec -n 4 /home/ubuntu/workspace/build/gpu/release/bin/cntk configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/ OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu DeviceId=-1 timestamping=true numCPUThreads=3 stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:03:43
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:03:43
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:03:43
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:03:43
 
-/home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+/home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 Changed current directory to /tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData
 Changed current directory to /tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData
 Changed current directory to /tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData
@@ -936,7 +932,7 @@ ping [mpihelper]: 4 nodes pinging each other
 [fdb4dbbde386:20164] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
 MPI Rank 0: CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:03:43
 MPI Rank 0: 
-MPI Rank 0: /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+MPI Rank 0: /home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 MPI Rank 0: 12/12/2017 17:03:43: -------------------------------------------------------------------
 MPI Rank 0: 12/12/2017 17:03:43: Build info: 
 MPI Rank 0: 
@@ -944,7 +940,6 @@ MPI Rank 0: 12/12/2017 17:03:43: 		Built time: Dec 11 2017 18:28:39
 MPI Rank 0: 12/12/2017 17:03:43: 		Last modified date: Wed Nov 15 09:27:10 2017
 MPI Rank 0: 12/12/2017 17:03:43: 		Build type: release
 MPI Rank 0: 12/12/2017 17:03:43: 		Build target: GPU
-MPI Rank 0: 12/12/2017 17:03:43: 		With 1bit-SGD: yes
 MPI Rank 0: 12/12/2017 17:03:43: 		With ASGD: yes
 MPI Rank 0: 12/12/2017 17:03:43: 		Math lib: mkl
 MPI Rank 0: 12/12/2017 17:03:43: 		CUDA version: 9.0.0
@@ -1028,7 +1023,7 @@ MPI Rank 0:
 MPI Rank 0: 12/12/2017 17:04:27: __COMPLETED__
 MPI Rank 1: CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:03:43
 MPI Rank 1: 
-MPI Rank 1: /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+MPI Rank 1: /home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 MPI Rank 1: 12/12/2017 17:03:44: -------------------------------------------------------------------
 MPI Rank 1: 12/12/2017 17:03:44: Build info: 
 MPI Rank 1: 
@@ -1036,7 +1031,6 @@ MPI Rank 1: 12/12/2017 17:03:44: 		Built time: Dec 11 2017 18:28:39
 MPI Rank 1: 12/12/2017 17:03:44: 		Last modified date: Wed Nov 15 09:27:10 2017
 MPI Rank 1: 12/12/2017 17:03:44: 		Build type: release
 MPI Rank 1: 12/12/2017 17:03:44: 		Build target: GPU
-MPI Rank 1: 12/12/2017 17:03:44: 		With 1bit-SGD: yes
 MPI Rank 1: 12/12/2017 17:03:44: 		With ASGD: yes
 MPI Rank 1: 12/12/2017 17:03:44: 		Math lib: mkl
 MPI Rank 1: 12/12/2017 17:03:44: 		CUDA version: 9.0.0
@@ -1119,7 +1113,7 @@ MPI Rank 1:
 MPI Rank 1: 12/12/2017 17:04:27: __COMPLETED__
 MPI Rank 2: CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:03:43
 MPI Rank 2: 
-MPI Rank 2: /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+MPI Rank 2: /home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 MPI Rank 2: 12/12/2017 17:03:44: -------------------------------------------------------------------
 MPI Rank 2: 12/12/2017 17:03:44: Build info: 
 MPI Rank 2: 
@@ -1127,7 +1121,6 @@ MPI Rank 2: 12/12/2017 17:03:44: 		Built time: Dec 11 2017 18:28:39
 MPI Rank 2: 12/12/2017 17:03:44: 		Last modified date: Wed Nov 15 09:27:10 2017
 MPI Rank 2: 12/12/2017 17:03:44: 		Build type: release
 MPI Rank 2: 12/12/2017 17:03:44: 		Build target: GPU
-MPI Rank 2: 12/12/2017 17:03:44: 		With 1bit-SGD: yes
 MPI Rank 2: 12/12/2017 17:03:44: 		With ASGD: yes
 MPI Rank 2: 12/12/2017 17:03:44: 		Math lib: mkl
 MPI Rank 2: 12/12/2017 17:03:44: 		CUDA version: 9.0.0
@@ -1210,7 +1203,7 @@ MPI Rank 2:
 MPI Rank 2: 12/12/2017 17:04:27: __COMPLETED__
 MPI Rank 3: CNTK 2.3.1+ (HEAD f4f0f8, Dec 11 2017 18:34:12) at 2017/12/12 17:03:43
 MPI Rank 3: 
-MPI Rank 3: /home/ubuntu/workspace/build/1bitsgd/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
+MPI Rank 3: /home/ubuntu/workspace/build/gpu/release/bin/cntk  configFile=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM//dssm.cntk  currentDirectory=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  RunDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DataDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/TestData  ConfigDir=/home/ubuntu/workspace/Tests/EndToEndTests/Text/SparseDSSM/  OutputDir=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu  DeviceId=-1  timestamping=true  numCPUThreads=3  stderr=/tmp/cntk-test-20171211223423.932710/Text_SparseDSSM@release_cpu/stderr
 MPI Rank 3: 12/12/2017 17:03:45: -------------------------------------------------------------------
 MPI Rank 3: 12/12/2017 17:03:45: Build info: 
 MPI Rank 3: 
@@ -1218,7 +1211,6 @@ MPI Rank 3: 12/12/2017 17:03:45: 		Built time: Dec 11 2017 18:28:39
 MPI Rank 3: 12/12/2017 17:03:45: 		Last modified date: Wed Nov 15 09:27:10 2017
 MPI Rank 3: 12/12/2017 17:03:45: 		Build type: release
 MPI Rank 3: 12/12/2017 17:03:45: 		Build target: GPU
-MPI Rank 3: 12/12/2017 17:03:45: 		With 1bit-SGD: yes
 MPI Rank 3: 12/12/2017 17:03:45: 		With ASGD: yes
 MPI Rank 3: 12/12/2017 17:03:45: 		Math lib: mkl
 MPI Rank 3: 12/12/2017 17:03:45: 		CUDA version: 9.0.0

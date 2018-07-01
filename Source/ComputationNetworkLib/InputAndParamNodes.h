@@ -761,7 +761,7 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        auto result = ValueFor(fr);
+        auto& result = Value();
         result.SetValue(m_fillValue);
     }
 
@@ -787,4 +787,73 @@ private:
 template class ConstantNode<float>;
 template class ConstantNode<double>;
 
+// -----------------------------------------------------------------------
+// DiagonalLikeNode
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class EyeLikeNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"EyeLikeOp"; }
+public:
+    DeclareConstructorFromConfigWithNumInputs(EyeLikeNode);
+    EyeLikeNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : EyeLikeNode(deviceId, name, false)
+    {
+    }
+
+    EyeLikeNode(DEVICEID_TYPE deviceId, const wstring& name, bool isOutputSparse)
+        : Base(deviceId, name), m_isOutputSparse(isOutputSparse)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /* inputIndex */, const FrameRange& /* t */) override
+    {
+        // EyeLikeNode is constant; nothing to backpropagate
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto& result = this->Value();
+        if (m_isOutputSparse && result.GetMatrixType() != SPARSE)
+        {
+            result.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+        }
+        result.SetValue(static_cast<ElemType>(0.0));
+        result.SetDiagonalValue(static_cast<ElemType>(1.0));
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_isOutputSparse;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_isOutputSparse;
+    }
+private:
+    bool m_isOutputSparse;
+};
+
+template class EyeLikeNode<float>;
+template class EyeLikeNode<double>;
 }}}

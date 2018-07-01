@@ -752,6 +752,12 @@ namespace CNTK
                 case PrimitiveOpType::Sin:
                     ASSIGN_NEW_NODE(SinNode, network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::Atan:
+                    ASSIGN_NEW_NODE(AtanNode, network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::Tan:
+                    ASSIGN_NEW_NODE(TanNode, network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::Cosh:
                     ASSIGN_NEW_NODE(CoshNode, network->GetDeviceId(), internalNodeName);
                     break;
@@ -790,6 +796,9 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::Hardmax:
                     ASSIGN_NEW_NODE(HardmaxNode, network->GetDeviceId(), internalNodeName);
+                    break;
+                case PrimitiveOpType::StraightThrough:
+                    ASSIGN_NEW_NODE(StraightThroughNode, network->GetDeviceId(), internalNodeName);
                     break;
                 case PrimitiveOpType::TopK:
                 {
@@ -956,6 +965,12 @@ namespace CNTK
                     computationNodePtr = New<ConstantNode<ElementType>>(network->GetDeviceId(), internalNodeName, fillValue);
                     break;
                 }
+                case PrimitiveOpType::EyeLikeOp:
+                {
+                    bool outputSparse = functionConfig[PrimitiveFunction::AttributeNameOutputSparse].Value<bool>();
+                    ASSIGN_NEW_NODE(EyeLikeNode, network->GetDeviceId(), internalNodeName, outputSparse);
+                    break;
+                }
                 case PrimitiveOpType::ROIPooling:
                 {
                     PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
@@ -1082,12 +1097,15 @@ namespace CNTK
                     NDShape outputShape = NDShape::Unknown();
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
                         outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
+                    auto groups = PrimitiveFunction::convolutionOpDefaultValueForGroups;
+                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameGroups))
+                        groups = functionConfig[PrimitiveFunction::AttributeNameGroups].Value<size_t>();
                     auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
                     ASSIGN_NEW_NODE(ConvolutionNode, network->GetDeviceId(), internalNodeName,
                                                                            AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
                                                                            sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
                                                                            outputShape.IsUnknown() ? TensorShape(0) : AsTensorShape(outputShape),
-                                                                           ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation));
+                                                                           ImageLayoutKind::CHW, maxTempMemSizeInSamples, AsTensorShape(dilation), groups);
                     break;
                 }
                 case PrimitiveOpType::CosDistance:
@@ -1323,6 +1341,11 @@ namespace CNTK
                     }
                     break;
                 }
+                case PrimitiveOpType::CustomProxyOp:
+                {
+                    ASSIGN_NEW_NODE(CustomProxyOpNode, network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 default:
                     CNTK::LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                     break;
@@ -1430,7 +1453,22 @@ namespace CNTK
             return GetNode(variable.BlockFunctionVariableMapping(), network, builder, fullyDefinedArgumentsMap, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor, useMangledNamesForComputationNodes);
         }
         else
-            computationNodePtr = CreateComputationNode<ElementType>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+        {
+            switch (variable.GetDataType())
+            {
+            case DataType::Float:
+                computationNodePtr = CreateComputationNode<float>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+                break;
+            case DataType::Double:
+                computationNodePtr = CreateComputationNode<double>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+                break;
+            case DataType::Float16:
+                computationNodePtr = CreateComputationNode<half>(variable, function, inputNodes, network, variableToNodeMap, useMangledNamesForComputationNodes);
+                break;
+            default:
+                RuntimeError("Unsupported variable data type for CreateComputationNode");
+            }
+        }
 
         PrimitiveFunction* primitiveFunction = dynamic_cast<PrimitiveFunction*>(function);
         if (!primitiveFunction || (primitiveFunction->OpType() != PrimitiveOpType::Combine))

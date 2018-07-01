@@ -1,8 +1,8 @@
 dataDir: ../../../Data
 tags:
-     - bvt-s (build_sku == '1bitsgd') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
-     - nightly-s (build_sku == '1bitsgd')
-     - weekly-s (build_sku == '1bitsgd')
+     - bvt-s (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+     - nightly-s (build_sku == 'gpu')
+     - weekly-s (build_sku == 'gpu')
 
 testCases:
   Must train epochs in exactly same order and parameters for each MPI Rank:

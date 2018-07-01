@@ -15,7 +15,6 @@ Changed current directory to /home/ubuntu/workspace/Tests/EndToEndTests/Speech/D
 01/08/2018 04:59:11: 		Last modified date: Sun Jan  7 20:08:19 2018
 01/08/2018 04:59:11: 		Build type: debug
 01/08/2018 04:59:11: 		Build target: GPU
-01/08/2018 04:59:11: 		With 1bit-SGD: no
 01/08/2018 04:59:11: 		With ASGD: yes
 01/08/2018 04:59:11: 		Math lib: mkl
 01/08/2018 04:59:11: 		CUDA version: 9.0.0

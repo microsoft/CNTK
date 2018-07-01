@@ -10,7 +10,6 @@
 # which will contain the following information to be displayed at runtime:
 #   BUILDTYPE       (release/debug)
 #   BUILDTYPE       (GPU/CPU-only)
-#   WITH_1BITSGD    (whether 1bit-SGD support was enabled)
 #   MATHLIB         (MKL)
 #   CUDA_PATH       (if exists, i.e., for GPU builds)
 #   CUB_PATH        (if exists, i.e., for GPU builds)
@@ -27,7 +26,7 @@ usage ()
 {
     echo "usage: $0 <Config.make>"
     echo "-------------------------------------------------------------------"
-    echo "This script is used to generate buildinfo.h in Source/CNTK"
+    echo "This script is used to generate buildinfo.h in Source/CNTK/Generated/Linux"
     echo "This script needs to be called from the top level directory of CNTK project"
     echo "This script assumes git can be used"
     echo "This script assumes Config.make has been made"
@@ -56,13 +55,12 @@ makebuildinfo()
     local GIT_BRANCH=$5
     local CUDA_PATH=$6
     local CUB_PATH=$7
-    local WITH_1BITSGD=$8
-    local WITH_ASGD=$9
-    local BUILDER=$10
-    local BUILDMACHINE=${11}
-    local BUILDPATH=${12}
-    local MPI_NAME=${13}
-    local MPI_VERSION=${14}
+    local WITH_ASGD=$8
+    local BUILDER=$9
+    local BUILDMACHINE=${10}
+    local BUILDPATH=${11}
+    local MPI_NAME=${12}
+    local MPI_VERSION=${13}
     (
         printf "#ifndef _BUILDINFO_H\n"
         printf "#define _BUILDINFO_H\n"
@@ -83,11 +81,6 @@ makebuildinfo()
             printf "#define _CUDNN_PATH_ \"%s\"\n"  $CUDNN_PATH
         fi
         printf "#define _BUILDTYPE_ \"%s\"\n" "$BUILDTYPE"
-        if [ ! -z "$WITH_1BITSGD" ]; then
-            printf "#define _WITH_1BITSGD_ \"yes\"\n"
-        else
-            printf "#define _WITH_1BITSGD_ \"no\"\n"
-        fi
         if [ ! -z "$WITH_ASGD" ]; then 
             printf "#define _WITH_ASGD_ \"yes\"\n"
         else
@@ -161,10 +154,18 @@ BUILDER=$USER
 BUILDMACHINE=`hostname`
 BUILDPATH=`pwd`
 
-# Make buildinfo.h (only update if changed)
-target=Source/CNTK/buildinfo.h
+# Delete the old versions of the buildinfo file, as they can break the build in some scenarios if left hanging around
+[ ! -e Source/CNTK/buildinfo.h ] || rm Source/CNTK/buildinfo.h
+[ ! -e Source/CNTKv2LibraryDll/buildinfo.h ] || rm Source/CNTKv2LibraryDll/buildinfo.h
+
+target=Source/CNTKv2LibraryDll/Generated/Linux/buildinfo.h
 if [ ! -d Source ] ; then
     usage
+fi
+
+# Make buildinfo.h (only update if changed)
+if [ ! -d Source/CNTKv2LibraryDll/Generated/Linux ]; then
+	mkdir -p Source/CNTKv2LibraryDll/Generated/Linux
 fi
 
 makebuildinfo \
@@ -175,7 +176,6 @@ makebuildinfo \
     "$GIT_BRANCH" \
     "$CUDAPATH" \
     "$CUBPATH" \
-    "$CNTK_ENABLE_1BitSGD" \
     "$CNTK_ENABLE_ASGD" \
     "$BUILDER" \
     "$BUILDMACHINE" \

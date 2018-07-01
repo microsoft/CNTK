@@ -61,7 +61,6 @@ Changed current directory to C:\repos\cntk\Examples\Image\DataSets\MNIST
 11/21/2016 13:50:54: 		Last modified date: Wed Nov 16 20:54:22 2016
 11/21/2016 13:50:54: 		Build type: Release
 11/21/2016 13:50:54: 		Build target: CPU-only
-11/21/2016 13:50:54: 		With 1bit-SGD: yes
 11/21/2016 13:50:54: 		With ASGD: yes
 11/21/2016 13:50:54: 		Math lib: mkl
 11/21/2016 13:50:54: 		Build Branch: zhouwang/evalwrapper-multioutputs
@@ -276,7 +275,6 @@ Changed current directory to C:\repos\cntk\Examples\Image\DataSets\MNIST
 11/21/2016 13:50:58: 		Last modified date: Wed Nov 16 20:54:22 2016
 11/21/2016 13:50:58: 		Build type: Release
 11/21/2016 13:50:58: 		Build target: CPU-only
-11/21/2016 13:50:58: 		With 1bit-SGD: yes
 11/21/2016 13:50:58: 		With ASGD: yes
 11/21/2016 13:50:58: 		Math lib: mkl
 11/21/2016 13:50:58: 		Build Branch: zhouwang/evalwrapper-multioutputs

@@ -92,6 +92,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSeqGammarWordPen = L"SeqGammarWordPen";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumClass = L"numClass";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotOutputSparse = L"oneHotOutputSparse";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameOutputSparse = L"OutputSparse";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotAxis = L"onehotAxis";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceAxisNamePrefix = L"sequenceAxis";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue = L"sequenceUnpackPaddingValue";
@@ -117,4 +118,6 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameFillValue = L"fillValue";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUseStatsAcrossChannels = L"useStatsAcrossChannels";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDoVarianceScaling = L"doVarianceScaling";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameGroups = L"groups";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameCustomOp = L"customOp";
 }

@@ -23,7 +23,6 @@ Build info:
 		Last modified date: Sun Apr  9 23:12:54 2017
 		Build type: release
 		Build target: GPU
-		With 1bit-SGD: no
 		With ASGD: yes
 		Math lib: mkl
 		CUDA_PATH: /usr/local/cuda-8.0
@@ -55,7 +54,6 @@ Build info:
 		Last modified date: Sun Apr  9 23:12:54 2017
 		Build type: release
 		Build target: GPU
-		With 1bit-SGD: no
 		With ASGD: yes
 		Math lib: mkl
 		CUDA_PATH: /usr/local/cuda-8.0

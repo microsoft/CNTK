@@ -85,7 +85,6 @@ namespace CNTK
                             return retVal;
                     }
                 }
-
                 return std::make_pair(Variable(), false);
             };
 
@@ -238,6 +237,8 @@ namespace CNTK
         {
             // Get gradients after forward/backward pass.
             std::unordered_map<Variable, ValuePtr> parameterGradients;
+
+            // ExecuteForwardBackward updates m_prevMinibatchNumSamples to the local value.
             ExecuteForwardBackward(arguments, outputsToFetch, computeDevice, parameterGradients);
             for (const auto& parameter : m_learnerParameters)
                 gradients[parameter] = parameterGradients[parameter]->Data();
@@ -250,8 +251,11 @@ namespace CNTK
 
         MinibatchInfo info{ arguments.empty(), sweepEnd, m_prevMinibatchNumSamples, trainingLoss, evalCriterion };
         bool updated = m_parameterLearners->Update(gradients, info);
-        m_prevMinibatchNumSamples = info.numberOfSamples;
 
+        // Here we update m_prevMinibatchNumSamples with aggregated value in the
+        // case of distributed learner.
+        m_prevMinibatchNumSamples = info.numberOfSamples;
+    
         // Update internal state.
         if (emptyMinibatch)
         {
@@ -270,7 +274,6 @@ namespace CNTK
 
             m_prevDistributedTotalNumSamples = currentTotalNumSamples;
         }
-
         return updated;
     }
 
@@ -377,12 +380,16 @@ namespace CNTK
             m_rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_aggregatedLossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Shape(), computeDevice), outputs.at(m_aggregatedLossFunction)->Mask());
         }
 
-        if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Float)
+        DataType aggregateDataType = m_aggregatedLossFunction->Output().GetDataType();
+
+        if (aggregateDataType == DataType::Float)
             m_rootGradientValue->Data()->SetValue(1.0f);
-        else if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Double)
+        else if (aggregateDataType == DataType::Double)
             m_rootGradientValue->Data()->SetValue(1.0);
+        else if (aggregateDataType == DataType::Float16)
+            m_rootGradientValue->Data()->SetValue(float16(1.0));
         else
-            m_rootGradientValue->Data()->SetValue(half(1.0));
+            RuntimeError("DataType %s is not supported for root gradients", DataTypeName(aggregateDataType));
 
         for (const auto& parameter : m_learnerParameters)
             parameterGradients[parameter] = nullptr;
@@ -411,7 +418,7 @@ namespace CNTK
         state[internalWorkerStateKey] = compositeFunction->GetInternalState(); // this is the local worker's state.
         state[externalWorkerStateKey] = externalState;
 
-        // Collect distrbuted external state.
+        // Collect distributed external state.
         DistributedCommunicatorPtr communicator = MPICommunicator();
         communicator->Barrier();
 
@@ -519,7 +526,7 @@ namespace CNTK
     {
         // TODO: better return 0; it is then still valid to compute lossAverage * numSamples
         if (m_prevMinibatchNumSamples == 0)
-            RuntimeError("There was no preceeding call to TrainMinibatch or the minibatch was empty.");
+            RuntimeError("There was no preceding call to TrainMinibatch or the minibatch was empty.");
 
         return m_prevMinibatchAggregateTrainingLossValue->AsScalar<double>() / m_prevMinibatchNumSamples;
     }
@@ -530,7 +537,7 @@ namespace CNTK
             InvalidArgument("Trainer::PreviousMinibatchEvaluationAverage: Cannot get evaluation criterion value when no evaluation function was specified during 'this' trainer's construction");
 
         if (m_prevMinibatchNumSamples == 0)
-            RuntimeError("There was no preceeding call to TrainMinibatch or the minibatch was empty.");
+            RuntimeError("There was no preceding call to TrainMinibatch or the minibatch was empty.");
 
         return m_prevMinibatchAggregateEvalCriterionValue->AsScalar<double>() / m_prevMinibatchNumSamples;
     }
@@ -542,7 +549,7 @@ namespace CNTK
 
     size_t Trainer::TotalNumberOfSamplesSeen() const
     {
-        return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
+        return m_parameterLearners->GetMetricAggregatingLearner()->TotalNumberOfSamplesSeen();
     }
 
     size_t Trainer::TotalNumberOfUnitsSeen(DataUnit unit) const
@@ -550,13 +557,13 @@ namespace CNTK
         switch (unit)
         {
         case DataUnit::Minibatch:
-            return m_parameterLearners->ParameterLearners().front()->TotalNumberOfMinibatchesSeen();
+            return m_parameterLearners->GetMetricAggregatingLearner()->TotalNumberOfMinibatchesSeen();
             break;
         case DataUnit::Sweep:
-            return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSweepsSeen();
+            return m_parameterLearners->GetMetricAggregatingLearner()->TotalNumberOfSweepsSeen();
             break;
         case DataUnit::Sample:
-            return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
+            return m_parameterLearners->GetMetricAggregatingLearner()->TotalNumberOfSamplesSeen();
         default:
             //should not be here; whenever a new data unit is defined, there should be a new case in this function.
             LogicError("Unsupported data unit: %d", (int)unit);

@@ -15,7 +15,6 @@ Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Te
 01/23/2017 13:42:35: 		Last modified date: Sat Jan 21 21:30:49 2017
 01/23/2017 13:42:35: 		Build type: Release
 01/23/2017 13:42:35: 		Build target: GPU
-01/23/2017 13:42:35: 		With 1bit-SGD: no
 01/23/2017 13:42:35: 		With ASGD: yes
 01/23/2017 13:42:35: 		Math lib: mkl
 01/23/2017 13:42:35: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
@@ -924,7 +923,6 @@ Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-SlaveTest\Te
 01/23/2017 13:42:42: 		Last modified date: Sat Jan 21 21:30:49 2017
 01/23/2017 13:42:42: 		Build type: Release
 01/23/2017 13:42:42: 		Build target: GPU
-01/23/2017 13:42:42: 		With 1bit-SGD: no
 01/23/2017 13:42:42: 		With ASGD: yes
 01/23/2017 13:42:42: 		Math lib: mkl
 01/23/2017 13:42:42: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0

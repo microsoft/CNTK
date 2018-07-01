@@ -805,7 +805,9 @@ namespace CNTK
 
                             if (existingPlaceholderReplacement == placeholderReplacements.end())
                             {
-                                clonedInput = PlaceholderVariable();
+                                //we need to carry the shape information to the new placeholder otherwise, deep chained recurrence with reshaping ops will fail (e.g. expand_dims);
+                                //however, we can not carry over the dynamic axis, as the placeholder might be replaced with different dynamic axes
+                                clonedInput = PlaceholderVariable(cloneeInput.Shape());
                                 placeholderReplacements[clonedInput] = cloneeInput;
                             }
                             else
@@ -1188,6 +1190,16 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Cos, operand, Dictionary(), name);
     }
 
+    FunctionPtr Atan(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Atan, operand, Dictionary(), name);
+    }
+
+    FunctionPtr Tan(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Tan, operand, Dictionary(), name);
+    }
+
     FunctionPtr Cosh(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Cosh, operand, Dictionary(), name);
@@ -1305,6 +1317,11 @@ namespace CNTK
     FunctionPtr Hardmax(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Hardmax, operand, Dictionary(), name);
+    }
+
+    FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::StraightThrough, operand, Dictionary(), name);
     }
 
     FunctionPtr HardSigmoid(const Variable& operand, float alpha, float beta, const std::wstring& name)
@@ -1688,6 +1705,23 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr CustomProxyOp(const std::vector<Variable>& operands, const std::wstring& customOp, const NDShape& outputShape, DataType outputType, const std::wstring& name)
+    {
+        auto attributes = Dictionary();
+        attributes[PrimitiveFunction::AttributeNameCustomOp] = customOp;
+        attributes[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
+        attributes.Add(PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(outputType));
+        auto op = AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::CustomProxyOp, operands, std::move(attributes), name));
+        return op;
+    }
+    
+    FunctionPtr EyeLike(const Variable& operand, bool isOutputSparse, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameOutputSparse] = isOutputSparse;
+        return UnaryOp(PrimitiveOpType::EyeLikeOp, operand, std::move(additionalProperties), name);
+    }
+
     std::vector<Variable> AutoBroadcastSequence(PrimitiveOpType op, const Variable& left, const Variable& right, bool autoBroadcast)
     {
         auto left_axis = left.DynamicAxes();
@@ -2018,8 +2052,8 @@ namespace CNTK
                 LogicError("DepthToSpace: Number of channels in the operand (%zu) must be divisible by (blocksize x blocksize), i.e., (%zu x %zu).", inputShape[2], blockSize, blockSize);
         }
 
-        FunctionPtr inputView = Reshape(inputPlaceholder, { blockSize, blockSize, NDShape::InferredDimension }, Axis(2), Axis(3));
-        std::vector<Axis> axisShufflePermutation({ Axis(2), Axis(0), Axis(3), Axis(1), Axis(4) });
+        FunctionPtr inputView = Reshape(inputPlaceholder, { NDShape::InferredDimension, blockSize, blockSize }, Axis(2), Axis(3));
+        std::vector<Axis> axisShufflePermutation({ Axis(3), Axis(0), Axis(4), Axis(1), Axis(2) });
         auto shuffleOut = Transpose(inputView, axisShufflePermutation);
         auto merge23Out = Reshape(shuffleOut, { NDShape::InferredDimension }, Axis(2), Axis(4));
         auto merge01Out = Reshape(merge23Out, { NDShape::InferredDimension }, Axis(0), Axis(2));
@@ -2045,7 +2079,7 @@ namespace CNTK
 
         FunctionPtr reshape01out = Reshape(inputPlaceholder, { blockSize, NDShape::InferredDimension }, Axis(0), Axis(1));
         FunctionPtr reshape23out = Reshape(reshape01out, { blockSize, NDShape::InferredDimension }, Axis(2), Axis(3));
-        std::vector<Axis> axisShufflePermutation({ Axis(1), Axis(3), Axis(0), Axis(2), Axis(4) });
+        std::vector<Axis> axisShufflePermutation({ Axis(1), Axis(3), Axis(4), Axis(0), Axis(2) });
         auto shuffleOut = Transpose(reshape23out, axisShufflePermutation);
         auto merge234Out = Reshape(shuffleOut, { NDShape::InferredDimension }, Axis(2), Axis::EndStaticAxis());
 
@@ -2375,17 +2409,25 @@ namespace CNTK
         return AsBlock(std::move(ElementTimes(Minus(operandPlaceholder, meanPlaceholder), invStdDevPlaceholder)), { { operandPlaceholder, operand },{ meanPlaceholder, mean },{ invStdDevPlaceholder, invStdDev } }, L"PerDimMeanVarianceNormalize", name);
     }
 
-    FunctionPtr MeanVarianceNormalization(const Variable& operand, const bool useStatsAcrossChannels, const bool doVarianceScaling, const std::wstring& name)
+    FunctionPtr MeanVarianceNormalization(const Variable& operand, double epsilon, const bool useStatsAcrossChannels, const bool doVarianceScaling, const std::wstring& name)
     {
         Dictionary additionalAttributes;
         additionalAttributes[PrimitiveFunction::AttributeNameUseStatsAcrossChannels] = useStatsAcrossChannels;
         additionalAttributes[PrimitiveFunction::AttributeNameDoVarianceScaling] = doVarianceScaling;
+        additionalAttributes[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
 
+        if (epsilon < 0)
+            InvalidArgument("Input argument epsilon must be non-negative.");
         auto operandPlaceholder = PlaceholderVariable(L"operand");
         size_t operandRank = operand.Shape().Rank();
-        if (operandRank < 2 && !useStatsAcrossChannels)
-            InvalidArgument("When rank of the operand is < 2, useStatsAcrossChannels must be set to false, because there is no channel dimension.");
-        auto numAxesToReduce = useStatsAcrossChannels ? operandRank : operandRank - 1; // Assuming last dim to be the channel dim.
+        size_t numAxesToReduce;
+        if (operandRank < 1)
+            InvalidArgument("The rank of the operand must be >= 1.");
+        else if (operandRank < 2)
+            numAxesToReduce = operandRank; // Operand's a vector, useStatsAcrossChannels is ignored and mean is computed over the vector.
+        else
+            numAxesToReduce = useStatsAcrossChannels ? operandRank : operandRank - 1; // Assuming last dim to be the channel dim.
+
         std::vector<Axis> axesToReduce(numAxesToReduce);
         for (size_t i = 0; i < numAxesToReduce; ++i)
             axesToReduce[i] = Axis(i);
@@ -2396,8 +2438,11 @@ namespace CNTK
         }
         else
         {
-            return AsBlock(std::move(ElementDivide(operandMeanRemoved, Sqrt(ReduceMean(Square(operandMeanRemoved), axesToReduce)))),
-                { { operandPlaceholder, operand } }, std::move(additionalAttributes), L"MeanVarianceNormalization", name);
+            return AsBlock(std::move(ElementDivide(operandMeanRemoved, 
+                Plus(Sqrt(ReduceMean(Square(operandMeanRemoved), axesToReduce)), 
+                    Constant({}, operand.GetDataType(), epsilon, DeviceDescriptor::UseDefaultDevice(), L"mvn_epsilon")))),
+                { { operandPlaceholder, operand } }, std::move(additionalAttributes),
+                L"MeanVarianceNormalization", name);
         }
     }
 
@@ -2424,15 +2469,10 @@ namespace CNTK
             return Internal::SpatialConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
                 maxTempMemSizeInSamples, name);
         }
-        else if (groups > 1)
-        {
-            return Internal::GroupConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
-                groups, maxTempMemSizeInSamples, name);
-        }
         else
         {
             return Internal::Convolution(convolutionMap, operand, strides, sharing, autoPadding, dilation, false,
-                { 0 }, maxTempMemSizeInSamples, name);
+                { 0 }, groups, maxTempMemSizeInSamples, name);
         }
     }
 
@@ -2450,6 +2490,7 @@ namespace CNTK
         if ((reductionRank != 0) && (reductionRank != 1))
             LogicError("reductionRank: must be 1 or 0.");
 
+        size_t groups = 1;
         if (reductionRank == 1)
             return Internal::Convolution(convolutionMap,
                 operand,
@@ -2459,6 +2500,7 @@ namespace CNTK
                 dilation,
                 true,
                 outputShape,
+                groups,
                 maxTempMemSizeInSamples,
                 name);
         else
@@ -2491,6 +2533,7 @@ namespace CNTK
                 dilation,
                 true,
                 outputShape,
+                groups,
                 maxTempMemSizeInSamples,
                 name);
             return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"ConvolutionTranspose", name);
@@ -2714,6 +2757,19 @@ namespace CNTK
     FunctionPtr ELU(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
+    }
+
+    FunctionPtr ELU(const Variable& operand, double alpha, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
+
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero, 
+            ElementTimes(Constant::Scalar(operand.GetDataType(), alpha), ELU(operandPlaceholder, name + L"_ELU")),
+            operandPlaceholder);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"ELU", name);
     }
 
     FunctionPtr SELU(const Variable& operand, double gamma, double alpha, const std::wstring& name)
@@ -3226,6 +3282,7 @@ namespace CNTK
             const NDShape& dilation,
             bool transpose,
             const NDShape& outputShape,
+            size_t groups,
             size_t maxTempMemSizeInSamples,
             const std::wstring& name)
         {
@@ -3246,6 +3303,7 @@ namespace CNTK
             additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
             additionalProperties[PrimitiveFunction::AttributeNameKernelShape] = NDShape({0});
             additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
+            additionalProperties[PrimitiveFunction::AttributeNameGroups] = groups;
 
             return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
         }
@@ -3287,50 +3345,10 @@ namespace CNTK
                 dilation,
                 false,
                 { 0 },
+                PrimitiveFunction::convolutionOpDefaultValueForGroups,
                 maxTempMemSizeInSamples,
                 name);
             return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Convolution", name);
-        }
-
-        FunctionPtr GroupConvolution(const Variable& convolutionMap,
-            const Variable& operand,
-            const NDShape& strides,
-            const std::vector<bool>& sharing,
-            const std::vector<bool>& autoPadding,
-            const NDShape& dilation,
-            size_t groups,
-            size_t maxTempMemSizeInSamples,
-            const std::wstring& name)
-        {
-            assert(groups > 1);
-
-            auto filterShape = convolutionMap.Shape();
-            auto filterRank = static_cast<int>(filterShape.Rank());
-            auto inputRank = static_cast<int>(operand.Shape().Rank());
-            auto M = filterShape[filterRank - 1]; // Number of output channels.
-            auto C = operand.Shape()[inputRank - 1]; // Number of input channels in operand.
-            auto kC = filterShape[filterRank - 2]; // Number of input channels in kernel.
-            if (M % groups)
-                LogicError("groups: number of output channels must be divisble by groups.");
-            if (C != (kC * groups))
-                LogicError("groups: number of input channels (C) must be equal to number of input kernel channels (kC) * groups (G).");
-
-            auto operandPlaceholder = PlaceholderVariable();
-            std::vector<Variable> opsOutputVector(groups);
-            auto outputChannelStepSize = static_cast<int>(M / groups);
-            auto inputChannelStepSize = static_cast<int>(C / groups);
-            assert(inputChannelStepSize == static_cast<int>(kC));
-            for (int i = 0; i < groups; ++i)
-            {
-                auto groupConvMap = Slice(convolutionMap, { Axis(filterRank - 1) }, { i*outputChannelStepSize },
-                    { (i + 1)*outputChannelStepSize });
-                auto groupOperand = Slice(operandPlaceholder, { Axis(inputRank - 1) }, { i*inputChannelStepSize },
-                    { (i + 1)*inputChannelStepSize });
-                opsOutputVector[i] = Internal::Convolution(groupConvMap, groupOperand, strides, sharing, autoPadding, dilation,
-                    false, { 0 }, maxTempMemSizeInSamples, name)->Output();
-            }
-            auto splicedConv = Splice(opsOutputVector, Axis(inputRank - 1));
-            return AsBlock(std::move(splicedConv), { { operandPlaceholder, operand } }, L"Convolution", name);
         }
     }
 }

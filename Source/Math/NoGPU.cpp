@@ -111,6 +111,16 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetDiagonalValue(const ElemType v)
+{
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
+{
+}
+
+template <class ElemType>
 GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
 {
     return NULL;
@@ -1035,7 +1045,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& m, const GPUMatrix<ElemType>& a, ElemType alpha, bool idxHaveDups)
 {
     return *this;
 }
@@ -1578,6 +1588,18 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignNegativeSineOf(const GPUMatrix<E
 }
 
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTan()
+{
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTanOf(const GPUMatrix<ElemType>& /*a*/)
+{
+    return *this;
+}
+
+template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceAcos()
 {
     return *this;
@@ -1597,6 +1619,18 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceAsin()
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignAsinOf(const GPUMatrix<ElemType>& /*a*/)
+{
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceAtan()
+{
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignAtanOf(const GPUMatrix<ElemType>& /*a*/)
 {
     return *this;
 }

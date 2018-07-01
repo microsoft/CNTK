@@ -53,7 +53,7 @@ def test_cifar_convnet_distributed(device_id):
         tb_files += 1
     assert tb_files == 1
 
-def test_cifar_convnet_distributed_1bitsgd(device_id):
+def test_cifar_convnet_distributed_gpu(device_id):
     params = [ "-n", "2",
                "-m", "64",
                "-e", "3200",

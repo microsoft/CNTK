@@ -235,6 +235,16 @@ namespace CNTK
             Microsoft::MSR::CNTK::CPUMatrix<float>::SetOptimizationFlags(flags);
         }
 
+        void SetMPIPackThreshold(size_t packThesholdInBytes)
+        {
+            Microsoft::MSR::CNTK::Globals::SetMPIPackThreshold(packThesholdInBytes);
+        }
+
+        size_t GetMPIPackThreshold()
+        {
+            return Microsoft::MSR::CNTK::Globals::GetMPIPackThreshold();
+        }
+
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
         {
             bool areDynamicAxesCompatible = (var1.DynamicAxes().size() == var2.DynamicAxes().size());
@@ -337,7 +347,7 @@ namespace CNTK
             {
                 auto firstValue = data1[i];
                 auto secondValue = data2[i];
-                ElementType allowedTolerance = (std::max<ElementType>)(std::abs((ElementType)absoluteTolerance), std::abs(((ElementType)relativeTolerance) * firstValue));
+                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)std::abs((ElementType)absoluteTolerance), (ElementType)std::abs(((ElementType)relativeTolerance) * firstValue));
                 if (std::abs(firstValue - secondValue) > allowedTolerance)
                     return false;
             }
@@ -359,7 +369,7 @@ namespace CNTK
             {
                 auto firstValue = values1[i];
                 auto secondValue = values2[i];
-                ElementType allowedTolerance = (std::max<ElementType>)(std::abs((ElementType)absoluteTolerance), std::abs(((ElementType)relativeTolerance) * firstValue));
+                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)std::abs((ElementType)absoluteTolerance), (ElementType)std::abs(((ElementType)relativeTolerance) * firstValue));
                 if (std::abs(firstValue - secondValue) > allowedTolerance)
                     return false;
             }
@@ -462,6 +472,12 @@ namespace CNTK
 
             if (view1.GetDataType() == DataType::Double)
                 return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
+
+            if (view1.GetDataType() == DataType::Int8)
+                return AreEqual<int8_t>(view1, view2, relativeTolerance, absoluteTolerance);
+
+            if (view1.GetDataType() == DataType::Int16)
+                return AreEqual<int16_t>(view1, view2, relativeTolerance, absoluteTolerance);
 
             LogicError("AreEqual(NDArrayView): Unknown DataType.");
         }
@@ -613,11 +629,6 @@ namespace CNTK
         bool MaxNumCPUThreadsSet()
         {
             return s_threadsAreSet;
-        }
-
-        size_t DefaultPackThresholdSizeInBytes()
-        {
-            return DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES;
         }
     }
 
@@ -979,9 +990,6 @@ namespace CNTK
 #endif
 #ifdef _BUILDTARGET_
             LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
-#endif
-#ifdef _WITH_1BITSGD_
-            LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
 #endif
 #ifdef _WITH_ASGD_
             LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);

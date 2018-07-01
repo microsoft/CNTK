@@ -21,7 +21,7 @@ which cntk
 MODULE_DIR="\$(python -c "import cntk, os, sys; sys.stdout.write(os.path.dirname(os.path.abspath(cntk.__file__)))")"
 [ \$? -eq 0 ]
 
-[ "\$TEST_DEVICE" = "gpu" ] && pytest "\$MODULE_DIR" --deviceid \$TEST_DEVICE --doctest-modules
+[ "\$TEST_DEVICE" = "gpu" ] && pytest "\$MODULE_DIR" --deviceid \$TEST_DEVICE
 # TODO not all (doc) tests run on CPU
 
 # Installation validation example from CNTK.wiki (try from two different paths):

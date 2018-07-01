@@ -149,3 +149,85 @@ def test_ones_like(operand, device_id, precision):
     from .. import ones_like
     _test_unary_op(precision, device_id, ones_like, operand,
                    expected_forward, expected_backward)
+
+
+Matrices = [
+    ([[2.1, 4.7], [2.1, 2.1]], True),
+    ([[2.1, 2., 2.], [4.7, 3, 5], [5.1, 2, 5]], True),
+    ([[2.1], [4.7], [5.1], [5.8]], True),
+    ([[2.1, 4.7], [2.1, 2.1]], False),
+    ([[2.1, 2., 2.], [4.7, 3, 5], [5.1, 2, 5]], False),
+    ([[2.1], [4.7], [5.1], [5.8]], False),
+]
+
+
+@pytest.mark.parametrize("operand, sparse_output", Matrices)
+def test_eye_like(operand, sparse_output, device_id, precision):
+    np_eye_like = lambda matrix: np.eye(matrix.shape[0], matrix.shape[1], dtype=np.float32)
+    operand = AA(operand).astype(np.float32)
+    expected = np_eye_like(operand)
+    expected_grad = np.zeros_like(operand).reshape(expected.shape)
+
+    my_eval = (lambda f, arg: f.eval(arg).todense()) if sparse_output else (lambda f, arg: f.eval(arg))
+
+    from .. import eye_like
+    import cntk as C
+
+    #testing with direct numpy input
+    y =  C.eye_like(operand, sparse_output=sparse_output)
+    actual = y.eval().todense() if sparse_output else y.eval()
+    np.testing.assert_almost_equal(actual, expected)
+
+    #testing through input_variable
+    #test load and save:
+    import tempfile
+    import os
+    x = C.input_variable(operand.shape[1:], dtype=np.float32, needs_gradient=True)
+    cntk_eye_like = C.eye_like(x, sparse_output=sparse_output)
+    actual = my_eval(cntk_eye_like, {x: operand})
+    grad = cntk_eye_like.grad({x: operand})
+    np.testing.assert_almost_equal(actual, expected)
+    np.testing.assert_almost_equal(grad, expected_grad)
+    tempdir = os.path.join(tempfile.gettempdir(), 'eye_like_test')
+    cntk_eye_like.save(tempdir)
+    cntk_eye_like2 = C.load_model(tempdir)
+    np.testing.assert_almost_equal(my_eval(cntk_eye_like2, {cntk_eye_like2.arguments[0]: operand}), expected)
+    os.remove(tempdir)
+
+    cntk_eye_like = C.eye_like(C.unpack_batch(x), sparse_output=sparse_output)
+    actual = my_eval(cntk_eye_like, {x: operand})
+    grad = cntk_eye_like.grad({x: operand})
+    np.testing.assert_almost_equal(actual, expected)
+    np.testing.assert_almost_equal(grad, expected_grad)
+    tempdir = os.path.join(tempfile.gettempdir(), 'eye_like_test2')
+    cntk_eye_like.save(tempdir)
+    cntk_eye_like2 = C.load_model(tempdir)
+    np.testing.assert_almost_equal(my_eval(cntk_eye_like2, {cntk_eye_like2.arguments[0]: operand}), expected)
+    os.remove(tempdir)
+
+    cntk_eye_like = C.eye_like(C.transpose(C.unpack_batch(x), (1,0)), sparse_output=sparse_output)
+    actual = my_eval(cntk_eye_like, {x: operand})
+    grad = cntk_eye_like.grad({x: operand})
+    np.testing.assert_almost_equal(actual, expected.transpose())
+    np.testing.assert_almost_equal(grad, expected_grad)
+    tempdir = os.path.join(tempfile.gettempdir(), 'eye_like_test3')
+    cntk_eye_like.save(tempdir)
+    cntk_eye_like2 = C.load_model(tempdir)
+    np.testing.assert_almost_equal(my_eval(cntk_eye_like2, {cntk_eye_like2.arguments[0]: operand}), expected.transpose())
+    os.remove(tempdir)
+
+    #test expecting exception with sequence axis
+    with pytest.raises(Exception) as info:
+        #no sequence axis is allowed
+        x = C.sequence.input_variable(operand.shape[1:], dtype=np.float32, needs_gradient=True)
+        cntk_eye_like = C.eye_like(x, sparse_output=sparse_output)
+
+    with pytest.raises(Exception) as info:
+        #no more than 2 axes is allowed (including any dynamic axes)
+        x = C.input_variable((3, 3), dtype=np.float32, needs_gradient=True)
+        cntk_eye_like = C.eye_like(x, sparse_output=sparse_output)
+
+    with pytest.raises(Exception) as info:
+        #no less than 2 axes is allowed (including any dynamic axes)
+        x = C.input_variable((), dtype=np.float32, needs_gradient=True)
+        cntk_eye_like = C.eye_like(x, sparse_output=sparse_output)
