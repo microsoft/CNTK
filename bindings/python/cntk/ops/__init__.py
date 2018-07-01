@@ -1731,7 +1731,7 @@ def atan(x, name=''):
 
     Example:
         >>> np.round(C.atan([-1, 0, 1]).eval(), 5)
-        array([-0.78539997,  0.        ,  0.78539997], dtype=float32)
+        array([-0.7854,  0.    ,  0.7854], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor

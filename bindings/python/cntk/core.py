@@ -197,8 +197,8 @@ class NDArrayView(cntk_py.NDArrayView):
             >>> np_sliced = sliced.asarray()
             >>> # Result is an array of shape (2, 3)
             >>> print(np_sliced)
-            [[10. 20. 30.]
-             [40. 50. 60.]]
+            [[ 10.  20.  30.]
+             [ 40.  50.  60.]]
 
         Args:
           start_offset (tuple or list): shape of the same rank as this Value

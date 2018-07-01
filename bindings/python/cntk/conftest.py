@@ -47,7 +47,12 @@ def pytest_generate_tests(metafunc):
 import numpy
 # Because of difference in precision across platforms, we restrict the output
 # precision and don't write in scientific notation
-numpy.set_printoptions(precision=6, suppress=True, legacy='1.13')
+# Numpy compatibility (array string representation has changed)
+numpy.set_printoptions(precision=6, suppress=True)
+np_opts=numpy.get_printoptions()
+if numpy.__version__[:4] == "1.14":
+    np_opts['legacy'] = '1.13'
+    numpy.set_printoptions(np_opts)
 
 import cntk.debugging
 cntk.debugging.set_checked_mode(True)
