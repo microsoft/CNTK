@@ -8,7 +8,7 @@ dependencies:
 - jupyter
 - matplotlib
 - mock
-- numpy==1.13.3
+- numpy==1.11.3
 - pandas
 # Downgrade to 0.5.0 due to https://github.com/pydata/pandas-datareader/issues/495
 - pandas-datareader==0.5.0
