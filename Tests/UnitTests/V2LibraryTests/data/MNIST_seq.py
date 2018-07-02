@@ -8,7 +8,8 @@ from cntk.debugging import start_profiler, stop_profiler, enable_profiler
 
 from IPython.display import SVG, display
 
-C.try_set_default_device(C.cpu())
+#C.try_set_default_device(C.cpu())
+#C.logging.set_trace_level(2)
 
 input_dim_model = (1, 28)
 input_dim = 28

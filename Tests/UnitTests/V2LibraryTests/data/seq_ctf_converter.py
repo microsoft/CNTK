@@ -21,8 +21,8 @@ def convert_to_sequence(infile_path, outfile_path, max_crop=3):
                 label_data_arr = label_str[len(label_prefix):].strip().split(' ')
                 feature_data_arr = feature_str[len(feature_prefix):].strip().split(' ')
 
-                ignore_top_row_count = random.randint(0, 3)
-                ignore_bottom_row_count = random.randint(0, 3)
+                ignore_top_row_count = random.randint(0, max_crop)
+                ignore_bottom_row_count = random.randint(0, max_crop)
 
                 seq_count = 0
                 new_count_str = str(data_count)
@@ -48,5 +48,5 @@ def convert_to_sequence(infile_path, outfile_path, max_crop=3):
                 line = infile.readline()
 
 
-#convert_to_sequence('Train-28x28_cntk_text.txt', 'Train-28xseq_cntk_text.txt')
-convert_to_sequence('Test-28x28_cntk_text.txt', 'Test-28xseq_cntk_text.txt')
+convert_to_sequence('Train-28x28_cntk_text.txt', 'Train-28xseq_cntk_text.txt', 0)
+convert_to_sequence('Test-28x28_cntk_text.txt', 'Test-28xseq_cntk_text.txt', 0)
