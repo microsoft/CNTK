@@ -49,10 +49,8 @@ import numpy
 # precision and don't write in scientific notation
 # Numpy compatibility (array string representation has changed)
 numpy.set_printoptions(precision=6, suppress=True)
-np_opts=numpy.get_printoptions()
 if numpy.__version__[:4] == "1.14":
-    np_opts['legacy'] = '1.13'
-    numpy.set_printoptions(np_opts)
+    numpy.set_printoptions(legacy='1.13')
 
 import cntk.debugging
 cntk.debugging.set_checked_mode(True)
