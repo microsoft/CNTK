@@ -790,7 +790,9 @@ public:
                 outputSeqAxisDimValue += (ElemType) lo + hi;
             }
 
-            outputSeqAxisDimValue = (outputSeqAxisDimValue - (ElemType) effectiveKernelShape) / (ElemType) delta + (ElemType) 1;
+            outputSeqAxisDimValue -= (ElemType)effectiveKernelShape;
+            outputSeqAxisDimValue /= (ElemType)delta;
+            outputSeqAxisDimValue += 1;
 
             TensorShape outputSeqAxisDimTensorShape{outputSeqAxisDimValue.GetNumRows(), outputSeqAxisDimValue.GetNumCols()};
             if (outputSeqAxisDimTensorShape.GetDim(0) != 1)
