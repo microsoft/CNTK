@@ -2394,8 +2394,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         }
         else
         {
-            int index = static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0));
-            Axis axis(index - 1);
+            Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0)), inputs[0]));
             FunctionPtr cntkFunction = Softmax(inputs[0], axis, ToWString(node->Name()));
             return cntkFunction;
         }
@@ -2404,15 +2403,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         int index = static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0));
 
-        Axis axis;
-        if (index == 0)
-        {
-            axis = Axis::DefaultBatchAxis();
-        }
-        else
-        {
-            axis = Axis(index - 1);
-        }
+        Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0)), inputs[0]));
 
         FunctionPtr cntkFunction = LogSoftmax(inputs[0], axis, ToWString(node->Name()));
         return cntkFunction;
