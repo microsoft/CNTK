@@ -790,6 +790,10 @@ public:
     void ForwardProp(const FrameRange& fr) override
     {
         auto inputMBLayout = InputRef(1).GetMBLayout();
+
+        if (inputMBLayout->HasSequenceBeyondBegin() || inputMBLayout->HasSequenceBeyondEnd())
+            LogicError("%ls: %ls truncated sequence is not supported by sequential convolution.", NodeName().c_str(), OperationName().c_str());
+
         const size_t numSequences = inputMBLayout->GetNumSequences();
         let& inputSequences = inputMBLayout->GetAllSequences();
         std::vector<size_t> inputSequenceLengths(numSequences, 0);
