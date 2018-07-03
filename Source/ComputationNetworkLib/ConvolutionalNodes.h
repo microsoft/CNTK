@@ -868,13 +868,13 @@ protected:
         std::vector<ElemType> outputSequenceLengths(inputSequenceLengths.size(), 0.0);
         // Same computing logic in ConvolveGeometry.
         // Rewritten here because TensorShape uses SmallVector which cannot exceed size of 12, a size too small for sequence count.
-        size_t kernelShape_i = m_kernelShape[m_seqAxisIdx];
-        size_t delta = m_stride[m_seqAxisIdx];
-        size_t dil = m_dilation[m_seqAxisIdx];
-        bool autoPadCur = m_autoPad[m_seqAxisIdx];
-        size_t lo = m_lowerPad[m_seqAxisIdx];
-        size_t hi = m_upperPad[m_seqAxisIdx];
-        size_t effectiveKernelShape = (kernelShape_i - 1) * dil + 1;
+        const size_t kernelShape_i = m_kernelShape[m_seqAxisIdx];
+        const size_t delta = m_stride[m_seqAxisIdx];
+        const size_t dil = m_dilation[m_seqAxisIdx];
+        const bool autoPadCur = m_autoPad[m_seqAxisIdx];
+        const size_t lo = m_lowerPad[m_seqAxisIdx];
+        const size_t hi = m_upperPad[m_seqAxisIdx];
+        const size_t effectiveKernelShape = (kernelShape_i - 1) * dil + 1;
 
         size_t dimAdjust = 0;
 

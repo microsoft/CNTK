@@ -258,7 +258,7 @@ namespace CNTK
                                                       const NDShape& dilation, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
         CNTK_API FunctionPtr SpatialConvolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing,
                                                 const std::vector<bool>& autoPadding, const NDShape& dilation, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
-        CNTK_API FunctionPtr SpatialConvolutionSequenceShape(const Variable& convolutionMap, const Variable& unpackedOperand, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing,
+        CNTK_API FunctionPtr SpatialConvolutionSequenceShape(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing,
                                                              const std::vector<bool>& autoPadding,const NDShape& dilation, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
         
 
