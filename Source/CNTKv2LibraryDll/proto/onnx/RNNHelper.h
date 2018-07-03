@@ -9,16 +9,16 @@
 #pragma once
 #include "stdafx.h"
 #include "CNTKLibrary.h"
-#include "Utils.h"
-
-#include "proto/onnx/core/model.h"
 
 #include <algorithm>
-#include "CNTKLibrary.h"
 #include <functional>
 
-using namespace CNTK;
-using namespace ONNXIR;
+using namespace std;
+
+namespace LotusIR
+{
+    class Node;
+}
 
 const std::string LSTMInputBiasNameHint = "_bias_";
 const std::string LSTMInputInitialHNameHint = "_initial_h_";
@@ -30,12 +30,6 @@ const std::string GRUInputInitialHNameHint = "_initial_h_";
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#attributes-18
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#attributes-27
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#attributes-39
-// CNTK RNN ops always output sequence. 
-// ONNX requires to set the output_sequence attribute to 1 to output sequence. 
-enum
-{
-    RNNOutputSequence = 1
-};
 
 enum
 {
@@ -164,26 +158,26 @@ const string RNNDirectionBidirection = "bidirectional";
 const string RNNDirectionReverse = "reverse";
 const string RNNDirectionForward = "forward";
 
-FunctionPtr CreateLSTM(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+CNTK::FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
     const std::vector<std::string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
 
-FunctionPtr CreateGRU(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+CNTK::FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
 
-FunctionPtr CreateRNN(const ONNXIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+CNTK::FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
 
-void TraceLSTMPathes(const FunctionPtr& src, string &f_activation, string &g_activation, string &h_activation,
-    RNNDirection &direction, Variable &initStateH, Variable &initStateC, Variable &peepholeCi, Variable &peepholeCo, Variable &peepholeCf,
+void TraceLSTMPathes(const CNTK::FunctionPtr& src, string &f_activation, string &g_activation, string &h_activation,
+    RNNDirection &direction, CNTK::Variable &initStateH, CNTK::Variable &initStateC, CNTK::Variable &peepholeCi, CNTK::Variable &peepholeCo, CNTK::Variable &peepholeCf,
     double &stabilizer_dh, double &stabilizer_dc, double &stabilizer_c);
 
-void TraceGRUPathes(const FunctionPtr& src, string &f_activation, string &g_activation,
-    RNNDirection &direction, Variable &initStateH);
+void TraceGRUPathes(const CNTK::FunctionPtr& src, string &f_activation, string &g_activation,
+    RNNDirection &direction, CNTK::Variable &initStateH);
 
-void TraceRNNPathes(const FunctionPtr& src, string &activation,
-    RNNDirection &direction, Variable &initStateH);
+void TraceRNNPathes(const CNTK::FunctionPtr& src, string &activation,
+    RNNDirection &direction, CNTK::Variable &initStateH);
 
 std::string MapActivationNameONNXToCNTK(const std::string &onnxOp);
 std::string MapActivationNameCNTKToONNX(const std::string &cntkOp);
 
-std::vector<FunctionPtr> GetRNNBlocksFromSingleOrBidirectionalRNN(const FunctionPtr src, const std::string &RNNStepOpName);
+std::vector<CNTK::FunctionPtr> GetRNNBlocksFromSingleOrBidirectionalRNN(const CNTK::FunctionPtr src, const std::string &RNNStepOpName);

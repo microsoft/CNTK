@@ -1,0 +1,1 @@
+This directory is used by SWIG when generating C# proxy classes. The generated files are not saved in the repository, but the directory is needed so that it exists when SWIG is invoked.

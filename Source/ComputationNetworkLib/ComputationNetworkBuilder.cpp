@@ -136,6 +136,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(TransposeTimesNode))                   return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(QuantizedTimesNode))                   return New<QuantizedTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(WhereNode))                            return New<WhereNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(StraightThroughNode))                  return New<StraightThroughNode<ElemType>>(forward<_Types>(_Args)...);
     // legacy names we also support for back compat of model-files
     else if (nodeType == L"ColumnElementTimes")                                 return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == L"ErrorPrediction")                                    return New<ClassificationErrorNode<ElemType>>(forward<_Types>(_Args)...);
@@ -683,6 +684,18 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Sin(c
 }
 
 template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Atan(const ComputationNodePtr a, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<AtanNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Tan(const ComputationNodePtr a, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<TanNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Cosh(const ComputationNodePtr a, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<CoshNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
@@ -716,6 +729,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Hardmax(const ComputationNodePtr a, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<HardmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::StraightThrough(const ComputationNodePtr a, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<StraightThroughNode<ElemType>>(net.GetDeviceId(), nodeName), {a});
 }
 
 template <class ElemType>

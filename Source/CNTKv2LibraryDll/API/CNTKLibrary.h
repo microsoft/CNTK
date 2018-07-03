@@ -123,6 +123,8 @@ namespace CNTK
             return DataType::Int8;
         else if (std::is_same<ElementType, int16_t>())
             return DataType::Int16;
+        else if (std::is_same<ElementType, uint16_t>()) // In ONNX, float16 values must be converted to an uint16_t to prior writing to the buffer.
+            return DataType::Float16;
         else
             NOT_IMPLEMENTED;
     }
@@ -3902,6 +3904,16 @@ namespace CNTK
     CNTK_API FunctionPtr Cos(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise atan operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Atan(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise tan operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Tan(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise cosh operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Cosh(const Variable& operand, const std::wstring& name = L"");
@@ -4759,6 +4771,11 @@ namespace CNTK
     CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with specified alpha and with the specified input operand.
+    ///
+    CNTK_API FunctionPtr ELU(const Variable& operand, double alpha, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise scaled exponential linear unit operation with the specified input operand.
     ///
     CNTK_API FunctionPtr SELU(const Variable& operand, double gamma = 1.0507009873554804934193349852946, double alpha = 1.6732632423543772848170429916717, const std::wstring& name = L"");
@@ -4793,7 +4810,12 @@ namespace CNTK
     /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
- 
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise scaled exponential linear unit operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
     ///

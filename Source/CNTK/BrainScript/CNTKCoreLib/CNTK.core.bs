@@ -377,6 +377,7 @@ ReduceMax               = CNTK2.ReduceMax
 
 Round                   = CNTK2.Round
 Sigmoid                 = CNTK2.Sigmoid
+StraightThrough         = CNTK2.StraightThrough
 
 ##############################################################################
 # ComputationNodes
@@ -468,6 +469,7 @@ CNTK2 = [
     Sqrt(_, tag='') = new ComputationNode [ operation = 'Sqrt' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Square(_, tag='') = ElementTimes(_, _, tag=tag)
     Tanh(_, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+    StraightThrough(_, tag='') = new ComputationNode [ operation = 'StraightThrough' ; inputs = _AsNodes (_) /*plus the function args*/ ]
 
     // 6. Reductions
     ReduceSum   (_, axis=None, tag='') = { axis1 = if BS.Constants.IsNone (axis) then 0 else axis ; r = new ComputationNode [ operation = 'ReduceElements' ; inputs = _AsNodes (_) ; axis = axis1 ; reductionOp = "Sum"    /*plus the function args*/ ]}.r

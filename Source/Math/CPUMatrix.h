@@ -264,11 +264,17 @@ public:
     CPUMatrix<ElemType>& InplaceNegativeSine();
     CPUMatrix<ElemType>& AssignNegativeSineOf(const CPUMatrix<ElemType>& a);
 
+    CPUMatrix<ElemType>& InplaceTan();
+    CPUMatrix<ElemType>& AssignTanOf(const CPUMatrix<ElemType>& a);
+
     CPUMatrix<ElemType>& InplaceAcos();
     CPUMatrix<ElemType>& AssignAcosOf(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& InplaceAsin();
     CPUMatrix<ElemType>& AssignAsinOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceAtan();
+    CPUMatrix<ElemType>& AssignAtanOf(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& InplaceCosh();
     CPUMatrix<ElemType>& AssignCoshOf(const CPUMatrix<ElemType>& a);

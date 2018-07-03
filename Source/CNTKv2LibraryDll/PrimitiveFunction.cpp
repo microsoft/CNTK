@@ -375,8 +375,10 @@ namespace CNTK
                         case PrimitiveOpType::LogSoftmax:
                         case PrimitiveOpType::Asin:
                         case PrimitiveOpType::Acos:
+                        case PrimitiveOpType::Atan:
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
+                        case PrimitiveOpType::Tan:
                         case PrimitiveOpType::Cosh:
                         case PrimitiveOpType::Asinh:
                         case PrimitiveOpType::Sinh:
@@ -387,6 +389,7 @@ namespace CNTK
                         case PrimitiveOpType::StableSigmoid:
                         case PrimitiveOpType::ConstantOp:
                         case PrimitiveOpType::Cast:
+                        case PrimitiveOpType::StraightThrough:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;

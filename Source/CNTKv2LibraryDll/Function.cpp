@@ -1190,6 +1190,16 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Cos, operand, Dictionary(), name);
     }
 
+    FunctionPtr Atan(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Atan, operand, Dictionary(), name);
+    }
+
+    FunctionPtr Tan(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Tan, operand, Dictionary(), name);
+    }
+
     FunctionPtr Cosh(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Cosh, operand, Dictionary(), name);
@@ -1307,6 +1317,11 @@ namespace CNTK
     FunctionPtr Hardmax(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Hardmax, operand, Dictionary(), name);
+    }
+
+    FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::StraightThrough, operand, Dictionary(), name);
     }
 
     FunctionPtr HardSigmoid(const Variable& operand, float alpha, float beta, const std::wstring& name)
@@ -2037,8 +2052,8 @@ namespace CNTK
                 LogicError("DepthToSpace: Number of channels in the operand (%zu) must be divisible by (blocksize x blocksize), i.e., (%zu x %zu).", inputShape[2], blockSize, blockSize);
         }
 
-        FunctionPtr inputView = Reshape(inputPlaceholder, { blockSize, blockSize, NDShape::InferredDimension }, Axis(2), Axis(3));
-        std::vector<Axis> axisShufflePermutation({ Axis(2), Axis(0), Axis(3), Axis(1), Axis(4) });
+        FunctionPtr inputView = Reshape(inputPlaceholder, { NDShape::InferredDimension, blockSize, blockSize }, Axis(2), Axis(3));
+        std::vector<Axis> axisShufflePermutation({ Axis(3), Axis(0), Axis(4), Axis(1), Axis(2) });
         auto shuffleOut = Transpose(inputView, axisShufflePermutation);
         auto merge23Out = Reshape(shuffleOut, { NDShape::InferredDimension }, Axis(2), Axis(4));
         auto merge01Out = Reshape(merge23Out, { NDShape::InferredDimension }, Axis(0), Axis(2));
@@ -2064,7 +2079,7 @@ namespace CNTK
 
         FunctionPtr reshape01out = Reshape(inputPlaceholder, { blockSize, NDShape::InferredDimension }, Axis(0), Axis(1));
         FunctionPtr reshape23out = Reshape(reshape01out, { blockSize, NDShape::InferredDimension }, Axis(2), Axis(3));
-        std::vector<Axis> axisShufflePermutation({ Axis(1), Axis(3), Axis(0), Axis(2), Axis(4) });
+        std::vector<Axis> axisShufflePermutation({ Axis(1), Axis(3), Axis(4), Axis(0), Axis(2) });
         auto shuffleOut = Transpose(reshape23out, axisShufflePermutation);
         auto merge234Out = Reshape(shuffleOut, { NDShape::InferredDimension }, Axis(2), Axis::EndStaticAxis());
 
@@ -2780,6 +2795,19 @@ namespace CNTK
     FunctionPtr ELU(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
+    }
+
+    FunctionPtr ELU(const Variable& operand, double alpha, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
+
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero, 
+            ElementTimes(Constant::Scalar(operand.GetDataType(), alpha), ELU(operandPlaceholder, name + L"_ELU")),
+            operandPlaceholder);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"ELU", name);
     }
 
     FunctionPtr SELU(const Variable& operand, double gamma, double alpha, const std::wstring& name)

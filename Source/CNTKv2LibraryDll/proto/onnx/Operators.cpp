@@ -3,8 +3,9 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#include "proto/onnx/core/graph/graph.h"
+
 #include "Operators.h"
-#include "proto/onnx/core/graph.h"
 #include "Utils.h"
 
 namespace CNTK
@@ -206,7 +207,7 @@ namespace ONNX
         } } },
         { L"ELU", { {
             { L"ELU", "Elu" },
-            // { L"", "alpha" },
+            { L"alpha", "alpha" },
         } } },
         { L"Exp", { {
             { L"Exp", "Exp" },
@@ -274,6 +275,24 @@ namespace ONNX
             { L"axis ", "axis" }, 
             { L"broadcast", "broadcast" }, 
         } } },
+        { L"Cos",{ {
+            { L"Cos", "Cos" },
+            } } },
+        { L"Sin",{ {
+            { L"Sin", "Sin" },
+        } } },
+        { L"Tan",{ {
+            { L"Tan", "Tan" },
+            } } },
+        { L"Acos",{ {
+            { L"Acos", "Acos" },
+        } } },
+        { L"Asin",{ {
+            { L"Asin", "Asin" },
+        } } },
+        { L"Atan",{ {
+            { L"Atan", "Atan" },
+        } } },
 
         // From reduction
         { L"ReduceElements", { {
@@ -333,7 +352,10 @@ namespace ONNX
         } } },
 
         // From tensor
-        // { L"", "Cast" },
+        { L"Cast", { {
+            { L"Cast", "Cast" },
+            { L"newDataType", "to" },
+            } } },
         { L"Splice", { {
             { L"Splice", "Concat" },
             { L"axis", "axis" },
@@ -385,7 +407,7 @@ namespace ONNX
             } } },
         { L"Alias",{ {
             { L"Alias", "Identity" },
-            } } },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -452,6 +474,7 @@ namespace ONNX
     }
         std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
             { L"Clip",{ 1, 2 } },
+            { L"ELU",{ 0, 1 } },
             { L"LeakyReLU",{ 0, 1 } },
             { L"SELU",{ 0, 1, 2 } },
             { L"PReLU",{ 0 } },

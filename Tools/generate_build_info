@@ -26,7 +26,7 @@ usage ()
 {
     echo "usage: $0 <Config.make>"
     echo "-------------------------------------------------------------------"
-    echo "This script is used to generate buildinfo.h in Source/CNTK"
+    echo "This script is used to generate buildinfo.h in Source/CNTK/Generated/Linux"
     echo "This script needs to be called from the top level directory of CNTK project"
     echo "This script assumes git can be used"
     echo "This script assumes Config.make has been made"
@@ -154,10 +154,18 @@ BUILDER=$USER
 BUILDMACHINE=`hostname`
 BUILDPATH=`pwd`
 
-# Make buildinfo.h (only update if changed)
-target=Source/CNTK/buildinfo.h
+# Delete the old versions of the buildinfo file, as they can break the build in some scenarios if left hanging around
+[ ! -e Source/CNTK/buildinfo.h ] || rm Source/CNTK/buildinfo.h
+[ ! -e Source/CNTKv2LibraryDll/buildinfo.h ] || rm Source/CNTKv2LibraryDll/buildinfo.h
+
+target=Source/CNTKv2LibraryDll/Generated/Linux/buildinfo.h
 if [ ! -d Source ] ; then
     usage
+fi
+
+# Make buildinfo.h (only update if changed)
+if [ ! -d Source/CNTKv2LibraryDll/Generated/Linux ]; then
+	mkdir -p Source/CNTKv2LibraryDll/Generated/Linux
 fi
 
 makebuildinfo \

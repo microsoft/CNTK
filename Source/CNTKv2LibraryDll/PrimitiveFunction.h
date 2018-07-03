@@ -119,6 +119,9 @@ namespace CNTK
         {PrimitiveOpType::Cast, L"Cast" },
         { PrimitiveOpType::EyeLikeOp, L"EyeLikeOp" },
         { PrimitiveOpType::CustomProxyOp, L"CustomProxyOp" },
+        {PrimitiveOpType::StraightThrough, L"StraightThrough"},
+        { PrimitiveOpType::Tan, L"Tan" },
+        { PrimitiveOpType::Atan, L"Atan" },
         { PrimitiveOpType::ConvolutionSequenceShape, L"ConvolutionSequenceShapeOp" },
     };
 
@@ -840,8 +843,10 @@ namespace CNTK
         // Version 19: Add TopK
         // Version 20: Add squeeze, expand dims, zeros like, ones like
         // Version 21: Add EyeLikeOp
-        // Version 22: Add ConvolutionSequenceShape
-        static const size_t s_serializationVersion = 22;
+        // Version 22: Add StraightThrough
+        // Version 23: Add Tan and Atan.
+        // Version 24: Add ConvolutionSequenceShape
+        static const size_t s_serializationVersion = 24;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);
