@@ -354,7 +354,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::LatticeSequenceWithSoftmax) == 90 &&
                   static_cast<size_t>(PrimitiveOpType::Cast) == 91 && 
                   static_cast<size_t>(PrimitiveOpType::EyeLikeOp) == 92 &&
-                  static_cast<size_t>(PrimitiveOpType::CustomProxyOp) == 93,
+                  static_cast<size_t>(PrimitiveOpType::CustomProxyOp) == 93 &&
+                  static_cast<size_t>(PrimitiveOpType::ConvolutionSequenceShape) == 94,
                   "PrimitiveOpType enum value was modified.");
 }
 
