@@ -2092,6 +2092,7 @@ public:
     {
         if (inputIndex == 1) //only right operand need calculate gradient
         {
+            InputRef(0).MaskMissingValueColumnsTo(FrameRange(InputRef(0).GetMBLayout()), (ElemType) -1.0);
             let&  indices = InputRef(0).Value();
             auto& sourceGradient = InputRef(1).Gradient();
             auto& outputGradient = Gradient();

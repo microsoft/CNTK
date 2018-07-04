@@ -5831,6 +5831,8 @@ __global__ void _scatterToIndices(ElemType *indices,
     {
         size_t indices_index = index / num_row_elements;
         size_t offset = index % num_row_elements;
+        //Skip missing values
+        if (indices[indices_index] < 0) return;
         //We resort to nondeterministic behavior (floating point addition is not associative).
         //Note that the CPU parallel algorithm will have poor performance on the GPU because of thread divergence
         atomicAdd(&buffer[(size_t)(unsigned long long int)indices[indices_index] * num_row_elements + offset], value[index]);
