@@ -2092,7 +2092,8 @@ public:
     {
         if (inputIndex == 1) //only right operand need calculate gradient
         {
-            InputRef(0).MaskMissingValueColumnsTo(FrameRange(InputRef(0).GetMBLayout()), (ElemType) -1.0);
+            const FrameRange fr(InputRef(0).GetMBLayout());
+            InputRef(0).MaskMissingValueColumnsTo(fr, (ElemType) -1.0);
             let&  indices = InputRef(0).Value();
             auto& sourceGradient = InputRef(1).Gradient();
             auto& outputGradient = Gradient();
@@ -2111,6 +2112,7 @@ public:
             }
 
             sourceGradient.ScatterToIndices(outputGradient, indices, row_elements);
+            InputRef(0).MaskMissingValueColumnsToZero(fr);
         }
         else
         {
