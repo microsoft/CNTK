@@ -27,6 +27,7 @@ if [ "$OS" == "Windows_NT" ]; then
   RunTestDataDir=$TEST_BIN_DIR/data
 else
   TestDataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+  # On Linux, all dotnet dlls are built into lib dir, so keeping the data dir in the same location
   RunTestDataDir=$TEST_BIN_DIR/../lib/data
 fi
 mkdir $RunTestDataDir
