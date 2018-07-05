@@ -3338,35 +3338,25 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::GatherFromTarget(const CPUMatrix<ElemT
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements,
+    const CPUMatrix<char>* mask/*= nullptr*/)
 {
     if (indices.IsEmpty() || values.IsEmpty())
         LogicError("ScatterToIndices: input matrix is empty.");
+    if (mask)
+    {
+        if (mask->IsEmpty())
+            LogicError("ScatterToIndices: input matrix is empty.");
+        if (indices.GetNumRows() != mask->GetNumRows() || indices.GetNumCols() != mask->GetNumCols())
+            LogicError("ScatterToIndices: indices matrix must have same shape with mask matrix.");
+    }
 
     ElemType* indicesBufPtr = indices.Data();
     ElemType* valueBufPtr = values.Data();
+    char* maskBufPtr = mask ? mask->Data() : nullptr;
     ElemType* buffer = Data();
 
-    ScatterValues(indicesBufPtr, valueBufPtr, buffer, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
-
-    return *this;
-}
-
-template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, 
-    const CPUMatrix<char>& mask, size_t row_elements)
-{
-    if (indices.IsEmpty() || values.IsEmpty() || mask.IsEmpty())
-        LogicError("ScatterToIndices: input matrix is empty.");
-    if (indices.GetNumRows() != mask.GetNumRows() || indices.GetNumCols() != mask.GetNumCols())
-        LogicError("ScatterToIndices: indices matrix must have same shape with mask matrix.");
-
-    ElemType* indicesBufPtr = indices.Data();
-    ElemType* valueBufPtr = values.Data();
-    char* maskBufPtr = mask.Data();
-    ElemType* buffer = Data();
-
-    ScatterValues(indicesBufPtr, valueBufPtr, buffer, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols(), /*indices_step=*/1, maskBufPtr);
+    ScatterValues(indicesBufPtr, valueBufPtr, buffer, maskBufPtr, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
 
     return *this;
 }
@@ -7293,7 +7283,13 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/, char* mask/*=nullptr*/)
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/)
+{
+    ScatterValues(indices, value, data, nullptr, alpha, num_indices, rows, cols, indices_step);
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, char* mask, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/)
 {
     if (!indices || !value || !data)
         LogicError("ScatterValues: input data is null.");

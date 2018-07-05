@@ -2110,7 +2110,7 @@ public:
                 row_elements *= dims[i];
             }
 
-            sourceGradient.ScatterToIndicesWithMask(outputGradient, indices, indicesMask, row_elements);
+            sourceGradient.ScatterToIndices(outputGradient, indices, row_elements, &indicesMask);
         }
         else
         {

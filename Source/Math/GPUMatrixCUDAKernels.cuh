@@ -5819,24 +5819,50 @@ __global__ void _gatherFromTarget(ElemType *indices,
 }
 
 template<class ElemType>
+inline __device__ void _scatterToIndices4Index(ElemType *indices, 
+                                               ElemType *value, 
+                                               ElemType *buffer,
+                                               char *mask,
+                                               CUDA_LONG index,
+                                               size_t num_row_elements)
+{
+    size_t indices_index = index / num_row_elements;
+    size_t offset = index % num_row_elements;
+    //Skip missing values
+    if (mask && mask[indices_index] == 0) return;
+    //We resort to nondeterministic behavior (floating point addition is not associative).
+    //Note that the CPU parallel algorithm will have poor performance on the GPU because of thread divergence
+    atomicAdd(&buffer[(size_t)(unsigned long long int)indices[indices_index] * num_row_elements + offset], value[index]);
+}
+
+template<class ElemType>
 __global__ void _scatterToIndices(ElemType *indices,
                                   ElemType *value,
                                   ElemType *buffer,
                                   size_t num_row_elements,
                                   size_t num_indices,
-                                  CUDA_LONG num_elements,
-                                  char *mask = nullptr)
+                                  CUDA_LONG num_elements)
 {
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < num_elements)
     {
-        size_t indices_index = index / num_row_elements;
-        size_t offset = index % num_row_elements;
-        //Skip missing values
-        if (mask && mask[indices_index] == 0) return;
-        //We resort to nondeterministic behavior (floating point addition is not associative).
-        //Note that the CPU parallel algorithm will have poor performance on the GPU because of thread divergence
-        atomicAdd(&buffer[(size_t)(unsigned long long int)indices[indices_index] * num_row_elements + offset], value[index]);
+        _scatterToIndices4Index(indices, value, buffer, /*mask*/nullptr, index, num_row_elements);
+    }
+}
+
+template<class ElemType>
+__global__ void _scatterToIndices(ElemType *indices,
+                                  ElemType *value,
+                                  ElemType *buffer,
+                                  char *mask,
+                                  size_t num_row_elements,
+                                  size_t num_indices,
+                                  CUDA_LONG num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_elements)
+    {
+        _scatterToIndices4Index(indices, value, buffer, mask, index, num_row_elements);
     }
 }
 

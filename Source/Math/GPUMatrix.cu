@@ -4436,38 +4436,20 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GatherFromTarget(const GPUMatrix<ElemT
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements, const GPUMatrix<char>* mask/*= nullptr*/)
 {
-    if (indices.IsEmpty() || values.IsEmpty())
+    if (indices.IsEmpty() || values.IsEmpty() || (mask && mask->IsEmpty()))
         LogicError("ScatterToIndices: input matrix is empty.");
 
     ElemType* indicesBufPtr = indices.Data();
     ElemType* valueBufPtr = values.Data();
+    char* maskBufPtr = mask ? mask->Data() : nullptr;
     ElemType* buffer = Data();
 
     size_t num_indices = indices.GetNumElements();
     CUDA_LONG N = (CUDA_LONG)num_indices * row_elements;
     int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
-    _scatterToIndices<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (indicesBufPtr, valueBufPtr, buffer, row_elements, num_indices, N);
-
-    return *this;
-}
-
-template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, const GPUMatrix<char>& mask, size_t row_elements)
-{
-    if (indices.IsEmpty() || values.IsEmpty() || mask.IsEmpty())
-        LogicError("ScatterToIndices: input matrix is empty.");
-
-    ElemType* indicesBufPtr = indices.Data();
-    ElemType* valueBufPtr = values.Data();
-    char* maskBufPtr = mask.Data();
-    ElemType* buffer = Data();
-
-    size_t num_indices = indices.GetNumElements();
-    CUDA_LONG N = (CUDA_LONG)num_indices * row_elements;
-    int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
-    _scatterToIndices<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (indicesBufPtr, valueBufPtr, buffer, row_elements, num_indices, N, maskBufPtr);
+    _scatterToIndices<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (indicesBufPtr, valueBufPtr, buffer, maskBufPtr, row_elements, num_indices, N);
 
     return *this;
 }
