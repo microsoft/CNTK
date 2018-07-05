@@ -34,7 +34,7 @@ dependencies:
   - sphinx
   - nbsphinx
   - twine
-  - protobuf
+  - protobuf==3.5.2
   - pillow
   - imageio
   - scikit-image
