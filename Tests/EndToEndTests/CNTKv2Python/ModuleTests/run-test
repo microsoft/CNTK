@@ -10,7 +10,7 @@ python -c "import pytest; print('PyTest: %s'%pytest.__version__)"
 # TODO why doesn't "py.test --pyargs cntk" work?
 MODULE_DIR="$(python -c "import cntk, os, sys; sys.stdout.write(os.path.dirname(os.path.abspath(cntk.__file__)))")"
 [ $? -eq 0 ] || exit $?
-py.test "$MODULE_DIR" --verbose --deviceid $TEST_DEVICE -k "not test_svd_factorization and not test_factor_dense and not test_free_static_axis_times_free_static_axis"
+py.test "$MODULE_DIR" --verbose --deviceid $TEST_DEVICE -k "not test_svd_factorization and not test_factor_dense and not test_free_static_axis_times_free_static_axis and not test_unpack_axis_times_transpose_unpack_axis"
 
 if [ "$?" -eq "0" ]; then
   echo "__COMPLETED__"
