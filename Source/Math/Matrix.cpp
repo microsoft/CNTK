@@ -3706,6 +3706,23 @@ Matrix<ElemType>& Matrix<ElemType>::ScatterToIndices(const Matrix<ElemType>& val
 
     return *this;
 }
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::ScatterToIndicesWithMask(const Matrix<ElemType>& values, const Matrix<ElemType>& indices, const Matrix<char>& mask, size_t row_elements)
+{
+    if (indices.IsEmpty() || values.IsEmpty() || mask.IsEmpty())
+        LogicError("ScatterAccordingIndices: input matrix is empty.");
+    if (indices.GetNumRows() != mask.GetNumRows() || indices.GetNumCols() != mask.GetNumCols())
+        LogicError("ScatterAccordingIndices: indices matrix must have same shape with mask matrix.");
+
+    DISPATCH_MATRIX_ON_FLAG(&values,
+                            this,
+                            m_CPUMatrix->ScatterToIndices(*values.m_CPUMatrix, *indices.m_CPUMatrix, *mask.m_CPUMatrix, row_elements),
+                            m_GPUMatrix->ScatterToIndices(*values.m_GPUMatrix, *indices.m_GPUMatrix, *mask.m_GPUMatrix, row_elements),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
 
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignSumOfElements(const Matrix<ElemType>& a)

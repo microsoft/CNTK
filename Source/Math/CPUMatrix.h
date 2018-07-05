@@ -304,6 +304,7 @@ public:
     CPUMatrix<ElemType>& AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
     CPUMatrix<ElemType>& GatherFromTarget(const CPUMatrix<ElemType>& indices, const CPUMatrix<ElemType>& target, size_t row_elements);
     CPUMatrix<ElemType>& ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements);
+    CPUMatrix<ElemType>& ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, const CPUMatrix<char>& mask, size_t row_elements);
 
     bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
@@ -592,7 +593,7 @@ protected:
 private:
     void Clear();
 
-    void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
+    void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1, char* mask = nullptr);
 
 private:
     static int m_optimizationFlags;

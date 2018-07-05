@@ -3353,6 +3353,25 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemT
 }
 
 template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, 
+    const CPUMatrix<char>& mask, size_t row_elements)
+{
+    if (indices.IsEmpty() || values.IsEmpty() || mask.IsEmpty())
+        LogicError("ScatterToIndices: input matrix is empty.");
+    if (indices.GetNumRows() != mask.GetNumRows() || indices.GetNumCols() != mask.GetNumCols())
+        LogicError("ScatterToIndices: indices matrix must have same shape with mask matrix.");
+
+    ElemType* indicesBufPtr = indices.Data();
+    ElemType* valueBufPtr = values.Data();
+    char* maskBufPtr = mask.Data();
+    ElemType* buffer = Data();
+
+    ScatterValues(indicesBufPtr, valueBufPtr, buffer, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols(), /*indices_step=*/1, maskBufPtr);
+
+    return *this;
+}
+
+template <class ElemType>
 bool CPUMatrix<ElemType>::IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold /*= 1e-8*/) const
 {
     return AreEqual(*this, a, threshold);
@@ -7274,7 +7293,7 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step)
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/, char* mask/*=nullptr*/)
 {
     if (!indices || !value || !data)
         LogicError("ScatterValues: input data is null.");
@@ -7286,7 +7305,7 @@ void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, Elem
         for (auto i = 0; i < num_indices; i++)
         {
             auto col_r = indices[i * indices_step];
-            if (std::isnan(col_r) || col_r < 0)
+            if (std::isnan(col_r) || col_r < 0 || (mask && mask[i * indices_step] == 0))
                 continue;
             auto col = (size_t)col_r;
             //ignore the elements that is not partitioned into this thread

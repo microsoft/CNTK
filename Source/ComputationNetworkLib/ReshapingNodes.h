@@ -2092,9 +2092,8 @@ public:
     {
         if (inputIndex == 1) //only right operand need calculate gradient
         {
-            const FrameRange fr(InputRef(0).GetMBLayout());
-            InputRef(0).MaskMissingValueColumnsTo(fr, (ElemType) -1.0);
             let&  indices = InputRef(0).Value();
+            const auto& indicesMask = InputRef(0).GetMBLayout()->GetColumnsValidityMask(indices.GetDeviceId());
             auto& sourceGradient = InputRef(1).Gradient();
             auto& outputGradient = Gradient();
             const auto& sampleLayout = InputRef(1).GetSampleLayout();
@@ -2111,8 +2110,7 @@ public:
                 row_elements *= dims[i];
             }
 
-            sourceGradient.ScatterToIndices(outputGradient, indices, row_elements);
-            InputRef(0).MaskMissingValueColumnsToZero(fr);
+            sourceGradient.ScatterToIndicesWithMask(outputGradient, indices, indicesMask, row_elements);
         }
         else
         {
