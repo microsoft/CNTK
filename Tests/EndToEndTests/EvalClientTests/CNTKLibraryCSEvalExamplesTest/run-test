@@ -5,11 +5,11 @@
 set -x
 
 # Since we only use python to train a model for evaluation test, it is sufficient to train the model only with one python version.
-# Now it is trained with Python 2.7. If it is not supported anymore, need to use another python version.
+# Now it is trained with Python 3.5. If it is not supported anymore, need to use another python version.
 # TODO: have a better way to configure how run test only on a single python version
-PythonVer=$(python -c "import sys; sys.stdout.write(str(sys.version_info[0])); sys.stdout.flush()")
-if [ "$PythonVer" == "3" ]; then
-  echo Skip this test for Python 3.5/3.6. Run this test only on Python 2.7 to save test time.
+PythonVer=$(python -c "import sys; sys.stdout.write(str(sys.version_info[0])+str(sys.version_info[1])); sys.stdout.flush()")
+if [ "$PythonVer" != "35" ]; then
+  echo Skip this test for Python 2.7/3.6. Run this test only on Python 3.5 to save test time.
   # Simulate test completes.
   set +x
   echo Evaluation completes
@@ -27,7 +27,7 @@ if [ "$OS" == "Windows_NT" ]; then
   RunTestDataDir=$TEST_BIN_DIR/data
 else
   TestDataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-  RunTestDataDir=$TEST_BIN_DIR/data
+  RunTestDataDir=$TEST_BIN_DIR../lib/data
 fi
 mkdir $RunTestDataDir
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
