@@ -161,9 +161,9 @@ RUN cd /root && \
     make -j $(nproc) && \
     make install
 
-COPY Patches /tmp
-RUN /tmp/Patches/patch_swig.sh /usr/local/share/swig/3.0.10 && \
-	rm -rfd /tmp/Patches
+COPY ./Patches /tmp/patches
+RUN /tmp/patches/patch_swig.sh /usr/local/share/swig/3.0.10 && \
+	rm -rfd /tmp/patches
 	
 # .NET Core SDK
 RUN cd /tmp && \
