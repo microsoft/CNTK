@@ -27,7 +27,7 @@ if [ "$OS" == "Windows_NT" ]; then
   RunTestDataDir=$TEST_BIN_DIR/data
 else
   TestDataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-  RunTestDataDir=$TEST_BIN_DIR../lib/data
+  RunTestDataDir=$TEST_BIN_DIR/../lib/data
 fi
 mkdir $RunTestDataDir
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
