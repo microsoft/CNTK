@@ -636,6 +636,9 @@ class Function(cntk_py.Function):
         substitutions = substitutions or {}
         if not isinstance(substitutions, dict):
             raise TypeError("Variable substitution map must be a dictionary")
+        for prev_node, new_node in substitutions.items():
+            if not new_node or not prev_node:
+                raise AttributeError("Cannot replace node: " + str(prev_node) + " with node: " + str(new_node) + ". Neither node can be None.")
         return super(Function, self).clone(method, substitutions)
 
     @property
