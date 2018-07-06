@@ -2019,14 +2019,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "LRN")
     {
-        // TODO: this is experimental code to load Facebook Caffe models.
-        // Operators are added so hopefully there is not further work needed.
-        size_t depthRadius = GetNamedAttributeAsInt64(node, "size");
-        double bias = GetNamedAttributeAsFloat(node, "bias");
-        double alpha = GetNamedAttributeAsFloat(node, "alpha");
-        double beta = GetNamedAttributeAsFloat(node, "beta");
-        FunctionPtr cntkFunction = LocalResponseNormalization(inputs[0],
-                                                              depthRadius, bias, alpha, beta, ToWString(node->Name()));
+        size_t depthRadius = (GetNamedAttributeAsInt64(node, "size") - 1)/2;
+        double bias = static_cast<double>(GetNamedAttributeAsFloat(node, "bias", 1.0f));
+        double alpha = static_cast<double>(GetNamedAttributeAsFloat(node, "alpha", 1e-4f));
+        double beta = static_cast<double>(GetNamedAttributeAsFloat(node, "beta", 0.75f));
+        FunctionPtr cntkFunction = LocalResponseNormalization(inputs[0], 
+            depthRadius, bias, alpha, beta, ToWString(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "AveragePool" || onnxOpName == "MaxPool")
@@ -2394,8 +2392,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         }
         else
         {
-            int index = static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0));
-            Axis axis(index - 1);
+            Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0)), inputs[0]));
             FunctionPtr cntkFunction = Softmax(inputs[0], axis, ToWString(node->Name()));
             return cntkFunction;
         }
@@ -2404,15 +2401,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         int index = static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0));
 
-        Axis axis;
-        if (index == 0)
-        {
-            axis = Axis::DefaultBatchAxis();
-        }
-        else
-        {
-            axis = Axis(index - 1);
-        }
+        Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0)), inputs[0]));
 
         FunctionPtr cntkFunction = LogSoftmax(inputs[0], axis, ToWString(node->Name()));
         return cntkFunction;

@@ -625,7 +625,7 @@ def test_LogSoftmax(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LRN(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
-        pytest.skip('Test is skipped on CPU with float16 data')
+        pytest.skip('Test is skipped on CPU with float16 data, because it uses convolution.')
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype):
         img_shape = (64, 32, 32)

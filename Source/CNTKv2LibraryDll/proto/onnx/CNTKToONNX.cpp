@@ -2891,7 +2891,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             auto alpha = (float)src->Attributes()[L"alpha"].Value<double>();
             auto beta = (float)src->Attributes()[L"beta"].Value<double>();
 
-            node->AddAttribute(attributesMap[L"size"], depthRadius);
+            node->AddAttribute(attributesMap[L"size"], 2*depthRadius + 1);
             node->AddAttribute(attributesMap[L"bias"], bias);
             node->AddAttribute(attributesMap[L"alpha"], alpha);
             node->AddAttribute(attributesMap[L"beta"], beta);
