@@ -3353,7 +3353,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemT
     ElemType* buffer = Data();
     size_t numElemsPerMaskEntry = mask ? indices.GetNumCols() / mask->GetNumCols() * indices.GetNumRows() : 0;
 
-    ScatterValues(indicesBufPtr, valueBufPtr, buffer, maskBufPtr, numElemsPerMaskEntry, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
+    ScatterValues(indicesBufPtr, valueBufPtr, buffer, static_cast<ElemType>(1), indices.GetNumElements(), row_elements, this->GetNumCols(), maskBufPtr, numElemsPerMaskEntry);
 
     return *this;
 }
@@ -7282,11 +7282,11 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
 template <class ElemType>
 void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/)
 {
-    ScatterValues(indices, value, data, nullptr, 0, alpha, num_indices, rows, cols, indices_step);
+    ScatterValues(indices, value, data, alpha, num_indices, rows, cols, /*mask*/nullptr, /*numElemsPerMaskEntry*/0, indices_step);
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, char* mask, size_t numElemsPerMaskEntry, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/)
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, char* mask, size_t numElemsPerMaskEntry, size_t indices_step/*=1*/)
 {
     if (!indices || !value || !data)
         LogicError("ScatterValues: input data is null.");
