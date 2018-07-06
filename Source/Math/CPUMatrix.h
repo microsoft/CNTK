@@ -593,7 +593,7 @@ private:
     void Clear();
 
     void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
-    void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, char* mask, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
+    void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, char* mask, size_t numElemsPerMaskEntry, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
 
 private:
     static int m_optimizationFlags;

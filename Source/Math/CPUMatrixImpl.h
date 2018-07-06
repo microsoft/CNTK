@@ -3341,22 +3341,19 @@ template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements,
     const CPUMatrix<char>* mask/*= nullptr*/)
 {
-    if (indices.IsEmpty() || values.IsEmpty())
+    if (indices.IsEmpty() || values.IsEmpty() || (mask && mask->IsEmpty()))
         LogicError("ScatterToIndices: input matrix is empty.");
-    if (mask)
-    {
-        if (mask->IsEmpty())
-            LogicError("ScatterToIndices: input matrix is empty.");
-        if (indices.GetNumRows() != mask->GetNumRows() || indices.GetNumCols() != mask->GetNumCols())
-            LogicError("ScatterToIndices: indices matrix must have same shape with mask matrix.");
-    }
+    if (mask && (indices.GetNumCols() % mask->GetNumCols() != 0))
+        LogicError("ScatterAccordingIndices: The number of columns(%zu) of the matrix slice to be masked is not a multiple of the number of columns(%zu) of the mask slice.",
+            indices.GetNumCols(), mask->GetNumCols());
 
     ElemType* indicesBufPtr = indices.Data();
     ElemType* valueBufPtr = values.Data();
     char* maskBufPtr = mask ? mask->Data() : nullptr;
     ElemType* buffer = Data();
+    size_t numElemsPerMaskEntry = mask ? indices.GetNumCols() / mask->GetNumCols() * indices.GetNumRows() : 0;
 
-    ScatterValues(indicesBufPtr, valueBufPtr, buffer, maskBufPtr, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
+    ScatterValues(indicesBufPtr, valueBufPtr, buffer, maskBufPtr, numElemsPerMaskEntry, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
 
     return *this;
 }
@@ -7285,14 +7282,16 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
 template <class ElemType>
 void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/)
 {
-    ScatterValues(indices, value, data, nullptr, alpha, num_indices, rows, cols, indices_step);
+    ScatterValues(indices, value, data, nullptr, 0, alpha, num_indices, rows, cols, indices_step);
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, char* mask, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/)
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, char* mask, size_t numElemsPerMaskEntry, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/)
 {
     if (!indices || !value || !data)
         LogicError("ScatterValues: input data is null.");
+    if (mask && (numElemsPerMaskEntry == 0))
+        RuntimeError("ScatterValues: numElemsPerMaskEntry must not be 0 when a mask is provided.");
 
 #pragma omp parallel
     {
@@ -7301,11 +7300,14 @@ void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, Elem
         for (auto i = 0; i < num_indices; i++)
         {
             auto col_r = indices[i * indices_step];
-            if (std::isnan(col_r) || col_r < 0 || (mask && mask[i * indices_step] == 0))
+            if (std::isnan(col_r) || col_r < 0)
                 continue;
             auto col = (size_t)col_r;
             //ignore the elements that is not partitioned into this thread
             if (col % nthread != ithread)
+                continue;
+            //check if colMask is invalid
+            if (mask && mask[i * indices_step / numElemsPerMaskEntry] == 0)
                 continue;
 
             if (col >= cols)

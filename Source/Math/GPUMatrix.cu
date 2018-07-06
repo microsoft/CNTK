@@ -4445,11 +4445,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterToIndices(const GPUMatrix<ElemT
     ElemType* valueBufPtr = values.Data();
     char* maskBufPtr = mask ? mask->Data() : nullptr;
     ElemType* buffer = Data();
+    size_t num_indices_elems_per_mask_col = mask ? indices.GetNumRows() * indices.GetNumCols() / mask->GetNumCols() : 0;
 
     size_t num_indices = indices.GetNumElements();
     CUDA_LONG N = (CUDA_LONG)num_indices * row_elements;
     int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
-    _scatterToIndices<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (indicesBufPtr, valueBufPtr, buffer, maskBufPtr, row_elements, num_indices, N);
+    _scatterToIndices<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (indicesBufPtr, valueBufPtr, buffer, maskBufPtr, num_indices_elems_per_mask_col, row_elements, num_indices, N);
 
     return *this;
 }
