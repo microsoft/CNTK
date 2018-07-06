@@ -578,3 +578,41 @@ def test_clone_with_deep_rnn_chaining():
     seq_op_res = seq_op_func(c1)
     net = rnn_seq(seq_op_res)
     cloned = net.clone('freeze')
+
+
+def test_clone_with_unfound_new_node():
+    x = C.input_variable(())
+    y = C.combine(x * x, x + x)
+    y0 = y[0]
+    y1 = y[1]
+    y0_new = C.plus(y0,0, name="test")
+    X=C.logging.find_by_name(y0_new, 'QueryReply_y')
+    
+    with pytest.raises(AttributeError):
+        y_clone = y.clone(C.CloneMethod.share, {y0:y0_new, y1:X})
+
+
+def test_clone_with_unfound_previous_node():
+    x = C.input_variable(())
+    y = C.combine(x * x, x + x)
+    y0 = y[0]
+    y1 = y[1]
+    y0_new = C.plus(y0,0, name="test")
+    X=C.logging.find_by_name(y0_new, 'QueryReply_y')
+    
+    with pytest.raises(AttributeError):
+        y_clone = y.clone(C.CloneMethod.share, {X:y0_new})
+
+
+def test_clone_with_wrong_type_node():
+    x = C.input_variable(())
+    y = C.combine(x * x, x + x)
+    y0 = y[0]
+    y1 = y[1]
+    y0_new = C.plus(y0,0, name="test")
+    X=C.logging.find_by_name(y0_new, 'QueryReply_y')
+
+    a = 5
+    
+    with pytest.raises(TypeError):
+        y_clone = y.clone(C.CloneMethod.share, {y0:a})
