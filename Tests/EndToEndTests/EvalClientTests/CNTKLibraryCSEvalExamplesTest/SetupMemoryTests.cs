@@ -60,7 +60,7 @@ namespace CNTKLibraryCSEvalExamples
                 MemoryTests.Device0 = deviceList[0];
 
                 // Load the model.
-                string modelFilePath = "resnet20.dnn";
+                string modelFilePath = CNTKLibraryManagedExamples.ExampleTestDataDir + "resnet20.dnn";
                 CNTKLibraryManagedExamples.ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
                 Function modelFunc = Function.Load(modelFilePath, device);
 
@@ -81,7 +81,7 @@ namespace CNTKLibraryCSEvalExamples
                 int imageChannels = inputShape[2];
                 int imageSize = inputShape.TotalSize;
 
-                var imageList = new List<string>() { "00000.png", "00001.png", "00002.png" };
+                var imageList = new List<string>() { CNTKLibraryManagedExamples.ExampleTestDataDir + "00000.png", CNTKLibraryManagedExamples.ExampleTestDataDir + "00001.png", CNTKLibraryManagedExamples.ExampleTestDataDir + "00002.png" };
                 foreach (var image in imageList)
                 {
                     CNTKLibraryManagedExamples.ThrowIfFileNotExist(image, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", image));
