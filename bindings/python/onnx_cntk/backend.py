@@ -1,8 +1,8 @@
-#-------------------------------------------------------------------------
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License. See License.txt in the project root for
-# license information.
-#--------------------------------------------------------------------------
+# ==============================================================================
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
 
 import numpy as np
 import cntk as C
