@@ -58,7 +58,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     for (const pair<string, ConfigParameters>& section : input)
     {
         ConfigParameters input2 = section.second;
-        wstring name = msra::strfun::utf16(section.first);
+        wstring name = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(section.first);
 
         if (!input2.ExistsCurrent(L"dim") || !input2.ExistsCurrent(L"format"))
         {
@@ -120,7 +120,7 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         m_streams.push_back(stream);
     }
 
-    m_filepath = msra::strfun::utf16(config(L"file"));
+    m_filepath = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(config(L"file"));
     m_skipSequenceIds = config(L"skipSequenceIds", false);
     m_maxErrors = config(L"maxErrors", 0);
     m_traceLevel = config(L"traceLevel", 1);

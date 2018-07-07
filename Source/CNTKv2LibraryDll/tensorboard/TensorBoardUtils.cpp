@@ -90,8 +90,8 @@ namespace CNTK
             const std::vector<Variable>& outputs,
             tensorflow::NodeDef& dst)
         {
-            dst.set_name(ToString(name));
-            dst.set_op(ToString(opName));
+            dst.set_name(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(name)));
+            dst.set_op(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(opName)));
 
             PopulateDataTypeAttr(dataType, *dst.mutable_attr());
             PopulateOutputShapesAttr(outputs, *dst.mutable_attr());

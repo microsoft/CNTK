@@ -149,7 +149,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         if (initFromLiteral.empty())
             RuntimeError("initFromLiteral parameter must be provided when using \"fromLiteral\" initialization method");
         size_t numRows, numCols;
-        auto array = File::LoadMatrixFromStringLiteral<ElemType>(msra::strfun::utf8(initFromLiteral), numRows, numCols);
+        auto array = File::LoadMatrixFromStringLiteral<ElemType>(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(initFromLiteral)), numRows, numCols);
         InitFromArray(array, numRows, numCols);
         m_initString.clear();
     }

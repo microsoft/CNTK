@@ -153,7 +153,7 @@ void SparsePCReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
                                          LODWORD(0),
                                          0);
 #else
-    m_hndl = open(msra::strfun::utf8(m_file).c_str(), O_RDONLY);
+    m_hndl = open(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(m_file)).c_str(), O_RDONLY);
     if (m_hndl == -1)
         RuntimeError("Unable to Open/Create file %ls", m_file.c_str());
     struct stat sb;

@@ -385,7 +385,7 @@ private:
         else if (dynamic_cast<const ScriptableObjects::ScriptingException*>(&ex) != nullptr) // Includes derived classes
         {
             const auto& err = dynamic_cast<const ScriptableObjects::ScriptingException&>(ex);
-            return gcnew CNTKLogicErrorException(gcnew System::String(::msra::strfun::_strprintf<wchar_t>(L"%ls\n%ls", msra::strfun::utf16(err.what()).c_str(), err.GetError(L"").c_str()).c_str()), nullptr);
+            return gcnew CNTKLogicErrorException(gcnew System::String(::msra::strfun::_strprintf<wchar_t>(L"%ls\n%ls", Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(err.what()).c_str(), err.GetError(L"").c_str()).c_str()), nullptr);
         }
         else
         {

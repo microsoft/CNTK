@@ -566,10 +566,6 @@ namespace CNTK
     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly);
     int GetFileDescriptor(const std::wstring& filePath, bool readOnly);
 
-    std::string ToString(const std::wstring& wstring);
-    std::wstring ToWString(const std::string& string);
-
-
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes);
 
     inline size_t ShapeRowColSplitPoint(const NDShape& varShape, bool isSparse, bool noDynamicAxes)

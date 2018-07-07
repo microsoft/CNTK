@@ -125,7 +125,7 @@ public:
 
     operator std::wstring() const
     {
-        return msra::strfun::utf16(*this);
+        return Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(*this);
     }
     operator double() const
     {
@@ -322,7 +322,7 @@ public:
     ConfigParser(char separator, const std::wstring& configname)
         : m_separator(separator)
     {
-        m_configName = string(configname.begin(), configname.end());
+        m_configName = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(configname));
     }
 
     ConfigParser(char separator)
@@ -659,7 +659,7 @@ public:
 
     void SetName(const std::wstring& name)
     {
-        m_configName = string(name.begin(), name.end());
+        m_configName = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(name));
     }
 
     void SetName(const std::string& name)
@@ -762,8 +762,7 @@ public:
         vector<wstring> ids;
         for (auto iter = begin(); iter != end(); ++iter)
         {
-            auto id = iter->first;
-            ids.push_back(wstring(id.begin(), id.end()));
+            ids.emplace_back(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(iter->first));
         }
         return ids;
     }
@@ -877,7 +876,7 @@ public:
     // Insert - insert a new name and value into the dictionary
     void Insert(const std::wstring& name, const std::string& val)
     {
-        Insert(msra::strfun::utf8(name), val);
+        Insert(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(name)), val);
     }
 
     // Insert - insert a new name and value into the dictionary
@@ -910,7 +909,7 @@ public:
 
     bool Exists(const std::wstring& name) const
     {
-        return Exists(msra::strfun::utf8(name));
+        return Exists(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(name)));
     }
 
     bool Exists(const std::string& name) const
@@ -935,28 +934,28 @@ public:
     }
     bool ExistsCurrent(const wchar_t* name) const
     {
-        return ExistsCurrent(string(name, name + wcslen(name)));
+        return ExistsCurrent(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(name)));
     }
 
     // dict(name, default) for strings
     ConfigValue operator()(const std::wstring& name,
                            const wchar_t* defaultvalue) const
     {
-        return operator()(string(name.begin(), name.end()), defaultvalue);
+        return operator()(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(name)), defaultvalue);
     }
 
     // dict(name, default) for strings
     ConfigValue operator()(const std::string& name,
                            const wchar_t* defaultvalue) const
     {
-        return operator()(name, msra::strfun::utf8(defaultvalue).c_str());
+        return operator()(name, Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(defaultvalue)).c_str());
     }
 
     // dict(name, default) for strings
     ConfigValue operator()(const std::wstring& name,
                            const char* defaultvalue) const
     {
-        return operator()(string(name.begin(), name.end()), defaultvalue);
+        return operator()(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(name)), defaultvalue);
     }
 
     // dict(name, default) for strings
@@ -976,7 +975,7 @@ public:
         // TODO: unify with the Find() function below
         for (auto* dict = this; dict; dict = dict->m_parent)
         {
-            auto iter = dict->find(string(name, name + wcslen(name)));
+            auto iter = dict->find(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(name)));
             if (iter != dict->end())
             {
                 if (iter->second == "default")
@@ -1147,7 +1146,7 @@ public:
     // dict(name): read out a mandatory parameter value
     ConfigValue operator()(const std::wstring& name) const
     {
-        return operator()(string(name.begin(), name.end()));
+        return operator()(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(name)));
     }
 
     // dict(name): read out a mandatory parameter value
@@ -1176,7 +1175,7 @@ public:
     }
     bool Match(const std::wstring& key, const std::wstring& compareValue) const
     {
-        return Match(string(key.begin(), key.end()), msra::strfun::utf8(compareValue));
+        return Match(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(key)), Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(compareValue)));
     }
 
     // return the entire path to this config element

@@ -25,14 +25,6 @@ DWORD LODWORD(size_t size)
     return size & 0xFFFFFFFF;
 }
 
-std::string ws2s(const std::wstring& wstr)
-{
-    int size_needed = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), 0, 0, 0, 0);
-    std::string strTo(size_needed, 0);
-    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), &strTo[0], size_needed, 0, 0);
-    return strTo;
-}
-
 template <class ElemType>
 size_t DSSMReader<ElemType>::RandomizeSweep(size_t mbStartSample)
 {

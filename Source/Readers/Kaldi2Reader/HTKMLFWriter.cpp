@@ -67,7 +67,7 @@ void HTKMLFWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig
             kaldicmd.push_back(thisOutput(L"Kaldicmd"));
             kaldi::BaseFloatMatrixWriter wfea;
             feature_writer.push_back(wfea);
-            feature_writer[i].Open(msra::strfun::utf8(kaldicmd[counter]));
+            feature_writer[i].Open(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(kaldicmd[counter])));
         }
 
         outputNameToIdMap[outputNames[i]] = i;
@@ -89,6 +89,9 @@ void HTKMLFWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig
     {
         filelist.clear();
         std::wstring scriptPath = scriptpaths[i];
+
+        // TODO: The format specifier should probably be "%ls" here, but I'm not making that change as part of 
+        // this checkin as it is on the larger side and I want to limit its scope.
         fprintf(stderr, "HTKMLFWriter::Init: reading output script file %S ...", scriptPath.c_str());
         size_t n = 0;
         for (msra::files::textreader reader(scriptPath); reader && filelist.size() <= firstfilesonly /*optimization*/;)
@@ -170,7 +173,7 @@ bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std
             size_t id = outputNameToIdMap[outputName];
             size_t dim = outputNameToDimMap[outputName];
             wstring outFile = outputFiles[id][outputFileIndex];
-            string wfea = "ark:" + msra::strfun::utf8(outFile);
+            string wfea = "ark:" + Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(outFile));
 
             // wfea = msra::strfun::utf8(kaldicmd[i]);
             // feature_writer[i].Open(wfea);
@@ -178,7 +181,7 @@ bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std
 
             assert(outputData.GetNumRows() == dim);
             dim;
-            const std::string outputPath = msra::strfun::utf8(outFile);
+            const std::string outputPath = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(outFile));
             const std::string file_key = removeExtension(basename(outputPath));
 
             nnet_out_host.Resize(outputData.GetNumCols(), outputData.GetNumRows());

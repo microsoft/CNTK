@@ -883,8 +883,7 @@ public:
     void LoadConfigsFromFile()
     {
         // Workaround for loading a trained model from a different location
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-        std::string latticeConfigPathStr = converter.to_bytes(m_latticeConfigPath);
+        std::string latticeConfigPathStr = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(m_latticeConfigPath));
         wifstream file(latticeConfigPathStr.c_str());
         if (file.good())
         {

@@ -49,7 +49,7 @@ void TestBing(const ConfigParameters& config)
     size_t maxEpochs = config("maxEpochs");
     float momentumPerMB = 0.9;//0.9f;
     std::string outDir = config("outdir");
-    wstring modelPath = wstring(msra::strfun::utf16(outDir)).append(L"\\bingranknet.dnn");
+    wstring modelPath = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(outDir).append(L"\\bingranknet.dnn");
 
     SimpleSGD<ElemType> sgd(learnRatesPerMB, mbSize, epochSize, maxEpochs, modelPath, momentumPerMB);
     sgd.Train(netBuilder, dataReader, true);
@@ -238,7 +238,7 @@ void TestConfiguration(const ConfigParameters& configBase)
              iter != configNodes.end(); iter++)
         {
             std::wstring nodeName;
-            nodeName = msra::strfun::utf16(iter->first);
+            nodeName = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(iter->first);
             ConfigArray configNode = iter->second;
             std::string opName = configNode[0];
             if (IsParameter(paramsMap, opName))
@@ -295,7 +295,7 @@ void TestConfiguration(const ConfigParameters& configBase)
         configNodes = configCN("Relation");
         for (auto iter = configNodes.begin(); iter != configNodes.end(); iter++)
         {
-            std::wstring nodeName = msra::strfun::utf16(iter->first);
+            std::wstring nodeName = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(iter->first);
             ConfigArray configNode = iter->second;
             int numChildren = (int) configNode.size();
             for (int i = 0; i < numChildren; ++i)

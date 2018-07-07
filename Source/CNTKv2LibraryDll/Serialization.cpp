@@ -489,7 +489,7 @@ namespace CNTK
         proto::Axis* dst = (arena != nullptr) ? 
             Arena::CreateMessage<proto::Axis>(arena) : new proto::Axis();
         dst->set_static_axis_idx(src.StaticAxisIndex(false));
-        dst->set_name(ToString(src.Name()));
+        dst->set_name(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(src.Name())));
         dst->set_is_ordered_dynamic_axis(src.IsOrdered());
         return dst;
     }
@@ -502,7 +502,7 @@ namespace CNTK
         }
         else
         {
-            return new Axis(ToWString(src.name()), src.is_ordered_dynamic_axis());
+            return new Axis(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(src.name()), src.is_ordered_dynamic_axis());
         }
     }
 
@@ -605,7 +605,7 @@ namespace CNTK
         dst->set_version(src.s_version);
         for (const auto& kv : src)
         {
-            Copy(kv.second, dst->mutable_data()->operator[](ToString(kv.first)), arena);
+            Copy(kv.second, dst->mutable_data()->operator[](Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(kv.first))), arena);
         }
         return dst;
     }
@@ -615,7 +615,7 @@ namespace CNTK
         Dictionary* dst = new Dictionary();
         for (const auto& kv : src.data())
         {
-            Copy(kv.second, dst->operator[](ToWString(kv.first)));
+            Copy(kv.second, dst->operator[](Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(kv.first)));
         }
         return dst;
     }
@@ -654,7 +654,7 @@ namespace CNTK
             dst.set_double_value(src.Value<double>());
             break;
         case DictionaryValue::Type::String:
-            dst.set_string_value(ToString(src.Value<std::wstring>()));
+            dst.set_string_value(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(src.Value<std::wstring>())));
             break;
         case DictionaryValue::Type::NDShape:
             dst.set_allocated_nd_shape_value(CreateProto(src.Value<NDShape>(), arena));
@@ -681,7 +681,7 @@ namespace CNTK
         dst.m_dictionaryData->reserve(src.data_size());
         for (const auto& kv : src.data())
         {
-            Serializer::Copy(kv.second, dst[ToWString(kv.first)]);
+            Serializer::Copy(kv.second, dst[Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(kv.first)]);
         }
     }
 
@@ -715,7 +715,7 @@ namespace CNTK
             dst.m_data.m_double = src.double_value();
             break;
         case proto::DictionaryValue::String:
-            dst.m_data.m_ptr = new std::wstring(ToWString(src.string_value()));
+            dst.m_data.m_ptr = new std::wstring(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(src.string_value()));
             break;
         case proto::DictionaryValue::NDShape:
             dst.m_data.m_ptr = CreateFromProto(src.nd_shape_value());

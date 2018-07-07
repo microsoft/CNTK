@@ -422,7 +422,7 @@ namespace ONNX
         if (itNodeFn == _cntkToONNXOpName.end())
         {
             LogicError("Cannot map to ONNX op from CNTK ReduceElements operation: %s / %s",
-                ToString(cntkOpName).c_str(), ToString(cntkAttributeOpName).c_str());
+                       Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(cntkOpName)).c_str(), Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(cntkAttributeOpName)).c_str());
         }
 
         return itNodeFn->second;
@@ -432,7 +432,7 @@ namespace ONNX
     {
         if (!SupportBroadcast(opName))
         {
-            LogicError("Calling GitElementWiseInputIndices with invalid op: %s", ToString(opName).c_str());
+            LogicError("Calling GitElementWiseInputIndices with invalid op: %s", Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(opName)).c_str());
         }
 
         int index0 = 0;
