@@ -33,7 +33,6 @@
 #include <vector>
 #include <chrono>
 
-#include "core/common/CommonSTD.h"
 #include "core/common/code_location.h"
 #include "core/common/exceptions.h"
 #include "core/common/status.h"
@@ -62,6 +61,8 @@ using std::vector;
 #define UNUSED_PARAMETER(x)
 #endif
 
+// std::vector<std::string> GetStackTrace();
+
 // __PRETTY_FUNCTION__ isn't a macro on gcc, so use a check for _MSC_VER
 // so we only define it as one for MSVC
 #if (_MSC_VER && !defined(__PRETTY_FUNCTION__))
@@ -73,7 +74,7 @@ using std::vector;
   Lotus::CodeLocation(__FILE__, __LINE__, __FUNCTION__)
 
 #define WHERE_WITH_STACK \
-  Lotus::CodeLocation(__FILE__, __LINE__, __FUNCTION__) // Lotus::CodeLocation(__FILE__, __LINE__, __PRETTY_FUNCTION__, Lotus::GetStackTrace())
+  Lotus::CodeLocation(__FILE__, __LINE__, __PRETTY_FUNCTION__) // , Lotus::GetStackTrace())
 
 // Throw an exception with optional message.
 // NOTE: The arguments get streamed into a string via ostringstream::operator<<

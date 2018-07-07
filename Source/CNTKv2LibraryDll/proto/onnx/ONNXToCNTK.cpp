@@ -16,6 +16,7 @@
 using namespace LotusIR;
 using namespace CNTK;
 using namespace CNTK::ONNX;
+using namespace onnx;
 
 namespace CNTK
 {
