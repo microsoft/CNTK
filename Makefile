@@ -76,6 +76,8 @@ endif
 
 #### Configure based on options above
 
+DEFAULT_CXX:= $(CXX)
+
 # The mpic++ wrapper only adds MPI specific flags to the g++ command line.
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 ifneq ($(HAS_MPI),0)
@@ -692,7 +694,9 @@ EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL_LIBS+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
-$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB)
+MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
+
+$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
@@ -1113,7 +1117,7 @@ lMULTIVERSO:=-lmultiverso
 INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
 COMMON_FLAGS += -DASGD_PARALLEL_SUPPORT
 
-MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
+# MULTIVERSO_LIB has been set above
 
 ALL_LIBS+=$(MULTIVERSO_LIB)
 ifeq ("$(BUILDTYPE)","release")
@@ -1130,13 +1134,13 @@ $(MULTIVERSO_LIB):
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build/$(BUILDTYPE)
 	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
-		-DCMAKE_CXX_COMPILER=$(CXX) \
+		-DCMAKE_CXX_COMPILER=$(DEFAULT_CXX) \
 		-DOpenMP_CXX_FLAGS="" \
 		-DOpenMP_C_FLAGS="" \
 		-DBoost_NO_BOOST_CMAKE=TRUE \
 		-DBoost_NO_SYSTEM_PATHS=TRUE \
-		-DBOOST_ROOT:PATHNAME=$(BOOST_PATH) \
-		-DBOOST_LIBRARY_DIRS:FILEPATH=$(BOOST_PATH) \
+		-DBOOST_ROOT:PATH=$(BOOST_PATH) \
+		-DBOOST_LIBRARY_DIRS:PATH=$(BOOST_PATH) \
 		-DLIBRARY_OUTPUT_PATH=$(shell readlink -f $(LIBDIR)) \
 		-DEXECUTABLE_OUTPUT_PATH=$(shell readlink -f $(BINDIR)) \
 		-DCMAKE_BUILD_TYPE=$(MULTIVERSO_CMAKE_BUILDTYPE) \
