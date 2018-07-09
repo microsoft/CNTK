@@ -16,12 +16,12 @@
 #include "core/common/status.h"
 #include "onnx/onnx_pb.h"
 
-// #include "gsl/pointers"
+#include "gsl/pointers"
 
 namespace Lotus{
 using namespace ::Lotus::Common;
 #ifdef _WIN32
-inline Status FileOpenRd(const std::wstring& path, /*out*/ int* p_fd) {
+inline Status FileOpenRd(const std::wstring& path, /*out*/ gsl::not_null<int*> p_fd) {
   _wsopen_s(p_fd, path.c_str(), _O_RDONLY | _O_SEQUENTIAL | _O_BINARY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
   if (0 > *p_fd) {
     return Status(SYSTEM, errno);
@@ -29,7 +29,7 @@ inline Status FileOpenRd(const std::wstring& path, /*out*/ int* p_fd) {
   return Status::OK();
 }
 
-inline Status FileOpenWr(const std::wstring& path, /*out*/ int* p_fd) {
+inline Status FileOpenWr(const std::wstring& path, /*out*/ gsl::not_null<int*> p_fd) {
   _wsopen_s(p_fd, path.c_str(), _O_CREAT | O_TRUNC | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
   if (0 > *p_fd) {
     return Status(SYSTEM, errno);
@@ -38,7 +38,7 @@ inline Status FileOpenWr(const std::wstring& path, /*out*/ int* p_fd) {
 }
 #endif
 
-inline Status FileOpenRd(const std::string& path, /*out*/ int* p_fd) {
+inline Status FileOpenRd(const std::string& path, /*out*/ gsl::not_null<int*> p_fd) {
 #ifdef _WIN32
   _sopen_s(p_fd, path.c_str(), _O_RDONLY | _O_SEQUENTIAL | _O_BINARY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
 #else
@@ -50,7 +50,7 @@ inline Status FileOpenRd(const std::string& path, /*out*/ int* p_fd) {
   return Status::OK();
 }
 
-inline Status FileOpenWr(const std::string& path, /*out*/ int* p_fd) {
+inline Status FileOpenWr(const std::string& path, /*out*/ gsl::not_null<int*> p_fd) {
 #ifdef _WIN32
   _sopen_s(p_fd, path.c_str(), _O_CREAT | O_TRUNC | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
 #else

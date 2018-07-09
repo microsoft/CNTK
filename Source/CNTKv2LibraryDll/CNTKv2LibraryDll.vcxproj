@@ -178,7 +178,6 @@
     <ClInclude Include="proto\onnx\CNTKToONNX.h" />
     <ClInclude Include="proto\onnx\core\common\code_location.h" />
     <ClInclude Include="proto\onnx\core\common\common.h" />
-    <ClInclude Include="proto\onnx\core\common\CommonSTD.h" />
     <ClInclude Include="proto\onnx\core\common\const_pointer_container.h" />
     <ClInclude Include="proto\onnx\core\common\exceptions.h" />
     <ClInclude Include="proto\onnx\core\common\logging\capture.h" />
