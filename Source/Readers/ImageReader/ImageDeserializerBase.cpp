@@ -47,7 +47,7 @@ using namespace Microsoft::MSR::CNTK;
         ConfigParameters featureSection = inputs(featureNames[0]);
         StreamInformation features;
         features.m_id = 0;
-        features.m_name = msra::strfun::utf16(featureSection.ConfigName());
+        features.m_name = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(featureSection.ConfigName());
         features.m_storageFormat = StorageFormat::Dense;
         features.m_sampleLayout = NDShape::Unknown();
         // Due to performance, now we support images of different types.
@@ -59,7 +59,7 @@ using namespace Microsoft::MSR::CNTK;
         size_t labelDimension = label("labelDim");
         StreamInformation labels;
         labels.m_id = 1;
-        labels.m_name = msra::strfun::utf16(label.ConfigName());
+        labels.m_name = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(label.ConfigName());
         labels.m_sampleLayout = NDShape({ labelDimension });
         labels.m_storageFormat = StorageFormat::SparseCSC;
         labels.m_elementType = m_precision;

@@ -462,38 +462,12 @@ namespace CNTK
         mode = mode | O_BINARY;
         fd = _wopen(filePath.c_str(), mode, 0644);
 #else
-        fd = open(ToString(filePath).c_str(), mode, 0644);
+        fd = open(ToLegacyString(ToUTF8(filePath)).c_str(), mode, 0644);
 #endif
         if (fd < 0)
             RuntimeError("Cannot open file '%S' for %s.", filePath.c_str(), (readOnly ? "reading" : "writing"));
 
         return fd;
-    }
-
-    std::string ToString(const std::wstring& wstring)
-    {
-#ifdef _MSC_VER
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-        return converter.to_bytes(wstring);
-#else
-        const auto length = wstring.length() * sizeof(std::wstring::value_type) + 1;
-        char buf[length];
-        const auto res = std::wcstombs(buf, wstring.c_str(), sizeof(buf));
-        return (res >= 0) ? buf : "";
-#endif
-    }
-
-    std::wstring ToWString(const std::string& string)
-    {
-#ifdef _MSC_VER
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-        return converter.from_bytes(string);
-#else
-        const auto length = string.length() + 1;
-        wchar_t buf[length];
-        const auto res = std::mbstowcs(buf, string.c_str(),  sizeof(buf));
-        return (res >= 0) ? buf : L"";
-#endif
     }
 
     bool IsFirstOutputOfMultiOutputFunction(const Variable& var)

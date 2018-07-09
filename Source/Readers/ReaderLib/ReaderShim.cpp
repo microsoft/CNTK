@@ -234,7 +234,7 @@ string EnumerateInputs(const unordered_map<wstring, size_t>& nameToStreamId)
     for (auto s : nameToStreamId)
     {
         str << (first ? "" : ", ");
-        auto name = msra::strfun::utf8(s.first);
+        std::string name = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(s.first));
         str << '\"' << name.c_str() << '\"';
         first = false;
     }

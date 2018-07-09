@@ -343,7 +343,7 @@ class Value(cntk_py.Value):
                 raise ValueError('could not convert sample data to '
                                     'NumPy array')
 
-        elif sample.dtype in (np.float32, np.float64, np.float16):
+        elif sample.dtype in (bool, np.float32, np.float64, np.float16):
             if sample.dtype != var.dtype:
                 convert_to_var_dtype = True
 
@@ -351,7 +351,7 @@ class Value(cntk_py.Value):
             convert_to_var_dtype = True
 
         else:
-            raise ValueError('only integer, float32, float64 and float16 are '
+            raise ValueError('only integer, bool, float32, float64 and float16 are '
                              'supported, you gave %s' % sample.dtype)
 
         if convert_to_var_dtype:

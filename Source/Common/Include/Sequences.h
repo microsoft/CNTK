@@ -922,6 +922,7 @@ inline size_t MBLayout::GetActualNumSamples() const { return m_numFramesDeclared
 
 // return m_columnsValidityMask(,), which is lazily created here upon first call
 // only called from MaskMissingColumnsTo()
+// Update: also called from GatherNode::BackpropToNonLooping(). 
 // TODO: Can probably be faster by using the sequence array directly.
 // TODO: Or should we just blast m_distanceToStart to GPU, and maks based on that? It is small compared to features.
 inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE deviceId) const

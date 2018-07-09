@@ -1835,9 +1835,9 @@ public:
     virtual std::set<std::pair<const MatrixBase*, std::wstring>> GetMatrixInfo() const override
     {
         std::set<std::pair<const MatrixBase*, std::wstring>> matrixInfo;
-        matrixInfo.insert    (make_pair(ValuePtr().get(),    NodeName() + L" : " + msra::strfun::utf16(ShapeDescription())));
+        matrixInfo.insert(make_pair(ValuePtr().get(), NodeName() + L" : " + Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(ShapeDescription())));
         if (GradientPtr())
-            matrixInfo.insert(make_pair(GradientPtr().get(), NodeName() + L" : " + msra::strfun::utf16(ShapeDescription()) + L" (gradient)"));
+            matrixInfo.insert(make_pair(GradientPtr().get(), NodeName() + L" : " + Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(ShapeDescription()) + L" (gradient)"));
         return matrixInfo;
     }
 

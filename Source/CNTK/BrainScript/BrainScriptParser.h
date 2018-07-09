@@ -66,7 +66,7 @@ class ConfigException : public Microsoft::MSR::ScriptableObjects::ScriptingExcep
 public:
     // Note: All our Error objects use wide strings, which we round-trip through runtime_error as utf8.
     ConfigException(const wstring& msg, TextLocation where)
-        : Microsoft::MSR::ScriptableObjects::ScriptingException(msra::strfun::utf8(msg))
+        : Microsoft::MSR::ScriptableObjects::ScriptingException(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(msg)))
     {
         locations.push_back(where);
     }
@@ -80,12 +80,12 @@ public:
 
     wstring GetError(const std::wstring& linePrefix) const override
     {
-        return TextLocation::CreateIssueMessage(locations, linePrefix.c_str(), kind(), msra::strfun::utf16(what()).c_str());
+        return TextLocation::CreateIssueMessage(locations, linePrefix.c_str(), kind(), Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(what()).c_str());
     }
     // pretty-print this as an error message
     void /*ScriptingException::*/ PrintError(const std::wstring& linePrefix) const override
     {
-        TextLocation::PrintIssue(locations, linePrefix.c_str(), kind(), msra::strfun::utf16(what()).c_str());
+        TextLocation::PrintIssue(locations, linePrefix.c_str(), kind(), Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(what()).c_str());
     }
     void AddLocation(TextLocation where)
     {

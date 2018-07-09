@@ -276,7 +276,7 @@ public:
             {
                 result.archivePathIdx = (unsigned int)archivePathStringMap.size();
                 archivePathStringMap[archivepath] = result.archivePathIdx;
-                archivePathStringVector.push_back(msra::strfun::utf16(archivepath));
+                archivePathStringVector.push_back(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(archivepath));
             }
 
             logicalPath = logicalPath.substr(0, logicalPath.find_last_of("."));

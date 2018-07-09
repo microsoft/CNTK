@@ -1633,7 +1633,7 @@ namespace CNTK
         if (cntk_index > operand.Shape().Rank())
         {
             LogicError("Flatten: unsupported axis (operand.Shape().Rank() = %d, axis = %s).",
-                (int)operand.Shape().Rank(), ToString(axis.AsString()).c_str());
+                (int)operand.Shape().Rank(), ToLegacyString(ToUTF8(axis.AsString())).c_str());
         }
 
         size_t dim0 = cntk_index == 0 ? 1 : operand.Shape().SubShape(0, cntk_index).TotalSize();

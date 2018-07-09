@@ -5822,6 +5822,8 @@ template<class ElemType>
 __global__ void _scatterToIndices(ElemType *indices,
                                   ElemType *value,
                                   ElemType *buffer,
+                                  char *mask,
+                                  size_t num_indices_elems_per_mask_col,
                                   size_t num_row_elements,
                                   size_t num_indices,
                                   CUDA_LONG num_elements)
@@ -5831,6 +5833,9 @@ __global__ void _scatterToIndices(ElemType *indices,
     {
         size_t indices_index = index / num_row_elements;
         size_t offset = index % num_row_elements;
+        //Skip missing values
+        assert(!mask || num_indices_elems_per_mask_col != 0);
+        if (mask && mask[indices_index / num_indices_elems_per_mask_col] == 0) return;
         //We resort to nondeterministic behavior (floating point addition is not associative).
         //Note that the CPU parallel algorithm will have poor performance on the GPU because of thread divergence
         atomicAdd(&buffer[(size_t)(unsigned long long int)indices[indices_index] * num_row_elements + offset], value[index]);

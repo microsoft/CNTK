@@ -210,7 +210,7 @@ template <class ElemType>
 SparseBinaryInput<ElemType>::SparseBinaryInput(std::wstring fileName)
     : m_fileName(fileName), m_readOrder(nullptr), m_readOrderLength(0), m_randomize(false), m_tempValues(nullptr), m_tempValuesSize(0), m_offsets(nullptr), m_offsetsStart(0), m_startMB(0), m_endMB(0)
 {
-    std::string name = msra::strfun::utf8(m_fileName);
+    std::string name = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(m_fileName));
     m_inFile.open(name, ifstream::binary | ifstream::in);
 }
 
@@ -257,7 +257,7 @@ void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rena
         m_inFile.read((char*) tempName, len);
         tempName[len] = '\0';
         // std::string name((char*)header_buffer + base_offset, len);
-        std::wstring wname = msra::strfun::utf16(tempName);
+        std::wstring wname = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(tempName);
         if (rename.find(wname) == rename.end())
         {
             m_features.emplace_back(wname);
@@ -288,7 +288,7 @@ void SparseBinaryInput<ElemType>::Init(std::map<std::wstring, std::wstring> rena
         // std::string name((char*)header_buffer + base_offset, len);
         m_inFile.read((char*) tempName, len);
         tempName[len] = '\0';
-        std::wstring wname = msra::strfun::utf16(tempName);
+        std::wstring wname = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(tempName);
         if (rename.find(wname) == rename.end())
         {
             m_labels.emplace_back(wname);
@@ -848,9 +848,8 @@ void LibSVMBinaryReader<ElemType>::RenamedMatrices(const ConfigRecordType& confi
         // see if we have a config parameters that contains a "dim" element, it's a sub key, use it
         if (temp.ExistsCurrent(L"rename"))
         {
-
             std::wstring ren = temp(L"rename");
-            rename.emplace(msra::strfun::utf16(id), msra::strfun::utf16(ren));
+            rename.emplace(id, ren);
         }
     }
 }

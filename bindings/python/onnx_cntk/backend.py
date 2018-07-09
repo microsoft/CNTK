@@ -1,14 +1,14 @@
-#-------------------------------------------------------------------------
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License. See License.txt in the project root for
-# license information.
-#--------------------------------------------------------------------------
+# ==============================================================================
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
 
-import numpy as np
 import cntk as C
-from onnx.backend.base import Backend
+import numpy as np
 from onnx import helper, TensorProto
-from .backend_rep import CNTKBackendRep
+from onnx.backend.base import Backend
+from onnx.backend.base import BackendRep
 
 class CNTKBackend(Backend):
     @staticmethod
@@ -41,29 +41,36 @@ class CNTKBackend(Backend):
         return CNTKBackend.run_model(onnx_model, input, device)
 
     @classmethod
-    def run_model(cls, model, input, device='CPU'):
-        with open(r'tmp_model.pb', 'wb') as f:
-            f.write(model.SerializeToString())
-                   
-        CNTKBackend.set_device(device)
-        c_model = C.Function.load(r'tmp_model.pb', format=C.ModelFormat.ONNX)
-        c_inputs = {c_model.arguments[i]:input[i] for i in range(len(input))} 
-        res = c_model.eval(c_inputs)
-        return [res]
-
-    @classmethod
     def prepare(cls, model, device='CPU', **kwargs):
+        expected_out_types = [out.type.tensor_type.elem_type for out in model.graph.output]
         with open(r'tmp_model.pb', 'wb') as f:
             f.write(model.SerializeToString())
         
         CNTKBackend.set_device(device)
         c_model = C.Function.load(r'tmp_model.pb', format=C.ModelFormat.ONNX)
-        return CNTKBackendRep(c_model)
+        return CNTKBackendRep(c_model, expected_out_types)
 
     @classmethod
     def supports_device(cls, device='CPU'):
         return device in ['CPU', 'GPU', 'CUDA']
 
+
+class CNTKBackendRep(BackendRep):
+    def __init__(self, model, expected_out_types):
+        self.model = model
+        self.expected_out_types = expected_out_types
+
+    def run(self, inputs, **kwargs):
+        input = {self.model.arguments[i]:inputs[i] for i in range(len(inputs))} 
+        res = self.model.eval(input)
+        # TODO: make this work for multiple output case.
+        # TODO: support more types.
+        if self.expected_out_types[0] == TensorProto.BOOL:
+            res = res.astype("bool")
+        return [res]
+
+
+prepare = CNTKBackend.prepare
+run_model = CNTKBackend.run_model
 run_node = CNTKBackend.run_node
 supports_device = CNTKBackend.supports_device
-prepare = CNTKBackend.prepare

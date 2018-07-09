@@ -830,7 +830,7 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
                 else // -(node)
                     return EvaluateNodeOp(e, argValPtr, ConfigValuePtr(), ConfigValuePtr(), scope, exprPath);
             else
-                Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand (which has type " + msra::strfun::utf16(argValPtr.TypeName()) + L")", e->location);
+                Fail(L"operator '" + e->op.substr(0, 1) + L"' cannot be applied to this operand (which has type " + Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(argValPtr.TypeName()) + L")", e->location);
         }
         else if (e->op == L"!(") // === unary operator !
         {
@@ -1011,7 +1011,7 @@ static wstring FormatConfigValue(ConfigValuePtr arg, const wstring &how)
     else if (arg.Is<HasToString>())
         return arg.AsRef<HasToString>().ToString();
     else
-        return msra::strfun::utf16(arg.TypeName()); // cannot print this type
+        return Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(arg.TypeName()); // cannot print this type
 }
 
 // NumericFunctions

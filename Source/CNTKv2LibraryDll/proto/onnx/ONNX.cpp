@@ -15,6 +15,7 @@
 #include <memory>
 
 using namespace CNTK;
+using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
@@ -37,14 +38,15 @@ namespace CNTK
     {
         if (function->Inputs().size() == 0)
         {
-            cout << string(spaces, '.') + "(" + ToString(useName ? function->Name() : function->Uid()) + ")" + ToString(function->AsString()) << std::endl;
+            cout << string(spaces, '.') + "(" + ToLegacyString(ToUTF8(useName ? function->Name() : function->Uid())) + ")" + ToLegacyString(ToUTF8(function->AsString())) << std::endl;
             return;
         }
 
         for (auto input : function->Inputs())
         {
-            cout << string(spaces, '.') + "(" + ToString(useName ? function->Name() : function->Uid()) + ")" + "->" +
-                "(" + ToString(useName ? input.Name() : input.Uid()) + ")" + ToString(input.AsString()) << std::endl;
+            cout << string(spaces, '.') + "(" + ToLegacyString(ToUTF8(useName ? function->Name() : function->Uid())) + ")" + "->" +
+                        "(" + ToLegacyString(ToUTF8(useName ? input.Name() : input.Uid())) + ")" + ToLegacyString(ToUTF8(input.AsString()))
+                 << std::endl;
         }
 
         for (auto input : function->Inputs())
@@ -64,7 +66,7 @@ void ONNXFormat::Save(const FunctionPtr& src, const std::wstring& filepath)
 #ifdef _WIN32
     LotusIR::Model::Save(*model, filepath);
 #else
-    LotusIR::Model::Save(*model, ToString(filepath));
+    LotusIR::Model::Save(*model, ToLegacyString(ToUTF8(filepath)));
 #endif
 }
 
@@ -75,7 +77,7 @@ FunctionPtr ONNXFormat::Load(const std::wstring& filepath, const DeviceDescripto
 #ifdef _WIN32
     Lotus::Common::Status loadStatus = LotusIR::Model::Load(filepath, model);
 #else
-    Lotus::Common::Status loadStatus = LotusIR::Model::Load(ToString(filepath), model);
+    Lotus::Common::Status loadStatus = LotusIR::Model::Load(ToLegacyString(ToUTF8(filepath)), model);
 #endif
     if (!loadStatus.IsOK())
         LogicError("Failed to load model: '%s'", loadStatus.ErrorMessage().c_str());

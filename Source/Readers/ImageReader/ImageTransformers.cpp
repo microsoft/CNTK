@@ -430,7 +430,7 @@ MeanTransformer::MeanTransformer(const ConfigParameters& config) : ImageTransfor
     else
     {
         cv::FileStorage fs;
-        fs.open(msra::strfun::utf8(meanFile).c_str(), cv::FileStorage::READ);
+        fs.open(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(meanFile)).c_str(), cv::FileStorage::READ);
         if (!fs.isOpened())
             RuntimeError("Could not open file: %ls", meanFile.c_str());
         fs["MeanImg"] >> m_meanImg;
@@ -606,7 +606,7 @@ IntensityTransformer::IntensityTransformer(const ConfigParameters &config) : Ima
     else
     {
         cv::FileStorage fs;
-        fs.open(msra::strfun::utf8(intFile).c_str(), cv::FileStorage::READ);
+        fs.open(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(intFile)).c_str(), cv::FileStorage::READ);
         if (!fs.isOpened())
             RuntimeError("Could not open file: %ls", intFile.c_str());
         fs["EigVal"] >> m_eigVal;

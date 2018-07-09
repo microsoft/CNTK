@@ -580,7 +580,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 #endif
 #ifdef __unix__
             char tempFile[PATH_MAX];
-            strcpy(tempFile, msra::strfun::utf8(pageFilePath).c_str());
+            strcpy(tempFile, Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(pageFilePath)).c_str());
             int fid = mkstemp(tempFile);
             unlink(tempFile);
             close(fid);
