@@ -35,10 +35,6 @@ skip_models = [
 
 skip_ops = [
     # These tests crash and prevent tests after them from running.
-    'test_max_one_input_cpu',
-    'test_max_one_input_cuda',
-    'test_min_one_input_cpu',
-    'test_min_one_input_cuda',
     'test_reshape_extended_dims_cpu',
     'test_reshape_extended_dims_cuda',
     'test_reshape_negative_dim_cpu',
