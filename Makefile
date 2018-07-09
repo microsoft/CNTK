@@ -694,7 +694,10 @@ EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL_LIBS+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
+# only set lib name when asgd is true
+ifeq ("$(CNTK_ENABLE_ASGD)","true")
 MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
+endif
 
 $(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
