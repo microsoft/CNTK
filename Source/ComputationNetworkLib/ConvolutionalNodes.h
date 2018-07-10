@@ -49,7 +49,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class ConvolutionNodeBase : public ComputationNode<ElemType>
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers;
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;
 
 public:
     ConvolutionNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
@@ -244,8 +244,22 @@ protected:
         return result;
     }
 
+    // Check if we are padding over channel axis.
+    // Normally in convolution, input channel of inputShape and kernelShape should have the same size, 
+    // with padding turned off or with stride equal to channel size. 
+    void CheckPaddingChannelAxis(const TensorShape& inputShape)
+    {
+        const bool isPaddingChannelAxis = ConvolveGeometry::isPaddingOverChannelAxis(inputShape, m_stride, m_autoPad, m_lowerPad, m_upperPad);
+        if (isPaddingChannelAxis)
+            std::call_once(m_padChannelWarningOnceFlag,
+                [this] { fprintf(stderr, "WARNING: %ls %ls operation: detected padding over channel axis. Is this intended?\n",
+                    NodeName().c_str(), OperationName().c_str()); });
+    }
+
     virtual TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
     {
+        CheckPaddingChannelAxis(inputShape);
+
         const size_t DEAFULT_NUM_GROUPS = 1;
         return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
             m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, DEAFULT_NUM_GROUPS, ceilOutDim,
@@ -272,6 +286,9 @@ protected:
     shared_ptr<Matrix<ElemType>> m_tempMatrixBackward;
 
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
+
+private:
+    std::once_flag m_padChannelWarningOnceFlag;
 };
 
 #define UsingConvolutionNodeBaseMembersNonInstantiate \
@@ -295,6 +312,7 @@ protected:                                  \
     using Base::m_convEng;                  \
     using Base::InferConvolution2DReductionDims; \
     using Base::InferReductionDims;         \
+    using Base::CheckPaddingChannelAxis;    \
 public:
 
 #define UsingConvolutionNodeBaseMembers     \
@@ -725,6 +743,8 @@ private:
     virtual TensorShape /*ConvolutionNode::*/ComputeOutputShape(const TensorShape& inputShape,
         const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
     {
+        CheckPaddingChannelAxis(inputShape);
+
         return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
             m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, m_groups, ceilOutDim,
             Base::NeedsDynamicValidation(), isFinalValidationPass);

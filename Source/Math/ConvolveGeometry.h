@@ -421,6 +421,20 @@ public:
         return (kernSize - 1) - (kernSize - 1) / 2 - (extra - center);
     }
 
+    // Return if padding is enabled for input channel axis. 
+    static bool isPaddingOverChannelAxis(const TensorShape& inputShape, const TensorShape& stride, const BoolVec& autoPad, 
+        const TensorShape& lowerPad, const TensorShape& upperPad)
+    {
+        size_t channelIdx = inputShape.GetRank() - 1;
+        assert(inputShape.GetRank() >= 1);
+        size_t delta = stride[stride.GetRank() == 1 ? 0 : channelIdx];
+        bool autoPadCur = autoPad[autoPad.size() == 1 ? 0 : channelIdx];
+        size_t lo = lowerPad[lowerPad.size() == 1 ? 0 : channelIdx];
+        size_t hi = upperPad[upperPad.size() == 1 ? 0 : channelIdx];
+        // padding is enabled for channel axis, i.e. channel axis output dim != 1, when any of autoPad, lowerPad or upperPad > 0 and stride != channel size.
+        return (autoPadCur || (lo + hi > 0)) && delta != inputShape[channelIdx];
+    }
+
     // Computes output shape given input shape and other convolution parameters.
     static TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
                                           const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad,
@@ -464,6 +478,7 @@ public:
             size_t lo = lowerPad[lowerPad.size() == 1 ? 0 : i];
             size_t hi = upperPad[upperPad.size() == 1 ? 0 : i];
             size_t dil = dilation[dilation.GetRank() == 1 ? 0 : i];
+
             if (autoPadCur)
             {
                 dim += dil * (kernelShape_i - 1);
