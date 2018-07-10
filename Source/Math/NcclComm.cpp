@@ -32,6 +32,12 @@ ncclRedOp_t ncclRedOpFromMpiOp(MPI_Op op)
 NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     : m_ncclComm(nullptr), m_stream(nullptr)
 {
+    if (deviceId == CPUDEVICE)
+    {
+        fprintf(stderr, "NcclComm: disabled, at least one rank using CPU device\n");
+        return;
+    }
+
     cudaDeviceSynchronize();
     size_t numRanks = mpi->NumNodesInUse();
 
@@ -44,26 +50,19 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     }
     else
     {
-        if (deviceId != CPUDEVICE)
+        nvmlDevice_t thisDevice;
+        nvmlRes = nvmlDeviceGetHandleByIndex(deviceId, &thisDevice);
+        if (nvmlRes != NVML_SUCCESS)
         {
-            nvmlDevice_t thisDevice;
-            nvmlRes = nvmlDeviceGetHandleByIndex(deviceId, &thisDevice);
-            if (nvmlRes != NVML_SUCCESS)
-            {
-                fprintf(stderr, "NcclComm: disabled, failed to obtain nvmlDevice handle: %s\n", nvmlErrorString(nvmlRes));
-            }
-            else
-            {
-                nvmlRes = nvmlDeviceGetUUID(thisDevice, thisDeviceUUID.data(), thisDeviceUUID.size());
-                if (nvmlRes != NVML_SUCCESS)
-                {
-                    fprintf(stderr, "NcclComm: disabled, failed to obtain nvmlDevice UUID: %s\n", nvmlErrorString(nvmlRes));
-                }
-            }
+            fprintf(stderr, "NcclComm: disabled, failed to obtain nvmlDevice handle: %s\n", nvmlErrorString(nvmlRes));
         }
         else
         {
-            fprintf(stderr, "NcclComm: disabled, at least one rank using CPU device\n");
+            nvmlRes = nvmlDeviceGetUUID(thisDevice, thisDeviceUUID.data(), thisDeviceUUID.size());
+            if (nvmlRes != NVML_SUCCESS)
+            {
+                fprintf(stderr, "NcclComm: disabled, failed to obtain nvmlDevice UUID: %s\n", nvmlErrorString(nvmlRes));
+            }
         }
     }
     std::vector<std::array<char, NVML_DEVICE_UUID_BUFFER_SIZE>> allDeviceUUIDs(numRanks);
