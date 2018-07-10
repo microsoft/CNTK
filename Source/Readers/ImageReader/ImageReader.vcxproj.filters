@@ -11,6 +11,7 @@
     <ClCompile Include="ZipByteReader.cpp" />
     <ClCompile Include="Base64ImageDeserializer.cpp" />
     <ClCompile Include="ImageDeserializerBase.cpp" />
+    <ClCompile Include="CustomImageTransformer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -32,6 +33,7 @@
     <ClInclude Include="ImageUtil.h" />
     <ClInclude Include="Base64ImageDeserializer.h" />
     <ClInclude Include="ImageDeserializerBase.h" />
+    <ClInclude Include="CustomImageTransformer.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

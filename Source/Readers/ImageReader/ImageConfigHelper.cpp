@@ -83,6 +83,14 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
     m_grayscale = config(L"grayscale", c == 1);
     std::string rand = config(L"randomize", "auto");
 
+
+    std::string customCropValue = string(featureSection(L"customCrop", "false"));
+    if (customCropValue == "true" || customCropValue == "True")
+        m_customCrop = true;
+    else
+        m_customCrop = false;
+
+
     if (AreEqualIgnoreCase(rand, "auto"))
     {
         m_randomize = true;

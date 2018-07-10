@@ -60,7 +60,7 @@
       <WarningLevel>Level4</WarningLevel>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_USRDLL;$(ZipDefine);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>false</TreatWarningAsError>
       <OpenMPSupport>true</OpenMPSupport>
       <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
@@ -112,6 +112,7 @@
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="Base64ImageDeserializer.h" />
     <ClInclude Include="ByteReader.h" />
+    <ClInclude Include="CustomImageTransformer.h" />
     <ClInclude Include="ImageConfigHelper.h" />
     <ClInclude Include="ImageDataDeserializer.h" />
     <ClInclude Include="ImageDeserializerBase.h" />
@@ -123,6 +124,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base64ImageDeserializer.cpp" />
+    <ClCompile Include="CustomImageTransformer.cpp" />
     <ClCompile Include="ImageConfigHelper.cpp" />
     <ClCompile Include="ImageDataDeserializer.cpp" />
     <ClCompile Include="dllmain.cpp" />

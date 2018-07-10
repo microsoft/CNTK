@@ -1047,6 +1047,7 @@ IMAGEREADER_SRC =\
   $(SOURCEDIR)/Readers/ImageReader/ImageDataDeserializer.cpp \
   $(SOURCEDIR)/Readers/ImageReader/ImageTransformers.cpp \
   $(SOURCEDIR)/Readers/ImageReader/ImageReader.cpp \
+  $(SOURCEDIR)/Readers/ImageReader/CustomImageTransformer.cpp \
   $(SOURCEDIR)/Readers/ImageReader/ZipByteReader.cpp \
 
 IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))

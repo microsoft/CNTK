@@ -14,8 +14,10 @@
 #include "FramePacker.h"
 #include <omp.h>
 #include "TransformController.h"
+#include "CustomImageTransformer.h"
 
-namespace CNTK {
+namespace CNTK
+{
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -50,9 +52,9 @@ ImageReader::ImageReader(const ConfigParameters& config)
         // We do not do io prefetching, because chunks are single images currently.
         bool ioPrefetch = false;
         randomizer = std::make_shared<BlockRandomizer>(0, 1, deserializer, ioPrefetch, multithreadedGetNextSequences,
-            /*maxNumberOfInvalidSequences =*/ 0, // default
-            /*sampleBasedRandomizationWindow =*/ true, // default
-            GetRandomSeed(config));
+                                                       /*maxNumberOfInvalidSequences =*/0,       // default
+                                                       /*sampleBasedRandomizationWindow =*/true, // default
+                                                       GetRandomSeed(config));
     }
     else
     {
@@ -64,20 +66,28 @@ ImageReader::ImageReader(const ConfigParameters& config)
     ConfigParameters featureStream = config(featureName);
 
     std::vector<Transformation> transformations;
-    transformations.push_back(Transformation{ std::make_shared<CropTransformer>(featureStream), featureName });
-    transformations.push_back(Transformation{ std::make_shared<ScaleTransformer>(featureStream), featureName });
-    transformations.push_back(Transformation{ std::make_shared<ColorTransformer>(featureStream), featureName });
-    transformations.push_back(Transformation{ std::make_shared<IntensityTransformer>(featureStream), featureName });
-    transformations.push_back(Transformation{ std::make_shared<MeanTransformer>(featureStream), featureName });
+
+
+    if (configHelper.GetCustomCrop())
+        transformations.push_back(Transformation{std::make_shared<CustomTransformer>(featureStream), featureName});
+    else
+    {
+        transformations.push_back(Transformation{std::make_shared<CropTransformer>(featureStream), featureName});
+        transformations.push_back(Transformation{std::make_shared<ScaleTransformer>(featureStream), featureName});
+        transformations.push_back(Transformation{std::make_shared<ColorTransformer>(featureStream), featureName});
+        transformations.push_back(Transformation{std::make_shared<IntensityTransformer>(featureStream), featureName});
+        transformations.push_back(Transformation{std::make_shared<MeanTransformer>(featureStream), featureName});
+    }
+
 
     if (configHelper.GetDataFormat() == CHW)
     {
-        transformations.push_back(Transformation{ std::make_shared<TransposeTransformer>(featureStream), featureName });
+        transformations.push_back(Transformation{std::make_shared<TransposeTransformer>(featureStream), featureName});
     }
 
-    // We should always have cast at the end. 
+    // We should always have cast at the end.
     // It is noop if the matrix element type is already expected by the packer.
-    transformations.push_back(Transformation{ std::make_shared<CastTransformer>(featureStream), featureName });
+    transformations.push_back(Transformation{std::make_shared<CastTransformer>(featureStream), featureName});
 
     m_sequenceEnumerator = std::make_shared<TransformController>(transformations, randomizer);
     bool useLocalTimeline = true;
@@ -93,5 +103,4 @@ std::vector<StreamInformation> ImageReader::GetStreamDescriptions()
     assert(!m_streams.empty());
     return m_streams;
 }
-
 }
