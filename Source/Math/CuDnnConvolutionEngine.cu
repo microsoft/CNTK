@@ -26,6 +26,8 @@ const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
 // CNTK with cuDNN by default uses NCHW formats for both inputs/outputs and kernels.
 #define TENSOR_FORMAT CUDNN_TENSOR_NCHW
 #define FILTER_FORMAT CUDNN_TENSOR_NCHW
+//#define __PROFILE__
+
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -206,6 +208,14 @@ enum class AutotuningState : int
     Running = 2        // done tuning, no long performing auto-tuning, code is running normally
 };
 
+
+#ifdef __PROFILE__
+static std::set<int> forwardAlgo = std::set<int>();
+static std::set<int> backwardDataAlgo = std::set<int>();
+static std::set<int> backwardFilterAlgo = std::set<int>();
+#endif
+
+
 template <class ElemType>
 class CuDnnConvolutionEngine : public ConvolutionEngine<ElemType>
 {
@@ -320,6 +330,34 @@ protected:
         if(m_dataType == CUDNN_DATA_HALF) CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, m_fwdAlgo.AlgoMathType));
         else CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, CUDNN_DEFAULT_MATH));
         // Perform forward convolution operation.
+
+
+#ifdef __PROFILE__
+        if (forwardAlgo.find(m_fwdAlgo.selectedAlgo) == forwardAlgo.end())
+        {
+            if (CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM == m_fwdAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn forward kernel : CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM\n");
+            else if (CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM == m_fwdAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn forward kernel : CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM\n");
+            else if (CUDNN_CONVOLUTION_FWD_ALGO_GEMM == m_fwdAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn forward kernel : CUDNN_CONVOLUTION_FWD_ALGO_GEMM\n");
+            else if (CUDNN_CONVOLUTION_FWD_ALGO_DIRECT == m_fwdAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn forward kernel : CUDNN_CONVOLUTION_FWD_ALGO_DIRECT\n");
+            else if (CUDNN_CONVOLUTION_FWD_ALGO_FFT == m_fwdAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn forward kernel : CUDNN_CONVOLUTION_FWD_ALGO_FFT\n");
+            else if (CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING == m_fwdAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn forward kernel : CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING\n");
+            else if (CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD == m_fwdAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn forward kernel : CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD\n");
+            else if (CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED == m_fwdAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn forward kernel : CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED\n");
+            else if (CUDNN_CONVOLUTION_FWD_ALGO_COUNT == m_fwdAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn forward kernel : CUDNN_CONVOLUTION_FWD_ALGO_COUNT\n");
+            forwardAlgo.insert(m_fwdAlgo.selectedAlgo);
+        }
+#endif
+
+
         CUDNN_CALL(cudnnConvolutionForward(*m_cudnn, &C::One, m_inT, ptr(in), *m_kernelT, ptr(kernel), *m_conv, m_fwdAlgo.selectedAlgo, ptr(workspace), workspace.BufferSize(), &C::Zero, m_outT, ptr(out)));
     }
 
@@ -382,6 +420,30 @@ protected:
         };
         CUDNN_CALL(cudnnSetConvolutionGroupCount(*m_conv, (int)m_geometry->Groups()));
         FindBestAlgo(batchSize, m_backDataAlgo, workspaceSizeFinder, deterministicFinder, finder, staticFinder, workspace);
+
+
+#ifdef __PROFILE__
+        if (backwardDataAlgo.find(m_backDataAlgo.selectedAlgo) == backwardDataAlgo.end())
+        {
+            if (CUDNN_CONVOLUTION_BWD_DATA_ALGO_0 == m_backDataAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardData kernel : CUDNN_CONVOLUTION_BWD_DATA_ALGO_0\n");
+            else if (CUDNN_CONVOLUTION_BWD_DATA_ALGO_1 == m_backDataAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardData kernel : CUDNN_CONVOLUTION_BWD_DATA_ALGO_1\n");
+            else if (CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT == m_backDataAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardData kernel : CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT\n");
+            else if (CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING == m_backDataAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardData kernel : CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING\n");
+            else if (CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD == m_backDataAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardData kernel : CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD\n");
+            else if (CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED == m_backDataAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardData kernel : CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED\n");
+            else if (CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT == m_backDataAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardData kernel : CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT\n");
+            backwardDataAlgo.insert(m_backDataAlgo.selectedAlgo);
+        }
+#endif
+
+
         // Compute gradients with respect to the output tensor (data).
         if(m_dataType == CUDNN_DATA_HALF) CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, m_backDataAlgo.AlgoMathType));
         else CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, CUDNN_DEFAULT_MATH));
@@ -456,6 +518,32 @@ protected:
         };
         CUDNN_CALL(cudnnSetConvolutionGroupCount(*m_conv, (int)m_geometry->Groups()));
         FindBestAlgo(batchSize, m_backFiltAlgo, workspaceSizeFinder, deterministicFinder, finder, staticFinder, workspace);
+
+
+#ifdef __PROFILE__
+        if (backwardFilterAlgo.find(m_backFiltAlgo.selectedAlgo) == backwardFilterAlgo.end())
+        {
+            if (CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0 == m_backFiltAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardFilter kernel : CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0\n");
+            else if (CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1 == m_backFiltAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardFilter kernel : CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1\n");
+            else if (CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT == m_backFiltAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardFilter kernel : CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT\n");
+            else if (CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3 == m_backFiltAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardFilter kernel : CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3\n");
+            else if (CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD == m_backFiltAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardFilter kernel : CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD\n");
+            else if (CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED == m_backFiltAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardFilter kernel : CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED\n");
+            else if (CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT_TILING == m_backFiltAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardFilter kernel : CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT_TILING\n");
+            else if (CUDNN_CONVOLUTION_BWD_FILTER_ALGO_COUNT == m_backFiltAlgo.selectedAlgo)
+                LOGPRINTF(stderr, "Cudnn backwardFilter kernel : CUDNN_CONVOLUTION_BWD_FILTER_ALGO_COUNT\n");
+            backwardFilterAlgo.insert(m_backFiltAlgo.selectedAlgo);
+        }
+#endif
+
+
         // Compute gradients with respect to the output tensor (data).
         if(m_dataType == CUDNN_DATA_HALF) CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, m_backFiltAlgo.AlgoMathType));
         else CUDNN_CALL(cudnnSetConvolutionMathType(*m_conv, CUDNN_DEFAULT_MATH));

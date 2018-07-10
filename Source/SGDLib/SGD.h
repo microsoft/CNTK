@@ -72,6 +72,17 @@ enum class ParallelizationMethod : int
     modelParallelSGD = (1 << 8) // Currently unsupported
 };
 
+
+enum class AdjustType : int
+{
+    None,
+    Poly,
+    Inv,
+    Exp,
+    Step
+};
+
+
 // configuration parameters associated with RMSProp learning algorithm
 struct RMSPropInfo
 {
@@ -100,6 +111,26 @@ struct GradientUpdateInfo
     double targetAdagradAvDenom = 1;
     size_t varianceTimeConstant = 2 * 3600 * 100; // originally was: 2h of speech
 };
+
+
+// learning rate adjust per iteration info
+struct LRAPIInfo
+{
+    AdjustType adjustType;
+    size_t iter = 0;
+    size_t maxIter;
+    size_t step;
+    double base_;
+    double gamma;
+    double power;
+    size_t numItersToShowLR;
+    size_t numItersToSaveModel;
+    bool reachMaxIter = false;
+    size_t sgdTraceLevel;
+
+    LRAPIInfo() {}
+};
+
 
 struct BestEpoch
 {
@@ -322,11 +353,14 @@ protected:
     double m_seqGammarCalcWP;
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
-    
+
     // decide whether should apply regularization into BatchNormalizationNode
     // true: disable Regularization
     // false: enable Regularization (default)
     bool m_disableRegInBatchNormalization;
+
+
+    LRAPIInfo m_lrapiInfo;
 };
 
 template <class ElemType>
