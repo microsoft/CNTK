@@ -4341,6 +4341,16 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
 
+
+    CNTK_API FunctionPtr MarginInnerProduct(const Variable& prediction, const Variable& targets, const Variable& weight, size_t outputDimension, double base, double gamma, double power, double lambdaMin, size_t marginCoefficient, const std::wstring& name = L"");
+
+    CNTK_API FunctionPtr FeatureNormalize(const Variable& feature, size_t normalizeType, const std::wstring& name = L"");
+
+    CNTK_API FunctionPtr AdditiveFullConnection(const Variable& prediction, const Variable& targets, const Variable& weight, size_t outputDimension, bool weightNormalize, double bias, bool annealBias, double biasBase, double biasGamma, double biasPower, double biasMin, double biasMax, const std::wstring& name = L"");
+
+    CNTK_API FunctionPtr GlobalConcat(const Variable& feature, size_t blockIndex, size_t growthRate, size_t segmentIndex, size_t segmentNum, const std::wstring& name = L"");
+
+
     ///
     /// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.
     ///

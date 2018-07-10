@@ -126,6 +126,10 @@ namespace CNTK
         if ((op == PrimitiveOpType::SumAll) ||
             (op == PrimitiveOpType::ReduceElements &&  anyOfAxesInReduction([](const Axis& axis) { return axis == Axis::AllAxes(); })) ||
             (op == PrimitiveOpType::SquaredError) ||
+            (op == PrimitiveOpType::MarginInnerProduct) ||
+            (op == PrimitiveOpType::FeatureNormalize) ||
+            (op == PrimitiveOpType::AdditiveFullConnection) ||
+            (op == PrimitiveOpType::GlobalConcat) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::LatticeSequenceWithSoftmax) ||
             (op == PrimitiveOpType::EditDistanceError) ||
@@ -869,6 +873,30 @@ namespace CNTK
                             m_attributes[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
                             m_attributes[PrimitiveFunction::AttributeNameDilation] = dilation;
                             m_attributes[PrimitiveFunction::AttributeNameKernelShape] = kernelShape;
+                            break;
+                        }
+                        case PrimitiveOpType::MarginInnerProduct:
+                        {
+                            assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
+                            break;
+                        }
+                        case PrimitiveOpType::FeatureNormalize:
+                        {
+                            assert(m_inputs.size() == 1);
+                            outputShape = NDShape{};
+                            break;
+                        }
+                        case PrimitiveOpType::AdditiveFullConnection:
+                        {
+                            assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
+                            break;
+                        }
+                        case PrimitiveOpType::GlobalConcat:
+                        {
+                            assert(m_inputs.size() == 1);
+                            outputShape = NDShape{};
                             break;
                         }
                         case PrimitiveOpType::CrossEntropyWithSoftmax:

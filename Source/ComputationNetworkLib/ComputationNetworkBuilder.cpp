@@ -126,6 +126,10 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SqrtNode))                             return New<SqrtNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SquareErrorNode))                      return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(MarginInnerProductNode))               return New<MarginInnerProductNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(FeatureNormalizeNode))                 return New<FeatureNormalizeNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(AdditiveFullConnectionNode))           return New<AdditiveFullConnectionNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(GlobalConcatNode))                     return New<GlobalConcatNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogisticNode))                         return New<LogisticNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SumColumnElementsNode))                return New<SumColumnElementsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SumElementsNode))                      return New<SumElementsNode<ElemType>>(forward<_Types>(_Args)...);
@@ -471,6 +475,32 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Squar
 {
     return net.AddNodeToNetAndAttachInputs(New<SquareErrorNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
+
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MarginInnerProduct(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, size_t outputDimension, ElemType base, ElemType gamma, ElemType power, ElemType lambdaMin, size_t marginCoefficient, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<MarginInnerProductNode<ElemType>>(net.GetDeviceId(), nodeName, outputDimension, base, gamma, power, lambdaMin, marginCoefficient), {a, b, c});
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::FeatureNormalize(const ComputationNodePtr a, size_t normalizeType, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<FeatureNormalizeNode<ElemType>>(net.GetDeviceId(), nodeName, normalizeType), {a});
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::AdditiveFullConnection(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, size_t outputDimension, bool weightNormalize, ElemType bias, bool annealBias, ElemType biasBase, ElemType biasGamma, ElemType biasPower, ElemType biasMin, ElemType biasMax, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<AdditiveFullConnectionNode<ElemType>>(net.GetDeviceId(), nodeName, outputDimension, weightNormalize, bias, annealBias, biasBase, biasGamma, biasPower, biasMin, biasMax), {a, b, c});
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::GlobalConcat(const ComputationNodePtr a, size_t blockIndex, size_t growthRate, size_t segmentIndex, size_t segmentNum, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<GlobalConcatNode<ElemType>>(net.GetDeviceId(), nodeName, blockIndex, growthRate, segmentIndex, segmentNum), {a});
+}
+
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)

@@ -198,6 +198,10 @@ public:
     ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Sqrt(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr SquareError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+    ComputationNodePtr MarginInnerProduct(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, size_t outputDimension, ElemType base, ElemType gamma, ElemType power, ElemType lambdaMin, size_t marginCoefficient, const std::wstring nodeName = L"");
+    ComputationNodePtr FeatureNormalize(const ComputationNodePtr a, size_t normalizeType, const std::wstring nodeName = L"");
+    ComputationNodePtr AdditiveFullConnection(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, size_t outputDimension, bool weightNormalize, ElemType bias, bool annealBias, ElemType biasBase, ElemType biasGamma, ElemType biasPower, ElemType biasMin, ElemType biasMax, const std::wstring nodeName = L"");
+    ComputationNodePtr GlobalConcat(const ComputationNodePtr a, size_t blockIndex, size_t growthRate, size_t segmentIndex, size_t segmentNum, const std::wstring nodeName = L"");
     ComputationNodePtr Sum(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Tan(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Tanh(const ComputationNodePtr a, const std::wstring nodeName = L"");

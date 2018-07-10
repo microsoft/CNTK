@@ -2082,6 +2082,57 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
 {
 }
 
+
+#pragma region Asoftmax
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AsoftmaxForward2(ElemType lambda, size_t minibatchSize, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& inputMagnitude,
+                                           const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& sign0)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AsoftmaxForward3(ElemType lambda, size_t minibatchSize, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& inputMagnitude,
+                                           const GPUMatrix<ElemType>& cosTheta, const GPUMatrix<ElemType>& cosThetaCubic, const GPUMatrix<ElemType>& sign1, const GPUMatrix<ElemType>& sign2)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AsoftmaxForward4(ElemType lambda, size_t minibatchSize, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& inputMagnitude,
+                                           const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& cosThetaQuartic, const GPUMatrix<ElemType>& sign3, const GPUMatrix<ElemType>& sign4)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AsoftmaxBackward2(ElemType lambda, size_t inputDimension, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gradient, GPUMatrix<ElemType>& X_gradient, const GPUMatrix<ElemType>& inputMagnitude, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight,
+                                            const GPUMatrix<ElemType>& cosTheta, const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& sign0)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AsoftmaxBackward3(ElemType lambda, size_t inputDimension, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gradient, GPUMatrix<ElemType>& X_gradient, const GPUMatrix<ElemType>& inputMagnitude, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight,
+                                            const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& cosThetaCubic, const GPUMatrix<ElemType>& sign1, const GPUMatrix<ElemType>& sign2)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AsoftmaxBackward4(ElemType lambda, size_t inputDimension, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gradient, GPUMatrix<ElemType>& X_gradient, const GPUMatrix<ElemType>& inputMagnitude, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight,
+                                            const GPUMatrix<ElemType>& cosTheta, const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& cosThetaCubic, const GPUMatrix<ElemType>& cosThetaQuartic, const GPUMatrix<ElemType>& sign3, const GPUMatrix<ElemType>& sign4)
+{
+}
+
+#pragma endregion
+
+#pragma region AMsoftmax
+
+template <class ElemType>
+void GPUMatrix<ElemType>::LabelAdd(const GPUMatrix<ElemType>& label, ElemType bias, const GPUMatrix<ElemType>& value)
+{
+}
+
+#pragma endregion
+
+
 template <class ElemType>
 void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const GPUMatrix<ElemType> &paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
 {

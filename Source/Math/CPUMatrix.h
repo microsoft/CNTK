@@ -435,6 +435,35 @@ public:
     void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<StatType>& scale, double blendFactor, const CPUMatrix<StatType>& saveMean, const CPUMatrix<StatType>& saveInvStdDev,
                                     CPUMatrix<StatType>& scaleGrad, CPUMatrix<StatType>& biasGrad) const;
 
+#pragma region Asoftmax
+
+    static void AsoftmaxForward2(ElemType lambda, size_t minibatchSize, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& inputMagnitude,
+                                 const CPUMatrix<ElemType>& cosThetaQuadratic, const CPUMatrix<ElemType>& sign0);
+
+    static void AsoftmaxForward3(ElemType lambda, size_t minibatchSize, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& inputMagnitude,
+                                 const CPUMatrix<ElemType>& cosTheta, const CPUMatrix<ElemType>& cosThetaCubic, const CPUMatrix<ElemType>& sign1, const CPUMatrix<ElemType>& sign2);
+
+    static void AsoftmaxForward4(ElemType lambda, size_t minibatchSize, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& inputMagnitude,
+                                 const CPUMatrix<ElemType>& cosThetaQuadratic, const CPUMatrix<ElemType>& cosThetaQuartic, const CPUMatrix<ElemType>& sign3, const CPUMatrix<ElemType>& sign4);
+
+    static void AsoftmaxBackward2(ElemType lambda, size_t inputDimension, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gradient, CPUMatrix<ElemType>& X_gradient, const CPUMatrix<ElemType>& inputMagnitude, const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight,
+                                  const CPUMatrix<ElemType>& cosTheta, const CPUMatrix<ElemType>& cosThetaQuadratic, const CPUMatrix<ElemType>& sign0);
+
+    static void AsoftmaxBackward3(ElemType lambda, size_t inputDimension, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gradient, CPUMatrix<ElemType>& X_gradient, const CPUMatrix<ElemType>& inputMagnitude, const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight,
+                                  const CPUMatrix<ElemType>& cosThetaQuadratic, const CPUMatrix<ElemType>& cosThetaCubic, const CPUMatrix<ElemType>& sign1, const CPUMatrix<ElemType>& sign2);
+
+    static void AsoftmaxBackward4(ElemType lambda, size_t inputDimension, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gradient, CPUMatrix<ElemType>& X_gradient, const CPUMatrix<ElemType>& inputMagnitude, const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight,
+                                  const CPUMatrix<ElemType>& cosTheta, const CPUMatrix<ElemType>& cosThetaQuadratic, const CPUMatrix<ElemType>& cosThetaCubic, const CPUMatrix<ElemType>& cosThetaQuartic, const CPUMatrix<ElemType>& sign3, const CPUMatrix<ElemType>& sign4);
+
+#pragma endregion
+
+#pragma region AMsoftmax
+
+    static void LabelAdd(const CPUMatrix<ElemType>& label, ElemType bias, const CPUMatrix<ElemType>& value);
+
+#pragma endregion
+
+
 public:
     // This functions do not depend on <ElemType>, i.e. you can call them on any <ElemType>
     static int SetNumThreads(int numThreads);

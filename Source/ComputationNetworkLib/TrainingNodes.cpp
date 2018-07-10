@@ -345,4 +345,16 @@ template class BatchNormalizationNode<float>;
 template class BatchNormalizationNode<double>;
 template class BatchNormalizationNode<half>;
 
+template class MarginInnerProductNode<float>;
+template class MarginInnerProductNode<double>;
+
+template class AdditiveFullConnectionNode<float>;
+template class AdditiveFullConnectionNode<double>;
+
+template class GlobalMemoryBlock<float>;
+template class GlobalMemoryBlock<double>;
+
+template class GlobalConcatNode<float>;
+template class GlobalConcatNode<double>;
+
 }}}

@@ -591,6 +591,36 @@ public:
     void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<StatType>& scale, double blendFactor, const Matrix<StatType>& saveMean, const Matrix<StatType>& saveInvStdDev,
                                     Matrix<StatType>& scaleGrad, Matrix<StatType>& biasGrad) const;
 
+
+#pragma region Asoftmax
+
+    static void AsoftmaxForward2(ElemType lambda, size_t minibatchSize, size_t outputDimension, const Matrix<ElemType>& label, const Matrix<ElemType>& value, const Matrix<ElemType>& inputMagnitude,
+                                 const Matrix<ElemType>& cosThetaQuadratic, const Matrix<ElemType>& sign0);
+
+    static void AsoftmaxForward3(ElemType lambda, size_t minibatchSize, size_t outputDimension, const Matrix<ElemType>& label, const Matrix<ElemType>& value, const Matrix<ElemType>& inputMagnitude,
+                                 const Matrix<ElemType>& cosTheta, const Matrix<ElemType>& cosThetaCubic, const Matrix<ElemType>& sign1, const Matrix<ElemType>& sign2);
+
+    static void AsoftmaxForward4(ElemType lambda, size_t minibatchSize, size_t outputDimension, const Matrix<ElemType>& label, const Matrix<ElemType>& value, const Matrix<ElemType>& inputMagnitude,
+                                 const Matrix<ElemType>& cosThetaQuadratic, const Matrix<ElemType>& cosThetaQuartic, const Matrix<ElemType>& sign3, const Matrix<ElemType>& sign4);
+
+    static void AsoftmaxBackward2(ElemType lambda, size_t inputDimension, size_t outputDimension, const Matrix<ElemType>& label, const Matrix<ElemType>& gradient, const Matrix<ElemType>& X_gradient, const Matrix<ElemType>& inputMagnitude, const Matrix<ElemType>& X, const Matrix<ElemType>& weight,
+                                  const Matrix<ElemType>& cosTheta, const Matrix<ElemType>& cosThetaQuadratic, const Matrix<ElemType>& sign0);
+
+    static void AsoftmaxBackward3(ElemType lambda, size_t inputDimension, size_t outputDimension, const Matrix<ElemType>& label, const Matrix<ElemType>& gradient, const Matrix<ElemType>& X_gradient, const Matrix<ElemType>& inputMagnitude, const Matrix<ElemType>& X, const Matrix<ElemType>& weight,
+                                  const Matrix<ElemType>& cosThetaQuadratic, const Matrix<ElemType>& cosThetaCubic, const Matrix<ElemType>& sign1, const Matrix<ElemType>& sign2);
+
+    static void AsoftmaxBackward4(ElemType lambda, size_t inputDimension, size_t outputDimension, const Matrix<ElemType>& label, const Matrix<ElemType>& gradient, const Matrix<ElemType>& X_gradient, const Matrix<ElemType>& inputMagnitude, const Matrix<ElemType>& X, const Matrix<ElemType>& weight,
+                                  const Matrix<ElemType>& cosTheta, const Matrix<ElemType>& cosThetaQuadratic, const Matrix<ElemType>& cosThetaCubic, const Matrix<ElemType>& cosThetaQuartic, const Matrix<ElemType>& sign3, const Matrix<ElemType>& sign4);
+
+#pragma endregion
+
+#pragma region AMsoftmax
+
+    static void LabelAdd(const Matrix<ElemType>& label, ElemType bias, const Matrix<ElemType>& value);
+
+#pragma endregion
+
+
     void RNNForward(const Matrix<ElemType>& inputX, const Matrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
     void RNNBackwardData(const Matrix<ElemType>& outputDY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
     void RNNBackwardWeights(const Matrix<ElemType>& inputX, const Matrix<ElemType>& outputY, Matrix<ElemType>& dw, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);

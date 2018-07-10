@@ -122,6 +122,10 @@ namespace CNTK
         {PrimitiveOpType::StraightThrough, L"StraightThrough"},
         { PrimitiveOpType::Tan, L"Tan" },
         { PrimitiveOpType::Atan, L"Atan" },
+        {PrimitiveOpType::MarginInnerProduct, L"MarginInnerProduct"},
+        {PrimitiveOpType::FeatureNormalize, L"FeatureNormalize"},
+        {PrimitiveOpType::AdditiveFullConnection, L"AdditiveFullConnection"},
+        {PrimitiveOpType::GlobalConcat, L"GlobalConcat"}
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -324,6 +328,27 @@ namespace CNTK
         static const std::wstring AttributeNameCustomOp;
 
         static const size_t convolutionOpDefaultValueForGroups = 1;
+
+        static const std::wstring AttributeMarginInnerProductOutputDimension;
+        static const std::wstring AttributeMarginInnerProductBase;
+        static const std::wstring AttributeMarginInnerProductGamma;
+        static const std::wstring AttributeMarginInnerProductPower;
+        static const std::wstring AttributeMarginInnerProductLambdaMin;
+        static const std::wstring AttributeMarginInnerProductMarginCoefficient;
+        static const std::wstring AttributeFeatureNormalizeNormalizeType;
+        static const std::wstring AttributeAdditiveFullConnectionOutputDimension;
+        static const std::wstring AttributeAdditiveFullConnectionWeightNormalize;
+        static const std::wstring AttributeAdditiveFullConnectionBias;
+        static const std::wstring AttributeAdditiveFullConnectionAnnealBias;
+        static const std::wstring AttributeAdditiveFullConnectionBiasBase;
+        static const std::wstring AttributeAdditiveFullConnectionBiasGamma;
+        static const std::wstring AttributeAdditiveFullConnectionBiasPower;
+        static const std::wstring AttributeAdditiveFullConnectionBiasMin;
+        static const std::wstring AttributeAdditiveFullConnectionBiasMax;
+        static const std::wstring AttributeGlobalConcatBlockIndex;
+        static const std::wstring AttributeGlobalConcatGrowthRate;
+        static const std::wstring AttributeGlobalConcatSegmentIndex;
+        static const std::wstring AttributeGlobalConcatSegmentNum;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

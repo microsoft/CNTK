@@ -329,6 +329,14 @@ namespace CNTK
                     opType = PrimitiveOpType::Logistic;
                 else if (node->OperationName() == OperationNameOf(SquareErrorNode))
                     opType = PrimitiveOpType::SquaredError;
+                else if (node->OperationName() == OperationNameOf(MarginInnerProductNode))
+                    opType = PrimitiveOpType::MarginInnerProduct;
+                else if (node->OperationName() == OperationNameOf(FeatureNormalizeNode))
+                    opType = PrimitiveOpType::FeatureNormalize;
+                else if (node->OperationName() == OperationNameOf(AdditiveFullConnectionNode))
+                    opType = PrimitiveOpType::AdditiveFullConnection;
+                else if (node->OperationName() == OperationNameOf(GlobalConcatNode))
+                    opType = PrimitiveOpType::GlobalConcat;
                 else if (node->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode))
                     opType = PrimitiveOpType::CrossEntropyWithSoftmax;
                 else if (node->OperationName() == OperationNameOf(ClassificationErrorNode))

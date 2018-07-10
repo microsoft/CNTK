@@ -52,6 +52,40 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
         else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
 }.apply
 
+
+# MarginInnerProductLayer -- create a marginInnerProduct projection layer
+# Note: outputDimension may describe a tensor as well.
+MarginInnerProductLayer {inputDimension, outputDimension, base, gamma, power, lambdaMin, coefficient, init='glorotUniform', initValueScale=1} =
+{
+    W = ParameterTensor {_ConcatArrays (outputDimension, inputDimension), init=init, initValueScale=initValueScale}
+
+    apply (labelSequence, outProbVectorSequence) = MarginInnerProduct(labelSequence, outProbVectorSequence, W, marginInnerProductOutputDimension=outputDimension, marginInnerProductBase=base, marginInnerProductGamma=gamma, marginInnerProductPower=power, marginInnerProductLambdaMin=lambdaMin, marginCoefficient=coefficient)
+}.apply
+
+# FeatureNormalizeLayer -- create a feature normalization layer
+# Note: outputDimension may describe a tensor as well.
+FeatureNormalizeLayer {featureNormalizeType=2} =
+{
+    apply (feature) = FeatureNormalize(feature, featureNormalizeType=featureNormalizeType)
+}.apply
+
+# AdditiveFullConnectionLayer -- create a label-specific-add full connection layer
+# Note: outputDimension may describe a tensor as well.
+AdditiveFullConnectionLayer {inputDimension, outputDimension, weightNormalize=true, bias=0, annealBias=false, biasBase=0, biasGamma=0, biasPower=1, biasMin=0, biasMax=0, init='glorotUniform', initValueScale=1} =
+{
+    W = ParameterTensor {_ConcatArrays (outputDimension, inputDimension), init=init, initValueScale=initValueScale}
+
+    apply (labelSequence, outProbVectorSequence) = AdditiveFullConnection(labelSequence, outProbVectorSequence, W, outputDimension=outputDimension, weightNormalize=weightNormalize, bias=bias, annealBias=annealBias, biasBase=biasBase, biasGamma=biasGamma, biasPower=biasPower, biasMin=biasMin, biasMax=biasMax)
+}.apply
+
+# GlobalConcatLayer -- create a concat layer, which uses temporary global memory to save the output
+# Note: outputDimension may describe a tensor as well.
+GlobalConcatLayer {blockIndex, growthRate, segmentIndex, segmentNum} =
+{
+    apply (outProbVectorSequence) = GlobalConcat(outProbVectorSequence, blockIndex, growthRate, segmentIndex, segmentNum)
+}.apply
+
+
 # DenseLayer -- create a fully-connected layer with optional non-linearity
 DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank, initBias=initBias} : activation )
 
@@ -357,6 +391,10 @@ Times                   = CNTK2.Times
 Abs                     = CNTK2.Abs
 Ceil                    = CNTK2.Ceil
 CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
+MarginInnerProduct      = CNTK2.MarginInnerProduct
+FeatureNormalize        = CNTK2.FeatureNormalize
+AdditiveFullConnection  = CNTK2.AdditiveFullConnection
+GlobalConcat            = CNTK2.GlobalConcat
 Dropout                 = CNTK2.Dropout
 ElementTimes            = CNTK2.ElementTimes
 ElementDivide           = CNTK2.ElementDivide
@@ -451,6 +489,26 @@ CNTK2 = [
     // 4. Tensor operations
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
     Times(x, y, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = _AsNodes (x : y) /*plus the function args*/ ]
+
+
+    #
+    # FeatureNormalize node
+    #
+    FeatureNormalize(feature, featureNormalizeType=2, tag='') = 
+        new ComputationNode [ operation = 'FeatureNormalize' ; inputs = _AsNodes (feature) /*plus the function args*/ ]
+
+    #
+    # AdditiveFullConnection node
+    #
+    AdditiveFullConnection(labelSequence, outProbVectorSequence, W, outputDimension=0, weightNormalize=true, bias=0, annealBias=false, biasBase=0, biasGamma=0, biasPower=0, biasMin=0, biasMax=0,tag='') = 
+        new ComputationNode [ operation = 'AdditiveFullConnection' ; inputs = _AsNodes (labelSequence : outProbVectorSequence : W) /*plus the function args*/ ]
+
+    #
+    # GlobalConcat node
+    #
+    GlobalConcat(feature, blockIndex, growthRate, segmentIndex, segmentNum, tag='') = 
+        new ComputationNode [ operation = 'GlobalConcat' ; inputs = _AsNodes (feature) /*plus the function args*/ ]
+
 
     // 5. Elementwise operations.
     // Changes: "Matrix" -> "Tensor"; left input -> _; Clip: move input to front. ElementDivide/Times: anotherTensor -> y

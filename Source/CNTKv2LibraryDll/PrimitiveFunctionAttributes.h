@@ -120,4 +120,24 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDoVarianceScaling = L"doVarianceScaling";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameGroups = L"groups";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCustomOp = L"customOp";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeMarginInnerProductOutputDimension = L"marginInnerProductOutputDimension";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeMarginInnerProductBase = L"marginInnerProductOutputBase";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeMarginInnerProductGamma = L"marginInnerProductOutputGamma";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeMarginInnerProductPower = L"marginInnerProductOutputPower";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeMarginInnerProductLambdaMin = L"marginInnerProductOutputLambdaMin";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeMarginInnerProductMarginCoefficient = L"marginCoefficient";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeFeatureNormalizeNormalizeType = L"featureNormalizeType";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionOutputDimension = L"outputDimension";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionWeightNormalize = L"weightNormalize";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionBias = L"bias";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionAnnealBias = L"annealBias";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionBiasBase = L"biasBase";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionBiasGamma = L"biasGamma";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionBiasPower = L"biasPower";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionBiasMin = L"biasMin";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionBiasMax = L"biasMax";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeGlobalConcatBlockIndex = L"blockIndex";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeGlobalConcatGrowthRate = L"growthRate";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeGlobalConcatSegmentIndex = L"segmentIndex";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeGlobalConcatSegmentNum = L"segmentNum";
 }

@@ -5132,6 +5132,224 @@ void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& 
 }
 
 
+#pragma region Asoftmax
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AsoftmaxForward2(ElemType lambda, size_t minibatchSize, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& inputMagnitude,
+                                           const CPUMatrix<ElemType>& cosThetaQuadratic, const CPUMatrix<ElemType>& sign0)
+{
+    size_t labelValue;
+    size_t index;
+    ElemType* labelPtr = label.Data();
+    ElemType* valuePtr = value.Data();
+    ElemType* inputMagnitudePtr = inputMagnitude.Data();
+    ElemType* cosThetaQuadraticPtr = cosThetaQuadratic.Data();
+    ElemType* sign0Ptr = sign0.Data();
+
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        labelValue = static_cast<size_t>(labelPtr[i]);
+        index = i * outputDimension + labelValue;
+        valuePtr[index] = (valuePtr[index] * lambda + inputMagnitudePtr[i] * (2 * sign0Ptr[index] * cosThetaQuadraticPtr[index] - 1)) / (1 + lambda);
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AsoftmaxForward3(ElemType lambda, size_t minibatchSize, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& inputMagnitude,
+                                           const CPUMatrix<ElemType>& cosTheta, const CPUMatrix<ElemType>& cosThetaCubic, const CPUMatrix<ElemType>& sign1, const CPUMatrix<ElemType>& sign2)
+{
+    size_t labelValue;
+    size_t index;
+    ElemType* labelPtr = label.Data();
+    ElemType* valuePtr = value.Data();
+    ElemType* inputMagnitudePtr = inputMagnitude.Data();
+    ElemType* cosThetaPtr = cosTheta.Data();
+    ElemType* cosThetaCubicPtr = cosThetaCubic.Data();
+    ElemType* sign1Ptr = sign1.Data();
+    ElemType* sign2Ptr = sign2.Data();
+
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        labelValue = static_cast<size_t>(labelPtr[i]);
+        index = i * outputDimension + labelValue;
+        valuePtr[index] = (valuePtr[index] * lambda + inputMagnitudePtr[i] * (sign1Ptr[index] * (4 * cosThetaCubicPtr[index] - 3 * cosThetaPtr[index]) + sign2Ptr[index])) / (1 + lambda);
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AsoftmaxForward4(ElemType lambda, size_t minibatchSize, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& inputMagnitude,
+                                           const CPUMatrix<ElemType>& cosThetaQuadratic, const CPUMatrix<ElemType>& cosThetaQuartic, const CPUMatrix<ElemType>& sign3, const CPUMatrix<ElemType>& sign4)
+{
+    size_t labelValue;
+    size_t index;
+    ElemType* labelPtr = label.Data();
+    ElemType* valuePtr = value.Data();
+    ElemType* inputMagnitudePtr = inputMagnitude.Data();
+    ElemType* cosThetaQuadraticPtr = cosThetaQuadratic.Data();
+    ElemType* cosThetaQuarticPtr = cosThetaQuartic.Data();
+    ElemType* sign3Ptr = sign3.Data();
+    ElemType* sign4Ptr = sign4.Data();
+
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        labelValue = static_cast<size_t>(labelPtr[i]);
+        index = i * outputDimension + labelValue;
+        valuePtr[index] = (valuePtr[index] * lambda + inputMagnitudePtr[i] * (sign3Ptr[index] * (8 * cosThetaQuarticPtr[index] - 8 * cosThetaQuadraticPtr[index] + 1) + sign4Ptr[index])) / (1 + lambda);
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AsoftmaxBackward2(ElemType lambda, size_t inputDimension, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gradient, CPUMatrix<ElemType>& X_gradient, const CPUMatrix<ElemType>& inputMagnitude, const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight,
+                                            const CPUMatrix<ElemType>& cosTheta, const CPUMatrix<ElemType>& cosThetaQuadratic, const CPUMatrix<ElemType>& sign0)
+{
+    CPUMatrix<ElemType>::Multiply(weight, true, gradient, false, X_gradient);
+    size_t minibatchSize = label.GetNumCols();
+    size_t labelValue = 0;
+    ElemType coeff_w = 0.0;
+    ElemType coeff_x = 0.0;
+    ElemType coeff_norm = 0.0;
+    size_t index = 0;
+    ElemType* labelPtr = label.Data();
+    ElemType* gradientPtr = gradient.Data();
+    ElemType* X_gradientPtr = X_gradient.Data();
+    ElemType* inputMagnitudePtr = inputMagnitude.Data();
+    ElemType* XPtr = X.Data();
+    ElemType* weightPtr = weight.Data();
+    ElemType* cosThetaPtr = cosTheta.Data();
+    ElemType* cosThetaQuadraticPtr = cosThetaQuadratic.Data();
+    ElemType* sign0Ptr = sign0.Data();
+
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        labelValue = static_cast<size_t>(labelPtr[i]);
+        index = i * outputDimension + labelValue;
+        coeff_w = 4.0 * sign0Ptr[index] * cosThetaPtr[index];
+        coeff_x = 1.0 / (-inputMagnitudePtr[i]) * (2.0 * sign0Ptr[index] * cosThetaQuadraticPtr[index] + 1);
+        coeff_norm = sqrt(coeff_w * coeff_w + coeff_x * coeff_x);
+        coeff_w /= coeff_norm;
+        coeff_x /= coeff_norm;
+
+        for (size_t cnt(0), j(i * inputDimension), k(labelValue); cnt < inputDimension; ++cnt, ++j, k += outputDimension)
+        {
+            // From weight
+            X_gradientPtr[j] += weightPtr[k] * gradientPtr[index] / (1.0 + lambda) * (coeff_w - 1);
+            // From X
+            X_gradientPtr[j] += XPtr[j] * (gradientPtr[index] / (1.0 + lambda) * coeff_x);
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AsoftmaxBackward3(ElemType lambda, size_t inputDimension, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gradient, CPUMatrix<ElemType>& X_gradient, const CPUMatrix<ElemType>& inputMagnitude, const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight,
+                                            const CPUMatrix<ElemType>& cosThetaQuadratic, const CPUMatrix<ElemType>& cosThetaCubic, const CPUMatrix<ElemType>& sign1, const CPUMatrix<ElemType>& sign2)
+{
+    CPUMatrix<ElemType>::Multiply(weight, true, gradient, false, X_gradient);
+    size_t minibatchSize = label.GetNumCols();
+    size_t labelValue = 0;
+    ElemType coeff_w = 0.0;
+    ElemType coeff_x = 0.0;
+    ElemType coeff_norm = 0.0;
+    size_t index = 0;
+    ElemType* labelPtr = label.Data();
+    ElemType* gradientPtr = gradient.Data();
+    ElemType* X_gradientPtr = X_gradient.Data();
+    ElemType* inputMagnitudePtr = inputMagnitude.Data();
+    ElemType* XPtr = X.Data();
+    ElemType* weightPtr = weight.Data();
+    ElemType* cosThetaQuadraticPtr = cosThetaQuadratic.Data();
+    ElemType* cosThetaCubicPtr = cosThetaCubic.Data();
+    ElemType* sign1Ptr = sign1.Data();
+    ElemType* sign2Ptr = sign2.Data();
+
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        labelValue = static_cast<size_t>(labelPtr[i]);
+        index = i * outputDimension + labelValue;
+        coeff_w = sign1Ptr[index] * (12.0 * cosThetaQuadraticPtr[index] - 3.0);
+        coeff_x = 1.0 / (-inputMagnitudePtr[i]) * (8.0 * sign1Ptr[index] * cosThetaCubicPtr[index] - sign2Ptr[index]);
+        coeff_norm = sqrt(coeff_w * coeff_w + coeff_x * coeff_x);
+        coeff_w /= coeff_norm;
+        coeff_x /= coeff_norm;
+
+        for (size_t cnt(0), j(i * inputDimension), k(labelValue); cnt < inputDimension; ++cnt, ++j, k += outputDimension)
+        {
+            // From weight
+            X_gradientPtr[j] += weightPtr[k] * gradientPtr[index] / (1.0 + lambda) * (coeff_w - 1);
+            // From X
+            X_gradientPtr[j] += XPtr[j] * (gradientPtr[index] / (1.0 + lambda) * coeff_x);
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AsoftmaxBackward4(ElemType lambda, size_t inputDimension, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gradient, CPUMatrix<ElemType>& X_gradient, const CPUMatrix<ElemType>& inputMagnitude, const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight,
+                                            const CPUMatrix<ElemType>& cosTheta, const CPUMatrix<ElemType>& cosThetaQuadratic, const CPUMatrix<ElemType>& cosThetaCubic, const CPUMatrix<ElemType>& cosThetaQuartic, const CPUMatrix<ElemType>& sign3, const CPUMatrix<ElemType>& sign4)
+{
+    CPUMatrix<ElemType>::Multiply(weight, true, gradient, false, X_gradient);
+    size_t minibatchSize = label.GetNumCols();
+    size_t labelValue = 0;
+    ElemType coeff_w = 0.0;
+    ElemType coeff_x = 0.0;
+    ElemType coeff_norm = 0.0;
+    size_t index = 0;
+    ElemType* labelPtr = label.Data();
+    ElemType* gradientPtr = gradient.Data();
+    ElemType* X_gradientPtr = X_gradient.Data();
+    ElemType* inputMagnitudePtr = inputMagnitude.Data();
+    ElemType* XPtr = X.Data();
+    ElemType* weightPtr = weight.Data();
+    ElemType* cosThetaPtr = cosTheta.Data();
+    ElemType* cosThetaQuadraticPtr = cosThetaQuadratic.Data();
+    ElemType* cosThetaCubicPtr = cosThetaCubic.Data();
+    ElemType* cosThetaQuarticPtr = cosThetaQuartic.Data();
+    ElemType* sign3Ptr = sign3.Data();
+    ElemType* sign4Ptr = sign4.Data();
+
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        labelValue = static_cast<size_t>(labelPtr[i]);
+        index = i * outputDimension + labelValue;
+        coeff_w = sign3Ptr[index] * (32.0 * cosThetaCubicPtr[index] - 16.0 * cosThetaPtr[index]);
+        coeff_x = 1.0 / (-inputMagnitudePtr[i]) * (sign3Ptr[index] * (24.0 * cosThetaQuarticPtr[index] - 8.0 * cosThetaQuadraticPtr[index] - 1.0) - sign4Ptr[index]);
+        coeff_norm = sqrt(coeff_w * coeff_w + coeff_x * coeff_x);
+        coeff_w /= coeff_norm;
+        coeff_x /= coeff_norm;
+
+        for (size_t cnt(0), j(i * inputDimension), k(labelValue); cnt < inputDimension; ++cnt, ++j, k += outputDimension)
+        {
+            // From weight
+            X_gradientPtr[j] += weightPtr[k] * gradientPtr[index] / (1.0 + lambda) * (coeff_w - 1);
+            // From X
+            X_gradientPtr[j] += XPtr[j] * (gradientPtr[index] / (1.0 + lambda) * coeff_x);
+        }
+    }
+}
+
+#pragma endregion
+
+#pragma region AMsoftmax
+
+template <class ElemType>
+void CPUMatrix<ElemType>::LabelAdd(const CPUMatrix<ElemType>& label, ElemType bias, const CPUMatrix<ElemType>& value)
+{
+    size_t minibatchSize = value.GetNumCols();
+    size_t outputDimension = value.GetNumRows();
+    size_t labelValue;
+    ElemType* labelPtr = label.Data();
+    ElemType* valuePtr = value.Data();
+
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        labelValue = static_cast<size_t>(labelPtr[i]);
+        size_t index = i * outputDimension + labelValue;
+        if (valuePtr[index] > -bias)
+            valuePtr[index] += bias;
+    }
+}
+
+#pragma endregion
+
+
 #pragma region Static BLAS Functions
 
 /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c</summary>

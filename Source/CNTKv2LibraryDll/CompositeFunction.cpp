@@ -1120,6 +1120,46 @@ namespace CNTK
                 case PrimitiveOpType::SquaredError:
                     ASSIGN_NEW_NODE(SquareErrorNode, network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::MarginInnerProduct:
+                {
+                    auto outputDimension = functionConfig[PrimitiveFunction::AttributeMarginInnerProductOutputDimension].Value<size_t>();
+                    auto base = functionConfig[PrimitiveFunction::AttributeMarginInnerProductBase].Value<double>();
+                    auto gamma = functionConfig[PrimitiveFunction::AttributeMarginInnerProductGamma].Value<double>();
+                    auto power = functionConfig[PrimitiveFunction::AttributeMarginInnerProductPower].Value<double>();
+                    auto lambdaMin = functionConfig[PrimitiveFunction::AttributeMarginInnerProductLambdaMin].Value<double>();
+                    auto marginCoefficient = functionConfig[PrimitiveFunction::AttributeMarginInnerProductMarginCoefficient].Value<size_t>();
+                    computationNodePtr = New<MarginInnerProductNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputDimension, base, gamma, power, lambdaMin, marginCoefficient);
+                    break;
+                }
+                case PrimitiveOpType::FeatureNormalize:
+                {
+                    auto normalizeType = functionConfig[PrimitiveFunction::AttributeFeatureNormalizeNormalizeType].Value<size_t>();
+                    computationNodePtr = New<FeatureNormalizeNode<ElementType>>(network->GetDeviceId(), internalNodeName, normalizeType);
+                    break;
+                }
+                case PrimitiveOpType::AdditiveFullConnection:
+                {
+                    auto outputDimension = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionOutputDimension].Value<size_t>();
+                    auto weightNormalize = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionWeightNormalize].Value<bool>();
+                    auto bias = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBias].Value<double>();
+                    auto annealBias = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionAnnealBias].Value<bool>();
+                    auto biasBase = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasBase].Value<double>();
+                    auto biasGamma = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasGamma].Value<double>();
+                    auto biasPower = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasPower].Value<double>();
+                    auto biasMin = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMin].Value<double>();
+                    auto biasMax = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMax].Value<double>();
+                    computationNodePtr = New<AdditiveFullConnectionNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputDimension, weightNormalize, bias, annealBias, biasBase, biasGamma, biasPower, biasMin, biasMax);
+                    break;
+                }
+                case PrimitiveOpType::GlobalConcat:
+                {
+                    auto blockIndex = functionConfig[PrimitiveFunction::AttributeGlobalConcatBlockIndex].Value<size_t>();
+                    auto growthRate = functionConfig[PrimitiveFunction::AttributeGlobalConcatGrowthRate].Value<size_t>();
+                    auto segmentIndex = functionConfig[PrimitiveFunction::AttributeGlobalConcatSegmentIndex].Value<size_t>();
+                    auto segmentNum = functionConfig[PrimitiveFunction::AttributeGlobalConcatSegmentNum].Value<size_t>();
+                    computationNodePtr = New<GlobalConcatNode<ElementType>>(network->GetDeviceId(), internalNodeName, blockIndex, growthRate, segmentIndex, segmentNum);
+                    break;
+                }
                 case PrimitiveOpType::CrossEntropyWithSoftmax:
                     ASSIGN_NEW_NODE(CrossEntropyWithSoftmaxNode, network->GetDeviceId(), internalNodeName);
                     break;

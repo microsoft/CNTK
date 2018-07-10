@@ -2110,6 +2110,56 @@ namespace CNTK
         return AsBlock(std::move(squaredErrorComposite), { { predictionPlaceholder, prediction }, { targetPlaceholder, targets } }, L"SquaredError", name);
     }
 
+
+    FunctionPtr MarginInnerProduct(const Variable& features, const Variable& labels, const Variable& weight, size_t outputDimension, double base, double gamma, double power, double lambdaMin, size_t marginCoefficient, const std::wstring& name)
+    {
+        std::vector<Variable> operands = {features, labels, weight};
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductOutputDimension] = outputDimension;
+        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductBase] = base;
+        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductGamma] = gamma;
+        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductPower] = power;
+        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductLambdaMin] = lambdaMin;
+        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductMarginCoefficient] = marginCoefficient;
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::MarginInnerProduct, operands, std::move(additionalProperties), name), name);
+    }
+
+    FunctionPtr FeatureNormalize(const Variable& features, size_t normalizeType, const std::wstring& name)
+    {
+        std::vector<Variable> operands = {features};
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeFeatureNormalizeNormalizeType] = normalizeType;
+        return UnaryOp(PrimitiveOpType::FeatureNormalize, features, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr AdditiveFullConnection(const Variable& features, const Variable& labels, const Variable& weight, size_t outputDimension, bool weightNormalize, double bias, bool annealBias, double biasBase, double biasGamma, double biasPower, double biasMin, double biasMax, const std::wstring& name)
+    {
+        std::vector<Variable> operands = {features, labels, weight};
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionOutputDimension] = outputDimension;
+        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionWeightNormalize] = weightNormalize;
+        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBias] = bias;
+        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionAnnealBias] = annealBias;
+        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBiasBase] = biasBase;
+        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBiasGamma] = biasGamma;
+        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBiasPower] = biasPower;
+        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMin] = biasMin;
+        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMax] = biasMax;
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::AdditiveFullConnection, operands, std::move(additionalProperties), name), name);
+    }
+
+    FunctionPtr GlobalConcat(const Variable& features, size_t blockIndex, size_t growthRate, size_t segmentIndex, size_t segmentNum, const std::wstring& name)
+    {
+        std::vector<Variable> operands = {features};
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeGlobalConcatBlockIndex] = blockIndex;
+        additionalProperties[PrimitiveFunction::AttributeGlobalConcatGrowthRate] = growthRate;
+        additionalProperties[PrimitiveFunction::AttributeGlobalConcatSegmentIndex] = segmentIndex;
+        additionalProperties[PrimitiveFunction::AttributeGlobalConcatSegmentNum] = segmentNum;
+        return UnaryOp(PrimitiveOpType::GlobalConcat, features, std::move(additionalProperties), name);
+    }
+
+
     FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name)
     {
         auto predictionPlaceholder = PlaceholderVariable(L"prediction");
