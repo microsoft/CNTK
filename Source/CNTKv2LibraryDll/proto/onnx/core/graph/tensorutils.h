@@ -3,8 +3,8 @@
 #include <type_traits>
 #include <vector>
 
-// #include "gsl/pointers"
-// #include "gsl/span"
+#include "gsl/pointers"
+#include "gsl/span"
 
 #include "core/common/common.h"
 #include "core/common/status.h"
@@ -36,9 +36,9 @@ class TensorUtils {
     if (tensor.field_size() != expected_size)                                                             \
       return Status(StatusCategory::LOTUS, StatusCode::FAIL,                                              \
                     "UnpackTensor: the pre-allocated size does not match the size in proto");             \
-    for (auto elem : tensor.field_name()) {                                                               \
-        *p_data++ = static_cast<T>(elem);                                                                 \
-    }                                                                                                     \
+    const auto span = gsl::make_span(p_data, expected_size);                                              \
+    auto& data = tensor.field_name();                                                                     \
+    std::copy(data.cbegin(), data.cend(), span.begin());                                                  \
     return Status::OK();                                                                                  \
   }
 
