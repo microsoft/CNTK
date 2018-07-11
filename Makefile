@@ -696,7 +696,7 @@ SRC+=$(EVAL_SRC)
 
 MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
 
-$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB)
+$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
