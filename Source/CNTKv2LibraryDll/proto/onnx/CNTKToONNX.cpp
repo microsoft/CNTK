@@ -62,10 +62,19 @@ private:
             std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
             const std::unordered_map<Variable, Variable>& compositeOutputsMap,
             std::vector<LotusIR::NodeArg *>& inputs);
+        static void ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
+            LotusIR::Graph* graph,
+            std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
+            std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+            const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+            std::vector<LotusIR::NodeArg *>& inputs);
 
         // Processes outputs of a src CNTK op.
         static void ProcessOutputs(const FunctionPtr& src,
             std::vector<LotusIR::NodeArg *>& outputs, Graph *graph);
+        static void ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
+            std::vector<LotusIR::NodeArg *>& outputs, Graph *graph);
+        
 
         static LotusIR::Node *AddReshapeNode(LotusIR::NodeArg &nodeArg, const std::vector<int> &newShape, const std::string &outArgName,
             LotusIR::Graph* graph, int dynamicAxisCount);
@@ -324,22 +333,32 @@ private:
     static LotusIR::NodeArg* LSTMOutputShapeAdapter(LotusIR::NodeArg& inputArg, onnx::TypeProto& inputArgType, LotusIR::Graph* graph,
                                                    size_t numDirections, size_t hiddenSize, CNTK::DataType outputType, string adapterBasename = "");
 
-        // Takes CNTK's Select node and converts it into a series of ONNX nodes.
-        static LotusIR::Node * CreateONNXNodesForSelect(const FunctionPtr & src,
-            LotusIR::Graph * graph, std::unordered_map<FunctionPtr,
-            LotusIR::Node*>& functionNodes,
-            std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-            const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+    // Takes CNTK's Select node and converts it into a series of ONNX nodes.
+    static LotusIR::Node * CreateONNXNodesForSelect(const FunctionPtr & src,
+        LotusIR::Graph * graph, std::unordered_map<FunctionPtr,
+        LotusIR::Node*>& functionNodes,
+        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
-        // A helper function, to reverse any iterable container and return a copy
-        // of the reversed container.
-        //
-        template<typename ItrType>
-        static ItrType reverse(ItrType v)
-        {
-            std::reverse(std::begin(v), std::end(v));
-            return v;
-        }
+    //
+    // Method to create ONNX nodes that have an explicit batch axis from their CNTK
+    // counterparts.
+    //
+    static LotusIR::Node* CreateNodeForBatchAxisOp(const FunctionPtr &src,
+        LotusIR::Graph* graph,
+        std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
+        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+
+    // A helper function, to reverse any iterable container and return a copy
+    // of the reversed container.
+    //
+    template<typename ItrType>
+    static ItrType reverse(ItrType v)
+    {
+        std::reverse(std::begin(v), std::end(v));
+        return v;
+    }
 
     template <class T, class V>
     static inline std::vector<V> Cast(const std::vector<T>& v)
@@ -1153,6 +1172,30 @@ bool IsUnSupportedLayerNormalization(const FunctionPtr src)
 {
     std::string cntkOpName = ToString(src->OpName());
     return cntkOpName == "LayerNormalization" && src->Output().HasSequenceAxis();
+}
+
+bool IsBatchAxisOp(const FunctionPtr src)
+{
+    // Check for the pattern "UnpackBatchAxis" --> Supported batch op --> "ToBatchAxis"
+    bool isBatchAxisOp = false;
+    std::string cntkOpName = ToString(src->OpName());
+    if (cntkOpName == "UnpackBatchAxis") 
+    {
+        auto parentNode = src->Inputs()[0].Owner();
+        if (Operators::IsOpExportedWithBatchAxis(parentNode->OpName()))
+        {
+            for (size_t inputIndex = 0; inputIndex < parentNode->Inputs().size(); ++inputIndex)
+            {
+                auto input = parentNode->Inputs()[inputIndex];
+
+                if (input.IsOutput())
+                {
+                    return ToString(input.Owner()->OpName()) == "ToBatchAxis";
+                }
+            }
+        }
+    }
+    return isBatchAxisOp;
 }
 
 bool OpNeedONNXTypeMap(const std::string &cntkType)
@@ -2552,6 +2595,13 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     else if (cntkOpName == "Select")
     {
         return CreateONNXNodesForSelect(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+    }
+    else if (cntkOpName == "UnpackBatchAxis")
+    {
+        if (IsBatchAxisOp(src))
+            return CreateNodeForBatchAxisOp(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+        else
+            LogicError("Node '%S': Unsupported outside the context of batch axis ops.", src->AsString().c_str());
     }
 
     //
@@ -4116,4 +4166,178 @@ LotusIR::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr &src
 
     functionNodes.emplace(src, sumNode);
     return sumNode;
+}
+
+LotusIR::Node* CNTKToONNXHelper::CreateNodeForBatchAxisOp(const FunctionPtr &src,
+    LotusIR::Graph* graph,
+    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
+    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+{
+    std::vector<LotusIR::NodeArg *> inputs;
+    ProcessInputsForBatchAxisOp(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
+
+    std::vector<LotusIR::NodeArg *> outputs;
+    ProcessOutputsForBatchAxisOp(src, outputs, graph);
+
+    auto batchOp = src->Inputs()[0].Owner();
+    // Add a new node to ONNX graph.
+    auto functionNode = AddNode(batchOp, graph, inputs, outputs);
+
+    functionNodes.emplace(batchOp, functionNode);
+    return functionNode;
+}
+
+void CNTKToONNXHelper::ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
+    LotusIR::Graph* graph,
+    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
+    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+    std::vector<LotusIR::NodeArg *>& inputs)
+{
+    // This method assumes that it has been validated already that 
+    // rootNode batch axis op with the following pattern: 
+    // "UnpackBatchAxis" (rootNode) --> Supported batch op (src) --> "ToBatchAxis" (topNode)
+    FunctionPtr topNode = nullptr;
+    Variable inputTopNode;
+    size_t inputIdxToReplace(0u);
+    auto src = rootNode->Inputs()[0].Owner();
+    for (size_t inputIndex = 0; inputIndex < src->Inputs().size(); ++inputIndex)
+    {
+        auto input = src->Inputs()[inputIndex];
+        if (input.IsOutput())
+        {
+            inputIdxToReplace = inputIndex;
+            topNode = input.Owner();
+        }
+    }
+    if (topNode != nullptr)
+        inputTopNode = topNode->Inputs()[0];
+    else
+        LogicError("Invalid top node encountered when exporting CNTK op as ONNX batch axis op.");
+
+    std::string cntkOpName = ToString(src->OpName());
+    std::string onnxOpName = ToOPName(src);
+
+    for (size_t inputIndex = 0; inputIndex < src->Inputs().size(); ++inputIndex)
+    {
+        Variable input = (inputIndex == inputIdxToReplace) ? inputTopNode : src->Inputs()[inputIndex];
+        if (input.IsPlaceholder())
+        {
+            input = input.BlockFunctionVariableMapping();
+            if (input.IsPlaceholder())
+                LogicError("Node '%S': Placeholder isn't supported currently.", src->AsString().c_str());
+        }
+
+        if (FilterInput(src, input, inputIndex))
+            continue;
+
+        // Use user-defined name if available, otherwise use our internal unique name ID.
+        std::string inputName = ToString(input.Uid());
+        auto inputItr = compositeOutputsMap.find(input);
+        if (inputItr != compositeOutputsMap.end())
+            inputName = ToString(inputItr->second.Uid());
+
+        bool isConstant = (input.IsParameter() || input.IsConstant()) &&
+            !Operators::IgnoreConstantAndParameter(src->OpName(), inputIndex);
+
+        onnx::TypeProto inputArgType;
+        inputArgType = ToTypeProto(input.Shape(), false, false, true); // Explicitly turning off batch and sequence axis.
+        if (input.IsInput() && input.HasSequenceAxis())
+            (*inputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim())[0].set_dim_param(FreeSequenceDimParam);
+        // TODO: Commented code below is a workaround for BN. Is is still needed?
+        //if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4)
+        //    && input.Shape().Rank() == 2)
+        //    // this is a workaround for brainscript models that have rank = 2 for BN inputs.
+        //    inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
+
+        if (OpNeedONNXTypeMap(cntkOpName))
+        {
+            MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), inputArgType); // TODO: Is this needed? Probably not.
+        }
+        else
+        {
+            UpdateONNXType(input.GetDataType(), inputArgType);
+        }
+
+        LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(inputName, &inputArgType);
+        inputs.push_back(&inputArg);
+
+        //
+        // Leaf nodes are data entry to the graph and need their own node with only output arg.
+        //
+        if (isConstant)
+        {
+            if (variableNodes.find(input) == variableNodes.end())
+            {
+                if (input.IsParameter() || input.IsConstant())
+                {
+                    auto srcTensor = input.IsParameter() ? Parameter(input).Value() : Constant(input).Value();
+
+                    onnx::TensorProto dstTensor;
+                    dstTensor.set_name(inputName);
+                    CopyTensor(srcTensor, dstTensor, &inputArgType);
+
+                    graph->AddInitializedTensor(dstTensor);
+                }
+            }
+        }
+        //
+        // If this input is output, then it is the ouput of an up stream node. Recursively add all upstream nodes.
+        // Pretty much, we are doing DFS.
+        //
+        else if (input.IsOutput())
+            CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
+    }
+}
+
+void CNTKToONNXHelper::ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
+    std::vector<LotusIR::NodeArg *>& outputs, Graph *graph)
+{
+    FunctionPtr topNode = nullptr;
+    NDShape topNodeInputShape;
+    auto src = rootNode->Inputs()[0].Owner();
+    for (size_t inputIndex = 0; inputIndex < src->Inputs().size(); ++inputIndex)
+    {
+        auto input = src->Inputs()[inputIndex];
+        if (input.IsOutput())
+        {
+            topNode = input.Owner();
+        }
+    }
+    if (topNode != nullptr)
+        topNodeInputShape = topNode->Inputs()[0].Shape();
+    else
+        LogicError("Invalid top node encountered when exporting CNTK op as ONNX batch axis op.");
+
+    std::string onnxOpName = ToOPName(src);
+    size_t outputIdxToReplace(0u); // TODO: This assumes that the first output of the op (e.g. conv) is the one which upackbatch gets applied on.
+    for (size_t outputIndex = 0; outputIndex < src->Outputs().size(); ++outputIndex)
+    {
+        Variable output;
+        NDShape outputShape;
+        if (outputIndex == outputIdxToReplace)
+        {   // This is the batch axis op's output that needs to be replaced with UnpackBatchAxis output.
+            output = rootNode->Outputs()[0];
+            outputShape = output.Shape().SubShape(0, output.Shape().Rank() - 1);
+            outputShape = outputShape.AppendShape(topNodeInputShape.SubShape(topNodeInputShape.Rank() - 1, topNodeInputShape.Rank()));
+        }
+        else
+        {
+            output = src->Outputs()[outputIndex];
+            outputShape = output.Shape();
+        }
+
+        auto outputArgType = ToTypeProto(outputShape, false, output.HasSequenceAxis(), true);
+        if (OpNeedONNXTypeMap(onnxOpName))
+        {
+            MapAndUpdateONNXType(onnxOpName, false, 0, output.GetDataType(), outputArgType); // TODO: Is this needed? Probably not.
+        }
+        else
+        {
+            UpdateONNXType(output.GetDataType(), outputArgType);
+        }
+        LotusIR::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(ToString(output.Uid()), &outputArgType);
+        outputs.emplace_back(&outputNodeArg);
+    }
 }

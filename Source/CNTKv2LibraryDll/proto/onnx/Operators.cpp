@@ -525,5 +525,9 @@ namespace ONNX
             { L"rnnTanh","RNN" },
         };
 
+        std::set<std::wstring> Operators::_cntkOpsExportedWithBatchAxis = {
+        { L"Convolution" },
+        };
+
     }
 }

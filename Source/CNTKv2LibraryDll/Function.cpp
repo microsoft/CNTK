@@ -2462,17 +2462,40 @@ namespace CNTK
         if (groups == 0)
             LogicError("groups: Must be strictly positive, i.e. groups > 0.");
 
-        if (reductionRank == 0)
+        auto hasStaticBatchAxis = operand.HasBatchAxis();
+        auto operandPlaceholder = PlaceholderVariable(operand.Shape(), L"operand", {});
+
+        if (hasStaticBatchAxis)
         {
-            if (groups > 1)
-                LogicError("groups: groups > 1 is not supported when reductionRank is 0.");
-            return Internal::SpatialConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
-                maxTempMemSizeInSamples, name);
+            if (reductionRank == 0)
+            {
+                if (groups > 1)
+                    LogicError("groups: groups > 1 is not supported when reductionRank is 0.");
+                return Internal::SpatialConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
+                    maxTempMemSizeInSamples, name);
+            }
+            else
+            {
+                return Internal::Convolution(convolutionMap, operand, strides, sharing, autoPadding, dilation, false,
+                    { 0 }, groups, maxTempMemSizeInSamples, name);
+            }
         }
         else
         {
-            return Internal::Convolution(convolutionMap, operand, strides, sharing, autoPadding, dilation, false,
-                { 0 }, groups, maxTempMemSizeInSamples, name);
+            if (reductionRank == 0)
+            {
+                LogicError("hasStaticBatchAxis=true is not supported when reductionRank is 0.");
+            }
+            else
+            {
+                // Check that operand indeed does not have any dynamic axes
+                FunctionPtr operandWithBatchAxis = ToBatch(operandPlaceholder);
+                FunctionPtr convResultWithBatchAxis = Internal::Convolution(convolutionMap, operandWithBatchAxis, strides, sharing, autoPadding, dilation, false,
+                    { 0 }, groups, maxTempMemSizeInSamples);
+                FunctionPtr convResultWithStaticAxis = UnpackBatch(convResultWithBatchAxis, name);
+
+                return AsBlock(std::move(convResultWithStaticAxis), { { operandPlaceholder, operand } }, L"Convolution", name);
+            }
         }
     }
 
@@ -3289,8 +3312,8 @@ namespace CNTK
             // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
             // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as
             // the sample shape and considering the rest to be part of the batch axis
-            if (operand.DynamicAxes().empty())
-                LogicError("Convolution currently requires the main operand to have dynamic axes");
+            //if (operand.DynamicAxes().empty())
+            //    LogicError("Convolution currently requires the main operand to have dynamic axes");
 
             auto additionalProperties = Dictionary();
             additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
