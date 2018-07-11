@@ -996,7 +996,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const int epochNumber,
                                     const size_t epochSize,
                                     IDataReader* trainSetDataReader,
-                                    double learnRatePerSample,
+                                    double _learnRatePerSample,
                                     size_t tunedMBSize,
                                     const std::vector<ComputationNodeBasePtr>& featureNodes,
                                     const std::vector<ComputationNodeBasePtr>& labelNodes,
@@ -1014,7 +1014,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const int startEpoch)
 {
     PROFILE_SCOPE(profilerEvtMainEpoch);
-
+    double learnRatePerSample = _learnRatePerSample;
 
 #ifdef __PROFILE__
     clock_t forwardTime = 0;
