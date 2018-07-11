@@ -1357,7 +1357,7 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     const onnx::TensorProto *valueProto;
     if (graph->GetInitializedTensor(nodeName, &valueProto))
     {
-        return CreateConstant(*valueProto, nodeName, computeDevice);
+        return CreateConstant(*valueProto, nodeName, computeDevice); // There is no batch axis added on here.
     }
 
     auto shapeProto = nodeArg->Shape();
@@ -1366,26 +1366,30 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     // in ONNX constants may also be a leaf with values saved in initializer
     // here we know it is not an ONNX constant so reshape the variable to trim off last dim;
     NDShape shape = FromTensorShapeProto(*shapeProto);
-    if (!IsSecondInputOfElementWiseOpsWithBroadcast(parentNode, nodeArg))
-    {
-        // can only do this when broadcast is 0
-        shape = shape.SubShape(0, shape.Rank() - 1);
-    }
+    //if (!IsSecondInputOfElementWiseOpsWithBroadcast(parentNode, nodeArg))
+    //{
+    //    // can only do this when broadcast is 0
+    //    shape = shape.SubShape(0, shape.Rank() - 1);
+    //}
 
-    std::vector<Axis> dynamicAxes({Axis::DefaultBatchAxis()});
+    std::vector<Axis> dynamicAxes({});
 
-    // TODO: this is not fully correct. We need to get hasSequenceAxis
-    // over the traverse path. An input will have a sequence axis
-    // only if it outputs to an RNN op along the path.
-    // This requires support from LotusIR.
-    // Now traversing starts from arbitray nodes which may miss the RNN op.
-    bool hasSequenceAxis = nodeArg->Shape()->dim(0).dim_value() == 0;
+    // Is the section below needed? Probably not. 
+    // Commenting the section below because this is probably taken care of in
+    // RNN leaf node creation (different function).
 
-    if (hasSequenceAxis)
-    {
-        shape = shape.SubShape(0, shape.Rank() - 1);
-        dynamicAxes.insert(dynamicAxes.begin(), Axis::OperandSequenceAxis());
-    }
+    //// TODO: this is not fully correct. We need to get hasSequenceAxis
+    //// over the traverse path. An input will have a sequence axis
+    //// only if it outputs to an RNN op along the path.
+    //// This requires support from LotusIR.
+    //// Now traversing starts from arbitray nodes which may miss the RNN op.
+    //bool hasSequenceAxis = nodeArg->Shape()->dim(0).dim_value() == 0;
+
+    //if (hasSequenceAxis)
+    //{
+    //    shape = shape.SubShape(0, shape.Rank() - 1);
+    //    dynamicAxes.insert(dynamicAxes.begin(), Axis::OperandSequenceAxis());
+    //}
 
     auto dataType = FromONNXType(nodeArg->ToProto().type());
     switch (dataType)

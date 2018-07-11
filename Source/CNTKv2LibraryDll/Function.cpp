@@ -2463,8 +2463,6 @@ namespace CNTK
             LogicError("groups: Must be strictly positive, i.e. groups > 0.");
 
         auto hasStaticBatchAxis = operand.HasBatchAxis();
-        auto operandPlaceholder = PlaceholderVariable(operand.Shape(), L"operand", {});
-
         if (hasStaticBatchAxis)
         {
             if (reductionRank == 0)
@@ -2482,19 +2480,22 @@ namespace CNTK
         }
         else
         {
+            printf("Instantiating conv without batch axis.\n");
             if (reductionRank == 0)
             {
                 LogicError("hasStaticBatchAxis=true is not supported when reductionRank is 0.");
             }
             else
             {
-                // Check that operand indeed does not have any dynamic axes
+                // TODO: Check that operand indeed does not have any dynamic axes
+                auto operandPlaceholder = PlaceholderVariable(operand.Shape(), L"operand", {});
+                auto convmapPlaceholder = PlaceholderVariable(convolutionMap.Shape(), L"convolutionMap", {});
                 FunctionPtr operandWithBatchAxis = ToBatch(operandPlaceholder);
-                FunctionPtr convResultWithBatchAxis = Internal::Convolution(convolutionMap, operandWithBatchAxis, strides, sharing, autoPadding, dilation, false,
+                FunctionPtr convResultWithBatchAxis = Internal::Convolution(convmapPlaceholder, operandWithBatchAxis, strides, sharing, autoPadding, dilation, false,
                     { 0 }, groups, maxTempMemSizeInSamples);
                 FunctionPtr convResultWithStaticAxis = UnpackBatch(convResultWithBatchAxis, name);
 
-                return AsBlock(std::move(convResultWithStaticAxis), { { operandPlaceholder, operand } }, L"Convolution", name);
+                return AsBlock(std::move(convResultWithStaticAxis), { { operandPlaceholder, operand }, { convmapPlaceholder, convolutionMap } }, L"Convolution", name);
             }
         }
     }

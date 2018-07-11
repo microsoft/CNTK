@@ -4311,7 +4311,12 @@ void CNTKToONNXHelper::ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
         LogicError("Invalid top node encountered when exporting CNTK op as ONNX batch axis op.");
 
     std::string onnxOpName = ToOPName(src);
-    size_t outputIdxToReplace(0u); // TODO: This assumes that the first output of the op (e.g. conv) is the one which upackbatch gets applied on.
+    // TODO: Below line assumes that the first output of the op (e.g. conv)
+    // is the one which UnpackBatch gets applied on. If some other output is
+    // the one that is unpacked (i.e. gets passed on to UnpackBatchAxis) then 
+    // this needs to be updated and we need to change this dynamically for 
+    // different ops. 
+    size_t outputIdxToReplace(0u); 
     for (size_t outputIndex = 0; outputIndex < src->Outputs().size(); ++outputIndex)
     {
         Variable output;
