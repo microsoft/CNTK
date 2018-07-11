@@ -420,7 +420,7 @@ __global__ void _selectK(
 
     for(int i = 0; i < ITEMS_PER_THREAD; ++i) {
         if(idx + i < totalNumElements) {
-            take[i] = (curand_uniform(&state) <= (10 * prob * absVals[i])) ? 1 : 0;
+            take[i] = (curand_uniform(&state) <= (.1 * prob * absVals[i])) ? 1 : 0;
             //take[i] = (curand_uniform(&state) <= (prob * (absVals[i] + eps))) ? 1 : 0;
             //printf("Taking: %d - %d\n", idx + i, take[i]);
         } else {
