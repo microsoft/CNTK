@@ -475,12 +475,8 @@ public:
     ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
         : Base(configp)
     {
-        // If this object implements also TransformerNode interface we need to notify it about number of inputs.
-        if (ComputationNode<ElemType>::Is<TransformerNode>())
-        {
-            auto transformerNode = ComputationNode<ElemType>::As<TransformerNode>();
-            transformerNode->SetNumberOfInputs(m_inputs.size());
-        }
+        // we need to notify TransformerNode about number of inputs.
+        TransformerNode::SetNumberOfInputs(m_inputs.size());
     }
 
     // TODO: the check for NeedsDynamicValidation() is a temporary resolution and needs to be properly handled when we look at support for free dimension convolution inputs.
