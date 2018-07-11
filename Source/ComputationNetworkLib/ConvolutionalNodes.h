@@ -476,9 +476,9 @@ public:
         : Base(configp)
     {
         // If this object implements also TransformerNode interface we need to notify it about number of inputs.
-        if (Is<TransformerNode>())
+        if (ComputationNode<ElemType>::Is<TransformerNode>())
         {
-            auto transformerNode = As<TransformerNode>();
+            auto transformerNode = ComputationNode<ElemType>::As<TransformerNode>();
             transformerNode->SetNumberOfInputs(m_inputs.size());
         }
     }
