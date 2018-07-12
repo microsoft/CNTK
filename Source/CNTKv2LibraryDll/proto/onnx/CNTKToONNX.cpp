@@ -55,33 +55,32 @@ private:
     static LotusIR::Node *AddReshapeNodeAccordingToONNXVersion(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t>& newShape);
 
 
-        // Processes inputs of a src CNTK op, creating ONNX nodes needed for the inputs.
-        static void ProcessInputs(const FunctionPtr& src,
-            LotusIR::Graph* graph,
-            std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-            std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-            const std::unordered_map<Variable, Variable>& compositeOutputsMap,
-            std::vector<LotusIR::NodeArg *>& inputs);
-        static void ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
-            LotusIR::Graph* graph,
-            std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-            std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-            const std::unordered_map<Variable, Variable>& compositeOutputsMap,
-            std::vector<LotusIR::NodeArg *>& inputs);
+    // Processes inputs of a src CNTK op, creating ONNX nodes needed for the inputs.
+    static void ProcessInputs(const FunctionPtr& src,
+        LotusIR::Graph* graph,
+        std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
+        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+        std::vector<LotusIR::NodeArg *>& inputs);
+    static void ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
+        LotusIR::Graph* graph,
+        std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
+        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+        std::vector<LotusIR::NodeArg *>& inputs);
 
-        // Processes outputs of a src CNTK op.
-        static void ProcessOutputs(const FunctionPtr& src,
-            std::vector<LotusIR::NodeArg *>& outputs, Graph *graph);
-        static void ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
-            std::vector<LotusIR::NodeArg *>& outputs, Graph *graph);
-        
+    // Processes outputs of a src CNTK op.
+    static void ProcessOutputs(const FunctionPtr& src,
+        std::vector<LotusIR::NodeArg *>& outputs, Graph *graph);
+    static void ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
+        std::vector<LotusIR::NodeArg *>& outputs, Graph *graph);
 
-        static LotusIR::Node *AddReshapeNode(LotusIR::NodeArg &nodeArg, const std::vector<int> &newShape, const std::string &outArgName,
-            LotusIR::Graph* graph, int dynamicAxisCount);
-        static LotusIR::Node *AddMatMulNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph,
-            const std::string &out_arg_name);
-        static LotusIR::Node *AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis);
-        static LotusIR::Node *AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &toType);
+    static LotusIR::Node *AddReshapeNode(LotusIR::NodeArg &nodeArg, const std::vector<int> &newShape, const std::string &outArgName,
+        LotusIR::Graph* graph, int dynamicAxisCount);
+    static LotusIR::Node *AddMatMulNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph,
+        const std::string &out_arg_name);
+    static LotusIR::Node *AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis);
+    static LotusIR::Node *AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &toType);
 
     //
     //  Insert a reshape node in front of a given node and its output node arg
@@ -1176,10 +1175,11 @@ bool IsUnSupportedLayerNormalization(const FunctionPtr src)
 
 bool IsBatchAxisOp(const FunctionPtr src)
 {
-    // Check for the pattern "UnpackBatchAxis" --> Supported batch op --> "ToBatchAxis"
+    // This method checks for the following pattern to determine whether
+    // we have a batch axis op:
+    // "UnpackBatchAxis" --> Supported batch op --> "ToBatchAxis"
     bool isBatchAxisOp = false;
-    std::string cntkOpName = ToString(src->OpName());
-    if (cntkOpName == "UnpackBatchAxis") 
+    if (ToString(src->OpName()) == "UnpackBatchAxis")
     {
         auto parentNode = src->Inputs()[0].Owner();
         if (Operators::IsOpExportedWithBatchAxis(parentNode->OpName()))
@@ -1187,7 +1187,6 @@ bool IsBatchAxisOp(const FunctionPtr src)
             for (size_t inputIndex = 0; inputIndex < parentNode->Inputs().size(); ++inputIndex)
             {
                 auto input = parentNode->Inputs()[inputIndex];
-
                 if (input.IsOutput())
                 {
                     return ToString(input.Owner()->OpName()) == "ToBatchAxis";
@@ -4196,7 +4195,7 @@ void CNTKToONNXHelper::ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
     std::vector<LotusIR::NodeArg *>& inputs)
 {
     // This method assumes that it has been validated already that 
-    // rootNode batch axis op with the following pattern: 
+    // rootNode is a batch axis op with the following pattern: 
     // "UnpackBatchAxis" (rootNode) --> Supported batch op (src) --> "ToBatchAxis" (topNode)
     FunctionPtr topNode = nullptr;
     Variable inputTopNode;

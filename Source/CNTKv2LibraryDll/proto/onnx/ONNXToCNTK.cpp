@@ -1366,30 +1366,10 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     // in ONNX constants may also be a leaf with values saved in initializer
     // here we know it is not an ONNX constant so reshape the variable to trim off last dim;
     NDShape shape = FromTensorShapeProto(*shapeProto);
-    //if (!IsSecondInputOfElementWiseOpsWithBroadcast(parentNode, nodeArg))
-    //{
-    //    // can only do this when broadcast is 0
-    //    shape = shape.SubShape(0, shape.Rank() - 1);
-    //}
-
     std::vector<Axis> dynamicAxes({});
 
-    // Is the section below needed? Probably not. 
-    // Commenting the section below because this is probably taken care of in
-    // RNN leaf node creation (different function).
-
-    //// TODO: this is not fully correct. We need to get hasSequenceAxis
-    //// over the traverse path. An input will have a sequence axis
-    //// only if it outputs to an RNN op along the path.
-    //// This requires support from LotusIR.
-    //// Now traversing starts from arbitray nodes which may miss the RNN op.
-    //bool hasSequenceAxis = nodeArg->Shape()->dim(0).dim_value() == 0;
-
-    //if (hasSequenceAxis)
-    //{
-    //    shape = shape.SubShape(0, shape.Rank() - 1);
-    //    dynamicAxes.insert(dynamicAxes.begin(), Axis::OperandSequenceAxis());
-    //}
+    // TODO: Do we need to take care of the sequence axis here (like before)?
+    // Should it be be taken care of in RNN leaf node creation (different function)?
 
     auto dataType = FromONNXType(nodeArg->ToProto().type());
     switch (dataType)
