@@ -3043,18 +3043,23 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::ve
     std::vector<bool> cntkConvAutoPadding;
     auto convOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkConvAutoPadding, strides, node, inputs);
 
-    FunctionPtr cntkConvFunction = Convolution(
-        convolutionMap,
-        convOperand,
+    auto operandPlaceholder = PlaceholderVariable(convOperand.Shape(), L"operand", {});
+    auto convmapPlaceholder = PlaceholderVariable(convolutionMap.Shape(), L"convolutionMap", {});
+    FunctionPtr operandWithBatchAxis = ToBatch(operandPlaceholder);
+    FunctionPtr convResultWithBatchAxis = Convolution(
+        convmapPlaceholder,
+        operandWithBatchAxis,
         strides,
         sharing,
         cntkConvAutoPadding,
         dilation,
         reductionRank,
         groups,
-        maxTempMemSizeInSamples,
-        ToWString(node->Name()));
+        maxTempMemSizeInSamples);
+    FunctionPtr convResultWithStaticAxis = UnpackBatch(convResultWithBatchAxis, ToWString(node->Name()));
 
+    FunctionPtr cntkConvFunction = AsBlock(std::move(convResultWithStaticAxis), { { operandPlaceholder, convOperand }, { convmapPlaceholder, convolutionMap } }, L"Convolution", ToWString(node->Name()));
+    
     // TODO: support bias in CNTK op.
     if (inputs.size() == 3)
     {

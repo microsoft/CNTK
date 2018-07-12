@@ -2462,41 +2462,17 @@ namespace CNTK
         if (groups == 0)
             LogicError("groups: Must be strictly positive, i.e. groups > 0.");
 
-        auto hasStaticBatchAxis = operand.HasBatchAxis();
-        if (hasStaticBatchAxis)
+        if (reductionRank == 0)
         {
-            if (reductionRank == 0)
-            {
-                if (groups > 1)
-                    LogicError("groups: groups > 1 is not supported when reductionRank is 0.");
-                return Internal::SpatialConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
-                    maxTempMemSizeInSamples, name);
-            }
-            else
-            {
-                return Internal::Convolution(convolutionMap, operand, strides, sharing, autoPadding, dilation, false,
-                    { 0 }, groups, maxTempMemSizeInSamples, name);
-            }
+            if (groups > 1)
+                LogicError("groups: groups > 1 is not supported when reductionRank is 0.");
+            return Internal::SpatialConvolution(convolutionMap, operand, strides, sharing, autoPadding, dilation,
+                maxTempMemSizeInSamples, name);
         }
         else
         {
-            printf("Instantiating conv without batch axis.\n");
-            if (reductionRank == 0)
-            {
-                LogicError("hasStaticBatchAxis=true is not supported when reductionRank is 0.");
-            }
-            else
-            {
-                // TODO: Check that operand indeed does not have any dynamic axes
-                auto operandPlaceholder = PlaceholderVariable(operand.Shape(), L"operand", {});
-                auto convmapPlaceholder = PlaceholderVariable(convolutionMap.Shape(), L"convolutionMap", {});
-                FunctionPtr operandWithBatchAxis = ToBatch(operandPlaceholder);
-                FunctionPtr convResultWithBatchAxis = Internal::Convolution(convmapPlaceholder, operandWithBatchAxis, strides, sharing, autoPadding, dilation, false,
-                    { 0 }, groups, maxTempMemSizeInSamples);
-                FunctionPtr convResultWithStaticAxis = UnpackBatch(convResultWithBatchAxis, name);
-
-                return AsBlock(std::move(convResultWithStaticAxis), { { operandPlaceholder, operand }, { convmapPlaceholder, convolutionMap } }, L"Convolution", name);
-            }
+            return Internal::Convolution(convolutionMap, operand, strides, sharing, autoPadding, dilation, false,
+                { 0 }, groups, maxTempMemSizeInSamples, name);
         }
     }
 
