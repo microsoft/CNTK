@@ -6,6 +6,8 @@
 
 #pragma once
 
+#define __PROFILE__
+
 #undef _SCL_SECURE_NO_WARNINGS
 #include "Constants.h"
 #include "CNTKLibrary.h"
@@ -16,6 +18,7 @@
 #include "GPUDataTransferer.h"
 #include "TimerUtility.h"
 #include "MatrixQuantizerImpl.h"
+#include "ProgressTracing.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -143,9 +146,9 @@ private:
         // Use pinned memory for GPU devices for better copy performance
         size_t totalSize = sizeof(ElemType) * numElements;
         return std::shared_ptr<ElemType>((ElemType*) m_allocator->Malloc(totalSize), [this, deviceID](ElemType* p)
-                                         {
-                                             m_allocator->Free(p);
-                                         });
+        {
+            m_allocator->Free(p);
+        });
     }
 
     bool ShouldCopyDataToCPU(int deviceId)
@@ -226,7 +229,7 @@ private:
                 {
                     m_gpuDataTransferers.push_back(std::make_unique<GPUDataTransferer>(deviceId, m_useAsyncAggregation));
                     m_intermediateCPUBuffers.push_back(AllocateIntermediateBuffer(deviceId,
-                        (i == -1) ? packedGradientsSizeInElements : gradients[i]->GetNumElements()));
+                                                                                  (i == -1) ? packedGradientsSizeInElements : gradients[i]->GetNumElements()));
                 }
             }
 
@@ -325,9 +328,17 @@ private:
         size_t numGradientIndex = m_gradientIndexToAggregate.size();
         if (numGradientIndex > 0)
         {
+#ifdef __PROFILE__
+            if (logCounter % 100 == 0)
+                LOGPRINTF(stderr, "AggregateGradientsImpl : numGradientIndex = %d\n", (int) numGradientIndex);
+#endif
             // non-GDR && GPU && non-NCCL: need to copy data from GPU to CPU
             if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE) && !m_nccl->IsSupported())
             {
+#ifdef __PROFILE__
+                if (logCounter++ % 100 == 0)
+                    LOGPRINTF(stderr, "AggregateGradientsImpl Branch1[non-GDR && GPU && non-NCCL: need to copy data from GPU to CPU] : m_mpi->UseGpuGdr() == false && deviceId != CPUDEVICE && m_nccl->IsSupported() == false \n");
+#endif
                 Matrix<ElemType>* gpuCopyBuffer = m_aggregationBuffer.get();
 
                 ElemType* reductionBuffer;
@@ -344,11 +355,11 @@ private:
                     // currentGradientIndex == -1, first element is for packed gradients, which should not be with AsyncAggregation
                     assert(m_useAsyncAggregation == false);
                 }
-                // First sync_g_to_c_copy
-                // TODO: we need a CopyGPUToCPUSync
-                #ifndef CPUONLY
+// First sync_g_to_c_copy
+// TODO: we need a CopyGPUToCPUSync
+#ifndef CPUONLY
                 cudaMemcpy(m_intermediateCPUBuffers[gpuToCpuIndex].get(), gpuCopyBuffer->Data(), gpuCopyBuffer->GetNumElements() * sizeof(ElemType), cudaMemcpyDeviceToHost);
-                #endif
+#endif
                 gpuToCpuIndex++;
 
                 for (size_t i = 1; i <= numGradientIndex; i ++)
@@ -371,7 +382,7 @@ private:
                     }
                     // Wait for previous copy
                     m_gpuDataTransferers[allReduceIndex]->WaitForCopyGPUToCPUAsync();
-                    
+
                     // Allreduce
                     reductionBuffer = m_intermediateCPUBuffers[allReduceIndex].get();
                     m_mpi->AllReduce(reductionBuffer, (currentGradientIndex == -1) ? m_aggregationBuffer->GetNumElements() : gradients[currentGradientIndex]->GetNumElements());
@@ -379,8 +390,8 @@ private:
                     // Create async H-to-G copy
                     cpuToGpuIndex = allReduceIndex;
                     m_gpuDataTransferers[cpuToGpuIndex]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[cpuToGpuIndex].get(),
-                        (currentGradientIndex == -1) ? m_aggregationBuffer->GetNumElements() : gradients[currentGradientIndex]->GetNumElements(),
-                        (currentGradientIndex == -1) ? m_aggregationBuffer->Data() : gradients[currentGradientIndex]->Data());
+                                                                           (currentGradientIndex == -1) ? m_aggregationBuffer->GetNumElements() : gradients[currentGradientIndex]->GetNumElements(),
+                                                                           (currentGradientIndex == -1) ? m_aggregationBuffer->Data() : gradients[currentGradientIndex]->Data());
                     allReduceIndex = gpuToCpuIndex;
                     gpuToCpuIndex ++;
                     currentGradientIndex = nextGradientIndex;
@@ -389,6 +400,10 @@ private:
             // non-NCCL, using CPU, using GDR
             else if (!m_nccl->IsSupported())
             {
+#ifdef __PROFILE__
+                if (logCounter++ % 100 == 0)
+                    LOGPRINTF(stderr, "AggregateGradientsImpl Branch2[non-NCCL, using CPU, using GDR] : m_nccl->IsSupported() == false \n");
+#endif
                 ElemType* reductionBuffer;
                 for (size_t i : m_gradientIndexToAggregate)
                 {
@@ -398,7 +413,7 @@ private:
                     if (m_mpi->UseGpuGdr() == 0)
                     {
                         m_mpi->Iallreduce(MPI_IN_PLACE, reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(),
-                            MPIWrapper::GetDataType(reductionBuffer), MPI_SUM, &allReduceRequests.back()) || MpiFail("MPI_Iallreduce");
+                                          MPIWrapper::GetDataType(reductionBuffer), MPI_SUM, &allReduceRequests.back()) || MpiFail("MPI_Iallreduce");
                         allReduceIndex++;
                     }
                     // GDR && GPU
@@ -407,9 +422,13 @@ private:
                         m_mpi->AllReduce(reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements());
                     }
                 }
-            } 
+            }
             else if (m_nccl->IsSupported())
             {
+#ifdef __PROFILE__
+                if (logCounter++ % 100 == 0)
+                    LOGPRINTF(stderr, "AggregateGradientsImpl Branch3 : m_nccl->IsSupported() == true \n");
+#endif
                 std::vector<Matrix<ElemType>*> ncclReduceGradients;
                 for (size_t i : m_gradientIndexToAggregate)
                 {
@@ -517,5 +536,7 @@ private:
     bool m_initialized;
 
     std::unique_ptr<NcclComm> m_nccl;
+
+    static size_t logCounter = 0;
 };
 } } }
