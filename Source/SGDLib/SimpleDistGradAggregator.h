@@ -22,6 +22,10 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+#ifdef __PROFILE__
+static size_t logCounter = 0;
+#endif
+
 template <class ElemType>
 class SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
 {
@@ -536,7 +540,5 @@ private:
     bool m_initialized;
 
     std::unique_ptr<NcclComm> m_nccl;
-
-    static size_t logCounter = 0;
 };
 } } }
