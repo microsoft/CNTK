@@ -20,7 +20,12 @@
 #include "MatrixQuantizerImpl.h"
 #include "ProgressTracing.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 #ifdef __PROFILE__
 static size_t logCounter = 0;
@@ -33,9 +38,9 @@ class SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
 
 public:
     SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
-        : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace),
-        m_iterationCount(0), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
-    {}
+        : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
+    {
+    }
 
     ~SimpleDistGradAggregator()
     {
@@ -51,7 +56,6 @@ public:
     {
         if (m_mpi->NumNodesInUse() == 1) // No need to aggregate anything.
             return (headerCPU->numSamples != 0);
-
 
         // Initialize NCCL
         if (m_nccl == nullptr)
@@ -149,8 +153,7 @@ private:
 
         // Use pinned memory for GPU devices for better copy performance
         size_t totalSize = sizeof(ElemType) * numElements;
-        return std::shared_ptr<ElemType>((ElemType*) m_allocator->Malloc(totalSize), [this, deviceID](ElemType* p)
-        {
+        return std::shared_ptr<ElemType>((ElemType*) m_allocator->Malloc(totalSize), [this, deviceID](ElemType* p) {
             m_allocator->Free(p);
         });
     }
@@ -224,7 +227,7 @@ private:
             else
             {
                 // First element is reserved for continous buffer
-                m_gradientIndexToAggregate.insert(m_gradientIndexToAggregate.begin(), 1, (size_t)-1);
+                m_gradientIndexToAggregate.insert(m_gradientIndexToAggregate.begin(), 1, (size_t) -1);
             }
 
             if (ShouldCopyDataToCPU(deviceId))
@@ -322,7 +325,6 @@ private:
         if (!m_mpi->IsMainNode())
             m_mpi->Isend(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank(), numGradMatrices, &sendHeaderRequest) || MpiFail("MPI_Isend");
 
-
         // New aggregation pipeline for non-GDR, perform sync allreduce on the gradient data
         // For CPU, still use async allreduce
         std::vector<MPI_Request> allReduceRequests;
@@ -334,7 +336,12 @@ private:
         {
 #ifdef __PROFILE__
             if (logCounter % 100 == 0)
+            {
                 LOGPRINTF(stderr, "AggregateGradientsImpl : numGradientIndex = %d\n", (int) numGradientIndex);
+                LOGPRINTF(stderr, "m_mpi->UseGpuGdr() = %d\n", m_mpi->UseGpuGdr());
+                LOGPRINTF(stderr, "deviceId = %d\n", deviceId);
+                LOGPRINTF(stderr, "m_nccl->IsSupported() = %d\n", m_nccl->IsSupported());
+            }
 #endif
             // non-GDR && GPU && non-NCCL: need to copy data from GPU to CPU
             if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE) && !m_nccl->IsSupported())
@@ -366,7 +373,7 @@ private:
 #endif
                 gpuToCpuIndex++;
 
-                for (size_t i = 1; i <= numGradientIndex; i ++)
+                for (size_t i = 1; i <= numGradientIndex; i++)
                 {
                     // Get next gradient
                     if (i < numGradientIndex)
@@ -397,7 +404,7 @@ private:
                                                                            (currentGradientIndex == -1) ? m_aggregationBuffer->GetNumElements() : gradients[currentGradientIndex]->GetNumElements(),
                                                                            (currentGradientIndex == -1) ? m_aggregationBuffer->Data() : gradients[currentGradientIndex]->Data());
                     allReduceIndex = gpuToCpuIndex;
-                    gpuToCpuIndex ++;
+                    gpuToCpuIndex++;
                     currentGradientIndex = nextGradientIndex;
                 }
             }
@@ -412,12 +419,13 @@ private:
                 for (size_t i : m_gradientIndexToAggregate)
                 {
                     allReduceRequests.push_back(MPI_Request());
-                    reductionBuffer = (i == -1)? m_aggregationBuffer->Data() : gradients[i]->Data();
+                    reductionBuffer = (i == -1) ? m_aggregationBuffer->Data() : gradients[i]->Data();
                     // CPU
                     if (m_mpi->UseGpuGdr() == 0)
                     {
                         m_mpi->Iallreduce(MPI_IN_PLACE, reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(),
-                                          MPIWrapper::GetDataType(reductionBuffer), MPI_SUM, &allReduceRequests.back()) || MpiFail("MPI_Iallreduce");
+                                          MPIWrapper::GetDataType(reductionBuffer), MPI_SUM, &allReduceRequests.back()) ||
+                            MpiFail("MPI_Iallreduce");
                         allReduceIndex++;
                     }
                     // GDR && GPU
@@ -541,4 +549,6 @@ private:
 
     std::unique_ptr<NcclComm> m_nccl;
 };
-} } }
+}
+}
+}
