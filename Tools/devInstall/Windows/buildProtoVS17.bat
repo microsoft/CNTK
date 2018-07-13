@@ -94,9 +94,9 @@ goto FIN
 @echo Use this script to build the Protobuf library for CNTK.
 @echo The script requires two parameter
 @echo   Parameter 1: The complete path to the ProtoBuf source directory 
-@echo                e.g. C:\local\src\protobuf-3.1.0
+@echo                e.g. C:\local\src\protobuf-3.5.2
 @echo   Parameter 2: The target path for the created binaries
-@echo                e.g. C:\local\protobuf-3.1.0-vs15
+@echo                e.g. C:\local\protobuf-3.5.2-vs17
 @echo.
 goto FIN
 

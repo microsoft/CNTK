@@ -636,7 +636,7 @@ function GetBatchBuildProtoBuf(
     [string] $targetDir,
     [string] $repoDirectory)
 {
-    $batchFile = join-path $repoDirectory "tools\devInstall\Windows\buildProtoVS15.bat"
+    $batchFile = join-path $repoDirectory "tools\devInstall\Windows\buildProtoVS17.bat"
 @"
 call $batchFile $sourceDir $targetDir
 "@

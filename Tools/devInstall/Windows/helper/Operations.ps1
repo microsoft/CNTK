@@ -216,7 +216,7 @@ function OpOpenCV31(
          } )
 }
 
-function OpProtoBuf310VS17(
+function OpProtoBuf352VS17(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder,
     [parameter(Mandatory=$true)][string] $repoDirectory)
@@ -225,20 +225,20 @@ function OpProtoBuf310VS17(
     # create batch file to build protobuf files in $scriptDirectory = $targetFolder\script
     # the script file can be used to create the compiled protobuf libraries in $targetPath = $targetFolder\$prodSubDir
 
-    $prodName = "ProtoBuf 3.1.0 Source"
-    $prodSrcSubdir = "protobuf-3.1.0"
-    $prodFile = "protobuf310.zip"
-    $prodSubDir =  "protobuf-3.1.0-vs17"
+    $prodName = "ProtoBuf 3.5.2 Source"
+    $prodSrcSubdir = "protobuf-3.5.2"
+    $prodFile = "protobuf352.zip"
+    $prodSubDir =  "protobuf-3.5.2-vs17"
     $batchFile = "buildProtoVS17.cmd"
 
     $protoSourceDir = join-path $targetFolder "src"
     $targetPath = Join-Path $protoSourceDir $prodSrcSubdir
     $scriptDirectory = join-path $targetFolder "script"
     $buildDir = join-path $targetFolder $prodSubDir
-    $downloadSource = "https://github.com/google/protobuf/archive/v3.1.0.zip"
-    $expectedHash = "C07629F666312E43A4C2415AF77F6442178605A8658D975299C793CB89999212"
+    $downloadSource = "https://github.com/google/protobuf/archive/v3.5.2.zip"
+    $expectedHash = "7404D040865A031E80C2810CD9453EAFEFB2BBBF5F5F9A282B1D071D8E12C4BF"
 
-    @( @{ShortName = "PROTO310"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
+    @( @{ShortName = "PROTO352"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath } );
          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash} );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $protoSourceDir; zipSubTree = $prodSrcSubdir; destinationFolder = $prodSrcSubdir },
@@ -247,21 +247,21 @@ function OpProtoBuf310VS17(
         } )
 }
 
-function OpProtoBuf310VS17Prebuild(
+function OpProtoBuf352VS17Prebuild(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "ProtoBuf 3.1.0 VS17 CNTK Prebuild"
-    $prodFile = "protobuf-3.1.0-vs17.zip"
-    $prodSubDir =  "protobuf-3.1.0-vs17"
+    $prodName = "ProtoBuf 3.5.2 VS17 CNTK Prebuild"
+    $prodFile = "protobuf-3.5.2-vs17.zip"
+    $prodSubDir =  "protobuf-3.5.2-vs17"
 
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "PROTOBUF_PATH"
     $envValue = $targetPath
-    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/protobuf/protobuf-3.1.0-vs17.zip"
-    $expectedHash = "ED0F3215AC60E6AE29B21CBFF53F8876E4CF8B4767FEC525CEF0DA6FDF6A4A73"   
+    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/protobuf/protobuf-3.5.2-vs17.zip"
+    $expectedHash = "38EC849B775B36B214073BD45665A6F1ABF286D0E3C2BF67C1F11409CE28DE96"   
 
-    @( @{ShortName = "PROTO310PRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
+    @( @{ShortName = "PROTO352PRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash} );
