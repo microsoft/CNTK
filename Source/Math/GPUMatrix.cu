@@ -3722,6 +3722,36 @@ void GPUMatrix<ElemType>::LabelAdd(const GPUMatrix<ElemType>& label, ElemType bi
 #pragma endregion
 
 
+#pragma region CenterLoss
+
+template <class ElemType>
+__global__ void _classCount(CUDA_LONG outputDimension, const ElemType* label, ElemType* counter, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        CUDA_LONG i = id / outputDimension;
+        CUDA_LONG j = id % outputDimension;
+
+        if ((CUDA_LONG)label[i] == (CUDA_LONG)label[j])
+            counter[i] += (ElemType)1;
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter)
+{
+    CUDA_LONG minibatchSize = label.GetNumCols();
+    CUDA_LONG numElements = minibatchSize * minibatchSize;
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _classCount<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(minibatchSize, label.Data(), counter.Data(), numElements);
+}
+
+#pragma endregion
+
+
 #pragma region RNN Functions
 
 template <class ElemType>

@@ -463,6 +463,12 @@ public:
 
 #pragma endregion
 
+#pragma region CenterLoss
+
+    static void ClassCount(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& counter);
+
+#pragma endregion
+
 
 public:
     // This functions do not depend on <ElemType>, i.e. you can call them on any <ElemType>

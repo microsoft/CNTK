@@ -5349,6 +5349,33 @@ void CPUMatrix<ElemType>::LabelAdd(const CPUMatrix<ElemType>& label, ElemType bi
 
 #pragma endregion
 
+#pragma region CenterLoss
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ClassCount(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& counter)
+{
+    size_t minibatchSize = label.GetNumCols();
+    ElemType* labelPtr = label.Data();
+    ElemType* counterPtr = counter.Data();
+
+    map<size_t, ElemType>mp;
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        size_t id = labelPtr[i];
+        if (mp.find(id) == mp.end())
+            mp[id] = (ElemType)1;
+        else
+            mp[id] += (ElemType)1;
+    }
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        size_t id = labelPtr[i];
+        counterPtr[i] = mp[id];
+    }
+}
+
+#pragma endregion
+
 
 #pragma region Static BLAS Functions
 

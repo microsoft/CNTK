@@ -335,6 +335,8 @@ namespace CNTK
                     opType = PrimitiveOpType::FeatureNormalize;
                 else if (node->OperationName() == OperationNameOf(AdditiveFullConnectionNode))
                     opType = PrimitiveOpType::AdditiveFullConnection;
+                else if (node->OperationName() == OperationNameOf(CenterLossNode))
+                    opType = PrimitiveOpType::CenterLoss;
                 else if (node->OperationName() == OperationNameOf(GlobalConcatNode))
                     opType = PrimitiveOpType::GlobalConcat;
                 else if (node->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode))

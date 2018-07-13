@@ -117,14 +117,15 @@ namespace CNTK
         {PrimitiveOpType::ConstantOp, L"ConstantOp"},
         {PrimitiveOpType::Squeeze, L"Squeeze"},
         {PrimitiveOpType::Cast, L"Cast" },
-        { PrimitiveOpType::EyeLikeOp, L"EyeLikeOp" },
-        { PrimitiveOpType::CustomProxyOp, L"CustomProxyOp" },
+        {PrimitiveOpType::EyeLikeOp, L"EyeLikeOp" },
+        {PrimitiveOpType::CustomProxyOp, L"CustomProxyOp" },
         {PrimitiveOpType::StraightThrough, L"StraightThrough"},
-        { PrimitiveOpType::Tan, L"Tan" },
-        { PrimitiveOpType::Atan, L"Atan" },
+        {PrimitiveOpType::Tan, L"Tan" },
+        {PrimitiveOpType::Atan, L"Atan" },
         {PrimitiveOpType::MarginInnerProduct, L"MarginInnerProduct"},
         {PrimitiveOpType::FeatureNormalize, L"FeatureNormalize"},
         {PrimitiveOpType::AdditiveFullConnection, L"AdditiveFullConnection"},
+        {PrimitiveOpType::CenterLoss, L"CenterLoss" },
         {PrimitiveOpType::GlobalConcat, L"GlobalConcat"}
     };
 
@@ -345,6 +346,10 @@ namespace CNTK
         static const std::wstring AttributeAdditiveFullConnectionBiasPower;
         static const std::wstring AttributeAdditiveFullConnectionBiasMin;
         static const std::wstring AttributeAdditiveFullConnectionBiasMax;
+        static const std::wstring AttributeCenterLossLambda;
+        static const std::wstring AttributeCenterLossAlpha;
+        static const std::wstring AttributeCenterLossLabelDim;
+        static const std::wstring AttributeCenterLossNormalize;
         static const std::wstring AttributeGlobalConcatBlockIndex;
         static const std::wstring AttributeGlobalConcatGrowthRate;
         static const std::wstring AttributeGlobalConcatSegmentIndex;

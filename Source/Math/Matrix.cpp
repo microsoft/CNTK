@@ -5106,6 +5106,21 @@ template <class ElemType>
 
 #pragma endregion
 
+#pragma region CenterLoss
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ClassCount(const Matrix<ElemType>& label, const Matrix<ElemType>& counter)
+{
+    DISPATCH_MATRIX_ON_FLAG(&counter,
+                            &counter,
+                            CPUMatrix<ElemType>::ClassCount(*(label.m_CPUMatrix), *(counter.m_CPUMatrix)),
+                            GPUMatrix<ElemType>::ClassCount(*(label.m_GPUMatrix), *(counter.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+#pragma endregion
+
 
 template <class ElemType>
 template <class StatType>

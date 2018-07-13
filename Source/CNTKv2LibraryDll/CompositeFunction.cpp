@@ -1151,6 +1151,15 @@ namespace CNTK
                     computationNodePtr = New<AdditiveFullConnectionNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputDimension, weightNormalize, bias, annealBias, biasBase, biasGamma, biasPower, biasMin, biasMax);
                     break;
                 }
+                case PrimitiveOpType::CenterLoss:
+                {
+                    auto lambda = functionConfig[PrimitiveFunction::AttributeCenterLossLambda].Value<double>();
+                    auto alpha = functionConfig[PrimitiveFunction::AttributeCenterLossAlpha].Value<double>();
+                    auto labelDim = functionConfig[PrimitiveFunction::AttributeCenterLossLabelDim].Value<size_t>();
+                    auto normalize = functionConfig[PrimitiveFunction::AttributeCenterLossNormalize].Value<bool>();
+                    computationNodePtr = New<CenterLossNode<ElementType>>(network->GetDeviceId(), internalNodeName, lambda, alpha, labelDim, normalize);
+                    break;
+                }
                 case PrimitiveOpType::GlobalConcat:
                 {
                     auto blockIndex = functionConfig[PrimitiveFunction::AttributeGlobalConcatBlockIndex].Value<size_t>();

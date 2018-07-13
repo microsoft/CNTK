@@ -2148,6 +2148,16 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::AdditiveFullConnection, operands, std::move(additionalProperties), name), name);
     }
 
+    FunctionPtr CenterLoss(const Variable& features, const Variable& labels, double lambda, double alpha, size_t labelDim, bool normalize, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeCenterLossLambda] = lambda;
+        additionalProperties[PrimitiveFunction::AttributeCenterLossAlpha] = alpha;
+        additionalProperties[PrimitiveFunction::AttributeCenterLossLabelDim] = labelDim;
+        additionalProperties[PrimitiveFunction::AttributeCenterLossNormalize] = normalize;
+        return BinaryOp(PrimitiveOpType::CenterLoss, labels, features, std::move(additionalProperties), name);
+    }
+
     FunctionPtr GlobalConcat(const Variable& features, size_t blockIndex, size_t growthRate, size_t segmentIndex, size_t segmentNum, const std::wstring& name)
     {
         std::vector<Variable> operands = {features};

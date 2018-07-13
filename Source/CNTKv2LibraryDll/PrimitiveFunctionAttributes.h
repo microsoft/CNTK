@@ -136,6 +136,10 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionBiasPower = L"biasPower";
     /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionBiasMin = L"biasMin";
     /*static*/ const std::wstring PrimitiveFunction::AttributeAdditiveFullConnectionBiasMax = L"biasMax";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossLambda = L"centerLossLambda";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossAlpha = L"centerLossAlpha";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossLabelDim = L"centerLossLabelDim";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeCenterLossNormalize = L"centerLossNormalize";
     /*static*/ const std::wstring PrimitiveFunction::AttributeGlobalConcatBlockIndex = L"blockIndex";
     /*static*/ const std::wstring PrimitiveFunction::AttributeGlobalConcatGrowthRate = L"growthRate";
     /*static*/ const std::wstring PrimitiveFunction::AttributeGlobalConcatSegmentIndex = L"segmentIndex";

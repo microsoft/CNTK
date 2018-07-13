@@ -29,6 +29,7 @@ static const wstring RandomDistributionTypeNormal    = L"normal";
 static const wstring RandomDistributionTypeGumbel    = L"gumbel";
 static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
 
+
 // Implements A-Softmax as described in:
 // SphereFace: DeepHypersphereEmbeddingforFaceRecognition [Weiyang Liu, Yandong Wen, Zhiding Yu, Ming Li, Bhiksha Raj, Le Song]
 // https://arxiv.org/abs/1704.08063
@@ -383,7 +384,6 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-
         fstream << m_outputDimension;
         fstream << m_marginCoefficient;
         fstream << m_base;
@@ -396,7 +396,6 @@ public:
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-
         fstream >> m_outputDimension;
         fstream >> m_marginCoefficient;
         fstream >> m_base;
@@ -577,14 +576,12 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-
         fstream << m_normalizeType;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-
         fstream >> m_normalizeType;
     }
 
@@ -744,7 +741,6 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-
         fstream << m_outputDimension;
         fstream << m_weightNormalize;
         fstream << m_bias;
@@ -760,7 +756,6 @@ public:
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-
         fstream >> m_outputDimension;
         fstream >> m_weightNormalize;
         fstream >> m_bias;
@@ -790,6 +785,171 @@ private:
     shared_ptr<Matrix<ElemType>> m_labelValue;      // Matrix(1,m)
     shared_ptr<Matrix<ElemType>> m_weightMagnitude; // Matrix(k,1)
 };
+
+// Implements Center-Loss as described in:
+// A Discriminative Feature Learning Approach for Deep Face Recognition [Yandong Wen, Kaipeng Zhang, Zhifeng Li, Yu Qiao]
+// https://ydwen.github.io/papers/WenECCV16.pdf
+template <class ElemType>
+class CenterLossNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"CenterLoss"; }
+
+public:
+    CenterLossNode(const ScriptableObjects::IConfigRecordPtr configp) :
+        CenterLossNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"centerLossLambda"), configp->Get(L"centerLossAlpha"),
+                       configp->Get(L"centerLossLabelDim"), configp->Get(L"centerLossNormalize"))
+    {
+        // To support legacy models, runCount is optional. Hence, we cannot use NumInputs<>, and must check ourselves in Validation.
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    CenterLossNode(DEVICEID_TYPE deviceId, const wstring& name, double lambda = 0.0, double alpha = 0.0, size_t labelDim = 0, bool normalize = false)
+        : Base(deviceId, name), m_lambda(lambda), m_alpha(alpha), m_labelDim(labelDim), m_normalize(normalize)
+    {
+    }
+
+    ~CenterLossNode()
+    {
+        if(!initFlag)
+            m_centroids.reset();
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        m_leftMinusRight->Resize(Input(1)->Value());
+        m_minibatchSize = InputRef(0).Value().GetNumCols();
+        m_featureDim = InputRef(1).Value().GetNumRows();
+        m_centroidsBatch->Resize(m_featureDim, m_minibatchSize);
+
+        if (initFlag)
+        {
+            m_centroids = make_shared<Matrix<ElemType>>(Matrix<ElemType>::Zeros(m_featureDim, m_labelDim, m_deviceId));
+            initFlag = false;
+        }
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (inputIndex == 1)
+        {
+            m_counter->Resize(1, m_minibatchSize);
+            Matrix<ElemType>::ClassCount(*m_label, *m_counter);
+            auto X_gradient = InputRef(1).GradientFor(InputRef(0).GetMBLayout());
+
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(1.0f / m_minibatchSize, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, X_gradient);
+            Matrix<ElemType>::Scale((ElemType)m_alpha, *m_leftMinusRight);
+            m_leftMinusRight->RowElementDivideBy(*m_counter);
+            m_centroids->ScatterToIndices(*m_leftMinusRight, *m_label, m_featureDim);
+
+            if (m_normalize)
+            {
+                m_leftMinusRight->AssignVectorNorm2Of(*m_centroids, /*isColumnWise*/true);
+                m_centroids->RowElementDivideBy(*m_leftMinusRight);
+            }
+        }
+        else
+            LogicError("%ls operation doesn't expect gradient on left operand", OperationName().c_str());
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        InputRef(0).MaskedValueFor(fr).VectorMax(*m_label, *m_labelValue, true /*isColWise*/);
+        m_centroidsBatch->GatherFromTarget(*m_label, *m_centroids, m_featureDim);
+        m_leftMinusRight->AssignDifferenceOf(InputRef(1).ValueFor(fr), *m_centroidsBatch);
+        ElemType v = m_leftMinusRight->FrobeniusNorm();
+        Value().VerifySize(1, 1);
+        Value().SetValue((ElemType)m_lambda * v * v / m_minibatchSize / (ElemType)2);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<CenterLossNode<ElemType>>(nodeP);
+            node->m_leftMinusRight->SetValue(*m_leftMinusRight);
+            node->m_centroids->SetValue(*m_centroids);
+            node->m_centroidsBatch->SetValue(*m_centroidsBatch);
+            node->m_label->SetValue(*m_label);
+            node->m_labelValue->SetValue(*m_labelValue);
+            node->m_lambda = m_lambda;
+            node->m_alpha = m_alpha;
+            node->m_featureDim = m_featureDim;
+            node->m_labelDim = m_labelDim;
+            node->m_normalize = m_normalize;
+            node->m_minibatchSize = m_minibatchSize;
+        }
+    }
+
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_leftMinusRight, matrixPool, m_featureDim, true, false, false);
+        RequestMatrixFromPool(m_centroidsBatch, matrixPool, m_featureDim, true, false, false);
+        RequestMatrixFromPool(m_label, matrixPool, 1, true, false, false);
+        RequestMatrixFromPool(m_labelValue, matrixPool, 1, true, false, false);
+    }
+
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_labelValue, matrixPool);
+    }
+
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_counter, matrixPool, 1, true, false, false);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_leftMinusRight, matrixPool);
+        ReleaseMatrixToPool(m_centroidsBatch, matrixPool);
+        ReleaseMatrixToPool(m_label, matrixPool);
+        ReleaseMatrixToPool(m_counter, matrixPool);
+    }
+
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_lambda << m_alpha << m_featureDim << m_labelDim << m_normalize;
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_lambda >> m_alpha >> m_featureDim >> m_labelDim >> m_normalize;
+    }
+
+public:
+    shared_ptr<Matrix<ElemType>> m_leftMinusRight;
+    shared_ptr<Matrix<ElemType>> m_centroids;
+    shared_ptr<Matrix<ElemType>> m_centroidsBatch;
+    shared_ptr<Matrix<ElemType>> m_label;
+    shared_ptr<Matrix<ElemType>> m_labelValue;
+    shared_ptr<Matrix<ElemType>> m_counter;
+    double m_lambda;
+    double m_alpha;
+    size_t m_featureDim;
+    size_t m_labelDim;
+    bool m_normalize;
+    size_t m_minibatchSize;
+    bool initFlag = true;
+};
+
 
 // -----------------------------------------------------------------------
 // SquareErrorNode (left, right)

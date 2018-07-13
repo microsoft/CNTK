@@ -394,6 +394,7 @@ CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
 MarginInnerProduct      = CNTK2.MarginInnerProduct
 FeatureNormalize        = CNTK2.FeatureNormalize
 AdditiveFullConnection  = CNTK2.AdditiveFullConnection
+CenterLoss              = CNTK2.CenterLoss
 GlobalConcat            = CNTK2.GlobalConcat
 Dropout                 = CNTK2.Dropout
 ElementTimes            = CNTK2.ElementTimes
@@ -502,6 +503,13 @@ CNTK2 = [
     #
     AdditiveFullConnection(labelSequence, outProbVectorSequence, W, outputDimension=0, weightNormalize=true, bias=0, annealBias=false, biasBase=0, biasGamma=0, biasPower=0, biasMin=0, biasMax=0,tag='') = 
         new ComputationNode [ operation = 'AdditiveFullConnection' ; inputs = _AsNodes (labelSequence : outProbVectorSequence : W) /*plus the function args*/ ]
+
+    #
+    #CenterLoss node
+    #
+    CenterLoss(labelSequence, outProbVectorSequence, centerLossLambda, centerLossAlpha, centerLossLabelDim, centerLossNormalize=false, axis=0, tag='') = 
+        if axis==0 then new ComputationNode [ operation = 'CenterLoss' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
+        else [ tag1 = tag; out = Minus (ReduceLogSum (outProbVectorSequence, axis=axis), ReduceSum (labelSequence .* outProbVectorSequence, axis=axis), tag=tag1) ].out
 
     #
     # GlobalConcat node

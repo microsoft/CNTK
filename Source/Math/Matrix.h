@@ -620,6 +620,12 @@ public:
 
 #pragma endregion
 
+#pragma region CenterLoss
+
+    static void ClassCount(const Matrix<ElemType>& label, const Matrix<ElemType>& counter);
+
+#pragma endregion
+
 
     void RNNForward(const Matrix<ElemType>& inputX, const Matrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
     void RNNBackwardData(const Matrix<ElemType>& outputDY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);

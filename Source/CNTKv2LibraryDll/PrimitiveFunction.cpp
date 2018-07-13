@@ -129,6 +129,7 @@ namespace CNTK
             (op == PrimitiveOpType::MarginInnerProduct) ||
             (op == PrimitiveOpType::FeatureNormalize) ||
             (op == PrimitiveOpType::AdditiveFullConnection) ||
+            (op == PrimitiveOpType::CenterLoss) ||
             (op == PrimitiveOpType::GlobalConcat) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::LatticeSequenceWithSoftmax) ||
@@ -904,6 +905,7 @@ namespace CNTK
                         case PrimitiveOpType::LambdaRank:
                         case PrimitiveOpType::CosDistance:
                         case PrimitiveOpType::SquaredError:
+                        case PrimitiveOpType::CenterLoss:
                         case PrimitiveOpType::EditDistanceError:
                         case PrimitiveOpType::LatticeSequenceWithSoftmax:
                         case PrimitiveOpType::ClassificationError:

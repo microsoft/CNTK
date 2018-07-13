@@ -579,6 +579,12 @@ public:
 
 #pragma endregion
 
+#pragma region CenterLoss
+
+    static void ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter);
+
+#pragma endregion
+
 
     // RNN support functions
     void RNNForward(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);
