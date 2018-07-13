@@ -33,7 +33,7 @@ def verify_one_input(model, data, tmpdir, name, device=None):
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
         model_shape = (1, ) + model_shape
         data.shape = (1, ) + data.shape
-    assert model.shape == loaded_model.shape
+    assert model_shape == loaded_model.shape
 
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
