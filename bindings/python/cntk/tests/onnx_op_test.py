@@ -29,6 +29,10 @@ def verify_one_input(model, data, tmpdir, name, device=None):
     model.save(filename, format=C.ModelFormat.ONNX)
 
     loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    model_shape = model.shape
+    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
+        model_shape = (1, ) + model_shape
+        data.shape = (1, ) + data.shape
     assert model.shape == loaded_model.shape
 
     if device:
