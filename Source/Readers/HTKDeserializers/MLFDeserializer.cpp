@@ -51,11 +51,14 @@ struct MLFSequenceData : SparseSequenceData
         m_indices = &m_indexBuffer[0];
     }
 
-    MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries, const NDShape& frameShape) :
+    MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries, const NDShape& frameShape, float weight) :
         MLFSequenceData(numberOfSamples, frameShape)
     {
         for (auto boundary : phoneBoundaries)
             m_values[boundary] = s_phoneBoundary;
+        if (weight > 0 && m_values[numberOfSamples-1] != 2.0)
+            m_values[numberOfSamples - 1] = weight;
+
     }
 
     const void* GetDataBuffer() override
@@ -187,7 +190,7 @@ public:
                 sequencePhoneBoundaries[i] = utterance[i].FirstFrame();
         }
 
-        auto s = make_shared<MLFSequenceData<ElementType>>(sequence.m_numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout);
+        auto s = make_shared<MLFSequenceData<ElementType>>(sequence.m_numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout, utterance[0].UttWeight());
         auto* startRange = s->m_indices;
         for (const auto& range : utterance)
         {

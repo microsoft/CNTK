@@ -52,6 +52,7 @@ namespace CNTK {
     class MLFFrameRange
     {
         static const double s_htkTimeToFrame;
+        float m_uttWeight;
 
         uint32_t m_firstFrame;     // start frame
         uint32_t m_numFrames;      // number of frames
@@ -59,11 +60,12 @@ namespace CNTK {
 
     public:
         // Parses format with original HTK state align MLF format and state list and builds an MLFFrameRange.
-        void Build(const std::vector<boost::iterator_range<char*>>& tokens, const std::unordered_map<std::string, size_t>& stateTable, size_t byteOffset);
+        void Build(const std::vector<boost::iterator_range<char*>>& tokens, const std::unordered_map<std::string, size_t>& stateTable, size_t byteOffset, float weight);
 
         ClassIdType ClassId() const { return m_classId;    }
         uint32_t FirstFrame() const { return m_firstFrame; }
         uint32_t NumFrames()  const { return m_numFrames;  }
+        float UttWeight() const { return m_uttWeight; }
 
         // Note: preserving logic of the old speech reader.
         // Parse the time range.

@@ -69,7 +69,7 @@ namespace CNTK {
 
     const double MLFFrameRange::s_htkTimeToFrame = 100000.0;
 
-    void MLFFrameRange::Build(const vector<boost::iterator_range<char*>>& tokens, const unordered_map<string, size_t>& stateTable, size_t byteOffset)
+    void MLFFrameRange::Build(const vector<boost::iterator_range<char*>>& tokens, const unordered_map<string, size_t>& stateTable, size_t byteOffset, float weight)
     {
         auto range = ParseFrameRange(tokens, byteOffset);
         size_t uid;
@@ -92,6 +92,7 @@ namespace CNTK {
             if (!boost::spirit::qi::parse(tokens[3].begin(), tokens[3].end(), boost::spirit::qi::int_, uid))
                 RuntimeError("Offset '%zu': cannot parse class id of the frame range", byteOffset);
         }
+        m_uttWeight = weight;
 
         VerifyAndSaveRange(range, uid, byteOffset);
     }
@@ -172,6 +173,9 @@ namespace CNTK {
         // Remove extension if specified.
         sequenceKey = sequenceKey.substr(0, sequenceKey.find_last_of("."));
 
+        //get utterance weight from mlf file
+        float weight = stof(string(lines[idx].begin(), lines[idx].end()));
+        idx++;
         // determine content line range [s,e)
         size_t s = idx;
         size_t e = lines.size() - 1;
@@ -183,6 +187,7 @@ namespace CNTK {
         }
 
         utterance.resize(e - s);
+        
         vector<boost::iterator_range<char*>> tokens;
         unordered_map<string, size_t> empty;
         for (size_t i = s; i < e; i++)
@@ -193,7 +198,7 @@ namespace CNTK {
             Split(lines[i].begin(), lines[i].end(), spaceDelim, tokens);
 
             auto& current = utterance[i - s];
-            current.Build(tokens, m_states ? m_states->States() : empty, sequenceOffset + std::distance(sequenceData.begin(), lines[i].begin()));
+            current.Build(tokens, m_states ? m_states->States() : empty, sequenceOffset + std::distance(sequenceData.begin(), lines[i].begin()), weight);
 
             // Check that frames are sequential.
             if (i > s)

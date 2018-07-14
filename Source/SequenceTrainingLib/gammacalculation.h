@@ -303,6 +303,7 @@ public:
         uttPhoneNum.reserve(numSequences);
         uttToChanInd.reserve(numSequences);
         size_t seqId = 0;
+        maxValues.Print("max value");
         for (const auto& seq : pMBLayout->GetAllSequences())
         {
             if (seq.seqId == GAP_SEQUENCE_ID)
