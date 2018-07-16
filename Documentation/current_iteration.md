@@ -24,6 +24,8 @@ There is a breaking change in the **depth_to_space** and **space_to_depth** oper
 the permutation for how the depth dimension is placed as blocks in the spatial dimensions, and vice-versa, has been changed. Please refer to the updated doc
 examples for these two ops to see the change.
 
+## Default arguments order
+There is a breaking change in the **arguments** property in CNTK python API. The default behavior has been updated to return arguments in python order instead of in C++ order. This way it will return arguments in the same order as they are fed into ops. If you wish to still get arguments in C++ order, you can simply override the global option. This change should only affect the following ops: Times, TransposeTimes, and Gemm(internal). 
 
 ## Bug fixes
 
