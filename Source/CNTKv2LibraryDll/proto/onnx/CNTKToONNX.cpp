@@ -392,7 +392,7 @@ private:
     //
     // Helper function to reduce the rank of a shape.
     //
-    static onnx::TypeProto ReduceRank(const onnx::TensorShapeProto* inputShape, int reductionRank, bool rightReduction)
+    static onnx::TypeProto ReduceRank(const onnx::TensorShapeProto* inputShape, int reductionRank, bool rightReduction, bool hasBatchAxis)
     {
         assert(inputShape != nullptr);
 
@@ -405,6 +405,8 @@ private:
 
         if (rightReduction)
         {
+            // This code detects and skips batch axis automatically. 
+            // If we support outputRank > 1 in the future, we can deduct if we have emulated batch axis based on reductionRank and outputRank.
             for (int index = 0; index < (inputRank - reductionRank); index++)
                 newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(inputShape->dim(index).dim_value());
 
@@ -415,12 +417,20 @@ private:
         }
         else
         {
-            for (int index = 0; index < reductionRank; index++)
+            // Update: if there is batch axis, we skip the first axis, since axis (1, ) is emulated batch axis.
+            // There is no way to deduct if there is batch axis from here.
+            // a valid shape could be [1, reductionRank, postfix] where postfix can have arbitrary rank. 
+            // Currently however we are assuming postfix as 1. This part should also be updated when we support outputRank > 1.
+            size_t startIdx = hasBatchAxis ? 1 : 0;
+            if (hasBatchAxis)
+                newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(inputShape->dim(0).dim_value());
+
+            for (int index = startIdx; index < reductionRank + startIdx; index++)
                 reduceDim *= inputShape->dim(index).dim_value();
 
             newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(reduceDim);
 
-            for (int index = reductionRank; index < inputRank; index++)
+            for (int index = reductionRank + startIdx; index < inputRank; index++)
                 newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(inputShape->dim(index).dim_value());
         }
 
@@ -2847,7 +2857,7 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
                                      std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     auto iter = visited.find(src);
-    if (iter != visited.end())
+    if (iter != visited.end()) 
         return;
 
     std::string opName = ToLegacyString(ToUTF8(src->OpName()));
@@ -3280,6 +3290,18 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             node->AddAttribute(attributesMap[L"useStatsAcrossChannels"], useStatsAcrossChannels);
             node->AddAttribute(attributesMap[L"doVarianceScaling"], doVarianceScaling);
         }
+        else if (src->OpName() == L"Gemm")
+        {
+            float alpha = static_cast<float>(src->Attributes()[L"alpha"].Value<float>());
+            float beta = static_cast<float>(src->Attributes()[L"beta"].Value<float>());
+            int64_t transA = static_cast<int64_t>(src->Attributes()[L"transA"].Value<bool>());
+            int64_t transB = static_cast<int64_t>(src->Attributes()[L"transB"].Value<bool>());
+
+            node->AddAttribute("alpha", alpha);
+            node->AddAttribute("beta", beta);
+            node->AddAttribute("transA", transA);
+            node->AddAttribute("transB", transB);
+        }
     }
     else
     {
@@ -3571,11 +3593,15 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
             int input2Rank = input2Shape->dim_size();
             int outputRank = outputShape->dim_size();
             int reductionRank = (input1Rank + input2Rank - outputRank) / 2;
+            // Currently we don't support outputRank > 1. Thus input1 shape has format [(1), a, outputRank],
+            // where (1) is the optional batch axis and a the axis correspond to outputRank = 1.
+            // When we support outputRank, the flag will be defined as (input1Rank - reductionRank - outputRank) == 1.
+            bool hasBatchAxis = (input1Rank - reductionRank) == 2;
 
             if (reductionRank > 1) // We need to insert reshape.
             {
-                onnx::TypeProto input1Reshape = ReduceRank(input1Shape, reductionRank, true);
-                onnx::TypeProto input2Reshape = ReduceRank(input2Shape, reductionRank, false);
+                onnx::TypeProto input1Reshape = ReduceRank(input1Shape, reductionRank, true, hasBatchAxis);
+                onnx::TypeProto input2Reshape = ReduceRank(input2Shape, reductionRank, false, hasBatchAxis);
 
                 UpdateONNXType(src->Inputs()[1].GetDataType(), input1Reshape);
                 UpdateONNXType(src->Inputs()[0].GetDataType(), input2Reshape);

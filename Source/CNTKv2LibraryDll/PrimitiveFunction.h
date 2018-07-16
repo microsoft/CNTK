@@ -324,6 +324,8 @@ namespace CNTK
         static const std::wstring AttributeNameDoVarianceScaling;
         static const std::wstring AttributeNameGroups;
         static const std::wstring AttributeNameCustomOp;
+        static const std::wstring AttributeNameTransposeLeftOperand;
+        static const std::wstring AttributeNameTransposeRightOperand;
 
         static const size_t convolutionOpDefaultValueForGroups = 1;
 

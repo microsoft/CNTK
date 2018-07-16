@@ -408,6 +408,12 @@ namespace ONNX
         { L"Alias",{ {
             { L"Alias", "Identity" },
         } } },
+        { L"Gemm",{ {
+            { L"Gemm", "Gemm" },
+        } } },
+        { L"MatMul",{ {
+            { L"MatMul", "MatMul" },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -501,6 +507,7 @@ namespace ONNX
             { L"Times",{ 1, 0 } },
             { L"Gather",{ 1, 0 } },
             { L"PReLU",{ 1, 0 } },
+            { L"Gemm", { -1, -1, 1, 0, 2} },
         };
 
         //
