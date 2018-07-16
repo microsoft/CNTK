@@ -10,6 +10,16 @@ import pytest
 from cntk.ops.tests.ops_test_utils import cntk_device
 from itertools import product
 
+CNTK_FREEDIM_AXIS_DENOTATION = -3
+DIM_SIZE_FOR_NON_BATCH_OPS = 1
+
+# This is a list of all ops in CNTK that are exported as ONNX ops
+# that have a batch axis defined by spec (e.g. convolution, pooling)
+# When adding a test for a new op, please check to see if 
+# that op needs to be added to this list (i.e. does that op 
+# get exported to an ONNX op with defined batch axis).
+set_of_batch_ops = {'Pooling', 'Convolution'}
+
 #############
 #helpers
 #############
@@ -27,11 +37,14 @@ def verify_no_input(model, tmpdir, name):
 def verify_one_input(model, data, tmpdir, name, device=None):
     filename = os.path.join(str(tmpdir), name + R'.onnx')
     model.save(filename, format=C.ModelFormat.ONNX)
+    opname = model.owner.op_name
 
     loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
-        model_shape = (1, ) + model_shape
+        dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
+        model_shape = (dim_denotation, ) + model_shape
         data.shape = (1, ) + data.shape
     assert model_shape == loaded_model.shape
 
