@@ -18,7 +18,7 @@ DIM_SIZE_FOR_NON_BATCH_OPS = 1
 # When adding a test for a new op, please check to see if 
 # that op needs to be added to this list (i.e. does that op 
 # get exported to an ONNX op with defined batch axis).
-set_of_batch_ops = {'Pooling', 'Convolution'}
+set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling'}
 
 #############
 #helpers
@@ -496,6 +496,34 @@ def test_Gather_With_Axis(tmpdir, dtype):
         axis = 1
         model = C.gather(data, y, axis)
         verify_one_input(model, indices, tmpdir, 'Gather_With_Axis_1')
+
+#GlobalAveragePool
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_GlobalAveragePool(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
+    device = cntk_device(device_id)
+    input_shape = [3, 7, 7]
+    with C.default_options(dtype=dtype):
+        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape)
+        x = C.input_variable(img.shape)
+        model = C.layers.GlobalAveragePooling()(x)
+
+        verify_one_input(model, img, tmpdir, 'GlobalAveragePool_1', device)
+
+#GlobalMaxPool
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_GlobalMaxPool(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
+    device = cntk_device(device_id)
+    input_shape = [4, 8, 8]
+    with C.default_options(dtype=dtype):
+        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape)
+        x = C.input_variable(img.shape)
+        model = C.layers.GlobalMaxPooling()(x)
+
+        verify_one_input(model, img, tmpdir, 'GlobalMaxPool_1', device)        
 
 #Greater
 @pytest.mark.parametrize("dtype", DType_Config)

@@ -77,6 +77,15 @@ public:
         return _cntkOpsExportedWithBatchAxis.find(opName) != _cntkOpsExportedWithBatchAxis.end();
     }
 
+    //
+    // Check if the ONNX op is a simple op with batch axis.
+    //
+    static inline bool IsSimpleBatchAxisOnnxOp(const std::string& opName)
+    {
+        return _onnxSimpleBatchAxisOps.find(opName) != _onnxSimpleBatchAxisOps.end();
+    }
+
+
     static std::tuple<int, int> GetElementWiseInputIndices(const std::wstring& opName);
 
     //
@@ -143,6 +152,7 @@ private:
     static std::unordered_map<std::wstring, std::string> _optimizedRnnOpNameToOnnxOpName;
     static std::set<std::wstring> _cntkLayerOPName;
     static std::set<std::wstring> _cntkOpsExportedWithBatchAxis;
+    static std::set<std::string> _onnxSimpleBatchAxisOps;
 };
 
 } // namespace ONNX

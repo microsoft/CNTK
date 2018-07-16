@@ -53,6 +53,7 @@ private:
                                                                  const Node *parentNode, const Graph *graph,
                                                                  ONNXToCNTKVariableMap &constructedNodeArgVariableMap, const DeviceDescriptor &computeDevice);
     static FunctionPtr CreateFunction(const Node *node, const std::vector<Variable> &inputs, const Graph *graph);
+    static FunctionPtr CreateFunction(const Node *node, const std::vector<Variable> &inputs, const Graph *graph, const Variable& inputPlaceholder);
 
     static bool IsSecondInputOfElementWiseOpsWithBroadcast(const Node *parentNode, const NodeArg *nodeArg);
     static bool FixConstantShapeForConstantVariableInputPair(const std::vector<Variable> &inputs,
@@ -137,7 +138,7 @@ private:
                                                                    const Variable &input0, const Variable &input1);
 
     static Variable GetNodeOperandWithPaddingResolved(std::vector<bool> &cntkConvAutoPadding,
-                                                      NDShape &strides, const Node *node, const std::vector<Variable> &inputs, const double padValue = 0.0);
+        NDShape &strides, const Node *node, const Variable& dataOperand, const double padValue = 0.0);
 
     //
     // CNTK convolution/pooling operations do not support ONNX same_low padding.
@@ -1911,7 +1912,30 @@ CNTK::DataType ConvertDataTypeTensorProtoToCNTK(TensorProto_DataType newDataType
 
 FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector<Variable> &inputs, const Graph *graph)
 {
+    // This method checks if the node to create is a simple vanilla batch op (such as AveragePool and MaxPool, but unlike Conv)
+    // and if it is then it wraps it in pack/unpack batch ops. Otherwise it just calls CreateStandardCNTKFunction
+    // to create the CNTK op(s). Some complex batch ops (e.g. convolution) are not wrapped here but the wrapping 
+    // is done inside CreateStandardCNTKFunction directly.
+
+    if (Operators::IsSimpleBatchAxisOnnxOp(node->OpType()))
+    {
+        // Asssumes that if CreateFunction was called with isSimpleBatchAxisOnnxOp = true
+        // then the op was created with a PlaceholderVariable input.
+        auto operandPlaceholder = PlaceholderVariable(inputs[0].Shape(), L"operand", {});
+        FunctionPtr operandWithBatchAxis = ToBatch(operandPlaceholder);
+        auto cntkFunctionWithBatchAxis = CreateFunction(node, inputs, graph, operandWithBatchAxis);
+        FunctionPtr cntkFunctionWithStaticAxis = UnpackBatch(cntkFunctionWithBatchAxis, ToFixedWStringFromMultiByte(node->Name()));
+        return AsBlock(std::move(cntkFunctionWithStaticAxis), { { operandPlaceholder, inputs[0] } }, 
+            cntkFunctionWithBatchAxis->OpName(), ToFixedWStringFromMultiByte(node->Name()));
+    }
+    else
+        return CreateFunction(node, inputs, graph, Variable());
+}
+
+FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector<Variable> &inputs, const Graph *graph, const Variable& inputPlaceholder)
+{
     string onnxOpName = node->OpType();
+    Variable inputOperand0 = (inputPlaceholder.IsInitialized()) ? inputPlaceholder : inputs[0];
 
     if (onnxOpName == "LSTM")
     {
@@ -2019,7 +2043,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
 
         std::vector<bool> cntkPoolingAutoPadding;
         auto padValue = (onnxOpName == "AveragePool") ? 0.0 : static_cast<double>(std::numeric_limits<int>::min());
-        auto poolingOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkPoolingAutoPadding, strides, node, inputs, padValue);
+        auto poolingOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkPoolingAutoPadding, strides, node, inputOperand0, padValue);
 
         FunctionPtr cntkFunction = Pooling(poolingOperand,
                                            onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
@@ -2033,7 +2057,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         bool ceilOutDim = false;
         bool includePad = false;
 
-        FunctionPtr cntkFunction = Pooling(inputs[0],
+        FunctionPtr cntkFunction = Pooling(inputOperand0,
                                            onnxOpName == "GlobalAveragePool" ? PoolingType::Average : PoolingType::Max,
                                            NDShape::Unknown(), strides, autoPadding, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
@@ -2833,11 +2857,11 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKNode(const Node *node, const std::vector
 }
 
 Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool> &cntkConvAutoPadding,
-                                                             NDShape &strides, const Node *node, const std::vector<Variable> &inputs, const double padValue)
+                                                             NDShape &strides, const Node *node, const Variable& dataOperand, const double padValue)
 {
     bool hasAutoPad = HasNamedAttribute(node, "auto_pad") && GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER") != "NOTSET";
     bool hasPads = HasNamedAttribute(node, "pads");
-    Variable operand = inputs[0];
+    Variable operand = dataOperand;
     Variable convOperand = operand; // Important initial condition.
     if (hasAutoPad && hasPads)
     {
@@ -2853,7 +2877,7 @@ Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool> &
         {
             cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), false);
             NDShape kernelShape = GetNamedAttributeAsShape(node, "kernel_shape", false);
-            convOperand = (Variable) CreatePadOpForSameLowAutoPad(inputs[0], kernelShape, strides, padValue);
+            convOperand = (Variable) CreatePadOpForSameLowAutoPad(dataOperand, kernelShape, strides, padValue);
         }
         break;
         case ConvAutoPadType::SAME_UPPER:
@@ -3019,7 +3043,7 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::ve
     size_t groups = GetNamedAttributeAsInt64(node, "group", 1);
 
     std::vector<bool> cntkConvAutoPadding;
-    auto convOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkConvAutoPadding, strides, node, inputs);
+    auto convOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkConvAutoPadding, strides, node, inputs[0]);
 
     auto operandPlaceholder = PlaceholderVariable(convOperand.Shape(), L"operand", {});
     auto convmapPlaceholder = PlaceholderVariable(convolutionMap.Shape(), L"convolutionMap", {});
