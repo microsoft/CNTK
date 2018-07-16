@@ -126,6 +126,7 @@ namespace CNTK
         {PrimitiveOpType::FeatureNormalize, L"FeatureNormalize"},
         {PrimitiveOpType::AdditiveFullConnection, L"AdditiveFullConnection"},
         {PrimitiveOpType::CenterLoss, L"CenterLoss" },
+        {PrimitiveOpType::ChannelMultiply, L"ChannelMultiply" },
         {PrimitiveOpType::GlobalConcat, L"GlobalConcat"}
     };
 

@@ -130,6 +130,7 @@ namespace CNTK
             (op == PrimitiveOpType::FeatureNormalize) ||
             (op == PrimitiveOpType::AdditiveFullConnection) ||
             (op == PrimitiveOpType::CenterLoss) ||
+            (op == PrimitiveOpType::ChannelMultiply) ||
             (op == PrimitiveOpType::GlobalConcat) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::LatticeSequenceWithSoftmax) ||
@@ -891,6 +892,12 @@ namespace CNTK
                         case PrimitiveOpType::AdditiveFullConnection:
                         {
                             assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
+                            break;
+                        }
+                        case PrimitiveOpType::ChannelMultiply:
+                        {
+                            assert(m_inputs.size() == 2);
                             outputShape = NDShape{};
                             break;
                         }

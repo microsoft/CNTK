@@ -585,6 +585,14 @@ public:
 
 #pragma endregion
 
+#pragma region SqueezeAndExcitation
+
+    static void ChannelMultiply(const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight, const GPUMatrix<ElemType>& value, size_t featureSize);
+
+    static void ChannelMultiplyScaleBackprop(const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight_gradient, const GPUMatrix<ElemType>& buffer, size_t featureSize, size_t N);
+
+#pragma endregion
+
 
     // RNN support functions
     void RNNForward(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);

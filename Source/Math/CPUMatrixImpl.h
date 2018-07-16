@@ -5376,6 +5376,54 @@ void CPUMatrix<ElemType>::ClassCount(const CPUMatrix<ElemType>& label, const CPU
 
 #pragma endregion
 
+#pragma region SqueezeAndExcitation
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ChannelMultiply(const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight, CPUMatrix<ElemType>& value, size_t featureSize)
+{
+    long n = (long)X.GetNumCols();
+    long m = (long)X.GetNumRows();
+
+#pragma omp parallel for
+    for (long j = 0; j < n; j++)
+    {
+        // four-way unrolling
+        for (long i = 0; i < (m & ~3); i += 4)
+        {
+            value(i, j) = X(i, j) * weight(i / featureSize, j);
+        }
+        // handle remaining stuffs
+        for (long i = m & ~3; i < m; i++)
+        {
+            value(i, j) = X(i, j) * weight(i / featureSize, j);
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& X, CPUMatrix<ElemType>& weight_gradient, size_t featureSize)
+{
+    long n = (long)X.GetNumCols();
+    long m = (long)X.GetNumRows();
+
+#pragma omp parallel for
+    for (long j = 0; j < n; j++)
+    {
+        // four-way unrolling
+        for (long i = 0; i < (m & ~3); i += 4)
+        {
+            weight_gradient(i / featureSize, j) += gradient(i, j) * X(i, j);
+        }
+        // handle remaining stuffs
+        for (long i = m & ~3; i < m; i++)
+        {
+            weight_gradient(i / featureSize, j) += gradient(i, j) * X(i, j);
+        }
+    }
+}
+
+#pragma endregion
+
 
 #pragma region Static BLAS Functions
 

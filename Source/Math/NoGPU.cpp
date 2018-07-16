@@ -2132,10 +2132,24 @@ void GPUMatrix<ElemType>::LabelAdd(const GPUMatrix<ElemType>& label, ElemType bi
 
 #pragma endregion
 
-#pragma region AMsoftmax
+#pragma region CenterLoss
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter)
+void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter, const GPUMatrix<ElemType>& value, size_t featureSize)
+{
+}
+
+#pragma endregion
+
+#pragma region SqueezeAndExcitation
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ChannelMultiply(const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight, const GPUMatrix<ElemType>& value)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight_gradient, const GPUMatrix<ElemType>& buffer, size_t featureSize, size_t N)
 {
 }
 

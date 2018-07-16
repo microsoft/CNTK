@@ -5121,6 +5121,32 @@ template <class ElemType>
 
 #pragma endregion
 
+#pragma region SqueezeAndExcitation
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ChannelMultiply(const Matrix<ElemType>& X, const Matrix<ElemType>& weight, const Matrix<ElemType>& value, size_t featureSize)
+{
+    DISPATCH_MATRIX_ON_FLAG(&value,
+                            &value,
+                            CPUMatrix<ElemType>::ChannelMultiply(*(X.m_CPUMatrix), *(weight.m_CPUMatrix), *(value.m_CPUMatrix), featureSize),
+                            GPUMatrix<ElemType>::ChannelMultiply(*(X.m_GPUMatrix), *(weight.m_GPUMatrix), *(value.m_GPUMatrix), featureSize),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ChannelMultiplyScaleBackprop(const Matrix<ElemType>& gradient, const Matrix<ElemType>& X, const Matrix<ElemType>& weight_gradient, const Matrix<ElemType>& buffer, size_t featureSize, size_t N)
+{
+    DISPATCH_MATRIX_ON_FLAG(&weight_gradient,
+                            &weight_gradient,
+                            CPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(*(gradient.m_CPUMatrix), *(X.m_CPUMatrix), *(weight_gradient.m_CPUMatrix), featureSize),
+                            GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(*(gradient.m_GPUMatrix), *(X.m_GPUMatrix), *(weight_gradient.m_GPUMatrix), *(buffer.m_GPUMatrix), featureSize, N),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+#pragma endregion
+
 
 template <class ElemType>
 template <class StatType>

@@ -3725,16 +3725,16 @@ void GPUMatrix<ElemType>::LabelAdd(const GPUMatrix<ElemType>& label, ElemType bi
 #pragma region CenterLoss
 
 template <class ElemType>
-__global__ void _classCount(CUDA_LONG outputDimension, const ElemType* label, ElemType* counter, CUDA_LONG numElements)
+__global__ void _classCount(CUDA_LONG minibatchSize, const ElemType* label, ElemType* counter)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
-    if (id < numElements)
+    if (id < minibatchSize)
     {
-        CUDA_LONG i = id / outputDimension;
-        CUDA_LONG j = id % outputDimension;
-
-        if ((CUDA_LONG)label[i] == (CUDA_LONG)label[j])
-            counter[i] += (ElemType)1;
+        for (CUDA_LONG i = 0; i < minibatchSize; ++i)
+        {
+            if ((CUDA_LONG)label[i] == (CUDA_LONG)label[id])
+                counter[id] += (ElemType)1;
+        }
     }
 }
 
@@ -3742,11 +3742,77 @@ template <class ElemType>
 void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter)
 {
     CUDA_LONG minibatchSize = label.GetNumCols();
-    CUDA_LONG numElements = minibatchSize * minibatchSize;
+
+    SyncGuard syncGuard;
+    GridDim grid(minibatchSize);
+    _classCount<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(minibatchSize, label.Data(), counter.Data());
+}
+
+#pragma endregion
+
+#pragma region SqueezeAndExcitation
+
+template <class ElemType>
+__global__ void _channelMultiply(CUDA_LONG numRows, const ElemType* X, const ElemType* weight, ElemType* value, CUDA_LONG featureSize, const CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        CUDA_LONG i = id / numRows;
+        CUDA_LONG j = (id % numRows) / featureSize;
+
+        value[id] = X[id] * weight[numRows / featureSize * i + j];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ChannelMultiply(const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight, const GPUMatrix<ElemType>& value, size_t featureSize)
+{
+    CUDA_LONG m = (long)X.GetNumCols();
+    CUDA_LONG n = (long)X.GetNumRows();
+    CUDA_LONG numElements = m * n;
 
     SyncGuard syncGuard;
     GridDim grid(numElements);
-    _classCount<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(minibatchSize, label.Data(), counter.Data(), numElements);
+    _channelMultiply<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(n, X.Data(), weight.Data(), value.Data(), (CUDA_LONG)featureSize, numElements);
+}
+
+template <class ElemType>
+__global__ void _channelMultiplyScaleBackprop(const ElemType* gradient, const ElemType* X, ElemType* weight_gradient, ElemType* buffer, CUDA_LONG featureSize, CUDA_LONG N, const CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        CUDA_LONG i = id / featureSize; // Channel i
+        CUDA_LONG j = id % featureSize; // Element j
+
+        if (j < N)
+            buffer[id] = gradient[id] * X[id];
+        __syncthreads();
+        if (j >= N)
+            buffer[id - N] += gradient[id] * X[id];
+        __syncthreads();
+
+        for (CUDA_LONG k = N >> 1; k > 0; k >>= 1)
+        {
+            if (j < k)
+                buffer[id] += buffer[id + k];
+            __syncthreads();
+        }
+
+        if (0 == j)
+            weight_gradient[i] = buffer[id];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight_gradient, const GPUMatrix<ElemType>& buffer, size_t featureSize, size_t N)
+{
+    CUDA_LONG numElements = gradient.GetNumElements();
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _channelMultiplyScaleBackprop<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(gradient.Data(), X.Data(), weight_gradient.Data(), buffer.Data(), (CUDA_LONG)featureSize, (CUDA_LONG)N, numElements);
 }
 
 #pragma endregion

@@ -4350,6 +4350,8 @@ namespace CNTK
 
     CNTK_API FunctionPtr CenterLoss(const Variable& prediction, const Variable& targets, double lambda, double alpha, size_t labelDim, bool normalize, const std::wstring& name = L"");
 
+    CNTK_API FunctionPtr ChannelMultiply(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
+
     CNTK_API FunctionPtr GlobalConcat(const Variable& feature, size_t blockIndex, size_t growthRate, size_t segmentIndex, size_t segmentNum, const std::wstring& name = L"");
 
 

@@ -130,6 +130,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(FeatureNormalizeNode))                 return New<FeatureNormalizeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(AdditiveFullConnectionNode))           return New<AdditiveFullConnectionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CenterLossNode))                       return New<CenterLossNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ChannelMultiplyNode))                  return New<ChannelMultiplyNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(GlobalConcatNode))                     return New<GlobalConcatNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogisticNode))                         return New<LogisticNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SumColumnElementsNode))                return New<SumColumnElementsNode<ElemType>>(forward<_Types>(_Args)...);
@@ -500,6 +501,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CenterLoss(const ComputationNodePtr a, const ComputationNodePtr b, double lambda, double alpha, size_t labelDim, bool normalize, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<CenterLossNode<ElemType>>(net.GetDeviceId(), nodeName, lambda, alpha, labelDim, normalize), { a, b });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ChannelMultiply(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<CenterLossNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>

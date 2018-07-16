@@ -110,7 +110,8 @@ namespace CNTK
         FeatureNormalize = 98,
         AdditiveFullConnection = 99,
         CenterLoss = 100,
-        GlobalConcat = 101,
+        ChannelMultiply = 101,
+        GlobalConcat = 102,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

@@ -950,6 +950,146 @@ public:
     bool initFlag = true;
 };
 
+// Implements Squeeze-and-Excitation operation as described in:
+// Squeeze-and-Excitation Networks [Jie Hu, Li Shen, Gang Sun]
+// https://arxiv.org/pdf/1709.01507.pdf
+template <class ElemType>
+class ChannelMultiplyNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ChannelMultiply";
+    }
+
+public:
+    ChannelMultiplyNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ChannelMultiplyNode(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    ChannelMultiplyNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (0 == inputIndex)
+        {
+            FrameRange fr(InputRef(0).GetMBLayout());
+            auto X_gradient = InputRef(0).GradientFor(fr);
+            auto weight = InputRef(1).ValueFor(fr);
+
+            Matrix<ElemType>::ChannelMultiply(Gradient(), weight, X_gradient, m_featureSize);
+        }
+        else
+        {
+            FrameRange fr(InputRef(0).GetMBLayout());
+            auto X = InputRef(0).ValueFor(fr);
+            auto weight_gradient = InputRef(1).GradientFor(fr);
+            weight_gradient.SetValue((ElemType)0);
+            m_buffer->Resize(m_featureSize * m_channels, X.GetNumCols());
+
+            Matrix<ElemType>::ChannelMultiplyScaleBackprop(Gradient(), X, weight_gradient, *m_buffer, m_featureSize, m_N);
+        }
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        auto X = InputRef(0).ValueFor(fr);
+        auto weight = InputRef(1).ValueFor(fr);
+
+        Matrix<ElemType>::ChannelMultiply(X, weight, Value(), m_featureSize);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return true;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        SetDims(Input(0));
+
+        auto dims0 = Input(0)->GetSampleLayout().GetDims();
+        auto dims1 = Input(1)->GetSampleLayout().GetDims();
+        if(InputRef(0).Value().GetNumCols() != InputRef(1).Value().GetNumCols())
+            LogicError("ChannelMultiplyNode : input minibatch size not match %d v.s. %d\n",
+                (int)InputRef(0).Value().GetNumCols(), (int)InputRef(1).Value().GetNumCols());
+        if (dims0.size() != 3)
+            LogicError("ChannelMultiplyNode : input[0] dimension not equals to 3 \n");
+        size_t temp = 1;
+        for (size_t i(0); i < dims1.size(); ++i)
+            temp *= dims1[i];
+        if (dims0[2] != temp)
+            LogicError("ChannelMultiplyNode : input channel not match %d v.s. %d\n", (int)dims0[2], (int)temp);
+
+        m_featureSize = dims0[0] * dims0[1];
+        m_channels = dims0[2];
+
+        size_t featureSize = m_featureSize;
+        m_N = 1;
+        assert(featureSize != 0);
+        while (featureSize)
+        {
+            m_N *= 2;
+            featureSize /= 2;
+        }
+        m_N /= 2;
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<ChannelMultiplyNode<ElemType>>(nodeP);
+            node->m_buffer->SetValue(*m_buffer);
+            node->m_featureSize = m_featureSize;
+            node->m_channels = m_channels;
+        }
+    }
+
+    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_buffer, matrixPool, m_featureSize * m_channels, true, false, false);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_buffer, matrixPool);
+    }
+
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_featureSize << m_channels;
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_featureSize >> m_channels;
+    }
+
+private:
+    shared_ptr<Matrix<ElemType>> m_buffer;
+    size_t m_featureSize;
+    size_t m_channels;
+    size_t m_N;
+};
+
 
 // -----------------------------------------------------------------------
 // SquareErrorNode (left, right)
@@ -3504,6 +3644,8 @@ public:
         if (0 == m_dims.size())
         {
             m_dims = Input(0)->GetSampleLayout().GetDims();
+            if(m_dims.size() != 3)
+                LogicError("GlobalConcatNode : input dims not equals to 3\n");
             m_numRows = m_dims[0] * m_dims[1] * m_dims[2];
             if (0 == m_segmentIndex)
             {

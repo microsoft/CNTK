@@ -395,6 +395,7 @@ MarginInnerProduct      = CNTK2.MarginInnerProduct
 FeatureNormalize        = CNTK2.FeatureNormalize
 AdditiveFullConnection  = CNTK2.AdditiveFullConnection
 CenterLoss              = CNTK2.CenterLoss
+ChannelMultiply         = CNTK2.ChannelMultiply
 GlobalConcat            = CNTK2.GlobalConcat
 Dropout                 = CNTK2.Dropout
 ElementTimes            = CNTK2.ElementTimes
@@ -510,6 +511,12 @@ CNTK2 = [
     CenterLoss(labelSequence, outProbVectorSequence, centerLossLambda, centerLossAlpha, centerLossLabelDim, centerLossNormalize=false, axis=0, tag='') = 
         if axis==0 then new ComputationNode [ operation = 'CenterLoss' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
         else [ tag1 = tag; out = Minus (ReduceLogSum (outProbVectorSequence, axis=axis), ReduceSum (labelSequence .* outProbVectorSequence, axis=axis), tag=tag1) ].out
+
+    #
+    # ChannelMultiply node
+    #
+    ChannelMultiply(feature, weight, tag='') = 
+        new ComputationNode [ operation = 'ChannelMultiply' ; inputs = _AsNodes (feature : weight) /*plus the function args*/ ]
 
     #
     # GlobalConcat node

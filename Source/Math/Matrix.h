@@ -626,6 +626,14 @@ public:
 
 #pragma endregion
 
+#pragma region SqueezeAndExcitation
+
+    static void ChannelMultiply(const Matrix<ElemType>& X, const Matrix<ElemType>& weight, const Matrix<ElemType>& value, size_t featureSize);
+
+    static void ChannelMultiplyScaleBackprop(const Matrix<ElemType>& gradient, const Matrix<ElemType>& X, const Matrix<ElemType>& weight_gradient, const Matrix<ElemType>& buffer, size_t featureSize, size_t N);
+
+#pragma endregion
+
 
     void RNNForward(const Matrix<ElemType>& inputX, const Matrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
     void RNNBackwardData(const Matrix<ElemType>& outputDY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);

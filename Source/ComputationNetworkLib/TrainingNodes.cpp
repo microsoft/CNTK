@@ -348,8 +348,17 @@ template class BatchNormalizationNode<half>;
 template class MarginInnerProductNode<float>;
 template class MarginInnerProductNode<double>;
 
+template class FeatureNormalizeNode<float>;
+template class FeatureNormalizeNode<double>;
+
 template class AdditiveFullConnectionNode<float>;
 template class AdditiveFullConnectionNode<double>;
+
+template class CenterLossNode<float>;
+template class CenterLossNode<double>;
+
+template class ChannelMultiplyNode<float>;
+template class ChannelMultiplyNode<double>;
 
 template class GlobalMemoryBlock<float>;
 template class GlobalMemoryBlock<double>;

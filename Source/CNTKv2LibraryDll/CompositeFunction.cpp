@@ -1160,6 +1160,11 @@ namespace CNTK
                     computationNodePtr = New<CenterLossNode<ElementType>>(network->GetDeviceId(), internalNodeName, lambda, alpha, labelDim, normalize);
                     break;
                 }
+                case PrimitiveOpType::ChannelMultiply:
+                {
+                    computationNodePtr = New<ChannelMultiplyNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 case PrimitiveOpType::GlobalConcat:
                 {
                     auto blockIndex = functionConfig[PrimitiveFunction::AttributeGlobalConcatBlockIndex].Value<size_t>();

@@ -2158,6 +2158,12 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::CenterLoss, labels, features, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ChannelMultiply(const Variable& feature, const Variable& weight, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        return BinaryOp(PrimitiveOpType::ChannelMultiply, feature, weight, std::move(additionalProperties), name);
+    }
+
     FunctionPtr GlobalConcat(const Variable& features, size_t blockIndex, size_t growthRate, size_t segmentIndex, size_t segmentNum, const std::wstring& name)
     {
         std::vector<Variable> operands = {features};

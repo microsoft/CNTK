@@ -469,6 +469,14 @@ public:
 
 #pragma endregion
 
+#pragma region SqueezeAndExcitation
+
+    static void ChannelMultiply(const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight, CPUMatrix<ElemType>& value, size_t featureSize);
+
+    static void ChannelMultiplyScaleBackprop(const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& X, CPUMatrix<ElemType>& weight_gradient, size_t featureSize);
+
+#pragma endregion
+
 
 public:
     // This functions do not depend on <ElemType>, i.e. you can call them on any <ElemType>
