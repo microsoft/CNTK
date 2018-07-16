@@ -43,7 +43,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <PackageCertificateKeyFile>UnitTestApp_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateKeyFile>GeneratedCode\CNTKDevelopmentTemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateThumbprint>38DB9CA7A6734D947728E4742AE9FBB7C2303CF7</PackageCertificateThumbprint>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -79,6 +80,8 @@
     <AppxManifest Include="Package.appxmanifest">
       <SubType>Designer</SubType>
     </AppxManifest>
+    <None Include="GeneratedCode\CNTKDevelopmentTemporaryKey.pfx" />
+    <None Include="GeneratedCode\UnitTestApp_TemporaryKey.pfx" />
     <None Include="UnitTestApp_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
