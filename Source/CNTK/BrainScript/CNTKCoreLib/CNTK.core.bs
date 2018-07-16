@@ -494,6 +494,12 @@ CNTK2 = [
 
 
     #
+    # MarginInnerProduct node
+    #
+    MarginInnerProduct(labelSequence, outProbVectorSequence, W, marginInnerProductOutputDimension=0, marginInnerProductBase=0, marginInnerProductGamma=0, marginInnerProductPower=0, marginInnerProductLambdaMin=0, marginCoefficient=2, tag='') = 
+        new ComputationNode [ operation = 'MarginInnerProduct' ; inputs = _AsNodes (labelSequence : outProbVectorSequence : W) /*plus the function args*/ ]
+
+    #
     # FeatureNormalize node
     #
     FeatureNormalize(feature, featureNormalizeType=2, tag='') = 
