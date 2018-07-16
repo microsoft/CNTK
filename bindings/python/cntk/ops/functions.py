@@ -536,7 +536,7 @@ class Function(cntk_py.Function):
         '''
         List of all input variables of the Function that are not of type Parameter or Constant
         '''
-        return super(Function, self).arguments()
+        return super(Function, self).arguments(True)
 
     @property
     @typemap
