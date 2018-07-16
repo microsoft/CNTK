@@ -81,8 +81,6 @@
       <SubType>Designer</SubType>
     </AppxManifest>
     <None Include="GeneratedCode\CNTKDevelopmentTemporaryKey.pfx" />
-    <None Include="GeneratedCode\UnitTestApp_TemporaryKey.pfx" />
-    <None Include="UnitTestApp_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\LockScreenLogo.scale-200.png" />
