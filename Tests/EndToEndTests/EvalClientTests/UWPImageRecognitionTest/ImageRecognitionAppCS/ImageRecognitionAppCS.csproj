@@ -19,13 +19,15 @@
     <DefaultLanguage>en-US</DefaultLanguage>
     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
     <TargetPlatformVersion>$(UCRTVersion)</TargetPlatformVersion>
-    <TargetPlatformMinVersion>10.0.10586.0</TargetPlatformMinVersion> <!-- Windows 10, November 2015 -->
+    <TargetPlatformMinVersion>10.0.10586.0</TargetPlatformMinVersion>
+    <!-- Windows 10, November 2015 -->
     <MinimumVisualStudioVersion>14</MinimumVisualStudioVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{A5A43C5B-DE2A-4C0C-9213-0A381AF9435A};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <PackageCertificateKeyFile>ImageRecognitionAppCS_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateKeyFile>GeneratedCode\CNTKDevelopmentTemporaryKey.pfx</PackageCertificateKeyFile>
     <CNTKRoot>$(SolutionDir)</CNTKRoot>
     <AppSrcDir>$(SolutionDir)Examples\Evaluation\UWPImageRecognition\App</AppSrcDir>
+    <PackageCertificateThumbprint>38DB9CA7A6734D947728E4742AE9FBB7C2303CF7</PackageCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug_UWP|x64'">
     <DebugSymbols>true</DebugSymbols>
@@ -68,7 +70,6 @@
     <AppxManifest Include="Package.appxmanifest">
       <SubType>Designer</SubType>
     </AppxManifest>
-    <Content Include="ImageRecognitionAppCS_TemporaryKey.pfx" />
   </ItemGroup>
   <PropertyGroup>
     <CntkVersion Condition=" '$(BUILD_CNTK_VERSION)' != '' ">$(BUILD_CNTK_VERSION)</CntkVersion>
@@ -104,17 +105,20 @@
       <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
-  <ItemGroup> 
-    <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform"> 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
       <!-- Was 5.2.2 -->
-      <Version>6.1.2</Version> 
-    </PackageReference> 
+      <Version>6.1.2</Version>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="ImageRecognizerLib, Version=255.255.255.255, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>$(CNTKRoot)$(Platform)\$(Configuration)\ImageRecognizerLib.winmd</HintPath>
     </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="GeneratedCode\CNTKDevelopmentTemporaryKey.pfx" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '14.0' ">
     <VisualStudioVersion>14.0</VisualStudioVersion>
