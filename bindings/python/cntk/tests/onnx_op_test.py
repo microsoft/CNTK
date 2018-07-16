@@ -763,6 +763,27 @@ def test_MatMul(tmpdir, dtype):
         model = C.times(data0, data1)
         verify_no_input(model, tmpdir, 'MatMul_0')
 
+#MatMul 2d
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MatMul_2d(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data0 = np.asarray([[1,2],[3,4]], dtype=dtype)
+        data1 = np.asarray([[5,7,9],[6,8,10]], dtype=dtype)
+        model = C.times(data0, data1)
+        verify_no_input(model, tmpdir, 'MatMul_1')
+
+#MatMul 2d with 2 inputs
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MatMul_2d_2inputs(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data0 = np.asarray([[1,2],[3,4]], dtype=dtype)
+        data1 = np.asarray([[5,7,9],[6,8,10]], dtype=dtype)
+
+        x = C.input_variable(np.shape(data0))
+        y = C.input_variable(np.shape(data1))
+        model = C.times(x, y)
+        verify_two_input(model, data0, data1, tmpdir, 'MatMul_1_1')        
+
 #Max
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Max(tmpdir, dtype):
