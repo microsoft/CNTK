@@ -47,6 +47,7 @@ class CNTKBackend(Backend):
             f.write(model.SerializeToString())
         
         CNTKBackend.set_device(device)
+        print('cntk start load onnx model')
         c_model = C.Function.load(r'tmp_model.pb', format=C.ModelFormat.ONNX)
         return CNTKBackendRep(c_model, expected_out_types)
 
@@ -62,6 +63,7 @@ class CNTKBackendRep(BackendRep):
 
     def run(self, inputs, **kwargs):
         input = {self.model.arguments[i]:inputs[i] for i in range(len(inputs))} 
+        print('cntk start eval model')
         res = self.model.eval(input)
         # TODO: make this work for multiple output case.
         # TODO: support more types.

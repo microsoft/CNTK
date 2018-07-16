@@ -2346,6 +2346,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "MatMul")
     {
+        fprintf(stderr, "MatMul input_0 shape: %ls, input_1 shape: %ls\n", inputs[0].Shape().AsString().c_str(), inputs[1].Shape().AsString().c_str());
         FunctionPtr cntkFunction = Times(inputs[1], inputs[0], ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }

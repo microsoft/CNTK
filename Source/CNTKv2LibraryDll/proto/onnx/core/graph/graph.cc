@@ -416,6 +416,7 @@ Graph::Graph(GraphProto* graph_proto,
   if (graph_proto != nullptr) {
     // Copy constant nodes _value to name_to_initial_tensor_
     for (auto& node : graph_proto_->node()) {
+      fprintf(stderr, "Graph::Graph: node name:%s, op_type:%s\n", node.name().c_str(), node.op_type().c_str());
       if (node.op_type() == kConstant) {
         const gsl::not_null<TensorProto*> tensor = graph_proto_->add_initializer();
         *tensor = node.attribute(0).t();
@@ -433,7 +434,9 @@ Graph::Graph(GraphProto* graph_proto,
         graph_mutable_nodes->end());
 
     // Copy initial tensors to a map.
+    fprintf(stderr, "Graph::Graph: initial tensor size: %d\n", graph_proto_->initializer().size());
     for (auto& tensor : graph_proto_->initializer()) {
+      fprintf(stderr, "Graph::Graph: initial tensor: %s\n", tensor.name().c_str());
       name_to_initial_tensor_[tensor.name()] = &tensor;
     }
 

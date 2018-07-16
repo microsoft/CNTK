@@ -63,4 +63,7 @@ globals().update(backend_test
                  .test_cases)
 
 if __name__ == '__main__':
-    unittest.main()
+    for case_name, test_case in backend_test.test_cases.items():
+        print('case: ' + case_name)
+        print([name for name, _ in vars(test_case).items()])
+    #unittest.main()
