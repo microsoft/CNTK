@@ -1308,8 +1308,8 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
 
         auto operandPlaceholder = PlaceholderVariable();
-
-        auto result = operandPlaceholder - Log(ReduceSum(Exp(operandPlaceholder), axis));
+        auto axMax = ReduceMax(operandPlaceholder, axis);
+        auto result = operandPlaceholder - axMax - Log(ReduceSum(Exp(operandPlaceholder - axMax), axis));
 
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"LogSoftmax", name);
     }
