@@ -44,6 +44,14 @@ public:
     }
 
     //
+    // Check if opName is an ONNX equivalent CNTK block node. They are treated with care to be converted back directly to the ONNX node. 
+    //
+    static inline bool IsConvertedBlockOP(const std::wstring& opName)
+    {
+        return _cntkConvertedBlockOpName.find(opName) != _cntkConvertedBlockOpName.end();
+    }
+
+    //
     // Return a lookup table which is keyed on CNTK OP, and the value is another table
     // that contain name mapping from CNTK to ONNX.
     //
@@ -153,6 +161,7 @@ private:
     static std::set<std::wstring> _cntkLayerOPName;
     static std::set<std::wstring> _cntkOpsExportedWithBatchAxis;
     static std::set<std::string> _onnxSimpleBatchAxisOps;
+    static std::set<std::wstring> _cntkConvertedBlockOpName;
 };
 
 } // namespace ONNX
