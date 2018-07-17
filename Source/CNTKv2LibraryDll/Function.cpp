@@ -2466,7 +2466,21 @@ namespace CNTK
         {
             LogicError("groups: groups > 1 is not supported when reductionRank is 0.");
         }
-        
+
+        if (!(operand.IsPlaceholder() || convolutionMap.IsPlaceholder()))
+        {
+            auto filterShape = convolutionMap.Shape();
+            auto filterRank = static_cast<int>(filterShape.Rank());
+            auto inputRank = static_cast<int>(operand.Shape().Rank());
+            auto M = filterShape[filterRank - 1]; // Number of output channels.
+            auto C = operand.Shape()[inputRank - 1]; // Number of input channels in operand.
+            auto kC = filterShape[filterRank - 2]; // Number of input channels in kernel.
+            if (M % groups)
+                LogicError("groups: number of output channels must be divisble by groups.");
+            if (C != (kC * groups))
+                LogicError("groups: number of input channels (C) must be equal to number of input kernel channels (kC) * groups (G).");
+        }
+
         if (sequential)
         {
             // unpack sequence axis to static axes:   [ H_in, W_in, c ] x [*] -> [ H_in, W_in, c, * ] x [1]
