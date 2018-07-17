@@ -465,14 +465,12 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, LotusIR::Graph* dst)
     //
     // Traverse the graph and collect some information.
     //
-    fprintf(stderr, "CNTKToONNX::Copy: Start Traverse graph. \n");
     TraverseGraph(src, visited, compositeOutputsMap);
 
     //
     // Iterate through each node in CNTK graph and create an equivalent node
     // in ONNX graph.
     //
-    fprintf(stderr, "CNTKToONNX::Copy: Start Create node. \n");
     CreateNode(src, dst, functionNodes, variableNodes, compositeOutputsMap);
 }
 
@@ -2561,16 +2559,12 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
 {
     auto iter = functionNodes.find(src);
     if (iter != functionNodes.end())
-    {
-        fprintf(stderr, "CNTKToONNX::CreateNode: Node already visited. \n");
         return iter->second;
-    }
 
     LotusIR::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
     std::string onnxOpName = ToOPName(src);
 
-    fprintf(stderr, "CNTKToONNX::CreateNode: cntkOpName: %s to onnxOpName: %s \n", cntkOpName.c_str(), onnxOpName.c_str());
     // TODO: uncomment this code once bidirectional LSTM is supprted.
     //if (cntkOpName == "Splice")
     //{
@@ -2632,10 +2626,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     if (src->IsBlock() && !Operators::IsConvertedBlockOP(src->OpName()) &&
         (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())))
     {
-        fprintf(stderr, "CNTKToONNX::CreateNode: cntkOpName: %s to onnxOpName: %s. is block, recursive create node. \n", cntkOpName.c_str(), onnxOpName.c_str());
         functionNode = CreateNode(src->BlockRoot(), graph, functionNodes, variableNodes, compositeOutputsMap);
-        fprintf(stderr, "CNTKToONNX::CreateNode: cntkOpName: %s to onnxOpName: %s. is block, complete recursive create node. \n", cntkOpName.c_str(), onnxOpName.c_str());
-
     }
     else if (IsUnSupportedLayerNormalization(src))
     {
@@ -2653,7 +2644,6 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //
     else if (Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsConvertedBlockOP(src->OpName()))
     {
-        fprintf(stderr, "CNTKToONNX::CreateNode: cntkOpName: %s to onnxOpName: %s. is supported node. add node. \n", cntkOpName.c_str(), onnxOpName.c_str());
         std::vector<LotusIR::NodeArg *> inputs;
         ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
@@ -2668,7 +2658,6 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     else
         LogicError("Node '%S': Unsupported node.", src->AsString().c_str());
 
-    fprintf(stderr, "CNTKToONNX::CreateNode: cntkOpName: %s to onnxOpName: %s. complete. \n", cntkOpName.c_str(), onnxOpName.c_str());
     functionNodes.emplace(src, functionNode);
     return functionNode; 
 }
@@ -2876,17 +2865,12 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
 {
     auto iter = visited.find(src);
     if (iter != visited.end()) 
-    {
-        fprintf(stderr, "CNTKToONNX::TraverseGraph: Node already visited. \n");
         return;
-    }
 
     std::string opName = ToLegacyString(ToUTF8(src->OpName()));
-    fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s \n", opName.c_str());
     if (Operators::IsLoopOp(opName))
     {
         // avoid infinite loop
-        fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s Avoid loop. \n", opName.c_str());
         return;
     }
 
@@ -2897,13 +2881,10 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
         auto blockSrc = dynamic_cast<BlockFunction*>(src.get());
         for (auto map : blockSrc->CompositeOutputsMap())
             compositeOutputsMap.insert(map);
-        fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s is block, recursive traverse. \n", opName.c_str());
         TraverseGraph(src->BlockRoot(), visited, compositeOutputsMap);
-        fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s is block, complete recursive traverse. \n", opName.c_str());
     }
     else
     {
-        fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s is not block. \n", opName.c_str());
         for (auto input : src->Inputs())
         {
             if (input.IsPlaceholder())
@@ -2914,14 +2895,9 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
             }
 
             if (input.IsInitialized() && input.IsOutput())
-            {
-                fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s is not block, recursive traverse input\n", opName.c_str());
                 TraverseGraph(input.Owner(), visited, compositeOutputsMap);
-                fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s is not block, complete recursive traverse input\n", opName.c_str());
-            }
         }
     }
-    fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s complete. \n", opName.c_str());
     visited.emplace(src);
 }
 
@@ -3603,7 +3579,6 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
         //
         if (src->OpName() == L"Times")
         {
-            fprintf(stderr, "CNTKToONNX::AddNode::Times\n");
             auto input1Shape = orderedInputs[0]->Shape();
             auto input2Shape = orderedInputs[1]->Shape();
             auto outputShape = outputs[0]->Shape();
@@ -3616,37 +3591,15 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
             // where (1) is the optional batch axis and a the axis correspond to outputRank = 1. 
             // When we support outputRank, the flag will be defined as (input1Rank - reductionRank - outputRank) == 1.
             bool hasBatchAxis = (input1Rank - reductionRank) == 2;
-            fprintf(stderr, "CNTKToONNX::AddNode::Times. reductionRank %d\n", reductionRank);
             
-            auto printShape = [](const onnx::TensorShapeProto* shape, const std::string& descStr) {
-                fprintf(stderr, "CNTKToONNX::AddNode::Times. %s [", descStr.c_str());
-                for (size_t i = 0; i < shape->dim_size(); ++i) {
-                    fprintf(stderr, "%ld ", (long)shape->dim(i).dim_value());
-                }
-                fprintf(stderr, "]\n");
-            };
-
-            auto printShapeTypeProto = [&printShape](const onnx::TypeProto& shape, const std::string& descStr) {
-                printShape(&(shape.tensor_type().shape()), descStr);
-            };
-
-            printShape(input1Shape, "input1 shape");
-            printShape(input2Shape, "input2 shape");
-
             if (reductionRank > 1) // We need to insert reshape.
             {
-                fprintf(stderr, "CNTKToONNX::AddNode::Times. start reduce rank.\n");
                 onnx::TypeProto input1Reshape = ReduceRank(input1Shape, reductionRank, true, hasBatchAxis);
                 onnx::TypeProto input2Reshape = ReduceRank(input2Shape, reductionRank, false, hasBatchAxis);
 
-                printShapeTypeProto(input1Reshape, "input1 reshape");
-                printShapeTypeProto(input2Reshape, "input2 reshape");
-
-                fprintf(stderr, "CNTKToONNX::AddNode::Times. start update ONNX type.\n");
                 UpdateONNXType(src->Inputs()[1].GetDataType(), input1Reshape);
                 UpdateONNXType(src->Inputs()[0].GetDataType(), input2Reshape);
 
-                fprintf(stderr, "CNTKToONNX::AddNode::Times. start GetOrCreateNodeArg.\n");
                 LotusIR::NodeArg &inputOutput1Arg = graph->GetOrCreateNodeArg(orderedInputs[0]->Name() + string("_reshape0"), &input1Reshape);
                 LotusIR::NodeArg &inputOutput2Arg = graph->GetOrCreateNodeArg(orderedInputs[1]->Name() + string("_reshape1"), &input2Reshape);
 
@@ -3656,11 +3609,9 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
                 //reshapeNode1->AddAttribute("shape", ToINTS(input1Reshape));
                 //reshapeNode2->AddAttribute("shape", ToINTS(input2Reshape));
 
-                fprintf(stderr, "CNTKToONNX::AddNode::Times. start add reshape node.\n");
                 AddReshapeNodeAccordingToONNXVersion(graph, nodeName + "_reshape0", orderedInputs[0], &inputOutput1Arg, ToINTS(input1Reshape));
                 AddReshapeNodeAccordingToONNXVersion(graph, nodeName + "_reshape1", orderedInputs[1], &inputOutput2Arg, ToINTS(input2Reshape));
 
-                fprintf(stderr, "CNTKToONNX::AddNode::Times. start AddNode.\n");
                 node = graph->AddNode(nodeName, ToOPName(src), "", {&inputOutput1Arg, &inputOutput2Arg}, outputs);
             }
             else

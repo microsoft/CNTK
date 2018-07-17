@@ -82,8 +82,6 @@ FunctionPtr ONNXFormat::Load(const std::wstring& filepath, const DeviceDescripto
     if (!loadStatus.IsOK())
         LogicError("Failed to load model: '%s'", loadStatus.ErrorMessage().c_str());
 
-    fprintf(stderr, "ONNXFormat::Load complete Lotus Load, start to CreateGraph..\n");
-
     FunctionPtr cntkFunction = ONNXToCNTK::CreateGraph(model->MainGraph(), computeDevice);
     return cntkFunction;
 }

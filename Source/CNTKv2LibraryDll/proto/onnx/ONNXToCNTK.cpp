@@ -2156,10 +2156,6 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         Variable input0 = inputs[0];
         Variable input1 = inputs[1];
         Variable input2 = inputs[2];
-
-        fprintf(stderr, "ONNXToCNTK::CreateFunction::Gemm: shapes %ls %ls %ls.\n",
-            input0.Shape().AsString().c_str(), input1.Shape().AsString().c_str(), input2.Shape().AsString().c_str());
-
         auto cDims = input2.Shape().Dimensions();
         bool hasSingletonDim = std::any_of(cDims.begin(), cDims.end(), [](size_t i) { return i == 1; });
         if (broadcast == 0 && hasSingletonDim) // Bad ONNX node - such model/node shouldn't be serializable in ONNX at all.
@@ -2356,10 +2352,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "MatMul")
     {
-        fprintf(stderr, "MatMul input_0 shape: %ls, input_1 shape: %ls\n", inputs[0].Shape().AsString().c_str(), inputs[1].Shape().AsString().c_str());
         // CNTK C++ interface has the right side matrix on the left and left right. Thus the swap here. 
-        //FunctionPtr cntkFunction = Times(inputs[1], inputs[0], ToFixedWStringFromMultiByte(node->Name()));
-        //return cntkFunction;
         return CreateCNTKTimesNode(node, inputs);
     }
     else if (onnxOpName == "PRelu")
@@ -3193,10 +3186,10 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKTimesNode(const Node *node, const std::v
     //    where prefix_array(rank > 1) describes the same "prefix" dimensions shared by input_0 and input_1. 
     //    According to ONNX(numpy) spec, Both inputs are treated as a stack of matrices residing in the last two indexes and broadcast accordingly. 
 
-    // TODO: we implement this import step-by-step.
+    // we implement this import step-by-step.
     //      1. Both 2-D inputs.
     //      2. Both N-D inputs.
-    //      3. Add broadcast.
+    //      3. Add broadcast. (Not supported in ONNX/CNTK yet)
 
     const Variable& input0 = inputs[0];
     const Variable& input1 = inputs[1];
@@ -3206,9 +3199,7 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKTimesNode(const Node *node, const std::v
 
     auto isBothNDInputs = [&]() -> bool {
         if (inputShape0.Rank() != inputShape1.Rank() || inputShape0.Rank() <= 2) return false;
-        const size_t inputRank = inputShape0.Rank();
         // In this case we don't require broadcast, thus prefix dimensions should match. 
-        fprintf(stderr, "CreateCNTKTimesNode:: Prefix Shape %ls and %ls\n", inputShape0.SubShape(2).AsString().c_str(), inputShape1.SubShape(2).AsString().c_str());
         return inputShape0.SubShape(2) == inputShape1.SubShape(2);
     };
 
@@ -3247,8 +3238,6 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKTimesNode(const Node *node, const std::v
         const size_t bDim = inputShape0[0];
         const size_t cDim = inputShape1[0];
 
-        fprintf(stderr, "CreateCNTKTimesNode:: Both ND inputs. Shape %ls and %ls\n", inputShape0.AsString().c_str(), inputShape1.AsString().c_str());
-
         if (inputShape1[1] != bDim)
             LogicError("MatMul: shape %ls and %ls are not aligned.", inputShape0.AsString().c_str(), inputShape1.AsString().c_str());
 
@@ -3259,37 +3248,27 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKTimesNode(const Node *node, const std::v
             inputPrefixProd *= inputShape0[i];
         }
         FunctionPtr input0CNTK = Reshape(leftOperandPlaceholder, {bDim, inputPrefixProd * aDim});
-        fprintf(stderr, "CreateCNTKTimesNode: step 1. shape: %ls\n", input0CNTK->Output().Shape().AsString().c_str());
         // 2)
         FunctionPtr input1CNTK = Reshape(rightOperandPlaceholder, {cDim, bDim, inputPrefixProd});
-        fprintf(stderr, "CreateCNTKTimesNode: step 2. shape: %ls\n", input1CNTK->Output().Shape().AsString().c_str());
         // 3)
         input1CNTK = TransposeAxes(input1CNTK, Axis(1), Axis(2));
-        fprintf(stderr, "CreateCNTKTimesNode: step 3. shape: %ls\n", input1CNTK->Output().Shape().AsString().c_str());
         // 4)
         input1CNTK = Reshape(input1CNTK, {inputPrefixProd * cDim, bDim});
-        fprintf(stderr, "CreateCNTKTimesNode: step 4. shape: %ls\n", input1CNTK->Output().Shape().AsString().c_str());
         // 5)
-        // CNTK Times has reversed input order than ONNX(numpy) MatMul. 
+        // CNTK Times has reversed input order than ONNX(numpy) MatMul due to c++/python row/col major storage. 
         FunctionPtr outputCNTK = Times(input1CNTK, input0CNTK, ToFixedWStringFromMultiByte(node->Name()));
-        fprintf(stderr, "CreateCNTKTimesNode: step 5. shape: %ls\n", outputCNTK->Output().Shape().AsString().c_str());
         // 6)
         outputCNTK = Reshape(outputCNTK, {cDim, inputPrefixProd, aDim, inputPrefixProd});
-        fprintf(stderr, "CreateCNTKTimesNode: step 6. shape: %ls\n", outputCNTK->Output().Shape().AsString().c_str());
         // 7)
         outputCNTK = TransposeAxes(outputCNTK, Axis(1), Axis(2));
-        fprintf(stderr, "CreateCNTKTimesNode: step 7. shape: %ls\n", outputCNTK->Output().Shape().AsString().c_str());
         // 8)
         outputCNTK = Reshape(outputCNTK, {cDim, aDim, inputPrefixProd * inputPrefixProd});
-        fprintf(stderr, "CreateCNTKTimesNode: step 8. shape: %ls\n", outputCNTK->Output().Shape().AsString().c_str());
         // 9)
         if (inputPrefixProd > 1)
             outputCNTK = Slice(outputCNTK, {Axis(2)}, {0}, {static_cast<int>(inputPrefixProd * inputPrefixProd)}, vector<int>({static_cast<int>(inputPrefixProd) + 1}));
-        fprintf(stderr, "CreateCNTKTimesNode: step 9. shape: %ls\n", outputCNTK->Output().Shape().AsString().c_str());
         // 10)
         const NDShape& outputShape = NDShape({ cDim, aDim }).AppendShape(inputShape0.SubShape(2));
         cntkFunction = Reshape(outputCNTK, outputShape);
-        fprintf(stderr, "CreateCNTKTimesNode: step 10. shape: %ls\n", cntkFunction->Output().Shape().AsString().c_str());
     }
     else
     {
