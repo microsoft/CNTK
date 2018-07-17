@@ -72,6 +72,7 @@ def verify_one_input(model, data, tmpdir, name, device=None):
 def verify_two_input(model, data1, data2, tmpdir, name):
     filename = os.path.join(str(tmpdir), name + R'.onnx')
     model.save(filename, format=C.ModelFormat.ONNX)
+    opname = model.owner.op_name
 
     loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
 
@@ -80,7 +81,8 @@ def verify_two_input(model, data1, data2, tmpdir, name):
 
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
-        model_shape = (1, ) + model_shape
+        dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
+        model_shape = (dim_denotation, ) + model_shape
         data1.shape = (1, ) + data1.shape
         data2.shape = (1, ) + data2.shape
     assert model_shape == loaded_model.shape
