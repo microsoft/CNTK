@@ -465,12 +465,14 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, LotusIR::Graph* dst)
     //
     // Traverse the graph and collect some information.
     //
+    fprintf(stderr, "CNTKToONNX::Copy: Start Traverse graph. \n");
     TraverseGraph(src, visited, compositeOutputsMap);
 
     //
     // Iterate through each node in CNTK graph and create an equivalent node
     // in ONNX graph.
     //
+    fprintf(stderr, "CNTKToONNX::Copy: Start Create node. \n");
     CreateNode(src, dst, functionNodes, variableNodes, compositeOutputsMap);
 }
 
@@ -2559,12 +2561,16 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
 {
     auto iter = functionNodes.find(src);
     if (iter != functionNodes.end())
+    {
+        fprintf(stderr, "CNTKToONNX::CreateNode: Node already visited. \n");
         return iter->second;
+    }
 
     LotusIR::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
     std::string onnxOpName = ToOPName(src);
 
+    fprintf(stderr, "CNTKToONNX::CreateNode: cntkOpName: %s to onnxOpName: %s \n", cntkOpName.c_str(), onnxOpName.c_str());
     // TODO: uncomment this code once bidirectional LSTM is supprted.
     //if (cntkOpName == "Splice")
     //{
@@ -2618,10 +2624,18 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     // If this block node equivalent to a primitive ONNX OP, then treated as such.
     // And just maps its argument to ONNX node.
     //
-    if (src->IsBlock() &&
+    // Update: the above comment is old and confusing. The comment mentioned we should map equivalent block node directly to ONNX node.
+    //  But in code we have contradictory behavior and explore within that block node and recursively convert to ONNX node. 
+    //  Now we check by calling Operators::IsConvertedBlockOp(), this is flag indicating an ONNX equivalent block node, 
+    //  so we skip the recursive call here, and add ONNX node directly. 
+    //
+    if (src->IsBlock() && !Operators::IsConvertedBlockOP(src->OpName()) &&
         (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())))
     {
+        fprintf(stderr, "CNTKToONNX::CreateNode: cntkOpName: %s to onnxOpName: %s. is block, recursive create node. \n", cntkOpName.c_str(), onnxOpName.c_str());
         functionNode = CreateNode(src->BlockRoot(), graph, functionNodes, variableNodes, compositeOutputsMap);
+        fprintf(stderr, "CNTKToONNX::CreateNode: cntkOpName: %s to onnxOpName: %s. is block, complete recursive create node. \n", cntkOpName.c_str(), onnxOpName.c_str());
+
     }
     else if (IsUnSupportedLayerNormalization(src))
     {
@@ -2635,8 +2649,11 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     // For compatibility of other framework that support ONNX, we will limit the list of OPs to the one
     // supported by ONNX https://github.com/onnx/onnx/tree/master/onnx/defs.
     //
-    else if (Operators::IsSupportedCNTKOP(src->OpName()))
+    // We are also mapping block nodes equivalent to a primitive ONNX OP directly back to that ONNX node.
+    //
+    else if (Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsConvertedBlockOP(src->OpName()))
     {
+        fprintf(stderr, "CNTKToONNX::CreateNode: cntkOpName: %s to onnxOpName: %s. is supported node. add node. \n", cntkOpName.c_str(), onnxOpName.c_str());
         std::vector<LotusIR::NodeArg *> inputs;
         ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
@@ -2651,6 +2668,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     else
         LogicError("Node '%S': Unsupported node.", src->AsString().c_str());
 
+    fprintf(stderr, "CNTKToONNX::CreateNode: cntkOpName: %s to onnxOpName: %s. complete. \n", cntkOpName.c_str(), onnxOpName.c_str());
     functionNodes.emplace(src, functionNode);
     return functionNode; 
 }
@@ -2857,27 +2875,35 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
                                      std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     auto iter = visited.find(src);
-    if (iter != visited.end())
-        return;
-
-    std::string opName = ToLegacyString(ToUTF8(src->OpName()));
-    if (Operators::IsLoopOp(opName))
+    if (iter != visited.end()) 
     {
-        // avoid infinite loop
+        fprintf(stderr, "CNTKToONNX::TraverseGraph: Node already visited. \n");
         return;
     }
 
-    if (!Operators::IsRNNOp(opName) &&
+    std::string opName = ToLegacyString(ToUTF8(src->OpName()));
+    fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s \n", opName.c_str());
+    if (Operators::IsLoopOp(opName))
+    {
+        // avoid infinite loop
+        fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s Avoid loop. \n", opName.c_str());
+        return;
+    }
+
+    if (!Operators::IsRNNOp(opName) && !Operators::IsConvertedBlockOP(src->OpName()) &&
         src->IsBlock() && (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())) ||
         IsUnSupportedLayerNormalization(src))
     {
         auto blockSrc = dynamic_cast<BlockFunction*>(src.get());
         for (auto map : blockSrc->CompositeOutputsMap())
             compositeOutputsMap.insert(map);
+        fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s is block, recursive traverse. \n", opName.c_str());
         TraverseGraph(src->BlockRoot(), visited, compositeOutputsMap);
+        fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s is block, complete recursive traverse. \n", opName.c_str());
     }
     else
     {
+        fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s is not block. \n", opName.c_str());
         for (auto input : src->Inputs())
         {
             if (input.IsPlaceholder())
@@ -2888,10 +2914,14 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
             }
 
             if (input.IsInitialized() && input.IsOutput())
+            {
+                fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s is not block, recursive traverse input\n", opName.c_str());
                 TraverseGraph(input.Owner(), visited, compositeOutputsMap);
+                fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s is not block, complete recursive traverse input\n", opName.c_str());
+            }
         }
     }
-
+    fprintf(stderr, "CNTKToONNX::TraverseGraph: OpName :%s complete. \n", opName.c_str());
     visited.emplace(src);
 }
 

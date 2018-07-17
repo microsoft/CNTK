@@ -513,6 +513,15 @@ namespace ONNX
             { L"Dropout" },
         };
 
+        //
+        // These are the ops that exist in ONNX but not in CNTK, and they are imported into CNTK as a block function of ops.
+        // They need to be treated specially as to be exported back as the original op in ONNX. 
+        //
+        std::set<std::wstring> Operators::_cntkConvertedBlockOpName = {
+            { L"MatMul" },
+            // { L"Gemm" }, // TODO : unsupported yet. 
+        };
+
         std::set<std::wstring> Operators::_optimizedRnnStackOpNames = {
             { L"lstm" },
             { L"rnnReLU" },
