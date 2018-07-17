@@ -2467,7 +2467,7 @@ namespace CNTK
             LogicError("groups: groups > 1 is not supported when reductionRank is 0.");
         }
 
-        if (!(operand.IsPlaceholder() || convolutionMap.IsPlaceholder()))
+        if (groups > 1 && !(operand.IsPlaceholder() || convolutionMap.IsPlaceholder()))
         {
             auto filterShape = convolutionMap.Shape();
             auto filterRank = static_cast<int>(filterShape.Rank());
