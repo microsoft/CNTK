@@ -78,10 +78,20 @@ def verify_two_input(model, data1, data2, tmpdir, name):
     filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
     loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
 
-    assert model.shape == loaded_model.shape
+    model_shape = model.shape
+    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
+        model_shape = (1, ) + model_shape
+        data1.shape = (1, ) + data1.shape
+        data2.shape = (1, ) + data2.shape
+    assert model_shape == loaded_model.shape
 
     o0 = model.eval({model.arguments[0]:data1, model.arguments[1]:data2})
     o1 = loaded_model.eval({loaded_model.arguments[0]:data1, loaded_model.arguments[1]:data2})
+
+    if (type(o0) is list):
+        o0 = o0[0]
+    if (type(o1) is list):
+        o1 = o1[0]
 
     assert np.allclose(o0, o1)
 
@@ -782,7 +792,57 @@ def test_MatMul_2d_2inputs(tmpdir, dtype):
         x = C.input_variable(np.shape(data0))
         y = C.input_variable(np.shape(data1))
         model = C.times(x, y)
-        verify_two_input(model, data0, data1, tmpdir, 'MatMul_1_1')        
+        verify_two_input(model, data0, data1, tmpdir, 'MatMul_1_1')
+
+#MatMul nd
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MatMul_nd(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        np.random.seed(0)
+
+        data0 = np.random.randn(3, 2, 3, 4).astype(np.float32)
+        data1 = np.random.randn(2, 3, 4, 5).astype(np.float32)
+        model = C.times(data0, data1)
+        verify_no_input(model, tmpdir, 'MatMul_n_0')
+
+#MatMul nd
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MatMul_nd_2(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        np.random.seed(0)
+
+        data0 = np.random.randn(3, 3, 4).astype(np.float32)
+        data1 = np.random.randn(3, 4, 5).astype(np.float32)
+        model = C.times(data0, data1)
+        verify_no_input(model, tmpdir, 'MatMul_n_1')        
+
+#MatMul nd with 2 inputs
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MatMul_nd_2inputs(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        np.random.seed(0)
+
+        data0 = np.random.randn(3, 2, 3, 4).astype(np.float32)
+        data1 = np.random.randn(2, 3, 4, 5).astype(np.float32)
+
+        x = C.input_variable(np.shape(data0))
+        y = C.input_variable(np.shape(data1))
+        model = C.times(x, y)
+        verify_two_input(model, data0, data1, tmpdir, 'MatMul_n_2')
+
+#MatMul nd with 2 inputs
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MatMul_nd_2inputs_2(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        np.random.seed(0)
+
+        data0 = np.random.randn(3, 3, 4).astype(np.float32)
+        data1 = np.random.randn(3, 4, 5).astype(np.float32)
+
+        x = C.input_variable(np.shape(data0))
+        y = C.input_variable(np.shape(data1))
+        model = C.times(x, y)
+        verify_two_input(model, data0, data1, tmpdir, 'MatMul_n_3')
 
 #Max
 @pytest.mark.parametrize("dtype", DType_Config)
