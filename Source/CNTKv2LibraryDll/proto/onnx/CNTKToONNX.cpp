@@ -2618,7 +2618,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     // If this block node equivalent to a primitive ONNX OP, then treated as such.
     // And just maps its argument to ONNX node.
     //
-    // Update: the above comment is old and confusing. The comment mentioned we should map equivalent block node directly to ONNX node.
+    // Update: the above comment is confusing. The comment mentioned we should map equivalent block node directly to ONNX node.
     //  But in code we have contradictory behavior and explore within that block node and recursively convert to ONNX node. 
     //  Now we check by calling Operators::IsConvertedBlockOp(), this is flag indicating an ONNX equivalent block node, 
     //  so we skip the recursive call here, and add ONNX node directly. 

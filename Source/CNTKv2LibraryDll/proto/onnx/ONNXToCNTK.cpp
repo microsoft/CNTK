@@ -2352,7 +2352,6 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "MatMul")
     {
-        // CNTK C++ interface has the right side matrix on the left and left right. Thus the swap here. 
         return CreateCNTKTimesNode(node, inputs);
     }
     else if (onnxOpName == "PRelu")
