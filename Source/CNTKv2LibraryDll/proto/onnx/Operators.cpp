@@ -501,6 +501,7 @@ namespace ONNX
             { L"Times",{ 1, 0 } },
             { L"Gather",{ 1, 0 } },
             { L"PReLU",{ 1, 0 } },
+            { L"Gemm", { -1, -1, 0, 1, 2} },
         };
 
         //
@@ -519,7 +520,7 @@ namespace ONNX
         //
         std::set<std::wstring> Operators::_cntkConvertedBlockOpName = {
             { L"MatMul" },
-            // { L"Gemm" }, // TODO : unsupported yet. 
+            { L"Gemm" }, 
         };
 
         std::set<std::wstring> Operators::_optimizedRnnStackOpNames = {

@@ -2560,10 +2560,10 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     auto iter = functionNodes.find(src);
     if (iter != functionNodes.end())
         return iter->second;
-
     LotusIR::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
     std::string onnxOpName = ToOPName(src);
+    fprintf(stderr, "CNTKToONNXHelper::CreateNode: cntkOpName: %s onnxOpName: %s.\n", cntkOpName.c_str(), onnxOpName.c_str());
 
     // TODO: uncomment this code once bidirectional LSTM is supprted.
     //if (cntkOpName == "Splice")
@@ -2644,20 +2644,25 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //
     else if (Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsConvertedBlockOP(src->OpName()))
     {
+        fprintf(stderr, "CNTKToONNXHelper::CreateNode: cntkOpName: %s onnxOpName: %s. process inputs. \n", cntkOpName.c_str(), onnxOpName.c_str());
         std::vector<LotusIR::NodeArg *> inputs;
         ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
+        fprintf(stderr, "CNTKToONNXHelper::CreateNode: cntkOpName: %s onnxOpName: %s. process outputs. \n", cntkOpName.c_str(), onnxOpName.c_str());
         std::vector<LotusIR::NodeArg *> outputs;
         ProcessOutputs(src, outputs, graph);
 
+        fprintf(stderr, "CNTKToONNXHelper::CreateNode: cntkOpName: %s onnxOpName: %s. add node. \n", cntkOpName.c_str(), onnxOpName.c_str());
         //
         // Finally add a new node to ONNX graph.
         //
         functionNode = AddNode(src, graph, inputs, outputs);
+        fprintf(stderr, "CNTKToONNXHelper::CreateNode: cntkOpName: %s onnxOpName: %s. complete addnode. \n", cntkOpName.c_str(), onnxOpName.c_str());
     }
     else
         LogicError("Node '%S': Unsupported node.", src->AsString().c_str());
 
+    fprintf(stderr, "CNTKToONNXHelper::CreateNode: cntkOpName: %s onnxOpName: %s. complete. \n", cntkOpName.c_str(), onnxOpName.c_str());
     functionNodes.emplace(src, functionNode);
     return functionNode; 
 }
@@ -2904,7 +2909,9 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
 void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* node)
 {
     auto lookup = Operators::CntkToONNXLookup();
-    assert(lookup.count(src->OpName()) != 0);
+    fprintf(stderr, "CNTKToONNXHelper::CopyAttributes: OpName: %ls. Found in lookup: %zu\n", src->OpName().c_str(), lookup.count(src->OpName()));
+    // We also support exporting imported ONNX ops that don't exist in CNTK.
+    assert(lookup.count(src->OpName()) != 0 || Operators::IsConvertedBlockOP(src->OpName()));
 
     std::string opName = ToLegacyString(ToUTF8(src->OpName()));
     if (lookup.count(src->OpName()) == 1)
@@ -3297,7 +3304,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             node->AddAttribute(attributesMap[L"doVarianceScaling"], doVarianceScaling);
         }
     }
-    else
+    else if (lookup.count(src->OpName()) > 1)
     {
         // Some nodes map one to many.
         if (src->OpName() == L"Convolution")
@@ -3385,6 +3392,25 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             }
         }
     }
+    else
+    {
+        // block nodes that are imported ONNX ops which don't exist in CNTK. 
+        if (src->OpName() == L"Gemm")
+        {
+            float alpha = static_cast<float>(src->Attributes()[L"alpha"].Value<float>());
+            float beta = static_cast<float>(src->Attributes()[L"beta"].Value<float>());
+            size_t transA = static_cast<int>(src->Attributes()[L"transA"].Value<size_t>());
+            size_t transB = static_cast<int>(src->Attributes()[L"transB"].Value<size_t>());
+
+            fprintf(stderr, "CNTKToONNXHelper::CopyAttributes: OpName: %ls. setting attributes for gemm %f %f %zu %zu\n", 
+                src->OpName().c_str(), alpha, beta, transA, transB);
+
+            node->AddAttribute("alpha", alpha);
+            node->AddAttribute("beta", beta);
+            node->AddAttribute("transA", (int64_t) transA);
+            node->AddAttribute("transB", (int64_t) transB);
+        }
+    }
 }
 
 void CNTKToONNXHelper::PutAutopadOrPadAttrInNode(LotusIR::Node* node,
@@ -3458,6 +3484,11 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
     LotusIR::Node* node = nullptr;
     std::vector<LotusIR::NodeArg *> orderedInputs = MapInputsOrderToONNX(src, inputs);
     auto nodeName = src->Name().empty() ? ToLegacyString(ToUTF8(src->Uid())) : ToLegacyString(ToUTF8(src->Name()));
+    for (auto input : orderedInputs)
+    {
+        fprintf(stderr, "CNTKToONNXHelper::AddNode: nodeName %s, input name %s, input size %d.\n",
+            nodeName.c_str(), input->Name().c_str(), input->Shape()->dim_size());
+    }
 
     if (L"Embedding" == src->OpName())
     {

@@ -2147,7 +2147,8 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         float beta = GetNamedAttributeAsFloat(node, "beta", 1.0f);
         float transA = GetNamedAttributeAsInt64(node, "transA", 0);
         float transB = GetNamedAttributeAsInt64(node, "transB", 0);
-        float broadcast = GetNamedAttributeAsInt64(node, "broadcast", 0);
+        // ONNX removed the attribute broadcast. we need to infer from input if broadcast is required. 
+        float broadcast = 0;
         // All the three inputs are expected to be rank=2 matrices. Only C, i.e. inputs[2]
         // can be a scalar or vector, and if the 'broadcast' attribute is non-zero then
         // we will use CNTK's automatic braodcast capability to broadcast C. But if rank < 2
@@ -2156,21 +2157,47 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         Variable input0 = inputs[0];
         Variable input1 = inputs[1];
         Variable input2 = inputs[2];
-        auto cDims = input2.Shape().Dimensions();
-        bool hasSingletonDim = std::any_of(cDims.begin(), cDims.end(), [](size_t i) { return i == 1; });
-        if (broadcast == 0 && hasSingletonDim) // Bad ONNX node - such model/node shouldn't be serializable in ONNX at all.
-            LogicError("The rank of input C in GEMM operator (A*B + C) is not 2. Either specify a value with rank=2, or set the broadcast attribute to 1.");
 
-        FunctionPtr A = ElementTimes(input0, Constant(NDShape({1, 1}), CNTK::DataType::Float, static_cast<double>(alpha)));
-        FunctionPtr C = ElementTimes(input2, Constant(NDShape({1, 1}), CNTK::DataType::Float, static_cast<double>(beta)));
+        auto cDims = input2.Shape().Dimensions();
+        const NDShape& inputShape0 = input0.Shape();
+        const NDShape& inputShape1 = input1.Shape();
+
+        Variable operandAPlaceholder = PlaceholderVariable(inputShape0, L"operandAPlaceholder", {});
+        Variable operandBPlaceholder = PlaceholderVariable(inputShape1, L"operandBPlaceholder", {});
+        Variable operandCPlaceholder = PlaceholderVariable(input2.Shape(), L"operandCPlaceholder", {});
+
+        NDShape outputShape({transB ? inputShape1[1] : inputShape1[0], transA ? inputShape0[0] : inputShape0[1]});
+
+        for (size_t i = 0; i < cDims.size(); ++i)
+        {
+            if (cDims[i] == 1 && outputShape[i] != 1)
+            {
+                broadcast = 1;
+                break;
+            }
+        }
+        
+        FunctionPtr A = ElementTimes(operandAPlaceholder, Constant(NDShape({1, 1}), CNTK::DataType::Float, static_cast<double>(alpha)));
+        FunctionPtr C = ElementTimes(operandCPlaceholder, Constant(NDShape({1, 1}), CNTK::DataType::Float, static_cast<double>(beta)));
         if (!transA && transB && broadcast) // Special case: Equivalent to FC (fully-connected) op. Takes in account broadcast of B, if needed.
         {
-            return CreateCNTKFCNode(ToFixedWStringFromMultiByte(node->Name()), {(Variable) A, input1, (Variable) C});
+            return CreateCNTKFCNode(ToFixedWStringFromMultiByte(node->Name()), {(Variable) A, operandBPlaceholder, (Variable) C});
         }
-        FunctionPtr B = (transB != 0) ? Transpose(input1) : (FunctionPtr) input1;
+        FunctionPtr B = (transB != 0) ? Transpose(operandBPlaceholder) : (FunctionPtr) operandBPlaceholder;
         FunctionPtr D = (transA != 0) ? Times(B, Transpose(A)) : Times(B, A);
         // If needed, Plus op will broadcast C automatically.
-        return Plus(C, D);
+        FunctionPtr result = Plus(C, D);
+
+        Dictionary attributes = Dictionary();
+        attributes[L"alpha"] = alpha;
+        attributes[L"beta"] = beta;
+        attributes[L"transA"] = static_cast<size_t>(transA);
+        attributes[L"transB"] = static_cast<size_t>(transB);
+
+        return AsBlock(std::move(result),
+            { { operandAPlaceholder, input0 },{ operandBPlaceholder, input1 }, { operandCPlaceholder, input2 } },
+            std::move(attributes),
+            L"Gemm", ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "Dropout")
     {
