@@ -966,7 +966,6 @@ def test_ReduceSumSquare(tmpdir, dtype):
 #ReduceLogSum
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceLogSum(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_log_sum_exp(data, axis=0)
@@ -976,7 +975,6 @@ def test_ReduceLogSum(tmpdir, dtype):
 #ReduceMax
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceMax(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_max(data, 0)
@@ -985,7 +983,6 @@ def test_ReduceMax(tmpdir, dtype):
 #ReduceMean
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceMean(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_mean(data, 0)
@@ -994,7 +991,6 @@ def test_ReduceMean(tmpdir, dtype):
 #ReduceMin
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceMin(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_min(data, 0)
@@ -1003,7 +999,6 @@ def test_ReduceMin(tmpdir, dtype):
 #ReduceProd
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceProd(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_prod(data, 0)
@@ -1012,7 +1007,6 @@ def test_ReduceProd(tmpdir, dtype):
 #ReduceSum
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceSum(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_sum(data, 0)

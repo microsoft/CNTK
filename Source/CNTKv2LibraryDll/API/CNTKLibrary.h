@@ -4517,32 +4517,32 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in LogSum reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceLogSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceLogSum(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in Mean reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceMean(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceMean(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in Max reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in Min reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceMin(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceMin(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in L1 norm reduction operation on specified tensor input operand along the specified axis

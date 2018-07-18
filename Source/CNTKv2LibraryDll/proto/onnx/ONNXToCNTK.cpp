@@ -2426,57 +2426,126 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "ReduceMax")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceMax(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceMax(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceMin")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceMin(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceMin(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceSum")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceSum(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceSum(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceMean")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceMean(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceMean(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceProd")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceProd(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+        
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceProd(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
-    else if (onnxOpName == "ReduceLogSumExp")
+    else if (onnxOpName == "ReduceLogSumExp" || onnxOpName == "ReduceLogSum")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceLogSum(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+        
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceLogSum(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceL1")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
         bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceL1(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceL2")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
         bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceL2(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceSumSquare")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
         bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceSumSquare(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;

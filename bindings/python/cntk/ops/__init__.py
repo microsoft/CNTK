@@ -2882,7 +2882,7 @@ def flatten(x, axis = None, name = ''):
 ##########################################################################
 
 @typemap
-def reduce_sum(x, axis=None, name=''):
+def reduce_sum(x, axis=None, keepdims=True, name=''):
     '''
     Computes the sum of the input tensor's elements across one axis or a list of axes. If the axis parameter
     is not specified then the sum will be computed over all static axes, which is
@@ -2918,6 +2918,7 @@ def reduce_sum(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -2928,11 +2929,11 @@ def reduce_sum(x, axis=None, name=''):
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
     axis = sanitize_multi_axis_reduction_list(axis)
-    return reduce_sum(x, axis, name)
+    return reduce_sum(x, axis, keepdims, name)
 
 
 @typemap
-def reduce_log_sum_exp(x, axis=None, name=''):
+def reduce_log_sum_exp(x, axis=None, keepdims=True, name=''):
     '''
     Computes the log of the sum of the exponentiations of the input tensor's
     elements across a specified axis or a list of specified axes.
@@ -2964,6 +2965,7 @@ def reduce_log_sum_exp(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -2975,11 +2977,11 @@ def reduce_log_sum_exp(x, axis=None, name=''):
     from cntk.cntk_py import reduce_log_sum
     x = sanitize_input(x)
     axis = sanitize_multi_axis_reduction_list(axis)
-    return reduce_log_sum(x, axis, name)
+    return reduce_log_sum(x, axis, keepdims, name)
 
 
 @typemap
-def reduce_mean(x, axis=None, name=''):
+def reduce_mean(x, axis=None, keepdims=True, name=''):
     '''
     Computes the mean of the input tensor's elements across a specified axis or a list of specified axes.
 
@@ -3015,6 +3017,7 @@ def reduce_mean(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -3025,11 +3028,11 @@ def reduce_mean(x, axis=None, name=''):
     from cntk.cntk_py import reduce_mean
     x = sanitize_input(x)
     axis = sanitize_multi_axis_reduction_list(axis)
-    return reduce_mean(x, axis, name)
+    return reduce_mean(x, axis, keepdims, name)
 
 
 @typemap
-def reduce_max(x, axis=None, name=''):
+def reduce_max(x, axis=None, keepdims=True, name=''):
     '''
     Computes the max of the input tensor's elements across a specified axis or a list of specified axes.
 
@@ -3058,6 +3061,7 @@ def reduce_max(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -3068,11 +3072,11 @@ def reduce_max(x, axis=None, name=''):
     from cntk.cntk_py import reduce_max
     x = sanitize_input(x)
     axis = sanitize_multi_axis_reduction_list(axis)
-    return reduce_max(x, axis, name)
+    return reduce_max(x, axis, keepdims, name)
 
 
 @typemap
-def reduce_min(x, axis=None, name=''):
+def reduce_min(x, axis=None, keepdims=True, name=''):
     '''
     Computes the min of the input tensor's elements across a specified axis or a list of specified axes.
 
@@ -3101,6 +3105,7 @@ def reduce_min(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a list of integers or a list of :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -3111,11 +3116,11 @@ def reduce_min(x, axis=None, name=''):
     from cntk.cntk_py import reduce_min
     x = sanitize_input(x)
     axis = sanitize_axis_list(axis)
-    return reduce_min(x, axis, name)
+    return reduce_min(x, axis, keepdims, name)
 
 
 @typemap
-def reduce_prod(x, axis=None, name=''):
+def reduce_prod(x, axis=None, keepdims=True, name=''):
     '''
     Computes the min of the input tensor's elements across the specified axis.
 
@@ -3144,6 +3149,7 @@ def reduce_prod(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -3154,7 +3160,7 @@ def reduce_prod(x, axis=None, name=''):
     from cntk.cntk_py import reduce_prod
     x = sanitize_input(x)
     axis = sanitize_multi_axis_reduction_list(axis)
-    return reduce_prod(x, axis, name)
+    return reduce_prod(x, axis, keepdims, name)
 
 @typemap
 def reduce_l1(x, axis=None, keepdims = True, name=''):
@@ -3172,6 +3178,7 @@ def reduce_l1(x, axis=None, keepdims = True, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -3197,6 +3204,7 @@ def reduce_l2(x, axis=None, keepdims = True, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -3222,6 +3230,7 @@ def reduce_sum_square(x, axis=None, keepdims = True, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
