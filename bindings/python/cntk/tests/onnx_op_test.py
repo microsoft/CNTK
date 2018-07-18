@@ -816,7 +816,7 @@ def test_MatMul_nd_2(tmpdir, dtype):
         data0 = np.random.randn(3, 3, 4).astype(np.float32)
         data1 = np.random.randn(3, 4, 5).astype(np.float32)
         model = C.times(data0, data1)
-        verify_no_input(model, tmpdir, 'MatMul_n_1')        
+        verify_no_input(model, tmpdir, 'MatMul_n_1')
 
 #MatMul nd with 2 inputs
 @pytest.mark.parametrize("dtype", DType_Config)

@@ -121,6 +121,6 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDoVarianceScaling = L"doVarianceScaling";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameGroups = L"groups";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCustomOp = L"customOp";
-    /*static*/ const std::wstring PrimitiveFunction::AttributeNameTransA = L"transA";
-    /*static*/ const std::wstring PrimitiveFunction::AttributeNameTransB = L"transB";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameTransposeLeftOperand = L"transA";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameTransposeRightOperand = L"transB";
 }

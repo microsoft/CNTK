@@ -408,8 +408,6 @@ namespace ONNX
         { L"Alias",{ {
             { L"Alias", "Identity" },
         } } },
-
-        // From Internal
         { L"Gemm",{ {
             { L"Gemm", "Gemm" },
         } } },
