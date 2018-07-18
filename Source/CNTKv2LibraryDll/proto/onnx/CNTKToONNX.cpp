@@ -2560,6 +2560,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     auto iter = functionNodes.find(src);
     if (iter != functionNodes.end())
         return iter->second;
+
     LotusIR::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
     std::string onnxOpName = ToOPName(src);
@@ -2616,6 +2617,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //
     // If this block node equivalent to a primitive ONNX OP, then treated as such.
     // And just maps its argument to ONNX node.
+    //
     if (src->IsBlock() &&
         (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())))
     {
@@ -2632,6 +2634,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //
     // For compatibility of other framework that support ONNX, we will limit the list of OPs to the one
     // supported by ONNX https://github.com/onnx/onnx/tree/master/onnx/defs.
+    //
     else if (Operators::IsSupportedCNTKOP(src->OpName()))
     {
         std::vector<LotusIR::NodeArg *> inputs;
@@ -2888,6 +2891,7 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
                 TraverseGraph(input.Owner(), visited, compositeOutputsMap);
         }
     }
+
     visited.emplace(src);
 }
 

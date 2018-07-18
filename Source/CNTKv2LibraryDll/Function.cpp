@@ -3610,10 +3610,10 @@ namespace CNTK
             FunctionPtr result = Plus(C, D);
 
             Dictionary attributes = Dictionary();
-            attributes[L"alpha"] = alpha;
-            attributes[L"beta"] = beta;
-            attributes[L"transA"] = transA;
-            attributes[L"transB"] = transB;
+            attributes[PrimitiveFunction::AttributeNameAlpha] = alpha;
+            attributes[PrimitiveFunction::AttributeNameBeta] = beta;
+            attributes[PrimitiveFunction::AttributeNameTransA] = transA;
+            attributes[PrimitiveFunction::AttributeNameTransB] = transB;
 
             return AsBlock(std::move(result),
                 { { operandAPlaceholder, operandA },{ operandBPlaceholder, operandB },{ operandCPlaceholder, operandC } },
