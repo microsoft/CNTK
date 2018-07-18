@@ -3005,17 +3005,22 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
             }
         }
 
-        return ConvolutionTranspose(
-            convolutionMap,
-            inputs[0],
+        auto operandPlaceholder = PlaceholderVariable(inputOperand.Shape(), L"operand", {});
+        auto convmapPlaceholder = PlaceholderVariable(convolutionMap.Shape(), L"convolutionMap", {});
+        FunctionPtr operandWithBatchAxis = ToBatch(operandPlaceholder);
+        FunctionPtr convResultWithBatchAxis = ConvolutionTranspose(
+            convmapPlaceholder,
+            operandWithBatchAxis,
             strides,
             sharing,
             cntkConvAutoPadding,
             outputShape,
             dilation,
             reductionRank,
-            maxTempMemSizeInSamples,
-            ToFixedWStringFromMultiByte(node->Name()));
+            maxTempMemSizeInSamples);
+        FunctionPtr convResultWithStaticAxis = UnpackBatch(convResultWithBatchAxis, ToFixedWStringFromMultiByte(node->Name()));
+        return AsBlock(std::move(convResultWithStaticAxis), { { operandPlaceholder, inputOperand },{ convmapPlaceholder, convolutionMap } },
+            L"ConvolutionTranspose", ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (HasNamedAttribute(node, "pads"))
     {

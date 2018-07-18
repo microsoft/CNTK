@@ -28,6 +28,10 @@ def verify_no_input(model, tmpdir, name):
     model.save(filename, format=C.ModelFormat.ONNX)
 
     loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+
+    filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
+    model.save(filename_resave, format=C.ModelFormat.ONNX)
+
     assert model.shape == loaded_model.shape
 
     o = model.eval()
@@ -40,6 +44,9 @@ def verify_one_input(model, data, tmpdir, name, device=None):
     opname = model.owner.op_name
 
     loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+
+    filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
+    model.save(filename_resave, format=C.ModelFormat.ONNX)
 
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
@@ -67,6 +74,10 @@ def verify_two_input(model, data1, data2, tmpdir, name):
     model.save(filename, format=C.ModelFormat.ONNX)
 
     loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+
+    filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
+    model.save(filename_resave, format=C.ModelFormat.ONNX)
+
     assert model.shape == loaded_model.shape
 
     o0 = model.eval({model.arguments[0]:data1, model.arguments[1]:data2})
@@ -208,7 +219,6 @@ def test_ArgMin(tmpdir, dtype):
 #AveragePool
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_AveragePool(tmpdir, dtype, device_id):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
@@ -325,7 +335,6 @@ def test_Concat(tmpdir, dtype):
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ConvTranspose(tmpdir, dtype, device_id):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
@@ -765,8 +774,7 @@ def test_Max(tmpdir, dtype):
 
 #MaxPool
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_MaxPool(tmpdir, dtype, device_id):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
+def test_MaxPool(tmpdir, dtype, device_id):    
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)

@@ -527,6 +527,8 @@ namespace ONNX
 
         std::set<std::wstring> Operators::_cntkOpsExportedWithBatchAxis = { // This is mostly used on export side.
         { L"Convolution" },
+        { L"ConvolutionTranspose" },
+        { L"Pooling" },
         };
 
         std::set<std::string> Operators::_onnxSimpleBatchAxisOps = { // List of all ONNX ops that are simple (single input, output) and have batch axis.
