@@ -1023,9 +1023,6 @@ public:
 
         auto dims0 = Input(0)->GetSampleLayout().GetDims();
         auto dims1 = Input(1)->GetSampleLayout().GetDims();
-        if(InputRef(0).Value().GetNumCols() != InputRef(1).Value().GetNumCols())
-            LogicError("ChannelMultiplyNode : input minibatch size not match %d v.s. %d\n",
-                (int)InputRef(0).Value().GetNumCols(), (int)InputRef(1).Value().GetNumCols());
         if (dims0.size() != 3)
             LogicError("ChannelMultiplyNode : input[0] dimension not equals to 3 \n");
         size_t temp = 1;
