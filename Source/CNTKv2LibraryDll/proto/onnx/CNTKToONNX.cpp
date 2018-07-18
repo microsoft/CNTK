@@ -2616,13 +2616,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //
     // If this block node equivalent to a primitive ONNX OP, then treated as such.
     // And just maps its argument to ONNX node.
-    //
-    // Update: the above comment is confusing. The comment mentioned we should map equivalent block node directly to ONNX node.
-    //  But in code we have contradictory behavior and explore within that block node and recursively convert to ONNX node. 
-    //  Now we check by calling Operators::IsConvertedBlockOp(), this is flag indicating an ONNX equivalent block node, 
-    //  so we skip the recursive call here, and add ONNX node directly. 
-    //
-    if (src->IsBlock() && !Operators::IsConvertedBlockOP(src->OpName()) &&
+    if (src->IsBlock() &&
         (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())))
     {
         functionNode = CreateNode(src->BlockRoot(), graph, functionNodes, variableNodes, compositeOutputsMap);
@@ -2638,10 +2632,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //
     // For compatibility of other framework that support ONNX, we will limit the list of OPs to the one
     // supported by ONNX https://github.com/onnx/onnx/tree/master/onnx/defs.
-    //
-    // We are also mapping block nodes equivalent to a primitive ONNX OP directly back to that ONNX node.
-    //
-    else if (Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsConvertedBlockOP(src->OpName()))
+    else if (Operators::IsSupportedCNTKOP(src->OpName()))
     {
         std::vector<LotusIR::NodeArg *> inputs;
         ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
@@ -2873,7 +2864,7 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
         return;
     }
 
-    if (!Operators::IsRNNOp(opName) && !Operators::IsConvertedBlockOP(src->OpName()) &&
+    if (!Operators::IsRNNOp(opName) &&
         src->IsBlock() && (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())) ||
         IsUnSupportedLayerNormalization(src))
     {

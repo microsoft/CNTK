@@ -413,6 +413,9 @@ namespace ONNX
         { L"Gemm",{ {
             { L"Gemm", "Gemm" },
         } } },
+        { L"MatMul",{ {
+            { L"MatMul", "MatMul" },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -517,15 +520,6 @@ namespace ONNX
             { L"ConvolutionTranspose" },
             { L"BatchNormalization" },
             { L"Dropout" },
-        };
-
-        //
-        // These are the ops that exist in ONNX but not in CNTK, and they are imported into CNTK as a block function of ops.
-        // They need to be treated specially as to be exported back as the original op in ONNX. 
-        //
-        std::set<std::wstring> Operators::_cntkConvertedBlockOpName = {
-            { L"MatMul" },
-            //{ L"Gemm" }, 
         };
 
         std::set<std::wstring> Operators::_optimizedRnnStackOpNames = {

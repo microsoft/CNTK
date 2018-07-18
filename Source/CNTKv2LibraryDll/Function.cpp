@@ -112,7 +112,7 @@ namespace CNTK
             else if (pythonOperandOrder && primitiveFunction && primitiveFunction->OpName() == L"Gemm")
             {
                 assert(m_inputs.size() == 5);
-                // For Gemm we also need to reorder the operands stored in m_inputs.
+                // For Gemm we also need to reorder the operands A and B stored in m_inputs.
                 // The first two inputs are Constant for alpha and beta, followed with three Variable A, B and C.
                 inputs = { m_inputs[0], m_inputs[1], m_inputs[3], m_inputs[2], m_inputs[4] };
             }
@@ -3480,7 +3480,109 @@ namespace CNTK
 
         FunctionPtr MatMul(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
         {
-            return nullptr;
+            // There are two cases in MatMul
+            // 1. Both inputs are 2-D:
+            //      input_0:    [b, a]
+            //      input_1:    [c, b]
+            //      output:     [c, a]
+            //    CNTK Times has the same spec for this case.
+            // 2. Either inputs are N-D:
+            //      input_0:    [b, a, prefix_array]
+            //      input_1:    [c, b, prefix_array]
+            //      output:     [c, a, prefix_array]
+            //    where prefix_array(rank > 1) describes the same "prefix" dimensions shared by input_0 and input_1. 
+            //    According to ONNX(numpy) spec, Both inputs are treated as a stack of matrices residing in the last two indexes and broadcast accordingly. 
+
+            // we implement this import step-by-step.
+            //      1. Both 2-D inputs.
+            //      2. Both N-D inputs.
+            //      3. Add broadcast. (Not supported in ONNX/CNTK yet)
+
+            const NDShape& inputShape0 = leftOperand.Shape();
+            const NDShape& inputShape1 = rightOperand.Shape();
+
+            auto isBothNDInputs = [&]() -> bool {
+                if (inputShape0.Rank() != inputShape1.Rank() || inputShape0.Rank() <= 2) return false;
+                // In this case we don't require broadcast, thus prefix dimensions should match. 
+                return inputShape0.SubShape(2) == inputShape1.SubShape(2);
+            };
+
+            Variable leftOperandPlaceholder = PlaceholderVariable(inputShape0, L"leftOperand", {});
+            Variable rightOperandPlaceholder = PlaceholderVariable(inputShape1, L"rightOperand", {});
+            FunctionPtr cntkFunction;
+            if (inputShape0.Rank() == 2 && inputShape1.Rank() == 2)
+            {
+                // 1. Both 2-D inputs.
+                // CNTK Times has reversed input order than ONNX(numpy) MatMul. 
+                cntkFunction = Times(rightOperandPlaceholder, leftOperandPlaceholder);
+            }
+            else if (isBothNDInputs())
+            {
+                // 2. Both N-D inputs.
+                // Convert inputs into CNTK style:
+                //      input_0:    [b, a, prefix_array]
+                //      input_1:    [c, b, prefix_array]
+                //      output:     [c, a, prefix_array]
+                // Here are the converting steps:
+                // 1) input_0:  reshape     [b, a, prefix_array]        -->     [b, a * prod(prefix_array)]
+                // 2) input_1:  reshape     [c, b, prefix_array]        -->     [c, b, prod(prefix_array)]
+                // 3) input_1:  swap(1, 2)  [c, b, prod(prefix_array)]  -->     [c, prod(prefix_array), b]
+                // 4) input_1:  reshape     [c, prod(prefix_array), b]  -->     [c * prod(prefix_array), b]
+                // 5) output:   times       [c * prod(prefix_array), a * prod(prefix_array)]
+                // 6) output:   reshape     [c * prod(prefix_array), a * prod(prefix_array)]    -->     [c, prod(prefix_array), a, prod(prefix_array)]
+                // 7) output:   swap(1, 2)  [c, prod(prefix_array), a, prod(prefix_array)]      -->     [c, a, prod(prefix_array), prod(prefix_array)]
+                // 8) output:   reshape     [c, a, prod(prefix_array), prod(prefix_array)]      -->     [c, a, prod(prefix_array) * prod(prefix_array)]
+                // 9) output:   slice       [c, a, prod(prefix_array) * prod(prefix_array)]     -->     [c, a, prod(prefix_array)]
+                // 10)output:   reshape     [c, a, prod(prefix_array)]  -->     [c, a, prefix_array]
+                assert(inputShape0.Rank() == inputShape1.Rank());
+                assert(inputShape0.Rank() > 2);
+                const size_t inputRank = inputShape0.Rank();
+                assert(inputShape0.SubShape(2) == inputShape1.SubShape(2));
+                const size_t aDim = inputShape0[1];
+                const size_t bDim = inputShape0[0];
+                const size_t cDim = inputShape1[0];
+
+                if (inputShape1[1] != bDim)
+                    LogicError("MatMul: shape %ls and %ls are not aligned.", inputShape0.AsString().c_str(), inputShape1.AsString().c_str());
+
+                // 1)
+                size_t inputPrefixProd = 1;
+                for (size_t i = 2; i < inputShape0.Rank(); ++i)
+                {
+                    inputPrefixProd *= inputShape0[i];
+                }
+                FunctionPtr input0CNTK = Reshape(leftOperandPlaceholder, { bDim, inputPrefixProd * aDim });
+                // 2)
+                FunctionPtr input1CNTK = Reshape(rightOperandPlaceholder, { cDim, bDim, inputPrefixProd });
+                // 3)
+                input1CNTK = TransposeAxes(input1CNTK, Axis(1), Axis(2));
+                // 4)
+                input1CNTK = Reshape(input1CNTK, { inputPrefixProd * cDim, bDim });
+                // 5)
+                // CNTK Times has reversed input order than ONNX(numpy) MatMul due to c++/python row/col major storage. 
+                FunctionPtr outputCNTK = Times(input1CNTK, input0CNTK);
+                // 6)
+                outputCNTK = Reshape(outputCNTK, { cDim, inputPrefixProd, aDim, inputPrefixProd });
+                // 7)
+                outputCNTK = TransposeAxes(outputCNTK, Axis(1), Axis(2));
+                // 8)
+                outputCNTK = Reshape(outputCNTK, { cDim, aDim, inputPrefixProd * inputPrefixProd });
+                // 9)
+                if (inputPrefixProd > 1)
+                    outputCNTK = ::CNTK::Slice(outputCNTK, { Axis(2) }, { 0 }, { static_cast<int>(inputPrefixProd * inputPrefixProd) }, vector<int>({ static_cast<int>(inputPrefixProd) + 1 }));
+                // 10)
+                const NDShape& outputShape = NDShape({ cDim, aDim }).AppendShape(inputShape0.SubShape(2));
+                cntkFunction = Reshape(outputCNTK, outputShape);
+            }
+            else
+            {
+                // 3. broadcast.
+                LogicError("MatMul: broadcasting is currently not supported in ONNX/CNTK.");
+            }
+
+            return AsBlock(std::move(cntkFunction),
+                { { leftOperandPlaceholder, leftOperand },{ rightOperandPlaceholder, rightOperand } },
+                L"MatMul", name);
         }
 
         FunctionPtr Gemm(const Variable& operandA, const Variable& operandB, const Variable& operandC, 
