@@ -1018,6 +1018,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
         SetDims(Input(0));
 
         auto dims0 = Input(0)->GetSampleLayout().GetDims();
