@@ -432,13 +432,11 @@ def SequentialConvolution(filter_shape,     # shape of receptive field, e.g. (3,
         num_inserted_axes = num_emulated_axes # sequential reshape is handled at c++ side now.
         if num_inserted_axes != 0:
             # x: (in_depth, spatial_shape)
-
             x = reshape(x, (1,) * num_inserted_axes,    # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
                         begin_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else C.Axis.new_leading_axis(),
                         end_axis  =-filter_rank_without_seq if filter_rank_without_seq != 0 else None)
             # x: (in_depth or emulated_in_depth, emulated_1D_extra, seq_filter_shape, spatial_shape)
         # actual convolution
-        print(x.shape)
         r = convolution (W, x,
                          strides=strides, sharing=sharing,
                          auto_padding=pad,

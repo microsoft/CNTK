@@ -447,6 +447,22 @@ public:
 
     bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
+    void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        if (m_groups > 1)
+        {
+            TensorShape inputShape = GetInputSampleLayout(GetExpectedNumInputs() - 1);
+            auto M = m_mapCount.GetNumElements(); // Number of output channels.
+            auto C = inputShape[inputShape.GetRank() - 1]; // Number of input channels in operand.
+            auto kC = m_kernelShape[m_kernelShape.GetRank() - 1]; // Number of input channels in kernel.
+            if (M % m_groups)
+                LogicError("groups: number of output channels must be divisble by groups.");
+            if (C != (kC * m_groups))
+                LogicError("groups: number of input channels (C) must be equal to number of input kernel channels (kC) * groups (G).");
+        }
+    }
+
 protected:
     TensorShape m_dilation;
     size_t m_groups;

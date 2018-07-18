@@ -2361,12 +2361,14 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Max")
     {
-        FunctionPtr cntkFunction = ElementMax(inputs[0], inputs[1], ToFixedWStringFromMultiByte(node->Name()));
+        // TODO: Support more than 2 inputs.
+        FunctionPtr cntkFunction = ElementMax(inputs[0], inputs.size() > 1 ? inputs[1] : inputs[0], ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "Min")
     {
-        FunctionPtr cntkFunction = ElementMin(inputs[0], inputs[1], ToFixedWStringFromMultiByte(node->Name()));
+        // TODO: Support more than 2 inputs.
+        FunctionPtr cntkFunction = ElementMin(inputs[0], inputs.size() > 1 ? inputs[1] : inputs[0], ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "Sum")
