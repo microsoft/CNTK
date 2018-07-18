@@ -3612,8 +3612,8 @@ namespace CNTK
             Dictionary attributes = Dictionary();
             attributes[PrimitiveFunction::AttributeNameAlpha] = alpha;
             attributes[PrimitiveFunction::AttributeNameBeta] = beta;
-            attributes[PrimitiveFunction::AttributeNameTransA] = transA;
-            attributes[PrimitiveFunction::AttributeNameTransB] = transB;
+            attributes[PrimitiveFunction::AttributeNameTransposeLeftOperand] = transA;
+            attributes[PrimitiveFunction::AttributeNameTransposeRightOperand] = transB;
 
             return AsBlock(std::move(result),
                 { { operandAPlaceholder, operandA },{ operandBPlaceholder, operandB },{ operandCPlaceholder, operandC } },
