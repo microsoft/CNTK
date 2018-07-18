@@ -3758,23 +3758,18 @@ __global__ void _channelMultiply(CUDA_LONG numRows, const ElemType* X, const Ele
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
     {
-        CUDA_LONG i = id / numRows;
-        CUDA_LONG j = (id % numRows) / featureSize;
-
-        value[id] = X[id] * weight[numRows / featureSize * i + j];
+        value[id] = X[id] * weight[id / featureSize];
     }
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::ChannelMultiply(const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight, const GPUMatrix<ElemType>& value, size_t featureSize)
 {
-    CUDA_LONG m = (long)X.GetNumCols();
-    CUDA_LONG n = (long)X.GetNumRows();
-    CUDA_LONG numElements = m * n;
+    CUDA_LONG numElements = X.GetNumElements();
 
     SyncGuard syncGuard;
     GridDim grid(numElements);
-    _channelMultiply<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(n, X.Data(), weight.Data(), value.Data(), (CUDA_LONG)featureSize, numElements);
+    _channelMultiply<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(X.Data(), weight.Data(), value.Data(), (CUDA_LONG)featureSize, numElements);
 }
 
 template <class ElemType>
