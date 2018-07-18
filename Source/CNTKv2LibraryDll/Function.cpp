@@ -109,6 +109,13 @@ namespace CNTK
                 assert(m_inputs.size() == 2);
                 inputs = { m_inputs[1], m_inputs[0] };
             }
+            else if (pythonOperandOrder && primitiveFunction && primitiveFunction->OpName() == L"Gemm")
+            {
+                assert(m_inputs.size() == 5);
+                // For Gemm we also need to reorder the operands stored in m_inputs.
+                // The first two inputs are Constant for alpha and beta, followed with three Variable A, B and C.
+                inputs = { m_inputs[0], m_inputs[1], m_inputs[3], m_inputs[2], m_inputs[4] };
+            }
             else
                 inputs = m_inputs;
         }
@@ -3469,6 +3476,47 @@ namespace CNTK
                 PrimitiveFunction::convolutionOpDefaultValueForGroups,
                 maxTempMemSizeInSamples,
                 name);
+        }
+
+        FunctionPtr MatMul(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+        {
+            return nullptr;
+        }
+
+        FunctionPtr Gemm(const Variable& operandA, const Variable& operandB, const Variable& operandC, 
+            float alpha, float beta, bool transA, bool transB, const std::wstring& name)
+        {
+            // All the three inputs are expected to be rank=2 matrices. Only C, i.e. operandC
+            // can be a scalar or vector, and if needed we will use CNTK's automatic braodcast capability to broadcast C. 
+            if (operandA.Shape().Rank() != 2 || operandB.Shape().Rank() != 2)
+                InvalidArgument("Gemm: Invalid shape, input A and B are expected to be rank=2 matrices");
+            const size_t operandACol = transA ? operandA.Shape()[0] : operandA.Shape()[1];
+            const size_t operandBCol = transB ? operandB.Shape()[1] : operandB.Shape()[0];
+            if (operandACol != operandBCol)
+                InvalidArgument("Gemm: Invalid shape, The shape of A should be (M, K) if transA is 0, or (K, M) if transA is non-zero, and The shape of B should be (K, N) if transB is 0, or (N, K) if transB is non-zero.");
+
+            Variable operandAPlaceholder = PlaceholderVariable(operandA.Shape(), L"operandAPlaceholder", {});
+            Variable operandBPlaceholder = PlaceholderVariable(operandB.Shape(), L"operandBPlaceholder", {});
+            Variable operandCPlaceholder = PlaceholderVariable(operandC.Shape(), L"operandCPlaceholder", {});
+
+            FunctionPtr A = ElementTimes(operandAPlaceholder, Constant(NDShape({ 1, 1 }), CNTK::DataType::Float, static_cast<double>(alpha)));
+            FunctionPtr C = ElementTimes(operandCPlaceholder, Constant(NDShape({ 1, 1 }), CNTK::DataType::Float, static_cast<double>(beta)));
+            
+            FunctionPtr B = transB ? Transpose(operandBPlaceholder) : (FunctionPtr)operandBPlaceholder;
+            FunctionPtr D = transA ? Times(Transpose(A), B) : Times(A, B);
+            // If needed, Plus op will broadcast C automatically.
+            FunctionPtr result = Plus(C, D);
+
+            Dictionary attributes = Dictionary();
+            attributes[L"alpha"] = alpha;
+            attributes[L"beta"] = beta;
+            attributes[L"transA"] = transA;
+            attributes[L"transB"] = transB;
+
+            return AsBlock(std::move(result),
+                { { operandAPlaceholder, operandA },{ operandBPlaceholder, operandB },{ operandCPlaceholder, operandC } },
+                std::move(attributes),
+                L"Gemm", name);
         }
     }
 }

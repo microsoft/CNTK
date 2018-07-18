@@ -408,6 +408,11 @@ namespace ONNX
         { L"Alias",{ {
             { L"Alias", "Identity" },
         } } },
+
+        // From Internal
+        { L"Gemm",{ {
+            { L"Gemm", "Gemm" },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -501,7 +506,7 @@ namespace ONNX
             { L"Times",{ 1, 0 } },
             { L"Gather",{ 1, 0 } },
             { L"PReLU",{ 1, 0 } },
-            { L"Gemm", { -1, -1, 0, 1, 2} },
+            { L"Gemm", { -1, -1, 1, 0, 2} },
         };
 
         //
@@ -520,7 +525,7 @@ namespace ONNX
         //
         std::set<std::wstring> Operators::_cntkConvertedBlockOpName = {
             { L"MatMul" },
-            { L"Gemm" }, 
+            //{ L"Gemm" }, 
         };
 
         std::set<std::wstring> Operators::_optimizedRnnStackOpNames = {

@@ -2145,59 +2145,11 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         float alpha = GetNamedAttributeAsFloat(node, "alpha", 1.0f);
         float beta = GetNamedAttributeAsFloat(node, "beta", 1.0f);
-        float transA = GetNamedAttributeAsInt64(node, "transA", 0);
-        float transB = GetNamedAttributeAsInt64(node, "transB", 0);
-        // ONNX removed the attribute broadcast. we need to infer from input if broadcast is required. 
-        float broadcast = 0;
-        // All the three inputs are expected to be rank=2 matrices. Only C, i.e. inputs[2]
-        // can be a scalar or vector, and if the 'broadcast' attribute is non-zero then
-        // we will use CNTK's automatic braodcast capability to broadcast C. But if rank < 2
-        // and 'broadcast' attribute is zero, then we error out because 'broadcast' attribute
-        // value is considered imperative.
-        Variable input0 = inputs[0];
-        Variable input1 = inputs[1];
-        Variable input2 = inputs[2];
-
-        auto cDims = input2.Shape().Dimensions();
-        const NDShape& inputShape0 = input0.Shape();
-        const NDShape& inputShape1 = input1.Shape();
-
-        Variable operandAPlaceholder = PlaceholderVariable(inputShape0, L"operandAPlaceholder", {});
-        Variable operandBPlaceholder = PlaceholderVariable(inputShape1, L"operandBPlaceholder", {});
-        Variable operandCPlaceholder = PlaceholderVariable(input2.Shape(), L"operandCPlaceholder", {});
-
-        NDShape outputShape({transB ? inputShape1[1] : inputShape1[0], transA ? inputShape0[0] : inputShape0[1]});
-
-        for (size_t i = 0; i < cDims.size(); ++i)
-        {
-            if (cDims[i] == 1 && outputShape[i] != 1)
-            {
-                broadcast = 1;
-                break;
-            }
-        }
-        
-        FunctionPtr A = ElementTimes(operandAPlaceholder, Constant(NDShape({1, 1}), CNTK::DataType::Float, static_cast<double>(alpha)));
-        FunctionPtr C = ElementTimes(operandCPlaceholder, Constant(NDShape({1, 1}), CNTK::DataType::Float, static_cast<double>(beta)));
-        if (!transA && transB && broadcast) // Special case: Equivalent to FC (fully-connected) op. Takes in account broadcast of B, if needed.
-        {
-            return CreateCNTKFCNode(ToFixedWStringFromMultiByte(node->Name()), {(Variable) A, operandBPlaceholder, (Variable) C});
-        }
-        FunctionPtr B = (transB != 0) ? Transpose(operandBPlaceholder) : (FunctionPtr) operandBPlaceholder;
-        FunctionPtr D = (transA != 0) ? Times(B, Transpose(A)) : Times(B, A);
-        // If needed, Plus op will broadcast C automatically.
-        FunctionPtr result = Plus(C, D);
-
-        Dictionary attributes = Dictionary();
-        attributes[L"alpha"] = alpha;
-        attributes[L"beta"] = beta;
-        attributes[L"transA"] = static_cast<size_t>(transA);
-        attributes[L"transB"] = static_cast<size_t>(transB);
-
-        return AsBlock(std::move(result),
-            { { operandAPlaceholder, input0 },{ operandBPlaceholder, input1 }, { operandCPlaceholder, input2 } },
-            std::move(attributes),
-            L"Gemm", ToFixedWStringFromMultiByte(node->Name()));
+        bool transA = GetNamedAttributeAsInt64(node, "transA", 0) != 0;
+        bool transB = GetNamedAttributeAsInt64(node, "transB", 0) != 0;
+        // we need to swap position of inputs[0] and inputs[1], since c++ has different matrix row/col major than python. 
+        FunctionPtr cntkFunction = ::CNTK::Internal::Gemm(inputs[1], inputs[0], inputs[2], alpha, beta, transB, transA);
+        return cntkFunction;
     }
     else if (onnxOpName == "Dropout")
     {

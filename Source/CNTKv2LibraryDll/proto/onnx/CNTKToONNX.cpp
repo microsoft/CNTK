@@ -2903,8 +2903,7 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
 void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* node)
 {
     auto lookup = Operators::CntkToONNXLookup();
-    // We also support exporting imported ONNX ops that don't exist in CNTK.
-    assert(lookup.count(src->OpName()) != 0 || Operators::IsConvertedBlockOP(src->OpName()));
+    assert(lookup.count(src->OpName()) != 0);
 
     std::string opName = ToLegacyString(ToUTF8(src->OpName()));
     if (lookup.count(src->OpName()) == 1)
@@ -3296,8 +3295,20 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             node->AddAttribute(attributesMap[L"useStatsAcrossChannels"], useStatsAcrossChannels);
             node->AddAttribute(attributesMap[L"doVarianceScaling"], doVarianceScaling);
         }
+        else if (src->OpName() == L"Gemm")
+        {
+            float alpha = static_cast<float>(src->Attributes()[L"alpha"].Value<float>());
+            float beta = static_cast<float>(src->Attributes()[L"beta"].Value<float>());
+            bool transA = static_cast<bool>(src->Attributes()[L"transA"].Value<bool>());
+            bool transB = static_cast<bool>(src->Attributes()[L"transB"].Value<bool>());
+
+            node->AddAttribute("alpha", alpha);
+            node->AddAttribute("beta", beta);
+            node->AddAttribute("transA", static_cast<int64_t>(transA));
+            node->AddAttribute("transB", static_cast<int64_t>(transB));
+        }
     }
-    else if (lookup.count(src->OpName()) > 1)
+    else
     {
         // Some nodes map one to many.
         if (src->OpName() == L"Convolution")
@@ -3383,22 +3394,6 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
 
                 node->AddAttribute("axis", ax);
             }
-        }
-    }
-    else
-    {
-        // block nodes that are imported ONNX ops which don't exist in CNTK. 
-        if (src->OpName() == L"Gemm")
-        {
-            float alpha = static_cast<float>(src->Attributes()[L"alpha"].Value<float>());
-            float beta = static_cast<float>(src->Attributes()[L"beta"].Value<float>());
-            size_t transA = static_cast<int>(src->Attributes()[L"transA"].Value<size_t>());
-            size_t transB = static_cast<int>(src->Attributes()[L"transB"].Value<size_t>());
-
-            node->AddAttribute("alpha", alpha);
-            node->AddAttribute("beta", beta);
-            node->AddAttribute("transA", (int64_t) transA);
-            node->AddAttribute("transB", (int64_t) transB);
         }
     }
 }
