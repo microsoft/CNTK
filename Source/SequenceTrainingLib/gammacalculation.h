@@ -267,6 +267,7 @@ public:
         const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
         const Microsoft::MSR::CNTK::Matrix<ElemType>& maxValues,
         Microsoft::MSR::CNTK::Matrix<ElemType>& CTCPosterior, 
+        Microsoft::MSR::CNTK::Matrix<ElemType>& uttWeights,
         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, 
         size_t blankTokenId,
         int delayConstraint = -1)
@@ -278,8 +279,12 @@ public:
         m_deviceid = prob.GetDeviceId();
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneSeqs(CPUDEVICE);
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneBounds(CPUDEVICE);
+        Microsoft::MSR::CNTK::Matrix<ElemType> matrixUttWeights(CPUDEVICE);
         std::vector<std::vector<size_t>> allUttPhoneSeqs;
         std::vector<std::vector<size_t>> allUttPhoneBounds;
+        //std::vector<ElemType> uttWeights;
+        ElemType weight = 1.0;
+        matrixUttWeights.Resize(numRows, numCols);
         int maxPhoneNum = 0;
         std::vector<size_t> phoneSeq;
         std::vector<size_t> phoneBound;
@@ -303,7 +308,7 @@ public:
         uttPhoneNum.reserve(numSequences);
         uttToChanInd.reserve(numSequences);
         size_t seqId = 0;
-        maxValues.Print("max value");
+        //maxValues.Print("max value");
         for (const auto& seq : pMBLayout->GetAllSequences())
         {
             if (seq.seqId == GAP_SEQUENCE_ID)
@@ -315,7 +320,6 @@ public:
             size_t numFrames = seq.GetNumTimeSteps();
             uttBeginFrame.push_back(seq.tBegin);
             uttFrameNum.push_back(numFrames);
-
             // Get the phone list and boundaries
             phoneSeq.clear();
             phoneSeq.push_back(SIZE_MAX);
@@ -325,6 +329,11 @@ public:
             size_t startFrameInd = seq.tBegin * numParallelSequences + seq.s;
             size_t endFrameInd   = seq.tEnd   * numParallelSequences + seq.s;
             size_t frameCounter = 0;
+            size_t lastFrameID = startFrameInd + (numParallelSequences*(numFrames - 1));
+            if (maxValues(0, lastFrameID) < 1.0)
+                weight = maxValues(0, lastFrameID);
+            else if (maxValues(0, lastFrameID) == 3.0)
+                weight = 0.0;
             for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numParallelSequences, frameCounter++) 
             {
                 // Labels are represented as 1-hot vectors for each frame
@@ -340,6 +349,13 @@ public:
                     phoneSeq.push_back(prevPhoneId);
                     phoneBound.push_back(frameCounter);
                 }
+                
+            }
+
+            for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numParallelSequences)
+            {
+                for(size_t i=0; i<numRows;i++)
+                    matrixUttWeights(i, frameInd) = weight;
             }
             phoneSeq.push_back(blankTokenId);
             phoneBound.push_back(numFrames);
@@ -374,11 +390,11 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
         CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, totalScore, uttToChanInd, uttBeginFrame,
-            uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, /*isColWise=*/true );
+            uttFrameNum,  uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, /*isColWise=*/true );
         
         Microsoft::MSR::CNTK::Matrix<ElemType> rowSum(m_deviceid);
         rowSum.Resize(1, numCols);
-
+        uttWeights.SetValue(matrixUttWeights);
         // Normalize the CTC scores
         CTCPosterior.VectorSum(CTCPosterior, rowSum, /*isColWise=*/true);
         CTCPosterior.RowElementDivideBy(rowSum);

@@ -806,7 +806,7 @@ public:
         else if (inputIndex == 1)
         {
             FrameRange frameRange(InputRef(0).GetMBLayout());
-            BackpropToRight(*m_softmaxOfRight, InputRef(inputIndex).Gradient(), Gradient(), *m_CTCposterior);
+            BackpropToRight(*m_softmaxOfRight, InputRef(inputIndex).Gradient(), Gradient(), *m_CTCposterior, *m_uttWeights);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
         }
         else
@@ -830,7 +830,7 @@ public:
     }
 
     void BackpropToRight(const Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-        const Matrix<ElemType> &CTCposterior)
+        const Matrix<ElemType> &CTCposterior, const Matrix<ElemType> &uttWeights)
     {
 #if DUMPOUTPUT
         softmaxOfRight.Print("ForwardBackwardNode Partial-softmaxOfRight");
@@ -838,8 +838,22 @@ public:
         gradientValues.Print("ForwardBackwardNode Partial-gradientValues");
         inputGradientValues.Print("ForwardBackwardNode Partial-Right-in");
 #endif  
+        //Microsoft::MSR::CNTK::Matrix<ElemType> matrixTemp(CTCposterior.GetDeviceId());
+        //matrixTemp.SwitchToMatrixType(CTCposterior.GetMatrixType(), CTCposterior.GetFormat(), false);
+        //matrixTemp.Resize(CTCposterior.GetNumRows(), CTCposterior.GetNumCols());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
-        Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues); 
+        //softmaxOfRight.Print("soft max");
+        //CTCposterior.Print("CTC post");
+        //uttWeights.Print("weight");
+        //gradientValues.Print("gradient");
+        Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues);
+        //inputGradientValues.Print("ori gradient");
+        
+        inputGradientValues.ElementMultiplyWith(uttWeights);
+        //Matrix<ElemType>::Multiply(matrixTemp, uttWeights, inputGradientValues);
+        //inputGradientValues.Print("weighted gradient");
+        //inputGradientValues.SetValue(CTCposterior);
+        //matrixTemp.ReleaseMemory();
 
 #if DUMPOUTPUT
         inputGradientValues.Print("ForwardBackwardNode Partial-Right");
@@ -860,10 +874,13 @@ public:
         m_CTCposterior->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_CTCposterior->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
 
+        m_uttWeights->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
+        m_uttWeights->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
+
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
         // compute CTC score
-        m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, InputRef(0).GetMBLayout(), m_blankTokenId, m_delayConstraint);
+        m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, *m_uttWeights, InputRef(0).GetMBLayout(), m_blankTokenId, m_delayConstraint);
 
 #if NANCHECK
         functionValues.HasNan("ForwardBackwardNode");
@@ -905,6 +922,7 @@ public:
             node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
             node->m_CTCposterior->SetValue(*m_CTCposterior);
+            node->m_uttWeights->SetValue(*m_uttWeights);
             node->m_maxIndexes->SetValue(*m_maxIndexes);
             node->m_maxValues->SetValue(*m_maxValues);
             node->m_delayConstraint = m_delayConstraint;
@@ -918,6 +936,7 @@ public:
         RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
         RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
         RequestMatrixFromPool(m_CTCposterior, matrixPool);
+        RequestMatrixFromPool(m_uttWeights, matrixPool);
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
     }
@@ -928,6 +947,7 @@ public:
         ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
         ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
         ReleaseMatrixToPool(m_CTCposterior, matrixPool);
+        ReleaseMatrixToPool(m_uttWeights, matrixPool);
         ReleaseMatrixToPool(m_maxIndexes, matrixPool);
         ReleaseMatrixToPool(m_maxValues, matrixPool);
     }
@@ -963,6 +983,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_CTCposterior;
+    shared_ptr<Matrix<ElemType>> m_uttWeights;
     shared_ptr<Matrix<ElemType>> m_maxIndexes;
     shared_ptr<Matrix<ElemType>> m_maxValues;
 

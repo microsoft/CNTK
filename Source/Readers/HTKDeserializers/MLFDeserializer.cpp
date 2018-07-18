@@ -58,6 +58,9 @@ struct MLFSequenceData : SparseSequenceData
             m_values[boundary] = s_phoneBoundary;
         if (weight > 0 && m_values[numberOfSamples-1] != 2.0)
             m_values[numberOfSamples - 1] = weight;
+        else if (m_values[numberOfSamples - 1] == 2.0)
+            RuntimeError("the last frame is a phone boundary %zu\n",
+                numberOfSamples);
 
     }
 
