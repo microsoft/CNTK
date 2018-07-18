@@ -329,7 +329,7 @@ public:
             size_t startFrameInd = seq.tBegin * numParallelSequences + seq.s;
             size_t endFrameInd   = seq.tEnd   * numParallelSequences + seq.s;
             size_t frameCounter = 0;
-            size_t lastFrameID = startFrameInd + (numParallelSequences*(numFrames - 1));
+            size_t lastFrameID = startFrameInd ;
             if (maxValues(0, lastFrameID) < 1.0)
                 weight = maxValues(0, lastFrameID);
             else if (maxValues(0, lastFrameID) == 3.0)
@@ -340,7 +340,7 @@ public:
                 // If the 1-hot vectors may have either value 1 or 2 at the position of the phone corresponding to the frame:
                 //      1 means the frame is within phone boundary
                 //      2 means the frame is the phone boundary
-                if (maxValues(0, frameInd) == 2) 
+                if (maxValues(0, frameInd) == 2 || frameInd == startFrameInd) 
                 {
                     prevPhoneId = (size_t)maxIndexes(0, frameInd);
 
