@@ -3580,10 +3580,14 @@ public:
 
     ~GlobalConcatNode()
     {
-        if (0 == m_segmentIndex)
+        if (0 == m_segmentIndex && (valueGlobalMemoryBlockVec.size() > m_blockIndex || gradientGlobalMemoryBlockVec.size() > m_blockIndex))
         {
-            delete (GlobalMemoryBlock<ElemType>*) valueGlobalMemoryBlockVec[m_blockIndex];
-            delete (GlobalMemoryBlock<ElemType>*) gradientGlobalMemoryBlockVec[m_blockIndex];
+            GlobalMemoryBlock<ElemType>* valueGlobalMemoryPtr = (GlobalMemoryBlock<ElemType>*) valueGlobalMemoryBlockVec[m_blockIndex];
+            GlobalMemoryBlock<ElemType>* gradientGlobalMemoryPtr = (GlobalMemoryBlock<ElemType>*) gradientGlobalMemoryBlockVec[m_blockIndex];
+            if(valueGlobalMemoryPtr != NULL)
+                delete valueGlobalMemoryPtr;
+            if (gradientGlobalMemoryPtr != NULL)
+                delete gradientGlobalMemoryPtr;
         }
     }
 

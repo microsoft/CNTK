@@ -188,9 +188,6 @@ namespace CNTK
                         return img_size - crop_size;
                     }
                 }
-                else
-                {
-                }
                 return off;
             }
 
