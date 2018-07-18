@@ -18,7 +18,7 @@ DIM_SIZE_FOR_NON_BATCH_OPS = 1
 # When adding a test for a new op, please check to see if 
 # that op needs to be added to this list (i.e. does that op 
 # get exported to an ONNX op with defined batch axis).
-set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling'}
+set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth'}
 
 #############
 #helpers
@@ -355,7 +355,6 @@ def test_ConvTranspose(tmpdir, dtype, device_id):
 # DepthToSpace
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_DepthToSpace(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         num_channels = 9
         block_size = 3
@@ -1183,7 +1182,6 @@ def test_Sum(tmpdir, dtype):
 # SpaceToDepth
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SpaceToDepth(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         num_channels = 3
         block_size = 3
