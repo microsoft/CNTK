@@ -1054,6 +1054,7 @@ public:
             node->m_buffer->SetValue(*m_buffer);
             node->m_featureSize = m_featureSize;
             node->m_channels = m_channels;
+            node->m_N = m_N;
         }
     }
 
