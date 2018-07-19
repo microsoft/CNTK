@@ -12,6 +12,7 @@ from ..variables import Record
 from ..ops import combine, splice, sequence, reconcile_dynamic_axes
 from .blocks import *
 from .blocks import _get_initial_state_or_default, _inject_name
+from .layers import SequentialConvolution
 
 
 def Delay(T=1, initial_state=default_override_or(0), name=''):
@@ -674,7 +675,10 @@ def QRNN(filter_shape=2, hidden_dim=None, activation=C.tanh, return_full_state=F
 
     This is the CNTK implementation of [Salesforce Research](https://einstein.ai/)'s
     [Quasi-Recurrent Neural Networks](https://arxiv.org/abs/1611.01576) paper.
-
+    
+    More details on tuning and application can be found in this paper:
+    [An Analysis of Neural Language Modeling at Multiple Scales](https://arxiv.org/abs/1803.08240)
+    
     From the authors:
         The QRNN provides similar accuracy to the LSTM but can be between
         2 and 17 times faster than the highly optimized NVIDIA cuDNN LSTM
@@ -707,8 +711,8 @@ def QRNN(filter_shape=2, hidden_dim=None, activation=C.tanh, return_full_state=F
         return f * c + (1 - f) * z
 
     def model(input_tensor):
-        gate_values = Convolution(filter_shape=filter_shape, num_filters=3 * hidden_dim, pad=True,
-                                  reduction_rank=1, sequential=True)(input_tensor)
+        gate_values = SequentialConvolution(filter_shape=filter_shape, num_filters=3 * hidden_dim, pad=True,
+                                            reduction_rank=1)(input_tensor)
 
         x = C.slice(gate_values, -1, 0, hidden_dim)
         forget = C.slice(gate_values, -1, hidden_dim, 2 * hidden_dim)
