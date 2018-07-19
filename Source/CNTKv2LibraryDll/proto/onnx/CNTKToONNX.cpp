@@ -237,18 +237,6 @@ private:
     static std::vector<int64_t> ConvertAxesToOnnx(const std::vector<Axis> &axes, const Variable &operand);
 
     //
-    // Given input tersors of a CNTK elementwise operation, figure out
-    // input shapes for ONNX operation.
-    // It also returns whether broadcast is required and the axis for broadcast.
-    // Due to the fact that ONNX only allows braodcast of right-hand-side,
-    // inputs may need to be swapped. In this case the last bool is true.
-    static std::tuple<std::pair<std::vector<int>, std::vector<int>>, bool, int, bool> AdjustForBroadcastShape(
-        const Variable &input1, const Variable &input2);
-
-    static std::tuple<std::vector<int>, bool, int, bool > CalculateBroadcastAxis(
-        const std::vector<int> &dims1, const std::vector<int> &dims2);
-
-    //
     // Argument orders between CNTK and ONNX aren't always the same.
     //
     static std::vector<LotusIR::NodeArg* > MapInputsOrderToONNX(const FunctionPtr& src, const std::vector<LotusIR::NodeArg* >& inputs);
@@ -1384,176 +1372,6 @@ std::vector<int64_t> CNTKToONNXHelper::ConvertAxesToOnnx(const std::vector<Axis>
         onnxAxes[i] = ConvertAxisToOnnx(axes[i], operand);
     }
     return onnxAxes;
-}
-
-/*
-ONNX specifies braodcast for elementwise ops in following manners
-shape(A) = (2, 3, 4, 5), shape(B) = (,), i.e. B is a scalar
-shape(A) = (2, 3, 4, 5), shape(B) = (5,)
-shape(A) = (2, 3, 4, 5), shape(B) = (4, 5)
-shape(A) = (2, 3, 4, 5), shape(B) = (3, 4), with axis=1
-shape(A) = (2, 3, 4, 5), shape(B) = (2), with axis=0
-
-CNTK handles braodcast implicitely as numpy does. For example with above example 4,
-the shape of the shall be:
-(1, 3, 4, 1) or (3, 4, 1)
-
-more general cases:
-same rank:
-case1: [a, b, c] + [1, b, 1] - broadcast
-case1: [a, b, c] + [a, b, 1] - broadcast
-case1: [a, b, c] + [1, b, c] - broadcast
-case2: [1, b, 1] + [a, b, c] - swap to become case1 then broadcast
-case2: [a, b, 1] + [a, b, c] - swap to become case1 then broadcast
-case2: [1, b, c] + [a, b, c] - swap to become case1 then broadcast
-case3: [a2, b, c2] + [a, b, c]: cannot broadcast
-
-different ranks:
-[a, b, c] + [b, 1]: reshape input[1] to [1, b, 1] to become case 1
-[a, b, c] + [b, c]: reshape input[1] to [1, b, c] to become case 1
-
-[b, 1] + [a, b, c]: reshape input[0] to [1, b, 1] to become case 2
-[b, c] + [a, b, c]: reshape input[0] to [1, b, c] to become case 2
-
-[a2, b, c2] + [b, c]: reshape input[1] to [1, b, c] to become case 3 (cannot broadcast)
-[b, c2] + [a, b, c]: reshape input[0] to [1, b, c2] to become case 3 (cannot broadcast)
-
-Note that there is an addition batch dimension at the front of the shape in ONNX.
-
-*/
-std::tuple<std::pair<std::vector<int>, std::vector<int>>, bool, int, bool> CNTKToONNXHelper::AdjustForBroadcastShape(
-    const Variable &input1, const Variable &input2)
-{
-    bool broadcast;
-    int axis = 0;
-    NDShape shape1 = input1.Shape(), shape2 = input2.Shape();
-    bool swapInput = false;
-
-    bool hasAnyBatchAxis = input1.HasBatchAxis() || input2.HasBatchAxis();
-    bool hasAnySequenceAxis = input1.HasSequenceAxis() || input2.HasSequenceAxis();
-
-    // CNTK and ONNX dimensions are reversed.
-    // Reverse the dimension so that broadcast and axis calculation is in ONNX sense.
-    std::vector<int> dims1(reverse(Cast<size_t, int>(shape1.Dimensions())));
-    std::vector<int> dims2(reverse(Cast<size_t, int>(shape2.Dimensions())));
-
-    if ((shape1.TotalSize() > 1 && shape2.TotalSize() == 1) || (shape1.TotalSize() == 1 && shape2.TotalSize() > 1))
-    {
-        broadcast = true;
-        swapInput = (shape1.TotalSize() == 1 && shape2.TotalSize() > 1);
-
-        if (swapInput)
-            std::swap(dims1, dims2);
-        if (hasAnySequenceAxis)
-            dims1.insert(dims1.begin(), 1);
-        if (hasAnyBatchAxis)
-            dims1.insert(dims1.begin(), 1);
-
-        return make_tuple(std::pair<std::vector<int>, std::vector<int>>(dims1, dims2), broadcast, axis, swapInput);
-    }
-
-    if (shape1.Rank() < shape2.Rank())
-    {
-        // This is a case of [b, c] + [a, b, c].
-        // Need to swap the inputs to fit into ONNX spec - only right-hand-side argument will be broadcasted.
-        std::swap(dims1, dims2);
-        swapInput = true;
-    }
-
-    if (dims1.size() > dims2.size())
-    {
-        // This is a case like [a, b, c] + [b, 1]. Make it [a, b, c] + [1, b, 1].
-        dims2.insert(dims2.begin(), dims1.size() - dims2.size(), 1);
-    }
-
-    // Append batch dimension if needed.
-    if (hasAnySequenceAxis)
-    {
-        dims1.insert(dims1.begin(), 1);
-        dims2.insert(dims2.begin(), 1);
-    }
-    if (hasAnyBatchAxis)
-    {
-        dims1.insert(dims1.begin(), 1);
-        dims2.insert(dims2.begin(), 1);
-    }
-
-    bool swapInputDueToDims;
-    std::tie<std::vector<int>, bool, int>(dims2, broadcast, axis, swapInputDueToDims) = CalculateBroadcastAxis(dims1, dims2);
-
-    if (broadcast && swapInput && swapInputDueToDims)
-    {
-        LogicError("Shapes of elementwise binary operation are not compatible.");
-    }
-
-    // Pad the shape with trailing 1s when axis > 0 for ONNX 1.2.
-    if (broadcast && axis > 0) {
-        dims2.insert(dims2.end(), dims1.size() - axis - 1, 1);
-    }
-
-    return make_tuple(std::pair<std::vector<int>, std::vector<int>>(dims1, dims2), broadcast, axis, swapInput || swapInputDueToDims);
-}
-
-/*
-For example with:
-case1: [a, b, c] + [ b, 1] - broadcast
-broadcast shape = [b], broadcast = true, axis = 1
-*/
-std::tuple<std::vector<int>, bool, int, bool> CNTKToONNXHelper::CalculateBroadcastAxis(
-    const std::vector<int> &dims1, const std::vector<int> &dims2)
-{
-    bool swapInput = false;
-    // this method assumes dims1.size() == dims2.size(), which is granted by caller AdjustForBroadcastShape.
-    bool broadCast = false;
-    int axis_start = -1;
-    int axis_stop = dims2.size();
-    for (int i = 0; i < dims2.size(); i++)
-    {
-        if (dims1[i] != dims2[i])
-        {
-            if (dims1[i] == 1)
-                swapInput = true;
-
-            broadCast = true;
-            if (axis_start != -1)
-            {
-                axis_stop = i;
-                break;
-            }
-        }
-        else if (dims2[i] != 1 && axis_start == -1)
-        {
-            axis_start = i;
-        }
-    }
-
-    if (!broadCast)
-    {
-        return make_tuple(dims2, broadCast, axis_start, swapInput);
-    }
-
-    axis_start = std::max(0, axis_start);
-
-    const std::vector<int> broadcaseInputDims = swapInput ? dims1 : dims2;
-    // sanity check;
-    for (int i = 0; i < broadcaseInputDims.size(); i++)
-    {
-        if ((i < axis_start || i >= axis_stop) && broadcaseInputDims[i] != 1)
-        {
-            LogicError("dimension %d cannot be broadcasted", i);
-        }
-        else if (i >= axis_start && i < axis_stop && dims1[i] != dims2[i])
-        {
-            LogicError("dimension %d cannot be broadcasted", i);
-        }
-    }
-    std::vector<int> dimensions;
-    for (int i = axis_start; i < axis_stop; i++)
-    {
-        dimensions.push_back(broadcaseInputDims[i]);
-    }
-
-    return make_tuple(dimensions, broadCast, axis_start, swapInput);
 }
 
 // prepare an input node arg with correct name and meta data so that LotusIR can make the connection.
@@ -2704,26 +2522,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
 
         onnx::TypeProto inputArgType;
 
-        bool broadcastSwapped = false;
-        if (Operators::SupportBroadcast(src->OpName()))
-        {
-            std::pair<std::vector<int>, std::vector<int>> adjustedDims;
-            bool broadcast = false;
-            int axis = 0;
-            int index0, index1;
-            std::tie<int, int>(index0, index1) = Operators::GetElementWiseInputIndices(src->OpName());
-
-            if (index0 != inputIndex && index1 != inputIndex)
-                continue;
-
-            std::tie<std::pair<std::vector<int>, std::vector<int>>, bool, int, bool>(adjustedDims, broadcast, axis, broadcastSwapped) =
-                AdjustForBroadcastShape(src->Inputs()[index0], src->Inputs()[index1]);
-            if (inputIndex == index0)
-                inputArgType = ToTypeProto(adjustedDims.first, false);
-            else if (inputIndex == index1)
-                inputArgType = ToTypeProto(adjustedDims.second, false);
-        }
-        else if (cntkOpName == "Splice")
+        if (cntkOpName == "Splice")
         {
             // for ops like Concat, batch axis may exist in one of the operand
             // CNTK allows the other operand(s) not having batch axis. But ONNX
@@ -2800,9 +2599,6 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             *(dstTensor.mutable_dims()->Add()) = newShapeVec.size();
             graph->AddInitializedTensor(dstTensor);
         }
-
-        if (broadcastSwapped && inputs.size() == 2)
-            swap(inputs[0], inputs[1]);
 
         //
         // Leaf nodes are data entry to the graph and need their own node with only output arg.
@@ -3199,24 +2995,6 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
             node->AddAttribute(attributesMap[L"axis"], (int64_t)ToIndex(axis));
         }
-        else if (Operators::SupportBroadcast(src->OpName()))
-        {
-            std::pair<std::vector<int>, std::vector<int>> adjustedDims;
-            bool broadcast = false, swapInput = false;
-            int axis = 0;
-            int index0, index1;
-            std::tie<int, int>(index0, index1) = Operators::GetElementWiseInputIndices(src->OpName());
-            std::tie<std::pair<std::vector<int>, std::vector<int>>, bool, int>(adjustedDims, broadcast, axis, swapInput) =
-                AdjustForBroadcastShape(src->Inputs()[index0], src->Inputs()[index1]);
-
-            if (src->Inputs()[1].IsConstant() && src->Inputs()[1].Shape().Rank() == 0 &&
-                src->Inputs()[0].DynamicAxes().size() != 0)
-            {
-                // TODO: move into AdjustForBroadcastShape
-                // a scalar with dynamic access elementwise a constant scalar.
-                broadcast = true;
-            }
-        }
         else if (src->OpName() == L"Times")
         {
             size_t outputRank = src->Attributes()[L"outputRank"].Value<size_t>();
@@ -3502,79 +3280,6 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
                 LotusIR::NodeArg &gatherIndexInputNodeArg = graph->GetOrCreateNodeArg(int32Cast->OutputDefs()[0]->Name(), nullptr);
                 graph->AddNode(nodeName, "Gather", "", { orderedInputs[0] , &gatherIndexInputNodeArg }, outputs);
             }
-        }
-    }
-    else if (Operators::SupportBroadcast(src->OpName()))
-    {
-        // when converting CNTK to ONNX with broadcasting, the boardcasting input at right-hand-side
-        // needs to be reshaped. Reshape is not needed if the broadcasting input is a constant. In such case
-        // CreateNode already created a constant with the needed shape.
-        // If the broadcasting input is not a constant, a reshape operation needs to be inserted.
-        // The following code does this reshape insertion.
-        const TensorShapeProto* input1Shape = orderedInputs[0]->Shape();
-        const TensorShapeProto* input2Shape = orderedInputs[1]->Shape();
-        int input1Rank = input1Shape->dim_size();
-        int input2Rank = input2Shape->dim_size();
-        LotusIR::Node* inputNode2 = FindByName(graph, orderedInputs[1]->Name());
-        if (input2Rank < input1Rank && inputNode2 != nullptr && inputNode2->OpType() != "Constant" && input2Rank != 0)
-        {
-            // The conditions for inserting a reshape op (the if statement logic above) are:
-            // 1. input2Rank < input1Rank : Broadcast is needed.
-            // 2. inputNode2->OpType() != "Constant" : Because if it is Constant we create a
-            //    node for it explicitly in CreateNode() method above.
-            // 3. input2Rank != 0 : That is, the second input is not a scalar. If it is then
-            //    Reshape is not needed.
-            LotusIR::NodeArg &inputOutput2Arg = graph->GetOrCreateNodeArg(orderedInputs[1]->Name() + string("_reshape1"), nullptr);
-            inputOutput2Arg.SetShape(*input2Shape);
-
-            auto reshapeNode2 = graph->AddNode(nodeName + string("_reshape1"), "Reshape", "", {orderedInputs[1]}, {&inputOutput2Arg});
-
-            onnx::TypeProto reshapeTypeProto2 = TensorShapeProtoToTypeProto(input2Shape);
-
-            reshapeNode2->AddAttribute("shape", ToINTS(reshapeTypeProto2));
-
-            node = graph->AddNode(nodeName, ToOPName(src), "", {orderedInputs[0], &inputOutput2Arg}, outputs);
-        }
-        else
-        {
-            //if (src->Inputs()[0].DynamicAxes().size() == 2 && src->Inputs()[1].DynamicAxes().size() == 0 &&
-            //    input1Shape->dim().size() > 2 && input1Shape->dim().size() == input2Shape->dim().size())
-            //{
-            //    // TODO: apply workaround to MatMul by wrapping it with reshape ops.
-            //    // This shall be done after code refactoring.
-            //    // in one of this cases (Dense), "Plus" comes after matmul which collaped the first 2 axis (sequence and batch)
-            //    // into one. need to recover it assuming batch size = 1.
-            //    std::vector<int64_t> shape1 = ToINTS(TensorShapeProtoToTypeProto(input1Shape));
-            //    std::vector<int64_t> shape2 = ToINTS(TensorShapeProtoToTypeProto(input2Shape));
-
-            //    onnx::TypeProto reshape2OutputArgType = ToTypeProto(std::vector<int>({ (int)shape2.size() }));
-            //    UpdateONNXType(src->Inputs()[1].GetDataType(), reshape2OutputArgType);
-
-            //    LotusIR::NodeArg &inputOutput2Arg = graph->GetOrCreateNodeArg(orderedInputs[1]->Name() + string("_reshape2"), &reshape2OutputArgType);
-            //    {
-            //        // remove batch and sequence dimensions
-            //        shape2.erase(shape2.begin());
-            //        shape2.erase(shape2.begin());
-            //        auto reshapeNode2 = AddReshapeNodeAccordingToONNXVersion(graph, nodeName + string("_reshape2"),
-            //            orderedInputs[1], &inputOutput2Arg, shape2);
-
-            //    }
-
-            //    onnx::TypeProto reshape1OutputArgType = ToTypeProto(std::vector<int>({ (int)shape1.size() }));
-            //    UpdateONNXType(src->Inputs()[0].GetDataType(), reshape1OutputArgType);
-            //    LotusIR::NodeArg& inputOutput1Arg = graph->GetOrCreateNodeArg(orderedInputs[0]->Name() + string("_reshape1"), &reshape1OutputArgType);
-            //    {
-            //        (const_cast<TensorShapeProto*>(input1Shape))->mutable_dim(0)->set_dim_value(FreeSequenceLen);
-            //        onnx::TypeProto reshapeTypeProto1 = TensorShapeProtoToTypeProto(input1Shape);
-
-            //        auto reshapeNode1 = AddReshapeNodeAccordingToONNXVersion(graph, nodeName + string("_reshape1"),
-            //            orderedInputs[0], &inputOutput1Arg, ToINTS(reshapeTypeProto1));
-            //    }
-
-            //    node = graph->AddNode(nodeName, ToOPName(src), "", {&inputOutput1Arg, &inputOutput2Arg}, outputs);
-            //}
-            //else
-                node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
         }
     }
     else

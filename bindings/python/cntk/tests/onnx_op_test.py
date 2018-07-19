@@ -7,6 +7,7 @@ import os
 import numpy as np
 import cntk as C
 import pytest
+from copy import deepcopy
 from cntk.ops.tests.ops_test_utils import cntk_device
 from itertools import product
 
@@ -18,7 +19,7 @@ DIM_SIZE_FOR_NON_BATCH_OPS = 1
 # When adding a test for a new op, please check to see if 
 # that op needs to be added to this list (i.e. does that op 
 # get exported to an ONNX op with defined batch axis).
-set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth0', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization'}
+set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization'}
 
 #############
 #helpers
@@ -39,6 +40,8 @@ def verify_no_input(model, tmpdir, name):
     assert np.allclose(o_, o)
     
 def verify_one_input(model, data, tmpdir, name, device=None):
+    # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
+    data = deepcopy(data)
     filename = os.path.join(str(tmpdir), name + R'.onnx')
     model.save(filename, format=C.ModelFormat.ONNX)
     opname = model.owner.op_name
@@ -67,15 +70,13 @@ def verify_one_input(model, data, tmpdir, name, device=None):
     if (type(o1) is list):
         o1 = o1[0]
 
-    print(model)
-    print(model.owner.attributes)
-    print(loaded_model)
-    print(loaded_model.owner.attributes)
-    print(o0)
-    print(o1)
     assert np.allclose(o0, o1)
 
 def verify_two_input(model, data1, data2, tmpdir, name):
+    # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
+    data1 = deepcopy(data1)
+    data2 = deepcopy(data2)
+
     filename = os.path.join(str(tmpdir), name + R'.onnx')
     model.save(filename, format=C.ModelFormat.ONNX)
     opname = model.owner.op_name
@@ -387,7 +388,6 @@ def test_DepthToSpace(tmpdir, dtype):
 
 #Div
 def test_Div(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     def run_div_test(shape1, shape2, tmpdir):
         broadcast = 'no_broadcast'
         if (shape1 != shape2):
@@ -639,7 +639,6 @@ def test_ImageScaler(tmpdir, dtype):
 #LayerNormalization
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LayerNormalization(tmpdir, dtype):
-    #pytest.skip('Needs to be fixed after removal of batch axis change.')
     if (dtype == np.float16):
         pytest.skip("TO BE FIXED")
 
@@ -663,7 +662,12 @@ def test_LayerNormalization(tmpdir, dtype):
         filename = os.path.join(str(tmpdir), R'LayerNorm_1.onnx')
         model1.save(filename, format=C.ModelFormat.ONNX)
         loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
-        assert model1.shape == loaded_model.shape
+        model_shape = model1.shape
+        if model1.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
+            opname = model1.owner.op_name
+            dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
+            model_shape = (dim_denotation, ) + model_shape
+        assert model_shape == loaded_model.shape
 
 #LeakyRelu
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -921,22 +925,19 @@ def test_Mean(tmpdir, dtype):
 #MeanVarianceNormalization
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_MeanVarianceNormalization(tmpdir, dtype):
-    #pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
-        shape = (2,3) #(3, 5, 7)
+        shape = (3, 5, 7)
+        data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
 
         input_operand = C.input_variable(shape=shape)
 
         model0 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=True)
-        data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
         verify_one_input(model0, data, tmpdir, 'MVN_0')
 
         model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
-        data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
         verify_one_input(model1, data, tmpdir, 'MVN_1')
 
         model2 = C.mean_variance_normalization(input_operand, use_stats_across_channels=True, do_variance_scaling=True)
-        data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
         verify_one_input(model2, data, tmpdir, 'MVN_2')
 
         # The test below tests the round trip with epsilon. We loose always the epsilon value when exporting to ONNX
@@ -944,7 +945,6 @@ def test_MeanVarianceNormalization(tmpdir, dtype):
         # always uses the default eposilon value (0.00001). That's why test below has the default epsilon value. It is 
         # not expected to pass with any other epsilon value until something changes.
         model3 = C.mean_variance_normalization(input_operand, epsilon=0.00001, use_stats_across_channels=False, do_variance_scaling=True)
-        data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
         verify_one_input(model3, data, tmpdir, 'MVN_3')
 
 #Min
