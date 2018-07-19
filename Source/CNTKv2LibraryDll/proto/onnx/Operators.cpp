@@ -538,6 +538,8 @@ namespace ONNX
             { L"Pooling" },
             { L"DepthToSpace" },
             { L"SpaceToDepth" },
+            { L"LocalResponseNormalization" },
+            { L"MeanVarianceNormalization" },
         };
 
         std::set<std::string> Operators::_onnxSimpleBatchAxisOps = { // List of all ONNX ops that are simple (single input, output) and have batch axis.
@@ -547,6 +549,8 @@ namespace ONNX
             { "GlobalMaxPool" },
             { "DepthToSpace" },
             { "SpaceToDepth" },
+            { "LRN" },
+            { "MeanVarianceNormalization" },
         };
 
     }
