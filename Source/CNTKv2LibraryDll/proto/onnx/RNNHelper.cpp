@@ -12,6 +12,7 @@
 
 using namespace CNTK;
 using namespace CNTK::ONNX;
+using namespace Microsoft::MSR::CNTK;
 
 std::string MapActivationNameONNXToCNTK(const std::string &onnxOp)
 {
@@ -418,7 +419,7 @@ const std::vector<Variable> FindByNameHint(const std::vector<Variable> &inputs, 
     std::vector<Variable> variables;
     for (auto v : inputs)
     {
-        if (ToString(v.Name()).find(hint) != -1)
+        if (ToLegacyString(ToUTF8(v.Name())).find(hint) != -1)
         {
             variables.push_back(v);
         }
@@ -523,7 +524,7 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
     else
     {
         std::vector<Variable> operands({ outputHs[0], outputHs[1] });
-        return Splice(operands, Axis(0), ToWString(node->Name()));
+        return Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
 }
 
@@ -582,7 +583,7 @@ FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &in
     else
     {
         std::vector<Variable> operands({ outputHs[0], outputHs[1] });
-        return Splice(operands, Axis(0), ToWString(node->Name()));
+        return Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
 }
 
@@ -632,7 +633,7 @@ FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &in
     else
     {
         std::vector<Variable> operands({ outputHs[0], outputHs[1] });
-        return Splice(operands, Axis(0), ToWString(node->Name()));
+        return Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
 }
 
@@ -678,11 +679,11 @@ std::string FindActivation(const std::vector<FunctionPtr> &path, int nth)
             {
                 std::unordered_multimap<std::wstring, AttributesMapping>::const_iterator itLookup = Operators::CntkToONNXLookup().find(opName);
                 if (itLookup == Operators::CntkToONNXLookup().cend())
-                    CNTK::LogicError("Invalid activation (%s)", ToString(opName).c_str());
+                    CNTK::LogicError("Invalid activation (%s)", ToLegacyString(ToUTF8(opName)).c_str());
 
                 std::unordered_map<std::wstring, std::string>::const_iterator itMap = (*itLookup).second.map.find(opName);
                 if (itMap == (*itLookup).second.map.cend())
-                    CNTK::LogicError("Invalid activation (%s)", ToString(opName).c_str());
+                    CNTK::LogicError("Invalid activation (%s)", ToLegacyString(ToUTF8(opName)).c_str());
                 return itMap->second;
             }
             count++;
@@ -833,7 +834,7 @@ void TraceLSTMPathes(const FunctionPtr &src,
     }
     else
     {
-        CNTK::LogicError("Node %s (%s) is not a valid LSTM node", ToString(src->Name()).c_str(), ToString(src->Uid()).c_str());
+        CNTK::LogicError("Node %s (%s) is not a valid LSTM node", ToLegacyString(ToUTF8(src->Name())).c_str(), ToLegacyString(ToUTF8(src->Uid())).c_str());
     }
 
     // set up traverse boundary
@@ -986,7 +987,7 @@ FunctionPtr TraverseGraphFindFirstRNNOp(FunctionPtr src)
         for (auto f : front)
         {
             if (f.IsOutput() && f.Owner())
-                if (IsActivationOp(ToString(f.Owner()->OpName())))
+                if (IsActivationOp(ToLegacyString(ToUTF8(f.Owner()->OpName()))))
                     return f.Owner();
                 else
                 {
@@ -1020,7 +1021,7 @@ void TraceGRUPathes(const FunctionPtr &src, string &f_activation, string &g_acti
     }
     else
     {
-        CNTK::LogicError("Node %s (%s) is not a valid GRU node", ToString(src->Name()).c_str(), ToString(src->Uid()).c_str());
+        CNTK::LogicError("Node %s (%s) is not a valid GRU node", ToLegacyString(ToUTF8(src->Name())).c_str(), ToLegacyString(ToUTF8(src->Uid())).c_str());
     }
 
     // set up traverse boundary
@@ -1036,7 +1037,7 @@ void TraceGRUPathes(const FunctionPtr &src, string &f_activation, string &g_acti
     FunctionPtr gActivation = TraverseGraphFindFirstRNNOp(src->BlockRoot());
 
     f_activation = "Sigmoid";
-    g_activation = MapActivationNameCNTKToONNX(ToString(gActivation->OpName()));
+    g_activation = MapActivationNameCNTKToONNX(ToLegacyString(ToUTF8(gActivation->OpName())));
 }
 
 void TraceRNNPathes(const FunctionPtr &src, string &activation,
@@ -1059,17 +1060,17 @@ void TraceRNNPathes(const FunctionPtr &src, string &activation,
     }
     else
     {
-        CNTK::LogicError("Node %s (%s) is not a valid RNN node", ToString(src->Name()).c_str(), ToString(src->Uid()).c_str());
+        CNTK::LogicError("Node %s (%s) is not a valid RNN node", ToLegacyString(ToUTF8(src->Name())).c_str(), ToLegacyString(ToUTF8(src->Uid())).c_str());
     }
 
     FunctionPtr activationFunction = src->BlockRoot();
-    activation = MapActivationNameCNTKToONNX(ToString(activationFunction->OpName()));
+    activation = MapActivationNameCNTKToONNX(ToLegacyString(ToUTF8(activationFunction->OpName())));
 }
 
 std::vector<FunctionPtr> GetRNNBlocksFromSingleOrBidirectionalRNN(const FunctionPtr src, const std::string &RNNStepOpName)
 {
     std::vector<FunctionPtr> rnns;
-    if (ToString(src->OpName()) == RNNStepOpName)
+    if (ToLegacyString(ToUTF8(src->OpName())) == RNNStepOpName)
     {
         rnns.push_back(src);
     }
@@ -1088,7 +1089,7 @@ std::vector<FunctionPtr> GetRNNBlocksFromSingleOrBidirectionalRNN(const Function
     // For single direction RNN,  rnns.size() == 1. For bidirectional RNN, rnns.size() == 2.
     // It is an error otherwise.
     if (rnns.size() == 0 || rnns.size() > 2 ||
-        std::any_of(rnns.cbegin(), rnns.cend(), [RNNStepOpName](const FunctionPtr &f) { return ToString(f->OpName()) != RNNStepOpName; }))
+        std::any_of(rnns.cbegin(), rnns.cend(), [RNNStepOpName](const FunctionPtr &f) { return ToLegacyString(ToUTF8(f->OpName())) != RNNStepOpName; }))
     {
         CNTK::LogicError("Invalid number of RNN ops to construct an ONNX %s node.", RNNStepOpName.c_str());
     }

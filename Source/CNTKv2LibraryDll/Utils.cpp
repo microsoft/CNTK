@@ -237,6 +237,23 @@ namespace CNTK
         return !(*this == other);    
     }
 
+    void SetConvolutionProperties(Dictionary& additionalProperties, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
+                                  const NDShape& dilation, bool sequential, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples)
+    {
+        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunction::AttributeNameDilation] = dilation;
+        additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[PrimitiveFunction::AttributeNameSequential] = sequential;
+        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});
+        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
+        additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
+        additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
+        additionalProperties[PrimitiveFunction::AttributeNameKernelShape] = NDShape({0});
+        additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
+        additionalProperties[PrimitiveFunction::AttributeNameGroups] = groups;
+    }
+
     std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType)
     {
         std::wstring uid, name;
@@ -462,38 +479,12 @@ namespace CNTK
         mode = mode | O_BINARY;
         fd = _wopen(filePath.c_str(), mode, 0644);
 #else
-        fd = open(ToString(filePath).c_str(), mode, 0644);
+        fd = open(ToLegacyString(ToUTF8(filePath)).c_str(), mode, 0644);
 #endif
         if (fd < 0)
             RuntimeError("Cannot open file '%S' for %s.", filePath.c_str(), (readOnly ? "reading" : "writing"));
 
         return fd;
-    }
-
-    std::string ToString(const std::wstring& wstring)
-    {
-#ifdef _MSC_VER
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-        return converter.to_bytes(wstring);
-#else
-        const auto length = wstring.length() * sizeof(std::wstring::value_type) + 1;
-        char buf[length];
-        const auto res = std::wcstombs(buf, wstring.c_str(), sizeof(buf));
-        return (res >= 0) ? buf : "";
-#endif
-    }
-
-    std::wstring ToWString(const std::string& string)
-    {
-#ifdef _MSC_VER
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-        return converter.from_bytes(string);
-#else
-        const auto length = string.length() + 1;
-        wchar_t buf[length];
-        const auto res = std::mbstowcs(buf, string.c_str(),  sizeof(buf));
-        return (res >= 0) ? buf : L"";
-#endif
     }
 
     bool IsFirstOutputOfMultiOutputFunction(const Variable& var)

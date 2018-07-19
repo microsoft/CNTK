@@ -150,7 +150,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     if (allowUndeterminedVariable)
         *allowUndeterminedVariable = true; // be default we allow undetermined variables
 
-    wstring nodeType = msra::strfun::utf16(p_nodeType);
+    wstring nodeType = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(p_nodeType);
     bool ret = false;
          if (EqualInsensitive(nodeType, OperationNameOf(AbsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AcosNode))) ret = true;
@@ -258,7 +258,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 
     // return the actual node name in the parameter if we found something
     if (ret)
-        p_nodeType = msra::strfun::utf8(nodeType);
+        p_nodeType = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(nodeType));
     return ret;
 }
 

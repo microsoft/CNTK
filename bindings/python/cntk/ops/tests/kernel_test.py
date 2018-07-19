@@ -1013,6 +1013,20 @@ def test_group_conv(groups, num_output_channels, num_input_channels, input_tenso
     assert np.allclose(output_test, output_ref, atol=1e-4)
     assert np.allclose(output_grad_test, output_grad_ref, atol=1e-4)
 
+def test_group_conv_shape(device_id):
+    x = C.input_variable((16, 64, 64))
+    param = C.parameter((16, 1, 3, 3))
+    y_pad_channel = C.convolution(param, x, groups=16)
+    y_pad_channel_2 = C.convolution(param, x, groups=16, auto_padding=[True, True, True])
+    y_not_pad_channel = C.convolution(param, x, groups=16, auto_padding=[False, True, True])
+    
+    # Though in most cases unintended, padding in channel axis is expected and supported behavior when auto_padding is not specified or set to [True, ..]. 
+    assert np.allclose(y_pad_channel.shape, (256, 64, 64))
+    assert np.allclose(y_pad_channel_2.shape, (256, 64, 64))
+    # Explicit specification is required if we don't want padding on channel
+    assert np.allclose(y_not_pad_channel.shape, (16, 64, 64))
+
+
 FREE_STATIC_AXES_MAX_POOLING_DATA = [
     ((1, 4, 6, 6), # warmup_input_size: Defines the input size used for first run with free static axes.
      (1, 4, 6, 9), # second_input_size: Defines the input size used for second run with free static axes.

@@ -350,7 +350,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         smoothedCounts.push_back(0);
         if (node->IsParameterUpdateRequired())
         {
-            nodesToUpdateDescriptions.push_back(node->NodeDescription() + L" : [" + msra::strfun::utf16(string(node->GetSampleLayout())) + L"]");
+            nodesToUpdateDescriptions.push_back(node->NodeDescription() + L" : [" + Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(string(node->GetSampleLayout())) + L"]");
             numParameters += node->GetSampleLayout().GetNumElements();
         }
     }
@@ -2967,7 +2967,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     // Parameters that control logging of training progress in TensorBoard.
     // Directory to create TensorBoard event files in. If empty (default), the progress is not logged as event files.
-    m_tensorBoardLogDir = msra::strfun::utf16(configSGD(L"tensorBoardLogDir", L""));
+    m_tensorBoardLogDir = static_cast<std::wstring>(configSGD(L"tensorBoardLogDir", L""));
     // Frequency at which to log intermediate training progress results. Used only when tensorBoardLogDir is not empty.
     // Setting this to 0 disables intermediate progress logging (only per-epoch loss/eval metric are logged).
     // Setting this to any other value (n) will log average loss/eval metric for each n minibatches.

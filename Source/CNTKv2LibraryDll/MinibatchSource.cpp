@@ -147,7 +147,7 @@ namespace CNTK
         for (const auto& keyValuePair : *(augmentedConfiguration.m_dictionaryData))
             AddConfigString(s, keyValuePair.first, keyValuePair.second, 0);
 
-        config.Parse(msra::strfun::utf8(s.str()));
+        config.Parse(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(s.str())));
 
         typedef Reader*(*CreateCompositeDataReaderProc)(const ConfigParameters* parameters);
         CreateCompositeDataReaderProc createReaderProc = (CreateCompositeDataReaderProc)Plugin().Load(L"CompositeDataReader", "CreateCompositeDataReader");

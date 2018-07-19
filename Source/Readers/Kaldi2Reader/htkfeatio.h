@@ -188,7 +188,7 @@ public:
     template <class MATRIX>
     static void writeKaldi(const std::wstring &path, const std::string &kindstr, unsigned int period, const MATRIX &feat, const int precision)
     {
-        std::string path_utf8 = msra::strfun::utf8(path);
+        std::string path_utf8 = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(path));
         std::ofstream os(path_utf8.c_str());
 
         if (!os.good())

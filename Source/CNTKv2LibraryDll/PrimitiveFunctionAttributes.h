@@ -37,6 +37,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDilation = L"dilation";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSharing = L"sharing";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAutoPadding = L"autoPadding";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSequential = L"sequential";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameLowerPad = L"lowerPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUpperPad = L"upperPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCeilOutDim = L"ceilOutDim";

@@ -66,7 +66,7 @@ namespace CNTK
             UserFunctionFactoryMethodInfo(const std::wstring& moduleName, const std::wstring& factoryMethodName)
                 : m_moduleName(moduleName), m_factoryMethodName(factoryMethodName)
             {
-                m_factoryMethod = (UserFunctionFactoryMethodType)(m_module.Load(m_moduleName, msra::strfun::utf8(m_factoryMethodName), /*isCNTKPlugin =*/ false));
+                m_factoryMethod = (UserFunctionFactoryMethodType)(m_module.Load(m_moduleName, Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(m_factoryMethodName)), /*isCNTKPlugin =*/ false));
             }
 
             std::wstring m_moduleName;

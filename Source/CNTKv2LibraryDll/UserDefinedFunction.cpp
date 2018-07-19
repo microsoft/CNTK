@@ -52,7 +52,7 @@ namespace CNTK
         else 
         {
             Microsoft::MSR::CNTK::Plugin plugin;
-            auto factoryMethod = (UserFunctionFactoryMethodType)(plugin.Load(moduleName, msra::strfun::utf8(methodName), /*isCNTKPlugin =*/ false));
+            auto factoryMethod = (UserFunctionFactoryMethodType)(plugin.Load(moduleName, Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(methodName)), /*isCNTKPlugin =*/ false));
             udf = FunctionPtr(factoryMethod(inputs.data(), inputs.size(), &state, name.c_str()));
         }
 

@@ -2,7 +2,7 @@
 
 #include "core/graph/graph.h"
 
-// #include "gsl/pointers"
+#include "gsl/pointers"
 
 namespace LotusIR {
 typedef std::unordered_map<std::string, std::string> ModelMetaData;
@@ -22,11 +22,11 @@ class Model {
 
   // NOTE: after calling this constructor, <*this> model will
   // hold a copy of <model_proto>.
-  explicit Model(const ModelProto& model_proto, const ILotusOpSchemaCollection* local_registry = nullptr);
+  explicit Model(const onnx::ModelProto& model_proto, const ILotusOpSchemaCollection* local_registry = nullptr);
 
   // NOTE: after calling this constructor, <*this> model will
   // own the <model_proto>.
-  explicit Model(std::unique_ptr<ModelProto> model_proto, const ILotusOpSchemaCollection* local_registry = nullptr);
+  explicit Model(std::unique_ptr<onnx::ModelProto> model_proto, const ILotusOpSchemaCollection* local_registry = nullptr);
 
   // Get model's IR version.
   // Return <kNoVersion> if not specified.
@@ -71,7 +71,7 @@ class Model {
   const Graph* MainGraph() const noexcept;
 
   // Get model's serialization proto data.
-  ModelProto ToProto();
+  onnx::ModelProto ToProto();
 
 #ifdef _WIN32
   static Lotus::Common::Status Save(Model& model, const std::wstring& file_path);
@@ -84,7 +84,7 @@ class Model {
 
   static Lotus::Common::Status Save(Model& model, int fd);
 
-  static Lotus::Common::Status Load(std::istream& model_istream, ModelProto* p_model_proto);
+  static Lotus::Common::Status Load(std::istream& model_istream, onnx::ModelProto* p_model_proto);
 
   static Lotus::Common::Status Load(const std::string& file_path,
                                     /*out*/ std::shared_ptr<Model>& p_model,
@@ -97,7 +97,7 @@ class Model {
   static Lotus::Common::Status LoadFromBytes(int count, void* pBytes, /*out*/ std::shared_ptr<Model>& p_model,
                                              const ILotusOpSchemaCollection* local_registry = nullptr);
 
-  static Lotus::Common::Status Load(const ModelProto& model_proto, /*out*/ std::shared_ptr<Model>& p_model,
+  static Lotus::Common::Status Load(const onnx::ModelProto& model_proto, /*out*/ std::shared_ptr<Model>& p_model,
                                     const ILotusOpSchemaCollection* local_registry = nullptr);
 
  private:
@@ -106,11 +106,11 @@ class Model {
   // if <is_onnx_domain_only> is true, then only onnx domain will be contained.
   // otherwise, ml domain will also be contained.
   void AddImportOpSets(bool is_onnx_domain_only,
-                       /*out*/ std::unordered_map<std::string, int>* domain_to_version,
+                       /*out*/ gsl::not_null<std::unordered_map<std::string, int>*> domain_to_version,
                        const ILotusOpSchemaCollection* local_registry);
 
   // Model data.
-  std::unique_ptr<ModelProto> model_proto_;
+  std::unique_ptr<onnx::ModelProto> model_proto_;
 
   // This is a duplication of <model_proto_.metadata_props()>.
   // It gives better accessibility.

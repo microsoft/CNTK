@@ -345,7 +345,7 @@ namespace CNTK
             paddedOutputMapCount = NDShape(shapeRank - outputMapCount.Rank(), 1);
 
         paddedOutputMapCount = paddedOutputMapCount.AppendShape(outputMapCount);
-
+        
         if (transpose && (shapeRank > 0) && (paddedOutputMapCount[shapeRank - 1] == NDShape::InferredDimension))  // convolution transpose, the mapCount in depth is derived from operandShape 
         {
             if (operandShape[shapeRank - 1] == NDShape::FreeDimension)
@@ -353,10 +353,12 @@ namespace CNTK
 
             paddedOutputMapCount[shapeRank - 1] = operandShape[shapeRank - 1];
         }
-
+        
         return{ paddedOutputMapCount, kernelShape };
     }
 
+    void SetConvolutionProperties(Dictionary& additionalProperties, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
+                                  const NDShape& dilation, bool sequential, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples);
 
 
     template <typename SourceElementType, typename TargetElementType>
@@ -565,10 +567,6 @@ namespace CNTK
 
     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly);
     int GetFileDescriptor(const std::wstring& filePath, bool readOnly);
-
-    std::string ToString(const std::wstring& wstring);
-    std::wstring ToWString(const std::string& string);
-
 
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes);
 

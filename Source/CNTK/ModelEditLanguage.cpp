@@ -624,7 +624,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
                 continue;
             }
             shared_ptr<LearnableParameterNode> pParamNode = std::dynamic_pointer_cast<LearnableParameterNode>(pNodes);
-            pParamNode->ReviseFromFile(msra::strfun::utf16(paramPath));
+            pParamNode->ReviseFromFile(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(paramPath));
             fprintf(stderr, "Revise node %ls using parameter file %s\n", pNodes->NodeName().c_str(), paramPath.c_str());
         }
     }

@@ -122,6 +122,7 @@ namespace CNTK
         {PrimitiveOpType::StraightThrough, L"StraightThrough"},
         { PrimitiveOpType::Tan, L"Tan" },
         { PrimitiveOpType::Atan, L"Atan" },
+        { PrimitiveOpType::ConvolutionSequenceShape, L"ConvolutionSequenceShape" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -239,6 +240,7 @@ namespace CNTK
         static const std::wstring AttributeNameDilation;
         static const std::wstring AttributeNameSharing;
         static const std::wstring AttributeNameAutoPadding;
+        static const std::wstring AttributeNameSequential;
         static const std::wstring AttributeNameLowerPad;
         static const std::wstring AttributeNameUpperPad;
         static const std::wstring AttributeNameCeilOutDim;
@@ -843,7 +845,8 @@ namespace CNTK
         // Version 21: Add EyeLikeOp
         // Version 22: Add StraightThrough
         // Version 23: Add Tan and Atan.
-        static const size_t s_serializationVersion = 23;
+        // Version 24: Add ConvolutionSequenceShape.
+        static const size_t s_serializationVersion = 24;
     };
 
     std::vector<DictionaryValue> GetInputUids(const Function& f);

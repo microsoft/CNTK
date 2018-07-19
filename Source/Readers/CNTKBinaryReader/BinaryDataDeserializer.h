@@ -84,7 +84,7 @@ protected:
         file.ReadOrDie(len);
         vector<char> temp(len + 1 , '\0');
         file.ReadOrDie(temp.data(), sizeof(char), len);
-        m_name = msra::strfun::utf16(temp.data());
+        m_name = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(temp.data());
     }
 
     void ReadDataType(FileWrapper& file)

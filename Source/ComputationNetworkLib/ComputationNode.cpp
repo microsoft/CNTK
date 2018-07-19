@@ -1128,7 +1128,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
     fragment = msra::strfun::ReplaceAll<string>(fragment, "\\t", "\t");
     fragment = msra::strfun::ReplaceAll<string>(fragment, "\\s", " "); // Config might strip spaces.
     if (fragment.find("%s") != fragment.npos)
-        fragment = msra::strfun::ReplaceAll<string>(fragment, "%s", msra::strfun::utf8(nodeName));
+        fragment = msra::strfun::ReplaceAll<string>(fragment, "%s", Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(nodeName)));
     if (fragment.find("%n") != fragment.npos)
         fragment = msra::strfun::ReplaceAll<string>(fragment, "%n", msra::strfun::_strprintf<char>("%ld", minibatchId).c_str());
     // %d: sequenceId
@@ -1155,12 +1155,12 @@ WriteFormattingOptions::WriteFormattingOptions(const ConfigRecordType& config) :
         transpose = formatConfig(L"transpose", transpose);
         prologue  = formatConfig(L"prologue",  prologue);
         epilogue  = formatConfig(L"epilogue",  epilogue);
-        sequenceSeparator = msra::strfun::utf8(formatConfig(L"sequenceSeparator", (wstring)msra::strfun::utf16(sequenceSeparator)));
-        sequencePrologue  = msra::strfun::utf8(formatConfig(L"sequencePrologue",  (wstring)msra::strfun::utf16(sequencePrologue)));
-        sequenceEpilogue  = msra::strfun::utf8(formatConfig(L"sequenceEpilogue",  (wstring)msra::strfun::utf16(sequenceEpilogue)));
-        elementSeparator  = msra::strfun::utf8(formatConfig(L"elementSeparator",  (wstring)msra::strfun::utf16(elementSeparator)));
-        sampleSeparator   = msra::strfun::utf8(formatConfig(L"sampleSeparator",   (wstring)msra::strfun::utf16(sampleSeparator)));
-        precisionFormat   = msra::strfun::utf8(formatConfig(L"precisionFormat",   (wstring)msra::strfun::utf16(precisionFormat)));
+        sequenceSeparator = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(formatConfig(L"sequenceSeparator", Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(sequenceSeparator))));
+        sequencePrologue = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(formatConfig(L"sequencePrologue", Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(sequencePrologue))));
+        sequenceEpilogue = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(formatConfig(L"sequenceEpilogue", Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(sequenceEpilogue))));
+        elementSeparator = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(formatConfig(L"elementSeparator", Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(elementSeparator))));
+        sampleSeparator = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(formatConfig(L"sampleSeparator", Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(sampleSeparator))));
+        precisionFormat = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(formatConfig(L"precisionFormat", Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(precisionFormat))));
         // TODO: change those strings into wstrings to avoid this conversion mess
     }
 }
