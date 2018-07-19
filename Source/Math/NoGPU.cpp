@@ -2135,7 +2135,7 @@ void GPUMatrix<ElemType>::LabelAdd(const GPUMatrix<ElemType>& label, ElemType bi
 #pragma region CenterLoss
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter, const GPUMatrix<ElemType>& value, size_t featureSize)
+void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter)
 {
 }
 
@@ -2144,7 +2144,7 @@ void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPU
 #pragma region SqueezeAndExcitation
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ChannelMultiply(const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight, const GPUMatrix<ElemType>& value)
+void GPUMatrix<ElemType>::ChannelMultiply(const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight, const GPUMatrix<ElemType>& value, size_t featureSize)
 {
 }
 
