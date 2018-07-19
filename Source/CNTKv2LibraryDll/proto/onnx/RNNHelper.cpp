@@ -455,7 +455,9 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
         std::tie<std::function<FunctionPtr(const Variable &)>, std::function<FunctionPtr(const Variable &)>, std::function<FunctionPtr(const Variable &)>>(iofActivationOp, cellActivationOp, hiddenActivationOp) = GetActivations(activations, activation_alpha, activation_beta, dir);
 
         // the first a few inputs are (in order): X, numDirections * W, numDirections * R
-        Variable X = inputs[0];
+        auto operandPlaceholder = PlaceholderVariable(inputs[0].Shape(), L"operand", {});
+        FunctionPtr operandWithBatchAndSequenceAxis = ToSequence(ToBatch(operandPlaceholder), L"");
+        Variable X = operandWithBatchAndSequenceAxis;
         Variable W = inputs[1 + dir];
         Variable R = inputs[1 + numDirections + dir];
         Variable B;
@@ -517,8 +519,14 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
             X, { (size_t)hiddenDim }, iofActivationOp, cellActivationOp, hiddenActivationOp,
             recurrenceHookH, recurrenceHookC, (Constant &)W, (Constant &)R, (Constant &)B,
             (Constant &)Ci, (Constant &)Cf, (Constant &)Co);
-        outputHs.push_back(outputH);
+
+        FunctionPtr cntkFunctionWithoutSequenceAxis = Sequence::Unpack(outputH, 0, L"");
+        FunctionPtr cntkFunctionWithoutDynamicAxis = UnpackBatch(cntkFunctionWithoutSequenceAxis, L"");
+        FunctionPtr block = AsBlock(std::move(cntkFunctionWithoutDynamicAxis), { { operandPlaceholder, inputs[0] } },
+            outputH->OpName(), L"");
+        outputHs.push_back(block);
     }
+
     if (outputHs.size() == 1)
         return outputHs[0];
     else

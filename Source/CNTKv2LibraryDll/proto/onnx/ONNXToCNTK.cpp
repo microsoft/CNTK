@@ -1367,6 +1367,16 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     NDShape shape = FromTensorShapeProto(*shapeProto);
     std::vector<Axis> dynamicAxes({});
 
+    //// TODO: ONNX has sequence as the major axis. CNTK has batch axis as the major axis.
+    //// Need to figure out how to handle this.
+    //if (shape[shape.Rank() - 1] == shape.FreeDimension || shape[shape.Rank() - 1] == shape.InferredDimension)
+    //    std::swap(shape[shape.Rank() - 1], shape[shape.Rank() - 2]);
+    for (int i = 0; i < shape.Rank(); i++)
+    {
+        if (shape[i] == 0)
+            shape[i] = NDShape::FreeDimension;
+    }
+
     // TODO: Do we need to take care of the sequence axis here (like before)?
     // Should it be be taken care of in RNN leaf node creation (different function)?
 
