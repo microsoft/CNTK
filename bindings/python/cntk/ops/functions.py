@@ -536,7 +536,9 @@ class Function(cntk_py.Function):
         '''
         List of all input variables of the Function that are not of type Parameter or Constant
         '''
-        return super(Function, self).arguments(True)
+        from ..default_options import get_global_option
+        python_operand_order = get_global_option('python_operand_order', True)
+        return super(Function, self).arguments(python_operand_order)
 
     @property
     @typemap
