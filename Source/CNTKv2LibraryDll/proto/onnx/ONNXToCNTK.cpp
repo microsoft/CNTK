@@ -2025,11 +2025,18 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "LRN")
     {
-        size_t depthRadius = (GetNamedAttributeAsInt64(node, "size") - 1)/2;
+        // Guard the even number size case. The size > channel case is checked at cntk side.
+        size_t size = static_cast<size_t>(GetNamedAttributeAsInt64(node, "size"));
+        // In ONNX the size to sum over channel axis is given by diameter, while in CNTK radius.
+        // Thus we are unable to support even number diameter. 
+        // Currently in Lotus we are also throwing error when diameter is even. 
+        if (size % 2 != 1)
+            LogicError("LRN does not support even diameter size to sum over channel axis.");
+        size_t depthRadius = (size - 1)/2;
         double bias = static_cast<double>(GetNamedAttributeAsFloat(node, "bias", 1.0f));
         double alpha = static_cast<double>(GetNamedAttributeAsFloat(node, "alpha", 1e-4f));
         double beta = static_cast<double>(GetNamedAttributeAsFloat(node, "beta", 0.75f));
-        FunctionPtr cntkFunction = LocalResponseNormalization(inputs[0], 
+        FunctionPtr cntkFunction = LocalResponseNormalization(inputOperand0, 
             depthRadius, bias, alpha, beta, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
@@ -2749,7 +2756,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         // when loading the ONNX MeanVarianceNormalization node in CNTK.
         size_t acrossChannels = GetNamedAttributeAsInt64(node, "across_channels", 0);
         size_t normalizeVariance = GetNamedAttributeAsInt64(node, "normalize_variance", 1);
-        return MeanVarianceNormalization(inputs[0], !!acrossChannels, !!normalizeVariance, ToFixedWStringFromMultiByte(node->Name()));
+        return MeanVarianceNormalization(inputOperand0, !!acrossChannels, !!normalizeVariance, ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "Identity")
     {
