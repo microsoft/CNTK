@@ -65,7 +65,7 @@ namespace CNTK
                   useNesterovMomentum,
                   resetSGDMomentumAfterAggregation,
                   blockLearningRate,
-                  Momentum2TimeConstant(1.0 - 1.0 / (double)communicator->Workers().size(), globalModelAggregationBlockSize))
+                  Momentum2TimeConstant(1.0 - 1.0 / (double)communicator->Workers().size(), globalModelAggregationBlockSize * communicator->Workers().size()))
         {}
 
         BlockMomentumDistributedLearner(
@@ -562,7 +562,7 @@ namespace CNTK
         template<class ElemType>
         void SynchronizeModel(const std::vector<NDArrayViewPtr>& parameterValues)
         {
-            ElemType blockMomentum = (ElemType)TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_numSamplesSeenInCurrentBlock);
+            ElemType blockMomentum = (ElemType)TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_numSamplesSeenInCurrentBlock / m_communicator->Workers().size());
 
             // 1. Let's aggregate weights
             for (size_t i = 0; i < parameterValues.size(); ++i)
