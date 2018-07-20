@@ -2708,13 +2708,16 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
         additionalProperties[PrimitiveFunction::AttributeNameBeta] = beta;
 
-        size_t channelSize = operand.Shape()[2];
         size_t kernelSize = 2 * depthRadius + 1;
-        if (kernelSize > channelSize)
+        if (!(operand.IsPlaceholder()))
         {
-            fprintf(stderr, "Warning: LRN kernel size(%zu) larger than channel size(%zu) is unsupported, and is rounded down to channel size. The output value is not affected.",
-                kernelSize, channelSize);
-            kernelSize = channelSize;
+            size_t channelSize = operand.Shape()[operand.Shape().Rank() - 1];
+            if (kernelSize > channelSize)
+            {
+                fprintf(stderr, "Warning: LRN kernel size(%zu) larger than channel size(%zu) is unsupported, and is rounded down to channel size. The output value is not affected.",
+                    kernelSize, channelSize);
+                kernelSize = channelSize;
+            }
         }
 
         auto operandPlaceholder = PlaceholderVariable();

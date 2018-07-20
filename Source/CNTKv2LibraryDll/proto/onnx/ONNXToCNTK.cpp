@@ -2025,7 +2025,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "LRN")
     {
-        // TODO : Guard the even number size case, and the size > channel case. 
+        // Guard the even number size case. The size > channel case is checked at cntk side.
         size_t size = static_cast<size_t>(GetNamedAttributeAsInt64(node, "size"));
         // In ONNX the size to sum over channel axis is given by diameter, while in CNTK radius.
         // Thus we are unable to support even number diameter. 
