@@ -710,7 +710,7 @@ namespace CNTK
             s_defaultDevice.reset(new DeviceDescriptor(selectedDevice));
         }
 
-        if (!s_defaultDeviceFrozen)
+        if (!s_defaultDeviceFrozen && GetTraceLevel() >= TraceLevel::Info)
         {
             fprintf(stderr, "Selected %S as the process wide default device.\n", s_defaultDevice->AsString().c_str());
         }
