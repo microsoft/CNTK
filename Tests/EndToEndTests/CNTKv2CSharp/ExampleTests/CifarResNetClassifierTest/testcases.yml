@@ -3,7 +3,7 @@ isPythonTest: No
 dataDir: .
 
 tags: 
-  - bvt-e (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release') and (os == 'windows')
+  - bvt-e (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release')
   - nightly-e (build_sku == 'gpu') and (device == 'gpu') and ((flavor == 'release') or (flavor == 'debug')) and (os == 'windows')
   - weekly-e (build_sku == 'gpu') and (device == 'gpu') and ((flavor == 'release') or (flavor == 'debug')) and (os == 'windows')
 
