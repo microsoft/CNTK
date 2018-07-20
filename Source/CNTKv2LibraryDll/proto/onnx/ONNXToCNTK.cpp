@@ -139,7 +139,8 @@ private:
 
     static Variable GetNodeOperandWithPaddingResolved(std::vector<bool> &cntkConvAutoPadding,
         NDShape &strides, const Node *node, const Variable& dataOperand, const double padValue = 0.0);
-
+    static std::pair<std::vector<size_t>, std::vector<size_t>> CalcPaddingForSameLowerAutoPad(
+        const Variable &input, NDShape kernelShape, NDShape strides);
     //
     // CNTK convolution/pooling operations do not support ONNX same_low padding.
     // This method does padding accoordingly before invoking
@@ -2036,18 +2037,64 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "AveragePool" || onnxOpName == "MaxPool")
     {
         NDShape poolingWindowShape = GetNamedAttributeAsShape(node, "kernel_shape", false);
+        auto dim = poolingWindowShape.Rank();
         NDShape strides = GetNamedAttributeAsShape(node, "strides", false, NDShape(std::vector<size_t>(poolingWindowShape.Rank(), 1u)));
-
+        bool includePad = GetNamedAttributeAsInt64(node, "count_include_pad", 0) != 0;
+        bool hasAutoPad = HasNamedAttribute(node, "auto_pad") && GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER") != "NOTSET";
+        bool hasPads = HasNamedAttribute(node, "pads");
         bool ceilOutDim = false;
-        bool includePad = false;
 
+        if (strides.Rank() != dim)
+            LogicError("Length of attribute 'strides' should be equal to dimensionality of the kernel.");
+
+        if (hasAutoPad && hasPads)
+        {
+            LogicError("Ambiguous Conv node specification. Both %s and %s attributes are specified. Only one of the two should be specified.",
+                "auto_pad", "pads");
+        }
+
+        strides = strides.AppendShape({ 1 }); // Because CNTK Pooling API takes strides for channel axis also.
         std::vector<bool> cntkPoolingAutoPadding;
-        auto padValue = (onnxOpName == "AveragePool") ? 0.0 : static_cast<double>(std::numeric_limits<int>::min());
-        auto poolingOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkPoolingAutoPadding, strides, node, inputOperand0, padValue);
+        std::pair<std::vector<size_t>, std::vector<size_t>> padsPair;
+        FunctionPtr cntkFunction;
+        if (hasAutoPad)
+        {
+            ConvAutoPadType auto_pad = ConvertStrToConvAutoPadType(GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER"));
+            switch (auto_pad)
+            {
+            case ConvAutoPadType::SAME_LOWER:
+            {
+                padsPair = CalcPaddingForSameLowerAutoPad(inputOperand0, poolingWindowShape, strides);
+                cntkFunction = Pooling(inputOperand0, onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
+                    poolingWindowShape, strides, padsPair.first, padsPair.second, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
+                break;
+            }
+            case ConvAutoPadType::SAME_UPPER:
+            {
+                cntkPoolingAutoPadding.insert(cntkPoolingAutoPadding.begin(), dim, true);
+                cntkPoolingAutoPadding.push_back(false);
+                cntkFunction = Pooling(inputOperand0, onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
+                    poolingWindowShape, strides, cntkPoolingAutoPadding, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
+                break;
+            }
+            case ConvAutoPadType::VALID:
+            {
+                cntkPoolingAutoPadding.insert(cntkPoolingAutoPadding.begin(), dim + 1, false);
+                cntkFunction = Pooling(inputOperand0, onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
+                    poolingWindowShape, strides, cntkPoolingAutoPadding, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
+                break;
+            }
+            }
+        }
+        else // Either hasPads == true, i.e. pads was specified, or if pads is not specified then we use default pads value of 0.
+        {
+            // If 'pads' is specified, we pad the node and then do 'valid' convolution.
+            std::vector<int64_t> pads = GetNamedAttributeAsInt64Vec(node, "pads", std::vector<int64_t>(2*dim, 0));
+            auto padsPair = SplitAndReverseVec(pads);
+            cntkFunction = Pooling(inputOperand0, onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
+                poolingWindowShape, strides, padsPair.first, padsPair.second, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
+        }
 
-        FunctionPtr cntkFunction = Pooling(poolingOperand,
-                                           onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
-                                           poolingWindowShape, strides, cntkPoolingAutoPadding, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "GlobalAveragePool" || onnxOpName == "GlobalMaxPool")
@@ -2921,6 +2968,36 @@ Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool> &
 
     AdjustAutoPaddingAndStrideForCNTKSpecialCases(operand, cntkConvAutoPadding, strides);
     return convOperand;
+}
+
+std::pair<std::vector<size_t>, std::vector<size_t>> ONNXToCNTKHelper::CalcPaddingForSameLowerAutoPad(
+    const Variable &input, NDShape kernelShape, NDShape strides)
+{
+    NDShape inputShape = input.Shape();
+    std::vector<int> pads;
+    for (int dim = 0; dim < kernelShape.Rank(); dim++)
+    {
+        // Padding could be calcualted as: p = s - (w - f) % s.
+        // however, it does not ensure input size being multiplier of output size.
+        // The above calculation failed with the yolo model. ONNX spec is not clear on this.
+        // This following padding computation ensures: input_size = output_size * stride.
+        int f = kernelShape[dim];
+        int s = strides[dim];
+        pads.push_back(f - s);
+    }
+
+    std::vector<size_t> begins, ends;
+    for (int dim = 0; dim < pads.size(); dim++)
+    {
+        // SameLow: the lower (begin) side get one extra pad if total pads is odd.
+        int p = pads[dim];
+        int endPad = p / 2;
+        ends.push_back(endPad);
+        int beginPad = p - endPad;
+        begins.push_back(beginPad);
+    }
+
+    return std::make_pair(begins, ends);
 }
 
 FunctionPtr ONNXToCNTKHelper::CreatePadOpForSameLowAutoPad(

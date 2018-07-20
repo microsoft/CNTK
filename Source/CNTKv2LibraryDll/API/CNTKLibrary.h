@@ -4639,7 +4639,7 @@ namespace CNTK
                                     const std::wstring& name/* = L""*/);
 
     ///
-    /// TODO:
+    /// Create an instance of the CNTK built-in Pooling operation on specified tensor input operands with automatic padding option.
     ///
     CNTK_API FunctionPtr Pooling(const Variable& operand,
                                  PoolingType poolingType,
@@ -4649,6 +4649,19 @@ namespace CNTK
                                  const bool ceilOutDim = false,
                                  const bool includePad = false,
                                  const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Pooling operation on specified tensor input operands with explicit lower and upper pad lengths.
+    ///
+    CNTK_API FunctionPtr Pooling(const Variable& operand,
+                                PoolingType poolingType,
+                                const NDShape& poolingWindowShape,
+                                const NDShape& strides,
+                                const std::vector<size_t>& lowerPad,
+                                const std::vector<size_t>& upperPad,
+                                const bool ceilOutDim = false,
+                                const bool includePad = false,
+                                const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in Unpooling operation on specified tensor input operands with the specified type and shape
