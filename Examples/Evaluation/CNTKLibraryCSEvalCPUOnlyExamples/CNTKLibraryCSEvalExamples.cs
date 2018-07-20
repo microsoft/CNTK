@@ -46,7 +46,7 @@ namespace CNTKLibraryCSEvalExamples
         /// </summary>
         public static void Setup()
         {
-            ExampleTestDataDir = string.IsNullOrEmpty(ExampleTestDataDir) ? ExampleTestDataDir : ExampleTestDataDir + "\\";
+            ExampleTestDataDir = string.IsNullOrEmpty(ExampleTestDataDir) ? ExampleTestDataDir : ExampleTestDataDir + "/";
             VocabFile = ExampleTestDataDir + "query.wl";
             LabelFile = ExampleTestDataDir + "slots.wl";
             SampleImage = ExampleTestDataDir + "00000.png";

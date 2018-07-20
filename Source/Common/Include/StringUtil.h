@@ -8,6 +8,7 @@
 #include <codecvt>
 #include <string>
 #include <vector>
+#include <limits.h>
 
 #if defined(_MSC_VER)
 #include <cuchar>
@@ -194,7 +195,7 @@ std::vector<unsigned char> ToUTF8Impl(T const* str, ConvertFuncT const& func)
     std::vector<unsigned char> buffer;
     std::string oneChar;
 
-    oneChar.resize(MB_CUR_MAX);
+    oneChar.resize(MB_LEN_MAX);
 
     std::mbstate_t state{}; // Initialize to zeros
 

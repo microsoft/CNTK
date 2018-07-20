@@ -34,10 +34,21 @@ namespace CNTK.CNTKLibraryCSTrainingTest
 
             string runTest = args.Length == 0 ? string.Empty : args[0];
 
+            if (args.Length > 1)
+            {
+                Console.WriteLine($"-------- running with test data prefix : {args[1]} --------");
+                TestCommon.TestDataDirPrefix = args[1];
+            }
+            else
+            {
+                Console.WriteLine("-------- No data folder path found in input, using default paths.");
+                TestCommon.TestDataDirPrefix = "../../";
+            }
+
             foreach (var device in devices)
             {
-                /// Data folders of example classes are set for non-CNTK test runs.
-                /// In case of CNTK test runs (runTest is set to a test name) data folders need to be set accordingly.
+                // Data folders of example classes are set for non-CNTK test runs.
+                // In case of CNTK test runs (runTest is set to a test name) data folders need to be set accordingly.
                 switch (runTest)
                 {
                     case "LogisticRegressionTest":
@@ -50,11 +61,12 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                         break;
                     case "CifarResNetClassifierTest":
                         Console.WriteLine($"======== running CifarResNet.TrainAndEvaluate using {device.Type} ========");
-
+                        
                         if (args.Length > 1)
                         {
                             Console.WriteLine($"-------- running with test data in {args[1]} --------");
-                            CifarResNetClassifier.CifarDataFolder = args[1];
+                            // this test uses data from external folder, we execute this test with full data dir.
+                            CifarResNetClassifier.CifarDataFolder = TestCommon.TestDataDirPrefix;
                         }
 
                         CifarResNetClassifier.TrainAndEvaluate(device, true);
@@ -70,13 +82,6 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                     case "TransferLearningTest":
                         TransferLearning.BaseResnetModelFile = "ResNet_18.model";
                         Console.WriteLine($"======== running TransferLearning.TrainAndEvaluate with animal data using {device.Type} ========");
-
-                        if (args.Length > 1)
-                        {
-                            Console.WriteLine($"-------- running with test data in {args[1]} --------");
-                            TransferLearning.ExampleImageFoler = args[1];
-                        }
-
                         TransferLearning.TrainAndEvaluateWithAnimalData(device, true);
                         break;
 
@@ -142,5 +147,10 @@ namespace CNTK.CNTKLibraryCSTrainingTest
             Console.WriteLine($"======== running LSTMSequenceClassifier.Train using {device.Type} ========");
             LSTMSequenceClassifier.Train(device);
         }
+    }
+
+    public static class TestCommon
+    {
+        public static string TestDataDirPrefix;
     }
 }

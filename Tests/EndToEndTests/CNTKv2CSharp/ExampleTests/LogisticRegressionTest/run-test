@@ -1,15 +1,15 @@
 #!/bin/bash
 
 . $TEST_ROOT_DIR/run-test-common
-
+#On Linux the dlls are built into build/$config/lib directory
 if [ "$OS" == "Windows_NT" ]; then
   pushd $TEST_BIN_DIR > /dev/null
-  dotnet CNTKLibraryCSTrainingTest.dll LogisticRegressionTest
-  popd > /dev/null
 else
-  echo Cannot run CNTKLibraryCSTrainingTest on Linux.
-  exit 1
+  pushd $TEST_BIN_DIR/../lib > /dev/null
 fi
+
+dotnet CNTKLibraryCSTrainingTest.dll LogisticRegressionTest
+popd > /dev/null
 
 ExitCode=$?
 
