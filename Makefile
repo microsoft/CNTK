@@ -1606,7 +1606,9 @@ csharp: $(CSHARP_LIBS)
 	mkdir -p bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE)
 	cd bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE) && \
 		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) -DCNTK_BUILD_LIB_DIR_HACK=$(LIBDIR) && \
-		make
+		make clean && \
+		make all
+
 	mkdir -p bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)
 	cd bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE) && \
 		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) -DCNTK_BUILD_LIB_DIR_HACK=$(LIBDIR) && \
@@ -1621,10 +1623,33 @@ V2LibraryCSTests.dll: csharp
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
 	cd Tests/UnitTests/V2LibraryCSTests && \
 		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
-		dotnet build /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE)
-	cp $(LIBDIR)/*.so Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)
+		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE)
+	cp -f Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/V2LibraryCSTests.* $(LIBDIR)
+	cp -f Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/Microsoft.VisualStudio.* $(LIBDIR)
 	
 ALL += V2LibraryCSTests.dll
+
+# Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+CNTKLibraryCSTrainingTest.dll: csharp
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
+	cd Tests/EndToEndTests/CNTKv2CSharp/CNTKLibraryCSTrainingTest && \
+		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
+		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE) CNTKLibraryCSTrainingTest.csproj
+	cp -f Tests/EndToEndTests/CNTKv2CSharp/CNTKLibraryCSTrainingTest/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/*.* $(LIBDIR)
+	
+ALL += CNTKLibraryCSTrainingTest.dll
+
+# Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+CNTKLibraryCSEvalExamplesTest.dll: csharp
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
+	cd Tests/EndToEndTests/EvalClientTests/CNTKLibraryCSEvalExamplesTest && \
+		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
+		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE) CNTKLibraryCSEvalExamplesTest.csproj
+	cp -f Tests/EndToEndTests/EvalClientTests/CNTKLibraryCSEvalExamplesTest/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/*.* $(LIBDIR)
+
+ALL += CNTKLibraryCSEvalExamplesTest.dll
 
 endif
 

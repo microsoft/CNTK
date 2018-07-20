@@ -1813,7 +1813,11 @@ def asinh(x, name=''):
 @typemap
 def log_softmax(x, axis = None, name = ''):
     '''
-    Computes the logsoftmax normalized values of x. That is, y = x - log(reduce_sum(exp(x), axis)).
+    Computes the logsoftmax normalized values of x. That is, y = x - log(reduce_sum(exp(x), axis))
+    (the implementation uses an equivalent formula for numerical stability).
+
+    It is also possible to use `x - reduce_log_sum_exp(x, axis)` instead of log_softmax:
+    this can be faster (one reduce pass instead of two), but can behave slightly differently numerically.
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor

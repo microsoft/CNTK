@@ -15,7 +15,6 @@ FROM nvidia/cuda@sha256:33add9c50ab76b8f3a92187c0418ed600d5bea27690fda40711122fd
 RUN apt-get update && apt-get install -y --no-install-recommends \
         autotools-dev \
         build-essential \
-        cmake \
         git \
         gfortran-multilib \
         libavcodec-dev \
@@ -29,9 +28,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         pkg-config \
         wget \
         zlib1g-dev \
+        # OPENSSL support
+        libssl-dev \
+        openssl \
         # Protobuf
         ca-certificates \
         curl \
+		libcurl4-openssl-dev \
         unzip \
         # For Kaldi
         python-dev \
@@ -45,10 +48,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         openjdk-8-jdk \
         # For SWIG
         libpcre3-dev \
+        # For graphics managed lib
+        libgdiplus \
         # .NET Core SDK
         apt-transport-https && \
         # Cleanup
         rm -rf /var/lib/apt/lists/*
+
+ARG CMAKE_DOWNLOAD_VERSION=3.11
+ARG CMAKE_BUILD_VERSION=4
+RUN DEBIAN_FRONTEND=noninteractive && \
+    wget --no-verbose https://cmake.org/files/v$CMAKE_DOWNLOAD_VERSION/cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION.tar.gz && \
+	tar -xzvf cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION.tar.gz && \
+    cd cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION && \
+    ./bootstrap --system-curl -- -DCMAKE_USE_OPENSSL=ON && \
+    make -j $(nproc) install && \
+	cd .. && \
+    rm -rf cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION	
 
 RUN OPENMPI_VERSION=1.10.3 && \
     wget -q -O - https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-${OPENMPI_VERSION}.tar.gz | tar -xzf - && \

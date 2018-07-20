@@ -16,7 +16,7 @@ namespace CNTK.CSTrainingExamples
         /// execution folder is: CNTK/x64/BuildFolder
         /// data folder is: CNTK/Examples/Image/DataSets
         /// </summary>
-        public static string CifarDataFolder = "../../Examples/Image/DataSets/CIFAR-10";
+        public static string CifarDataFolder;
 
         /// <summary>
         /// number of epochs for training. 
