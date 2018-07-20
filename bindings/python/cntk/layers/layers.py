@@ -1496,9 +1496,13 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     '''
     epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
 
+    dtype = get_default_override(None, dtype=default_override_or(np.float32))
+
     # parameters bound to this Function
     scale = Parameter(_INFERRED, init=initial_scale, name='scale')  # TODO: if this gets usage then offer a Softplus version like Stabilizer() for stability?
-    bias  = Parameter(_INFERRED, init=initial_bias,  name='bias')
+    bias  = Parameter(_INFERRED, init=initial_bias, name='bias')
+    # cast to specified data type. The default for number is float32 which might be different than desired. 
+    epsilon = np.asarray(epsilon, dtype=dtype)
 
     # expression
     @BlockFunction('LayerNormalization', name)

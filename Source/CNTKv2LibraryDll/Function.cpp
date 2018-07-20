@@ -2708,10 +2708,23 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
         additionalProperties[PrimitiveFunction::AttributeNameBeta] = beta;
 
+        size_t channelSize = operand.Shape()[2];
+        size_t kernelSize = 2 * depthRadius + 1;
+        if (kernelSize > channelSize)
+        {
+            fprintf(stderr, "Warning: LRN kernel size(%zu) larger than channel size(%zu) is unsupported, and is rounded down to channel size. The output value is not affected.",
+                kernelSize, channelSize);
+            kernelSize = channelSize;
+        }
+
         auto operandPlaceholder = PlaceholderVariable();
         auto operandSquare = Square(operandPlaceholder);
         operandSquare = Reshape(operandSquare, { NDShape::InferredDimension, 1 }, Axis(2), Axis(3));
-        auto weights = Constant({ 1, 1, 2 * depthRadius + 1, 1 }, operand.GetDataType(), alpha / (2 * depthRadius + 1));
+        // Note we are still dividing alpha with 2 * depthRadius + 1 which might be larger than channel size.
+        // Handling for diameter size (2*depthRadius+1) larger than channel size is newly added. 
+        // Both Lotus implementation and ONNX spec divides alpha by diameter size instead of the rounded down channel size. 
+        // We follow that behavior here. This will not affect any pre-existing code, since oversized diameter was not supported before. 
+        auto weights = Constant({ 1, 1, kernelSize, 1 }, operand.GetDataType(), alpha / (2 * depthRadius + 1));
         auto convResult = Convolution(weights, operandSquare);
         convResult = Reshape(convResult, { NDShape::InferredDimension }, Axis(2), Axis(4));
         auto denom = Exp(ElementTimes(Constant::Scalar(operand.GetDataType(), beta), Log(Plus(Constant::Scalar(operand.GetDataType(), bias), convResult))));

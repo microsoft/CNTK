@@ -2032,14 +2032,6 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         // Currently in Lotus we are also throwing error when diameter is even. 
         if (size % 2 != 1)
             LogicError("LRN does not support even diameter size to sum over channel axis.");
-        size_t channelSize = inputOperand0.Shape()[2];
-        if (size > channelSize)
-        {
-            fprintf(stderr, "Warning: LRN size(%zu) larger than channel size(%zu) is unsupported, and is rounded down to channel size. The output value is not affected.",
-                size, channelSize);
-            size = channelSize;
-        }
-
         size_t depthRadius = (size - 1)/2;
         double bias = static_cast<double>(GetNamedAttributeAsFloat(node, "bias", 1.0f));
         double alpha = static_cast<double>(GetNamedAttributeAsFloat(node, "alpha", 1e-4f));

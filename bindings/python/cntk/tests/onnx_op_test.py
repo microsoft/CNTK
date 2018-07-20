@@ -125,7 +125,6 @@ def test_Abs(tmpdir, dtype):
 #Add
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Add(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         shape = (4, 5)
         data1 = np.random.rand(*shape).astype(dtype)
@@ -144,8 +143,8 @@ def test_Add(tmpdir, dtype):
         verify_two_input(model, data1, data2, tmpdir, 'Add_2')
 
 #And
-def test_And(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_And(tmpdir, dtype):
     data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], dtype)
     data2 = np.asarray([1, 0, 1, 0], dtype)
 
@@ -163,7 +162,6 @@ def test_And(tmpdir):
 
 #Or
 def test_Or(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
     data2 = np.asarray([1, 0, 1, 0], np.float32)
 
@@ -181,7 +179,6 @@ def test_Or(tmpdir):
 
 #Xor
 def test_Xor(tmpdir):
-    pytest.skip('Need to support new ONNX spec.')
     data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
     data2 = np.asarray([1, 0, 1, 0], np.float32)
 
@@ -638,9 +635,9 @@ def test_ImageScaler(tmpdir, dtype):
 
 #LayerNormalization
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_LayerNormalization(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
+def test_LayerNormalization(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
 
     # This test point tests the LayerNormalization round trip with defaultepsilon. We loose always the epsilon value when 
     # exporting to ONNX (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back 
@@ -719,6 +716,16 @@ def test_LRN(tmpdir, dtype, device_id):
         x_r = C.input_variable(shape=img_shape, dtype=dtype)
         model = C.local_response_normalization(x_r, 2, 1.0, 0.0001, 0.75)
         verify_one_input(model, img, tmpdir, 'LRN_1', device)
+        # test with edge case kernel size > channel size
+        # also test in lotus such that we are getting the value right.
+        # in onnx spec and lotus implementation, alpha is divided by size. 
+        # so it seems even if size is > and rounded down to channel size,
+        # its original value is still used in dividing alpha.
+        img_shape = (5, 32, 32)
+        img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
+        x_r = C.input_variable(shape=img_shape, dtype=dtype)
+        model = C.local_response_normalization(x_r, 4, 1.0, 0.0001, 0.75)
+        verify_one_input(model, img, tmpdir, 'LRN_2', device)
 
 #LSTM
 @pytest.mark.parametrize("dtype", DType_Config)
