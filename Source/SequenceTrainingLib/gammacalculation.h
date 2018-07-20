@@ -343,11 +343,13 @@ public:
                 if (maxValues(0, frameInd) == 2 || frameInd == startFrameInd) 
                 {
                     prevPhoneId = (size_t)maxIndexes(0, frameInd);
-
-                    phoneSeq.push_back(blankTokenId);
-                    phoneBound.push_back(frameCounter);
-                    phoneSeq.push_back(prevPhoneId);
-                    phoneBound.push_back(frameCounter);
+                    if (prevPhoneId != blankTokenId)
+                    {
+                        phoneSeq.push_back(blankTokenId);
+                        phoneBound.push_back(frameCounter);
+                        phoneSeq.push_back(prevPhoneId);
+                        phoneBound.push_back(frameCounter);
+                    }
                 }
                 
             }
