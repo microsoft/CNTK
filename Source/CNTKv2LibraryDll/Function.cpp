@@ -2650,6 +2650,29 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr Pooling(const Variable& operand,
+        PoolingType poolingType,
+        const NDShape& poolingWindowShape,
+        const NDShape& strides,
+        const std::vector<size_t>& lowerPad,
+        const std::vector<size_t>& upperPad,
+        const bool ceilOutDim,
+        const bool includePad,
+        const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)poolingType;
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowShape;
+        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(std::vector<bool>({ false }));
+        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape(lowerPad);
+        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape(upperPad);
+        additionalProperties[PrimitiveFunction::AttributeNameCeilOutDim] = ceilOutDim;
+        additionalProperties[PrimitiveFunction::AttributeNameIncludePad] = includePad;
+
+        return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr Unpooling(const Variable& operand,
         const Variable& poolingInput,
         PoolingType unpoolingType,
