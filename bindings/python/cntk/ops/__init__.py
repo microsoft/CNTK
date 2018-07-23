@@ -1821,7 +1821,7 @@ def log_softmax(x, axis = None, name = ''):
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
-        axis (int): the axis of the inputs when coerced to 2D
+        axis (int): axis along which the logsoftmax operation will be performed (the default is the last axis)
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`

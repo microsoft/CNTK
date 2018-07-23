@@ -38,7 +38,7 @@ def verify_no_input(model, tmpdir, name):
     o = model.eval()
     o_ = loaded_model.eval()
     assert np.allclose(o_, o)
-    
+
 def verify_one_input(model, data, tmpdir, name, device=None):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
@@ -469,7 +469,7 @@ def test_Exp(tmpdir, dtype):
 #Flatten
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Flatten(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
+    #pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         shape = (2, 3, 4, 5)
         data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
@@ -596,10 +596,14 @@ def test_GRU(tmpdir, dtype):
 #Hardmax
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Hardmax(tmpdir, dtype):
-    with C.default_options(dtype = dtype):
-        data = np.asarray([1., 1., 2., 3.], dtype=dtype)
-        model = C.hardmax(data)
-        verify_no_input(model, tmpdir, 'Hardmax_0')
+    data = np.asarray([1., 1., 2., 3.], dtype)
+    model = C.hardmax(data)
+    verify_no_input(model, tmpdir, 'Hardmax_0')
+
+    data = np.asarray([[1, 2, 3], [6, 5, 4]], dtype)
+    model = C.hardmax(data)
+    verify_no_input(model, tmpdir, 'Hardmax_2d_0')
+
 
 #HardSigmiod
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -702,9 +706,8 @@ def test_Log(tmpdir, dtype):
 #LogSoftmax
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LogSoftmax(tmpdir, dtype):
-    with C.default_options(dtype = dtype):
-        model = C.log_softmax(np.array([[1, 1, 2, 3]]).astype(dtype))
-        verify_no_input(model, tmpdir, 'LogSoftmax_0')
+    model = C.log_softmax(np.array([[1, 1, 2, 3]], dtype))
+    verify_no_input(model, tmpdir, 'LogSoftmax_0')
 
 
 #LRN
@@ -1243,9 +1246,8 @@ def test_Slice(tmpdir, dtype):
 #Softmax
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Softmax(tmpdir, dtype):
-    with C.default_options(dtype = dtype):
-        model = C.softmax(np.array([[1, 1, 2, 3]]).astype(dtype))
-        verify_no_input(model, tmpdir, 'Softmax_0')
+    model = C.softmax(np.array([[1, 1, 2, 3]], dtype))
+    verify_no_input(model, tmpdir, 'Softmax_0')
 
 #Softplus
 @pytest.mark.parametrize("dtype", DType_Config)
