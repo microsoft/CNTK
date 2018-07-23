@@ -1128,13 +1128,13 @@ namespace CNTK
                     auto power = functionConfig[PrimitiveFunction::AttributeMarginInnerProductPower].Value<double>();
                     auto lambdaMin = functionConfig[PrimitiveFunction::AttributeMarginInnerProductLambdaMin].Value<double>();
                     auto marginCoefficient = functionConfig[PrimitiveFunction::AttributeMarginInnerProductMarginCoefficient].Value<size_t>();
-                    computationNodePtr = New<MarginInnerProductNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputDimension, base, gamma, power, lambdaMin, marginCoefficient);
+                    ASSIGN_NEW_NODE(MarginInnerProductNode, network->GetDeviceId(), internalNodeName, outputDimension, base, gamma, power, lambdaMin, marginCoefficient);
                     break;
                 }
                 case PrimitiveOpType::FeatureNormalize:
                 {
                     auto normalizeType = functionConfig[PrimitiveFunction::AttributeFeatureNormalizeNormalizeType].Value<size_t>();
-                    computationNodePtr = New<FeatureNormalizeNode<ElementType>>(network->GetDeviceId(), internalNodeName, normalizeType);
+                    ASSIGN_NEW_NODE(FeatureNormalizeNode, network->GetDeviceId(), internalNodeName, normalizeType);
                     break;
                 }
                 case PrimitiveOpType::AdditiveFullConnection:
@@ -1148,7 +1148,7 @@ namespace CNTK
                     auto biasPower = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasPower].Value<double>();
                     auto biasMin = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMin].Value<double>();
                     auto biasMax = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMax].Value<double>();
-                    computationNodePtr = New<AdditiveFullConnectionNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputDimension, weightNormalize, bias, annealBias, biasBase, biasGamma, biasPower, biasMin, biasMax);
+                    ASSIGN_NEW_NODE(AdditiveFullConnectionNode, network->GetDeviceId(), internalNodeName, outputDimension, weightNormalize, bias, annealBias, biasBase, biasGamma, biasPower, biasMin, biasMax);
                     break;
                 }
                 case PrimitiveOpType::CenterLoss:
@@ -1157,12 +1157,12 @@ namespace CNTK
                     auto alpha = functionConfig[PrimitiveFunction::AttributeCenterLossAlpha].Value<double>();
                     auto labelDim = functionConfig[PrimitiveFunction::AttributeCenterLossLabelDim].Value<size_t>();
                     auto normalize = functionConfig[PrimitiveFunction::AttributeCenterLossNormalize].Value<bool>();
-                    computationNodePtr = New<CenterLossNode<ElementType>>(network->GetDeviceId(), internalNodeName, lambda, alpha, labelDim, normalize);
+                    ASSIGN_NEW_NODE(CenterLossNode, network->GetDeviceId(), internalNodeName, lambda, alpha, labelDim, normalize);
                     break;
                 }
                 case PrimitiveOpType::ChannelMultiply:
                 {
-                    computationNodePtr = New<ChannelMultiplyNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    ASSIGN_NEW_NODE(ChannelMultiplyNode, network->GetDeviceId(), internalNodeName);
                     break;
                 }
                 case PrimitiveOpType::GlobalConcat:
@@ -1171,7 +1171,7 @@ namespace CNTK
                     auto growthRate = functionConfig[PrimitiveFunction::AttributeGlobalConcatGrowthRate].Value<size_t>();
                     auto segmentIndex = functionConfig[PrimitiveFunction::AttributeGlobalConcatSegmentIndex].Value<size_t>();
                     auto segmentNum = functionConfig[PrimitiveFunction::AttributeGlobalConcatSegmentNum].Value<size_t>();
-                    computationNodePtr = New<GlobalConcatNode<ElementType>>(network->GetDeviceId(), internalNodeName, blockIndex, growthRate, segmentIndex, segmentNum);
+                    ASSIGN_NEW_NODE(GlobalConcatNode, network->GetDeviceId(), internalNodeName, blockIndex, growthRate, segmentIndex, segmentNum);
                     break;
                 }
                 case PrimitiveOpType::CrossEntropyWithSoftmax:

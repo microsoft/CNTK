@@ -23,11 +23,14 @@
 #include "Variable.h"
 #include "UserFunctionFactory.h"
 #include "PrimitiveFunctionAttributes.h"
+#include <map>
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    std::map<size_t, size_t>globalConcatMap;
+
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
 
@@ -892,19 +895,27 @@ namespace CNTK
                         case PrimitiveOpType::AdditiveFullConnection:
                         {
                             assert(m_inputs.size() == 3);
-                            outputShape = NDShape{};
+                            outputShape = m_inputs[0].Shape();
                             break;
                         }
                         case PrimitiveOpType::ChannelMultiply:
                         {
                             assert(m_inputs.size() == 2);
-                            outputShape = NDShape{};
+                            outputShape = m_inputs[0].Shape();
                             break;
                         }
                         case PrimitiveOpType::GlobalConcat:
                         {
                             assert(m_inputs.size() == 1);
-                            outputShape = NDShape{};
+                            size_t blockIndex = m_attributes[PrimitiveFunction::AttributeGlobalConcatBlockIndex].Value<size_t>();
+                            size_t growthRate = m_attributes[PrimitiveFunction::AttributeGlobalConcatGrowthRate].Value<size_t>();
+                            size_t segmentIndex = m_attributes[PrimitiveFunction::AttributeGlobalConcatSegmentIndex].Value<size_t>();
+                            NDShape outputDims = m_inputs[0].Shape();
+                            if (0 == segmentIndex)
+                                globalConcatMap[blockIndex] = outputDims[2];
+                            else
+                                outputDims[2] = globalConcatMap[blockIndex] + growthRate * segmentIndex;
+                            outputShape = NDShape(outputDims);
                             break;
                         }
                         case PrimitiveOpType::CrossEntropyWithSoftmax:
