@@ -29,7 +29,7 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
-    std::map<size_t, size_t>globalConcatMap;
+    static std::map<size_t, size_t>globalConcatMap = std::map<size_t, size_t>();
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
