@@ -21,16 +21,9 @@ backend_test = onnx.backend.test.BackendTest(cntk_backend, __name__)
 
 skip_models = [
     # These tests crash and prevent tests after them from running.
-    'bvlc_alexnet',
-    'densenet121',
-    'inception_v1',
-    'inception_v2',
-    'resnet50',
-    'shufflenet',
-    'vgg16',
+    'resnet50', # Attempt to use DefaultLogger but none has been registered.
     'vgg19',
     'zfnet512',  # Attempt to use DefaultLogger but none has been registered.
-    'PixelShuffle'
 ]
 
 skip_ops = [
@@ -45,12 +38,36 @@ skip_ops = [
     'test_reshape_reduced_dims_cuda',
     'test_reshape_reordered_dims_cpu',
     'test_reshape_reordered_dims_cuda',
-    'test_pow_bcast_scalar_cpu',
-    'test_pow_bcast_scalar_cuda',
     'test_operator_repeat_dim_overflow_cpu',
     'test_operator_repeat_dim_overflow_cuda',
 
+    'test_batchnorm_epsilon_cpu',
+    'test_batchnorm_epsilon_cuda',
+    'test_batchnorm_example_cpu',
+    'test_batchnorm_example_cuda',
+    'test_BatchNorm1d_3d_input_eval_cpu',
+    'test_BatchNorm1d_3d_input_eval_cuda',
+    'test_BatchNorm2d_eval_cpu',
+    'test_BatchNorm2d_eval_cuda',
+    'test_BatchNorm2d_momentum_eval_cpu',
+    'test_BatchNorm2d_momentum_eval_cuda',
+    'test_BatchNorm3d_eval_cpu',
+    'test_BatchNorm3d_eval_cuda',
+    'test_BatchNorm3d_momentum_eval_cpu',
+    'test_BatchNorm3d_momentum_eval_cuda',
+
     # These use pre-ONNX 1.2 incompatible versions of the operators.
+
+    # This test is incorrect in ONNX 1.2.
+    # https://github.com/onnx/onnx/issues/1210
+    'test_log_softmax_lastdim_cpu',
+    'test_log_softmax_lastdim_cuda',
+
+    # This is an experimental op.
+    'test_thresholdedrelu',
+
+    # Unfinished local test implementation.
+    'test_arg_max_do_not_keepdims_example',
 ]
 
 skip_tests = skip_models + skip_ops
