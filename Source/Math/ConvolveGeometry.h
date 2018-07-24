@@ -401,24 +401,51 @@ public:
         return -(center - (kernSize - 1) / 2);
     }
 
-    int GetUpperPad(size_t dim) const
+    // GetUpperPad
+    // 
+    // There will be four cases
+    //      kernelSize  extraSize   padSizes                cuDnn & MKL (they only support symmetric padding)
+    // 1.   odd         even        lower = upper           supported
+    // 2.   even        odd         lower = upper           supported
+    // 3.   odd         odd         lower = upper + 1       supported with extra 1 padding on upperPad
+    // 4.   even        even        lower = upper - 1       unsupported
+    //
+    // extra size = (dim - 1) % stride
+    //
+    // So for cases where lower = upper + 1. We can simply decide to pad one extra for upperPad, 
+    // as it will yield the same shape and value results.
+    // However, for cases where lower = upper - 1. We cannot pad the extra for lowerPad, 
+    // as it will change the center of the kernel, and produce different value and maybe different shape results. 
+    int GetUpperPad(size_t dim, bool convertToSymmetric = false) const
     {
         if (!GetAutoPad(dim))
             return (int)m_upperPad[m_upperPad.size() == 1 ? 0 : dim];
 
-        int dilation = (int)GetDilation(dim);
-        int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
-        int inpSize = (int)m_inputShape[dim];
-        int outSize = (int)m_outputShape[dim];
-        int stride = (int)GetStride(dim);
+        if (convertToSymmetric)
+        {
+            int lowerPad = GetLowerPad(dim);
+            int upperPad = GetUpperPad(dim, false);
+            // lowerPad and upperPad differs by at most 1. 
+            assert(lowerPad == upperPad || abs(lowerPad - upperPad) == 1);
+            if (upperPad < lowerPad) return lowerPad;
+            return upperPad;
+        }
+        else
+        {
+            int dilation = (int)GetDilation(dim);
+            int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
+            int inpSize = (int)m_inputShape[dim];
+            int outSize = (int)m_outputShape[dim];
+            int stride = (int)GetStride(dim);
 
-        // Taken from computation in ConvolveGeometry ctor.
-        // Number of cells between first and last "centers", inclusive.
-        int cells = (outSize - 1) * stride + 1;
-        // Extra cells, to the left and right of "cells".
-        int extra = inpSize - cells;
-        int center = extra / 2;
-        return (kernSize - 1) - (kernSize - 1) / 2 - (extra - center);
+            // Taken from computation in ConvolveGeometry ctor.
+            // Number of cells between first and last "centers", inclusive.
+            int cells = (outSize - 1) * stride + 1;
+            // Extra cells, to the left and right of "cells".
+            int extra = inpSize - cells;
+            int center = extra / 2;
+            return (kernSize - 1) - (kernSize - 1) / 2 - (extra - center);
+        }
     }
 
     // Return if padding is enabled for input channel axis. 
@@ -609,12 +636,14 @@ public:
         return res.str();
     }
 
-    bool IsAsymmetricPadding() const
+    // For MKL, if auto padding is enabled, in some cases we can convert asymmetric padding to symmetric padding,
+    // with the same output shape and value. 
+    bool IsAsymmetricPadding(bool useMKL) const
     {
         for (size_t i = 0; i < KernelShape().size(); i++)
         {
             auto lowerPad = GetLowerPad(i);
-            auto upperPad = GetUpperPad(i);
+            auto upperPad = GetUpperPad(i, useMKL);
             auto stride = GetStride(i);
             if ((lowerPad != upperPad) && (stride < InputShape()[i]))
             {
