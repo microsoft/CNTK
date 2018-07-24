@@ -889,13 +889,13 @@ namespace CNTK
                         case PrimitiveOpType::FeatureNormalize:
                         {
                             assert(m_inputs.size() == 1);
-                            outputShape = NDShape{};
+                            outputShape = m_inputs[0].Shape();
                             break;
                         }
                         case PrimitiveOpType::AdditiveFullConnection:
                         {
                             assert(m_inputs.size() == 3);
-                            outputShape = m_inputs[0].Shape();
+                            outputShape = NDShape{};
                             break;
                         }
                         case PrimitiveOpType::ChannelMultiply:
