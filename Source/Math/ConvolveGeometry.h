@@ -416,18 +416,24 @@ public:
     // as it will yield the same shape and value results.
     // However, for cases where lower = upper - 1. We cannot pad the extra for lowerPad, 
     // as it will change the center of the kernel, and produce different value and maybe different shape results. 
-    int GetUpperPad(size_t dim, bool convertToSymmetric = false) const
+    //
+    // Parameter: 
+    //  bool trySymmetricAutoPad : if set to true, this function will return symmetric padding for case 3 by padding 1 extra on upperPad.
+    //                             This parameter is ignored if auto padding is not enabled. 
+    int GetUpperPad(size_t dim, bool trySymmetricAutoPad = false) const
     {
         if (!GetAutoPad(dim))
             return (int)m_upperPad[m_upperPad.size() == 1 ? 0 : dim];
 
-        if (convertToSymmetric)
+        if (trySymmetricAutoPad)
         {
             int lowerPad = GetLowerPad(dim);
             int upperPad = GetUpperPad(dim, false);
             // lowerPad and upperPad differs by at most 1. 
             assert(lowerPad == upperPad || abs(lowerPad - upperPad) == 1);
+            // case 3: pad extra 1 for upperPad to enable symmetric padding. 
             if (upperPad < lowerPad) return lowerPad;
+            // case 4: cannot convert to symmetric padding for this case. 
             return upperPad;
         }
         else
