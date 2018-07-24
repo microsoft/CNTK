@@ -922,7 +922,6 @@ def test_MaxRoiPool(tmpdir, dtype):
 #Mean
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Mean(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         in1 = C.input_variable((4,))
         in2 = C.input_variable((4,))
@@ -1272,7 +1271,6 @@ def test_Softsign(tmpdir, dtype):
 #Sum
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Sum(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         in1_data = np.asarray([[1., 2., 3., 4.]], dtype = dtype)
         in2_data = np.asarray([[0., 5., -3., 2.]], dtype = dtype)
@@ -1363,7 +1361,6 @@ def test_TransposeAxes(tmpdir, dtype):
      (((9, 10), (11, 12)), ((13, 14), (15, 16)))),
 ))
 def test_Select(flag, if_true, if_false, tmpdir):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     flag = np.asarray(flag, dtype=np.float32)
     if_true = np.asarray(if_true, dtype=np.float32)
     if_false = np.asarray(if_false, dtype=np.float32)
