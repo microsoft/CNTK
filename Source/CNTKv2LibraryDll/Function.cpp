@@ -116,6 +116,13 @@ namespace CNTK
                 // The first two inputs are Constant for alpha and beta, followed with three Variable A, B and C.
                 inputs = { m_inputs[0], m_inputs[1], m_inputs[3], m_inputs[2], m_inputs[4] };
             }
+            else if (pythonOperandOrder && primitiveFunction && (primitiveFunction->OpName() == L"GatherOp" || primitiveFunction->OpType() == PrimitiveOpType::Gather))
+            {
+                assert(m_inputs.size() == 2);
+                fprintf(stderr, "InputsImpl::GatherOp: input size %zu input 0 shape %ls input 1 shape %ls\n", 
+                    m_inputs.size(), m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
+                inputs = { m_inputs[1], m_inputs[0] };
+            }
             else
                 inputs = m_inputs;
         }
@@ -2258,7 +2265,7 @@ namespace CNTK
             auto swapped = TransposeAxes(refPlaceholder, lastAxis, axis);
             auto gatherSwapped = GatherOp(indPlaceholder, swapped);
             auto result = TransposeAxes(gatherSwapped, lastAxis, axis);
-            return AsBlock(std::move(result), { { refPlaceholder, reference },{ indPlaceholder, indices } }, std::move(additionalProperties), L"GatherOp", name);
+            return AsBlock(std::move(result), { { indPlaceholder, indices }, { refPlaceholder, reference } }, std::move(additionalProperties), L"GatherOp", name);
         }
     }
 
@@ -2917,12 +2924,13 @@ namespace CNTK
     FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name)
     {
         auto operandPlaceholder = PlaceholderVariable();
+        auto alphaPlaceholder = PlaceholderVariable();
         auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
         auto result = ElementSelect(lessThanZero,
-            ElementTimes(alpha, operandPlaceholder),
+            ElementTimes(alphaPlaceholder, operandPlaceholder),
             operandPlaceholder);
 
-        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"PReLU", name);
+        return AsBlock(std::move(result), { { alphaPlaceholder, alpha }, { operandPlaceholder, operand } }, L"PReLU", name);
     }
 
     FunctionPtr Softplus(const Variable& operand, const std::wstring& name)

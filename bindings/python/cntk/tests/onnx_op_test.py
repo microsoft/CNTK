@@ -495,11 +495,11 @@ def test_Floor(tmpdir, dtype):
 #Gather
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Gather(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     if (dtype == np.float16):
         pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
-        c = np.asarray([[[0],[1]],[[4],[5]]]).astype(dtype)
+        c = np.asarray([[[0],[1]]]).astype(dtype) 
+        #c = np.asarray([[[0],[1]],[[4],[5]]]).astype(dtype) # batch size = 2 not supported yet. 
         x = C.input_variable((2,1))
         d = np.arange(12).reshape(6,2).astype(dtype)
         y = C.constant(d)
@@ -1020,11 +1020,20 @@ def test_Pad(tmpdir, dtype):
         verify_one_input(model, data, tmpdir, 'Pad_1')
 
 #PRelu
-#def test_PRelu(tmpdir):
-#    data = np.asarray([[-1, -0.5, 0, 1, 2]])
-#    alpha = C.constant(value=[[0.5, 0.5, 0.5, 0.5, 0.5]])
-#    model = C.param_relu(alpha, data)
-#    verify_no_input(model, tmpdir, 'PRelu_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_PRelu(tmpdir, dtype):
+    # no input
+    data = np.asarray([[-1, -0.5, 0, 1, 2]])
+    alpha = C.constant(value=[[0.5, 0.5, 0.5, 0.5, 0.5]], name='alpha')
+    model = C.param_relu(alpha, data)
+    verify_no_input(model, tmpdir, 'PRelu_0')
+
+    # one input
+    data = np.asarray([[-1, -0.5, 0, 1, 2]])
+    x = C.input_variable(data.shape)
+    alpha = C.constant(value=[[0.5, 0.5, 0.5, 0.5, 0.5]], name='alpha')
+    model = C.param_relu(alpha, x)
+    verify_one_input(model, data, tmpdir, 'PRelu_1')
 
 #Pow
 @pytest.mark.parametrize("dtype", DType_Config)

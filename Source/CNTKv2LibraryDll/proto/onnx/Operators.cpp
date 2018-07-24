@@ -483,7 +483,6 @@ namespace ONNX
             { L"ELU",{ 0, 1 } },
             { L"LeakyReLU",{ 0, 1 } },
             { L"SELU",{ 0, 1, 2 } },
-            { L"PReLU",{ 0 } },
             { L"ElementMax",{} },
             { L"ElementMin",{} },
             { L"HardSigmoid",{ 0, 1, 2, 3 } },
@@ -506,7 +505,7 @@ namespace ONNX
             { L"BatchNormalization",{ 0, 1, 2, 3, 4, -1 } },
             { L"Times",{ 1, 0 } },
             { L"Gather",{ 1, 0 } },
-            { L"PReLU",{ 1, 0 } },
+            { L"PReLU",{ -1, 1, 0 } },
             { L"Gemm", { -1, -1, 1, 0, 2} },
         };
 

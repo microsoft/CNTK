@@ -61,7 +61,12 @@ class CNTKBackendRep(BackendRep):
         self.expected_out_types = expected_out_types
 
     def run(self, inputs, **kwargs):
-        input = {self.model.arguments[i]:inputs[i] for i in range(len(inputs))} 
+        input = {self.model.arguments[i]:inputs[i] for i in range(len(inputs))}
+        if self.model.owner.op_name == "PReLU":
+            # temporary solution for handling "PRelu" op that has different input order between
+            # CNTK python operand order and ONNX order. 
+            mapping = [1, 0]
+            input = {self.model.arguments[i]:inputs[mapping[i]] for i in range(len(inputs))}
         res = self.model.eval(input)
         # TODO: make this work for multiple output case.
         # TODO: support more types.
