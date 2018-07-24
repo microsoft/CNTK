@@ -128,8 +128,6 @@ private:
     static Axis ConvertONNXAxisToCNTKCppApi(int64_t axes, const Variable &input);
     static std::vector<Axis> ConvertONNXAxesToCNTKCppApi(const std::vector<int64_t> &axes, const Variable &operand);
 
-    static void AdjustAutoPaddingAndStrideForCNTKSpecialCases(const Variable &operand,
-                                                              std::vector<bool> &autoPadding, NDShape &strides);
     static std::pair<std::vector<size_t>, std::vector<size_t>> SplitAndReverseVec(std::vector<int64_t> &pads);
     static std::pair<std::vector<size_t>, std::vector<size_t>> AdjustONNXPadsVecForCNTKPadOp(const Variable &operand, std::vector<int64_t> &pads);
     static NDShape ReverseShape(const NDShape &shape);
@@ -1858,19 +1856,6 @@ std::vector<Axis> ONNXToCNTKHelper::ConvertONNXAxesToCNTKCppApi(const std::vecto
     return cntkAxes;
 }
 
-void ONNXToCNTKHelper::AdjustAutoPaddingAndStrideForCNTKSpecialCases(const Variable &operand, std::vector<bool> &autoPadding, NDShape &strides)
-{
-    if ((operand.Shape().Rank() == (1 + autoPadding.size())))
-    {
-        autoPadding.push_back(false);
-    }
-
-    if ((operand.Shape().Rank() == (1 + strides.Rank())))
-    {
-        strides = strides.AppendShape({1});
-    }
-}
-
 std::pair<std::vector<size_t>, std::vector<size_t>> ONNXToCNTKHelper::SplitAndReverseVec(std::vector<int64_t> &pads)
 {
     // Split this into head (lower padding) and foot (upper padding), and reverse them because
@@ -3021,7 +3006,6 @@ Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool> &
         cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), false); // For 'VALID' convolution
     }
 
-    AdjustAutoPaddingAndStrideForCNTKSpecialCases(operand, cntkConvAutoPadding, strides);
     return convOperand;
 }
 
