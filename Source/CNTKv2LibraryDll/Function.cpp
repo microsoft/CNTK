@@ -119,8 +119,7 @@ namespace CNTK
             else if (pythonOperandOrder && primitiveFunction && (primitiveFunction->OpName() == L"GatherOp" || primitiveFunction->OpType() == PrimitiveOpType::Gather))
             {
                 assert(m_inputs.size() == 2);
-                fprintf(stderr, "InputsImpl::GatherOp: input size %zu input 0 shape %ls input 1 shape %ls\n", 
-                    m_inputs.size(), m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
+                // For GatherOp, python operand order is reversed. 
                 inputs = { m_inputs[1], m_inputs[0] };
             }
             else
