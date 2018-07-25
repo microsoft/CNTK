@@ -439,7 +439,7 @@ public:
         int center = extra / 2;
         int upperPad = (kernSize - 1) - (kernSize - 1) / 2 - (extra - center);
 
-        if (trySymmetricAutoPad && kernSize % 2 == 1 && extra % 2 == 1)
+        if (trySymmetricAutoPad && (kernSize % 2 == 1) && (extra % 2 == 1))
         {
             // case 3: pad extra 1 for upperPad to enable symmetric padding. 
             upperPad++;
@@ -452,7 +452,8 @@ public:
     {
         size_t channelIdx = m_inputShape.GetRank() - 1;
         assert(m_inputShape.GetRank() >= 1);
-        return GetLowerPad(channelIdx) > 0;
+        // check for lowerPad value. This value is incorrect when out channel size > 1. Check if channel stride is >= channel size in that case.
+        return (GetLowerPad(channelIdx) > 0) && (GetStride(channelIdx) < m_inputShape[channelIdx]);
     }
 
     // Computes output shape given input shape and other convolution parameters.
