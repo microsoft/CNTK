@@ -78,6 +78,7 @@ private:
     std::vector<shared_ptr<const msra::dbn::latticepair>> m_extraLatticeBufferMultiUtt;
     std::vector<std::vector<size_t>> m_extraLabelsIDBufferMultiUtt;
 
+    /* guoye: start */
     /* word labels */
     std::vector<std::vector<size_t>> m_wlabelsIDBufferMultiUtt;
     std::vector<std::vector<size_t>> m_extraWLabelsIDBufferMultiUtt;
@@ -85,6 +86,7 @@ private:
     std::vector<std::vector<short>> m_nwsBufferMultiUtt;
     std::vector<std::vector<short>> m_extraNWsBufferMultiUtt;
 
+    /* guoye: end */
     std::vector<std::vector<size_t>> m_extraPhoneboundaryIDBufferMultiUtt;
 
     // hmm
@@ -117,7 +119,10 @@ private:
     void PrepareForWriting(const ConfigRecordType& config);
 
     bool GetMinibatchToTrainOrTest(StreamMinibatchInputs& matrices);
+    /* guoye: start */
+    // bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, std::vector<size_t>& extrauttmap);
     bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& wids, vector<short>& nws, vector<size_t>& boundaries, std::vector<size_t>& extrauttmap);
+    /* guoye: end */
     void fillOneUttDataforParallelmode(StreamMinibatchInputs& matrices, size_t startFr, size_t framenum, size_t channelIndex, size_t sourceChannelIndex); // TODO: PascalCase()
     bool GetMinibatchToWrite(StreamMinibatchInputs& matrices);
 
@@ -197,7 +202,10 @@ public:
     virtual const std::map<LabelIdType, LabelType>& GetLabelMapping(const std::wstring& sectionName);
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
+    /* guoye: start */
+    // virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& wids, vector<short>& nws, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
+    /* guoye: end */
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
     virtual bool DataEnd();

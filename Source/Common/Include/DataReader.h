@@ -264,7 +264,10 @@ public:
     }
 
     virtual bool GetMinibatch(StreamMinibatchInputs& matrices) = 0;
+    /* guoye: start */
+    // virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& /*latticeinput*/, vector<size_t>& /*uids*/, vector<size_t>& /*boundaries*/, vector<size_t>& /*extrauttmap*/)
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& /*latticeinput*/, vector<size_t>& /*uids*/, vector<size_t>& /*wids*/, vector<short>& /*nws*/, vector<size_t>& /*boundaries*/, vector<size_t>& /*extrauttmap*/)
+    /* guoye: end */
     {
         NOT_IMPLEMENTED;
     };
@@ -444,8 +447,11 @@ public:
     //             [out] each matrix resized if necessary containing data.
     // returns - true if there are more minibatches, false if no more minibatches remain
     virtual bool GetMinibatch(StreamMinibatchInputs& matrices);
+    /* guoye: start */
+    // virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& wids, vector<short>& nws, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
 
+    /* guoye: end */
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
     size_t GetNumParallelSequencesForFixingBPTTMode();

@@ -52,6 +52,8 @@ protected:
                                 vectorref<double>& logaccalphas, vectorref<double>& logaccbetas,
                                 vectorref<double>& logframescorrectedge, vectorref<double>& logEframescorrect, vectorref<double>& Eframescorrectbuf,
                                 double& logEframescorrecttotal, double& totalfwscore) const;
+
+    /* guoye: start */
     void backwardlatticeEMBR(const size_t *batchsizebackward, const size_t numlaunchbackward,
         const vectorref<float> &edgeacscores,
         const vectorref<msra::lattices::edgeinfowithscores> &edges,
@@ -61,6 +63,7 @@ protected:
         const vectorref<msra::lattices::edgeinfowithscores> &edges, const vectorref<msra::lattices::nodeinfo> &nodes,
         const vectorref<double> &edgeweights,
         matrixref<float> &errorsignal) const;
+    /* guoye: end */
     void sMBRerrorsignal(const vectorref<unsigned short>& alignstateids, const vectorref<unsigned int>& alignoffsets,
                          const vectorref<msra::lattices::edgeinfowithscores>& edges, const vectorref<msra::lattices::nodeinfo>& nodes,
                          const vectorref<double>& logpps, const float amf, const vectorref<double>& logEframescorrect, const double logEframescorrecttotal,

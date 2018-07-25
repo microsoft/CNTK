@@ -646,6 +646,8 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
                                      const double& lmf /*= 14.0f*/,
                                      const double& wp /*= 0.0f*/,
                                      const double& bMMIfactor /*= 0.0f*/,
+                                      /* guoye: start */
+                                     // const bool& sMBR /*= false*/
                                      const bool& sMBR  /*= false */,
                                      const bool& EMBR  /*= false */,
                                      const string& EMBRUnit /* = "word" */,
@@ -658,9 +660,16 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
                                     const bool& useAccInNbest,
                                     const float& accWeightInNbest,
                                     const size_t& numRawPathsEMBR
+                                    /* guoye: end */
                                      )
 {
     fprintf(stderr, "Setting Hsmoothing weight to %.8g and frame-dropping threshhold to %.8g\n", hsmoothingWeight, frameDropThresh);
+    /* guoye: start */
+    
+    /* 
+    fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, usesMBR=%s\n",
+            amf, lmf, wp, bMMIfactor, sMBR ? "true" : "false");
+    */
     
     if(EMBR)
     {
@@ -677,6 +686,7 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
         fprintf(stderr, "Setting SeqGammar-related parameters: amf=%.2f, lmf=%.2f, wp=%.2f, bMMIFactor=%.2f, useMMI=true \n",
             amf, lmf, wp, bMMIfactor);
     }
+    /* guoye: end */
     list<ComputationNodeBasePtr> seqNodes = net->GetNodesWithType(OperationNameOf(SequenceWithSoftmaxNode), criterionNode);
     if (seqNodes.size() == 0)
     {
@@ -690,8 +700,11 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
             node->SetSmoothWeight(hsmoothingWeight);
             node->SetFrameDropThresh(frameDropThresh);
             node->SetReferenceAlign(doreferencealign);
+            /* guoye: start */
+            // node->SetGammarCalculationParam(amf, lmf, wp, bMMIfactor, sMBR);
             node->SetMBR(sMBR || EMBR);
             node->SetGammarCalculationParamEMBR(amf, lmf, wp, bMMIfactor, sMBR, EMBR, EMBRUnit, numPathsEMBR, enforceValidPathEMBR, getPathMethodEMBR, showWERMode, excludeSpecialWords, wordNbest, useAccInNbest, accWeightInNbest, numRawPathsEMBR);
+            /* guoye: end */
         }
     }
 }
@@ -1575,7 +1588,15 @@ template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(size_t modelVersion, File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
+/* guoye: start */
+/*
+template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
+                                                     const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
+*/
+
 template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign, const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR, const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode, const bool& excludeSpecialWords, const bool& wordNbest, const bool& useAccInNbest, const float& accWeightInNbest, const size_t& numRawPathsEMBR);
+
+/* guoye: end */
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
 template void ComputationNetwork::InitLearnableParametersWithBilinearFill<double>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
@@ -1585,10 +1606,16 @@ template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstri
 
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 
+/* guoye: start */
+/*
+template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
+                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
+*/
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR,
     const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode, const bool& excludeSpecialWords, const bool& wordNbest, const bool& useAccInNbest, const float& accWeightInNbest, const size_t& numRawPathsEMBR);
                                                   
+/* guoye: end */
 
 template void ComputationNetwork::SaveToDbnFile<double>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
@@ -1597,6 +1624,11 @@ template void ComputationNetwork::Read<half>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<half>(size_t modelVersion, File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<half>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<half>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
+/* guoye: start: mask this */
+/*
+template void ComputationNetwork::SetSeqParam<half>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
+    const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
+*/
 template void ComputationNetwork::SaveToDbnFile<half>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
 // register ComputationNetwork with the ScriptableObject system

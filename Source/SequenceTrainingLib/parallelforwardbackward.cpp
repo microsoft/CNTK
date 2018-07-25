@@ -133,6 +133,9 @@ void backwardlatticej(const size_t batchsize, const size_t startindex, const std
     }
 }
 
+/* guoye: start */
+
+
 void backwardlatticejEMBR(const size_t batchsize, const size_t startindex, const std::vector<float>& edgeacscores,
     const std::vector<msra::lattices::edgeinfowithscores>& edges,
     const std::vector<msra::lattices::nodeinfo>& nodes,
@@ -149,6 +152,8 @@ void backwardlatticejEMBR(const size_t batchsize, const size_t startindex, const
             logbetas, lmf, wp, amf);
     }
 }
+
+/* guoye: end */
 void sMBRerrorsignalj(const std::vector<unsigned short>& alignstateids, const std::vector<unsigned int>& alignoffsets,
                       const std::vector<msra::lattices::edgeinfowithscores>& edges, const std::vector<msra::lattices::nodeinfo>& nodes,
                       const std::vector<double>& logpps, const float amf, const std::vector<double>& logEframescorrect,
@@ -163,6 +168,7 @@ void sMBRerrorsignalj(const std::vector<unsigned short>& alignstateids, const st
     }
 }
 
+/* guoye: start */
 void EMBRerrorsignalj(const std::vector<unsigned short>& alignstateids, const std::vector<unsigned int>& alignoffsets,
     const std::vector<msra::lattices::edgeinfowithscores>& edges, const std::vector<msra::lattices::nodeinfo>& nodes,
     const std::vector<double>& edgeweights, msra::math::ssematrixbase& errorsignal)
@@ -174,6 +180,7 @@ void EMBRerrorsignalj(const std::vector<unsigned short>& alignstateids, const st
         msra::lattices::latticefunctionskernels::EMBRerrorsignalj(j, alignstateids, alignoffsets, edges, nodes, edgeweights, errorsignal);
     }
 }
+/* guoye: end */
 void stateposteriorsj(const std::vector<unsigned short>& alignstateids, const std::vector<unsigned int>& alignoffsets,
                       const std::vector<msra::lattices::edgeinfowithscores>& edges, const std::vector<msra::lattices::nodeinfo>& nodes,
                       const std::vector<double>& logqs, msra::math::ssematrixbase& logacc)
@@ -325,6 +332,8 @@ static double emulateforwardbackwardlattice(const size_t* batchsizeforward, cons
 #endif
     return totalfwscore;
 }
+/* guoye: start */
+
 static double emulatebackwardlatticeEMBR(const size_t* batchsizebackward, const size_t numlaunchbackward,
     const std::vector<float>& edgeacscores,
     const std::vector<msra::lattices::edgeinfowithscores>& edges, const std::vector<msra::lattices::nodeinfo>& nodes,
@@ -365,6 +374,7 @@ static double emulatebackwardlatticeEMBR(const size_t* batchsizebackward, const 
 
     return totalbwscore;
 }
+/* guoye: end */
 
 // this function behaves as its CUDA conterparts, except that it takes CPU-side std::vectors for everything
 // this must be identical to CUDA kernel-launch function in -ops class (except for the input data types: vectorref -> std::vector)
@@ -392,6 +402,8 @@ static void emulatesMBRerrorsignal(const std::vector<unsigned short>& alignstate
                 });
 }
 
+/* guoye: start */
+
 // this function behaves as its CUDA conterparts, except that it takes CPU-side std::vectors for everything
 // this must be identical to CUDA kernel-launch function in -ops class (except for the input data types: vectorref -> std::vector)
 static void emulateEMBRerrorsignal(const std::vector<unsigned short>& alignstateids, const std::vector<unsigned int>& alignoffsets,
@@ -412,7 +424,7 @@ static void emulateEMBRerrorsignal(const std::vector<unsigned short>& alignstate
     });
     dim3 b1((((unsigned int)errorsignal.rows()) + 31) / 32);
 }
-
+/* guoye: end */
 // this function behaves as its CUDA conterparts, except that it takes CPU-side std::vectors for everything
 // this must be identical to CUDA kernel-launch function in -ops class (except for the input data types: vectorref -> std::vector)
 static void emulatemmierrorsignal(const std::vector<unsigned short>& alignstateids, const std::vector<unsigned int>& alignoffsets,
@@ -477,8 +489,11 @@ struct parallelstateimpl
           logppsgpu(msra::cuda::newdoublevector(deviceid)),
           logalphasgpu(msra::cuda::newdoublevector(deviceid)),
           logbetasgpu(msra::cuda::newdoublevector(deviceid)),
+          /* guoye: start */
           edgelogbetasgpu(msra::cuda::newdoublevector(deviceid)),
           edgeweightsgpu(msra::cuda::newdoublevector(deviceid)),
+        /* guoye: end */
+        
           logaccalphasgpu(msra::cuda::newdoublevector(deviceid)),
           logaccbetasgpu(msra::cuda::newdoublevector(deviceid)),
           logframescorrectedgegpu(msra::cuda::newdoublevector(deviceid)),
@@ -617,8 +632,10 @@ struct parallelstateimpl
 
     std::unique_ptr<doublevector> logppsgpu;
     std::unique_ptr<doublevector> logalphasgpu;
+    /* guoye: start */
     std::unique_ptr<doublevector> edgelogbetasgpu;
     std::unique_ptr<doublevector> edgeweightsgpu;
+    /* guoye: end */
     std::unique_ptr<doublevector> logbetasgpu;
     std::unique_ptr<doublevector> logaccalphasgpu;
     std::unique_ptr<doublevector> logaccbetasgpu;
@@ -712,6 +729,7 @@ struct parallelstateimpl
             logEframescorrectgpu->allocate(edges.size());
         }
     }
+    /* guoye: start */
     template <class edgestype, class nodestype>
     void allocbwvectorsEMBR(const edgestype& edges, const nodestype& nodes)
     {
@@ -724,6 +742,8 @@ struct parallelstateimpl
         edgelogbetasgpu->allocate(edges.size());
 
     }
+    /* guoye: end */
+
     // check if gpumatrixstorage supports size of cpumatrix, if not allocate. set gpumatrix to part of gpumatrixstorage
     // This function checks the size of errorsignalgpustorage, and then sets errorsignalgpu to a columnslice of the
     // result, which encompases the entire matrix. Because this is a view of the underlying storage in 
@@ -768,6 +788,7 @@ struct parallelstateimpl
         edgealignments.resize(alignresult->size());
         alignresult->fetch(edgealignments, true);
     }
+    /* guoye: start */
 
     void getlogbetas(std::vector<double>& logbetas)
     {
@@ -794,6 +815,8 @@ struct parallelstateimpl
         edgeweightsgpu->assign(edgeweights, false);
     }
 
+
+    /* guoye: end */
 };
 
 void lattice::parallelstate::setdevice(size_t deviceid)
@@ -855,6 +878,7 @@ void lattice::parallelstate::getedgealignments(std::vector<unsigned short>& edge
 {
     pimpl->getedgealignments(edgealignments);
 }
+/* guoye: start */
 void lattice::parallelstate::getlogbetas(std::vector<double>& logbetas)
 {
     pimpl->getlogbetas(logbetas);
@@ -876,6 +900,7 @@ void lattice::parallelstate::setedgeweights(const std::vector<double>& edgeweigh
 
 
 
+/* guoye: end */
 //template<class ElemType>
 void lattice::parallelstate::setloglls(const Microsoft::MSR::CNTK::Matrix<float>& loglls)
 {
@@ -1060,6 +1085,10 @@ double lattice::parallelforwardbackwardlattice(parallelstate& parallelstate, con
     return totalfwscore;
 }
 
+/* guoye: start */
+
+
+// parallelforwardbackwardlattice() -- compute the latticelevel logpps using forwardbackward
 double lattice::parallelbackwardlatticeEMBR(parallelstate& parallelstate, const std::vector<float>& edgeacscores,
                                                const float lmf, const float wp, const float amf, 
                                                std::vector<double>& edgelogbetas, std::vector<double>& logbetas) const
@@ -1122,6 +1151,7 @@ double lattice::parallelbackwardlatticeEMBR(parallelstate& parallelstate, const 
     }
     return totalbwscore;
 }
+/* guoye: end */
 // ------------------------------------------------------------------------
 // parallel implementations of sMBR error updating step
 // ------------------------------------------------------------------------
@@ -1161,6 +1191,7 @@ void lattice::parallelsMBRerrorsignal(parallelstate& parallelstate, const edgeal
     }
 }
 
+/* guoye: start */
 // ------------------------------------------------------------------------
 void lattice::parallelEMBRerrorsignal(parallelstate& parallelstate, const edgealignments& thisedgealignments,
     const std::vector<double>& edgeweights, 
@@ -1188,6 +1219,8 @@ void lattice::parallelEMBRerrorsignal(parallelstate& parallelstate, const edgeal
         emulateEMBRerrorsignal(thisedgealignments.getalignmentsbuffer(), thisedgealignments.getalignoffsets(), edges, nodes, edgeweights, errorsignal);
     }
 }
+/* guoye: end */
+
 // ------------------------------------------------------------------------
 // parallel implementations of MMI error updating step
 // ------------------------------------------------------------------------
