@@ -1500,7 +1500,7 @@ namespace CNTK
                 fromShape = operandShape;
 
             size_t fillRank = (!transpose) ? filterRank : filterRank - 1;
-            if (!transpose && op == PrimitiveOpType::Convolution)
+            if (!transpose && (op == PrimitiveOpType::Convolution) && (fillRank > 0))
             {
                 // For convolution, we have taken steps to ensure fillRank = inputRank here.
                 // In previous steps, if fillRank < inputRank, we threw exception.

@@ -233,7 +233,7 @@ def test_clone_with_slice():
     x = C.splice(i1, i2, axis=0)
     W = C.constant(1, (4,1), name='W')
     y = C.convolution(W, x)
-    assert(y.shape == (4,2))
+    assert(y.shape == (1,2)) # default is no padding for channel
 
     from ..functions import CloneMethod
     x1 = C.input_variable((2,1), name='x1')
@@ -242,7 +242,7 @@ def test_clone_with_slice():
     p2 = C.placeholder()
     y_cloned = y.clone('clone', {i1:p1, i2:p2})
     y2 = y_cloned(x1, x2)
-    assert(y2.shape == (4,1))
+    assert(y2.shape == (1,1)) # default is no padding for channel
 
 def test_as_composite():
     input_dim = 1
