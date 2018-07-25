@@ -455,17 +455,11 @@ public:
     }
 
     // Return if padding is enabled for input channel axis. 
-    static bool isPaddingOverChannelAxis(const TensorShape& inputShape, const TensorShape& stride, const BoolVec& autoPad, 
-        const TensorShape& lowerPad, const TensorShape& upperPad)
+    bool IsPaddingOverChannelAxis() const
     {
-        size_t channelIdx = inputShape.GetRank() - 1;
-        assert(inputShape.GetRank() >= 1);
-        size_t delta = stride[stride.GetRank() == 1 ? 0 : channelIdx];
-        bool autoPadCur = autoPad[autoPad.size() == 1 ? 0 : channelIdx];
-        size_t lo = lowerPad[lowerPad.size() == 1 ? 0 : channelIdx];
-        size_t hi = upperPad[upperPad.size() == 1 ? 0 : channelIdx];
-        // padding is enabled for channel axis, i.e. channel axis output dim != 1, when any of autoPad, lowerPad or upperPad > 0 and stride != channel size.
-        return (autoPadCur || (lo + hi > 0)) && delta != inputShape[channelIdx];
+        size_t channelIdx = m_inputShape.GetRank() - 1;
+        assert(m_inputShape.GetRank() >= 1);
+        return GetLowerPad(channelIdx) > 0;
     }
 
     // Computes output shape given input shape and other convolution parameters.
