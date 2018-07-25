@@ -1959,7 +1959,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Flatten")
     {
-        int64_t axisIndex = (size_t) GetNamedAttributeAsInt64(node, "axis", 0);
+        int64_t axisIndex = (size_t) GetNamedAttributeAsInt64(node, "axis", 1);
         Axis axis = ConvertONNXAxisToCNTKCppApi(axisIndex, inputs[0]);
         FunctionPtr cntkFunction = Flatten(inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;

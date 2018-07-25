@@ -1340,7 +1340,7 @@ int64_t CNTKToONNXHelper::ConvertAxisToOnnx(const Axis &axis, const Variable &op
         else if (operand.DynamicAxes().size() == 2)
             return 1;
         else
-            LogicError("Inconsitant Axis in ConvertAxisToOnnx");
+            LogicError("Inconsistent Axis in ConvertAxisToOnnx");
     }
     else if (axis.IsSequenceAxis())
     {
@@ -2579,9 +2579,6 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                 else // REVIEW SPTIWARI: Should we fill 0 for FreeDimension here?
                     newShapeVec.push_back(static_cast<int>(axisSize));
             }
-            // Add a 1 to the shape for batch axis in ONNX tensors.
-            if ((src->Inputs().size() > 0) && (src->Inputs()[0].HasBatchAxis()))
-                newShapeVec.push_back(1);
 
             std::reverse(newShapeVec.begin(), newShapeVec.end());
             onnx::TypeProto shapeInputArgType = ToTypeProto(std::vector<int>({ (int)newShapeVec.size() }));
@@ -3037,7 +3034,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             {
                 axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
             }
-            int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
+            int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]) + 1 /* TODO: Figure out how to remove this hardcoded 1 */;
             node->AddAttribute(attributesMap[L"axis"], ax);
         }
         else if (src->OpName() == L"Squeeze")

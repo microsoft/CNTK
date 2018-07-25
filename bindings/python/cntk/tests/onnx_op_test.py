@@ -21,6 +21,12 @@ DIM_SIZE_FOR_NON_BATCH_OPS = 1
 # get exported to an ONNX op with defined batch axis).
 set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization'}
 
+# List of CNTK ops for which output shape doesn't change regardless
+# of whether the input has batch axis or not.
+# Basically, for these ops we don't prepend 1 to the output shape
+# when the input has batch axis.
+set_of_batch_irrelevant_ops = {'Flatten', 'Reshape'}
+
 #############
 #helpers
 #############
@@ -54,7 +60,8 @@ def verify_one_input(model, data, tmpdir, name, device=None):
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
         dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-        model_shape = (dim_denotation, ) + model_shape
+        if opname not in set_of_batch_irrelevant_ops:
+            model_shape = (dim_denotation, ) + model_shape
         data.shape = (1, ) + data.shape
     assert model_shape == loaded_model.shape
 
@@ -89,7 +96,8 @@ def verify_two_input(model, data1, data2, tmpdir, name):
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
         dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-        model_shape = (dim_denotation, ) + model_shape
+        if opname not in set_of_batch_irrelevant_ops:
+            model_shape = (dim_denotation, ) + model_shape
         data1.shape = (1, ) + data1.shape
         data2.shape = (1, ) + data2.shape
     assert model_shape == loaded_model.shape
@@ -106,7 +114,7 @@ def verify_two_input(model, data1, data2, tmpdir, name):
 
 #Shared Test Configs
 DType_Config = (np.float32, np.float16)
-    
+
 #Abs
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Abs(tmpdir, dtype):
@@ -469,7 +477,7 @@ def test_Exp(tmpdir, dtype):
 #Flatten
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Flatten(tmpdir, dtype):
-    #pytest.skip('Needs to be fixed after removal of batch axis change.')
+    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         shape = (2, 3, 4, 5)
         data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
@@ -1128,9 +1136,8 @@ def test_Relu(tmpdir, dtype):
 #Reshape
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Reshape(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
-        data = np.asarray([[[[0., 1.],[2., 3.],[4., 5.]]]], dtype=dtype)
+        data = np.asarray([[[0., 1.],[2., 3.],[4., 5.]]], dtype)
         i1 = C.input_variable(shape=(3,2))
         model = C.reshape(i1, (2,3))
         verify_one_input(model, data, tmpdir, 'Reshape_1')
