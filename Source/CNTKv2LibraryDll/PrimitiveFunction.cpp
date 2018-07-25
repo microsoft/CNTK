@@ -1500,6 +1500,15 @@ namespace CNTK
                 fromShape = operandShape;
 
             size_t fillRank = (!transpose) ? filterRank : filterRank - 1;
+            if (!transpose && op == PrimitiveOpType::Convolution)
+            {
+                // For convolution, we have taken steps to ensure fillRank = inputRank here.
+                // In previous steps, if fillRank < inputRank, we threw exception.
+                // if fillRank > inputRank, the extra dims specifies out channel size, and we have cropped them away and handled. 
+                assert(fillRank == inputRank);
+                // Reduce fillRank by 1, such that we can apply our default value for channel axis. 
+                fillRank--;
+            }
             FixNDShape(fillRank, inputRank, kernelShape, 1, fromShape); // convolve over red dim; pool over 1
             FixNDShape(fillRank, inputRank, strides, 1, fromShape); // stride for reduction dims is red dim or 1
             FixNDShape(fillRank, inputRank, dilation, 1);

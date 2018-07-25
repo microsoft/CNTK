@@ -964,7 +964,7 @@ protected:
 
             //MKL2017 does not support asymmetric padding yet
             if (geometry->IsAsymmetricPadding(/*useMKL=*/true)) {
-                fprintf(stderr, "WARNING: Detected asymmetric padding issue with lowerPad != higherPad, not supported by MKL. \n");
+                fprintf(stderr, "WARNING: Detected asymmetric padding issue with lowerPad != higherPad, not supported by MKL. Switching to GEMM convolution engine. \n");
                 return false;
             }
 

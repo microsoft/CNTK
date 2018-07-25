@@ -439,7 +439,7 @@ public:
         int center = extra / 2;
         int upperPad = (kernSize - 1) - (kernSize - 1) / 2 - (extra - center);
 
-        if (trySymmetricAutoPad && kernSize % 2 == 1 && extra % 2 == 1)
+        if (trySymmetricAutoPad && (kernSize % 2 == 1) && (extra % 2 == 1))
         {
             // case 3: pad extra 1 for upperPad to enable symmetric padding. 
             upperPad++;

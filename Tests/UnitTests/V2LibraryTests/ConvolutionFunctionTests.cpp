@@ -517,7 +517,7 @@ void RunConvRankTests2(const DeviceDescriptor& device)
     auto params = Parameter({3, 3, 2, 4}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
     // requires kernel dim >= input dim ....
 
-    auto conv = Convolution(params, input, {2, 2}, {true}, {true, true, true}, {1}, 0);
+    auto conv = Convolution(params, input, {2, 2}, {true}, {true}, {1}, 0);
 
     const size_t inputDataSize = 36;
     const std::vector<size_t> sequenceSize = {2, 3};
@@ -605,7 +605,7 @@ void RunConvRankTests4(const DeviceDescriptor& device)
     auto params = Parameter({2, 3, 4}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
     // requires kernel dim >= input dim ....
 
-    auto conv = Convolution(params, input, {2}, { true }, { true, true }, { 1 }, 0);
+    auto conv = Convolution(params, input, {2}, { true }, { true }, { 1 }, 0);
 
     const size_t inputDataSize = 9;
     const std::vector<size_t> sequenceSize = {2, 3};
