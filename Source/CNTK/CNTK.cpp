@@ -10,6 +10,8 @@
 #include "stdafx.h"
 #ifdef _WIN32
 #include <crtdbg.h>
+#else
+#include <sys/resource.h>
 #endif 
 
 #include "Basics.h"
@@ -902,6 +904,22 @@ int wmain(int argc, wchar_t* argv[]) // wmain wrapper that reports Win32 excepti
 /// UNIX main function converts arguments in UTF-8 encoding and passes to Visual-Studio style wmain() which takes wchar_t strings.
 int main(int argc, char* argv[])
 {
+    struct rlimit rl;
+    const rlim_t stackSize = 640 * 1024 * 1024;
+    int result = getrlimit(RLIMIT_STACK, &rl);
+    if (0 == result)
+    {
+        if (rl.rlim_cur < stackSize)
+        {
+            rl.rlim_cur = stackSize;
+            result = setrlimit(RLIMIT_STACK, &rl);
+            if (result != 0)
+                cout << "Increasing stack size fail" << endl;
+        }
+    }
+
+
+
     // TODO: change to STL containers
     wchar_t** wargs = new wchar_t*[argc];
     for (int i = 0; i < argc; ++i)
