@@ -424,34 +424,27 @@ public:
     {
         if (!GetAutoPad(dim))
             return (int)m_upperPad[m_upperPad.size() == 1 ? 0 : dim];
+       
+        int dilation = (int)GetDilation(dim);
+        int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
+        int inpSize = (int)m_inputShape[dim];
+        int outSize = (int)m_outputShape[dim];
+        int stride = (int)GetStride(dim);
 
-        if (trySymmetricAutoPad)
+        // Taken from computation in ConvolveGeometry ctor.
+        // Number of cells between first and last "centers", inclusive.
+        int cells = (outSize - 1) * stride + 1;
+        // Extra cells, to the left and right of "cells".
+        int extra = inpSize - cells;
+        int center = extra / 2;
+        int upperPad = (kernSize - 1) - (kernSize - 1) / 2 - (extra - center);
+
+        if (trySymmetricAutoPad && kernSize % 2 == 1 && extra % 2 == 1)
         {
-            int lowerPad = GetLowerPad(dim);
-            int upperPad = GetUpperPad(dim, false);
-            // lowerPad and upperPad differs by at most 1. 
-            assert(lowerPad == upperPad || abs(lowerPad - upperPad) == 1);
             // case 3: pad extra 1 for upperPad to enable symmetric padding. 
-            if (upperPad < lowerPad) return lowerPad;
-            // case 4: cannot convert to symmetric padding for this case. 
-            return upperPad;
+            upperPad++;
         }
-        else
-        {
-            int dilation = (int)GetDilation(dim);
-            int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
-            int inpSize = (int)m_inputShape[dim];
-            int outSize = (int)m_outputShape[dim];
-            int stride = (int)GetStride(dim);
-
-            // Taken from computation in ConvolveGeometry ctor.
-            // Number of cells between first and last "centers", inclusive.
-            int cells = (outSize - 1) * stride + 1;
-            // Extra cells, to the left and right of "cells".
-            int extra = inpSize - cells;
-            int center = extra / 2;
-            return (kernSize - 1) - (kernSize - 1) / 2 - (extra - center);
-        }
+        return upperPad;
     }
 
     // Return if padding is enabled for input channel axis. 
