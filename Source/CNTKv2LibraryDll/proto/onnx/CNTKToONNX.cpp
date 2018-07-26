@@ -3080,6 +3080,13 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             node->AddAttribute("transA", transA);
             node->AddAttribute("transB", transB);
         }
+        else if (src->OpName() == L"Unsqueeze")
+        {
+            std::vector<Axis> axes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
+            std::vector<int64_t> ax = ConvertAxesToOnnx(axes, src->Inputs()[0]);
+
+            node->AddAttribute("axes", ax);
+        }
     }
     else
     {

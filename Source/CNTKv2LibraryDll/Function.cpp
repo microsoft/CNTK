@@ -3659,5 +3659,90 @@ namespace CNTK
                 std::move(attributes),
                 L"Gemm", name);
         }
+
+        FunctionPtr Unsqueeze(const Variable& operand, const std::vector<Axis>& axes, const std::wstring& name)
+        {
+            int cntk_index;
+            int onnx_axis;
+
+            std::vector<size_t> axesIndices;
+            for (auto axis : axes)
+            {
+                // We need to express in onnx axis system to help ONNX conversion.
+                if (axis.IsStaticAxis())
+                {
+                    if (axis.StaticAxisIndex() < 0)
+                    {
+                        // python shape [2,3,4,5], cntk_py_index = 1 (point at 3). 
+                        // in python, sanitize_axis applies Axis(-cntk_py_index - 1) so axis = -2
+                        // in cpp shape becomes [5,4,3,2], axis(-2) is still pointing to 3 (from the last)
+                        // With ONNX Unsqueeze op, result shall be: [2,3,4,5]. thus onnx_axis = cntk_py_index = 1 (point to 3)
+                        // for CNTK reshape, cntk_index shall point to the one after 3 (2): cntk_index = axis + 1
+                        // cntk_index (-1) needs to be converted to positive by rank + cntk_index = 3
+                        int cntk_py_index = -axis.StaticAxisIndex() - 1;
+                        onnx_axis = cntk_py_index;
+                        cntk_index = axis.StaticAxisIndex() + 1;
+                        cntk_index += operand.Shape().Rank();
+                    }
+                    else
+                    {
+                        // in this case shape is the same as in python: [2,3,4,5]
+                        // that is: cntk_py_index = 1, points to 3
+                        // onnx_axis = 1, points to 3 in [2,3,4,5]
+                        // cntk_index = 1, points to 3 in [2,3,4,5]
+                        int cntk_py_index = axis.StaticAxisIndex();
+                        onnx_axis = cntk_py_index;
+                        cntk_index = cntk_py_index;
+                    }
+                }
+                else if (axis.IsBatchAxis())
+                {
+                    // expected result: [[batch],[flatten sample]]([[#][2,3,4,5]])
+                    // current onnx Unsqueeze op should not have batch axis in attribute. 
+                    cntk_index = 0;
+                }
+                else
+                {
+                    LogicError("Unsqueeze: accept only static and batch axes.");
+                }
+
+                if (cntk_index < 0 || cntk_index > operand.Shape().Rank() + axes.size())
+                {
+                    LogicError("Unsqueeze: unsupported axis (operand.Shape().Rank() = %zu, outShape.Rank() = %zu, axis = %s).",
+                        operand.Shape().Rank(), operand.Shape().Rank() + axes.size(), ToLegacyString(ToUTF8(axis.AsString())).c_str());
+                }
+
+                axesIndices.push_back(static_cast<size_t>(cntk_index));
+            }
+
+            std::vector<size_t> outShape(axesIndices.size() + operand.Shape().Rank(), 0);
+            for (int axis : axesIndices)
+            {
+                if (axis >= outShape.size())
+                    LogicError("Unsqueeze: 'axes' has an out of range axis(%d >= %zu).", axis, outShape.size());
+                if (outShape[axis] != 0)
+                    LogicError("Unsqueeze: 'axes' has a duplicate axis(%d).", axis);
+                outShape[axis] = 1;
+            }
+
+            auto begin = operand.Shape().Dimensions().cbegin();
+            for (auto &axisSize : outShape)
+            {
+                if (axisSize == 0)
+                {
+                    axisSize = *begin++;
+                }
+            }
+            assert(begin == operand.Shape().Dimensions().cend());
+
+            Dictionary attributes = Dictionary();
+            attributes[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
+
+            Variable operandPlaceholder = PlaceholderVariable(operand.Shape(), L"operandPlaceholder", {});
+
+            FunctionPtr result = Reshape(operandPlaceholder, outShape);
+
+            return AsBlock(std::move(result), {{operandPlaceholder, operand}}, std::move(attributes), L"Unsqueeze", name);
+        }
     }
 }

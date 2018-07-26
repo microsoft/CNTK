@@ -414,6 +414,9 @@ namespace ONNX
         { L"MatMul",{ {
             { L"MatMul", "MatMul" },
         } } },
+        { L"Unsqueeze",{ {
+            { L"Unsqueeze", "Unsqueeze" },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
