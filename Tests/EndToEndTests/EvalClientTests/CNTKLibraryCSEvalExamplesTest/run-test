@@ -56,14 +56,17 @@ if [ "$OS" == "Windows_NT" ]; then
   echo 'Running command "dotnet CNTKLibraryCSEvalExamplesTest.dll" `cygpath -aw $RunTestDataDir`'
   dotnet CNTKLibraryCSEvalExamplesTest.dll `cygpath -aw $RunTestDataDir`
   popd > /dev/null
-  # This is created by train_models_for_evaluation.py, remove after test
-  rm -rf ./data
-  # Remove temp test data dir
-  rm -rf $RunTestDataDir
 else
-  echo Cannot run CNTKLibraryCSEvalExampleTest on Linux.
-  exit 1
+  pushd $TEST_BIN_DIR/../lib > /dev/null
+  echo 'Running command "dotnet CNTKLibraryCSEvalExamplesTest.dll" $RunTestDataDir'
+  dotnet CNTKLibraryCSEvalExamplesTest.dll $RunTestDataDir
+  popd > /dev/null
 fi
+
+# This is created by train_models_for_evaluation.py, remove after test
+rm -rf ./data
+# Remove temp test data dir
+rm -rf $RunTestDataDir
 
 ExitCode=$?
 

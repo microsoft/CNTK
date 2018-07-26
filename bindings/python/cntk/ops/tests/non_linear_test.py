@@ -574,6 +574,23 @@ def test_op_hardmax(sample, device_id, precision):
     _test_unary_op(precision, device_id, hardmax, sample,
                    expected_forward, expected_backward)
 
+@pytest.mark.parametrize("sample", SAMPLES)
+def test_op_log_softmax(sample, device_id, precision):
+    t = np.asarray(sample, dtype=PRECISION_TO_TYPE[precision])
+    assert len(t.shape) == 1
+
+    x_max = t - t.max()
+    exp_x = np.exp(x_max)
+    softmax = exp_x / np.sum(exp_x)
+    forward = np.log(softmax)
+
+    expected_forward = np.asarray([forward])
+
+    from cntk import log_softmax
+
+    _test_unary_op(precision, device_id, log_softmax, sample,
+                   expected_forward, None)
+
 @pytest.mark.parametrize("use_cudnn", [True, False])
 @pytest.mark.parametrize("sample", SAMPLES)
 def test_op_batch_normalization(use_cudnn, sample, device_id, precision):

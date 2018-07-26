@@ -109,6 +109,13 @@ namespace CNTK
                 assert(m_inputs.size() == 2);
                 inputs = { m_inputs[1], m_inputs[0] };
             }
+            else if (pythonOperandOrder && primitiveFunction && primitiveFunction->OpName() == L"Gemm")
+            {
+                assert(m_inputs.size() == 5);
+                // For Gemm we also need to reorder the operands A and B stored in m_inputs.
+                // The first two inputs are Constant for alpha and beta, followed with three Variable A, B and C.
+                inputs = { m_inputs[0], m_inputs[1], m_inputs[3], m_inputs[2], m_inputs[4] };
+            }
             else
                 inputs = m_inputs;
         }
@@ -1308,8 +1315,8 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
 
         auto operandPlaceholder = PlaceholderVariable();
-
-        auto result = operandPlaceholder - Log(ReduceSum(Exp(operandPlaceholder), axis));
+        auto axMax = ReduceMax(operandPlaceholder, axis);
+        auto result = operandPlaceholder - axMax - Log(ReduceSum(Exp(operandPlaceholder - axMax), axis));
 
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), L"LogSoftmax", name);
     }
@@ -2287,43 +2294,18 @@ namespace CNTK
 
     //multiple axes reduction below:
 
-    FunctionPtr ReduceSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
-    {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, axis, name);
-    }
-
-    FunctionPtr ReduceLogSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
-    {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalLogSumReductionOpName, axis, name);
-    }
-
-    FunctionPtr ReduceMean(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
-    {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMeanReductionOpName, axis, name);
-    }
-
-    FunctionPtr ReduceMax(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
-    {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMaxReductionOpName, axis, name);
-    }
-
-    FunctionPtr ReduceMin(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
-    {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMinReductionOpName, axis, name);
-    }
-
-    FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name)
-    {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalProdReductionOpName, axis, name);
-    }
-
     FunctionPtr ReduceFunctionAsBlock(const Variable& operand, const std::vector<Axis>& axes, bool keepDims,
         const std::function<FunctionPtr(const Variable&, const std::vector<Axis>& axes)> func,
-        const std::wstring opName, const std::wstring& name)
+        const std::wstring opName, const std::wstring& name, const std::wstring reductionOpName = L"")
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
         additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = keepDims;
+        if (!reductionOpName.empty())
+        {
+            additionalProperties[PrimitiveFunction::AttributeNameReductionOpName] = reductionOpName;
+        }
+        
         auto operandPlaceholder = PlaceholderVariable(L"operand");
         auto result = func(operandPlaceholder, axes);
         if (!keepDims)
@@ -2347,11 +2329,46 @@ namespace CNTK
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, std::move(additionalProperties), opName, name);
     }
 
+    FunctionPtr ReduceSum(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
+    {
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalSumReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalSumReductionOpName);
+    }
+
+    FunctionPtr ReduceLogSum(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
+    {
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalLogSumReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalLogSumReductionOpName);
+    }
+
+    FunctionPtr ReduceMean(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
+    {
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalMeanReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalMeanReductionOpName);
+    }
+
+    FunctionPtr ReduceMax(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
+    {
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalMaxReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalMaxReductionOpName);
+    }
+
+    FunctionPtr ReduceMin(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
+    {
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalMinReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalMinReductionOpName);
+    }
+
+    FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
+    {
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalProdReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalProdReductionOpName);
+    }
+
     FunctionPtr ReduceL1(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
     {
         auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return ReduceSum(Abs(placeholder), axes); };
-        auto f = ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceL1", name);
-        return f;
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceL1", name);
     }
 
     FunctionPtr ReduceL2(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
@@ -2362,8 +2379,7 @@ namespace CNTK
 
     FunctionPtr ReduceSumSquare(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
     {
-        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes)
-        { return ReduceSum(ElementTimes(placeholder, placeholder), axes); };
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return ReduceSum(ElementTimes(placeholder, placeholder), axes); };
         return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceSumSquare", name);
     }
 
@@ -2466,7 +2482,21 @@ namespace CNTK
         {
             LogicError("groups: groups > 1 is not supported when reductionRank is 0.");
         }
-        
+
+        if (groups > 1 && !(operand.IsPlaceholder() || convolutionMap.IsPlaceholder()))
+        {
+            auto filterShape = convolutionMap.Shape();
+            auto filterRank = static_cast<int>(filterShape.Rank());
+            auto inputRank = static_cast<int>(operand.Shape().Rank());
+            auto M = filterShape[filterRank - 1]; // Number of output channels.
+            auto C = operand.Shape()[inputRank - 1]; // Number of input channels in operand.
+            auto kC = filterShape[filterRank - 2]; // Number of input channels in kernel.
+            if (M % groups)
+                LogicError("groups: number of output channels must be divisble by groups.");
+            if (C != (kC * groups))
+                LogicError("groups: number of input channels (C) must be equal to number of input kernel channels (kC) * groups (G).");
+        }
+
         if (sequential)
         {
             // unpack sequence axis to static axes:   [ H_in, W_in, c ] x [*] -> [ H_in, W_in, c, * ] x [1]
@@ -2620,6 +2650,29 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr Pooling(const Variable& operand,
+        PoolingType poolingType,
+        const NDShape& poolingWindowShape,
+        const NDShape& strides,
+        const std::vector<size_t>& lowerPad,
+        const std::vector<size_t>& upperPad,
+        const bool ceilOutDim,
+        const bool includePad,
+        const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)poolingType;
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowShape;
+        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(std::vector<bool>({ false }));
+        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape(lowerPad);
+        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape(upperPad);
+        additionalProperties[PrimitiveFunction::AttributeNameCeilOutDim] = ceilOutDim;
+        additionalProperties[PrimitiveFunction::AttributeNameIncludePad] = includePad;
+
+        return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr Unpooling(const Variable& operand,
         const Variable& poolingInput,
         PoolingType unpoolingType,
@@ -2678,10 +2731,26 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
         additionalProperties[PrimitiveFunction::AttributeNameBeta] = beta;
 
+        size_t kernelSize = 2 * depthRadius + 1;
+        if (!(operand.IsPlaceholder()))
+        {
+            size_t channelSize = operand.Shape()[operand.Shape().Rank() - 1];
+            if (kernelSize > channelSize)
+            {
+                fprintf(stderr, "Warning: LRN kernel size(%zu) larger than channel size(%zu) is unsupported, and is rounded down to channel size. The output value is not affected.",
+                    kernelSize, channelSize);
+                kernelSize = channelSize;
+            }
+        }
+
         auto operandPlaceholder = PlaceholderVariable();
         auto operandSquare = Square(operandPlaceholder);
         operandSquare = Reshape(operandSquare, { NDShape::InferredDimension, 1 }, Axis(2), Axis(3));
-        auto weights = Constant({ 1, 1, 2 * depthRadius + 1, 1 }, operand.GetDataType(), alpha / (2 * depthRadius + 1));
+        // Note we are still dividing alpha with 2 * depthRadius + 1 which might be larger than channel size.
+        // Handling for diameter size (2*depthRadius+1) larger than channel size is newly added. 
+        // Both Lotus implementation and ONNX spec divides alpha by diameter size instead of the rounded down channel size. 
+        // We follow that behavior here. This will not affect any pre-existing code, since oversized diameter was not supported before. 
+        auto weights = Constant({ 1, 1, kernelSize, 1 }, operand.GetDataType(), alpha / (2 * depthRadius + 1));
         auto convResult = Convolution(weights, operandSquare);
         convResult = Reshape(convResult, { NDShape::InferredDimension }, Axis(2), Axis(4));
         auto denom = Exp(ElementTimes(Constant::Scalar(operand.GetDataType(), beta), Log(Plus(Constant::Scalar(operand.GetDataType(), bias), convResult))));
@@ -3446,6 +3515,149 @@ namespace CNTK
                 PrimitiveFunction::convolutionOpDefaultValueForGroups,
                 maxTempMemSizeInSamples,
                 name);
+        }
+
+        FunctionPtr MatMul(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+        {
+            // There are two cases in MatMul
+            // 1. Both inputs are 2-D:
+            //      input_0:    [b, a]
+            //      input_1:    [c, b]
+            //      output:     [c, a]
+            //    CNTK Times has the same spec for this case.
+            // 2. Either inputs are N-D:
+            //      input_0:    [b, a, prefix_array]
+            //      input_1:    [c, b, prefix_array]
+            //      output:     [c, a, prefix_array]
+            //    where prefix_array(rank > 1) describes the same "prefix" dimensions shared by input_0 and input_1. 
+            //    According to ONNX(numpy) spec, Both inputs are treated as a stack of matrices residing in the last two indexes and broadcast accordingly. 
+
+            // we implement this import step-by-step.
+            //      1. Both 2-D inputs.
+            //      2. Both N-D inputs.
+            //      3. Add broadcast. (Not supported in ONNX/CNTK yet)
+
+            const NDShape& inputShape0 = leftOperand.Shape();
+            const NDShape& inputShape1 = rightOperand.Shape();
+
+            auto isBothNDInputs = [&]() -> bool {
+                if (inputShape0.Rank() != inputShape1.Rank() || inputShape0.Rank() <= 2) return false;
+                // In this case we don't require broadcast, thus prefix dimensions should match. 
+                return inputShape0.SubShape(2) == inputShape1.SubShape(2);
+            };
+
+            Variable leftOperandPlaceholder = PlaceholderVariable(inputShape0, L"leftOperand", {});
+            Variable rightOperandPlaceholder = PlaceholderVariable(inputShape1, L"rightOperand", {});
+            FunctionPtr cntkFunction;
+            if (inputShape0.Rank() == 2 && inputShape1.Rank() == 2)
+            {
+                // 1. Both 2-D inputs.
+                // CNTK Times has reversed input order than ONNX(numpy) MatMul. 
+                cntkFunction = Times(rightOperandPlaceholder, leftOperandPlaceholder);
+            }
+            else if (isBothNDInputs())
+            {
+                // 2. Both N-D inputs.
+                // Convert inputs into CNTK style:
+                //      input_0:    [b, a, prefix_array]
+                //      input_1:    [c, b, prefix_array]
+                //      output:     [c, a, prefix_array]
+                // Here are the converting steps:
+                // 1) input_0:  reshape     [b, a, prefix_array]        -->     [b, a * prod(prefix_array)]
+                // 2) input_1:  reshape     [c, b, prefix_array]        -->     [c, b, prod(prefix_array)]
+                // 3) input_1:  swap(1, 2)  [c, b, prod(prefix_array)]  -->     [c, prod(prefix_array), b]
+                // 4) input_1:  reshape     [c, prod(prefix_array), b]  -->     [c * prod(prefix_array), b]
+                // 5) output:   times       [c * prod(prefix_array), a * prod(prefix_array)]
+                // 6) output:   reshape     [c * prod(prefix_array), a * prod(prefix_array)]    -->     [c, prod(prefix_array), a, prod(prefix_array)]
+                // 7) output:   swap(1, 2)  [c, prod(prefix_array), a, prod(prefix_array)]      -->     [c, a, prod(prefix_array), prod(prefix_array)]
+                // 8) output:   reshape     [c, a, prod(prefix_array), prod(prefix_array)]      -->     [c, a, prod(prefix_array) * prod(prefix_array)]
+                // 9) output:   slice       [c, a, prod(prefix_array) * prod(prefix_array)]     -->     [c, a, prod(prefix_array)]
+                // 10)output:   reshape     [c, a, prod(prefix_array)]  -->     [c, a, prefix_array]
+                assert(inputShape0.Rank() == inputShape1.Rank());
+                assert(inputShape0.Rank() > 2);
+                const size_t inputRank = inputShape0.Rank();
+                assert(inputShape0.SubShape(2) == inputShape1.SubShape(2));
+                const size_t aDim = inputShape0[1];
+                const size_t bDim = inputShape0[0];
+                const size_t cDim = inputShape1[0];
+
+                if (inputShape1[1] != bDim)
+                    LogicError("MatMul: shape %ls and %ls are not aligned.", inputShape0.AsString().c_str(), inputShape1.AsString().c_str());
+
+                // 1)
+                size_t inputPrefixProd = 1;
+                for (size_t i = 2; i < inputShape0.Rank(); ++i)
+                {
+                    inputPrefixProd *= inputShape0[i];
+                }
+                FunctionPtr input0CNTK = Reshape(leftOperandPlaceholder, { bDim, inputPrefixProd * aDim });
+                // 2)
+                FunctionPtr input1CNTK = Reshape(rightOperandPlaceholder, { cDim, bDim, inputPrefixProd });
+                // 3)
+                input1CNTK = TransposeAxes(input1CNTK, Axis(1), Axis(2));
+                // 4)
+                input1CNTK = Reshape(input1CNTK, { inputPrefixProd * cDim, bDim });
+                // 5)
+                // CNTK Times has reversed input order than ONNX(numpy) MatMul due to c++/python row/col major storage. 
+                FunctionPtr outputCNTK = Times(input1CNTK, input0CNTK);
+                // 6)
+                outputCNTK = Reshape(outputCNTK, { cDim, inputPrefixProd, aDim, inputPrefixProd });
+                // 7)
+                outputCNTK = TransposeAxes(outputCNTK, Axis(1), Axis(2));
+                // 8)
+                outputCNTK = Reshape(outputCNTK, { cDim, aDim, inputPrefixProd * inputPrefixProd });
+                // 9)
+                if (inputPrefixProd > 1)
+                    outputCNTK = ::CNTK::Slice(outputCNTK, { Axis(2) }, { 0 }, { static_cast<int>(inputPrefixProd * inputPrefixProd) }, vector<int>({ static_cast<int>(inputPrefixProd) + 1 }));
+                // 10)
+                const NDShape& outputShape = NDShape({ cDim, aDim }).AppendShape(inputShape0.SubShape(2));
+                cntkFunction = Reshape(outputCNTK, outputShape);
+            }
+            else
+            {
+                // 3. broadcast.
+                LogicError("MatMul: broadcasting is currently not supported in ONNX/CNTK.");
+            }
+
+            return AsBlock(std::move(cntkFunction),
+                { { leftOperandPlaceholder, leftOperand },{ rightOperandPlaceholder, rightOperand } },
+                L"MatMul", name);
+        }
+
+        FunctionPtr Gemm(const Variable& operandA, const Variable& operandB, const Variable& operandC, 
+            float alpha, float beta, bool transA, bool transB, const std::wstring& name)
+        {
+            // All the three inputs are expected to be rank=2 matrices. Only C, i.e. operandC
+            // can be a scalar or vector, and if needed we will use CNTK's automatic braodcast capability to broadcast C. 
+            if (operandA.Shape().Rank() != 2 || operandB.Shape().Rank() != 2)
+                InvalidArgument("Gemm: Invalid shape, input A and B are expected to be rank=2 matrices");
+            const size_t operandACol = transA ? operandA.Shape()[0] : operandA.Shape()[1];
+            const size_t operandBCol = transB ? operandB.Shape()[1] : operandB.Shape()[0];
+            if (operandACol != operandBCol)
+                InvalidArgument("Gemm: Invalid shape, The shape of A should be (M, K) if transA is 0, or (K, M) if transA is non-zero, and The shape of B should be (K, N) if transB is 0, or (N, K) if transB is non-zero.");
+
+            Variable operandAPlaceholder = PlaceholderVariable(operandA.Shape(), L"operandAPlaceholder", {});
+            Variable operandBPlaceholder = PlaceholderVariable(operandB.Shape(), L"operandBPlaceholder", {});
+            Variable operandCPlaceholder = PlaceholderVariable(operandC.Shape(), L"operandCPlaceholder", {});
+
+            FunctionPtr A = ElementTimes(operandAPlaceholder, Constant(NDShape({ 1, 1 }), CNTK::DataType::Float, static_cast<double>(alpha)));
+            FunctionPtr C = ElementTimes(operandCPlaceholder, Constant(NDShape({ 1, 1 }), CNTK::DataType::Float, static_cast<double>(beta)));
+            
+            FunctionPtr B = transB ? Transpose(operandBPlaceholder) : (FunctionPtr)operandBPlaceholder;
+            FunctionPtr D = transA ? Times(Transpose(A), B) : Times(A, B);
+            // If needed, Plus op will broadcast C automatically.
+            FunctionPtr result = Plus(C, D);
+
+            Dictionary attributes = Dictionary();
+            attributes[PrimitiveFunction::AttributeNameAlpha] = alpha;
+            attributes[PrimitiveFunction::AttributeNameBeta] = beta;
+            attributes[PrimitiveFunction::AttributeNameTransposeLeftOperand] = transA;
+            attributes[PrimitiveFunction::AttributeNameTransposeRightOperand] = transB;
+
+            return AsBlock(std::move(result),
+                { { operandAPlaceholder, operandA },{ operandBPlaceholder, operandB },{ operandCPlaceholder, operandC } },
+                std::move(attributes),
+                L"Gemm", name);
         }
     }
 }

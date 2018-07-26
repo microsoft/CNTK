@@ -408,6 +408,12 @@ namespace ONNX
         { L"Alias",{ {
             { L"Alias", "Identity" },
         } } },
+        { L"Gemm",{ {
+            { L"Gemm", "Gemm" },
+        } } },
+        { L"MatMul",{ {
+            { L"MatMul", "MatMul" },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -501,6 +507,7 @@ namespace ONNX
             { L"Times",{ 1, 0 } },
             { L"Gather",{ 1, 0 } },
             { L"PReLU",{ 1, 0 } },
+            { L"Gemm", { -1, -1, 1, 0, 2} },
         };
 
         //
@@ -526,7 +533,13 @@ namespace ONNX
         };
 
         std::set<std::wstring> Operators::_cntkOpsExportedWithBatchAxis = { // This is mostly used on export side.
-        { L"Convolution" },
+            { L"Convolution" },
+            { L"ConvolutionTranspose" },
+            { L"Pooling" },
+            { L"DepthToSpace" },
+            { L"SpaceToDepth" },
+            { L"LocalResponseNormalization" },
+            { L"MeanVarianceNormalization" },
         };
 
         std::set<std::string> Operators::_onnxSimpleBatchAxisOps = { // List of all ONNX ops that are simple (single input, output) and have batch axis.
@@ -534,6 +547,10 @@ namespace ONNX
             { "AveragePool" },
             { "GlobalAveragePool" },
             { "GlobalMaxPool" },
+            { "DepthToSpace" },
+            { "SpaceToDepth" },
+            { "LRN" },
+            { "MeanVarianceNormalization" },
         };
 
     }

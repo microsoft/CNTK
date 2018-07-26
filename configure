@@ -376,13 +376,12 @@ enable_java=$(default_use_java)
 
 function default_use_csharp()
 {
-# TODO: Temporarily disabling csharp for Linux
-#    if [[ `command -v dotnet` && `command -v swig` && `command -v cmake` ]]
-#    then
-#        echo yes
-#    else
+    if [[ `command -v dotnet` && `command -v swig` && `command -v cmake` ]]
+    then
+       echo yes
+    else
         echo no
-#    fi
+    fi
 }
 enable_csharp=$(default_use_csharp)
 

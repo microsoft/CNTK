@@ -128,8 +128,6 @@ private:
     static Axis ConvertONNXAxisToCNTKCppApi(int64_t axes, const Variable &input);
     static std::vector<Axis> ConvertONNXAxesToCNTKCppApi(const std::vector<int64_t> &axes, const Variable &operand);
 
-    static void AdjustAutoPaddingAndStrideForCNTKSpecialCases(const Variable &operand,
-                                                              std::vector<bool> &autoPadding, NDShape &strides);
     static std::pair<std::vector<size_t>, std::vector<size_t>> SplitAndReverseVec(std::vector<int64_t> &pads);
     static std::pair<std::vector<size_t>, std::vector<size_t>> AdjustONNXPadsVecForCNTKPadOp(const Variable &operand, std::vector<int64_t> &pads);
     static NDShape ReverseShape(const NDShape &shape);
@@ -139,7 +137,8 @@ private:
 
     static Variable GetNodeOperandWithPaddingResolved(std::vector<bool> &cntkConvAutoPadding,
         NDShape &strides, const Node *node, const Variable& dataOperand, const double padValue = 0.0);
-
+    static std::pair<std::vector<size_t>, std::vector<size_t>> CalcPaddingForSameLowerAutoPad(
+        const Variable &input, NDShape kernelShape, NDShape strides);
     //
     // CNTK convolution/pooling operations do not support ONNX same_low padding.
     // This method does padding accoordingly before invoking
@@ -1867,19 +1866,6 @@ std::vector<Axis> ONNXToCNTKHelper::ConvertONNXAxesToCNTKCppApi(const std::vecto
     return cntkAxes;
 }
 
-void ONNXToCNTKHelper::AdjustAutoPaddingAndStrideForCNTKSpecialCases(const Variable &operand, std::vector<bool> &autoPadding, NDShape &strides)
-{
-    if ((operand.Shape().Rank() == (1 + autoPadding.size())))
-    {
-        autoPadding.push_back(false);
-    }
-
-    if ((operand.Shape().Rank() == (1 + strides.Rank())))
-    {
-        strides = strides.AppendShape({1});
-    }
-}
-
 std::pair<std::vector<size_t>, std::vector<size_t>> ONNXToCNTKHelper::SplitAndReverseVec(std::vector<int64_t> &pads)
 {
     // Split this into head (lower padding) and foot (upper padding), and reverse them because
@@ -2035,29 +2021,82 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "LRN")
     {
-        size_t depthRadius = (GetNamedAttributeAsInt64(node, "size") - 1)/2;
+        // Guard the even number size case. The size > channel case is checked at cntk side.
+        size_t size = static_cast<size_t>(GetNamedAttributeAsInt64(node, "size"));
+        // In ONNX the size to sum over channel axis is given by diameter, while in CNTK radius.
+        // Thus we are unable to support even number diameter. 
+        // Currently in Lotus we are also throwing error when diameter is even. 
+        if (size % 2 != 1)
+            LogicError("LRN does not support even diameter size to sum over channel axis.");
+        size_t depthRadius = (size - 1)/2;
         double bias = static_cast<double>(GetNamedAttributeAsFloat(node, "bias", 1.0f));
         double alpha = static_cast<double>(GetNamedAttributeAsFloat(node, "alpha", 1e-4f));
         double beta = static_cast<double>(GetNamedAttributeAsFloat(node, "beta", 0.75f));
-        FunctionPtr cntkFunction = LocalResponseNormalization(inputs[0], 
+        FunctionPtr cntkFunction = LocalResponseNormalization(inputOperand0, 
             depthRadius, bias, alpha, beta, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "AveragePool" || onnxOpName == "MaxPool")
     {
         NDShape poolingWindowShape = GetNamedAttributeAsShape(node, "kernel_shape", false);
+        auto dim = poolingWindowShape.Rank();
         NDShape strides = GetNamedAttributeAsShape(node, "strides", false, NDShape(std::vector<size_t>(poolingWindowShape.Rank(), 1u)));
-
+        bool includePad = GetNamedAttributeAsInt64(node, "count_include_pad", 0) != 0;
+        bool hasAutoPad = HasNamedAttribute(node, "auto_pad") && GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER") != "NOTSET";
+        bool hasPads = HasNamedAttribute(node, "pads");
         bool ceilOutDim = false;
-        bool includePad = false;
 
+        if (strides.Rank() != dim)
+            LogicError("Length of attribute 'strides' should be equal to dimensionality of the kernel.");
+
+        if (hasAutoPad && hasPads)
+        {
+            LogicError("Ambiguous Conv node specification. Both %s and %s attributes are specified. Only one of the two should be specified.",
+                "auto_pad", "pads");
+        }
+
+        strides = strides.AppendShape({ 1 }); // Because CNTK Pooling API takes strides for channel axis also.
         std::vector<bool> cntkPoolingAutoPadding;
-        auto padValue = (onnxOpName == "AveragePool") ? 0.0 : static_cast<double>(std::numeric_limits<int>::min());
-        auto poolingOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkPoolingAutoPadding, strides, node, inputOperand0, padValue);
+        std::pair<std::vector<size_t>, std::vector<size_t>> padsPair;
+        FunctionPtr cntkFunction;
+        if (hasAutoPad)
+        {
+            ConvAutoPadType auto_pad = ConvertStrToConvAutoPadType(GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER"));
+            switch (auto_pad)
+            {
+            case ConvAutoPadType::SAME_LOWER:
+            {
+                padsPair = CalcPaddingForSameLowerAutoPad(inputOperand0, poolingWindowShape, strides);
+                cntkFunction = Pooling(inputOperand0, onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
+                    poolingWindowShape, strides, padsPair.first, padsPair.second, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
+                break;
+            }
+            case ConvAutoPadType::SAME_UPPER:
+            {
+                cntkPoolingAutoPadding.insert(cntkPoolingAutoPadding.begin(), dim, true);
+                cntkPoolingAutoPadding.push_back(false);
+                cntkFunction = Pooling(inputOperand0, onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
+                    poolingWindowShape, strides, cntkPoolingAutoPadding, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
+                break;
+            }
+            case ConvAutoPadType::VALID:
+            {
+                cntkPoolingAutoPadding.insert(cntkPoolingAutoPadding.begin(), dim + 1, false);
+                cntkFunction = Pooling(inputOperand0, onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
+                    poolingWindowShape, strides, cntkPoolingAutoPadding, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
+                break;
+            }
+            }
+        }
+        else // Either hasPads == true, i.e. pads was specified, or if pads is not specified then we use default pads value of 0.
+        {
+            // If 'pads' is specified, we pad the node and then do 'valid' convolution.
+            std::vector<int64_t> pads = GetNamedAttributeAsInt64Vec(node, "pads", std::vector<int64_t>(2*dim, 0));
+            auto padsPair = SplitAndReverseVec(pads);
+            cntkFunction = Pooling(inputOperand0, onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
+                poolingWindowShape, strides, padsPair.first, padsPair.second, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
+        }
 
-        FunctionPtr cntkFunction = Pooling(poolingOperand,
-                                           onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
-                                           poolingWindowShape, strides, cntkPoolingAutoPadding, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "GlobalAveragePool" || onnxOpName == "GlobalMaxPool")
@@ -2149,32 +2188,11 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         float alpha = GetNamedAttributeAsFloat(node, "alpha", 1.0f);
         float beta = GetNamedAttributeAsFloat(node, "beta", 1.0f);
-        float transA = GetNamedAttributeAsInt64(node, "transA", 0);
-        float transB = GetNamedAttributeAsInt64(node, "transB", 0);
-        float broadcast = GetNamedAttributeAsInt64(node, "broadcast", 0);
-        // All the three inputs are expected to be rank=2 matrices. Only C, i.e. inputs[2]
-        // can be a scalar or vector, and if the 'broadcast' attribute is non-zero then
-        // we will use CNTK's automatic braodcast capability to broadcast C. But if rank < 2
-        // and 'broadcast' attribute is zero, then we error out because 'broadcast' attribute
-        // value is considered imperative.
-        Variable input0 = inputs[0];
-        Variable input1 = inputs[1];
-        Variable input2 = inputs[2];
-        auto cDims = input2.Shape().Dimensions();
-        bool hasSingletonDim = std::any_of(cDims.begin(), cDims.end(), [](size_t i) { return i == 1; });
-        if (broadcast == 0 && hasSingletonDim) // Bad ONNX node - such model/node shouldn't be serializable in ONNX at all.
-            LogicError("The rank of input C in GEMM operator (A*B + C) is not 2. Either specify a value with rank=2, or set the broadcast attribute to 1.");
-
-        FunctionPtr A = ElementTimes(input0, Constant(NDShape({1, 1}), CNTK::DataType::Float, static_cast<double>(alpha)));
-        FunctionPtr C = ElementTimes(input2, Constant(NDShape({1, 1}), CNTK::DataType::Float, static_cast<double>(beta)));
-        if (!transA && transB && broadcast) // Special case: Equivalent to FC (fully-connected) op. Takes in account broadcast of B, if needed.
-        {
-            return CreateCNTKFCNode(ToFixedWStringFromMultiByte(node->Name()), {(Variable) A, input1, (Variable) C});
-        }
-        FunctionPtr B = (transB != 0) ? Transpose(input1) : (FunctionPtr) input1;
-        FunctionPtr D = (transA != 0) ? Times(B, Transpose(A)) : Times(B, A);
-        // If needed, Plus op will broadcast C automatically.
-        return Plus(C, D);
+        bool transA = GetNamedAttributeAsInt64(node, "transA", 0) != 0;
+        bool transB = GetNamedAttributeAsInt64(node, "transB", 0) != 0;
+        // we need to swap position of inputs[0] and inputs[1], since c++ has different matrix row/col major than python. 
+        FunctionPtr cntkFunction = ::CNTK::Internal::Gemm(inputs[1], inputs[0], inputs[2], alpha, beta, transB, transA);
+        return cntkFunction;
     }
     else if (onnxOpName == "Dropout")
     {
@@ -2356,7 +2374,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "MatMul")
     {
-        FunctionPtr cntkFunction = Times(inputs[1], inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+        FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(inputs[0], inputs[1]);
         return cntkFunction;
     }
     else if (onnxOpName == "PRelu")
@@ -2371,12 +2389,14 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Max")
     {
-        FunctionPtr cntkFunction = ElementMax(inputs[0], inputs[1], ToFixedWStringFromMultiByte(node->Name()));
+        // TODO: Support more than 2 inputs.
+        FunctionPtr cntkFunction = ElementMax(inputs[0], inputs.size() > 1 ? inputs[1] : inputs[0], ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "Min")
     {
-        FunctionPtr cntkFunction = ElementMin(inputs[0], inputs[1], ToFixedWStringFromMultiByte(node->Name()));
+        // TODO: Support more than 2 inputs.
+        FunctionPtr cntkFunction = ElementMin(inputs[0], inputs.size() > 1 ? inputs[1] : inputs[0], ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "Sum")
@@ -2434,57 +2454,126 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "ReduceMax")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceMax(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceMax(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceMin")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceMin(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceMin(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceSum")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceSum(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceSum(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceMean")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceMean(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceMean(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceProd")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceProd(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+        
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceProd(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
-    else if (onnxOpName == "ReduceLogSumExp")
+    else if (onnxOpName == "ReduceLogSumExp" || onnxOpName == "ReduceLogSum")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-        FunctionPtr cntkFunction = ReduceLogSum(inputs[0], axes[0], ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+        
+        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        FunctionPtr cntkFunction = ReduceLogSum(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceL1")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
         bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceL1(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceL2")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
         bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceL2(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceSumSquare")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+
+        // use default of all axes according to ONNX
+        if (axes.empty())
+        {
+            axes = vector<Axis>({ Axis::AllAxes() });
+        }
+
         bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceSumSquare(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
@@ -2674,12 +2763,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "DepthToSpace")
     {
         auto blockSize = GetNamedAttributeAsInt64(node, "blocksize", 1);
-        return DepthToSpace(inputs[0], static_cast<size_t>(blockSize), ToFixedWStringFromMultiByte(node->Name()));
+        return DepthToSpace(inputOperand0, static_cast<size_t>(blockSize), ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "SpaceToDepth")
     {
         auto blockSize = GetNamedAttributeAsInt64(node, "blocksize", 1);
-        return SpaceToDepth(inputs[0], static_cast<size_t>(blockSize), ToFixedWStringFromMultiByte(node->Name()));
+        return SpaceToDepth(inputOperand0, static_cast<size_t>(blockSize), ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "Squeeze")
     {
@@ -2709,7 +2798,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         // when loading the ONNX MeanVarianceNormalization node in CNTK.
         size_t acrossChannels = GetNamedAttributeAsInt64(node, "across_channels", 0);
         size_t normalizeVariance = GetNamedAttributeAsInt64(node, "normalize_variance", 1);
-        return MeanVarianceNormalization(inputs[0], !!acrossChannels, !!normalizeVariance, ToFixedWStringFromMultiByte(node->Name()));
+        return MeanVarianceNormalization(inputOperand0, !!acrossChannels, !!normalizeVariance, ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "Identity")
     {
@@ -2927,8 +3016,37 @@ Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool> &
         cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), strides.Rank(), false); // For 'VALID' convolution
     }
 
-    AdjustAutoPaddingAndStrideForCNTKSpecialCases(operand, cntkConvAutoPadding, strides);
     return convOperand;
+}
+
+std::pair<std::vector<size_t>, std::vector<size_t>> ONNXToCNTKHelper::CalcPaddingForSameLowerAutoPad(
+    const Variable &input, NDShape kernelShape, NDShape strides)
+{
+    NDShape inputShape = input.Shape();
+    std::vector<int> pads;
+    for (int dim = 0; dim < kernelShape.Rank(); dim++)
+    {
+        // Padding could be calcualted as: p = s - (w - f) % s.
+        // however, it does not ensure input size being multiplier of output size.
+        // The above calculation failed with the yolo model. ONNX spec is not clear on this.
+        // This following padding computation ensures: input_size = output_size * stride.
+        int f = kernelShape[dim];
+        int s = strides[dim];
+        pads.push_back(f - s);
+    }
+
+    std::vector<size_t> begins, ends;
+    for (int dim = 0; dim < pads.size(); dim++)
+    {
+        // SameLow: the lower (begin) side get one extra pad if total pads is odd.
+        int p = pads[dim];
+        int endPad = p / 2;
+        ends.push_back(endPad);
+        int beginPad = p - endPad;
+        begins.push_back(beginPad);
+    }
+
+    return std::make_pair(begins, ends);
 }
 
 FunctionPtr ONNXToCNTKHelper::CreatePadOpForSameLowAutoPad(
@@ -3015,17 +3133,22 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
             }
         }
 
-        return ConvolutionTranspose(
-            convolutionMap,
-            inputs[0],
+        auto operandPlaceholder = PlaceholderVariable(inputOperand.Shape(), L"operand", {});
+        auto convmapPlaceholder = PlaceholderVariable(convolutionMap.Shape(), L"convolutionMap", {});
+        FunctionPtr operandWithBatchAxis = ToBatch(operandPlaceholder);
+        FunctionPtr convResultWithBatchAxis = ConvolutionTranspose(
+            convmapPlaceholder,
+            operandWithBatchAxis,
             strides,
             sharing,
             cntkConvAutoPadding,
             outputShape,
             dilation,
             reductionRank,
-            maxTempMemSizeInSamples,
-            ToFixedWStringFromMultiByte(node->Name()));
+            maxTempMemSizeInSamples);
+        FunctionPtr convResultWithStaticAxis = UnpackBatch(convResultWithBatchAxis, ToFixedWStringFromMultiByte(node->Name()));
+        return AsBlock(std::move(convResultWithStaticAxis), { { operandPlaceholder, inputOperand },{ convmapPlaceholder, convolutionMap } },
+            L"ConvolutionTranspose", ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (HasNamedAttribute(node, "pads"))
     {

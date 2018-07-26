@@ -27,7 +27,7 @@ namespace CNTK.CNTKLibraryCSTrainingTest
         /// during CNTK test, train data are copied to the test execution folder
         /// when not run as a CNTK test, DataFolder needs to be set accordingly.
         /// </summary>
-        public static string DataFolder = "../../Tests/EndToEndTests/Simple2d/Data";
+        public static string DataFolder = TestCommon.TestDataDirPrefix + "Tests/EndToEndTests/Simple2d/Data";
 
         internal static void TrainSimpleFeedForwardClassifier(DeviceDescriptor device)
         {

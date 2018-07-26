@@ -3,8 +3,7 @@ isPythonTest: True
 dataDir: .
 
 tags: 
-  # Only for Windows Release
-  - bvt-l ((build_sku == 'gpu') or (build_sku == 'cpu')) and (os == 'windows') and (flavor == 'release')
+  - bvt-l ((build_sku == 'gpu') or (build_sku == 'cpu')) and (flavor == 'release')
   - nightly-l ((build_sku == 'gpu') or (build_sku == 'cpu')) and (os == 'windows') and (flavor == 'release')
   - weekly-l ((build_sku == 'gpu') or (build_sku == 'cpu')) and (os == 'windows') and (flavor == 'release')
 
