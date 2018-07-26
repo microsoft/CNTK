@@ -19,7 +19,7 @@ DIM_SIZE_FOR_NON_BATCH_OPS = 1
 # When adding a test for a new op, please check to see if 
 # that op needs to be added to this list (i.e. does that op 
 # get exported to an ONNX op with defined batch axis).
-set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization'}
+set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization'}
 
 # List of CNTK ops for which output shape doesn't change regardless
 # of whether the input has batch axis or not.
@@ -44,18 +44,18 @@ def verify_no_input(model, tmpdir, name):
     o = model.eval()
     o_ = loaded_model.eval()
     assert np.allclose(o_, o)
-
-def verify_one_input(model, data, tmpdir, name, device=None):
+    
+def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
-    filename = os.path.join(str(tmpdir), name + R'.onnx')
-    model.save(filename, format=C.ModelFormat.ONNX)
     opname = model.owner.op_name
 
-    loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
-
-    filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
-    loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
+    if not loaded_model:
+        filename = os.path.join(str(tmpdir), name + R'.onnx')
+        model.save(filename, format=C.ModelFormat.ONNX)        
+        loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+        filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
+        loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
 
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
@@ -78,6 +78,7 @@ def verify_one_input(model, data, tmpdir, name, device=None):
         o1 = o1[0]
 
     assert np.allclose(o0, o1)
+    return loaded_model
 
 def verify_two_input(model, data1, data2, tmpdir, name):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
@@ -254,39 +255,59 @@ def test_AveragePool(tmpdir, dtype, device_id):
         verify_one_input(model, img, tmpdir, 'AveragePool_1', device)
 
 #BatchNormalization
+def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        scale        = C.Parameter(init=init_scale, dtype=dtype)
+        bias         = C.Parameter(init=init_bias, dtype=dtype)
+        run_mean     = C.ops.constant(mean, shape=mean.shape, dtype=dtype)
+        run_variance = C.ops.constant(var,  shape=var.shape, dtype=dtype)
+        run_count    = C.ops.constant(0,               dtype=dtype)
+
+        a = C.input_variable(shape=x.shape[1:], dtype=dtype, needs_gradient=False, name='a')
+
+        op_node = C.batch_normalization(a, scale, bias, run_mean, run_variance, running_count=run_count, spatial=spatial,
+            epsilon=epsilon)
+
+        loaded_model = None
+        for i in range(len(x)):
+            loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization', loaded_model=loaded_model)
+
+# Case 1 - Non-Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_BatchNormalization(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     if (dtype == np.float16):
         pytest.skip("TO BE FIXED")
-    with C.default_options(dtype = dtype):
-        sample = [  # 5 samples having 4 classes
+
+    sample = [  # 5 samples having 4 classes
             [1, 1, 2, 3],
             [0, 0, 0, 0],
             [3, 3, 4, 4],
             [1000, 1000, 1000, 1000],
             [10000, 10000, 10000, 10000]]
 
-        epsilon = 0.00001
+    x = np.asarray(sample, dtype=dtype).reshape(-1,1)
+    scale = np.asarray([3])
+    bias = np.asarray([4])
+    mean = np.asarray([1])
+    var = np.asarray([2])
+    epsilon = 0.00001
 
-        t = np.asarray(sample, dtype=dtype).reshape(-1,1)
-        mean = 1
-        var = 2
-        init_scale = 3
-        init_bias = 4
+    verify_BN(x, scale, bias, mean, var, epsilon, False, tmpdir, dtype)
+    
+# Case 2 - Spatial BN with More > 1 batches    
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_SpatialBatchNormalization(tmpdir, dtype):
+    if (dtype == np.float16):
+        pytest.skip("TO BE FIXED")
 
-        scale        = C.Parameter(init=np.asarray([init_scale], dtype=dtype), dtype=dtype)
-        bias         = C.Parameter(init=np.asarray([init_bias], dtype=dtype), dtype=dtype)
-        run_mean     = C.ops.constant(mean, shape=(1), dtype=dtype)
-        run_variance = C.ops.constant(var,  shape=(1), dtype=dtype)
-        run_count    = C.ops.constant(0,               dtype=dtype)
+    x = np.random.randn(2, 3, 4, 5).astype(np.float32)
+    scale = np.random.randn(3).astype(np.float32)
+    bias = np.random.randn(3).astype(np.float32)
+    mean = np.random.randn(3).astype(np.float32)
+    var = np.random.rand(3).astype(np.float32)
+    epsilon = 1e-2
 
-        a = C.input_variable(shape=(1), dtype=dtype, needs_gradient=False, name='a')
-
-        op_node = C.batch_normalization(a, scale, bias, run_mean, run_variance, running_count=run_count, spatial=False,
-            epsilon=epsilon)
-
-        verify_one_input(op_node, t, tmpdir, 'BatchNormalization')
+    verify_BN(x, scale, bias, mean, var, epsilon, True, tmpdir, dtype)
 
 #Cast
 Cast_Type_Config = (np.float64, np.float32, np.float16)

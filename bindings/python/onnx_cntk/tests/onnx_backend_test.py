@@ -31,21 +31,6 @@ skip_ops = [
     'test_operator_repeat_dim_overflow_cpu',
     'test_operator_repeat_dim_overflow_cuda',
 
-    'test_batchnorm_epsilon_cpu',
-    'test_batchnorm_epsilon_cuda',
-    'test_batchnorm_example_cpu',
-    'test_batchnorm_example_cuda',
-    'test_BatchNorm1d_3d_input_eval_cpu',
-    'test_BatchNorm1d_3d_input_eval_cuda',
-    'test_BatchNorm2d_eval_cpu',
-    'test_BatchNorm2d_eval_cuda',
-    'test_BatchNorm2d_momentum_eval_cpu',
-    'test_BatchNorm2d_momentum_eval_cuda',
-    'test_BatchNorm3d_eval_cpu',
-    'test_BatchNorm3d_eval_cuda',
-    'test_BatchNorm3d_momentum_eval_cpu',
-    'test_BatchNorm3d_momentum_eval_cuda',
-
     # These use pre-ONNX 1.2 incompatible versions of the operators.
 
     # This test is incorrect in ONNX 1.2.
