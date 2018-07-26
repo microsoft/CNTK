@@ -2126,11 +2126,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "BatchNormalization" || onnxOpName == "SpatialBN")
     {
-        const Variable &operand = inputs[0];
-        const Variable &scale = inputs[1];
-        const Variable &bias = inputs[2];
-        const Variable &runningMean = inputs[3];
-        const Variable &runningInvStd = inputs[4];
+        auto operandPlaceholder = PlaceholderVariable(inputs[0].Shape(), L"operand", {});
+        const Variable &operand = ToBatch(operandPlaceholder);
+        const Variable &scale = PlaceholderVariable(inputs[1].Shape(), inputs[1].Name(), {});
+        const Variable &bias = PlaceholderVariable(inputs[2].Shape(), inputs[2].Name(), {});;
+        const Variable &runningMean = PlaceholderVariable(inputs[3].Shape(), inputs[3].Name(), {});;
+        const Variable &runningInvStd = PlaceholderVariable(inputs[4].Shape(), inputs[4].Name(), {});;
         const Variable &runningCount = Constant::Scalar(0.0F);
 
         bool spatial = onnxOpName == "SpatialBN" || GetNamedAttributeAsInt64(node, "spatial", 1) != 0;
@@ -2162,7 +2163,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             useCuDNNEngine = false;
         }
         bool disableRegularization = false;
-        FunctionPtr cntkFunction = BatchNormalization(operand,
+        FunctionPtr cntkFunctionWithBatchAxis = BatchNormalization(operand,
                                                       scale,
                                                       bias,
                                                       runningMean,
@@ -2175,7 +2176,17 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
                                                       useCuDNNEngine,
                                                       disableRegularization,
                                                       ToFixedWStringFromMultiByte(node->Name()));
-        return cntkFunction;
+
+        FunctionPtr cntkFunctionWithStaticAxis = UnpackBatch(cntkFunctionWithBatchAxis, ToFixedWStringFromMultiByte(node->Name()));
+        vector<pair<Variable, Variable>> argsMap{
+            {operandPlaceholder, inputs[0]},
+            {scale, inputs[1]},
+            {bias, inputs[2]},
+            {runningMean, inputs[3]},
+            {runningInvStd, inputs[4]},
+        };
+        return AsBlock(std::move(cntkFunctionWithStaticAxis), argsMap,
+            cntkFunctionWithBatchAxis->OpName(), ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "Gemm")
     {
