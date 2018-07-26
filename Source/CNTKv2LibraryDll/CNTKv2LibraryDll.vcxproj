@@ -171,6 +171,7 @@
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="EvaluatorWrapper.h" />
     <ClInclude Include="Learner.h" />
+    <ClInclude Include="Logger.h" />
     <ClInclude Include="MinibatchSource.h" />
     <ClInclude Include="PrimitiveFunctionAttributes.h" />
     <ClInclude Include="PrimitiveFunction.h" />

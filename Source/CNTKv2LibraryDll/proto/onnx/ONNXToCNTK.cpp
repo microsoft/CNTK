@@ -2634,6 +2634,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         FunctionPtr cntkFunction = Reshape(inputs[0], newShape, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
+    else if (onnxOpName == "Unsqueeze")
+    {
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
+        FunctionPtr cntkFunction = ::CNTK::Internal::Unsqueeze(inputs[0], axes, ToFixedWStringFromMultiByte(node->Name()));
+        return cntkFunction;
+    }
     else if (onnxOpName == "Concat")
     {
         // We allow the 'axis' attribute to be optional, and not required (as
