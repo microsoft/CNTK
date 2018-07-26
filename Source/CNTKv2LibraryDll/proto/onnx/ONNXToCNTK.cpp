@@ -1412,7 +1412,10 @@ ConvAutoPadType ONNXToCNTKHelper::ConvertStrToConvAutoPadType(const string &str)
 NDShape ONNXToCNTKHelper::GetShapeFromInput(const NodeArg *shapeInput, const Graph *graph)
 {
     const onnx::TensorProto *valueProto;
-    graph->GetInitializedTensor(shapeInput->Name(), &valueProto);
+    if (!graph->GetInitializedTensor(shapeInput->Name(), &valueProto))
+    {
+        LogicError("Non-constant shape input for Reshape is not implemented.");
+    };
 
     std::vector<size_t> dimensions;
     for (int d = 0; d < valueProto->dims(0); d++)

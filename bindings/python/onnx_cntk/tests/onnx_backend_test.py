@@ -28,16 +28,6 @@ skip_models = [
 
 skip_ops = [
     # These tests crash and prevent tests after them from running.
-    'test_reshape_extended_dims_cpu',
-    'test_reshape_extended_dims_cuda',
-    'test_reshape_negative_dim_cpu',
-    'test_reshape_negative_dim_cuda',
-    'test_reshape_one_dim_cpu',
-    'test_reshape_one_dim_cuda',
-    'test_reshape_reduced_dims_cpu',
-    'test_reshape_reduced_dims_cuda',
-    'test_reshape_reordered_dims_cpu',
-    'test_reshape_reordered_dims_cuda',
     'test_operator_repeat_dim_overflow_cpu',
     'test_operator_repeat_dim_overflow_cuda',
 
