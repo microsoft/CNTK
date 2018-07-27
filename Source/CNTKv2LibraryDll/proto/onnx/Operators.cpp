@@ -408,6 +408,9 @@ namespace ONNX
         { L"Alias",{ {
             { L"Alias", "Identity" },
         } } },
+        { L"StopGradient",{ {
+            { L"StopGradient", "Identity" },
+            } } },
         { L"Gemm",{ {
             { L"Gemm", "Gemm" },
         } } },
