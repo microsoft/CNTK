@@ -19,6 +19,7 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    std::once_flag ONNXFormat::op_schema_initializer_flag_;
     // MaxVersion number in ONNX 1.2 is 7. Change this number (e.g. to 1 or 5) 
     // to experiment with earlier version ONNX. This is to help debugging with reshape op 
     // (and some convolution ops which only passed with newer version)
@@ -72,6 +73,11 @@ void ONNXFormat::Save(const FunctionPtr& src, const std::wstring& filepath)
 
 FunctionPtr ONNXFormat::Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice)
 {
+    std::call_once(op_schema_initializer_flag_, [&]() {
+        ONNX_NAMESPACE::OpSchema tmpSchema;
+        tmpSchema.TypeConstraint("T", ONNX_NAMESPACE::OpSchema::all_tensor_types(), "");
+    });
+
     std::shared_ptr<LotusIR::Model> model;
 
 #ifdef _WIN32
