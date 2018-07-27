@@ -10,6 +10,7 @@
 #include "stdafx.h"
 #ifdef _WIN32
 #include <crtdbg.h>
+#endif
 
 #include "Basics.h"
 #include "Globals.h"
