@@ -3681,8 +3681,7 @@ namespace CNTK
                         // cntk_index (-1) needs to be converted to positive by rank + cntk_index = 3
                         int cntk_py_index = -axis.StaticAxisIndex() - 1;
                         onnx_axis = cntk_py_index;
-                        cntk_index = axis.StaticAxisIndex() + 1;
-                        cntk_index += operand.Shape().Rank();
+                        cntk_index = axis.StaticAxisIndex() + operand.Shape().Rank() + axes.size();
                     }
                     else
                     {
