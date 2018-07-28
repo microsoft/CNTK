@@ -1417,10 +1417,14 @@ NDShape ONNXToCNTKHelper::GetShapeFromInput(const NodeArg *shapeInput, const Gra
         LogicError("Non-constant shape input for Reshape is not implemented.");
     };
 
+    auto shapeSize = valueProto->dims(0);
+    std::vector<int64_t> dimData(shapeSize);
+    ::Lotus::Utils::TensorUtils::UnpackTensor(*valueProto, &dimData[0], shapeSize);
+
     std::vector<size_t> dimensions;
-    for (int d = 0; d < valueProto->dims(0); d++)
+    for (int64_t dimVal : dimData)
     {
-        dimensions.push_back((size_t)(valueProto->int64_data()[d]));
+        dimensions.push_back(static_cast<size_t>(dimVal));
     }
     std::reverse(dimensions.begin(), dimensions.end());
     NDShape shape(dimensions);
