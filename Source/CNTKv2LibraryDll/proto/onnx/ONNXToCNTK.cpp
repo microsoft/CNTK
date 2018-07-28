@@ -1959,7 +1959,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Flatten")
     {
-        int64_t axisIndex = (size_t) GetNamedAttributeAsInt64(node, "axis", 0);
+        int64_t axisIndex = (size_t) GetNamedAttributeAsInt64(node, "axis", 1);
         Axis axis = ConvertONNXAxisToCNTKCppApi(axisIndex, inputs[0]);
         FunctionPtr cntkFunction = Flatten(inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
@@ -2397,43 +2397,24 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         // not specified in Operators.cpp
         return nullptr;
     }
-    else if (onnxOpName == "Hardmax")
+    else if (onnxOpName == "Softmax" || onnxOpName == "LogSoftmax" || onnxOpName == "Hardmax")
     {
-        if (inputs[0].IsConstant())
+        Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 1)), inputs[0]));
+        Variable input = Flatten(inputs[0], axis);
+        FunctionPtr cntkFunction;
+        if (onnxOpName == "Softmax")
         {
-            // onnx spec requires the first axis being batch axis for Hardmax op
-            Variable input = Reshape(inputs[0], inputs[0].Shape().SubShape(0, inputs[0].Shape().Rank() - 1));
-            FunctionPtr cntkFunction = Hardmax(input, ToFixedWStringFromMultiByte(node->Name()));
-            return cntkFunction;
+            cntkFunction = Softmax(input, ToFixedWStringFromMultiByte(node->Name()));
         }
-        else
+        else if (onnxOpName == "LogSoftmax")
         {
-            FunctionPtr cntkFunction = Hardmax(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
-            return cntkFunction;
+            cntkFunction = LogSoftmax(input, ToFixedWStringFromMultiByte(node->Name()));
         }
-    }
-    else if (onnxOpName == "Softmax")
-    {
-        if (!HasNamedAttribute(node, "axis"))
+        else if (onnxOpName == "Hardmax")
         {
-            FunctionPtr cntkFunction = Softmax(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
-            return cntkFunction;
+            cntkFunction = Hardmax(input, ToFixedWStringFromMultiByte(node->Name()));
         }
-        else
-        {
-            Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0)), inputs[0]));
-            FunctionPtr cntkFunction = Softmax(inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
-            return cntkFunction;
-        }
-    }
-    else if (onnxOpName == "LogSoftmax")
-    {
-        int index = static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0));
-
-        Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0)), inputs[0]));
-
-        FunctionPtr cntkFunction = LogSoftmax(inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
-        return cntkFunction;
+        return Reshape(cntkFunction, inputs[0].Shape());
     }
     else if (onnxOpName == "Softplus")
     {

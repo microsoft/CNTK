@@ -1340,7 +1340,7 @@ int64_t CNTKToONNXHelper::ConvertAxisToOnnx(const Axis &axis, const Variable &op
         else if (operand.DynamicAxes().size() == 2)
             return 1;
         else
-            LogicError("Inconsitant Axis in ConvertAxisToOnnx");
+            LogicError("Inconsistent Axis in ConvertAxisToOnnx");
     }
     else if (axis.IsSequenceAxis())
     {
@@ -2529,9 +2529,9 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             // requires operands to have the same rank
             inputArgType = ToTypeProto(input.Shape(), OpInputsHasBatchAxis(src), input.HasSequenceAxis());
         }
-        else if (cntkOpName == "Hardmax" || cntkOpName == "ImageScaler")
+        else if (cntkOpName == "ImageScaler")
         {
-            // ONNX specifies that hardmax, ImageScaler always need a batch axis
+            // TODO: verify - ONNX specifies that ImageScaler always need a batch axis
             inputArgType = ToTypeProto(input.Shape(), true);
         }
         else
@@ -2579,9 +2579,6 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                 else // REVIEW SPTIWARI: Should we fill 0 for FreeDimension here?
                     newShapeVec.push_back(static_cast<int>(axisSize));
             }
-            // Add a 1 to the shape for batch axis in ONNX tensors.
-            if ((src->Inputs().size() > 0) && (src->Inputs()[0].HasBatchAxis()))
-                newShapeVec.push_back(1);
 
             std::reverse(newShapeVec.begin(), newShapeVec.end());
             onnx::TypeProto shapeInputArgType = ToTypeProto(std::vector<int>({ (int)newShapeVec.size() }));
@@ -2988,12 +2985,24 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             size_t blockSize = src->Attributes()[L"blockSize"].Value<size_t>();
             node->AddAttribute("blocksize", static_cast<int64_t>(blockSize));
         }
+        else if (src->OpName() == L"Hardmax")
+        {
+            int numDims = src->Inputs()[0].Shape().Rank();
+            node->AddAttribute(attributesMap[L"axis"], static_cast<int64_t>(numDims - 1));
+        }
         else if (src->OpName() == L"Softmax" || src->OpName() == L"LogSoftmax")
         {
             Axis axis = Axis(0);
             if (src->Attributes().Contains(L"axis"))
                 axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
-            node->AddAttribute(attributesMap[L"axis"], (int64_t)ToIndex(axis));
+            int64_t axisIndex = static_cast<int64_t>(ToIndex(axis));
+            int numDims = src->Inputs()[0].Shape().Rank();
+            if (axisIndex != numDims - 1)
+            {
+                // TODO: support non-last axis (probably by adding transpose before and after the op)
+                LogicError("Only last axis is supported for ONNX export.");
+            }
+            node->AddAttribute(attributesMap[L"axis"], axisIndex);
         }
         else if (src->OpName() == L"Times")
         {
@@ -3025,7 +3034,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             {
                 axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
             }
-            int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
+            int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]) + 1 /* TODO: Figure out how to remove this hardcoded 1 */;
             node->AddAttribute(attributesMap[L"axis"], ax);
         }
         else if (src->OpName() == L"Squeeze")
