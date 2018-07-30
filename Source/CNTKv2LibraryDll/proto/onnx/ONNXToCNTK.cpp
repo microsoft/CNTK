@@ -1366,15 +1366,13 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     NDShape shape = FromTensorShapeProto(*shapeProto);
     std::vector<Axis> dynamicAxes({});
 
-    //// TODO: ONNX has sequence as the major axis. CNTK has batch axis as the major axis.
-    //// Need to figure out how to handle this.
-    //if (shape[shape.Rank() - 1] == shape.FreeDimension || shape[shape.Rank() - 1] == shape.InferredDimension)
-    //    std::swap(shape[shape.Rank() - 1], shape[shape.Rank() - 2]);
-    for (int i = 0; i < shape.Rank(); i++)
-    {
-        if (shape[i] == 0)
-            shape[i] = NDShape::FreeDimension;
-    }
+    // TODO: ONNX has sequence as the major axis (as the first axis). 
+    // CNTK has batch axis as the major axis (as the first axis).
+    // We have a strong assumption here that if the major dimension is FreeDimension it is 
+    // the sequence axis. Otherwise the following code is incorrect.
+    if (shape[shape.Rank() - 1] == shape.FreeDimension || shape[shape.Rank() - 1] == shape.InferredDimension)
+        std::swap(shape[shape.Rank() - 1], shape[shape.Rank() - 2]);
+
 
     // TODO: Do we need to take care of the sequence axis here (like before)?
     // Should it be be taken care of in RNN leaf node creation (different function)?
@@ -2609,7 +2607,11 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         {
             // TODO: this is to undo reshape after LSTM in CNTKToONNX to workaround
             // output shape mismatch with input to the nexk LSTM layer.
-            newShape = newShape.SubShape(0, newShape.Rank() - inputs[0].DynamicAxes().size());
+            if (inputs[0].DynamicAxes().size() != 0)
+                LogicError("ONNX import shall not have input with dynamic axis");
+            newShape = newShape.SubShape(0, newShape.Rank() - 2);
+            // newShape = newShape.AppendShape(NDShape({ (size_t)-3, (size_t)-3 }));
+            newShape = newShape.AppendShape(NDShape({ NDShape::FreeDimension, 1 }));
             return Reshape(inputs[0], newShape, ToFixedWStringFromMultiByte(node->Name()));
         }
 

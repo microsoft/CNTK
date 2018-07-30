@@ -449,15 +449,15 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
+    auto operandPlaceholder = PlaceholderVariable(inputs[0].Shape(), L"operand", {});
+    FunctionPtr operandWithBatchAndSequenceAxis = ToSequence(ToBatch(operandPlaceholder), L"");
+    Variable X = operandWithBatchAndSequenceAxis;
     for (int dir = 0; dir < numDirections; dir++)
     {
         std::function<FunctionPtr(const Variable &)> iofActivationOp, cellActivationOp, hiddenActivationOp;
         std::tie<std::function<FunctionPtr(const Variable &)>, std::function<FunctionPtr(const Variable &)>, std::function<FunctionPtr(const Variable &)>>(iofActivationOp, cellActivationOp, hiddenActivationOp) = GetActivations(activations, activation_alpha, activation_beta, dir);
 
         // the first a few inputs are (in order): X, numDirections * W, numDirections * R
-        auto operandPlaceholder = PlaceholderVariable(inputs[0].Shape(), L"operand", {});
-        FunctionPtr operandWithBatchAndSequenceAxis = ToSequence(ToBatch(operandPlaceholder), L"");
-        Variable X = operandWithBatchAndSequenceAxis;
         Variable W = inputs[1 + dir];
         Variable R = inputs[1 + numDirections + dir];
         Variable B;
@@ -520,20 +520,24 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
             recurrenceHookH, recurrenceHookC, (Constant &)W, (Constant &)R, (Constant &)B,
             (Constant &)Ci, (Constant &)Cf, (Constant &)Co);
 
-        FunctionPtr cntkFunctionWithoutSequenceAxis = Sequence::Unpack(outputH, 0, L"");
-        FunctionPtr cntkFunctionWithoutDynamicAxis = UnpackBatch(cntkFunctionWithoutSequenceAxis, L"");
-        FunctionPtr block = AsBlock(std::move(cntkFunctionWithoutDynamicAxis), { { operandPlaceholder, inputs[0] } },
-            outputH->OpName(), L"");
-        outputHs.push_back(block);
+        outputHs.push_back(outputH);
     }
 
+    FunctionPtr o;
     if (outputHs.size() == 1)
-        return outputHs[0];
+        o = outputHs[0];
     else
     {
         std::vector<Variable> operands({ outputHs[0], outputHs[1] });
-        return Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
+        o = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
+
+    FunctionPtr cntkFunctionWithoutSequenceAxis = Sequence::Unpack(o, 0, L"");
+    FunctionPtr cntkFunctionWithoutDynamicAxis = UnpackBatch(cntkFunctionWithoutSequenceAxis, L"");
+    FunctionPtr block = AsBlock(std::move(cntkFunctionWithoutDynamicAxis), { { operandPlaceholder, inputs[0] } },
+        o->OpName(), L"");
+
+    return block;
 }
 
 FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,

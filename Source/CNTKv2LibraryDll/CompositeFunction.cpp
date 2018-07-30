@@ -1674,7 +1674,6 @@ namespace CNTK
                 auto computationNodePtr = variableToNodeMap.at(outputVar);
                 auto outputShape = outputVar.Shape();
                 auto computationNodeSampleLayout = computationNodePtr->GetSampleLayout();
-                std::cout << ToFixedString(outputVar.Name()) << ":" << ToFixedString(outputShape.AsString()).c_str() << std::endl;
                 if (!VariableShapeMatchesNodeShape(outputShape, computationNodeSampleLayout))
                 {
                     LogicError("Function '%S': The output Variable '%S' shape '%S' does not match the SampleLayout shape '[%s]' of the corresponding ComputationNode in the network.",
