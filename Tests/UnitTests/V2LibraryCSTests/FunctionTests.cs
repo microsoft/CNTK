@@ -46,5 +46,26 @@ namespace CNTK.V2LibraryCSTests
             Assert.AreEqual(model.Inputs[0].Shape, loadedModel.Inputs[0].Shape);
             Assert.AreEqual(model.Output.Shape, loadedModel.Output.Shape);
         }
+
+        [TestMethod]
+        public void TestSetAndGetRandomSeed()
+        {
+            uint expectedRandomSeed = 20;
+            uint randomSeed = expectedRandomSeed;
+            CNTKLib.SetFixedRandomSeed(randomSeed);
+            var isSeedFixed = CNTKLib.IsRandomSeedFixed();
+            var retrievedRandomSeed = CNTKLib.GetRandomSeed();
+            Assert.AreEqual(true, isSeedFixed);
+            Assert.AreEqual(expectedRandomSeed, retrievedRandomSeed);
+        }
+
+        [TestMethod]
+        public void TestForceDeterministicAlgorithms()
+        {
+            CNTKLib.ForceDeterministicAlgorithms();
+            var shouldForce = CNTKLib.ShouldForceDeterministicAlgorithms();
+            Assert.AreEqual(true, shouldForce);
+        }
+
     }
 }
