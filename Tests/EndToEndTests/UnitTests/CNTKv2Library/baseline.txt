@@ -554,6 +554,9 @@ Test module "V2LibraryTests" has passed with:
     Test case "FunctionSuite/TestSettingRandomSeed" has passed with:
       2 assertions out of 2 passed
 
+    Test case "FunctionSuite/MatMul" has passed with:
+      4 assertions out of 4 passed
+
   Test suite "NDArrayViewSuite" has passed with:
     8 test cases out of 8 passed
     66039 assertions out of 66039 passed

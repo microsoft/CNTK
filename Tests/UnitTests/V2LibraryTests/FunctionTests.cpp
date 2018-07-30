@@ -1096,6 +1096,110 @@ void SetRandomSeed(const DeviceDescriptor& device)
     FloatingPointVectorCompare(result2, result4, "SetRandomSeed: output does match the expected after resetting the dropout seed.");
 }
 
+void TestMatMul(const DeviceDescriptor& device)
+{
+    srand(1);
+    auto diff_size = [](const std::vector<size_t>& a, const std::vector<size_t>& b)
+    {
+        bool foundDifference = false;
+        if (a.size() != b.size()) return true;
+        for (int i = 0; !foundDifference && i < a.size() && i < b.size(); ++i)
+        {
+            foundDifference = (a[i] != b[i]);
+        }
+        return foundDifference;
+    };
+
+    std::vector<std::vector<size_t>> inputShapeVec0{{3, 4}, {3, 4, 2, 2}, {64, 4, 1}, {64, NDShape::InferredDimension, 1}};
+    std::vector<std::vector<size_t>> inputShapeVec1{{5, 3}, {5, 3, 2, 2}, {2, 64}, {2, 64}};
+    std::vector<std::vector<size_t>> outShapeVec{{5, 4}, {5, 4, 2, 2}, {2, 4, 1}, {2, NDShape::InferredDimension, 1}};
+    std::vector<std::vector<size_t>> inputValueShapeVec0{ { 3, 4 },{ 3, 4, 2, 2 },{ 64, 4, 1 },{ 64, 4, 1 } };
+    std::vector<std::vector<size_t>> inputValueShapeVec1{ { 5, 3 },{ 5, 3, 2, 2 },{ 2, 64 },{ 2, 64 } };
+    std::vector<std::vector<size_t>> outValueShapeVec{ { 5, 4 },{ 5, 4, 2, 2 },{ 2, 4, 1 },{ 2, 4, 1 } };
+    std::vector<size_t> inputTotalSizeVec0 = { 12, 48, 256, 256 };
+    std::vector<size_t> inputTotalSizeVec1 = { 15, 60, 128, 128 };
+    std::vector<size_t> outputTotalSizeVec = { 20, 80, 8, 8 };
+    std::vector<size_t> inputSubSizeVec0 = { 12, 12, 256, 256 };
+    std::vector<size_t> inputSubSizeVec1 = { 15, 15, 128, 128 };
+    std::vector<size_t> outputSubSizeVec = { 20, 20, 8, 8 };
+
+
+    size_t testCases = inputShapeVec0.size();
+    for (size_t test_i = 0; test_i < testCases; ++test_i)
+    {
+        auto shape0 = NDShape(inputShapeVec0[test_i]);
+        auto shape1 = NDShape(inputShapeVec1[test_i]);
+        auto valueShape0 = NDShape(inputValueShapeVec0[test_i]);
+        auto valueShape1 = NDShape(inputValueShapeVec1[test_i]);
+        auto outShape = NDShape(outShapeVec[test_i]);
+        auto outValueShape = NDShape(outValueShapeVec[test_i]);
+
+        size_t inputTotalSize0 = inputTotalSizeVec0[test_i];
+        size_t inputTotalSize1 = inputTotalSizeVec1[test_i];
+        size_t outputTotalSize = outputTotalSizeVec[test_i];
+        size_t inputSubSize0 = inputSubSizeVec0[test_i];
+        size_t inputSubSize1 = inputSubSizeVec1[test_i];
+        size_t outputSubSize = outputSubSizeVec[test_i];
+
+        auto input0 = InputVariable(shape0, DataType::Float);
+        auto input1 = InputVariable(shape1, DataType::Float);
+        auto result = ::CNTK::Internal::MatMul(input0, input1);
+
+        std::vector<float> inputData0(inputTotalSize0);
+        std::vector<float> inputData1(inputTotalSize1);
+        for (size_t i = 0; i < inputData0.size(); ++i)
+            inputData0[i] = ((float)rand()) / RAND_MAX;
+        for (size_t i = 0; i < inputData1.size(); ++i)
+            inputData1[i] = ((float)rand()) / RAND_MAX;
+
+        ValuePtr inputValue0 = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(valueShape0.AppendShape({1,1}), inputData0, true));
+        ValuePtr inputValue1 = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(valueShape1.AppendShape({ 1,1 }), inputData1, true));
+
+        NDShape outputShape = result->Output().Shape();
+        BOOST_TEST(!diff_size(outShape.Dimensions(), outputShape.Dimensions()));
+        std::vector<float> outputData(outputTotalSize);
+        ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outValueShape.AppendShape({ 1,1 }), outputData, false));
+
+        std::unordered_map<Variable, ValuePtr> outputs = {{result->Output(), outputValue}};
+        result->Forward({{input0, inputValue0}, {input1, inputValue1}}, outputs, device);
+
+        std::vector<float> expectedOutputValues(outputTotalSize);
+        {
+            for (size_t i = 0; i < outputTotalSize / outputSubSize; i++)
+            {
+                std::vector<float> inputTimesData0(inputSubSize0);
+                std::vector<float> inputTimesData1(inputSubSize1);
+                std::vector<float> outTimesData(outputSubSize);
+                auto inputTimes0 = InputVariable(shape0.SubShape(0, 2), DataType::Float);
+                auto inputTimes1 = InputVariable(shape1.SubShape(0, 2), DataType::Float);
+                auto timesResult = Times(inputTimes1, inputTimes0);
+
+                for (size_t j = 0; j < inputSubSize0; ++j)
+                {
+                    inputTimesData0[j] = inputData0[i * inputSubSize0 + j];
+                }
+                for (size_t j = 0; j < inputSubSize1; ++j)
+                {
+                    inputTimesData1[j] = inputData1[i * inputSubSize1 + j];
+                }
+
+                ValuePtr inputTimesValue0 = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(valueShape0.SubShape(0, 2).AppendShape({ 1,1 }), inputTimesData0, true));
+                ValuePtr inputTimesValue1 = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(valueShape1.SubShape(0, 2).AppendShape({ 1,1 }), inputTimesData1, true));
+                ValuePtr outputTimesValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outValueShape.SubShape(0, 2).AppendShape({ 1,1 }), outTimesData, false));
+                std::unordered_map<Variable, ValuePtr> timesOutputs = { {timesResult->Output(), outputTimesValue}};
+                timesResult->Forward({{inputTimes0, inputTimesValue0 }, {inputTimes1, inputTimesValue1 }}, timesOutputs, device);
+
+                for (size_t j = 0; j < outputSubSize; ++j)
+                {
+                    expectedOutputValues[i * outputSubSize + j] = outTimesData[j];
+                }
+            }
+        }
+
+        FloatingPointVectorCompare(outputData, expectedOutputValues, "TestMatMul: Forward prop results do not match expected results.");
+    }
+}
+
 BOOST_AUTO_TEST_SUITE(FunctionSuite)
 
 BOOST_AUTO_TEST_CASE(FindNameInCPU)
@@ -1222,6 +1326,13 @@ BOOST_AUTO_TEST_CASE(TestSettingRandomSeed)
         SetRandomSeed(DeviceDescriptor::GPUDevice(0));
 }
 
+BOOST_AUTO_TEST_CASE(MatMul)
+{
+    if (ShouldRunOnCpu())
+        TestMatMul(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnGpu())
+        TestMatMul(DeviceDescriptor::GPUDevice(0));
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 
