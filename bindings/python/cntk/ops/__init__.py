@@ -570,7 +570,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         blend_time_constant(float, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
-        use_cudnn_engine(bool, default True):
+        use_cudnn_engine(bool, default False):
         name (str, optional): the name of the Function instance in the network
         disable_regularization(bool, default False): turn off regularization in batch normalization
     Returns:
@@ -1821,7 +1821,7 @@ def log_softmax(x, axis = None, name = ''):
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
-        axis (int): the axis of the inputs when coerced to 2D
+        axis (int): axis along which the logsoftmax operation will be performed (the default is the last axis)
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`

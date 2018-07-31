@@ -19,7 +19,13 @@ DIM_SIZE_FOR_NON_BATCH_OPS = 1
 # When adding a test for a new op, please check to see if 
 # that op needs to be added to this list (i.e. does that op 
 # get exported to an ONNX op with defined batch axis).
-set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization'}
+set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization'}
+
+# List of CNTK ops for which output shape doesn't change regardless
+# of whether the input has batch axis or not.
+# Basically, for these ops we don't prepend 1 to the output shape
+# when the input has batch axis.
+set_of_batch_irrelevant_ops = {'Flatten', 'Reshape'}
 
 #############
 #helpers
@@ -47,19 +53,19 @@ def verify_one_input(model, data, tmpdir, name, device=None):
 
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
-    filename = os.path.join(str(tmpdir), name + R'.onnx')
-    model.save(filename, format=C.ModelFormat.ONNX)
     opname = model.owner.op_name
 
+    filename = os.path.join(str(tmpdir), name + R'.onnx')
+    model.save(filename, format=C.ModelFormat.ONNX)        
     loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
-
     filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
     loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
 
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
         dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-        model_shape = (dim_denotation, ) + model_shape
+        if opname not in set_of_batch_irrelevant_ops:
+            model_shape = (dim_denotation, ) + model_shape
         data.shape = (1, ) + data.shape
 
     # When both batch and sequence axes exist, model input will have batch and seqence axes 
@@ -89,6 +95,7 @@ def verify_one_input(model, data, tmpdir, name, device=None):
         o1 = np.squeeze(o1, axis=1)
 
     assert np.allclose(o0, o1)
+    return loaded_model
 
 def verify_two_input(model, data1, data2, tmpdir, name):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
@@ -107,7 +114,8 @@ def verify_two_input(model, data1, data2, tmpdir, name):
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
         dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-        model_shape = (dim_denotation, ) + model_shape
+        if opname not in set_of_batch_irrelevant_ops:
+            model_shape = (dim_denotation, ) + model_shape
         data1.shape = (1, ) + data1.shape
         data2.shape = (1, ) + data2.shape
     assert model_shape == loaded_model.shape
@@ -124,7 +132,7 @@ def verify_two_input(model, data1, data2, tmpdir, name):
 
 #Shared Test Configs
 DType_Config = (np.float32, np.float16)
-    
+
 #Abs
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Abs(tmpdir, dtype):
@@ -264,39 +272,59 @@ def test_AveragePool(tmpdir, dtype, device_id):
         verify_one_input(model, img, tmpdir, 'AveragePool_1', device)
 
 #BatchNormalization
+def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        scale        = C.Parameter(init=init_scale, dtype=dtype)
+        bias         = C.Parameter(init=init_bias, dtype=dtype)
+        run_mean     = C.ops.constant(mean, shape=mean.shape, dtype=dtype)
+        run_variance = C.ops.constant(var,  shape=var.shape, dtype=dtype)
+        run_count    = C.ops.constant(0,               dtype=dtype)
+
+        a = C.input_variable(shape=x.shape[1:], dtype=dtype, needs_gradient=False, name='a')
+
+        op_node = C.batch_normalization(a, scale, bias, run_mean, run_variance, running_count=run_count, spatial=spatial,
+            epsilon=epsilon)
+
+        loaded_model = None
+        for i in range(len(x)):
+            loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization', loaded_model=loaded_model)
+
+# Case 1 - Non-Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_BatchNormalization(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     if (dtype == np.float16):
         pytest.skip("TO BE FIXED")
-    with C.default_options(dtype = dtype):
-        sample = [  # 5 samples having 4 classes
+
+    sample = [  # 5 samples having 4 classes
             [1, 1, 2, 3],
             [0, 0, 0, 0],
             [3, 3, 4, 4],
             [1000, 1000, 1000, 1000],
             [10000, 10000, 10000, 10000]]
 
-        epsilon = 0.00001
+    x = np.asarray(sample, dtype=dtype).reshape(-1,1)
+    scale = np.asarray([3])
+    bias = np.asarray([4])
+    mean = np.asarray([1])
+    var = np.asarray([2])
+    epsilon = 0.00001
 
-        t = np.asarray(sample, dtype=dtype).reshape(-1,1)
-        mean = 1
-        var = 2
-        init_scale = 3
-        init_bias = 4
+    verify_BN(x, scale, bias, mean, var, epsilon, False, tmpdir, dtype)
+    
+# Case 2 - Spatial BN with More > 1 batches    
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_SpatialBatchNormalization(tmpdir, dtype):
+    if (dtype == np.float16):
+        pytest.skip("TO BE FIXED")
 
-        scale        = C.Parameter(init=np.asarray([init_scale], dtype=dtype), dtype=dtype)
-        bias         = C.Parameter(init=np.asarray([init_bias], dtype=dtype), dtype=dtype)
-        run_mean     = C.ops.constant(mean, shape=(1), dtype=dtype)
-        run_variance = C.ops.constant(var,  shape=(1), dtype=dtype)
-        run_count    = C.ops.constant(0,               dtype=dtype)
+    x = np.random.randn(2, 3, 4, 5).astype(np.float32)
+    scale = np.random.randn(3).astype(np.float32)
+    bias = np.random.randn(3).astype(np.float32)
+    mean = np.random.randn(3).astype(np.float32)
+    var = np.random.rand(3).astype(np.float32)
+    epsilon = 1e-2
 
-        a = C.input_variable(shape=(1), dtype=dtype, needs_gradient=False, name='a')
-
-        op_node = C.batch_normalization(a, scale, bias, run_mean, run_variance, running_count=run_count, spatial=False,
-            epsilon=epsilon)
-
-        verify_one_input(op_node, t, tmpdir, 'BatchNormalization')
+    verify_BN(x, scale, bias, mean, var, epsilon, True, tmpdir, dtype)
 
 #Cast
 Cast_Type_Config = (np.float64, np.float32, np.float16)
@@ -513,11 +541,11 @@ def test_Floor(tmpdir, dtype):
 #Gather
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Gather(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     if (dtype == np.float16):
         pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
-        c = np.asarray([[[0],[1]],[[4],[5]]]).astype(dtype)
+        c = np.asarray([[[0],[1]]]).astype(dtype) 
+        #c = np.asarray([[[0],[1]],[[4],[5]]]).astype(dtype) # batch size = 2 not supported yet. 
         x = C.input_variable((2,1))
         d = np.arange(12).reshape(6,2).astype(dtype)
         y = C.constant(d)
@@ -613,10 +641,14 @@ def test_GRU(tmpdir, dtype):
 #Hardmax
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Hardmax(tmpdir, dtype):
-    with C.default_options(dtype = dtype):
-        data = np.asarray([1., 1., 2., 3.], dtype=dtype)
-        model = C.hardmax(data)
-        verify_no_input(model, tmpdir, 'Hardmax_0')
+    data = np.asarray([1., 1., 2., 3.], dtype)
+    model = C.hardmax(data)
+    verify_no_input(model, tmpdir, 'Hardmax_0')
+
+    data = np.asarray([[1, 2, 3], [6, 5, 4]], dtype)
+    model = C.hardmax(data)
+    verify_no_input(model, tmpdir, 'Hardmax_2d_0')
+
 
 #HardSigmiod
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -719,9 +751,8 @@ def test_Log(tmpdir, dtype):
 #LogSoftmax
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LogSoftmax(tmpdir, dtype):
-    with C.default_options(dtype = dtype):
-        model = C.log_softmax(np.array([[1, 1, 2, 3]]).astype(dtype))
-        verify_no_input(model, tmpdir, 'LogSoftmax_0')
+    model = C.log_softmax(np.array([[1, 1, 2, 3]], dtype))
+    verify_no_input(model, tmpdir, 'LogSoftmax_0')
 
 
 #LRN
@@ -1036,11 +1067,26 @@ def test_Pad(tmpdir, dtype):
         verify_one_input(model, data, tmpdir, 'Pad_1')
 
 #PRelu
-#def test_PRelu(tmpdir):
-#    data = np.asarray([[-1, -0.5, 0, 1, 2]])
-#    alpha = C.constant(value=[[0.5, 0.5, 0.5, 0.5, 0.5]])
-#    model = C.param_relu(alpha, data)
-#    verify_no_input(model, tmpdir, 'PRelu_0')
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_PRelu(tmpdir, dtype):
+    # no input
+    x_data = np.asarray([[-1, -0.5, 0, 1, 2]], dtype=dtype)
+    x = C.constant(value=x_data, dtype=dtype)
+    alpha_data = np.asarray([[0.5, 0.5, 0.5, 0.5, 0.5]], dtype=dtype)
+    alpha = C.constant(value=alpha_data, dtype=dtype)
+    model = C.param_relu(alpha, x)
+    verify_no_input(model, tmpdir, 'PRelu_0')
+
+    # one input
+    x = C.input_variable(x_data.shape, dtype=dtype)
+    model = C.param_relu(alpha, x)
+    verify_one_input(model, x_data, tmpdir, 'PRelu_1')
+
+    # two input
+    x = C.input_variable(x_data.shape, dtype=dtype)
+    alpha = C.input_variable(alpha_data.shape, dtype=dtype)
+    model = C.param_relu(alpha, x)
+    verify_two_input(model, alpha_data, x_data, tmpdir, 'PRelu_2')
 
 #Pow
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1141,9 +1187,8 @@ def test_Relu(tmpdir, dtype):
 #Reshape
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Reshape(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
-        data = np.asarray([[[[0., 1.],[2., 3.],[4., 5.]]]], dtype=dtype)
+        data = np.asarray([[[0., 1.],[2., 3.],[4., 5.]]], dtype)
         i1 = C.input_variable(shape=(3,2))
         model = C.reshape(i1, (2,3))
         verify_one_input(model, data, tmpdir, 'Reshape_1')
@@ -1258,9 +1303,8 @@ def test_Slice(tmpdir, dtype):
 #Softmax
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Softmax(tmpdir, dtype):
-    with C.default_options(dtype = dtype):
-        model = C.softmax(np.array([[1, 1, 2, 3]]).astype(dtype))
-        verify_no_input(model, tmpdir, 'Softmax_0')
+    model = C.softmax(np.array([[1, 1, 2, 3]], dtype))
+    verify_no_input(model, tmpdir, 'Softmax_0')
 
 #Softplus
 @pytest.mark.parametrize("dtype", DType_Config)

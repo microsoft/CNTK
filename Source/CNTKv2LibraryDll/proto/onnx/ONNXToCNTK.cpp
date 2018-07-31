@@ -1409,12 +1409,19 @@ ConvAutoPadType ONNXToCNTKHelper::ConvertStrToConvAutoPadType(const string &str)
 NDShape ONNXToCNTKHelper::GetShapeFromInput(const NodeArg *shapeInput, const Graph *graph)
 {
     const onnx::TensorProto *valueProto;
-    graph->GetInitializedTensor(shapeInput->Name(), &valueProto);
+    if (!graph->GetInitializedTensor(shapeInput->Name(), &valueProto))
+    {
+        LogicError("Non-constant shape input for Reshape is not implemented.");
+    };
+
+    auto shapeSize = valueProto->dims(0);
+    std::vector<int64_t> dimData(shapeSize);
+    ::Lotus::Utils::TensorUtils::UnpackTensor(*valueProto, &dimData[0], shapeSize);
 
     std::vector<size_t> dimensions;
-    for (int d = 0; d < valueProto->dims(0); d++)
+    for (int64_t dimVal : dimData)
     {
-        dimensions.push_back((size_t)(valueProto->int64_data()[d]));
+        dimensions.push_back(static_cast<size_t>(dimVal));
     }
     std::reverse(dimensions.begin(), dimensions.end());
     NDShape shape(dimensions);
@@ -1953,7 +1960,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Flatten")
     {
-        int64_t axisIndex = (size_t) GetNamedAttributeAsInt64(node, "axis", 0);
+        int64_t axisIndex = (size_t) GetNamedAttributeAsInt64(node, "axis", 1);
         Axis axis = ConvertONNXAxisToCNTKCppApi(axisIndex, inputs[0]);
         FunctionPtr cntkFunction = Flatten(inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
@@ -2120,11 +2127,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "BatchNormalization" || onnxOpName == "SpatialBN")
     {
-        const Variable &operand = inputs[0];
-        const Variable &scale = inputs[1];
-        const Variable &bias = inputs[2];
-        const Variable &runningMean = inputs[3];
-        const Variable &runningInvStd = inputs[4];
+        auto operandPlaceholder = PlaceholderVariable(inputs[0].Shape(), L"operand", {});
+        const Variable &operand = ToBatch(operandPlaceholder);
+        const Variable &scale = PlaceholderVariable(inputs[1].Shape(), inputs[1].Name(), {});
+        const Variable &bias = PlaceholderVariable(inputs[2].Shape(), inputs[2].Name(), {});;
+        const Variable &runningMean = PlaceholderVariable(inputs[3].Shape(), inputs[3].Name(), {});;
+        const Variable &runningInvStd = PlaceholderVariable(inputs[4].Shape(), inputs[4].Name(), {});;
         const Variable &runningCount = Constant::Scalar(0.0F);
 
         bool spatial = onnxOpName == "SpatialBN" || GetNamedAttributeAsInt64(node, "spatial", 1) != 0;
@@ -2156,7 +2164,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             useCuDNNEngine = false;
         }
         bool disableRegularization = false;
-        FunctionPtr cntkFunction = BatchNormalization(operand,
+        FunctionPtr cntkFunctionWithBatchAxis = BatchNormalization(operand,
                                                       scale,
                                                       bias,
                                                       runningMean,
@@ -2169,7 +2177,17 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
                                                       useCuDNNEngine,
                                                       disableRegularization,
                                                       ToFixedWStringFromMultiByte(node->Name()));
-        return cntkFunction;
+
+        FunctionPtr cntkFunctionWithStaticAxis = UnpackBatch(cntkFunctionWithBatchAxis, ToFixedWStringFromMultiByte(node->Name()));
+        vector<pair<Variable, Variable>> argsMap{
+            {operandPlaceholder, inputs[0]},
+            {scale, inputs[1]},
+            {bias, inputs[2]},
+            {runningMean, inputs[3]},
+            {runningInvStd, inputs[4]},
+        };
+        return AsBlock(std::move(cntkFunctionWithStaticAxis), argsMap,
+            cntkFunctionWithBatchAxis->OpName(), ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "Gemm")
     {
@@ -2391,43 +2409,24 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         // not specified in Operators.cpp
         return nullptr;
     }
-    else if (onnxOpName == "Hardmax")
+    else if (onnxOpName == "Softmax" || onnxOpName == "LogSoftmax" || onnxOpName == "Hardmax")
     {
-        if (inputs[0].IsConstant())
+        Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 1)), inputs[0]));
+        Variable input = Flatten(inputs[0], axis);
+        FunctionPtr cntkFunction;
+        if (onnxOpName == "Softmax")
         {
-            // onnx spec requires the first axis being batch axis for Hardmax op
-            Variable input = Reshape(inputs[0], inputs[0].Shape().SubShape(0, inputs[0].Shape().Rank() - 1));
-            FunctionPtr cntkFunction = Hardmax(input, ToFixedWStringFromMultiByte(node->Name()));
-            return cntkFunction;
+            cntkFunction = Softmax(input, ToFixedWStringFromMultiByte(node->Name()));
         }
-        else
+        else if (onnxOpName == "LogSoftmax")
         {
-            FunctionPtr cntkFunction = Hardmax(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
-            return cntkFunction;
+            cntkFunction = LogSoftmax(input, ToFixedWStringFromMultiByte(node->Name()));
         }
-    }
-    else if (onnxOpName == "Softmax")
-    {
-        if (!HasNamedAttribute(node, "axis"))
+        else if (onnxOpName == "Hardmax")
         {
-            FunctionPtr cntkFunction = Softmax(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
-            return cntkFunction;
+            cntkFunction = Hardmax(input, ToFixedWStringFromMultiByte(node->Name()));
         }
-        else
-        {
-            Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0)), inputs[0]));
-            FunctionPtr cntkFunction = Softmax(inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
-            return cntkFunction;
-        }
-    }
-    else if (onnxOpName == "LogSoftmax")
-    {
-        int index = static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0));
-
-        Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 0)), inputs[0]));
-
-        FunctionPtr cntkFunction = LogSoftmax(inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
-        return cntkFunction;
+        return Reshape(cntkFunction, inputs[0].Shape());
     }
     else if (onnxOpName == "Softplus")
     {
@@ -2628,6 +2627,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         }
 
         FunctionPtr cntkFunction = Reshape(inputs[0], newShape, ToFixedWStringFromMultiByte(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Unsqueeze")
+    {
+        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
+        FunctionPtr cntkFunction = ::CNTK::Internal::Unsqueeze(inputs[0], axes, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "Concat")

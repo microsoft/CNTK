@@ -297,6 +297,9 @@
     <ClInclude Include="proto\onnx\onnx_repo\onnx\common\assertions.h">
       <Filter>proto\onnx\onnx_repo\onnx\common</Filter>
     </ClInclude>
+    <ClInclude Include="Logger.h">
+      <Filter>proto\onnx</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

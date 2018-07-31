@@ -61,7 +61,7 @@ class CNTKBackendRep(BackendRep):
         self.expected_out_types = expected_out_types
 
     def run(self, inputs, **kwargs):
-        input = {self.model.arguments[i]:inputs[i] for i in range(len(inputs))} 
+        input = {self.model.arguments[i]:inputs[i] for i in range(len(inputs))}
         res = self.model.eval(input)
         # TODO: make this work for multiple output case.
         # TODO: support more types.

@@ -116,6 +116,12 @@ namespace CNTK
                 // The first two inputs are Constant for alpha and beta, followed with three Variable A, B and C.
                 inputs = { m_inputs[0], m_inputs[1], m_inputs[3], m_inputs[2], m_inputs[4] };
             }
+            else if (pythonOperandOrder && primitiveFunction && (primitiveFunction->OpName() == L"GatherOp" || primitiveFunction->OpType() == PrimitiveOpType::Gather))
+            {
+                assert(m_inputs.size() == 2);
+                // For GatherOp, python operand order is reversed. 
+                inputs = { m_inputs[1], m_inputs[0] };
+            }
             else
                 inputs = m_inputs;
         }
@@ -2258,7 +2264,7 @@ namespace CNTK
             auto swapped = TransposeAxes(refPlaceholder, lastAxis, axis);
             auto gatherSwapped = GatherOp(indPlaceholder, swapped);
             auto result = TransposeAxes(gatherSwapped, lastAxis, axis);
-            return AsBlock(std::move(result), { { refPlaceholder, reference },{ indPlaceholder, indices } }, std::move(additionalProperties), L"GatherOp", name);
+            return AsBlock(std::move(result), { { indPlaceholder, indices }, { refPlaceholder, reference } }, std::move(additionalProperties), L"GatherOp", name);
         }
     }
 
@@ -2917,12 +2923,13 @@ namespace CNTK
     FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name)
     {
         auto operandPlaceholder = PlaceholderVariable();
+        auto alphaPlaceholder = PlaceholderVariable();
         auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
         auto result = ElementSelect(lessThanZero,
-            ElementTimes(alpha, operandPlaceholder),
+            ElementTimes(alphaPlaceholder, operandPlaceholder),
             operandPlaceholder);
 
-        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"PReLU", name);
+        return AsBlock(std::move(result), { { operandPlaceholder, operand },{ alphaPlaceholder, alpha } }, L"PReLU", name);
     }
 
     FunctionPtr Softplus(const Variable& operand, const std::wstring& name)
@@ -3535,27 +3542,116 @@ namespace CNTK
             // we implement this import step-by-step.
             //      1. Both 2-D inputs.
             //      2. Both N-D inputs.
-            //      3. Add broadcast. (Not supported in ONNX/CNTK yet)
+            //      3. Add broadcast. (Partially supported in ONNX/CNTK. )
+            //
+            // Note: we don't support free/inferred dimension for N-D MatMul currently.
 
-            const NDShape& inputShape0 = leftOperand.Shape();
-            const NDShape& inputShape1 = rightOperand.Shape();
-
-            auto isBothNDInputs = [&]() -> bool {
-                if (inputShape0.Rank() != inputShape1.Rank() || inputShape0.Rank() <= 2) return false;
-                // In this case we don't require broadcast, thus prefix dimensions should match. 
-                return inputShape0.SubShape(2) == inputShape1.SubShape(2);
-            };
+            NDShape inputShape0 = leftOperand.Shape();
+            NDShape inputShape1 = rightOperand.Shape();
 
             Variable leftOperandPlaceholder = PlaceholderVariable(inputShape0, L"leftOperand", {});
             Variable rightOperandPlaceholder = PlaceholderVariable(inputShape1, L"rightOperand", {});
+            Variable operand0 = leftOperandPlaceholder;
+            Variable operand1 = rightOperandPlaceholder;
             FunctionPtr cntkFunction;
+            size_t unitTailLengthToAppend = 0;
+
+            ///
+            /// Preprocessing
+            ///
+
+            const bool isBothNDInputs = [&]() -> bool {
+                if (inputShape0.Rank() != inputShape1.Rank() || inputShape0.Rank() <= 2) return false;
+                // In this case we don't require broadcast, thus prefix dimensions should match. 
+                return inputShape0.SubShape(2) == inputShape1.SubShape(2);
+            }();
+            if (!isBothNDInputs)
+            {
+                // Do check for case 3. If total size of tail shape of longer operand is 1,
+                // we can handle this broadcast case by removing the tail shape and append to result later. 
+                const bool isSimpleBroadcast = [&]() -> bool {
+                    // Some situation needs broadcast. 
+                    // Check if this is simple broadcast: that we only need to append 1 to the shorter shape.
+                    // e.g.
+                    //  input_0:    [b, a, 2, 1, 1]
+                    //  input_1:    [c, b, 2]
+                    // ==> broadcast: remove tail shape [1, 1] from input_0
+                    //  input_0:    [b, a, 2]
+                    // 
+                    if (inputShape0.Rank() < 2 || inputShape1.Rank() < 2) return false;
+                    Variable *shortOperand = &operand1;
+                    Variable *longOperand = &operand0;
+                    if (inputShape0.Rank() < inputShape1.Rank()) {
+                        std::swap(shortOperand, longOperand);
+                    }
+                    const NDShape& tailShape = longOperand->Shape().SubShape(shortOperand->Shape().Rank());
+                    if (tailShape.TotalSize() != 1) return false;
+                    return true;
+                }();
+                if (!isSimpleBroadcast)
+                    LogicError("MatMul: Complex form of broadcasting is currently not supported in ONNX/CNTK.");
+
+                // Remove tail shape of {1, ..., 1}
+                if (inputShape0.Rank() < inputShape1.Rank())
+                {
+                    unitTailLengthToAppend = inputShape1.Rank() - inputShape0.Rank();
+                    inputShape1 = inputShape1.SubShape(0, inputShape0.Rank());
+                    operand1 = Reshape(operand1, inputShape1)->Output();
+                }
+                else
+                {
+                    unitTailLengthToAppend = inputShape0.Rank() - inputShape1.Rank();
+                    inputShape0 = inputShape0.SubShape(0, inputShape1.Rank());
+                    operand0 = Reshape(operand0, inputShape0)->Output();
+                }
+            }
+
+            // Do check for case 2. We can reduce tail shape of both operand if they are both 1. 
+            const size_t sharedUnitTailLength = [&]() -> size_t {
+                assert(inputShape0.Rank() == inputShape1.Rank());
+                size_t sharedUnitTailLength = 0;
+                for (size_t i = inputShape0.Rank() - 1; i >= 2; --i)
+                {
+                    if (inputShape0[i] == 1 && inputShape1[i] == 1)
+                        sharedUnitTailLength++;
+                    else
+                        break;
+                }
+                return sharedUnitTailLength;
+            }();
+            if (sharedUnitTailLength > 0)
+            {
+                // e.g.
+                //  input_0:    [b, a, 2, 1, 1]
+                //  input_1:    [c, b, 2, 1 ,1]
+                // ==> remove common tail shape [1, 1] from both input
+                //  input_0:    [b, a, 2]
+                //  input_1:    [c, b, 2]
+                //
+                inputShape0 = inputShape0.SubShape(0, inputShape0.Rank() - sharedUnitTailLength);
+                inputShape1 = inputShape1.SubShape(0, inputShape1.Rank() - sharedUnitTailLength);
+                operand0 = Reshape(operand0, inputShape0)->Output();
+                operand1 = Reshape(operand1, inputShape1)->Output();
+                unitTailLengthToAppend += sharedUnitTailLength;
+            }
+
+            ///
+            /// After preprocessing, inputs are either both 2-D or both N-D. 
+            ///
+
             if (inputShape0.Rank() == 2 && inputShape1.Rank() == 2)
             {
                 // 1. Both 2-D inputs.
                 // CNTK Times has reversed input order than ONNX(numpy) MatMul. 
-                cntkFunction = Times(rightOperandPlaceholder, leftOperandPlaceholder);
+                cntkFunction = Times(operand1, operand0);
+                if (unitTailLengthToAppend > 0)
+                {
+                    const NDShape& outputShape{ inputShape1[0], inputShape0[1] };
+                    const NDShape& tailShape(std::vector<size_t>(unitTailLengthToAppend, 1));
+                    cntkFunction = Reshape(cntkFunction, outputShape.AppendShape(tailShape));
+                }
             }
-            else if (isBothNDInputs())
+            else
             {
                 // 2. Both N-D inputs.
                 // Convert inputs into CNTK style:
@@ -3590,9 +3686,9 @@ namespace CNTK
                 {
                     inputPrefixProd *= inputShape0[i];
                 }
-                FunctionPtr input0CNTK = Reshape(leftOperandPlaceholder, { bDim, inputPrefixProd * aDim });
+                FunctionPtr input0CNTK = Reshape(operand0, { bDim, inputPrefixProd * aDim });
                 // 2)
-                FunctionPtr input1CNTK = Reshape(rightOperandPlaceholder, { cDim, bDim, inputPrefixProd });
+                FunctionPtr input1CNTK = Reshape(operand1, { cDim, bDim, inputPrefixProd });
                 // 3)
                 input1CNTK = TransposeAxes(input1CNTK, Axis(1), Axis(2));
                 // 4)
@@ -3612,11 +3708,12 @@ namespace CNTK
                 // 10)
                 const NDShape& outputShape = NDShape({ cDim, aDim }).AppendShape(inputShape0.SubShape(2));
                 cntkFunction = Reshape(outputCNTK, outputShape);
-            }
-            else
-            {
-                // 3. broadcast.
-                LogicError("MatMul: broadcasting is currently not supported in ONNX/CNTK.");
+
+                if (unitTailLengthToAppend > 0)
+                {
+                    const NDShape& tailShape(std::vector<size_t>(unitTailLengthToAppend, 1));
+                    cntkFunction = Reshape(cntkFunction, outputShape.AppendShape(tailShape));
+                }
             }
 
             return AsBlock(std::move(cntkFunction),
@@ -3658,6 +3755,90 @@ namespace CNTK
                 { { operandAPlaceholder, operandA },{ operandBPlaceholder, operandB },{ operandCPlaceholder, operandC } },
                 std::move(attributes),
                 L"Gemm", name);
+        }
+
+        FunctionPtr Unsqueeze(const Variable& operand, const std::vector<Axis>& axes, const std::wstring& name)
+        {
+            int cntk_index;
+            int onnx_axis;
+
+            std::vector<size_t> axesIndices;
+            for (auto axis : axes)
+            {
+                // We need to express in onnx axis system to help ONNX conversion.
+                if (axis.IsStaticAxis())
+                {
+                    if (axis.StaticAxisIndex() < 0)
+                    {
+                        // python shape [2,3,4,5], cntk_py_index = 1 (point at 3). 
+                        // in python, sanitize_axis applies Axis(-cntk_py_index - 1) so axis = -2
+                        // in cpp shape becomes [5,4,3,2], axis(-2) is still pointing to 3 (from the last)
+                        // With ONNX Unsqueeze op, result shall be: [2,3,4,5]. thus onnx_axis = cntk_py_index = 1 (point to 3)
+                        // for CNTK reshape, cntk_index shall point to the one after 3 (2): cntk_index = axis + 1
+                        // cntk_index (-1) needs to be converted to positive by rank + cntk_index = 3
+                        int cntk_py_index = -axis.StaticAxisIndex() - 1;
+                        onnx_axis = cntk_py_index;
+                        cntk_index = axis.StaticAxisIndex() + operand.Shape().Rank() + axes.size();
+                    }
+                    else
+                    {
+                        // in this case shape is the same as in python: [2,3,4,5]
+                        // that is: cntk_py_index = 1, points to 3
+                        // onnx_axis = 1, points to 3 in [2,3,4,5]
+                        // cntk_index = 1, points to 3 in [2,3,4,5]
+                        int cntk_py_index = axis.StaticAxisIndex();
+                        onnx_axis = cntk_py_index;
+                        cntk_index = cntk_py_index;
+                    }
+                }
+                else if (axis.IsBatchAxis())
+                {
+                    // expected result: [[batch],[flatten sample]]([[#][2,3,4,5]])
+                    // current onnx Unsqueeze op should not have batch axis in attribute. 
+                    cntk_index = 0;
+                }
+                else
+                {
+                    LogicError("Unsqueeze: accept only static and batch axes.");
+                }
+
+                if (cntk_index < 0 || cntk_index > operand.Shape().Rank() + axes.size())
+                {
+                    LogicError("Unsqueeze: unsupported axis (operand.Shape().Rank() = %zu, outShape.Rank() = %zu, axis = %s).",
+                        operand.Shape().Rank(), operand.Shape().Rank() + axes.size(), ToLegacyString(ToUTF8(axis.AsString())).c_str());
+                }
+
+                axesIndices.push_back(static_cast<size_t>(cntk_index));
+            }
+
+            std::vector<size_t> outShape(axesIndices.size() + operand.Shape().Rank(), 0);
+            for (int axis : axesIndices)
+            {
+                if (axis >= outShape.size())
+                    LogicError("Unsqueeze: 'axes' has an out of range axis(%d >= %zu).", axis, outShape.size());
+                if (outShape[axis] != 0)
+                    LogicError("Unsqueeze: 'axes' has a duplicate axis(%d).", axis);
+                outShape[axis] = 1;
+            }
+
+            auto begin = operand.Shape().Dimensions().cbegin();
+            for (auto &axisSize : outShape)
+            {
+                if (axisSize == 0)
+                {
+                    axisSize = *begin++;
+                }
+            }
+            assert(begin == operand.Shape().Dimensions().cend());
+
+            Dictionary attributes = Dictionary();
+            attributes[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
+
+            Variable operandPlaceholder = PlaceholderVariable(operand.Shape(), L"operandPlaceholder", {});
+
+            FunctionPtr result = Reshape(operandPlaceholder, outShape);
+
+            return AsBlock(std::move(result), {{operandPlaceholder, operand}}, std::move(attributes), L"Unsqueeze", name);
         }
     }
 }

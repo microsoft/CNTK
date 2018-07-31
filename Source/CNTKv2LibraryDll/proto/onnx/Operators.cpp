@@ -408,11 +408,17 @@ namespace ONNX
         { L"Alias",{ {
             { L"Alias", "Identity" },
         } } },
+        { L"StopGradient",{ {
+            { L"StopGradient", "Identity" },
+            } } },
         { L"Gemm",{ {
             { L"Gemm", "Gemm" },
         } } },
         { L"MatMul",{ {
             { L"MatMul", "MatMul" },
+        } } },
+        { L"Unsqueeze",{ {
+            { L"Unsqueeze", "Unsqueeze" },
         } } },
     };
 
@@ -483,7 +489,6 @@ namespace ONNX
             { L"ELU",{ 0, 1 } },
             { L"LeakyReLU",{ 0, 1 } },
             { L"SELU",{ 0, 1, 2 } },
-            { L"PReLU",{ 0 } },
             { L"ElementMax",{} },
             { L"ElementMin",{} },
             { L"HardSigmoid",{ 0, 1, 2, 3 } },
@@ -506,7 +511,7 @@ namespace ONNX
             { L"BatchNormalization",{ 0, 1, 2, 3, 4, -1 } },
             { L"Times",{ 1, 0 } },
             { L"Gather",{ 1, 0 } },
-            { L"PReLU",{ 1, 0 } },
+            { L"PReLU",{ -1, 0, 1 } },
             { L"Gemm", { -1, -1, 1, 0, 2} },
         };
 
@@ -540,6 +545,7 @@ namespace ONNX
             { L"SpaceToDepth" },
             { L"LocalResponseNormalization" },
             { L"MeanVarianceNormalization" },
+            { L"BatchNormalization" },
         };
 
         std::set<std::string> Operators::_onnxSimpleBatchAxisOps = { // List of all ONNX ops that are simple (single input, output) and have batch axis.
