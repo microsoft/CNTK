@@ -496,7 +496,8 @@ public:
             if (!autoPadCur && (lo > 0 || hi > 0))
             {
                 size_t size = (dimOut - 1) * delta + kernelShape_i;
-                if (size != dim)
+                // size must be >= (lo + inputShape[i]) to cover all original input space(excluding padding).
+                if (size < (dim - hi))
                     InvalidArgument("Convolution requires that kernel fills the entire space if auto-padding is disabled.");
             }
 
