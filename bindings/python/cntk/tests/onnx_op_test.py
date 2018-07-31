@@ -45,7 +45,7 @@ def verify_no_input(model, tmpdir, name):
     o_ = loaded_model.eval()
     assert np.allclose(o_, o)
     
-def verify_one_input(model, data, tmpdir, name, device=None):
+def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
     def TranposeDynamicAxis(data):
         perm = np.arange(np.rank(data))
         perm[0], perm[1] = perm[1], perm[0]
@@ -55,9 +55,11 @@ def verify_one_input(model, data, tmpdir, name, device=None):
     data = deepcopy(data)
     opname = model.owner.op_name
 
-    filename = os.path.join(str(tmpdir), name + R'.onnx')
-    model.save(filename, format=C.ModelFormat.ONNX)        
-    loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    if not loaded_model:
+        filename = os.path.join(str(tmpdir), name + R'.onnx')
+        model.save(filename, format=C.ModelFormat.ONNX)        
+        loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+
     filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
     loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
 
