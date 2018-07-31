@@ -2379,7 +2379,23 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "MatMul")
     {
-        FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(inputs[0], inputs[1]);
+        // in case of input have 
+        auto input0 = inputs[0];
+        auto input1 = inputs[1];
+        auto HasBatchAndSequenceAxes = [](Variable input) {
+            return input.Shape().Rank() >= 2 &&
+                input.Shape()[input.Shape().Rank() - 1] == NDShape::FreeDimension &&
+                input.Shape()[input.Shape().Rank() - 2] == NDShape::FreeDimension; };
+
+        bool input0HasBatchAndSequenceAxes = HasBatchAndSequenceAxes(inputs[0]);
+        bool input1HasBatchAndSequenceAxes = HasBatchAndSequenceAxes(inputs[1]);
+        if (input0HasBatchAndSequenceAxes)
+            input0 = ToBatchAndSequence(inputs[0]);
+        if (input1HasBatchAndSequenceAxes)
+            input1 = ToBatchAndSequence(inputs[1]);
+        FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+        if (input0HasBatchAndSequenceAxes || input1HasBatchAndSequenceAxes)
+            cntkFunction = UnpackBatchAndSequence(cntkFunction);
         return cntkFunction;
     }
     else if (onnxOpName == "PRelu")
