@@ -233,6 +233,8 @@ std::pair<FunctionPtr, FunctionPtr> LSTMPCell(Variable input,
     size_t outputDim = prevOutput.Shape()[0];
     int stacked_dim = (int)outputDim;
 
+    // computation order shall follow what is in bindings\python\cntk\layers\blocks.py
+    // lstm(dh, dc, x)
     FunctionPtr proj4;
     if (B.IsInitialized())
     {
@@ -280,6 +282,9 @@ FunctionPtr GRUCell(Variable input,
     size_t outputDim = prevOutput.Shape()[0];
     int stacked_dim = (int)outputDim;
 
+    // computation order shall follow what is in bindings\python\cntk\layers\blocks.py
+    // gru(dh, x)
+
     FunctionPtr projx3;
     if (B.IsInitialized())
         projx3 = Plus(B, Times(W, input));
@@ -323,10 +328,12 @@ FunctionPtr RNNCell(Variable input,
     Variable prevOutput,
     Constant &W, Constant &R, Constant &B)
 {
+    // computation order shall follow what is in bindings\python\cntk\layers\blocks.py
+    // rnn_step(dh, x)
     FunctionPtr proj = Times(W, input) + Times(R, prevOutput);
-    ;
+
     if (B.IsInitialized())
-        proj = B + proj;
+        proj = proj + B;
 
     FunctionPtr h = activationOp(proj);
     return h;
@@ -444,14 +451,32 @@ Variable GetInitialStateVariable(const std::vector<Variable> &inputs, int numDir
     return initialVariable;
 }
 
+Variable ToBatchAndSequence(Variable input)
+{
+    if(input.DynamicAxes().size() != 0)
+        CNTK::LogicError("Input (%s) shall not have any dynamic axis", ToLegacyString(ToUTF8(input.Name())).c_str());
+    if (input.Shape().Rank() < 2)
+        CNTK::LogicError("Shape of input (%s) shall have rank that is equal or more than 2", ToLegacyString(ToUTF8(input.Name())).c_str());
+
+    FunctionPtr transpose = TransposeAxes(input, Axis(input.Shape().Rank() - 2), Axis(input.Shape().Rank() - 1), L"");
+    FunctionPtr operandWithBatchAndSequenceAxis = ToSequence(ToBatch(transpose, L""), L"");
+    return operandWithBatchAndSequenceAxis;
+}
+
+FunctionPtr UnpackBatchAndSequence(FunctionPtr rnnFunction)
+{
+    FunctionPtr cntkFunctionWithoutSequenceAxis = Sequence::Unpack(rnnFunction, 0, L"");
+    FunctionPtr cntkFunctionWithoutDynamicAxis = UnpackBatch(cntkFunctionWithoutSequenceAxis, L"");
+    return cntkFunctionWithoutDynamicAxis;
+}
+
 FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
-    auto operandPlaceholder = PlaceholderVariable(inputs[0].Shape(), L"operand", {});
-    FunctionPtr operandWithBatchAndSequenceAxis = ToSequence(ToBatch(operandPlaceholder), L"");
-    Variable X = operandWithBatchAndSequenceAxis;
+    Variable X;
+    X = ToBatchAndSequence(inputs[0]);
     for (int dir = 0; dir < numDirections; dir++)
     {
         std::function<FunctionPtr(const Variable &)> iofActivationOp, cellActivationOp, hiddenActivationOp;
@@ -523,21 +548,17 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
         outputHs.push_back(outputH);
     }
 
-    FunctionPtr o;
+    FunctionPtr rnnFunction;
     if (outputHs.size() == 1)
-        o = outputHs[0];
+        rnnFunction = outputHs[0];
     else
     {
         std::vector<Variable> operands({ outputHs[0], outputHs[1] });
-        o = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
+        rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
 
-    FunctionPtr cntkFunctionWithoutSequenceAxis = Sequence::Unpack(o, 0, L"");
-    FunctionPtr cntkFunctionWithoutDynamicAxis = UnpackBatch(cntkFunctionWithoutSequenceAxis, L"");
-    FunctionPtr block = AsBlock(std::move(cntkFunctionWithoutDynamicAxis), { { operandPlaceholder, inputs[0] } },
-        o->OpName(), L"");
-
-    return block;
+    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction);
+    return unpackedRnnFunction;
 }
 
 FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
@@ -545,13 +566,14 @@ FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &in
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
+    Variable X = ToBatchAndSequence(inputs[0]);
+
     for (int dir = 0; dir < numDirections; dir++)
     {
         std::function<FunctionPtr(const Variable &)> fActivationOp, gActivationOp;
         std::tie<std::function<FunctionPtr(const Variable &)>, std::function<FunctionPtr(const Variable &)>>(fActivationOp, gActivationOp) = GetGRUActivations(activations, activation_alpha, activation_beta, dir);
 
         // the first a few inputs are (in order): X, numDirections * W, numDirections * R, numDirections * H1
-        Variable X = inputs[0];
         Variable W = inputs[1 * numDirections + dir - ((numDirections == 2) ? 1 : 0)];
         Variable R = inputs[2 * numDirections + dir - ((numDirections == 2) ? 1 : 0)];
 
@@ -590,13 +612,18 @@ FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &in
             recurrenceHook, (Constant &)W, (Constant &)R, (Constant &)H1, (Constant &)B);
         outputHs.push_back(outputH);
     }
+
+    FunctionPtr rnnFunction;
     if (outputHs.size() == 1)
-        return outputHs[0];
+        rnnFunction = outputHs[0];
     else
     {
         std::vector<Variable> operands({ outputHs[0], outputHs[1] });
-        return Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
+        rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
+
+    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction);
+    return unpackedRnnFunction;
 }
 
 FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
@@ -604,13 +631,14 @@ FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &in
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
+    Variable X = ToBatchAndSequence(inputs[0]);
+
     for (int dir = 0; dir < numDirections; dir++)
     {
         std::function<FunctionPtr(const Variable &)> activationOp =
             GetRNNActivations(activations, activation_alpha, activation_beta, dir);
 
         // the first a few inputs are (in order): X, numDirections * W, numDirections * R, numDirections * H1
-        Variable X = inputs[0];
         Variable W = inputs[1 * numDirections + dir - ((numDirections == 2) ? 1 : 0)];
         Variable R = inputs[2 * numDirections + dir - ((numDirections == 2) ? 1 : 0)];
         Variable B;
@@ -640,13 +668,18 @@ FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &in
             recurrenceHook, (Constant &)W, (Constant &)R, (Constant &)B);
         outputHs.push_back(outputH);
     }
+
+    FunctionPtr rnnFunction;
     if (outputHs.size() == 1)
-        return outputHs[0];
+        rnnFunction = outputHs[0];
     else
     {
         std::vector<Variable> operands({ outputHs[0], outputHs[1] });
-        return Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
+        rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
+
+    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction);
+    return unpackedRnnFunction;
 }
 
 template <typename FunctionType>

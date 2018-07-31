@@ -40,6 +40,11 @@ def verify_no_input(model, tmpdir, name):
     assert np.allclose(o_, o)
     
 def verify_one_input(model, data, tmpdir, name, device=None):
+    def TranposeDynamicAxis(data):
+        perm = np.arange(np.rank(data))
+        perm[0], perm[1] = perm[1], perm[0]
+        return np.transpose(data, perm)
+
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
     filename = os.path.join(str(tmpdir), name + R'.onnx')
@@ -56,19 +61,32 @@ def verify_one_input(model, data, tmpdir, name, device=None):
         dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
         model_shape = (dim_denotation, ) + model_shape
         data.shape = (1, ) + data.shape
+
+    # When both batch and sequence axes exist, model input will have batch and seqence axes 
+    # swapped to match the onnx model. In this case, input and output data shall be adjusted accordingly. 
+    hasBatchAndSequenceAxis = model.output.has_sequence_axis() and model.output.has_batch_axis()
+    if hasBatchAndSequenceAxis:
+        model_shape = (CNTK_FREEDIM_AXIS_DENOTATION, CNTK_FREEDIM_AXIS_DENOTATION, ) + model_shape
+        
+    dataOnnx = TranposeDynamicAxis(data) if hasBatchAndSequenceAxis else data
+
     assert model_shape == loaded_model.shape
 
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
-        o1 = loaded_model.eval({loaded_model.arguments[0]:data}, device=device)
+        o1 = loaded_model.eval({loaded_model.arguments[0]:dataOnnx}, device=device)
     else:
         o0 = model.eval({model.arguments[0]:data})
-        o1 = loaded_model.eval({loaded_model.arguments[0]:data})
+        o1 = loaded_model.eval({loaded_model.arguments[0]:dataOnnx})
 
     if (type(o0) is list):
         o0 = o0[0]
     if (type(o1) is list):
         o1 = o1[0]
+
+    if hasBatchAndSequenceAxis:
+        # squeeze the batch axis (=1) to match original model output
+        o1 = np.squeeze(o1, axis=1)
 
     assert np.allclose(o0, o1)
 
@@ -558,7 +576,6 @@ def test_Greater(tmpdir, dtype):
 #GRU
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_GRU(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         def MakeGRUNameFromConfig(backward, initial_state, activition):
             model_name = 'GRU.' + activition.__name__
@@ -734,7 +751,6 @@ def test_LRN(tmpdir, dtype, device_id):
 #LSTM
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LSTM(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         def CreateLSTMModel(activation, 
                             peepholes, 
@@ -1135,7 +1151,6 @@ def test_Reshape(tmpdir, dtype):
 #RNN
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_RNN(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         def CreatRNN(cell_dim, 
                      activation, 

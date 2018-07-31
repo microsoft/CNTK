@@ -1424,16 +1424,8 @@ void CNTKToONNXHelper::PrepareLSTMInitialStateNode(LotusIR::Graph* graph, std::u
     for (int i = 0; i < initialVariables.size(); i++)
     {
         const Variable &variable = initialVariables[i];
-        auto srcTensor = variable.IsParameter() ? Parameter(variable).Value() : Constant(variable).Value();
-        if (srcTensor->Shape().Rank() == 0 || srcTensor->Shape().TotalSize() == 1)
-        {
-            srcTensors.push_back(srcTensor);
-        }
-        else
-        {
-            // TODO:
-            NOT_IMPLEMENTED;
-        }
+        auto srcTensor = variable.IsParameter() ? Parameter(variable).Value() : Constant(variable).Value(); 
+        srcTensors.push_back(srcTensor);
     }
 
     onnx::TensorProto dstTensor;
@@ -1600,6 +1592,20 @@ std::pair<string, string> MakeRNNAndPostReshapeOutputNames(const std::vector<Fun
     return std::make_pair(nodeOutputName, nodeOutputNameBeforeReshape);
 }
 
+Variable FindInputToRNN(int startIndex, std::vector<Variable> &inputs)
+{
+    // input is the one other than bias, weights (ordered before startIndex), 
+    // and past/future ops. 
+    int inputIndex = inputs.size() - 1;
+    for (; inputIndex >= startIndex; inputIndex--)
+    {
+        if (inputs[inputIndex].Owner() == nullptr ||
+            (inputs[inputIndex].Owner()->OpName() != L"PastValue" && inputs[inputIndex].Owner()->OpName() != L"FutureValue"))
+            break;
+    }
+    return inputs[inputIndex];
+}
+
 LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
                                                LotusIR::Graph* graph,
                                                std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
@@ -1667,11 +1673,10 @@ LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
         stabilizerDcCoefs[directionIndex] = stabilizer_dc;
         stabilizerCCoefs[directionIndex] = stabilizer_c;
 
-        // input (always the last one), weight, hidden weight, and bias have fixed indices.
-        // Thus we do not bother obtain them through traversing.
-        int inputIndex = inputs.size() - 1;
-        Xs[directionIndex] = inputs[inputIndex];
+        Xs[directionIndex] = FindInputToRNN(CNTKLSTMHiddenWeightIndex + 1, inputs);
 
+        // weight, hidden weight, and bias have fixed indices.
+        // Thus we do not bother obtain them through traversing.
         Ws[directionIndex] = inputs[CNTKLSTMWeightIndex];
         Rs[directionIndex] = inputs[CNTKLSTMHiddenWeightIndex];
         Bs[directionIndex] = inputs[CNTKLSTMBiasIndex];
@@ -1963,11 +1968,10 @@ LotusIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
         activations[directionIndex * GRUActivationCount + GRUActivationFIndex] = f_activation;
         activations[directionIndex * GRUActivationCount + GRUActivationGIndex] = g_activation;
 
-        // input (always the last one), weight, hidden weight, and bias have fixed indices.
-        // Thus we do not bother obtain them through traversing.
-        int inputIndex = inputs.size() - 1;
-        Xs[directionIndex] = inputs[inputIndex];
+        Xs[directionIndex] = FindInputToRNN(CNTKGRUHiddenWeightHIndex + 1, inputs);
 
+        // Weight, hidden weight, and bias have fixed indices.
+        // Thus we do not bother obtain them through traversing.
         Ws[directionIndex] = inputs[CNTKGRUWeightIndex];
         SanityCheckForConstantOrParameters(Ws);
 
@@ -2168,7 +2172,7 @@ LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
 
         activations[directionIndex] = activation;
 
-        Xs[directionIndex] = inputs[CNTKRNNInputIndex];
+        Xs[directionIndex] = FindInputToRNN(CNTKRNNBiasIndex + 1, inputs);
 
         Ws[directionIndex] = inputs[CNTKRNNWeightIndex];
 
@@ -2436,7 +2440,8 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //        return CreateLSTMNode(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     //}
     //else
-    if (cntkOpName == "ToBatchAxis" || cntkOpName == "UnpackBatchAxis")
+    if (cntkOpName == "ToBatchAxis" || cntkOpName == "UnpackBatchAxis" ||
+        cntkOpName == "ToSequenceOp" || cntkOpName == "UnpackSequenceOp")
     {
         if (src->Inputs()[0].Owner())
         {

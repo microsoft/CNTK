@@ -1244,7 +1244,7 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
     }
 
     // std::string nodeName = nodeArg->Name();
-    std::vector<Axis> dynamicAxes({Axis::OperandSequenceAxis(), Axis::DefaultBatchAxis()});
+    std::vector<Axis> dynamicAxes({});
 
     if (parentONNXOpName == "LSTM")
     {
@@ -1260,8 +1260,7 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
                 if (constructedNodeArgVariableMap.find(nodeArg->Name()) == constructedNodeArgVariableMap.end())
                 {
                     DataType dataType = FromONNXType(nodeArg->ToProto().type());
-                    int input_size = shapeProto->dim(2).dim_value();
-                    NDShape shape({(size_t)(input_size)});
+                    NDShape shape = FromTensorShapeProto(*shapeProto);
                     inputVariable = InputVariable(shape, dataType, ToFixedWStringFromMultiByte(nodeArg->Name()), dynamicAxes);
                     constructedNodeArgVariableMap.insert(ONNXToCNTKVariableMap::value_type(nodeArg->Name(), inputVariable));
                 }
@@ -1292,8 +1291,7 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
                 if (constructedNodeArgVariableMap.find(nodeArg->Name()) == constructedNodeArgVariableMap.end())
                 {
                     DataType dataType = FromONNXType(nodeArg->ToProto().type());
-                    int input_size = shapeProto->dim(2).dim_value();
-                    NDShape shape({(size_t)(input_size)});
+                    NDShape shape = FromTensorShapeProto(*shapeProto);
                     inputVariable = InputVariable(shape, dataType, ToFixedWStringFromMultiByte(nodeArg->Name()), dynamicAxes);
                     constructedNodeArgVariableMap.insert(ONNXToCNTKVariableMap::value_type(nodeArg->Name(), inputVariable));
                 }
@@ -1322,8 +1320,7 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
                 if (constructedNodeArgVariableMap.find(nodeArg->Name()) == constructedNodeArgVariableMap.end())
                 {
                     DataType dataType = FromONNXType(nodeArg->ToProto().type());
-                    int input_size = shapeProto->dim(2).dim_value();
-                    NDShape shape({(size_t)(input_size)});
+                    NDShape shape = FromTensorShapeProto(*shapeProto);
                     inputVariable = InputVariable(shape, dataType, ToFixedWStringFromMultiByte(nodeArg->Name()), dynamicAxes);
                     constructedNodeArgVariableMap.insert(ONNXToCNTKVariableMap::value_type(nodeArg->Name(), inputVariable));
                 }
@@ -1365,14 +1362,6 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     // here we know it is not an ONNX constant so reshape the variable to trim off last dim;
     NDShape shape = FromTensorShapeProto(*shapeProto);
     std::vector<Axis> dynamicAxes({});
-
-    // TODO: ONNX has sequence as the major axis (as the first axis). 
-    // CNTK has batch axis as the major axis (as the first axis).
-    // We have a strong assumption here that if the major dimension is FreeDimension it is 
-    // the sequence axis. Otherwise the following code is incorrect.
-    if (shape[shape.Rank() - 1] == shape.FreeDimension || shape[shape.Rank() - 1] == shape.InferredDimension)
-        std::swap(shape[shape.Rank() - 1], shape[shape.Rank() - 2]);
-
 
     // TODO: Do we need to take care of the sequence axis here (like before)?
     // Should it be be taken care of in RNN leaf node creation (different function)?
@@ -2601,18 +2590,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             newShape = GetShapeFromInput(node->InputDefs()[1], graph);
         }
 
-        // Skip reshape is it follows a LSTM.
         const Node *childNode = GetChildNode(node, node->InputDefs()[0]);
-        if (childNode != nullptr && childNode->OpType() == "LSTM")
+        if (childNode != nullptr && Operators::IsRNNOp(childNode->OpType()))
         {
-            // TODO: this is to undo reshape after LSTM in CNTKToONNX to workaround
-            // output shape mismatch with input to the nexk LSTM layer.
-            if (inputs[0].DynamicAxes().size() != 0)
-                LogicError("ONNX import shall not have input with dynamic axis");
-            newShape = newShape.SubShape(0, newShape.Rank() - 2);
-            // newShape = newShape.AppendShape(NDShape({ (size_t)-3, (size_t)-3 }));
-            newShape = newShape.AppendShape(NDShape({ NDShape::FreeDimension, 1 }));
-            return Reshape(inputs[0], newShape, ToFixedWStringFromMultiByte(node->Name()));
+            // Adjust for batch and sequence axes swap between CNTK and ONNX.
+            auto transposed = TransposeAxes(inputs[0], Axis(1), Axis(2), ToFixedWStringFromMultiByte(node->Name()));
+            return transposed;
         }
 
         if (inputs[0].DynamicAxes().size() > 0)
