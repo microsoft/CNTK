@@ -396,7 +396,7 @@ namespace CNTK
             updated = true;
         }
 
-        if (currentOutputVar.Owner()->IsBlock())
+        if (currentOutputVar.IsOutput() && currentOutputVar.Owner()->IsBlock())
             currentOutputVar.m_dataFields->m_blockFunctionVariableMapping = newOutputVar.BlockFunctionVariableMapping();
 
         return updated;

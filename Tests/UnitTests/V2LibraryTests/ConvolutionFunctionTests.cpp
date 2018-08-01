@@ -115,7 +115,7 @@ void Run1DFreeDimConvLayer(const DeviceDescriptor& device, bool testFreeDimensio
         input = InputVariable({10}, AsDataType<ElementType>(), L"features");
     }
     auto convParam = Parameter({3, 1}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
-    auto conv = Convolution(convParam, input, {2});
+    auto conv = Convolution(convParam, input, {2}, {true}, {true}, {1}, 0);
     auto convb = Parameter({1}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
     auto relu = LeakyReLU(Plus(conv, convb), 0.01);
 
@@ -163,7 +163,7 @@ void Run1DFreeDimSimpConvLayer(const DeviceDescriptor& device, bool testFreeDime
         input = InputVariable({10}, AsDataType<ElementType>(), L"features");
     }
     auto convParam = Parameter({3, 1}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
-    auto conv = Convolution(convParam, input, {2});
+    auto conv = Convolution(convParam, input, {2}, { true }, { true }, { 1 }, 0);
     auto convParam2 = Parameter({2, 1}, AsDataType<ElementType>(), (ElementType) 0.5f, device);
     auto conv2 = Convolution(convParam2, conv, {2});
 
@@ -514,10 +514,10 @@ void RunConvRankTests2(const DeviceDescriptor& device)
 {
     auto input_ = InputVariable({36}, AsDataType<ElementType>());
     auto input = Reshape(input_, {4, 3, 3});
-    auto params = Parameter({3, 3, 2, 1, 4}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
+    auto params = Parameter({3, 3, 2, 4}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
     // requires kernel dim >= input dim ....
 
-    auto conv = Convolution(params, input, {2, 2});
+    auto conv = Convolution(params, input, {2, 2}, {true}, {true, true, true}, {1}, 0);
 
     const size_t inputDataSize = 36;
     const std::vector<size_t> sequenceSize = {2, 3};
@@ -561,7 +561,7 @@ void RunConvRankTests3(const DeviceDescriptor& device)
     auto params = Parameter({2, 4}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
     // requires kernel dim >= input dim ....
 
-    auto conv = Convolution(params, input, {5});
+    auto conv = Convolution(params, input, {5}, { true }, { true }, { 1 }, 0);
 
     const size_t inputDataSize = 6;
     const std::vector<size_t> sequenceSize = {2, 3};
@@ -605,7 +605,7 @@ void RunConvRankTests4(const DeviceDescriptor& device)
     auto params = Parameter({2, 3, 4}, AsDataType<ElementType>(), (ElementType) 1.0f, device);
     // requires kernel dim >= input dim ....
 
-    auto conv = Convolution(params, input, {2});
+    auto conv = Convolution(params, input, {2}, { true }, { true, true }, { 1 }, 0);
 
     const size_t inputDataSize = 9;
     const std::vector<size_t> sequenceSize = {2, 3};
@@ -784,13 +784,11 @@ BOOST_AUTO_TEST_CASE(ConvolutionNetworkDifferentRankInGPU)
 
 BOOST_AUTO_TEST_CASE(ConvolutionNetwork1DFreeDimensionInGPU)
 {
-    // TODO: Currently failing on GPU. CUDNN_STATUS_EXECUTION_FAILED. 
-    // This failure is not related to free dimension though, but to the specific setting(shapes) of the test. 
     if (ShouldRunOnGpu())
     {
-        //auto device = DeviceDescriptor::GPUDevice(0);
-        //Run1DFreeDimConvLayer<float>(device, false);
-        //Run1DFreeDimSimpConvLayer<float>(device, false);
+        auto device = DeviceDescriptor::GPUDevice(0);
+        Run1DFreeDimConvLayer<float>(device);
+        Run1DFreeDimSimpConvLayer<float>(device);
     }
 }
 

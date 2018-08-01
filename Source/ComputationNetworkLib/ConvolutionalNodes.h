@@ -244,22 +244,8 @@ protected:
         return result;
     }
 
-    // Check if we are padding over channel axis.
-    // Normally in convolution, input channel of inputShape and kernelShape should have the same size, 
-    // with padding turned off or with stride equal to channel size. 
-    void CheckPaddingChannelAxis(const TensorShape& inputShape)
-    {
-        const bool isPaddingChannelAxis = ConvolveGeometry::isPaddingOverChannelAxis(inputShape, m_stride, m_autoPad, m_lowerPad, m_upperPad);
-        if (isPaddingChannelAxis)
-            std::call_once(m_padChannelWarningOnceFlag,
-                [this] { fprintf(stderr, "WARNING: %ls %ls operation: detected padding over channel axis. Is this intended?\n",
-                    NodeName().c_str(), OperationName().c_str()); });
-    }
-
     virtual TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
     {
-        CheckPaddingChannelAxis(inputShape);
-
         const size_t DEAFULT_NUM_GROUPS = 1;
         return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
             m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, DEAFULT_NUM_GROUPS, ceilOutDim,
@@ -286,9 +272,6 @@ protected:
     shared_ptr<Matrix<ElemType>> m_tempMatrixBackward;
 
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
-
-private:
-    std::once_flag m_padChannelWarningOnceFlag;
 };
 
 #define UsingConvolutionNodeBaseMembersNonInstantiate \
@@ -312,7 +295,6 @@ protected:                                  \
     using Base::m_convEng;                  \
     using Base::InferConvolution2DReductionDims; \
     using Base::InferReductionDims;         \
-    using Base::CheckPaddingChannelAxis;    \
 public:
 
 #define UsingConvolutionNodeBaseMembers     \
@@ -703,6 +685,26 @@ public:
                 LogicError("Convolution weight matrix %ls should have dimension [(filter shape) x (input channels) x (output channels)]",
                            Input(0)->NodeName().c_str());
             }
+
+            // Check if we are padding over channel axis.
+            // Normally in convolution, input channel of inputShape and kernelShape should have the same size, 
+            // with padding turned off or with stride equal to channel size. 
+            if (m_convEng->Geometry()->IsPaddingOverChannelAxis())
+            {
+                // There are many cases that could lead to this failure.
+                //  Type 1: users explicitly trying to pad over channel axis.
+                //      case 1: lowerPad[channelAxis] is explicitly set to be > 0.
+                //      case 2: autoPad[channelAxis] is explicitly set to true, along with some other satisfying conditions resulting in lowerPad[channelAxis] > 0.
+                //  For type 1, these are behaviors that we aim at blocking, since cuDnn does not support padding over channel axis.
+                //
+                //  Type 2: users just used the default parameters.
+                //      case 1: channel size > 1, while autoPadding and strides are default value.
+                //      case 2: reduction rank = 0, outChannelSize > 1, while autoPadding and strides are default value.
+                //  For type 2, these will also get blocked.
+                //  This is due to a potential bug in PrimitiveFunction::ConvolutionOpOutputShape that we are not setting autoPadding to False for channel axis.
+                LogicError("%ls %ls operation: detected padding over channel axis. This is not supported in cuDnn. Please try setting autoPadding to false for channel axis. \n",
+                    NodeName().c_str(), OperationName().c_str());
+            }
         }
     }
 
@@ -759,8 +761,6 @@ private:
     virtual TensorShape /*ConvolutionNode::*/ComputeOutputShape(const TensorShape& inputShape,
         const TensorShape& dilate, bool ceilOutDim, bool isFinalValidationPass)
     {
-        CheckPaddingChannelAxis(inputShape);
-
         return ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
             m_sharing, m_autoPad, m_lowerPad, m_upperPad, dilate, m_groups, ceilOutDim,
             Base::NeedsDynamicValidation(), isFinalValidationPass);
