@@ -1178,6 +1178,17 @@ bool IsUnSupportedLayerNormalization(const FunctionPtr src)
     return cntkOpName == "LayerNormalization" && src->Output().HasSequenceAxis();
 }
 
+FunctionPtr ProcessBatchAndSequenceAxisOp(const FunctionPtr src)
+{
+    if ((src->OpName() == L"ToSequenceOp" && src->Inputs()[0].Owner() &&
+        src->Inputs()[0].Owner()->OpName() == L"ToBatchAxis") || 
+        (src->OpName() == L"UnpackBatchAxis" && src->Inputs()[0].Owner() &&
+            src->Inputs()[0].Owner()->OpName() == L"UnpackSequenceOp"))
+        return src->Inputs()[0].Owner()->Inputs()[0].Owner();
+    else
+        return src;
+}
+
 bool IsBatchAxisOp(const FunctionPtr src)
 {
     // This method checks for the following pattern to determine whether
@@ -2375,56 +2386,22 @@ LotusIR::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const FunctionP
     return reshapeNode;
 }
 
-LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
-    LotusIR::Graph* graph,
-    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
-{
-    auto f = src->BlockRoot();
-    FunctionPtr stepFunc;
-    std::vector<int64_t> indices;
-    int sliceLength;
-
-    f->PreorderTraverse((std::function<void(const FunctionPtr &)>)[&indices, &sliceLength](const FunctionPtr &function)
-    {
-        if (function->OpName() == L"FutureValue" || function->OpName() == L"PastValue")
-        {
-            indices.push_back(function->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
-        }
-        else if (function->OpName() == L"Where")
-        {
-            sliceLength = function->Attributes()[PrimitiveFunction::AttributeNameNewSequenceAxisLengthAdditiveFactor].Value<int>();
-        }
-    }, true);
-
-    std::vector<LotusIR::NodeArg *> inputs;
-    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
-
-    std::vector<LotusIR::NodeArg *> outputs;
-    ProcessOutputs(src, outputs, graph);
-
-    const std::string & outputName = outputs[0]->Name();
-    LotusIR::Node *sequenceSliceNode = graph->AddNode(outputName, "Slice", "", inputs, outputs);
-    sequenceSliceNode->AddAttribute("axes", int64_t(0));
-    sequenceSliceNode->AddAttribute("ends", std::vector<int64_t>({ indices[0] }));
-    sequenceSliceNode->AddAttribute("starts", std::vector<int64_t>({ indices[1] }));
-    return sequenceSliceNode;
-}
-
 //
 // This is the main horsepower, it navigate CNTK graph recursivley while keep track of all visited nodes and variables,
 // and create the corresponding ONNX graph.
 //
-LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
+LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& initialSrc,
                                            LotusIR::Graph* graph,
                                            std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
                                            std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
                                            const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
-    auto iter = functionNodes.find(src);
+    auto iter = functionNodes.find(initialSrc);
     if (iter != functionNodes.end())
         return iter->second;
+    
+    // try to skip batch and sequence pack unpack
+    FunctionPtr src = ProcessBatchAndSequenceAxisOp(initialSrc);
 
     LotusIR::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
@@ -2440,27 +2417,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //        return CreateLSTMNode(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     //}
     //else
-    if (cntkOpName == "ToBatchAxis" || cntkOpName == "UnpackBatchAxis" ||
-        cntkOpName == "ToSequenceOp" || cntkOpName == "UnpackSequenceOp")
-    {
-        if (src->Inputs()[0].Owner())
-        {
-            return CreateNode(src->Inputs()[0].Owner(),
-                graph,
-                functionNodes,
-                variableNodes,
-                compositeOutputsMap);
-        }
-    }
-    else if (cntkOpName == "Sequence::Slice")
-    {
-        return CreateSequenceSliceNode(src,
-            graph,
-            functionNodes,
-            variableNodes,
-            compositeOutputsMap);
-    }
-    else if (cntkOpName == "RNNStep")
+    if (cntkOpName == "RNNStep")
     {
         return CreateRNNNode(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     }

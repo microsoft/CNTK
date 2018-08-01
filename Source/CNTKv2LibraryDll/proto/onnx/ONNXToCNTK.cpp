@@ -2379,7 +2379,8 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "MatMul")
     {
-        // in case of input have 
+        // in case of input with both static batch and sequence axes, need to convert them
+        // to dynamic axes for MatMul to work.
         auto input0 = inputs[0];
         auto input1 = inputs[1];
         auto HasBatchAndSequenceAxes = [](Variable input) {
