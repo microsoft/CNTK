@@ -44,18 +44,22 @@ def verify_no_input(model, tmpdir, name):
     o = model.eval()
     o_ = loaded_model.eval()
     assert np.allclose(o_, o)
-    
-def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
-    # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
-    data = deepcopy(data)
-    opname = model.owner.op_name
 
+def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
     if not loaded_model:
         filename = os.path.join(str(tmpdir), name + R'.onnx')
         model.save(filename, format=C.ModelFormat.ONNX)        
         loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
         filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
         loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
+    return loaded_model
+
+def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
+    # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
+    data = deepcopy(data)
+    opname = model.owner.op_name
+
+    loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
@@ -95,12 +99,7 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
     data = deepcopy(data)
     opname = model.owner.op_name
 
-    if not loaded_model:
-        filename = os.path.join(str(tmpdir), name + R'.onnx')
-        model.save(filename, format=C.ModelFormat.ONNX)        
-        loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
-        filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
-        loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
+    loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
     model_shape = model.shape
 
