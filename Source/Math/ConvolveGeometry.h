@@ -461,7 +461,13 @@ public:
         {
             assert(inputShape[i] >= 1);
             auto kernelShape_i = (i == kernelShape.GetRank() - 1) ? kernelShape[i] * groups : kernelShape[i];
-            if (kernelShape_i > inputShape[i])
+
+            // If lowerPad and upperPad are specified, include them in the minimum size check
+            // for input image that is done below. Otherwise (if autoPad is specified), just 
+            // check against kernel size only.
+            auto lowerPadValForSizeCheck = autoPad[autoPad.size() == 1 ? 0 : i] ? 0 : lowerPad[lowerPad.size() == 1 ? 0 : i];
+            auto upperPadValForSizeCheck = autoPad[autoPad.size() == 1 ? 0 : i] ? 0 : upperPad[upperPad.size() == 1 ? 0 : i];
+            if (kernelShape_i > (inputShape[i] + upperPadValForSizeCheck + lowerPadValForSizeCheck) )
             {
                 if(isFinalValidationPass || !needsDynamicValidation)
                     InvalidArgument("Convolution operation requires that kernel dim %d <= input dim %d.", (int)kernelShape_i, (int)inputShape[i]);
