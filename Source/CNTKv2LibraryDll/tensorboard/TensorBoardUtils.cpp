@@ -6,7 +6,7 @@
 #include "tensorboard/TensorBoardUtils.h"
 
 #pragma warning(push)
-#pragma warning(disable : 4800 4267 4610 4512 4100 4510)
+#pragma warning(disable : 4800 4267 4610 4512 4100 4510 4505)
 #include "tensorboard/tensorboard.pb.h"
 #pragma warning(pop)
 

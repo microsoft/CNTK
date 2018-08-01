@@ -181,3 +181,7 @@ std::string MapActivationNameONNXToCNTK(const std::string &onnxOp);
 std::string MapActivationNameCNTKToONNX(const std::string &cntkOp);
 
 std::vector<CNTK::FunctionPtr> GetRNNBlocksFromSingleOrBidirectionalRNN(const CNTK::FunctionPtr src, const std::string &RNNStepOpName);
+
+CNTK::Variable ToBatchAndSequence(CNTK::Variable input);
+
+CNTK::FunctionPtr UnpackBatchAndSequence(CNTK::FunctionPtr rnnFunction);

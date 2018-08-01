@@ -3559,87 +3559,89 @@ namespace CNTK
             ///
             /// Preprocessing
             ///
-
-            const bool isBothNDInputs = [&]() -> bool {
-                if (inputShape0.Rank() != inputShape1.Rank() || inputShape0.Rank() <= 2) return false;
-                // In this case we don't require broadcast, thus prefix dimensions should match. 
-                return inputShape0.SubShape(2) == inputShape1.SubShape(2);
-            }();
-            if (!isBothNDInputs)
+            if (inputShape0.Rank() > 2 || inputShape1.Rank() > 2)
             {
-                // Do check for case 3. If total size of tail shape of longer operand is 1,
-                // we can handle this broadcast case by removing the tail shape and append to result later. 
-                const bool isSimpleBroadcast = [&]() -> bool {
-                    // Some situation needs broadcast. 
-                    // Check if this is simple broadcast: that we only need to append 1 to the shorter shape.
+                const bool isBothNDInputs = [&]() -> bool {
+                    if (inputShape0.Rank() != inputShape1.Rank() || inputShape0.Rank() <= 2) return false;
+                    // In this case we don't require broadcast, thus prefix dimensions should match. 
+                    return inputShape0.SubShape(2) == inputShape1.SubShape(2);
+                }();
+                if (!isBothNDInputs)
+                {
+                    // Do check for case 3. If total size of tail shape of longer operand is 1,
+                    // we can handle this broadcast case by removing the tail shape and append to result later. 
+                    const bool isSimpleBroadcast = [&]() -> bool {
+                        // Some situation needs broadcast. 
+                        // Check if this is simple broadcast: that we only need to append 1 to the shorter shape.
+                        // e.g.
+                        //  input_0:    [b, a, 2, 1, 1]
+                        //  input_1:    [c, b, 2]
+                        // ==> broadcast: remove tail shape [1, 1] from input_0
+                        //  input_0:    [b, a, 2]
+                        // 
+                        if (inputShape0.Rank() < 2 || inputShape1.Rank() < 2) return false;
+                        Variable *shortOperand = &operand1;
+                        Variable *longOperand = &operand0;
+                        if (inputShape0.Rank() < inputShape1.Rank()) {
+                            std::swap(shortOperand, longOperand);
+                        }
+                        const NDShape& tailShape = longOperand->Shape().SubShape(shortOperand->Shape().Rank());
+                        if (tailShape.TotalSize() != 1) return false;
+                        return true;
+                    }();
+                    if (!isSimpleBroadcast)
+                        LogicError("MatMul: Complex form of broadcasting is currently not supported in ONNX/CNTK.");
+
+                    // Remove tail shape of {1, ..., 1}
+                    if (inputShape0.Rank() < inputShape1.Rank())
+                    {
+                        unitTailLengthToAppend = inputShape1.Rank() - inputShape0.Rank();
+                        inputShape1 = inputShape1.SubShape(0, inputShape0.Rank());
+                        operand1 = Reshape(operand1, inputShape1)->Output();
+                    }
+                    else
+                    {
+                        unitTailLengthToAppend = inputShape0.Rank() - inputShape1.Rank();
+                        inputShape0 = inputShape0.SubShape(0, inputShape1.Rank());
+                        operand0 = Reshape(operand0, inputShape0)->Output();
+                    }
+                }
+
+                // Do check for case 2. We can reduce tail shape of both operand if they are both 1. 
+                const size_t sharedUnitTailLength = [&]() -> size_t {
+                    assert(inputShape0.Rank() == inputShape1.Rank());
+                    size_t sharedUnitTailLength = 0;
+                    for (size_t i = inputShape0.Rank() - 1; i >= 2; --i)
+                    {
+                        if (inputShape0[i] == 1 && inputShape1[i] == 1)
+                            sharedUnitTailLength++;
+                        else
+                            break;
+                    }
+                    return sharedUnitTailLength;
+                }();
+                if (sharedUnitTailLength > 0)
+                {
                     // e.g.
                     //  input_0:    [b, a, 2, 1, 1]
-                    //  input_1:    [c, b, 2]
-                    // ==> broadcast: remove tail shape [1, 1] from input_0
+                    //  input_1:    [c, b, 2, 1 ,1]
+                    // ==> remove common tail shape [1, 1] from both input
                     //  input_0:    [b, a, 2]
-                    // 
-                    if (inputShape0.Rank() < 2 || inputShape1.Rank() < 2) return false;
-                    Variable *shortOperand = &operand1;
-                    Variable *longOperand = &operand0;
-                    if (inputShape0.Rank() < inputShape1.Rank()) {
-                        std::swap(shortOperand, longOperand);
-                    }
-                    const NDShape& tailShape = longOperand->Shape().SubShape(shortOperand->Shape().Rank());
-                    if (tailShape.TotalSize() != 1) return false;
-                    return true;
-                }();
-                if (!isSimpleBroadcast)
-                    LogicError("MatMul: Complex form of broadcasting is currently not supported in ONNX/CNTK.");
-
-                // Remove tail shape of {1, ..., 1}
-                if (inputShape0.Rank() < inputShape1.Rank())
-                {
-                    unitTailLengthToAppend = inputShape1.Rank() - inputShape0.Rank();
-                    inputShape1 = inputShape1.SubShape(0, inputShape0.Rank());
-                    operand1 = Reshape(operand1, inputShape1)->Output();
-                }
-                else
-                {
-                    unitTailLengthToAppend = inputShape0.Rank() - inputShape1.Rank();
-                    inputShape0 = inputShape0.SubShape(0, inputShape1.Rank());
+                    //  input_1:    [c, b, 2]
+                    //
+                    inputShape0 = inputShape0.SubShape(0, inputShape0.Rank() - sharedUnitTailLength);
+                    inputShape1 = inputShape1.SubShape(0, inputShape1.Rank() - sharedUnitTailLength);
                     operand0 = Reshape(operand0, inputShape0)->Output();
+                    operand1 = Reshape(operand1, inputShape1)->Output();
+                    unitTailLengthToAppend += sharedUnitTailLength;
                 }
-            }
-
-            // Do check for case 2. We can reduce tail shape of both operand if they are both 1. 
-            const size_t sharedUnitTailLength = [&]() -> size_t {
-                assert(inputShape0.Rank() == inputShape1.Rank());
-                size_t sharedUnitTailLength = 0;
-                for (size_t i = inputShape0.Rank() - 1; i >= 2; --i)
-                {
-                    if (inputShape0[i] == 1 && inputShape1[i] == 1)
-                        sharedUnitTailLength++;
-                    else
-                        break;
-                }
-                return sharedUnitTailLength;
-            }();
-            if (sharedUnitTailLength > 0)
-            {
-                // e.g.
-                //  input_0:    [b, a, 2, 1, 1]
-                //  input_1:    [c, b, 2, 1 ,1]
-                // ==> remove common tail shape [1, 1] from both input
-                //  input_0:    [b, a, 2]
-                //  input_1:    [c, b, 2]
-                //
-                inputShape0 = inputShape0.SubShape(0, inputShape0.Rank() - sharedUnitTailLength);
-                inputShape1 = inputShape1.SubShape(0, inputShape1.Rank() - sharedUnitTailLength);
-                operand0 = Reshape(operand0, inputShape0)->Output();
-                operand1 = Reshape(operand1, inputShape1)->Output();
-                unitTailLengthToAppend += sharedUnitTailLength;
             }
 
             ///
             /// After preprocessing, inputs are either both 2-D or both N-D. 
             ///
 
-            if (inputShape0.Rank() == 2 && inputShape1.Rank() == 2)
+            if (inputShape0.Rank() <= 2 && inputShape1.Rank() <= 2)
             {
                 // 1. Both 2-D inputs.
                 // CNTK Times has reversed input order than ONNX(numpy) MatMul. 
