@@ -17,7 +17,7 @@
 #endif
 
 #pragma warning(push)
-#pragma warning(disable : 4800 4267 4610 4512 4100 4510)
+#pragma warning(disable : 4800 4267 4610 4512 4100 4510 4505 4505)
 #include "CNTK.pb.h"
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/arena.h>
