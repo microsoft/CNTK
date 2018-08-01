@@ -53,6 +53,12 @@ private:
                                     std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
                                     const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
+    static LotusIR::Node* CreateSequenceSliceNode(const FunctionPtr& src,
+        LotusIR::Graph* graph,
+        std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
+        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+
     static LotusIR::Node *AddReshapeNodeAccordingToONNXVersion(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t>& newShape);
 
 
@@ -1172,6 +1178,17 @@ bool IsUnSupportedLayerNormalization(const FunctionPtr src)
     return cntkOpName == "LayerNormalization" && src->Output().HasSequenceAxis();
 }
 
+FunctionPtr SkipBatchAndSequenceAxisOp(const FunctionPtr src)
+{
+    if ((src->OpName() == L"ToSequenceOp" && src->Inputs()[0].Owner() &&
+        src->Inputs()[0].Owner()->OpName() == L"ToBatchAxis") || 
+        (src->OpName() == L"UnpackBatchAxis" && src->Inputs()[0].Owner() &&
+            src->Inputs()[0].Owner()->OpName() == L"UnpackSequenceOp"))
+        return src->Inputs()[0].Owner()->Inputs()[0].Owner();
+    else
+        return src;
+}
+
 bool IsBatchAxisOp(const FunctionPtr src)
 {
     // This method checks for the following pattern to determine whether
@@ -1418,16 +1435,8 @@ void CNTKToONNXHelper::PrepareLSTMInitialStateNode(LotusIR::Graph* graph, std::u
     for (int i = 0; i < initialVariables.size(); i++)
     {
         const Variable &variable = initialVariables[i];
-        auto srcTensor = variable.IsParameter() ? Parameter(variable).Value() : Constant(variable).Value();
-        if (srcTensor->Shape().Rank() == 0 || srcTensor->Shape().TotalSize() == 1)
-        {
-            srcTensors.push_back(srcTensor);
-        }
-        else
-        {
-            // TODO:
-            NOT_IMPLEMENTED;
-        }
+        auto srcTensor = variable.IsParameter() ? Parameter(variable).Value() : Constant(variable).Value(); 
+        srcTensors.push_back(srcTensor);
     }
 
     onnx::TensorProto dstTensor;
@@ -1594,6 +1603,20 @@ std::pair<string, string> MakeRNNAndPostReshapeOutputNames(const std::vector<Fun
     return std::make_pair(nodeOutputName, nodeOutputNameBeforeReshape);
 }
 
+Variable FindInputToRNN(int startIndex, std::vector<Variable> &inputs)
+{
+    // input is the one other than bias, weights (ordered before startIndex), 
+    // and past/future ops. 
+    int inputIndex = inputs.size() - 1;
+    for (; inputIndex >= startIndex; inputIndex--)
+    {
+        if (inputs[inputIndex].Owner() == nullptr ||
+            (inputs[inputIndex].Owner()->OpName() != L"PastValue" && inputs[inputIndex].Owner()->OpName() != L"FutureValue"))
+            break;
+    }
+    return inputs[inputIndex];
+}
+
 LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
                                                LotusIR::Graph* graph,
                                                std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
@@ -1661,11 +1684,10 @@ LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
         stabilizerDcCoefs[directionIndex] = stabilizer_dc;
         stabilizerCCoefs[directionIndex] = stabilizer_c;
 
-        // input (always the last one), weight, hidden weight, and bias have fixed indices.
-        // Thus we do not bother obtain them through traversing.
-        int inputIndex = inputs.size() - 1;
-        Xs[directionIndex] = inputs[inputIndex];
+        Xs[directionIndex] = FindInputToRNN(CNTKLSTMHiddenWeightIndex + 1, inputs);
 
+        // weight, hidden weight, and bias have fixed indices.
+        // Thus we do not bother obtain them through traversing.
         Ws[directionIndex] = inputs[CNTKLSTMWeightIndex];
         Rs[directionIndex] = inputs[CNTKLSTMHiddenWeightIndex];
         Bs[directionIndex] = inputs[CNTKLSTMBiasIndex];
@@ -1957,11 +1979,10 @@ LotusIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
         activations[directionIndex * GRUActivationCount + GRUActivationFIndex] = f_activation;
         activations[directionIndex * GRUActivationCount + GRUActivationGIndex] = g_activation;
 
-        // input (always the last one), weight, hidden weight, and bias have fixed indices.
-        // Thus we do not bother obtain them through traversing.
-        int inputIndex = inputs.size() - 1;
-        Xs[directionIndex] = inputs[inputIndex];
+        Xs[directionIndex] = FindInputToRNN(CNTKGRUHiddenWeightHIndex + 1, inputs);
 
+        // Weight, hidden weight, and bias have fixed indices.
+        // Thus we do not bother obtain them through traversing.
         Ws[directionIndex] = inputs[CNTKGRUWeightIndex];
         SanityCheckForConstantOrParameters(Ws);
 
@@ -2162,7 +2183,7 @@ LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
 
         activations[directionIndex] = activation;
 
-        Xs[directionIndex] = inputs[CNTKRNNInputIndex];
+        Xs[directionIndex] = FindInputToRNN(CNTKRNNBiasIndex + 1, inputs);
 
         Ws[directionIndex] = inputs[CNTKRNNWeightIndex];
 
@@ -2369,15 +2390,18 @@ LotusIR::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const FunctionP
 // This is the main horsepower, it navigate CNTK graph recursivley while keep track of all visited nodes and variables,
 // and create the corresponding ONNX graph.
 //
-LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
+LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& initialSrc,
                                            LotusIR::Graph* graph,
                                            std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
                                            std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
                                            const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
-    auto iter = functionNodes.find(src);
+    auto iter = functionNodes.find(initialSrc);
     if (iter != functionNodes.end())
         return iter->second;
+    
+    // try to skip batch and sequence pack unpack
+    FunctionPtr src = SkipBatchAndSequenceAxisOp(initialSrc);
 
     LotusIR::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));

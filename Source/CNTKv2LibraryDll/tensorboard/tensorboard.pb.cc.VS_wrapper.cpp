@@ -4,6 +4,6 @@
 //
 
 #pragma warning(push)
-#pragma warning(disable : 4100 4125 4127 4267 4456 4510 4512 4610 4800)
+#pragma warning(disable : 4100 4125 4127 4267 4456 4510 4512 4610 4800 4505)
 #include "tensorboard/tensorboard.pb.cc"
 #pragma warning(pop)
