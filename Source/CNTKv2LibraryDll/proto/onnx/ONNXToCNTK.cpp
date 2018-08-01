@@ -2674,7 +2674,6 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     // { L"", "Split)
     else if (onnxOpName == "Slice")
     {
-        // axes is optional so provide a default
         std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
 
         std::vector<int64_t> starts64 = GetNamedAttributeAsInt64Vec(node, "starts");
@@ -2689,6 +2688,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         std::vector<int> starts = VecInt64ToVecInt(starts64);
         std::vector<int> ends = VecInt64ToVecInt(ends64);
 
+        // axes is optional so provide a default
         if (axes.empty())
         {
             for (int i = 0; i < starts.size(); i++)
@@ -2698,13 +2698,6 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             }
         }
 
-        bool workaroundONNXRT = false;
-        if (workaroundONNXRT)
-        {
-            axes.erase(axes.begin());
-            starts.erase(starts.begin());
-            ends.erase(ends.begin());
-        }
         FunctionPtr cntkFunction = Slice(inputs[0], axes, starts, ends, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }

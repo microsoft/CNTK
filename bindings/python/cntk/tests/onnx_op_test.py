@@ -1302,6 +1302,22 @@ def test_Slice(tmpdir, dtype):
         model = C.slice(x1, [0,1], [1,0], [2,1]);
         verify_one_input(model, data, tmpdir, 'Slice2_1')
 
+#Sequence.Slice 
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_SequenceSlice(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        data = np.asarray([[1,2,-3], [4, 5, 6]],dtype=dtype)
+        x1 = C.input_variable((2,3))
+
+        model = C.slice(data, 0, 1, 2)
+        verify_no_input(model, tmpdir, 'Slice_0')
+
+        model = C.slice(x1, 0, 1, 2)
+        verify_one_input(model, data, tmpdir, 'Slice_1')
+
+        model = C.slice(x1, [0,1], [1,0], [2,1]);
+        verify_one_input(model, data, tmpdir, 'Slice2_1')
+
 #Softmax
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Softmax(tmpdir, dtype):
