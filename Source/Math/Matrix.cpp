@@ -5113,6 +5113,9 @@ template <class ElemType>
 void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
                                               ElemType beta, Matrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier)
 {
+    // std::cout << "In Matrix<ElemType>::MultiplyAndWeightedAdd()" << std::endl;
+    // PrintMatrix(a);
+    // PrintMatrix(b);
     DecideAndMoveToRightDevice(a, b, c);
 
     if (c.GetDeviceId() < 0) // CPU
@@ -5257,6 +5260,8 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
             NOT_IMPLEMENTED;
         }
     }
+    // std::cout << "Out:" << std::endl;
+    // PrintMatrix(c);
 }
 
 template <class ElemType>
@@ -6145,6 +6150,7 @@ void Matrix<ElemType>::RCRFTransGrdCompute(const Matrix<ElemType>& lbls,
 // {
 //     double temp = 0.0;
 //     std::cout << std::endl;
+//     std::cout << in.GetNumRows() << "x" << in.GetNumCols() << std::endl;
 //     for (int r = 0; r < in.GetNumRows(); ++r)
 //     {
 //         for (int c = 0; c < in.GetNumCols(); ++c)
@@ -6162,6 +6168,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // 
                                             const Matrix<ElemType>& l_filter,// DxN1 TODO: +1
                                             const Matrix<ElemType>& r_filter,// DxN2
                                             const Matrix<ElemType>& flags,   // 1xT
+                                            int flag_stride,
                                             int l_order, int r_order,
                                             int l_stride, int r_stride,
                                             Matrix<ElemType>& out)
@@ -6186,6 +6193,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // 
                 *l_filter.m_CPUMatrix,
                 *r_filter.m_CPUMatrix,
                 *flags.m_CPUMatrix,
+                flag_stride,
                 l_order, r_order,
                 l_stride, r_stride,
                 *out.m_CPUMatrix);
@@ -6201,6 +6209,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // 
                 *l_filter.m_GPUMatrix,
                 *r_filter.m_GPUMatrix,
                 *flags.m_GPUMatrix,
+                flag_stride,
                 l_order, r_order,
                 l_stride, r_stride,
                 *out.m_GPUMatrix);
@@ -6225,6 +6234,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
     const Matrix<ElemType>& l_filter,
     const Matrix<ElemType>& r_filter,
     const Matrix<ElemType>& flags,
+    int flag_stride,
     int l_order, int r_order,
     int l_stride, int r_stride,
     Matrix<ElemType>& inputGradientValues)
@@ -6253,6 +6263,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
                 *l_filter.m_GPUMatrix,
                 *r_filter.m_GPUMatrix,
                 *flags.m_GPUMatrix,
+                flag_stride,
                 l_order, r_order,
                 l_stride, r_stride,
                 *inputGradientValues.m_GPUMatrix);
@@ -6272,6 +6283,7 @@ void Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
     const Matrix<ElemType>& gradientValues,
     const Matrix<ElemType>& inputValues,
     const Matrix<ElemType>& flags,
+    int flag_stride,
     int l_order, int l_stride,
     Matrix<ElemType>& leftFilterGradientValues)
 {
@@ -6296,6 +6308,7 @@ void Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
                 *gradientValues.m_GPUMatrix,
                 *inputValues.m_GPUMatrix,
                 *flags.m_GPUMatrix,
+                flag_stride,
                 l_order,
                 l_stride,
                 *leftFilterGradientValues.m_GPUMatrix);
@@ -6315,6 +6328,7 @@ void Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
     const Matrix<ElemType>& gradientValues,
     const Matrix<ElemType>& inputValues,
     const Matrix<ElemType>& flags,
+    int flag_stride,
     int r_order, int r_stride,
     Matrix<ElemType>& rightFilterGradientValues)
 {
@@ -6339,6 +6353,7 @@ void Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
                 *gradientValues.m_GPUMatrix,
                 *inputValues.m_GPUMatrix,
                 *flags.m_GPUMatrix,
+                flag_stride,
                 r_order,
                 r_stride,
                 *rightFilterGradientValues.m_GPUMatrix);
