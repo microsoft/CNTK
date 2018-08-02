@@ -5202,6 +5202,7 @@ __global__ void _computeBiVfsmnMemory(
     const ElemType* l_filter,  // D x N1 (TODO: +1)
     const ElemType* r_filter,  // D x N2
     const ElemType* flags,     // 1 x T
+    const CUDA_LONG flag_stride, // this is MBLayout's GetNumParallelSequences(), to process the Matrix's layout
     const CUDA_LONG N, const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG l_order, const CUDA_LONG r_order,
     const CUDA_LONG l_stride, const CUDA_LONG r_stride,
@@ -5227,7 +5228,7 @@ __global__ void _computeBiVfsmnMemory(
     out[index] = in[index];
     for (int order = 0; order < l_order; order++)
     {
-        shift_index = col - order * l_stride;
+        shift_index = col - order * l_stride * flag_stride;
         if (shift_index >= 0 && flags[shift_index] == flags[col])
         {
             value += in[shift_index * rows + row] * l_filter[order * rows + row];
@@ -5235,7 +5236,7 @@ __global__ void _computeBiVfsmnMemory(
     }
     for (int order = 1; order <= r_order; order++)
     {
-        shift_index = col + order * r_stride;
+        shift_index = col + order * r_stride * flag_stride;
         if (shift_index < cols && flags[shift_index] == flags[col])
         {
             value += in[shift_index * rows + row] * r_filter[(order-1) * rows + row];
@@ -5250,6 +5251,7 @@ __global__ void _computeBiVfsmnMemoryGradient(
     const ElemType* l_filter,  // D x N1 (TODO: +1)
     const ElemType* r_filter,  // D x N2
     const ElemType* flags,     // 1 x T
+    const CUDA_LONG flag_stride, // this is MBLayout's GetNumParallelSequences(), to process the Matrix's layout
     const CUDA_LONG N, const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG l_order, const CUDA_LONG r_order,
     const CUDA_LONG l_stride, const CUDA_LONG r_stride,
@@ -5275,7 +5277,7 @@ __global__ void _computeBiVfsmnMemoryGradient(
     out[index] = in[index];
     for (int order = -r_order; order < 0; order++)
     {
-        shift_index = col + order * r_stride;
+        shift_index = col + order * r_stride * flag_stride;
         if (shift_index >= 0 && flags[shift_index] == flags[col])
         {
             value += in[shift_index * rows + row] * r_filter[(-order-1) * rows + row];
@@ -5283,7 +5285,7 @@ __global__ void _computeBiVfsmnMemoryGradient(
     }
     for (int order = 0; order < l_order; order++)
     {
-        shift_index = col + order * l_stride;
+        shift_index = col + order * l_stride * flag_stride;
         if (shift_index < cols && flags[shift_index] == flags[col])
         {
             value += in[shift_index * rows + row] * l_filter[order * rows + row];
@@ -5297,6 +5299,7 @@ __global__ void _computeBiVfsmnLeftFilterGradient(
     const ElemType* diff,      // D x T, output gradient
     const ElemType* in,        // D x T, input
     const ElemType* flags,     // 1 x T
+    const CUDA_LONG flag_stride, // this is MBLayout's GetNumParallelSequences(), to process the Matrix's layout
     const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG l_order,
     const CUDA_LONG l_stride,
@@ -5313,7 +5316,7 @@ __global__ void _computeBiVfsmnLeftFilterGradient(
     int steps = (cols - 1)/THREADS + 1;
     int order = j/rows;
     int row   = j%rows;
-    int shift = order * l_stride;
+    int shift = order * l_stride * flag_stride;
     int index = order*rows + row;
     //copy input to aux
     int col = threadIdx.x - shift;
@@ -5374,6 +5377,7 @@ __global__ void _computeBiVfsmnRightFilterGradient(
     const ElemType* diff,      // D x T, output gradient
     const ElemType* in,        // D x T, input
     const ElemType* flags,     // 1 x T
+    const CUDA_LONG flag_stride, // this is MBLayout's GetNumParallelSequences(), to process the Matrix's layout
     const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG r_order,
     const CUDA_LONG r_stride,
@@ -5390,7 +5394,7 @@ __global__ void _computeBiVfsmnRightFilterGradient(
     int steps = (cols - 1)/THREADS + 1;
     int order = j/rows;
     int row   = j%rows;
-    int shift = (order+1) * r_stride;
+    int shift = (order+1) * r_stride * flag_stride;
     int index = order*rows + row;
     //copy input to aux
     int col = threadIdx.x + shift;

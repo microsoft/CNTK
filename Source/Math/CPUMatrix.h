@@ -590,6 +590,7 @@ public:
                                      const CPUMatrix<ElemType>& l_filter,// DxN1 TODO: +1
                                      const CPUMatrix<ElemType>& r_filter,// DxN2
                                      const CPUMatrix<ElemType>& flags,   // 1xT
+                                     int flag_stride,
                                      int l_order, int r_order,
                                      int l_stride, int r_stride,
                                      CPUMatrix<ElemType>& out);
