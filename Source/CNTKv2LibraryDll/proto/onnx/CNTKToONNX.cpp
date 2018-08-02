@@ -2468,17 +2468,10 @@ LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
         }
     }
 
-    if (beginIndex < 0)
-    {
-        // negative index is not supported in ONNX. This is an problem when slicing along sequence axis where
-        // dimension size is unknown at model time. 
-        // TODO: before ONNX support numpy indexing, assume fixed sequence length.
-        //const int SequenceLen = 17;
-        //beginIndex = SequenceLen + beginIndex;
-        if (endIndex == 0)
-            // endIndex = SequenceLen;
-            endIndex = INT_MAX;
-    }
+    if (endIndex == 0)
+        // this is where CNTK and numpy disagree. numpy will output an empty matrix
+        // where CNTK outputs from beginIndex to (and include) the last.
+        endIndex = INT_MAX;
 
     std::vector<LotusIR::NodeArg *> inputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);

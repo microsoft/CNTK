@@ -2686,6 +2686,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
 
         std::vector<int> starts = VecInt64ToVecInt(starts64);
         std::vector<int> ends = VecInt64ToVecInt(ends64);
+        for (auto &e : ends)
+        {
+            // CNTK treats endIndex of 0 as to (and include) the last.
+            if (e == INT_MAX)
+                e = 0;
+        }
 
         // axes is optional so provide a default
         if (axes.empty())

@@ -599,9 +599,10 @@ namespace CNTK
                                     LogicError("Function '%S': Built-in Slice operation currently does not support slicing along dynamic axis.", AsString().c_str());
                                 VerifyStaticAxis(ax, m_inputs[0].Shape());
                                 size_t sliceAxisDim = m_inputs[0].Shape()[ax.StaticAxisIndex()];
-                                if (sliceAxisDim == NDShape::FreeDimension && (beginIndex[i] < 0 || endIndex[i] < 0))
+                                if (sliceAxisDim == NDShape::FreeDimension && (beginIndex[i] < 0 || endIndex[i] <= 0))
                                 {
                                     // not able to calculate real indices. do not narrow either.
+                                    // note that endIndex[i] = 0 means to (and include) the last 
                                 }
                                 else
                                 {
