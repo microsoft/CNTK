@@ -160,6 +160,8 @@ public:
     }
     void operator=(const SmallVector& other)
     {
+        if (m_data == other.m_data)
+            return;
         m_size = other.m_size;
         memcpy(m_data, other.m_data, other.m_size * sizeof(T));
     }

@@ -1243,7 +1243,6 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
         return std::vector<Variable>();
     }
 
-    // std::string nodeName = nodeArg->Name();
     std::vector<Axis> dynamicAxes({});
 
     if (parentONNXOpName == "LSTM")

@@ -1178,7 +1178,7 @@ bool IsUnSupportedLayerNormalization(const FunctionPtr src)
     return cntkOpName == "LayerNormalization" && src->Output().HasSequenceAxis();
 }
 
-FunctionPtr ProcessBatchAndSequenceAxisOp(const FunctionPtr src)
+FunctionPtr SkipBatchAndSequenceAxisOp(const FunctionPtr src)
 {
     if ((src->OpName() == L"ToSequenceOp" && src->Inputs()[0].Owner() &&
         src->Inputs()[0].Owner()->OpName() == L"ToBatchAxis") || 
@@ -2533,7 +2533,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& initialSrc,
         return iter->second;
     
     // try to skip batch and sequence pack unpack
-    FunctionPtr src = ProcessBatchAndSequenceAxisOp(initialSrc);
+    FunctionPtr src = SkipBatchAndSequenceAxisOp(initialSrc);
 
     LotusIR::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
