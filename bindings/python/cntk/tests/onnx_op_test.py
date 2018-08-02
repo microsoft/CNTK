@@ -54,8 +54,8 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
         filename = os.path.join(str(tmpdir), name + R'.onnx')
         model.save(filename, format=C.ModelFormat.ONNX)        
         loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
-        filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
-        loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
+        #filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
+        #loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
 
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
@@ -275,9 +275,6 @@ def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dty
 # Case 1 - Non-Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_BatchNormalization(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
-
     sample = [  # 5 samples having 4 classes
             [1, 1, 2, 3],
             [0, 0, 0, 0],
@@ -285,11 +282,11 @@ def test_BatchNormalization(tmpdir, dtype):
             [1000, 1000, 1000, 1000],
             [10000, 10000, 10000, 10000]]
 
-    x = np.asarray(sample, dtype=dtype).reshape(-1,1)
-    scale = np.asarray([3])
-    bias = np.asarray([4])
-    mean = np.asarray([1])
-    var = np.asarray([2])
+    x = np.array(sample).reshape(-1,1).astype(dtype)
+    scale = np.array([3]).astype(dtype)
+    bias = np.array([4]).astype(dtype)
+    mean = np.array([1]).astype(dtype)
+    var = np.array([2]).astype(dtype)
     epsilon = 0.00001
 
     verify_BN(x, scale, bias, mean, var, epsilon, False, tmpdir, dtype)
@@ -297,14 +294,11 @@ def test_BatchNormalization(tmpdir, dtype):
 # Case 2 - Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SpatialBatchNormalization(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
-
-    x = np.random.randn(2, 3, 4, 5).astype(np.float32)
-    scale = np.random.randn(3).astype(np.float32)
-    bias = np.random.randn(3).astype(np.float32)
-    mean = np.random.randn(3).astype(np.float32)
-    var = np.random.rand(3).astype(np.float32)
+    x = np.random.randn(2, 3, 4, 5).astype(dtype)
+    scale = np.random.randn(3).astype(dtype)
+    bias = np.random.randn(3).astype(dtype)
+    mean = np.random.randn(3).astype(dtype)
+    var = np.random.rand(3).astype(dtype)
     epsilon = 1e-2
 
     verify_BN(x, scale, bias, mean, var, epsilon, True, tmpdir, dtype)

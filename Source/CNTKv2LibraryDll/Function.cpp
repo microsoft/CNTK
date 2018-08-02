@@ -94,6 +94,45 @@ namespace CNTK
         return const_cast<Function*>(this)->InitOutputs();
     }
 
+	CNTK::Variable ConvertFP16Stats(CNTK::Variable stat, const CNTK::DeviceDescriptor &computeDevice = DeviceDescriptor::UseDefaultDevice())
+	{
+		auto value_cpu = stat.GetValue()->DeepClone(computeDevice.CPUDevice(), true);
+		auto srcData = value_cpu->DataBuffer<float16>();
+
+		auto totalSize = stat.Shape().TotalSize();
+		float *dstData = new float[totalSize];
+
+		for (size_t index = 0; index < totalSize; index++)
+		{
+			dstData[index] = (float)(srcData[index]);
+		}
+
+		std::vector<size_t> dimensions;
+		for (int index = stat.Shape().Rank() - 1; index >= 0; index--)
+		{
+			dimensions.push_back(stat.Shape()[index]);
+		}
+		NDShape reversedShape = dimensions;
+
+		NDArrayViewPtr dstFinal(new NDArrayView(CNTK::DataType::Float, reversedShape, &dstData[0],
+			totalSize * sizeof(float), computeDevice.CPUDevice()));
+
+		if (computeDevice.Type() == DeviceKind::CPU)
+		{
+			Constant constantVariable(dstFinal);
+			return constantVariable;
+		}
+		else
+		{
+			// this is the way to load values into GPU:
+			// Create a GPU NDArrayView and CopyFrom a CPU NDArrayView that holding the data.
+			NDArrayViewPtr dstFinalGPU(new NDArrayView(CNTK::DataType::Float, StorageFormat::Dense, reversedShape, computeDevice));
+			dstFinalGPU->CopyFrom(*dstFinal);
+			Constant constantVariable(dstFinalGPU);
+			return constantVariable;
+		}
+	}
+
     std::shared_ptr<std::vector<Variable>> Function::InputsImpl(bool pythonOperandOrder) const
     {
         std::vector<Variable> inputs;
@@ -104,7 +143,7 @@ namespace CNTK
             // For the Times and TransposeTimes primitive functions, if we want the python operand order
             // then we need to reorder the operands as stored in m_inputs
             const PrimitiveFunction* primitiveFunction = dynamic_cast<const PrimitiveFunction*>(this);
-            if (pythonOperandOrder && primitiveFunction && ((primitiveFunction->OpType() == PrimitiveOpType::Times) || (primitiveFunction->OpType() == PrimitiveOpType::TransposeTimes)))
+			if (pythonOperandOrder && primitiveFunction && ((primitiveFunction->OpType() == PrimitiveOpType::Times) || (primitiveFunction->OpType() == PrimitiveOpType::TransposeTimes)))
             {
                 assert(m_inputs.size() == 2);
                 inputs = { m_inputs[1], m_inputs[0] };
@@ -116,7 +155,12 @@ namespace CNTK
                 // The first two inputs are Constant for alpha and beta, followed with three Variable A, B and C.
                 inputs = { m_inputs[0], m_inputs[1], m_inputs[3], m_inputs[2], m_inputs[4] };
             }
-            else
+			else if (pythonOperandOrder && primitiveFunction && m_inputs.size() == 6)
+			{
+				for (int i = 0; i < 6; i++)
+					inputs.push_back((m_inputs[i].IsConstant() || m_inputs[i].IsParameter()) && m_inputs[i].GetDataType() == CNTK::DataType::Float16 ? ConvertFP16Stats(m_inputs[i]) : m_inputs[i]);
+			}
+			else
                 inputs = m_inputs;
         }
         else

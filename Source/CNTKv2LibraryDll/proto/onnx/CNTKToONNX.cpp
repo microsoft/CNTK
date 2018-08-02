@@ -2473,6 +2473,45 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     return functionNode; 
 }
 
+CNTK::Variable ConvertFP32Stats(CNTK::Variable stat, const CNTK::DeviceDescriptor &computeDevice = DeviceDescriptor::UseDefaultDevice())
+{
+	auto value_cpu = stat.GetValue()->DeepClone(computeDevice.CPUDevice(), true);
+	auto srcData = value_cpu->DataBuffer<float>();
+
+	auto totalSize = stat.Shape().TotalSize();
+	float16 *dstData = new float16[totalSize];
+
+	for (size_t index = 0; index < totalSize; index++)
+	{
+		dstData[index] = (float16)srcData[index];
+	}
+
+	std::vector<size_t> dimensions;
+	for (int index = stat.Shape().Rank() - 1; index >= 0; index--)
+	{
+		dimensions.push_back(stat.Shape()[index]);
+	}
+	NDShape reversedShape = dimensions;
+
+	NDArrayViewPtr dstFinal(new NDArrayView(CNTK::DataType::Float16, reversedShape, &dstData[0],
+		totalSize * sizeof(float16), computeDevice.CPUDevice()));
+
+	if (computeDevice.Type() == DeviceKind::CPU)
+	{
+		Constant constantVariable(dstFinal);
+		return constantVariable;
+	}
+	else
+	{
+		// this is the way to load values into GPU:
+		// Create a GPU NDArrayView and CopyFrom a CPU NDArrayView that holding the data.
+		NDArrayViewPtr dstFinalGPU(new NDArrayView(CNTK::DataType::Float16, StorageFormat::Dense, reversedShape, computeDevice));
+		dstFinalGPU->CopyFrom(*dstFinal);
+		Constant constantVariable(dstFinalGPU);
+		return constantVariable;
+	}
+}
+
 void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
     LotusIR::Graph* graph,
     std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
@@ -2536,10 +2575,22 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         }
         else
         {
-            if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4)
-                && input.Shape().Rank() == 2)
-                // this is a workaround for brainscript models that have rank = 2 for BN inputs.
-                inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
+			if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4))
+			{
+				if (input.GetDataType() == CNTK::DataType::Float && (src->Inputs()[0].GetDataType() == CNTK::DataType::Float16))
+				{
+					input = ConvertFP32Stats(input);
+				}
+				if (input.Shape().Rank() == 2)
+				{
+					// this is a workaround for brainscript models that have rank = 2 for BN inputs.
+					inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
+				}
+				else
+				{
+					inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
+				}
+			}
             else
                 inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
             if (input.IsInput() && input.HasSequenceAxis())
@@ -3985,11 +4036,24 @@ void CNTKToONNXHelper::ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
         inputArgType = ToTypeProto(input.Shape(), false, false, true); // Explicitly turning off batch and sequence axis.
         if (input.IsInput() && input.HasSequenceAxis())
             (*inputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim())[0].set_dim_param(FreeSequenceDimParam);
-        // TODO: Commented code below is a workaround for BN. Is is still needed?
-        //if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4)
-        //    && input.Shape().Rank() == 2)
-        //    // this is a workaround for brainscript models that have rank = 2 for BN inputs.
-        //    inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
+		if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4))
+		{
+			if (input.GetDataType() == CNTK::DataType::Float && (src->Inputs()[0].GetDataType() == CNTK::DataType::Float16))
+			{
+				input = ConvertFP32Stats(input);
+			}
+			if (input.Shape().Rank() == 2)
+			{
+				// this is a workaround for brainscript models that have rank = 2 for BN inputs.
+				inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
+			}
+			else
+			{
+				inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
+			}
+		}
+		else
+			inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
 
         if (OpNeedONNXTypeMap(cntkOpName))
         {

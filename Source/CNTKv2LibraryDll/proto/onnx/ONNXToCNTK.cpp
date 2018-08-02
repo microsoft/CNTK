@@ -109,6 +109,7 @@ private:
     static std::vector<size_t> VecInt64ToVecSize_t(const std::vector<int64_t> &vecFloat);
 
     static std::vector<Axis> ConvertPermutationONNXToCNTK(const std::vector<int64_t> &permutation, bool hasBatchAxis, bool hasSequenceAxis);
+	static CNTK::Variable ConvertFP16Stats(CNTK::Variable stat, const CNTK::DeviceDescriptor &computeDevice);
 
     static float GetNamedAttributeAsFloat(const Node *node, const string &attributeName);
     static float GetNamedAttributeAsFloat(const Node *node, const string &attributeName, float defaultValue);
@@ -187,6 +188,46 @@ std::vector<Axis> ONNXToCNTKHelper::AttributeProtoToAxes(const AttributeProto &a
     }
     return axes;
 }
+
+CNTK::Variable ONNXToCNTKHelper::ConvertFP16Stats(CNTK::Variable stat, const CNTK::DeviceDescriptor &computeDevice = DeviceDescriptor::UseDefaultDevice())
+{
+	auto value_cpu = stat.GetValue()->DeepClone(computeDevice.CPUDevice(), true);
+	auto srcData = value_cpu->DataBuffer<float16>();
+
+	auto totalSize = stat.Shape().TotalSize();
+	float *dstData = new float[totalSize];
+
+	for (size_t index = 0; index < totalSize; index++)
+	{
+		dstData[index] = (float)(srcData[index]);
+	}
+
+	std::vector<size_t> dimensions;
+	for (int index = stat.Shape().Rank() - 1; index >= 0; index--)
+	{
+		dimensions.push_back(stat.Shape()[index]);
+	}
+	NDShape reversedShape = dimensions;
+
+	NDArrayViewPtr dstFinal(new NDArrayView(CNTK::DataType::Float, reversedShape, &dstData[0],
+		totalSize * sizeof(float), computeDevice.CPUDevice()));
+
+	if (computeDevice.Type() == DeviceKind::CPU)
+	{
+		Constant constantVariable(dstFinal);
+		return constantVariable;
+	}
+	else
+	{
+		// this is the way to load values into GPU:
+		// Create a GPU NDArrayView and CopyFrom a CPU NDArrayView that holding the data.
+		NDArrayViewPtr dstFinalGPU(new NDArrayView(CNTK::DataType::Float, StorageFormat::Dense, reversedShape, computeDevice));
+		dstFinalGPU->CopyFrom(*dstFinal);
+		Constant constantVariable(dstFinalGPU);
+		return constantVariable;
+	}
+}
+
 
 Axis ONNXToCNTKHelper::AttributeProtoToAxis(const AttributeProto &attributeProto)
 {
@@ -2130,13 +2171,19 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "BatchNormalization" || onnxOpName == "SpatialBN")
     {
+		auto i1 = ConvertFP16Stats(inputs[1]);
+		auto i2 = ConvertFP16Stats(inputs[2]);
+		auto i3 = ConvertFP16Stats(inputs[3]);
+		auto i4 = ConvertFP16Stats(inputs[4]);
+		auto i5 = Constant::Scalar(0.0F);
+
         auto operandPlaceholder = PlaceholderVariable(inputs[0].Shape(), L"operand", {});
         const Variable &operand = ToBatch(operandPlaceholder);
-        const Variable &scale = PlaceholderVariable(inputs[1].Shape(), inputs[1].Name(), {});
-        const Variable &bias = PlaceholderVariable(inputs[2].Shape(), inputs[2].Name(), {});;
-        const Variable &runningMean = PlaceholderVariable(inputs[3].Shape(), inputs[3].Name(), {});;
-        const Variable &runningInvStd = PlaceholderVariable(inputs[4].Shape(), inputs[4].Name(), {});;
-        const Variable &runningCount = Constant::Scalar(0.0F);
+		const Variable &scale = PlaceholderVariable(i1.Shape(), i1.Name(), {});
+        const Variable &bias = PlaceholderVariable(i2.Shape(), i2.Name(), {});
+        const Variable &runningMean = PlaceholderVariable(i3.Shape(), i3.Name(), {});
+        const Variable &runningInvStd = PlaceholderVariable(i4.Shape(), i4.Name(), {});
+		const Variable &runningCount = PlaceholderVariable(i5.Shape(), i5.Name(), {});
 
         bool spatial = onnxOpName == "SpatialBN" || GetNamedAttributeAsInt64(node, "spatial", 1) != 0;
 
@@ -2184,10 +2231,11 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         FunctionPtr cntkFunctionWithStaticAxis = UnpackBatch(cntkFunctionWithBatchAxis, ToFixedWStringFromMultiByte(node->Name()));
         vector<pair<Variable, Variable>> argsMap{
             {operandPlaceholder, inputs[0]},
-            {scale, inputs[1]},
-            {bias, inputs[2]},
-            {runningMean, inputs[3]},
-            {runningInvStd, inputs[4]},
+            {scale, i1},
+            {bias, i2},
+            {runningMean, i3},
+            {runningInvStd, i4},
+			{runningCount, i5}
         };
         return AsBlock(std::move(cntkFunctionWithStaticAxis), argsMap,
             cntkFunctionWithBatchAxis->OpName(), ToFixedWStringFromMultiByte(node->Name()));

@@ -1442,10 +1442,12 @@ namespace CNTK
 
         Function* function = variable.Owner().get();
         ComputationNodeBasePtr computationNodePtr;
-        auto& functionInputs = function->m_inputs;
+		const vector<Variable> &result = function->Inputs(true);
+
+        vector<Variable> &functionInputs = const_cast<vector<Variable>&>(result);
 
         DataType nonConstInputDataType = DataType::Unknown;
-        for (auto& inputVar : functionInputs)
+        for (Variable& inputVar : functionInputs)
         {
             if (!inputVar.IsConstant() && (inputVar.GetDataType() != DataType::Unknown))
             {
@@ -1456,7 +1458,7 @@ namespace CNTK
 
         // Create the nodes corresponding to the inputs
         std::vector<std::shared_ptr<ComputationNodeBase>> inputNodes;
-        for (auto& inputVar : functionInputs)
+        for (Variable& inputVar : functionInputs)
         {
             // If the inputVar is a constant and not the right DataType let's coerce it to the right type
             // except for FP16 that mismatch is needed (e.g. BatchNorm stats in FP16 need to be FP32)
