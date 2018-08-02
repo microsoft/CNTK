@@ -48,7 +48,7 @@ def verify_no_input(model, tmpdir, name):
 def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
     if not loaded_model:
         filename = os.path.join(str(tmpdir), name + R'.onnx')
-        model.save(filename, format=C.ModelFormat.ONNX)        
+        model.save(filename, format=C.ModelFormat.ONNX)
         loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
         filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
         loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
@@ -781,9 +781,13 @@ def test_Log(tmpdir, dtype):
 #LogSoftmax
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LogSoftmax(tmpdir, dtype):
-    model = C.log_softmax(np.array([[1, 1, 2, 3]], dtype))
+    data = np.array([[1, 1, 2, 3]], dtype)
+    model = C.log_softmax(data)
     verify_no_input(model, tmpdir, 'LogSoftmax_0')
 
+    x = C.input_variable(data.shape, dtype=dtype)
+    model = C.log_softmax(x)
+    verify_one_input(model, data, tmpdir, 'LogSoftmax_1')
 
 #LRN
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1333,8 +1337,13 @@ def test_Slice(tmpdir, dtype):
 #Softmax
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Softmax(tmpdir, dtype):
-    model = C.softmax(np.array([[1, 1, 2, 3]], dtype))
+    data = np.array([[1, 1, 2, 3]], dtype)
+    model = C.softmax(data)
     verify_no_input(model, tmpdir, 'Softmax_0')
+
+    x = C.input_variable(data.shape, dtype=dtype)
+    model = C.softmax(x)
+    verify_one_input(model, data, tmpdir, 'Softmax_1')
 
 #Softplus
 @pytest.mark.parametrize("dtype", DType_Config)
