@@ -2976,12 +2976,30 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
     size_t reductionRank = 1;
     size_t maxTempMemSizeInSamples = 0;
 
+    if (HasNamedAttribute(node, "pads"))
+    {
+        NDShape pads = GetNamedAttributeAsShape(node, "pads", false, NDShape(std::vector<size_t>(numSpatialDim, 0u)));
+        for (const auto pad: pads.Dimensions())
+        {
+            if (pad != 0)
+                NOT_IMPLEMENTED;    // we only support zero padding or automatic padding so far
+        }
+    }
+
+    bool hasAutoPad = HasNamedAttribute(node, "auto_pad") && GetNamedAttributeAsString(node, "auto_pad") != "NOTSET";
+    if (hasAutoPad)
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    std::vector<bool> cntkConvAutoPadding;
+    NDShape outputShape = NDShape::Unknown();
+    NDShape inputShape = inputOperand.Shape();
+    NDShape kernelShape = convolutionMap.Shape();
+
     if (HasNamedAttribute(node, "output_shape"))
     {
-        std::vector<bool> cntkConvAutoPadding;
-        NDShape outputShape = GetNamedAttributeAsShape(node, "output_shape", true);
-        NDShape inputShape = inputOperand.Shape();
-        NDShape kernelShape = convolutionMap.Shape();
+        outputShape = GetNamedAttributeAsShape(node, "output_shape", true);
 
         for (int axis = 0; axis < outputShape.Rank(); axis++)
         {
@@ -2997,30 +3015,23 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
                 // false when creating CNTK node.
                 cntkConvAutoPadding.push_back(false);
             }
+
         }
+    }
+    else
+        cntkConvAutoPadding.push_back(false);
 
-        return ConvolutionTranspose(
-            convolutionMap,
-            inputs[0],
-            strides,
-            sharing,
-            cntkConvAutoPadding,
-            outputShape,
-            dilation,
-            reductionRank,
-            maxTempMemSizeInSamples,
-            ToFixedWStringFromMultiByte(node->Name()));
-    }
-    else if (HasNamedAttribute(node, "pads"))
-    {
-        NOT_IMPLEMENTED;
-    }
-    else if (HasNamedAttribute(node, "auto_pad"))
-    {
-        NOT_IMPLEMENTED;
-    }
-
-    return nullptr;
+    return ConvolutionTranspose(
+        convolutionMap,
+        inputs[0],
+        strides,
+        sharing,
+        cntkConvAutoPadding,
+        outputShape,
+        dilation,
+        reductionRank,
+        maxTempMemSizeInSamples,
+        ToFixedWStringFromMultiByte(node->Name()));
 }
 
 FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::vector<Variable> &inputs)
