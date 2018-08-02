@@ -266,22 +266,22 @@ def test_vgg9_model(tmpdir):
     loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
 
 def test_conv3d_model(tmpdir):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
+    # pytest.skip('Needs to be fixed after removal of batch axis change.')
     def create_model(input):
         with C.default_options (activation=C.relu):
             model = C.layers.Sequential([
                     C.layers.Convolution3D((3,3,3), 64, pad=True),
-                    C.layers.MaxPooling((1,2,2), (1,2,2)),
-                    C.layers.For(range(3), lambda i: [
-                        C.layers.Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
-                        C.layers.Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
-                        C.layers.MaxPooling((2,2,2), (2,2,2))
-                    ]),
-                    C.layers.For(range(2), lambda : [
-                        C.layers.Dense(1024), 
-                        C.layers.Dropout(0.5)
-                    ]),
-                C.layers.Dense(100, activation=None)
+                #     C.layers.MaxPooling((1,2,2), (1,2,2)),
+                #     C.layers.For(range(3), lambda i: [
+                #         C.layers.Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
+                #         C.layers.Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
+                #         C.layers.MaxPooling((2,2,2), (2,2,2))
+                #     ]),
+                #     C.layers.For(range(2), lambda : [
+                #         C.layers.Dense(1024), 
+                #         C.layers.Dropout(0.5)
+                #     ]),
+                # C.layers.Dense(100, activation=None)
             ])
 
         return model(input)
@@ -292,6 +292,10 @@ def test_conv3d_model(tmpdir):
     x = C.input_variable(video.shape)
     root_node = create_model(x)
 
+    C.logging.graph.plot(root_node, 'E:\\TestScripts\\test_onnx\\conv3d_model.png')
+
+    import pdb
+    pdb.set_trace()
     filename = os.path.join(str(tmpdir), R'conv3d_model.onnx')
     root_node.save(filename, format=C.ModelFormat.ONNX)
 
@@ -306,6 +310,97 @@ def test_conv3d_model(tmpdir):
     loaded_node.save(filename2, format=C.ModelFormat.ONNX)
 
     filename3 = os.path.join(str(tmpdir), R'conv3d_model2.cntkmodel')
+    loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
+
+def test_conv2d_model(tmpdir):
+    # # pytest.skip('Needs to be fixed after removal of batch axis change.')
+    # def create_model(input):
+    #     with C.default_options (activation=C.relu):
+    #         model = C.layers.Sequential([
+    #                 C.layers.Convolution2D((3,3), 64, pad=True),
+    #             #     C.layers.MaxPooling((1,2,2), (1,2,2)),
+    #             #     C.layers.For(range(3), lambda i: [
+    #             #         C.layers.Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
+    #             #         C.layers.Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
+    #             #         C.layers.MaxPooling((2,2,2), (2,2,2))
+    #             #     ]),
+    #             #     C.layers.For(range(2), lambda : [
+    #             #         C.layers.Dense(1024), 
+    #             #         C.layers.Dropout(0.5)
+    #             #     ]),
+    #             # C.layers.Dense(100, activation=None)
+    #         ])
+
+    #     return model(input)
+
+    
+
+    # x = C.input_variable(video.shape)
+    # root_node = create_model(x)
+
+    # C.logging.graph.plot(root_node, 'E:\\TestScripts\\test_onnx\\conv2d_model.png')
+
+    # # import pdb
+    # # pdb.set_trace()
+    # filename = os.path.join(str(tmpdir), R'conv2d_model.onnx')
+    # root_node.save(filename, format=C.ModelFormat.ONNX)
+
+    # loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    # assert root_node.shape == loaded_node.shape
+    print('\nStarting loading!\n')
+    loaded_node = C.Function.load("E:\\TestScripts\\test_onnx\\conv2d_model.onnx", format=C.ModelFormat.ONNX)
+
+    video_shape = (3, 20, 32)
+    video = np.asarray(np.random.uniform(-1, 1, video_shape), dtype=np.float32)
+
+    print('Starting evaluation')
+    x_ = loaded_node.arguments[0]
+    output = loaded_node.eval({x_:video})
+    # assert np.allclose(loaded_node.eval({x_:video}), root_node.eval({x:video}))
+
+    # Additional test to ensure that loaded_node can be saved as both ONNX and CNTKv2 again.
+    filename2 = os.path.join(str(tmpdir), R'conv2d_model2.onnx')
+    loaded_node.save(filename2, format=C.ModelFormat.ONNX)
+
+    filename3 = os.path.join(str(tmpdir), R'conv2d_model2.cntkmodel')
+    loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)    
+
+def test_resnet3d_model(tmpdir):
+    # pytest.skip('Needs to be fixed after removal of batch axis change.')
+    def load_frames(cliproot, beginInd):
+        clipLen = 24
+        meanbgr = [104,117,123]
+        frames = np.zeros((3, 24, 160, 160), dtype=np.float32)
+        for i in range(beginInd, beginInd+clipLen):
+            frameName = "frame_%06d.jpg" %(i)
+            if not (os.path.isfile(os.path.join(cliproot, frameName))):
+                raise IOError("Cannot find frame: %s" %(os.path.join(cliproot, frameName)))
+            frame = cv2.imread(os.path.join(cliproot, frameName), cv2.IMREAD_COLOR) #read in a frame
+            frame = cv2.resize(frame, (160, 160), interpolation=cv2.INTER_CUBIC) - meanbgr #resize and normalize
+            frame = frame.transpose([2,0,1])
+            frames[:, i-beginInd, :, :] = frame
+        return np.ascontiguousarray(frames, dtype=np.float32)
+
+    modelfilename = 'E:\\TestScripts\\cntk_p3d_demo\\p3d_resnet_kinetics.cntkmodel'  
+    loaded_node = C.Function.load(modelfilename, format=C.ModelFormat.CNTKv2)
+    # root_node = C.as_composite(loaded_node.find_by_name('prob').owner)
+    root_node = C.as_composite(loaded_node.find_by_name('plus324').owner) # pool5
+    frames = load_frames(r"E:\\TestScripts\\cntk_p3d_demo\\frames", 1)
+
+    filename = os.path.join(str(tmpdir), R'resnet3d_model.onnx')
+    root_node.save(filename, format=C.ModelFormat.ONNX)
+
+    loaded_node = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    assert root_node.shape == loaded_node.shape
+
+    x_ = loaded_node.arguments[0]
+    assert np.allclose(loaded_node.eval({loaded_node.arguments[0]: [frames]}), root_node.eval({root_node.arguments[0]: [frames]}))
+
+    # Additional test to ensure that loaded_node can be saved as both ONNX and CNTKv2 again.
+    filename2 = os.path.join(str(tmpdir), R'resnet3d_model2.onnx')
+    loaded_node.save(filename2, format=C.ModelFormat.ONNX)
+
+    filename3 = os.path.join(str(tmpdir), R'resnet3d_model2.cntkmodel')
     loaded_node.save(filename3, format=C.ModelFormat.CNTKv2)
 
 def test_resnet_model(tmpdir):
