@@ -6,6 +6,8 @@
 
 import cntk as C
 import numpy as np
+import os
+import tempfile
 from onnx import helper, TensorProto
 from onnx.backend.base import Backend
 from onnx.backend.base import BackendRep
@@ -43,11 +45,16 @@ class CNTKBackend(Backend):
     @classmethod
     def prepare(cls, model, device='CPU', **kwargs):
         expected_out_types = [out.type.tensor_type.elem_type for out in model.graph.output]
-        with open(r'tmp_model.pb', 'wb') as f:
-            f.write(model.SerializeToString())
-        
+
+        f = tempfile.NamedTemporaryFile("wb", delete=False)
+        f.write(model.SerializeToString())
+        f.close()
         CNTKBackend.set_device(device)
-        c_model = C.Function.load(r'tmp_model.pb', format=C.ModelFormat.ONNX)
+        try:
+            c_model = C.Function.load(f.name, format=C.ModelFormat.ONNX)
+        finally:
+            os.unlink(f.name)
+
         return CNTKBackendRep(c_model, expected_out_types)
 
     @classmethod
