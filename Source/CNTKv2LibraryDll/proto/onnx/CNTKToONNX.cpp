@@ -3012,20 +3012,31 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
         else if (src->OpName() == L"Hardmax")
         {
             int numDims = src->Inputs()[0].Shape().Rank();
-            node->AddAttribute(attributesMap[L"axis"], static_cast<int64_t>(numDims - 1));
+            if (numDims == 0)
+            {
+                LogicError("Zero-rank input is not supported for ONNX export.");
+            }
+            int64_t axisIndex = numDims - 1 + src->Inputs()[0].DynamicAxes().size();
+            node->AddAttribute(attributesMap[L"axis"], axisIndex);
         }
         else if (src->OpName() == L"Softmax" || src->OpName() == L"LogSoftmax")
         {
-            Axis axis = Axis(0);
-            if (src->Attributes().Contains(L"axis"))
-                axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
-            int64_t axisIndex = static_cast<int64_t>(ToIndex(axis));
             int numDims = src->Inputs()[0].Shape().Rank();
-            if (axisIndex != numDims - 1)
+            if (numDims == 0)
             {
-                // TODO: support non-last axis (probably by adding transpose before and after the op)
-                LogicError("Only last axis is supported for ONNX export.");
+                LogicError("Zero-rank input is not supported for ONNX export.");
             }
+            int64_t axisIndex = numDims - 1;
+            if (src->Attributes().Contains(L"axis"))
+            {
+                Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
+                if (ToIndex(axis) != axisIndex)
+                {
+                    // TODO: support non-last axis (probably by adding transpose before and after the op)
+                    LogicError("Only last axis is supported for ONNX export.");
+                }
+            }
+            axisIndex += src->Inputs()[0].DynamicAxes().size();
             node->AddAttribute(attributesMap[L"axis"], axisIndex);
         }
         else if (src->OpName() == L"Times")
