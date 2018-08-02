@@ -83,7 +83,7 @@ private:
         std::vector<LotusIR::NodeArg *>& outputs, Graph *graph);
 
     static LotusIR::Node *AddReshapeNode(LotusIR::NodeArg &nodeArg, const std::vector<int> &newShape, const std::string &outArgName,
-        LotusIR::Graph* graph, int dynamicAxisCount);
+        LotusIR::Graph* graph);
     static LotusIR::Node *AddMatMulNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph,
         const std::string &out_arg_name);
     static LotusIR::Node *AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis);
@@ -1342,11 +1342,12 @@ bool CNTKToONNXHelper::FilterInput(const FunctionPtr& src, const CNTK::Variable&
 }
 
 /*
-CNTK python static axis is zero based. Free/Inferred axis is not static.
-ONNX batch axis, if exists, is 0. in this case static axes start from 1.
-CNTK cpp get static axis in a dis-normalized form (e.g. -axis - 1)
-In general CNTK node attribute contains axis in this dis-normalized form.
-This function converts dis-normalized form to ONNX form.
+CNTK python static axis is zero based. Batch and Sequence axis is not static axis.
+CNTK cpp get static axis in a sanitized form (e.g. -axis - 1 by sanitize_axis)
+In general CNTK node attribute contains axis 
+in a dis-normalized form (e.g. index from the last dimension).
+This function converts axis to ONNX form 
+(e.g. index from the first dimension of the shape including both static and dynamic axes).
 */
 int64_t CNTKToONNXHelper::ConvertAxisToOnnx(const Axis &axis, const Variable &operand)
 {
@@ -2313,15 +2314,14 @@ LotusIR::Node *CNTKToONNXHelper::AddReshapeNodeAccordingToONNXVersion(Graph *gra
     }
 }
 
-
-LotusIR::Node *CNTKToONNXHelper::AddReshapeNode(LotusIR::NodeArg &nodeArg, const std::vector<int> &newShape, const std::string &outArgName, 
-    LotusIR::Graph *graph, int dynamicAxisCount)
+LotusIR::Node *CNTKToONNXHelper::AddReshapeNode(LotusIR::NodeArg &nodeArg, const std::vector<int> &newShape, const std::string &outArgName,
+    LotusIR::Graph *graph)
 {
-    onnx::TypeProto typeProto = ToTypeProto(newShape, dynamicAxisCount);
+    onnx::TypeProto typeProto = ToTypeProto(newShape, false);
     UpdateONNXType(CNTK::DataType::Float, typeProto);
 
     LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(outArgName, &typeProto);
-    auto reshapeNode = AddReshapeNodeAccordingToONNXVersion(graph, nodeArg.Name() + string("_reshape"), 
+    auto reshapeNode = AddReshapeNodeAccordingToONNXVersion(graph, nodeArg.Name() + string("_reshape"),
         const_cast<LotusIR::NodeArg *>(&nodeArg), &outputArg, Cast<int, int64_t>(newShape));
     return reshapeNode;
 }
@@ -2386,6 +2386,131 @@ LotusIR::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const FunctionP
     return reshapeNode;
 }
 
+// parse Sequence.Slice node graph to collect axis/begin index/end index
+// and to build an ONNX slice node
+LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
+    LotusIR::Graph* graph,
+    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
+    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+{
+    auto f = src->BlockRoot();
+    int64_t beginIndex = 0, endIndex = 0;
+
+    auto packedIndex = f->Inputs()[1].Owner();
+    auto whereFunc = packedIndex->Inputs()[1].Owner();
+    auto inputToWhere = whereFunc->Inputs()[0].Owner();
+    // input to Where node can be:
+    // ElementTimes - both indices are non-zero, beginIndex/endIndex are from First/Second inputs 
+    // FutureValue - beginIndex is negative, endIndex is zero
+    // PastValue - endIndex is positive, beginIndex is zero
+    // 1 Minus FutureValue - endIndex is negative, beginIndex is zero
+    // 1 Minus PastValue - beginIndex is positive, endIndex is zero
+    auto reportLogicError = [&src]() 
+    {
+        LogicError("Failed to parse Sequence.Slice node %s(%s).", ToLegacyString(ToUTF8(src->Name())).c_str(), ToLegacyString(ToUTF8(src->Uid())).c_str()); 
+    };
+    if (inputToWhere->OpName() == L"ElementTimes")
+    {
+        {
+            auto beginToWhere = inputToWhere->Inputs()[0].Owner();
+            if (beginToWhere->OpName() == L"Minus")
+            {
+                auto beginToMinusMustBeAPastValueOp = beginToWhere->Inputs()[1].Owner();
+                if (beginToMinusMustBeAPastValueOp->OpName() == L"PastValue")
+                    beginIndex = static_cast<int64_t>(beginToMinusMustBeAPastValueOp->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+                else
+                    reportLogicError();
+            }
+            else if (beginToWhere->OpName() == L"FutureValue")
+            {
+                beginIndex = -static_cast<int64_t>(beginToWhere->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+            }
+            else
+                reportLogicError();
+        }
+        {
+            auto endToWhere = inputToWhere->Inputs()[1].Owner();
+            if (endToWhere->OpName() == L"Minus")
+            {
+                auto endToMinusMustBeAFutureValueOp = endToWhere->Inputs()[1].Owner();
+                if (endToMinusMustBeAFutureValueOp->OpName() == L"FutureValue")
+                    endIndex = -static_cast<int64_t>(endToMinusMustBeAFutureValueOp->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+                else
+                    reportLogicError();
+            }
+            else if (endToWhere->OpName() == L"PastValue")
+            {
+                endIndex = static_cast<int64_t>(endToWhere->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+            }
+            else
+                reportLogicError();
+        }
+    }
+    else if (inputToWhere->OpName() == L"FutureValue")
+    {
+        beginIndex = -static_cast<int64_t>(inputToWhere->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+    }
+    else if (inputToWhere->OpName() == L"PastValue")
+    {
+        endIndex = static_cast<int64_t>(inputToWhere->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+    }
+    else if (inputToWhere->OpName() == L"Minus")
+    {
+        auto inputToMinus = inputToWhere->Inputs()[1].Owner();
+        if (inputToMinus->OpName() == L"FutureValue")
+        {
+            endIndex = -static_cast<int64_t>(inputToMinus->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+        }
+        else if (inputToMinus->OpName() == L"PastValue")
+        {
+            beginIndex = static_cast<int64_t>(inputToMinus->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+        }
+    }
+
+    if (endIndex == 0)
+        // this is where CNTK and numpy disagree. numpy will output an empty matrix
+        // where CNTK outputs from beginIndex to (and include) the last.
+        endIndex = INT_MAX;
+
+    std::vector<LotusIR::NodeArg *> inputs;
+    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
+
+    //std::vector<LotusIR::NodeArg *> outputs;
+    //ProcessOutputs(src, outputs, graph);
+    auto outputArgType = ToTypeProto(src->Output().Shape(), src->Output().HasBatchAxis(), src->Output().HasSequenceAxis());
+    UpdateONNXType(src->Output().GetDataType(), outputArgType);
+
+    std::string outputName = ToLegacyString(ToUTF8(src->BlockRoot()->Output().Uid()));
+    std::string sliceOutputName = outputName;
+    bool seq_dim_is_1 = endIndex - beginIndex == 1 || (endIndex == INT_MAX && beginIndex == -1);
+    if (seq_dim_is_1)
+    {
+        // it appears that sequence.slice squeezes sequence axis out if slice length is 1
+        sliceOutputName += "_PreReshape";
+    }
+
+    LotusIR::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(sliceOutputName, &outputArgType);
+
+    const std::string & nodeName = ToLegacyString(ToUTF8(src->Name()));
+    LotusIR::Node *sequenceSliceNode = graph->AddNode(nodeName, "Slice", "", { inputs[inputs.size() - 1] }, { &outputNodeArg });
+    sequenceSliceNode->AddAttribute("axes", std::vector<int64_t>({ int64_t(0) }));
+    sequenceSliceNode->AddAttribute("ends", std::vector<int64_t>({ endIndex }));
+    sequenceSliceNode->AddAttribute("starts", std::vector<int64_t>({ beginIndex }));
+    if (seq_dim_is_1)
+    {
+        // CNTK Sequence.Slice op squeezes the sequence axis if it is of dimension 1.
+        // insert reshape to remove sequence axis
+        std::vector<int> newShape(reverse(Cast<size_t, int>(src->Output().Shape().Dimensions())));
+        // add batch size at end
+        newShape.insert(newShape.begin(), 1);
+        const std::string outArgName = sliceOutputName;
+        return AddReshapeNode(outputNodeArg, newShape, outputName, graph);
+    }
+    else
+        return sequenceSliceNode;
+}
+
 //
 // This is the main horsepower, it navigate CNTK graph recursivley while keep track of all visited nodes and variables,
 // and create the corresponding ONNX graph.
@@ -2417,7 +2542,15 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& initialSrc,
     //        return CreateLSTMNode(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     //}
     //else
-    if (cntkOpName == "RNNStep")
+    if (cntkOpName == "Sequence::Slice")
+    {
+        return CreateSequenceSliceNode(src,
+            graph,
+            functionNodes,
+            variableNodes,
+            compositeOutputsMap);
+    }
+    else if (cntkOpName == "RNNStep")
     {
         return CreateRNNNode(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     }
