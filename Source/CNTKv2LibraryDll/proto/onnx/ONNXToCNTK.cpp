@@ -1223,9 +1223,10 @@ std::vector<FunctionPtr> CreateRNNConstantOp(const Graph *graph, const Node *nod
     return returns;
 }
 
-std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const NodeArg *nodeArg,
-                                                                        const Node *parentNode, const Graph *graph, ONNXToCNTKVariableMap &constructedNodeArgVariableMap,
-                                                                        const DeviceDescriptor &computeDevice)
+std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const NodeArg *nodeArg, 
+    const Node *parentNode, const Graph *graph, 
+    ONNXToCNTKVariableMap &constructedNodeArgVariableMap, 
+    const DeviceDescriptor &computeDevice)
 {
     string parentONNXOpName = parentNode->OpType();
     std::string nodeName = nodeArg->Name();
@@ -2848,6 +2849,14 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         FunctionPtr cntkFunction = Atan(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
+    else if (onnxOpName == "TopK")
+    {
+        int64_t axisIndex = GetNamedAttributeAsInt64(node, "axis", (size_t)-1);
+        Axis axis = ConvertONNXAxisToCNTKCppApi(axisIndex, inputs[0]);
+        auto k = GetNamedAttributeAsInt64(node, "k", 1);
+        FunctionPtr cntkFunction = TopK(inputs[0], k, axis, ToFixedWStringFromMultiByte(node->Name()));
+        return cntkFunction;
+    }
     else
     {
         LogicError("ONNX (%s) is not supported in CNTK", onnxOpName.c_str());
@@ -3319,8 +3328,12 @@ std::vector<Variable> ONNXToCNTKHelper::CreateCNTKInputsStartingFromIndex(const 
             }
             else
             {
-                Variable inputVariable = CreateLeafVariableOrConstant(nodeArg, node, graph, computeDevice);
-                inputs.push_back(inputVariable);
+                if (constructedNodeArgVariableMap.find(nodeArg->Name()) == constructedNodeArgVariableMap.end())
+                {
+                    Variable inputVariable = CreateLeafVariableOrConstant(nodeArg, node, graph, computeDevice);
+                    constructedNodeArgVariableMap.insert(ONNXToCNTKVariableMap::value_type(nodeArg->Name(), inputVariable));
+                }
+                inputs.push_back(constructedNodeArgVariableMap[nodeArg->Name()]);
             }
         }
     }

@@ -1215,7 +1215,7 @@ bool IsBatchAxisOp(const FunctionPtr src)
 
 bool OpNeedONNXTypeMap(const std::string &cntkType)
 {
-    const vector<string> ops({"And", "Equal", "Greater", "Less", "Not", "Or", "Xor", "Gather", "ArgMax", "ArgMin"});
+    const vector<string> ops({"And", "Equal", "Greater", "Less", "Not", "Or", "Xor", "Gather", "ArgMax", "ArgMin", "TopK"});
     for (auto o : ops)
     {
         if (cntkType == o)
@@ -1249,6 +1249,8 @@ void MapAndUpdateONNXType(const std::string &op, bool inputArg, int argOrder, CN
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT32);
     else if ((op == "Greater" || op == "Less") && !inputArg)
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
+    else if (op == "TopK" && !inputArg && argOrder == 1)
+        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
     else
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_FLOAT);
 }
@@ -2653,12 +2655,13 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
     std::vector<LotusIR::NodeArg *>& outputs, Graph *graph)
 {
     std::string onnxOpName = ToOPName(src);
+    int outputIndex = 0;
     for (const auto& output : src->Outputs())
     {
         auto outputArgType = ToTypeProto(output.Shape(), output.HasBatchAxis(), output.HasSequenceAxis());
         if (OpNeedONNXTypeMap(onnxOpName))
         {
-            MapAndUpdateONNXType(onnxOpName, false, 0, output.GetDataType(), outputArgType);
+            MapAndUpdateONNXType(onnxOpName, false, outputIndex, output.GetDataType(), outputArgType);
         }
         else
         {
@@ -2666,6 +2669,7 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
         }
         LotusIR::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(output.Uid())), &outputArgType);
         outputs.emplace_back(&outputNodeArg);
+        outputIndex++;
     }
 }
 
@@ -3119,6 +3123,15 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             std::vector<int64_t> ax = ConvertAxesToOnnx(axes, src->Inputs()[0]);
 
             node->AddAttribute("axes", ax);
+        }
+        else if (src->OpName() == L"TopK")
+        {
+            Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
+            int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
+            node->AddAttribute(attributesMap[L"axis"], ax);
+
+            size_t k = src->Attributes()[L"numItems"].Value<size_t>();
+            node->AddAttribute(attributesMap[L"numItems"], static_cast<int64_t>(k));
         }
     }
     else

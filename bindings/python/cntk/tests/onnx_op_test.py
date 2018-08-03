@@ -60,7 +60,8 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
     opname = model.owner.op_name
 
     loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
-
+    
+    # TODO: handle multiple outputs
     model_shape = model.shape
     if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
         dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
@@ -1405,6 +1406,14 @@ def test_Tanh(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         model = C.tanh(np.array([[1,2],[3,4]]).astype(dtype))
         verify_no_input(model, tmpdir, 'Tanh_0')
+
+#TopK
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_TopK(tmpdir, dtype):
+    x = C.input_variable(10)
+    model = C.top_k(-x * C.log(x), 3)
+    data = [[np.arange(10,dtype=dtype)*0.1]]
+    verify_one_input(model, data, tmpdir, "top_k")
 
 #Transpose
 @pytest.mark.parametrize("dtype", DType_Config)
