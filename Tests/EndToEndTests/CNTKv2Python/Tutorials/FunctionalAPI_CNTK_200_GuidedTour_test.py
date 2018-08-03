@@ -6,9 +6,15 @@
 
 import os
 import re
+import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "FunctionalAPI", "CNTK_200_GuidedTour.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "FunctionalAPI", "CNTK_200_GuidedTour.ipynb")
+   
+    return notebook
+
 # Test only on GPU, since it is too slow on CPU.
 notebook_deviceIdsToRun = [0]
 

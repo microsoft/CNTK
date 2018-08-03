@@ -6,9 +6,15 @@
 
 import os
 import re
+import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_208_Speech_Connectionist_Temporal_Classification.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_208_Speech_Connectionist_Temporal_Classification.ipynb")
+   
+    return notebook
+
 notebook_timeoutSeconds = 600
 # TODO currently limited to GPU; need to investigate hangs in our Linux CI env
 notebook_deviceIdsToRun = [0]

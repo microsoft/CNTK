@@ -41,13 +41,12 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("device_id", devices, scope='session')
 
 @pytest.fixture(scope='module')
-def nb(tmpdir_factory, request, device_id):
+def nb(tmpdir_factory, request, device_id, notebook_path):
     import nbformat
     import os
     import subprocess
     from cntk.ops.tests.ops_test_utils import cntk_device
     from cntk.cntk_py import DeviceKind_GPU
-    inPath = getattr(request.module, "notebook")
 
     deviceIdsToRun = [-1, 0]
     try:
@@ -69,11 +68,11 @@ def nb(tmpdir_factory, request, device_id):
     if not device_id in deviceIdsToRun:
         pytest.skip('test not configured to run on device ID {0}'.format(device_id))
     outPath = str(tmpdir_factory.mktemp('notebook').join('out.ipynb'))
-    assert os.path.isfile(inPath)
+    assert os.path.isfile(notebook_path)
     kernel_name_opt = "--ExecutePreprocessor.kernel_name=python%d" % (sys.version_info[0])
     args = ["jupyter", "nbconvert", "--to", "notebook", "--execute",
             "--ExecutePreprocessor.timeout={0}".format(timeoutSeconds),
-            kernel_name_opt, "--output", outPath, inPath]
+            kernel_name_opt, "--output", outPath, notebook_path]
     subprocess.check_call(args)
     nb = nbformat.read(outPath, nbformat.current_nbformat)
     return nb

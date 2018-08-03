@@ -7,9 +7,15 @@
 import os
 import re
 import numpy
+import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_202_Language_Understanding.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_202_Language_Understanding.ipynb")
+   
+    return notebook
+
 # Runs on GPU only for speed
 notebook_deviceIdsToRun = [0]
 notebook_timeoutSeconds = 900

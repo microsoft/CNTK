@@ -7,9 +7,14 @@
 import os
 import re
 import numpy
+import pytest
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks.ipynb")
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_303_Deep_Structured_Semantic_Modeling_with_LSTM_Networks.ipynb")
+   
+    return notebook
 
 notebook_timeoutSeconds = 600
 expectedEvalErrorByDeviceId = { -1: [0.04, 0.04] , 0: [0.04, 0.04] }

@@ -10,12 +10,25 @@ import numpy as np
 import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_103A_MNIST_DataLoader.ipynb")
 datadir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "DataSets", "MNIST")
 reWeekly = re.compile(r'^weekly\b', re.IGNORECASE)
 
 # Run this on CPU only
 notebook_deviceIdsToRun = [-1]
+
+@pytest.fixture(scope="module", params=['English', 'Japanese'])
+def notebook_path(request):
+    language = request.param
+    notebook_name = "CNTK_103A_MNIST_DataLoader.ipynb"
+
+    import os
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    folder_path = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials")
+    
+    if language == 'English':
+        return os.path.join(folder_path, notebook_name)
+    else:
+        return os.path.join(folder_path, 'Translations', language, notebook_name)
 
 @pytest.fixture(scope='module')
 def clean_data(device_id):

@@ -8,6 +8,14 @@ import os
 import re
 import numpy as np
 import sys
+import pytest
+
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_106B_LSTM_Timeseries_with_IOT_Data.ipynb")
+  
+    return notebook
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -15,7 +23,6 @@ sys.path.append(abs_path)
 
 from nb_helper import get_output_stream_from_cell
 
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_106B_LSTM_Timeseries_with_IOT_Data.ipynb")
 notebook_timeoutSeconds = 1800
 
 def test_cntk_106B_lstm_timeseries_with_iot_data_noErrors(nb):

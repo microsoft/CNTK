@@ -7,12 +7,18 @@
 import os
 import re
 import numpy as np
+import pytest
+
+@pytest.fixture(scope="module")
+def notebook_path():
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.ipynb")
+   
+    return notebook
 
 from _cntk_py import force_deterministic_algorithms
 
 force_deterministic_algorithms()
-abs_path = os.path.dirname(os.path.abspath(__file__))
-notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.ipynb")
 
 notebook_timeoutSeconds = 900
 # Runs on GPU only for speed
