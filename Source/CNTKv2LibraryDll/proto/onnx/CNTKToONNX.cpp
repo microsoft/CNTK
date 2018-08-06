@@ -2560,12 +2560,13 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         }
         else
         {
-            if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4)
-                && input.Shape().Rank() == 2)
-                // this is a workaround for brainscript models that have rank = 2 for BN inputs.
-                inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
-            else
-                inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
+            inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
+
+            // In case of BatchNormalization, if data (input[0]) is of type FP16, then all BN stats(inputs[1:4])
+            // need to be converted from FP32 to FP16 prior to getting exported to ONNX.
+            if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4) && src->Inputs()[0].GetDataType() == DataType::Float16)
+                input = Utils::ConvertVariableType<float, float16>(input, true);
+
             if (input.IsInput() && input.HasSequenceAxis())
                 (*inputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim())[0].set_dim_param(FreeSequenceDimParam);
         }
@@ -4027,11 +4028,11 @@ void CNTKToONNXHelper::ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
         inputArgType = ToTypeProto(input.Shape(), false, false, true); // Explicitly turning off batch and sequence axis.
         if (input.IsInput() && input.HasSequenceAxis())
             (*inputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim())[0].set_dim_param(FreeSequenceDimParam);
-        // TODO: Commented code below is a workaround for BN. Is is still needed?
-        //if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4)
-        //    && input.Shape().Rank() == 2)
-        //    // this is a workaround for brainscript models that have rank = 2 for BN inputs.
-        //    inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
+
+        // In case of BatchNormalization, if data (input[0]) is of type FP16, then all BN stats(inputs[1:4])
+        // need to be converted from FP32 to FP16 prior to getting exported to ONNX.
+        if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4) && src->Inputs()[0].GetDataType() == DataType::Float16)
+            input = Utils::ConvertVariableType<float, float16>(input, true);
 
         if (OpNeedONNXTypeMap(cntkOpName))
         {
