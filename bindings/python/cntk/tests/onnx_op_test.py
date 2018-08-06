@@ -54,7 +54,7 @@ def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
         loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
     return loaded_model
 
-def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
+def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
     opname = model.owner.op_name
@@ -82,7 +82,7 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
     if (type(o1) is list):
         o1 = o1[0]
 
-    assert np.allclose(o0, o1)
+    assert np.allclose(o0, o1, rtol, atol)
     return loaded_model
 
 def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None):
@@ -304,11 +304,11 @@ def test_AveragePool(tmpdir, dtype, device_id):
 #BatchNormalization
 def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        scale        = C.Parameter(init=init_scale, dtype=dtype)
-        bias         = C.Parameter(init=init_bias, dtype=dtype)
-        run_mean     = C.ops.constant(mean, shape=mean.shape, dtype=dtype)
-        run_variance = C.ops.constant(var,  shape=var.shape, dtype=dtype)
-        run_count    = C.ops.constant(0,               dtype=dtype)
+        scale        = C.Parameter(init=init_scale, dtype=np.float32)
+        bias         = C.Parameter(init=init_bias, dtype=np.float32)
+        run_mean     = C.ops.constant(mean, shape=mean.shape, dtype=np.float32)
+        run_variance = C.ops.constant(var,  shape=var.shape, dtype=np.float32)
+        run_count    = C.ops.constant(0,               dtype=np.float32)
 
         a = C.input_variable(shape=x.shape[1:], dtype=dtype, needs_gradient=False, name='a')
 
@@ -317,14 +317,15 @@ def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dty
 
         loaded_model = None
         for i in range(len(x)):
-            loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization', loaded_model=loaded_model)
+            if dtype==np.float16:
+                loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization', loaded_model=loaded_model, rtol = 1e-03, atol = 1e-03)
+            else:
+                loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization', loaded_model=loaded_model)
+
 
 # Case 1 - Non-Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_BatchNormalization(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
-
     sample = [  # 5 samples having 4 classes
             [1, 1, 2, 3],
             [0, 0, 0, 0],
@@ -332,11 +333,12 @@ def test_BatchNormalization(tmpdir, dtype):
             [1000, 1000, 1000, 1000],
             [10000, 10000, 10000, 10000]]
 
-    x = np.asarray(sample, dtype=dtype).reshape(-1,1)
-    scale = np.asarray([3])
-    bias = np.asarray([4])
-    mean = np.asarray([1])
-    var = np.asarray([2])
+    np.random.seed(1)
+    x = np.array(sample).reshape(-1,1).astype(dtype)
+    scale = np.array([3]).astype(np.float32)
+    bias = np.array([4]).astype(np.float32)
+    mean = np.array([1]).astype(np.float32)
+    var = np.array([2]).astype(np.float32)
     epsilon = 0.00001
 
     verify_BN(x, scale, bias, mean, var, epsilon, False, tmpdir, dtype)
@@ -344,10 +346,7 @@ def test_BatchNormalization(tmpdir, dtype):
 # Case 2 - Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SpatialBatchNormalization(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
-
-    x = np.random.randn(2, 3, 4, 5).astype(np.float32)
+    x = np.random.randn(2, 3, 4, 5).astype(dtype)
     scale = np.random.randn(3).astype(np.float32)
     bias = np.random.randn(3).astype(np.float32)
     mean = np.random.randn(3).astype(np.float32)
