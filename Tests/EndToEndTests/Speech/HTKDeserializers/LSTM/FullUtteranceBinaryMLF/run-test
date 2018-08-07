@@ -1,0 +1,8 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/../../../HTKDeserializers/LSTM/FullUtteranceBinaryMLF
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+cntkrun cntk.cntk 'Truncated=false speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]] shareNodeValueMatrices=true' || exit $?

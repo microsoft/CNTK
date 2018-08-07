@@ -1,0 +1,165 @@
+# end-to-end test for recurrent LSTM for speech
+
+precision = "float"
+deviceId = $DeviceId$
+
+command = speechTrain
+
+# Note: These options are overridden from the command line in some test cases.
+frameMode = false
+truncated = true
+parallelTrain = false
+
+speechTrain = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntkSpeech.dnn"
+    #deviceId = $DeviceId$
+    traceLevel = 1
+    
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 20
+        learningRatesPerMB = 0.5
+        numMBsToShowResult = 10
+        momentumPerMB = 0:0.9
+        maxEpochs = 4
+        keepCheckPointFiles = true       
+    ]
+
+    reader = [
+        verbosity = 0
+        randomize = true
+
+        # A list of deserializers to use.
+        deserializers = (
+            [   
+                type = "HTKFeatureDeserializer"
+                module = "HTKDeserializers"
+
+                # Description of input streams
+                input = [
+                    # Description of a particular input stream
+                    features = [
+                        dim = 363
+                        scpFile = "$DataDir$/glob_0000.scp"
+                    ]
+                ]
+            ]:
+            [
+                type = "HTKMLFBinaryDeserializer"
+                module = "HTKDeserializers"
+                chunkSizeInBytes = 36
+                input = [
+                    labels = [
+                        mlfFile = "$DataDir$/mlf2.bin"
+                        dim = 132
+                    ]
+                ]
+            ]
+        )
+    ]
+
+    # TODO share this section ../../../LSTM/cntk.cntk
+    # define network using BrainScript
+    BrainScriptNetworkBuilder = [
+
+        useSelfStabilization = true
+
+        // define basic I/O
+        baseFeatDim = 33
+        featDim = 11 * baseFeatDim
+        labelDim = 132
+
+        // hidden dimensions
+        innerCellDim  = 1024
+        hiddenDim     = 256
+        numLSTMLayers = 3        // number of hidden LSTM model layers
+
+        // features
+        features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed
+        realFeatures = Transpose (features)             //       and swapping them back to (featDim:1), for testing Transpose()
+        labels   = Input(labelDim, tag='label')
+        feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, realFeatures);
+
+        featNorm = MeanVarNorm(feashift)
+
+        // we define the LSTM locally for now, since the one in CNTK.core.bs has a slightly changed configuration that breaks this test
+        Stabilize (x, enabled=true) =
+            if enabled
+            then [
+                beta = Exp (BS.Parameters.BiasParam ((1))) # init value is 0
+                result = beta .* x
+            ].result
+            else x
+
+        LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
+        [
+            _privateInnards = [       // encapsulate the inner workings
+                dh = prevState.h // previous values
+                dc = prevState.c
+
+                // parameter macros--these carry their own weight matrices
+                B() = BS.Parameters.BiasParam (cellDim)
+
+                W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+                H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+                C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+
+                // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
+                it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
+                bit = it .* Tanh (W(x) + (H(dh) + B()))            // applied to tanh of input network
+
+                ft = Sigmoid (W(x) + B() + H(dh) + C(dc))          // forget-me-not gate(t)
+                bft = ft .* dc                                     // applied to cell(t-1)
+
+                ct = bft + bit                                     // c(t) is sum of both
+
+                ot = Sigmoid (W(x) + B() + H(dh) + C(ct))          // output gate(t)
+                ht = ot .* Tanh (ct)                               // applied to tanh(cell(t))
+            ]
+
+            # our return values
+            c = _privateInnards.ct          // cell value
+            h = if outputDim != cellDim     // output/hidden state
+                then [                      // project
+                    Wmr = BS.Parameters.WeightParam (outputDim, cellDim);
+                    htp = Wmr * Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
+                ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
+                else _privateInnards.ht     // no projection
+            dim = outputDim
+        ]
+
+        RecurrentLSTMP (outputDim, cellDim=outputDim.dim, x, inputDim=x.dim, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
+        [
+            prevState = previousHook (lstmState)
+            inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization
+            lstmState = LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
+        ].lstmState // we return the state record (h,c)
+
+        // define the stack of hidden LSTM layers  --TODO: change to RecurrentLSTMPStack(), change stabilizer config
+        S(x) = Stabilize (x, enabled=useSelfStabilization)
+        LSTMoutput[k:1..numLSTMLayers] =
+            if k == 1
+            then /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
+            else /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
+
+        // and add a softmax layer on top
+        W = BS.Parameters.WeightParam (labelDim, hiddenDim)
+        B = BS.Parameters.BiasParam   (labelDim)
+
+        z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
+
+        // training
+        # this shows how both CE and frame error rate can be constructed as BS expressions
+        # BUGBUG: The per-sample criterion will trigger a bug fix in momentum computation
+        # which leads to a slightly better objective value than the baseline.
+        # For now, we will use SumElements() to neutralize this. Once we have a chance to update
+        # the baselines, we should remove SumElements() below.
+        ce  = /*Pass*/ SumElements (ReduceLogSum (z) - TransposeTimes (labels,          z),  tag='criterion')  // manually-defined per-sample objective
+        err = /*Pass*/ SumElements (BS.Constants.One - TransposeTimes (labels, Hardmax (z)), tag='evaluation') // also track frame errors
+
+        // decoding
+        logPrior = LogPrior(labels)	 
+        ScaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
+    ]
+]
