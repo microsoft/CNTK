@@ -450,6 +450,6 @@ def fmeasure(output, target, beta=1):
         axis = None
 
     correct_predictions = C.reduce_sum(output * target, axis=axis)
-    precision = correct_predictions / C.reduce_sum(target, axis=axis)
-    recall = correct_predictions / C.reduce_sum(output, axis=axis)
+    precision = correct_predictions / C.reduce_sum(output, axis=axis)
+    recall = correct_predictions / C.reduce_sum(target, axis=axis)
     return 1 - (1 + beta ** 2) * precision * recall / (beta ** 2 * precision + recall)
