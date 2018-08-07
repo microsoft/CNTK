@@ -266,7 +266,7 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
     bool containsEndOfSweepSequence = false;
     auto& slot = m_sequenceBufferPerStream[streamIndex]->m_slots[slotIndex];
 
-    // Let's see how much samples we need to read.
+    // Let's see how many samples we need to read.
     size_t numberOfSamples = min(m_config.m_truncationSize, slot.AvailableNumberOfSamples());
     if (numberOfSamples == 0)
     {
@@ -294,9 +294,12 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
         -(int)slot.m_sampleCursor,
         slot.FrontSequence()->m_numberOfSamples - slot.m_sampleCursor);
 
+    // Latency-controlled BLSTM variables
     size_t nc = m_config.m_truncationSize - m_config.m_rightSplice;
     size_t padding = 0;
-    bool cross_boundary = false;
+    // Whether the sequence is split due to minibatch limitation
+    // Those are currently skipped during LC-BLSTM training
+    bool crossBoundary = false;
 
     // Ok, now fill in the buffer with data.
     for (size_t currentTimestep = 0; currentTimestep < numberOfSamples; ++currentTimestep)
@@ -315,7 +318,7 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
                 slotIndex,
                 currentTimestep,
                 currentTimestep + slot.FrontSequence()->m_numberOfSamples);
-            cross_boundary = true;
+            crossBoundary = true;
         }
 
         // Fill in the data from the first sequence in the slot.
@@ -353,7 +356,7 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
     // For latency control BLSTM LC-BLSTM
     if (m_config.m_rightSplice > 0)
     {
-        if (!cross_boundary && numberOfSamples >= m_config.m_truncationSize)
+        if (!crossBoundary && numberOfSamples >= m_config.m_truncationSize)
         {
             slot.m_sampleCursor -= m_config.m_rightSplice;
             slot.m_sampleOffset -= padding;

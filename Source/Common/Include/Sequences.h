@@ -975,11 +975,6 @@ inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE device
                     }
                 }
             }
-            //if (t >= nT - m_rightSplice)
-            //{
-            //    for (size_t s = 0; s < nS; s++)
-            //        columnsValidityMask[(t * nS) + s] = 0;
-            //}
         }
         assert(gapsFound == m_numGapFrames); // sanity check
 
