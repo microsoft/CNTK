@@ -426,9 +426,10 @@ def fmeasure(output, target, beta=1):
     This operation computes the f-measure between the output and target. If beta is set as one,
     its called the f1-scorce or dice similarity coefficient. f1-scorce is monotonic in jaccard distance.
 
-    f-measure = (1 + bta ** 2) * precision * recall / (beta ** 2 * precision + recall)
+    f-measure = (1 + beta ** 2) * precision * recall / (beta ** 2 * precision + recall)
 
-    This loss function is frequently used in semantic segmentation of images. Works with imbalanced classes too.
+    This loss function is frequently used in semantic segmentation of images. Works with imbalanced classes, for
+    balanced classes you should prefer cross_entropy instead.
     This operation works with both binary and multiclass classification.
 
     Args:
