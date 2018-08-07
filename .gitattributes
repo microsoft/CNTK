@@ -161,5 +161,6 @@ Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_conv
 Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.a binary
 Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.lib binary
 external/gsl text
+Source/CNTKv2LibraryDll/proto/onnx/onnx_repo text
 #certificates
 *.pfx binary
