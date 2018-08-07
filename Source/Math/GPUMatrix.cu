@@ -4812,7 +4812,8 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemory(const GPUMatrix<ElemType>& in,   
                                                GPUMatrix<ElemType>& out)
 {
     if (in.GetNumRows() != l_filter.GetNumRows() || in.GetNumRows() != r_filter.GetNumRows() ||
-        in.GetNumCols() != flags.GetNumCols() || l_filter.GetNumCols() != l_order || r_filter.GetNumCols() != r_order)
+        // in.GetNumCols() != flags.GetNumCols() || l_filter.GetNumCols() != l_order || r_filter.GetNumCols() != r_order)
+        l_filter.GetNumCols() != l_order || r_filter.GetNumCols() != r_order)
     {
         LogicError("[ComputeBiVfsmnMemory] dim mismatch");
     }
@@ -4841,7 +4842,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemoryGradient(
 {
     if (gradientValues.GetNumRows() != l_filter.GetNumRows()
         || gradientValues.GetNumRows() != r_filter.GetNumRows()
-        || gradientValues.GetNumCols() != flags.GetNumCols()
+        // || gradientValues.GetNumCols() != flags.GetNumCols()
         || l_filter.GetNumCols() != l_order
         || r_filter.GetNumCols() != r_order)
     {
