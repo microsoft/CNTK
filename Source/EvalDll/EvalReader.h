@@ -77,6 +77,7 @@ public:
     {
         m_rightSplice = config(L"rightSplice", (size_t) 0);
     }
+
     virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
     {
     }

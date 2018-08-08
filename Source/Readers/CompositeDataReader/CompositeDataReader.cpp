@@ -85,8 +85,8 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     }
 
     m_rightSplice = config(L"rightSplice", 0);
-    if (m_rightSplice >= m_truncationLength)
-        InvalidArgument("rightSplice should be less than truncation length");
+    if (m_rightSplice > m_truncationLength)
+        InvalidArgument("rightSplice should not be greater than truncation length");
 
     m_precision = config("precision", "float");
 
