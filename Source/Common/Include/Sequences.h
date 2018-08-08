@@ -201,7 +201,7 @@ public:
 
     void Init(size_t numParallelSequences, size_t numTimeSteps, size_t rightSplice)
     {
-        Init(numParallelSequences, numTimeSteps, true);
+        Init(numParallelSequences, numTimeSteps);
         m_rightSplice = rightSplice;
         if (numTimeSteps < rightSplice)
             m_rightSplice = 0;
