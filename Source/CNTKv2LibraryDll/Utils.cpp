@@ -937,7 +937,7 @@ namespace CNTK
             shape = shapeDims;
         }
 
-        NDArrayViewPtr dstFinal(MakeSharedObject<NDArrayView>(AsDataType<DstType>(), shape, &dstData[0],
+        NDArrayViewPtr dstFinal(new NDArrayView(AsDataType<DstType>(), shape, &dstData[0],
             totalSize * sizeof(DstType), DeviceDescriptor::CPUDevice()));
 
         const DeviceDescriptor& computeDevice = stat.GetValue()->Device();
@@ -948,7 +948,7 @@ namespace CNTK
         }
         else
         {
-            NDArrayViewPtr dstFinalGPU(MakeSharedObject<NDArrayView>(AsDataType<DstType>(), StorageFormat::Dense, shape, computeDevice));
+            NDArrayViewPtr dstFinalGPU(new NDArrayView(AsDataType<DstType>(), StorageFormat::Dense, shape, computeDevice));
             dstFinalGPU->CopyFrom(*dstFinal);
             Constant constantVariable(dstFinalGPU);
             return constantVariable;
