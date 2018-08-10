@@ -918,7 +918,8 @@ namespace CNTK
     template <typename SrcType, typename DstType>
     Variable Utils::ConvertVariableType(const Variable& stat, bool reverseShape)
     {
-        auto const& srcData = stat.GetValue()->DeepClone(DeviceDescriptor::CPUDevice(), true)->DataBuffer<SrcType>();
+		auto value_cpu = stat.GetValue()->DeepClone(DeviceDescriptor::CPUDevice(), true);
+		auto srcData = value_cpu->DataBuffer<SrcType>();
         size_t totalSize = stat.Shape().TotalSize();
 
         //TODO: Consider using a vector/unique_ptr here to avoid potential memory leaks
