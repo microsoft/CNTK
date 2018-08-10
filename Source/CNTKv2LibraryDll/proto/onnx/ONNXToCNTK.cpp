@@ -2388,16 +2388,39 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
                 input.Shape()[input.Shape().Rank() - 1] == NDShape::FreeDimension &&
                 input.Shape()[input.Shape().Rank() - 2] == NDShape::FreeDimension; };
 
+        auto HasFreeDimensionAt0Axes = [](Variable input) {
+            return input.Shape().Rank() >= 1 &&
+                input.Shape()[input.Shape().Rank() - 1] == NDShape::FreeDimension; };
+
         bool input0HasBatchAndSequenceAxes = HasBatchAndSequenceAxes(inputs[0]);
         bool input1HasBatchAndSequenceAxes = HasBatchAndSequenceAxes(inputs[1]);
-        if (input0HasBatchAndSequenceAxes)
-            input0 = ToBatchAndSequence(inputs[0]);
-        if (input1HasBatchAndSequenceAxes)
-            input1 = ToBatchAndSequence(inputs[1]);
-        FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+        bool input0HasFreeDimensionAt0Axes = HasFreeDimensionAt0Axes(inputs[0]);
+        bool input1HasFreeDimensionAt0Axes = HasFreeDimensionAt0Axes(inputs[1]);
         if (input0HasBatchAndSequenceAxes || input1HasBatchAndSequenceAxes)
+        {
+            if (input0HasBatchAndSequenceAxes)
+                input0 = ToBatchAndSequence(inputs[0]);
+            if (input1HasBatchAndSequenceAxes)
+                input1 = ToBatchAndSequence(inputs[1]);
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
             cntkFunction = UnpackBatchAndSequence(cntkFunction);
-        return cntkFunction;
+            return cntkFunction;
+        }
+        else if (input0HasFreeDimensionAt0Axes || input1HasFreeDimensionAt0Axes)
+        {
+            if (input0HasFreeDimensionAt0Axes)
+                input0 = ToBatch(inputs[0], L"");
+            if (input1HasFreeDimensionAt0Axes)
+                input1 = ToBatch(inputs[1], L"");
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+            cntkFunction = UnpackBatch(cntkFunction, L"");
+            return cntkFunction;
+        }
+        else
+        {
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+            return cntkFunction;
+        }
     }
     else if (onnxOpName == "PRelu")
     {
