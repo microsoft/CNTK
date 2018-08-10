@@ -154,13 +154,13 @@ void TrainMNISTSeqClassifier(const DeviceDescriptor& device)
     auto labelsVar = InputVariable({numOutputClasses}, AsDataType<float>(), L"labels");
 
     auto convParam = Parameter({filterDim, filterDim, numInputChannels, filterCount}, AsDataType<float>(), GlorotUniformInitializer(), device);
-    auto convFunc = Convolution(convParam, packedInput, {convStrides, convStrides, numInputChannels}, {true}, {true}, {1}, 1, 1, 0, true);
+    auto convFunc = Convolution(convParam, packedInput, {convStrides, convStrides, numInputChannels}, {true}, {true, true, false}, {1}, 1, 1, 0, true);
 
     auto convb = Parameter({1, filterCount}, AsDataType<float>(), GlorotUniformInitializer(), device);
     auto relu = LeakyReLU(Plus(convFunc, convb), 0.01);
 
     auto convParam2 = Parameter({filterDim, filterDim, filterCount, filterCount2}, AsDataType<float>(), GlorotUniformInitializer(), device);
-    auto convFunc2 = Convolution(convParam2, relu, {convStrides, convStrides, filterCount}, {true}, {true}, { 1 }, 1, 1, 0, true);
+    auto convFunc2 = Convolution(convParam2, relu, {convStrides, convStrides, filterCount}, {true}, {true, true, false}, { 1 }, 1, 1, 0, true);
 
     auto convb2 = Parameter({1, filterCount2}, AsDataType<float>(), GlorotUniformInitializer(), device);
     auto relu2 = LeakyReLU(Plus(convFunc2, convb2), 0.01);
