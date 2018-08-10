@@ -25,7 +25,7 @@ set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMax
 # of whether the input has batch axis or not.
 # Basically, for these ops we don't prepend 1 to the output shape
 # when the input has batch axis.
-set_of_batch_irrelevant_ops = {'Flatten', 'Reshape'}
+set_of_batch_irrelevant_ops = {'Flatten'}
 
 #############
 #helpers

@@ -2604,6 +2604,10 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                     newShapeVec.push_back(static_cast<int>(axisSize));
             }
 
+            // If output has batch axis, then create an output shape (which goes in as input to the
+            // ONNX node) with an additional axis for batch axis (1). 
+            if (src->Output().HasBatchAxis())
+                newShapeVec.push_back(1u);
             std::reverse(newShapeVec.begin(), newShapeVec.end());
             onnx::TypeProto shapeInputArgType = ToTypeProto(std::vector<int>({ (int)newShapeVec.size() }));
             shapeInputArgType.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
@@ -3207,6 +3211,10 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             {
                 std::vector<Axis> reductionAxes;
                 reductionAxes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
+                // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
+                // For ONNX export we need to make sure we export keepdims as 0 (false). 
+                if (reductionAxes.size() == 1 && (reductionAxes[0] == Axis::DefaultBatchAxis()))
+                    keepReducedDimensions = 0;
                 std::vector<int64_t> axes = ConvertAxesToOnnx(reductionAxes, src->Inputs()[0]);
                 node->AddAttribute("axes", axes);
             }
@@ -3214,6 +3222,10 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             {
                 // py axis -> cpp (-axis -1) -> normalize (rank + axis)
                 Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
+                // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
+                // For ONNX export we need to make sure we export keepdims as 0 (false). 
+                if (axis == Axis::DefaultBatchAxis())
+                    keepReducedDimensions = 0;
                 int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
 
                 node->AddAttribute("axis", ax);
