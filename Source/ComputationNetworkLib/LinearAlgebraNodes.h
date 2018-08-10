@@ -22,6 +22,7 @@
 #include <set>
 #include "Quantizers.h"
 #include "InputAndParamNodes.h"
+#include <iostream>
 
 namespace Microsoft
 {
@@ -61,7 +62,7 @@ class BiVfsmnNode : public ComputationNode<ElemType>, public NumInputs<3>
 public:
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name),
-          m_flags(1, 32768 + 8192, deviceId)
+          m_flags(make_shared<Matrix<ElemType>>(deviceId))
     {
     }
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride)
@@ -70,13 +71,76 @@ public:
           m_rOrder(rOrder),
           m_lStride(lStride),
           m_rStride(rStride),
-          m_flags(1, 32768 + 8192, deviceId)
+          m_flags(make_shared<Matrix<ElemType>>(deviceId))
     {
     }
     BiVfsmnNode(const ScriptableObjects::IConfigRecordPtr configp)
         : BiVfsmnNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"lOrder"), configp->Get(L"rOrder"), configp->Get(L"lStride"), configp->Get(L"rStride"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_flags, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_flags, matrixPool);
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        Base::UpdateFunctionMBSize();
+
+        m_flags->Resize(1, InputRef(0).Value().GetNumCols());
+    }
+
+    virtual void BeginForwardProp() override
+    {
+        Base::BeginForwardProp();
+
+        // CPU-side m_flags
+        std::vector<ElemType> flags(InputRef(0).Value().GetNumCols());
+
+        // BEGIN construct flag
+        auto pMBLayout = InputRef(0).GetMBLayout();
+        auto sequences = pMBLayout->GetAllSequences();
+        size_t seqMaxLen = pMBLayout->GetNumTimeSteps();
+        size_t paraNum = pMBLayout->GetNumParallelSequences();
+        size_t nFrames = InputRef(0).Value().GetNumCols();
+
+        size_t count = 0;
+        for (size_t i = 0; i < sequences.size(); ++i)
+        {
+            let& sequence = sequences[i];
+            ElemType id = 0; // GAP_SEQUENCE_ID, for padding frames
+            if (sequence.seqId != GAP_SEQUENCE_ID)
+            {
+                id = (ElemType)(sequence.seqId + 1);
+            }
+            size_t slot = sequence.s;
+            size_t begin = sequence.tBegin >= 0 ? sequence.tBegin : 0;
+            size_t end = sequence.tEnd <= seqMaxLen ? sequence.tEnd : seqMaxLen;
+            for (size_t j = begin; j < end; ++j)
+            {
+                flags[j * paraNum + slot] = id;
+                ++count;
+            }
+        }
+        // double-check
+        if (count != nFrames)
+        {
+            LogicError("[BiVfsmnNode] not construct full flag matrix.");
+        }
+        // END construct flag
+
+        // move to GPU
+        m_flags->SetValue(1, flags.size(), m_deviceId, flags.data(), matrixFlagNormal);
+        // PrintMatrix(m_flags);
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
@@ -102,48 +166,6 @@ public:
         // std::cout << in0MBLayout->GetNumTimeSteps() << " " << in0MBLayout->GetNumParallelSequences() << std::endl;
         // END DEBUG
 
-        // BEGIN construct flag matrix
-        // TODO: make this a private method? because backprop also need to use m_flags
-        auto hidMBLayout = InputRef(0).GetMBLayout();
-        auto hidSequences = hidMBLayout->GetAllSequences();
-        size_t hidMaxLen = hidMBLayout->GetNumTimeSteps();
-        size_t paraNum = hidMBLayout->GetNumParallelSequences();
-        size_t nFrames = InputRef(0).Value().GetNumCols();
-        if (hidMaxLen * paraNum != nFrames)
-        {
-            LogicError("[BiVfsmnNode] construct flag matrix related error.");
-        }
-        // m_flags.Resize(1, nFrames);
-        size_t count = 0;
-
-        int curDevId = m_flags.GetDeviceId();
-        m_flags.TransferFromDeviceToDevice(curDevId, CPUDEVICE, false, false, false);
-        for (size_t i = 0; i < hidSequences.size(); ++i)
-        {
-            let& hidSeq = hidSequences[i];
-            ElemType id = 0; // GAP_SEQUENCE_ID, for padding frames
-            if (hidSeq.seqId != GAP_SEQUENCE_ID)
-            {
-                id = (ElemType)(hidSeq.seqId + 1);
-            }
-            size_t slot = hidSeq.s;
-            size_t begin = hidSeq.tBegin >= 0 ? hidSeq.tBegin : 0;
-            size_t end = hidSeq.tEnd <= hidMaxLen ? hidSeq.tEnd : hidMaxLen;
-            for (size_t j = begin; j < end; ++j)
-            {
-                // m_flags(0, slot * hidMaxLen + j) = id;
-                m_flags(0, j * paraNum + slot) = id;
-                ++count;
-            }
-        }
-        m_flags.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
-        if (count != nFrames)
-        {
-            LogicError("[BiVfsmnNode] not construct full flag matrix.");
-        }
-        // PrintMatrix(m_flags);
-        // END construct flag matrix
-
         // Get Matrix (can not do this because copy constructor is deleted)
         // leave them as comment
         // auto memory  = Value();
@@ -152,9 +174,9 @@ public:
         // auto ffilter = Input(2)->Value();
 
         // forward computation
-        m_flagStride = paraNum;
+        m_flagStride = InputRef(0).GetMBLayout()->GetNumParallelSequences();
         Matrix<ElemType>::ComputeBiVfsmnMemory(Input(0)->Value(), Input(1)->Value(), Input(2)->Value(),
-                                               m_flags, m_flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                                               *m_flags, m_flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
                                                Value());
     }
 
@@ -171,21 +193,21 @@ public:
         {
             Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
                 Gradient(), Input(1)->Value(), Input(2)->Value(),
-                m_flags, m_flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                *m_flags, m_flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
                 Input(0)->Gradient());
         }
         else if (inputIndex == 1)
         {
             Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
                 Gradient(), Input(0)->Value(),
-                m_flags, m_flagStride, m_lOrder, m_lStride,
+                *m_flags, m_flagStride, m_lOrder, m_lStride,
                 Input(1)->Gradient());
         }
         else if (inputIndex == 2)
         {
             Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
                 Gradient(), Input(0)->Value(),
-                m_flags, m_flagStride, m_rOrder, m_rStride,
+                *m_flags, m_flagStride, m_rOrder, m_rStride,
                 Input(2)->Gradient());
         }
         else
@@ -227,6 +249,8 @@ public:
         {
             auto node = dynamic_pointer_cast<BiVfsmnNode<ElemType>>(nodeP);
             assert(node != nullptr);
+            node->m_flags = m_flags;
+            node->m_flagStride = m_flagStride;
             node->m_lOrder = m_lOrder;
             node->m_rOrder = m_rOrder;
             node->m_lStride = m_lStride;
@@ -236,14 +260,8 @@ public:
 
     // TODO: should return true?
     // virtual bool ImplementsGradientOverwriteOptimization() const override { return false; }
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return true;
-    }
+    // virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    // virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
 
     size_t LOrder() const
     {
@@ -263,85 +281,72 @@ public:
     }
 
 protected:
-    Matrix<ElemType> m_flags; // use Matrix<size_t>?
+    shared_ptr<Matrix<ElemType>> m_flags;
     size_t m_flagStride;
     size_t m_lOrder;
     size_t m_rOrder;
     size_t m_lStride;
     size_t m_rStride;
 };
-
-template class BiVfsmnNode<float>;
-template class BiVfsmnNode<double>;
-
-// -----------------------------------------------------------------------
-// PlusNode (summand1, summand2)
-// -----------------------------------------------------------------------
-
-template <class ElemType>
-class PlusNode : public BinaryElementWiseNode<ElemType>
+UsingBinaryElementwiseNodeBaseMembers;
 {
-    typedef BinaryElementWiseNode<ElemType> Base;
-    UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName()
-    {
-        return L"Plus";
-    }
+    return L"Plus";
+}
 
 public:
-    DeclareConstructorFromConfigWithNumInputs(PlusNode);
-    PlusNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+DeclareConstructorFromConfigWithNumInputs(PlusNode);
+PlusNode(DEVICEID_TYPE deviceId, const wstring& name)
+    : Base(deviceId, name)
+{
+}
+
+virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+{
+    size_t rank = DetermineElementwiseTensorRank();
+    auto result = ValueTensorFor(rank, fr);
+    auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+    auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
+    result.AssignSumOf(input0, input1);
+}
+
+virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+{
+    size_t rank = DetermineElementwiseTensorRank();
+    auto gradient = GradientTensorFor(rank, fr);
+    auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+
+    // if reduction then mask the respective input(s) (zero out the gaps)
+    if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+        MaskMissingGradientColumnsToZero(fr);
+
+    if (Input(inputIndex)->IsGradientOptimized(this))
     {
-    }
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-    {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
-        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
-        result.AssignSumOf(input0, input1);
-    }
-
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-    {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
-        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
-
-        // if reduction then mask the respective input(s) (zero out the gaps)
-        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
-            MaskMissingGradientColumnsToZero(fr);
-
-        if (Input(inputIndex)->IsGradientOptimized(this))
+        if (Input(inputIndex)->ParentGradientReused())
         {
-            if (Input(inputIndex)->ParentGradientReused())
-            {
-                if (inputGradient.GetSOBPtr() != gradient.GetSOBPtr())
-                    LogicError("Gradients should be reused.");
-            }
-            else
-                inputGradient.AssignCopyOf(gradient);
+            if (inputGradient.GetSOBPtr() != gradient.GetSOBPtr())
+                LogicError("Gradients should be reused.");
         }
         else
-            inputGradient.AddCopyOf(gradient);
+            inputGradient.AssignCopyOf(gradient);
     }
+    else
+        inputGradient.AddCopyOf(gradient);
+}
 
-    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+{
+    size_t i;
+    for (i = 0; i < GetNumInputs(); i++)
     {
-        size_t i;
-        for (i = 0; i < GetNumInputs(); i++)
-        {
-            if (Input(i).get() == input)
-                break;
-        }
-        if (i == GetNumInputs())
-            LogicError("Cannot find input.");
-
-        return this->InputMatchesOutput(i) ? ParentGradientOptimization::Reuse : ParentGradientOptimization::Overwrite;
+        if (Input(i).get() == input)
+            break;
     }
-};
+    if (i == GetNumInputs())
+        LogicError("Cannot find input.");
+
+    return this->InputMatchesOutput(i) ? ParentGradientOptimization::Reuse : ParentGradientOptimization::Overwrite;
+}
+}; // namespace CNTK
 
 template class PlusNode<float>;
 template class PlusNode<double>;
@@ -2387,6 +2392,6 @@ template class CastNode<float, half>;
 template class CastNode<float, double>;
 template class CastNode<double, half>;
 template class CastNode<double, float>;
-} // namespace CNTK
 } // namespace MSR
+} // namespace Microsoft
 } // namespace Microsoft
