@@ -916,11 +916,12 @@ namespace CNTK
     }
 
     template <typename SrcType, typename DstType>
-    Variable Utils::ConvertVariableType(const Variable& stat, bool reverseShape)
+    Variable Utils::ConvertVariableType(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice)
     {
-		auto value_cpu = stat.GetValue()->DeepClone(DeviceDescriptor::CPUDevice(), true);
-		auto srcData = value_cpu->DataBuffer<SrcType>();
-        size_t totalSize = stat.Shape().TotalSize();
+        auto value_cpu = stat.GetValue()->DeepClone(computeDevice.CPUDevice(), true);
+        auto srcData = value_cpu->DataBuffer<SrcType>();
+
+        auto totalSize = stat.Shape().TotalSize();
 
         //TODO: Consider using a vector/unique_ptr here to avoid potential memory leaks
         DstType *dstData = new DstType[totalSize];
@@ -939,9 +940,8 @@ namespace CNTK
         }
 
         NDArrayViewPtr dstFinal(new NDArrayView(AsDataType<DstType>(), shape, &dstData[0],
-            totalSize * sizeof(DstType), DeviceDescriptor::CPUDevice()));
+            totalSize * sizeof(DstType), computeDevice.CPUDevice()));
 
-        const DeviceDescriptor& computeDevice = stat.GetValue()->Device();
         if (computeDevice.Type() == DeviceKind::CPU)
         {
             Constant constantVariable(dstFinal);
@@ -956,8 +956,8 @@ namespace CNTK
         }
     }
 
-    template Variable Utils::ConvertVariableType<float, float16>(const Variable& stat, bool reverseShape);
-    template Variable Utils::ConvertVariableType<float16, float>(const Variable& stat, bool reverseShape);
+    template Variable Utils::ConvertVariableType<float, float16>(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice);
+    template Variable Utils::ConvertVariableType<float16, float>(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice);
 
     std::vector<Axis> GetSqueezableAxes(const NDShape& inputShape)
     {

@@ -706,7 +706,7 @@ namespace CNTK
         static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
         
         template <typename SrcType, typename DstType>
-        static Variable ConvertVariableType(const Variable& stat, bool reverseShape = false);
+        static Variable ConvertVariableType(const Variable& stat, bool reverseShape = false, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
     };
 
     template <typename Container>
