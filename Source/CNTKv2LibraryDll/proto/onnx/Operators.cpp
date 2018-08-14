@@ -546,6 +546,7 @@ namespace ONNX
             { L"LocalResponseNormalization" },
             { L"MeanVarianceNormalization" },
             { L"BatchNormalization" },
+            { L"ImageScaler" },
         };
 
         std::set<std::string> Operators::_onnxSimpleBatchAxisOps = { // List of all ONNX ops that are simple (single input, output) and have batch axis.
@@ -557,6 +558,7 @@ namespace ONNX
             { "SpaceToDepth" },
             { "LRN" },
             { "MeanVarianceNormalization" },
+            { "ImageScaler" },
         };
 
     }

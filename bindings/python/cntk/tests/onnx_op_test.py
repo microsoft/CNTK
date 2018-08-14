@@ -19,7 +19,7 @@ DIM_SIZE_FOR_NON_BATCH_OPS = 1
 # When adding a test for a new op, please check to see if 
 # that op needs to be added to this list (i.e. does that op 
 # get exported to an ONNX op with defined batch axis).
-set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization'}
+set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization', 'ImageScaler'}
 
 # List of CNTK ops for which output shape doesn't change regardless
 # of whether the input has batch axis or not.
@@ -31,19 +31,32 @@ set_of_batch_irrelevant_ops = {'Flatten'}
 #helpers
 #############
 def verify_no_input(model, tmpdir, name):
-    filename = os.path.join(str(tmpdir), name + R'.onnx')
-    model.save(filename, format=C.ModelFormat.ONNX)
+    opname = model.owner.op_name
 
-    loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    loaded_model = None
+    loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
-    filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
-    loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
+    model_shape = model.shape
+    dim_denotation = None
+    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),) and opname not in set_of_batch_ops:
+        dim_denotation = DIM_SIZE_FOR_NON_BATCH_OPS
+    elif opname in set_of_batch_ops:
+        dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION
+    if not dim_denotation is None and opname not in set_of_batch_irrelevant_ops:
+        model_shape = (dim_denotation, ) + model_shape
 
-    assert model.shape == loaded_model.shape
+    assert model_shape == loaded_model.shape
 
-    o = model.eval()
-    o_ = loaded_model.eval()
-    assert np.allclose(o_, o)
+    o0 = model.eval()
+    o1 = loaded_model.eval()
+
+    if (type(o0) is list):
+        o0 = o0[0]
+    if (type(o1) is list):
+        o1 = o1[0]
+
+    assert np.allclose(o0, o1)
+    return loaded_model
 
 def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
     if not loaded_model:
@@ -711,7 +724,6 @@ def test_HardSigmiod(tmpdir, dtype):
 #ImageScaler
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ImageScaler(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         input_height = 32
         input_width = 32
@@ -720,11 +732,11 @@ def test_ImageScaler(tmpdir, dtype):
         scalar = 1.5
         bias = [10, 20, 30]
 
-        model = C.image_scaler(image, scalar, bias);
+        model = C.image_scaler(image, scalar, bias)
         verify_no_input(model, tmpdir, 'ImageScaler_0')
 
         x = C.input_variable(np.shape(image)) 
-        model = C.image_scaler(x, scalar, bias);
+        model = C.image_scaler(x, scalar, bias)
         verify_one_input(model, image, tmpdir, 'ImageScaler_1')
 
 #LayerNormalization
@@ -807,7 +819,6 @@ def test_LogSoftmax(tmpdir, dtype):
 #LRN
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LRN(tmpdir, dtype, device_id):
-    #pytest.skip('Needs to be fixed after removal of batch axis change.')
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data, because it uses convolution.')
     device = cntk_device(device_id)
