@@ -8,7 +8,6 @@
 #include "Config.h"
 #include "HTKDeserializer.h"
 #include "MLFDeserializer.h"
-#include "MLFBinaryDeserializer.h"
 #include "ConfigHelper.h"
 #include "Bundler.h"
 #include "StringUtil.h"
