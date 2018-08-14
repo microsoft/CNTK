@@ -600,24 +600,35 @@ namespace CNTK
                                 VerifyStaticAxis(ax, m_inputs[0].Shape());
 
                                 size_t sliceAxisDim = m_inputs[0].Shape()[ax.StaticAxisIndex()];
-                                int realBeginIndex = (beginIndex[i] >= 0) ? beginIndex[i] : beginIndex[i] + sliceAxisDim;
-                                int realEndIndex = (endIndex[i] > 0) ? endIndex[i] : endIndex[i] + sliceAxisDim;
-                                if ((sliceAxisDim < realEndIndex) || (realEndIndex < realBeginIndex) || (realBeginIndex < 0))
-                                    RuntimeError("Function '%S': Slice operation index range [%d,%d), interpreted as [%d,%d), is invalid for input '%S' shape '%S'.",
-                                        AsString().c_str(),
-                                        beginIndex[i],
-                                        endIndex[i],
-                                        realBeginIndex,
-                                        realEndIndex,
-                                        m_inputs[0].AsString().c_str(),
-                                        m_inputs[0].Shape().AsString().c_str());
-                                // propagate as much as we can
-                                // Note: If the sliceAxisDim is a free dimension and the slice size is relative to the sliceAxisDim then the
-                                // corresponding outputDim is also a free dimension
-                                if ((((sliceAxisDim != NDShape::FreeDimension) && (sliceAxisDim != NDShape::InferredDimension)) || (((beginIndex[i] >= 0) && (endIndex[i] > 0)) || ((beginIndex[i] < 0) && (endIndex[i] <= 0)))) &&
-                                    ((ax.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim)))
+                                if (sliceAxisDim == NDShape::FreeDimension && (beginIndex[i] < 0 || endIndex[i] <= 0))
                                 {
-                                    outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex, strides[i]);
+                                    // not able to calculate real indices. do not narrow either.
+                                    // note that endIndex[i] = 0 means to (and include) the last.
+                                    // One case for this condition is to export and import, in ONNX format, a CNTK Sequence.Slice op.
+                                    // In this case, if batch size is larger than 1 and input data are a zigged array (i.e. sequences of various lengths),
+                                    // model evaludation will not march the original CNTK model.
+                                }
+                                else
+                                {
+                                    int realBeginIndex = (beginIndex[i] >= 0) ? beginIndex[i] : beginIndex[i] + sliceAxisDim;
+                                    int realEndIndex = (endIndex[i] > 0) ? endIndex[i] : endIndex[i] + sliceAxisDim;
+                                    if ((sliceAxisDim < realEndIndex) || (realEndIndex < realBeginIndex) || (realBeginIndex < 0))
+                                        RuntimeError("Function '%S': Slice operation index range [%d,%d), interpreted as [%d,%d), is invalid for input '%S' shape '%S'.",
+                                            AsString().c_str(),
+                                            beginIndex[i],
+                                            endIndex[i],
+                                            realBeginIndex,
+                                            realEndIndex,
+                                            m_inputs[0].AsString().c_str(),
+                                            m_inputs[0].Shape().AsString().c_str());
+                                    // propagate as much as we can
+                                    // Note: If the sliceAxisDim is a free dimension and the slice size is relative to the sliceAxisDim then the
+                                    // corresponding outputDim is also a free dimension
+                                    if ((((sliceAxisDim != NDShape::FreeDimension) && (sliceAxisDim != NDShape::InferredDimension)) || (((beginIndex[i] >= 0) && (endIndex[i] > 0)) || ((beginIndex[i] < 0) && (endIndex[i] <= 0)))) &&
+                                        ((ax.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim)))
+                                    {
+                                        outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex, strides[i]);
+                                    }
                                 }
                             }
                             outputShape = AsNDShape(outputTensorShape, /*allowNonFlattenableTensorShapes = */ true);

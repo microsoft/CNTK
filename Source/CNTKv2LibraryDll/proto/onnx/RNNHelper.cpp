@@ -463,11 +463,21 @@ Variable ToBatchAndSequence(Variable input)
     return operandWithBatchAndSequenceAxis;
 }
 
-FunctionPtr UnpackBatchAndSequence(FunctionPtr rnnFunction)
+FunctionPtr UnpackBatchAndSequence(FunctionPtr rnnFunction, bool doTranspose)
 {
     FunctionPtr cntkFunctionWithoutSequenceAxis = Sequence::Unpack(rnnFunction, 0, L"");
     FunctionPtr cntkFunctionWithoutDynamicAxis = UnpackBatch(cntkFunctionWithoutSequenceAxis, L"");
-    return cntkFunctionWithoutDynamicAxis;
+    if (doTranspose)
+    {
+        FunctionPtr transpose = TransposeAxes(cntkFunctionWithoutDynamicAxis,
+            Axis(cntkFunctionWithoutDynamicAxis->Output().Shape().Rank() - 2),
+            Axis(cntkFunctionWithoutDynamicAxis->Output().Shape().Rank() - 1), L"");
+        return transpose;
+    }
+    else
+        // in case of RNN ops, transpose is inserted after the op so we do not do transpose again
+        // TODO: do not transpose after RNN ops so we have one code path here.
+        return cntkFunctionWithoutDynamicAxis;
 }
 
 FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
@@ -557,7 +567,7 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
         rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
 
-    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction);
+    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction, false);
     return unpackedRnnFunction;
 }
 
@@ -622,7 +632,7 @@ FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &in
         rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
 
-    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction);
+    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction, false);
     return unpackedRnnFunction;
 }
 
@@ -678,7 +688,7 @@ FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &in
         rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
 
-    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction);
+    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction, false);
     return unpackedRnnFunction;
 }
 
