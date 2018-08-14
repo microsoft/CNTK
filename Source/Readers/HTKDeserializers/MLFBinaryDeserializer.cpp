@@ -79,8 +79,7 @@ MLFBinaryDeserializer::MLFBinaryDeserializer(CorpusDescriptorPtr corpus, const C
         LogicError("TODO: implement phoneBoundaries setting in Binary MLF deserializer.");
 
     InitializeStream(inputName);
-    wstring as = L"asdasd";
-    InitializeChunkInfos<MLFBinaryIndexBuilder>(corpus, config, as);
+    InitializeChunkInfos<MLFBinaryIndexBuilder>(corpus, config, L"");
 }
 
 ChunkPtr MLFBinaryDeserializer::GetChunk(ChunkIdType chunkId)

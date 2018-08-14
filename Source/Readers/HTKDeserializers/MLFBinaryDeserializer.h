@@ -26,9 +26,6 @@ namespace CNTK {
         virtual ChunkPtr GetChunk(ChunkIdType) override;
 
     private:
-        // Initializes chunk descriptions.
-        //void InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config);
-
         class BinarySequenceChunk;
     };
 }
