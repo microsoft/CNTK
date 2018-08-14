@@ -2390,8 +2390,21 @@ LotusIR::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const FunctionP
     return reshapeNode;
 }
 
-// parse Sequence.Slice node graph to collect axis/begin index/end index
-// and to build an ONNX slice node
+// To parse Sequence.Slice node graph to collect axis/begin index/end index
+// and to build an ONNX Slice op.
+// IMPORTANT NOTE:
+// This function convert a CNTK Sequence::Slice op to ONNX Slice op. 
+// CNTK Sequence::Slice has ability to handle input of zigged arrays (i.e. sequences of various lengths).
+// ONNX Slice does not support zigged arrays data format. 
+// Therefore in case of batch size larger than 1 and input data are a zigged arrays, 
+// we do not expect model evaludation to generate marching numbers between CNTK and ONNX.
+// with this following CNTK example:
+// model = C.sequence.slice(C.sequence.input_variable((1)), -2, -1)
+// model.eval([[0, 1, 2], [0, 1, 2, 3, 4]])
+// CNTK output is:
+// array([[1.], [3.]], dtype = float32)
+// output from exported ONNX model will be:
+// array([[padding_value], [3.]], dtype = float32)
 LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
     LotusIR::Graph* graph,
     std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
