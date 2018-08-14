@@ -1264,7 +1264,7 @@ public:
 
     virtual void ForwardPropNonLooping() override
     {
-        auto MBLayoutPhone = InputRef(2).GetMBLayout();
+        /*auto MBLayoutPhone = InputRef(2).GetMBLayout();
         auto MBLayoutFrame = InputRef(1).GetMBLayout();
         size_t numchannelphone = MBLayoutPhone->GetNumParallelSequences();
         size_t numchannelframe = MBLayoutFrame->GetNumParallelSequences();
@@ -1291,7 +1291,7 @@ public:
             }
 
             fprintf(stderr, "PHONE: channelID:%zu beginframe:%zu, numframe:%zu\n", seq.s, seq.tBegin, seq.GetNumTimeSteps());
-        }
+        }*/
          
 //        size_t numParallelSeq = InputRef(0).GetMBLayout()->GetNumParallelSequences();
         //size_t numSeq = MBLayoutPhone->GetNumSequences();

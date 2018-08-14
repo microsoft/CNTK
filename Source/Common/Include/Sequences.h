@@ -222,10 +222,10 @@ public:
             let len = inputSequences[i].GetNumTimeSteps();
             // first see if we find a row that has enough space
             // TODO: Should we use a proper priority_queue?
-            size_t s;
-            for (s = 0; s < rowAllocations.size(); s++)
+            size_t s = rowAllocations.size();
+            /*for (s = 0; s < rowAllocations.size(); s++)
                 if (rowAllocations[s] + len <= width)
-                    break; // yep, it fits
+                    break; */ // yep, it fits
             // we did not find a s that fit then create a new one
             if (s == rowAllocations.size())
                 rowAllocations.push_back(0);
