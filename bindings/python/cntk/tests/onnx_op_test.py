@@ -426,6 +426,24 @@ def test_Concat(tmpdir, dtype):
         verify_one_input(model, data1, tmpdir, 'Concat_1')
 
 @pytest.mark.parametrize("dtype", DType_Config)
+def test_Conv(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype):
+        input_shape = (3, 20, 32) 
+        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape) 
+
+        x = C.input_variable(input_shape)
+
+        kernel_shape = (64, 3, 3, 3) # For convolution the shape is (O x I x W x H)
+        kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = dtype))
+
+        conv_model = C.convolution(kernel, x, auto_padding = [False, True, True])
+
+        verify_one_input(conv_model, img, tmpdir, 'Conv_0', device)
+        
+@pytest.mark.parametrize("dtype", DType_Config)
 def test_ConvTranspose(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')

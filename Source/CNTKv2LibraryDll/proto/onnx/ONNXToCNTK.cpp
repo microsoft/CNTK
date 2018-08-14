@@ -3176,7 +3176,7 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
 FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::vector<Variable> &inputs)
 {
     Variable convolutionMap = inputs[1];
-    size_t numSpatialDim = convolutionMap.Shape().Rank() - 1; // This is conv op dimension, i.e. 2 for 2D conv, 3 for 3D conv.
+    size_t numSpatialDim = convolutionMap.Shape().Rank() - 2; // This is conv op dimension, i.e. 2 for 2D conv, 3 for 3D conv.
 
     NDShape strides = GetNamedAttributeAsShape(node, "strides", false, NDShape(std::vector<size_t>(numSpatialDim, 1u)));
     NDShape dilation = GetNamedAttributeAsShape(node, "dilations", false, NDShape(std::vector<size_t>(numSpatialDim, 1u)));
@@ -3188,6 +3188,14 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::ve
 
     std::vector<bool> cntkConvAutoPadding;
     auto convOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkConvAutoPadding, strides, node, inputs[0]);
+
+    // At this point length of vectors strides, dilation, and cntkConvAutoPadding must be equal to
+    // number of spatial dimensions (2 for 2D conv, 3 for 3D conv). 
+    // In order to match the expected input for CNTK Convolution API we will append one more element
+    // in each for the "channel" axis. 
+    strides = strides.AppendShape({ 1 });
+    dilation = dilation.AppendShape({ 1 });
+    cntkConvAutoPadding.push_back(false);
 
     auto operandPlaceholder = PlaceholderVariable(convOperand.Shape(), L"operand", {});
     auto convmapPlaceholder = PlaceholderVariable(convolutionMap.Shape(), L"convolutionMap", {});
