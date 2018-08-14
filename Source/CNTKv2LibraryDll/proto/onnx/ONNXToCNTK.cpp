@@ -2442,7 +2442,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         {
             cntkFunction = Hardmax(input, ToFixedWStringFromMultiByte(node->Name()));
         }
-        return Reshape(cntkFunction, inputs[0].Shape());
+        NDShape originalShape = inputs[0].Shape();
+        assert(originalShape.Rank() > 0);
+        // If original shape has free dimension(batch axis), we'll need to have reshape node infer that for us. 
+        if (originalShape[originalShape.Rank() - 1] == NDShape::FreeDimension)
+            originalShape[originalShape.Rank() - 1] = NDShape::InferredDimension;
+        return Reshape(cntkFunction, originalShape);
     }
     else if (onnxOpName == "Softplus")
     {

@@ -1649,8 +1649,22 @@ namespace CNTK
                 (int)operand.Shape().Rank(), ToLegacyString(ToUTF8(axis.AsString())).c_str());
         }
 
-        size_t dim0 = cntk_index == 0 ? 1 : operand.Shape().SubShape(0, cntk_index).TotalSize();
-        size_t dim1 = cntk_index == operand.Shape().Rank() ? 1 : operand.Shape().SubShape(cntk_index).TotalSize();
+        auto getFlattenedDim = [&](bool isDim0) -> size_t {
+            const NDShape& operandSubShape = isDim0 ? operand.Shape().SubShape(0, cntk_index) : operand.Shape().SubShape(cntk_index);
+            // If subshape contains free or inferred dimension, we have reshape node try to infer what should the flattened dimension be. 
+            if (operandSubShape.HasFreeDimension() || operandSubShape.HasInferredDimension())
+            {
+                return NDShape::InferredDimension;
+            }
+
+            if ((isDim0 && cntk_index == 0) || (!isDim0 && cntk_index == operand.Shape().Rank()))
+                return 1u;
+            else
+                return operandSubShape.TotalSize();
+        };
+
+        size_t dim0 = getFlattenedDim(true);
+        size_t dim1 = getFlattenedDim(false);
 
         NDShape newShape({ dim0, dim1 });
 
