@@ -1181,10 +1181,13 @@ bool IsUnSupportedLayerNormalization(const FunctionPtr src)
 FunctionPtr SkipBatchAndSequenceAxisOp(const FunctionPtr src)
 {
     if ((src->OpName() == L"ToSequenceOp" && src->Inputs()[0].Owner() &&
-        src->Inputs()[0].Owner()->OpName() == L"ToBatchAxis") || 
+        src->Inputs()[0].Owner()->OpName() == L"ToBatchAxis") ||
         (src->OpName() == L"UnpackBatchAxis" && src->Inputs()[0].Owner() &&
             src->Inputs()[0].Owner()->OpName() == L"UnpackSequenceOp"))
         return src->Inputs()[0].Owner()->Inputs()[0].Owner();
+    else if (src->OpName() == L"UnpackBatchAxis" && src->Inputs()[0].Owner() &&
+        src->Inputs()[0].Owner()->OpName() == L"Sequence::Slice")
+        return src->Inputs()[0].Owner();
     else
         return src;
 }

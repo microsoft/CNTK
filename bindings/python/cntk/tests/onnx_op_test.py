@@ -113,10 +113,8 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
         o0 = model.eval({model.arguments[0]:data})
         o1 = loaded_model.eval({loaded_model.arguments[0]:dataOnnx})
 
-    if (type(o0) is list):
-        o0 = o0[0]
-    if (type(o1) is list):
-        o1 = o1[0]
+    o0 = np.array(o0)
+    o1 = np.array(o1)
 
     # if there is a sequence axis in the output, it must be swapped with batch axis 
     # to match the original CNTK model's output 

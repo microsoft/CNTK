@@ -2703,8 +2703,26 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             }
         }
 
-        FunctionPtr cntkFunction = Slice(inputs[0], axes, starts, ends, ToFixedWStringFromMultiByte(node->Name()));
-        return cntkFunction;
+        if (axes.size() == 1 && axes[0].StaticAxisIndex() == -1 && inputs[0].Shape()[inputs[0].Shape().Rank() - 1] == NDShape::FreeDimension)
+        {
+            // this is the Sequence.Slice case.
+            // with this following example, we need to call Sequence.Slice op to get expected outcome.
+            // model = C.sequence.slice(C.sequence.input_variable((1)), -2, -1)
+            // model.eval([[0, 1, 2], [0, 1, 2, 3, 4]])
+            // array([[1.], [3.]], dtype = float32)
+            auto input0 = ToBatchAndSequence(inputs[0]);
+            FunctionPtr cntkFunction = Sequence::Slice(input0, starts[0], ends[0], ToFixedWStringFromMultiByte(node->Name()));
+            if (cntkFunction->Output().HasSequenceAxis())
+                cntkFunction = UnpackBatchAndSequence(cntkFunction);
+            else
+                cntkFunction = UnpackBatch(cntkFunction, L"");
+            return cntkFunction;
+        }
+        else
+        {
+            FunctionPtr cntkFunction = Slice(inputs[0], axes, starts, ends, ToFixedWStringFromMultiByte(node->Name()));
+            return cntkFunction;
+        }
     }
     else if (onnxOpName == "Transpose")
     {
