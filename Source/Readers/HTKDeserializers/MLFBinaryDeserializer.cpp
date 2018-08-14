@@ -66,93 +66,21 @@ public:
 MLFBinaryDeserializer::MLFBinaryDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& cfg, bool primary)
     : MLFDeserializer(corpus, primary)
 {
-    if (primary)
-        RuntimeError("MLFDeserializer currently does not support primary mode.");
-
-    m_frameMode = (ConfigValue)cfg("frameMode", "true");
+    auto inputName = InitializeReaderParams(cfg, primary);
 
     if (m_frameMode)
         LogicError("TODO: support frame mode in Binary MLF deserializer.");
 
-    wstring precision = cfg(L"precision", L"float");
-    m_elementType = AreEqualIgnoreCase(precision, L"float") ? DataType::Float : DataType::Double;
-
-    // Same behavior as for the old deserializer - keep almost all in memory,
-    // because there are a lot of none aligned sets.
-    m_chunkSizeBytes = cfg(L"chunkSizeInBytes", g_64MB);
-
     ConfigParameters input = cfg("input");
-    auto inputName = input.GetMemberIds().front();
-
     ConfigParameters streamConfig = input(inputName);
     ConfigHelper config(streamConfig);
 
-    m_dimension = config.GetLabelDimension();
-    if (m_dimension > numeric_limits<ClassIdType>::max())
-        RuntimeError("Label dimension (%zu) exceeds the maximum allowed "
-            "value '%ud'\n", m_dimension, numeric_limits<ClassIdType>::max());
-
-    m_withPhoneBoundaries = streamConfig(L"phoneBoundaries", false);
     if (m_withPhoneBoundaries)
-        LogicError("TODO: implement phoneBoundaries setting.");
+        LogicError("TODO: implement phoneBoundaries setting in Binary MLF deserializer.");
 
     InitializeStream(inputName);
-    InitializeChunkInfos(corpus, config);
-}
-
-void MLFBinaryDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config)
-{
-    // Similarly to the old reader, currently we assume all Mlfs will have same root name (key)
-    // restrict MLF reader to these files--will make stuff much faster without having to use shortened input files
-    vector<wstring> mlfPaths = config.GetMlfPaths();
-
-    auto emptyPair = make_pair(numeric_limits<uint32_t>::max(), numeric_limits<uint32_t>::max());
-    size_t totalNumSequences = 0;
-    size_t totalNumFrames = 0;
-    bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
-    for (const auto& path : mlfPaths)
-    {
-        attempt(5, [this, path, enableCaching, corpus]()
-        {
-            MLFBinaryIndexBuilder builder(FileWrapper(path, L"rbS"), corpus);
-            builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
-            m_indices.emplace_back(builder.Build());
-        });
-
-        m_mlfFiles.push_back(path);
-        
-        auto& index = m_indices.back();
-        // Build auxiliary for GetSequenceByKey.
-        for (const auto& chunk : index->Chunks())
-        {
-            // Preparing chunk info that will be exposed to the outside.
-            auto chunkId = static_cast<ChunkIdType>(m_chunks.size());
-            uint32_t offsetInSamples = 0;
-            for (uint32_t i = 0; i < chunk.NumberOfSequences(); ++i)
-            {
-                const auto& sequence = chunk[i];
-                auto sequenceIndex = m_frameMode ? offsetInSamples : i;
-                offsetInSamples += sequence.m_numberOfSamples;
-                m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, chunkId, sequenceIndex));
-            }
-
-            totalNumSequences += chunk.NumberOfSequences();
-            totalNumFrames += chunk.NumberOfSamples();
-            m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1));
-            m_chunks.push_back(&chunk);
-            if (m_chunks.size() >= numeric_limits<ChunkIdType>::max())
-                RuntimeError("Number of chunks exceeded overflow limit.");
-        }
-    }
-
-    std::sort(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(), MLFDeserializer::LessByFirstItem);
-
-    fprintf(stderr, "MLFBinaryDeserializer: '%zu' utterances with '%zu' frames\n",
-        totalNumSequences,
-        totalNumFrames);
-
-    if (m_frameMode)
-        InitializeReadOnlyArrayOfLabels();
+    wstring as = L"asdasd";
+    InitializeChunkInfos<MLFBinaryIndexBuilder>(corpus, config, as);
 }
 
 ChunkPtr MLFBinaryDeserializer::GetChunk(ChunkIdType chunkId)

@@ -27,7 +27,7 @@ namespace CNTK {
 
     private:
         // Initializes chunk descriptions.
-        void InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config);
+        //void InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config);
 
         class BinarySequenceChunk;
     };
