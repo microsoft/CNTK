@@ -144,7 +144,7 @@ declare -a openfstFiles=("libfst.so.3")
 declare -a includeFiles=("Eval.h")
 
 # Include files 2.0
-declare -a includeFiles20=("CNTKLibrary.h" "CNTKLibraryInternals.h" "CNTKLibraryC.h")
+declare -a includeFiles20=("CNTKLibrary.h" "CNTKLibraryInternals.h" "CNTKLibraryC.h" "HalfConverter.hpp")
 
 # Set dependency sources paths
 mklPath="/usr/local/lib"
