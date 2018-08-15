@@ -13,6 +13,7 @@
 #include "FileWrapper.h"
 #include "Index.h"
 #include "MLFIndexBuilder.h"
+#include "MLFBinaryIndexBuilder.h"
 
 namespace CNTK {
 
@@ -31,7 +32,7 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
 
     wstring labelMappingFile = streamConfig(L"labelMappingFile", L"");
     InitializeStream(inputName);
-    InitializeChunkInfos<MLFIndexBuilder>(corpus, config, labelMappingFile);
+    InitializeChunkInfos(corpus, config, labelMappingFile);
 }
 
 // TODO: Should be removed. Currently a lot of end to end tests still use this one.
@@ -65,13 +66,83 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
 
     wstring labelMappingFile = labelConfig(L"labelMappingFile", L"");
     InitializeStream(name);
-    InitializeChunkInfos<MLFIndexBuilder>(corpus, config, labelMappingFile);
+    InitializeChunkInfos(corpus, config, labelMappingFile);
 }
 
 MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, bool primary)
     : DataDeserializerBase(primary),
     m_corpus(corpus)
 {
+}
+
+// Initializes chunk descriptions.
+void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config, const wstring& stateListPath)
+{
+    if (!stateListPath.empty())
+    {
+        m_stateTable = make_shared<StateTable>();
+        m_stateTable->ReadStateList(stateListPath);
+    }
+
+    // Similarly to the old reader, currently we assume all Mlfs will have same root name (key)
+    // restrict MLF reader to these files--will make stuff much faster without having to use shortened input files
+    vector<wstring> mlfPaths = config.GetMlfPaths();
+
+    auto emptyPair = make_pair(numeric_limits<uint32_t>::max(), numeric_limits<uint32_t>::max());
+    size_t totalNumSequences = 0;
+    size_t totalNumFrames = 0;
+    bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
+    for (const auto& path : mlfPaths)
+    {
+        attempt(5, [this, path, enableCaching, corpus, stateListPath]() {
+            if (!stateListPath.empty())
+            {
+                MLFIndexBuilder builder(FileWrapper(path, L"rbS"), corpus);
+                builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
+                m_indices.emplace_back(builder.Build());
+            }
+            else
+            {
+                MLFBinaryIndexBuilder builder(FileWrapper(path, L"rbS"), corpus);
+                builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
+                m_indices.emplace_back(builder.Build());
+            }
+        });
+
+        m_mlfFiles.push_back(path);
+
+        auto& index = m_indices.back();
+        // Build auxiliary for GetSequenceByKey.
+        for (const auto& chunk : index->Chunks())
+        {
+            // Preparing chunk info that will be exposed to the outside.
+            auto chunkId = static_cast<ChunkIdType>(m_chunks.size());
+            uint32_t offsetInSamples = 0;
+            for (uint32_t i = 0; i < chunk.NumberOfSequences(); ++i)
+            {
+                const auto& sequence = chunk[i];
+                auto sequenceIndex = m_frameMode ? offsetInSamples : i;
+                offsetInSamples += sequence.m_numberOfSamples;
+                m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, chunkId, sequenceIndex));
+            }
+
+            totalNumSequences += chunk.NumberOfSequences();
+            totalNumFrames += chunk.NumberOfSamples();
+            m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1));
+            m_chunks.push_back(&chunk);
+            if (m_chunks.size() >= numeric_limits<ChunkIdType>::max())
+                RuntimeError("Number of chunks exceeded overflow limit.");
+        }
+    }
+
+    std::sort(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(), LessByFirstItem);
+
+    fprintf(stderr, "MLF Deserializer: '%zu' utterances with '%zu' frames\n",
+            totalNumSequences,
+            totalNumFrames);
+
+    if (m_frameMode)
+        InitializeReadOnlyArrayOfLabels();
 }
 
 wstring MLFDeserializer::InitializeReaderParams(const ConfigParameters& cfg, bool primary)
