@@ -62,7 +62,7 @@ class BiVfsmnNode : public ComputationNode<ElemType>, public NumInputs<3>
 public:
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name),
-          m_flags(make_shared<Matrix<ElemType>>(deviceId))
+          m_flags(make_shared<Matrix<ElemType>>(1, 65536, deviceId)) // TODO:65536 is a hard code minibatch size
     {
     }
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride)
@@ -71,7 +71,7 @@ public:
           m_rOrder(rOrder),
           m_lStride(lStride),
           m_rStride(rStride),
-          m_flags(make_shared<Matrix<ElemType>>(deviceId))
+          m_flags(make_shared<Matrix<ElemType>>(1, 65536, deviceId)) // TODO:65536 is a hard code minibatch size
     {
     }
     BiVfsmnNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -80,28 +80,39 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
-    {
-        Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_flags, matrixPool);
-    }
+    // This MatrixPool related method doesn't work well and I still can get CUDA 77 error:
+    // https://github.com/Microsoft/CNTK/issues/3356
 
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
-    {
-        Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_flags, matrixPool);
-    }
+    // virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    // {
+    //     Base::RequestMatricesBeforeForwardProp(matrixPool);
+    //     RequestMatrixFromPool(m_flags, matrixPool);
+    // }
 
-    virtual void UpdateFunctionMBSize() override
-    {
-        Base::UpdateFunctionMBSize();
+    // virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    // {
+    //     Base::ReleaseMatricesAfterBackprop(matrixPool);
+    //     ReleaseMatrixToPool(m_flags, matrixPool);
+    // }
 
-        m_flags->Resize(1, InputRef(0).Value().GetNumCols());
-    }
+    // virtual void UpdateFunctionMBSize() override
+    // {
+    //     Base::UpdateFunctionMBSize();
+
+    //     m_flags->Resize(1, InputRef(0).Value().GetNumCols());
+    // }
 
     virtual void BeginForwardProp() override
     {
         Base::BeginForwardProp();
+
+        if (InputRef(0).Value().GetNumCols() > 65536)
+        {
+            LogicError("[BiVfsmnNode] Minibatch size is hard code as 65536 in this "
+                       "implementatation. Your minibatch size is too big and it's "
+                       "better to lower your minibatch size or modify this node's "
+                       "constructor and rebuild.");
+        }
 
         // CPU-side m_flags
         std::vector<ElemType> flags(InputRef(0).Value().GetNumCols());
@@ -139,6 +150,10 @@ public:
         // END construct flag
 
         // move to GPU
+        // TODO: I hard code the size of m_flags now, and it works fine in this SetValue(...).
+        // You can read GPUMatrix::SetValue(...), GPUMatrix::RequireSize(...) and
+        // GPUMatrix::GetNumElements(...) to understand the correctness.
+        // This implementation can avoid multiple transfer.
         m_flags->SetValue(1, flags.size(), m_deviceId, flags.data(), matrixFlagNormal);
         // PrintMatrix(m_flags);
     }
