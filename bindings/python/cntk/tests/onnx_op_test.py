@@ -1356,8 +1356,9 @@ def test_Slice(tmpdir, dtype):
 def test_SequenceSlice(tmpdir, dtype, beginIndex, endIndex):
     batch_size = 1
     sequence_length = 5
-    feature_shape = (3,)
-    shape = (batch_size, sequence_length, *feature_shape)
+    input_size = 3
+    feature_shape = (input_size,)
+    shape = (batch_size, sequence_length, input_size)
     data = np.reshape(range(0, np.prod(shape)), shape).astype(dtype)
     testName = "test_sequence_slice_{0}.{1}".format(beginIndex, endIndex)
     print(testName)
