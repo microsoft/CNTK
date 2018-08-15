@@ -4,6 +4,10 @@
 //
 
 #pragma once
+#ifdef _WIN32
+#else // assuming __unix__
+#pragma GCC diagnostic ignored "-fpermissive"
+#endif
 
 #include <boost/noncopyable.hpp>
 #include "HTKDeserializer.h"
@@ -11,6 +15,7 @@
 #include "MLFUtils.h"
 #include "FileWrapper.h"
 #include "Index.h"
+#include "File.h"
 
 namespace CNTK {
 
@@ -445,3 +450,8 @@ public:
 };
 
 }
+
+#ifdef _WIN32
+#else // assuming __unix__
+#pragma GCC diagnostic ignored "-pedantic"
+#endif
