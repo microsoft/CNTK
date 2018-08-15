@@ -93,20 +93,17 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
         perm[0], perm[1] = perm[1], perm[0]
         return np.transpose(data, perm)
 
-    assert model.output.has_sequence_axis() and model.output.has_batch_axis()
-    
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
     opname = model.owner.op_name
 
     loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
-    model_shape = model.shape
 
-    # When both batch and sequence axes exist, model input will have batch and sequence axes 
-    # swapped to match the onnx model. In this case, input and output data shall be adjusted accordingly.  
-    model_shape = (CNTK_FREEDIM_AXIS_DENOTATION, CNTK_FREEDIM_AXIS_DENOTATION, ) + model_shape
-    assert model_shape == loaded_model.shape
+    # in cases like with RNN models where models have both batch and sequence axis
+    # as dynamic axis, imported models will have the dynamic axes as free_dimensions in static shapes. 
+    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'), C.Axis('defaultDynamicAxis')):
+        assert (CNTK_FREEDIM_AXIS_DENOTATION, CNTK_FREEDIM_AXIS_DENOTATION, ) + model.shape == loaded_model.shape
         
     dataOnnx = TranposeDynamicAxis(data)
     if device:
@@ -116,13 +113,13 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
         o0 = model.eval({model.arguments[0]:data})
         o1 = loaded_model.eval({loaded_model.arguments[0]:dataOnnx})
 
-    if (type(o0) is list):
-        o0 = o0[0]
-    if (type(o1) is list):
-        o1 = o1[0]
+    o0 = np.array(o0)
+    o1 = np.array(o1)
 
-    # squeeze the batch axis (=1) to match original model output
-    o1 = np.squeeze(o1, axis=1)
+    # if there is a sequence axis in the output, it must be swapped with batch axis 
+    # to match the original CNTK model's output 
+    if model.outputs[0].has_sequence_axis(): 
+        o1 = TranposeDynamicAxis(o1)
 
     assert np.allclose(o0, o1)
     return loaded_model
@@ -1351,6 +1348,21 @@ def test_Slice(tmpdir, dtype):
 
         model = C.slice(x1, [0,1], [1,0], [2,1]);
         verify_one_input(model, data, tmpdir, 'Slice2_1')
+
+#Sequence.Slice 
+@pytest.mark.parametrize("beginIndex, endIndex", (  
+    (-2, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-4, 2), (0, 1), (1, 2)))
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_SequenceSlice(tmpdir, dtype, beginIndex, endIndex):
+    batch_size = 1
+    sequence_length = 5
+    feature_shape = (3,)
+    shape = (batch_size, sequence_length, *feature_shape)
+    data = np.reshape(range(0, np.prod(shape)), shape).astype(dtype)
+    testName = "test_sequence_slice_{0}.{1}".format(beginIndex, endIndex)
+    print(testName)
+    model = C.sequence.slice(C.sequence.input_variable((feature_shape)), beginIndex, endIndex)
+    verify_sequence_model(model, data, tmpdir, testName)
 
 #Softmax
 @pytest.mark.parametrize("dtype", DType_Config)

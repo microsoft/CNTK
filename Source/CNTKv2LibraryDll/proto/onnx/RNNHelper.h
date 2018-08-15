@@ -184,4 +184,4 @@ std::vector<CNTK::FunctionPtr> GetRNNBlocksFromSingleOrBidirectionalRNN(const CN
 
 CNTK::Variable ToBatchAndSequence(CNTK::Variable input);
 
-CNTK::FunctionPtr UnpackBatchAndSequence(CNTK::FunctionPtr rnnFunction);
+CNTK::FunctionPtr UnpackBatchAndSequence(CNTK::FunctionPtr rnnFunction, bool doTranspose = true);
