@@ -4,10 +4,6 @@
 //
 
 #pragma once
-#ifdef _WIN32
-#else // assuming __unix__
-#pragma GCC diagnostic ignored "-fpermissive"
-#endif
 
 #include <boost/noncopyable.hpp>
 #include "HTKDeserializer.h"
@@ -15,9 +11,9 @@
 #include "MLFUtils.h"
 #include "FileWrapper.h"
 #include "Index.h"
-#include "File.h"
 
-namespace CNTK {
+namespace CNTK
+{
 
 static float s_oneFloat = 1.0;
 static double s_oneDouble = 1.0;
@@ -34,25 +30,25 @@ struct MLFSequenceData : SparseSequenceData
     vector<IndexType> m_indexBuffer;
     const NDShape& m_frameShape;
 
-    MLFSequenceData(size_t numberOfSamples, const NDShape& frameShape) :
-        m_values(numberOfSamples, 1), m_frameShape(frameShape)
+    MLFSequenceData(size_t numberOfSamples, const NDShape& frameShape)
+        : m_values(numberOfSamples, 1), m_frameShape(frameShape)
     {
         if (numberOfSamples > numeric_limits<IndexType>::max())
         {
             RuntimeError("Number of samples in an MLFSequenceData (%zu) "
-                "exceeds the maximum allowed value (%zu)\n",
-                numberOfSamples, (size_t)numeric_limits<IndexType>::max());
+                         "exceeds the maximum allowed value (%zu)\n",
+                         numberOfSamples, (size_t) numeric_limits<IndexType>::max());
         }
 
         m_indexBuffer.resize(numberOfSamples);
         m_nnzCounts.resize(numberOfSamples, static_cast<IndexType>(1));
-        m_numberOfSamples = (uint32_t)numberOfSamples;
+        m_numberOfSamples = (uint32_t) numberOfSamples;
         m_totalNnzCount = static_cast<IndexType>(numberOfSamples);
         m_indices = &m_indexBuffer[0];
     }
 
-    MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries, const NDShape& frameShape) :
-        MLFSequenceData(numberOfSamples, frameShape)
+    MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries, const NDShape& frameShape)
+        : MLFSequenceData(numberOfSamples, frameShape)
     {
         for (auto boundary : phoneBoundaries)
             m_values[boundary] = s_phoneBoundary;
@@ -108,8 +104,8 @@ public:
 
         ChunkBase(const MLFDeserializer& deserializer, const ChunkDescriptor& descriptor, const wstring& fileName, const StateTablePtr& states)
             : m_parser(states),
-            m_descriptor(descriptor),
-            m_deserializer(deserializer)
+              m_descriptor(descriptor),
+              m_deserializer(deserializer)
         {
             if (descriptor.NumberOfSequences() == 0 || descriptor.SizeInBytes() == 0)
                 LogicError("Empty chunks are not supported.");
@@ -153,7 +149,7 @@ public:
             }
         }
 
-        template<class ElementType>
+        template <class ElementType>
         void GetSequence(size_t sequenceIndex, vector<SequenceDataPtr>& result)
         {
             if (!m_valid[sequenceIndex])
@@ -181,7 +177,7 @@ public:
             {
                 if (range.ClassId() >= m_deserializer.m_dimension)
                     // TODO: Possibly set m_valid to false, but currently preserving the old behavior.
-                    RuntimeError("Class id '%ud' exceeds the model output dimension '%d'.", range.ClassId(), (int)m_deserializer.m_dimension);
+                    RuntimeError("Class id '%ud' exceeds the model output dimension '%d'.", range.ClassId(), (int) m_deserializer.m_dimension);
 
                 // Filling all range of frames with the corresponding class id.
                 fill(startRange, startRange + range.NumFrames(), static_cast<IndexType>(range.ClassId()));
@@ -191,19 +187,18 @@ public:
             result.push_back(s);
         }
 
-        vector<char> m_buffer;   // Buffer for the whole chunk
-        vector<bool> m_valid;    // Bit mask whether the parsed sequence is valid.
+        vector<char> m_buffer; // Buffer for the whole chunk
+        vector<bool> m_valid;  // Bit mask whether the parsed sequence is valid.
         MLFUtteranceParser m_parser;
 
         const MLFDeserializer& m_deserializer;
-        const ChunkDescriptor& m_descriptor;     // Current chunk descriptor.
+        const ChunkDescriptor& m_descriptor; // Current chunk descriptor.
     };
-    
+
     // MLF chunk when operating in sequence mode.
     class SequenceChunk : public ChunkBase
     {
     public:
-    
         SequenceChunk(const MLFDeserializer& parent, const ChunkDescriptor& descriptor, const wstring& fileName, StateTablePtr states)
             : ChunkBase(parent, descriptor, fileName, states)
         {
@@ -233,8 +228,6 @@ public:
 
             m_sequences[index] = move(utterance);
         }
-
-        
     };
 
     // MLF chunk when operating in frame mode.
@@ -255,7 +248,7 @@ public:
         {
             uint32_t numSamples = static_cast<uint32_t>(m_descriptor.NumberOfSamples());
 
-            // The current assumption is that the number of samples in a chunk fits in uint32, 
+            // The current assumption is that the number of samples in a chunk fits in uint32,
             // therefore we can save 4 bytes per sequence, storing offsets in samples as uint32.
             if (numSamples != m_descriptor.NumberOfSamples())
                 RuntimeError("Exceeded maximum number of samples in a chunk");
@@ -263,7 +256,6 @@ public:
             // Preallocate a big array for filling in class ids for the whole chunk.
             m_classIds.resize(numSamples);
             m_sequenceOffsetInChunkInSamples.resize(m_descriptor.NumberOfSequences());
-
 
             uint32_t offset = 0;
             for (auto i = 0; i < m_descriptor.NumberOfSequences(); ++i)
@@ -275,11 +267,10 @@ public:
             if (numSamples != offset)
                 RuntimeError("Unexpected number of samples in a FrameChunk.");
 
-            // Parse the data on different threads to avoid locking during GetSequence calls.
+                // Parse the data on different threads to avoid locking during GetSequence calls.
 #pragma omp parallel for schedule(dynamic)
             for (auto i = 0; i < m_descriptor.NumberOfSequences(); ++i)
                 CacheSequence(descriptor[i], i);
-
 
             CleanBuffer();
         }
@@ -334,7 +325,7 @@ public:
                 const auto& range = utterance[i];
                 if (range.ClassId() >= m_deserializer.m_dimension)
                     // TODO: Possibly set m_valid to false, but currently preserving the old behavior.
-                    RuntimeError("Class id '%ud' exceeds the model output dimension '%d'.", range.ClassId(), (int)m_deserializer.m_dimension);
+                    RuntimeError("Class id '%ud' exceeds the model output dimension '%d'.", range.ClassId(), (int) m_deserializer.m_dimension);
 
                 fill(startRange, startRange + range.NumFrames(), range.ClassId());
                 startRange += range.NumFrames();
@@ -346,67 +337,7 @@ public:
     std::wstring InitializeReaderParams(const ConfigParameters& cfg, bool primary);
 
     // Initializes chunk descriptions.
-    template <class T>
-    void InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config, const wstring& stateListPath)
-    {
-        if (!stateListPath.empty())
-        {
-            m_stateTable = make_shared<StateTable>();
-            m_stateTable->ReadStateList(stateListPath);
-        }
-
-        // Similarly to the old reader, currently we assume all Mlfs will have same root name (key)
-        // restrict MLF reader to these files--will make stuff much faster without having to use shortened input files
-        vector<wstring> mlfPaths = config.GetMlfPaths();
-
-        auto emptyPair = make_pair(numeric_limits<uint32_t>::max(), numeric_limits<uint32_t>::max());
-        size_t totalNumSequences = 0;
-        size_t totalNumFrames = 0;
-        bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
-        for (const auto& path : mlfPaths)
-        {
-            attempt(5, [this, path, enableCaching, corpus]() {
-                T builder(FileWrapper(path, L"rbS"), corpus);
-                builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
-                m_indices.emplace_back(builder.Build());
-            });
-
-            m_mlfFiles.push_back(path);
-
-            auto& index = m_indices.back();
-            // Build auxiliary for GetSequenceByKey.
-            for (const auto& chunk : index->Chunks())
-            {
-                // Preparing chunk info that will be exposed to the outside.
-                auto chunkId = static_cast<ChunkIdType>(m_chunks.size());
-                uint32_t offsetInSamples = 0;
-                for (uint32_t i = 0; i < chunk.NumberOfSequences(); ++i)
-                {
-                    const auto& sequence = chunk[i];
-                    auto sequenceIndex = m_frameMode ? offsetInSamples : i;
-                    offsetInSamples += sequence.m_numberOfSamples;
-                    m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, chunkId, sequenceIndex));
-                }
-
-                totalNumSequences += chunk.NumberOfSequences();
-                totalNumFrames += chunk.NumberOfSamples();
-                m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1));
-                m_chunks.push_back(&chunk);
-                if (m_chunks.size() >= numeric_limits<ChunkIdType>::max())
-                    RuntimeError("Number of chunks exceeded overflow limit.");
-            }
-        }
-
-        std::sort(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(), LessByFirstItem);
-
-        fprintf(stderr, "MLF Deserializer: '%zu' utterances with '%zu' frames\n",
-                totalNumSequences,
-                totalNumFrames);
-
-        if (m_frameMode)
-            InitializeReadOnlyArrayOfLabels();
-    }
-
+    void InitializeChunkInfos(CorpusDescriptorPtr corpus, const ConfigHelper& config, const wstring& stateListPath);
 
     // Initializes a single stream this deserializer exposes.
     void InitializeStream(const std::wstring& name);
@@ -448,7 +379,6 @@ public:
     std::vector<std::shared_ptr<Index>> m_indices;
     std::vector<std::wstring> m_mlfFiles;
 };
-
 }
 
 #ifdef _WIN32
