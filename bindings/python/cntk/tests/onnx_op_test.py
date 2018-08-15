@@ -455,7 +455,7 @@ def test_ConvTranspose(tmpdir, dtype, device_id):
         kernel_shape = (48, 32, 3, 3) # For convolution_transpose the shape is (I x O x W x H)
         kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = dtype))
 
-        conv_trans_model = C.convolution_transpose(kernel, x, strides=(2, 2), output_shape=(32, 32, 32), auto_padding = [False, True, True])
+        conv_trans_model = C.convolution_transpose(kernel, x, strides=(2, 2), auto_padding = [False, True, True])#, output_shape=(32, 32, 32))
 
         verify_one_input(conv_trans_model, img, tmpdir, 'ConvTranspose_0', device)
 
