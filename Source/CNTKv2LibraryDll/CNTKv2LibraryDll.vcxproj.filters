@@ -19,6 +19,7 @@
     <ClCompile Include="DistributedCommunicator.cpp" />
     <ClCompile Include="CompositeFunction.cpp" />
     <ClCompile Include="PrimitiveFunction.cpp" />
+    <ClCompile Include="PrimitiveFunctionAttribute.cpp" />
     <ClCompile Include="DistributedLearnerBase.cpp" />
     <ClCompile Include="DataParallelDistributedLearner.cpp" />
     <ClCompile Include="TrainingSession.cpp" />
@@ -153,14 +154,26 @@
     <ClInclude Include="API\CNTKLibraryExperimental.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="API\Internals\ComputationGraphAlgorithms.h">
+      <Filter>API\Internals</Filter>
+    </ClInclude>
+    <ClInclude Include="API\Internals\EvaluatorWrapper.h">
+      <Filter>API\Internals</Filter>
+    </ClInclude>
+    <ClInclude Include="API\Internals\PrimitiveFunction.h">
+      <Filter>API\Internals</Filter>
+    </ClInclude>
+    <ClInclude Include="API\Internals\PrimitiveFunctionAttribute.h">
+      <Filter>API\Internals</Filter>
+    </ClInclude>
+    <ClInclude Include="API\Internals\PrimitiveOpType.h">
+      <Filter>API\Internals</Filter>
+    </ClInclude>
     <ClInclude Include="Serialization.h" />
     <ClInclude Include="Value.h" />
-    <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="BackCompat.h" />
     <ClInclude Include="CompositeFunction.h" />
-    <ClInclude Include="PrimitiveFunctionAttributes.h" />
-    <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="DataParallelDistributedLearner.h" />
     <ClInclude Include="tensorboard\TensorBoardUtils.h">
@@ -185,7 +198,6 @@
     <ClInclude Include="API\HalfConverter.hpp">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="EvaluatorWrapper.h" />
     <ClInclude Include="API\CNTKLibraryC.h">
       <Filter>API</Filter>
     </ClInclude>
@@ -304,6 +316,9 @@
   <ItemGroup>
     <Filter Include="API">
       <UniqueIdentifier>{ea62180a-fb06-4f33-b472-243fab69be01}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="API\Internals">
+      <UniqueIdentifier>{ba31bf16-b001-406c-a437-a6e7841fc372}</UniqueIdentifier>
     </Filter>
     <Filter Include="proto">
       <UniqueIdentifier>{1a93e221-b14c-476a-a53d-c931030acd6e}</UniqueIdentifier>

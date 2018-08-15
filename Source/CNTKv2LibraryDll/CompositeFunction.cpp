@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "CompositeFunction.h"
+#include "PrimitiveFunctionAttribute.h"
 #include "ComputationNetworkBuilder.h"
 #include "Utils.h"
 #include "ComputationNode.h"
@@ -71,8 +72,8 @@ namespace CNTK
             const auto& rng = m_variableToNodeMap.at(outputs[0])->As<RngUser>();
 
             Dictionary state;
-            state[PrimitiveFunction::AttributeNameRngSeed] = static_cast<size_t>(rng->GetRngSeed());
-            state[PrimitiveFunction::AttributeNameRngOffset] = static_cast<size_t>(rng->GetRngOffset());
+            state[PrimitiveFunctionAttribute::AttributeNameRngSeed] = static_cast<size_t>(rng->GetRngSeed());
+            state[PrimitiveFunctionAttribute::AttributeNameRngOffset] = static_cast<size_t>(rng->GetRngOffset());
             primitiveFunction->SetState(state);
         }
     }
@@ -311,8 +312,8 @@ namespace CNTK
             {
                 auto state = stateDictionary[primitiveFunction->Uid()].Value<Dictionary>();
                 // Add key-value pairs expected by the SetState method to the state dictionary.
-                state[PrimitiveFunction::AttributeNameRngSeed] = state[rngSeedKey].Value<size_t>();
-                state[PrimitiveFunction::AttributeNameRngOffset] = state[rngOffsetKey].Value<size_t>();
+                state[PrimitiveFunctionAttribute::AttributeNameRngSeed] = state[rngSeedKey].Value<size_t>();
+                state[PrimitiveFunctionAttribute::AttributeNameRngOffset] = state[rngOffsetKey].Value<size_t>();
                 primitiveFunction->SetState(state);
             }
             else
@@ -327,8 +328,8 @@ namespace CNTK
 
                 // Create state from scratch, so that function attributes contain all the required key-value pairs.
                 Dictionary state;
-                state[PrimitiveFunction::AttributeNameRngSeed] = Internal::GenerateRandomSeed(true);
-                state[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
+                state[PrimitiveFunctionAttribute::AttributeNameRngSeed] = Internal::GenerateRandomSeed(true);
+                state[PrimitiveFunctionAttribute::AttributeNameRngOffset] = size_t(0);
                 primitiveFunction->SetState(state);
             }
         }
@@ -395,8 +396,8 @@ namespace CNTK
             if (!m_computationNetwork)
                 continue;
 
-            auto seed = functionState[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
-            auto offset = functionState[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
+            auto seed = functionState[PrimitiveFunctionAttribute::AttributeNameRngSeed].Value<size_t>();
+            auto offset = functionState[PrimitiveFunctionAttribute::AttributeNameRngOffset].Value<size_t>();
 
             // copy the state directly into the network
             for (const auto& output : function->RawOutputs())
@@ -802,7 +803,7 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::TopK:
                 {
-                    auto k = functionConfig[PrimitiveFunction::AttributeNameNumItems].Value<size_t>();
+                    auto k = functionConfig[PrimitiveFunctionAttribute::AttributeNameNumItems].Value<size_t>();
                     ASSIGN_NEW_NODE(TopKNode, network->GetDeviceId(), internalNodeName, k);
                     break;
                 }
@@ -811,17 +812,17 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::TransposeAxes:
                 {
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameAxisVec))
                     {
-                        auto perm = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                        auto perm = AsVector<Axis>(functionConfig[PrimitiveFunctionAttribute::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
                         for (auto& p : perm)
                             p = NormalizeStaticAxis(p, perm.size());
                         ASSIGN_NEW_NODE(TransposeDimensionsNode, network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(perm));
                     }
                     else
                     {
-                        auto axis1 = functionConfig[PrimitiveFunction::AttributeNameAxis1].Value<Axis>();
-                        auto axis2 = functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>();
+                        auto axis1 = functionConfig[PrimitiveFunctionAttribute::AttributeNameAxis1].Value<Axis>();
+                        auto axis2 = functionConfig[PrimitiveFunctionAttribute::AttributeNameAxis2].Value<Axis>();
 
                         // The axis ids passed to the internal CNTK TransposeDimensionsNode are 1 based instead of 0 based
                         ASSIGN_NEW_NODE(TransposeDimensionsNode, network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(axis1), AsCNTKInternalAxisIdx(axis2));
@@ -847,8 +848,8 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::UnpackSequence:
                 {
-                    auto paddingValue = functionConfig[PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue].Value<double>();
-                    auto suppressMaskOutput = functionConfig[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
+                    auto paddingValue = functionConfig[PrimitiveFunctionAttribute::AttributeNameSequenceUnpackPaddingValue].Value<double>();
+                    auto suppressMaskOutput = functionConfig[PrimitiveFunctionAttribute::AttributeNameSequenceUnpackSuppressMaskOutput].Value<bool>();
                     ASSIGN_NEW_NODE(UnpackSequenceNode, network->GetDeviceId(), internalNodeName, paddingValue, suppressMaskOutput);
                     break;
                 }
@@ -856,27 +857,27 @@ namespace CNTK
                 {
                     std::vector<Axis> axis;
                     std::vector<int> beginIndex, endIndex, strides;
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
-                        functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
-                        functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameAxisVec) &&
+                        functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameBeginIndexVec) &&
+                        functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameEndIndexVec))
                     {
-                        axis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
-                        beginIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
-                        endIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
-                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStridesVec))
-                            strides = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
+                        axis = AsVector<Axis>(functionConfig[PrimitiveFunctionAttribute::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                        beginIndex = AsVector<int>(functionConfig[PrimitiveFunctionAttribute::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
+                        endIndex = AsVector<int>(functionConfig[PrimitiveFunctionAttribute::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
+                        if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameSliceStridesVec))
+                            strides = AsVector<int>(functionConfig[PrimitiveFunctionAttribute::AttributeNameSliceStridesVec].Value<std::vector<DictionaryValue>>());
                         else
                             strides.resize(axis.size(), 1);
                     }
-                    else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis) &&
-                        functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
-                        functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndex))
+                    else if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameAxis) &&
+                        functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameBeginIndex) &&
+                        functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameEndIndex))
                     {
-                        axis.push_back(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
-                        beginIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
-                        endIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
-                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameSliceStrides))
-                            strides.push_back(functionConfig[PrimitiveFunction::AttributeNameSliceStrides].Value<int>());
+                        axis.push_back(functionConfig[PrimitiveFunctionAttribute::AttributeNameAxis].Value<Axis>());
+                        beginIndex.push_back(functionConfig[PrimitiveFunctionAttribute::AttributeNameBeginIndex].Value<int>());
+                        endIndex.push_back(functionConfig[PrimitiveFunctionAttribute::AttributeNameEndIndex].Value<int>());
+                        if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameSliceStrides))
+                            strides.push_back(functionConfig[PrimitiveFunctionAttribute::AttributeNameSliceStrides].Value<int>());
                         else
                             strides.push_back(1);
                     }
@@ -890,38 +891,38 @@ namespace CNTK
                 }
                 case PrimitiveOpType::RandomSample:
                 {
-                    auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
-                    auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
+                    auto numSamples = functionConfig[PrimitiveFunctionAttribute::AttributeNameNumSamples].Value<size_t>();
+                    auto allowDuplicates = functionConfig[PrimitiveFunctionAttribute::AttributeNameAllowDuplicates].Value<bool>();
                     ASSIGN_NEW_NODE(RandomSampleNode, network->GetDeviceId(), internalNodeName, numSamples, allowDuplicates);
                     break;
                 }
                 case PrimitiveOpType::RandomSampleInclusionFrequency:
                 {
-                    auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
-                    auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
+                    auto numSamples = functionConfig[PrimitiveFunctionAttribute::AttributeNameNumSamples].Value<size_t>();
+                    auto allowDuplicates = functionConfig[PrimitiveFunctionAttribute::AttributeNameAllowDuplicates].Value<bool>();
                     ASSIGN_NEW_NODE(RandomSampleInclusionFrequencyNode, network->GetDeviceId(), internalNodeName, numSamples, allowDuplicates);
                     break;
                 }
                 case PrimitiveOpType::Dropout:
                 {
-                    auto dropoutRate = functionConfig[PrimitiveFunction::AttributeNameDropoutRate].Value<double>();
+                    auto dropoutRate = functionConfig[PrimitiveFunctionAttribute::AttributeNameDropoutRate].Value<double>();
                     ASSIGN_NEW_NODE(DropoutNode, network->GetDeviceId(), internalNodeName);
                     SMART_NODE_INVOKE(DropoutNode, computationNodePtr, SetDropoutRate, dropoutRate);
                     break;
                 }
                 case PrimitiveOpType::RandomDistribution:
                 {
-                    auto seed = functionConfig[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
-                    auto offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
-                    auto rvtype = functionConfig[PrimitiveFunction::AttributeNameRandomDistributionType].Value<std::wstring>();
+                    auto seed = functionConfig[PrimitiveFunctionAttribute::AttributeNameRngSeed].Value<size_t>();
+                    auto offset = functionConfig[PrimitiveFunctionAttribute::AttributeNameRngOffset].Value<size_t>();
+                    auto rvtype = functionConfig[PrimitiveFunctionAttribute::AttributeNameRandomDistributionType].Value<std::wstring>();
 
                     std::vector<double> randomDistributionArgs;
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameRandomDistributionArgs))
-                        randomDistributionArgs = AsVector<double>(functionConfig[PrimitiveFunction::AttributeNameRandomDistributionArgs].Value<std::vector<DictionaryValue>>());
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameRandomDistributionArgs))
+                        randomDistributionArgs = AsVector<double>(functionConfig[PrimitiveFunctionAttribute::AttributeNameRandomDistributionArgs].Value<std::vector<DictionaryValue>>());
 
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewShape))
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameNewShape))
                     {
-                        auto shape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                        auto shape = functionConfig[PrimitiveFunctionAttribute::AttributeNameNewShape].Value<NDShape>();
                         ASSIGN_NEW_NODE(RandomDistributionNode, network->GetDeviceId(), internalNodeName, rvtype, randomDistributionArgs, AsTensorShape(shape));
                     }
                     else
@@ -933,13 +934,13 @@ namespace CNTK
                 {
                     auto beginAxis = Axis(0);
                     auto endAxis = Axis((int)functionInputs[0].Shape().Rank());
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameBeginAxis))
-                        beginAxis = functionConfig[PrimitiveFunction::AttributeNameBeginAxis].Value<Axis>();
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameBeginAxis))
+                        beginAxis = functionConfig[PrimitiveFunctionAttribute::AttributeNameBeginAxis].Value<Axis>();
 
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameEndAxis))
-                        endAxis = functionConfig[PrimitiveFunction::AttributeNameEndAxis].Value<Axis>();
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameEndAxis))
+                        endAxis = functionConfig[PrimitiveFunctionAttribute::AttributeNameEndAxis].Value<Axis>();
 
-                    auto replacementShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                    auto replacementShape = functionConfig[PrimitiveFunctionAttribute::AttributeNameNewShape].Value<NDShape>();
                     for (size_t i = 0; i < replacementShape.Rank(); ++i)
                     {
                         if (replacementShape[i] == NDShape::InferredDimension)
@@ -961,52 +962,52 @@ namespace CNTK
                 }
                 case PrimitiveOpType::ConstantOp:
                 {
-                    double fillValue = functionConfig[PrimitiveFunction::AttributeNameFillValue].Value<double>();
+                    double fillValue = functionConfig[PrimitiveFunctionAttribute::AttributeNameFillValue].Value<double>();
                     computationNodePtr = New<ConstantNode<ElementType>>(network->GetDeviceId(), internalNodeName, fillValue);
                     break;
                 }
                 case PrimitiveOpType::EyeLikeOp:
                 {
-                    bool outputSparse = functionConfig[PrimitiveFunction::AttributeNameOutputSparse].Value<bool>();
+                    bool outputSparse = functionConfig[PrimitiveFunctionAttribute::AttributeNameOutputSparse].Value<bool>();
                     ASSIGN_NEW_NODE(EyeLikeNode, network->GetDeviceId(), internalNodeName, outputSparse);
                     break;
                 }
                 case PrimitiveOpType::ROIPooling:
                 {
-                    PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
-                    auto roiOutputShape = functionConfig[PrimitiveFunction::AttributeNameROIOutputShape].Value<NDShape>();
-                    auto spatialScale = functionConfig[PrimitiveFunction::AttributeNameSpatialScale].Value<double>();
+                    PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunctionAttribute::AttributeNamePoolingType].Value<size_t>());
+                    auto roiOutputShape = functionConfig[PrimitiveFunctionAttribute::AttributeNameROIOutputShape].Value<NDShape>();
+                    auto spatialScale = functionConfig[PrimitiveFunctionAttribute::AttributeNameSpatialScale].Value<double>();
                     ASSIGN_NEW_NODE(ROIPoolingNode, network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(roiOutputShape), spatialScale);
                     break;
                 }
                 case PrimitiveOpType::Pooling:
                 {
-                    PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());
-                    auto poolingWindowsShape = functionConfig[PrimitiveFunction::AttributeNamePoolingWindowShape].Value<NDShape>();
-                    auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
-                    auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
-                    auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
-                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                    PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunctionAttribute::AttributeNamePoolingType].Value<size_t>());
+                    auto poolingWindowsShape = functionConfig[PrimitiveFunctionAttribute::AttributeNamePoolingWindowShape].Value<NDShape>();
+                    auto strides = functionConfig[PrimitiveFunctionAttribute::AttributeNameStrides].Value<NDShape>();
+                    auto lowerPad = functionConfig[PrimitiveFunctionAttribute::AttributeNameLowerPad].Value<NDShape>();
+                    auto upperPad = functionConfig[PrimitiveFunctionAttribute::AttributeNameUpperPad].Value<NDShape>();
+                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunctionAttribute::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                     auto ceilOutDim = false;
                     auto includePad = false;
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameCeilOutDim))
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameCeilOutDim))
                     {
-                        ceilOutDim = functionConfig[PrimitiveFunction::AttributeNameCeilOutDim].Value<bool>();
+                        ceilOutDim = functionConfig[PrimitiveFunctionAttribute::AttributeNameCeilOutDim].Value<bool>();
                     }
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameIncludePad))
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameIncludePad))
                     {
-                        includePad = functionConfig[PrimitiveFunction::AttributeNameIncludePad].Value<bool>();
+                        includePad = functionConfig[PrimitiveFunctionAttribute::AttributeNameIncludePad].Value<bool>();
                     }
                     ASSIGN_NEW_NODE(PoolingNode, network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutDim, includePad, ImageLayoutKind::CHW);
                     break;
                 }
                 case PrimitiveOpType::Unpooling:
                 {
-                    auto unpoolingWindowShape = functionConfig[PrimitiveFunction::AttributeNameUnpoolingWindowShape].Value<NDShape>();
-                    auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
-                    auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
-                    auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
-                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                    auto unpoolingWindowShape = functionConfig[PrimitiveFunctionAttribute::AttributeNameUnpoolingWindowShape].Value<NDShape>();
+                    auto strides = functionConfig[PrimitiveFunctionAttribute::AttributeNameStrides].Value<NDShape>();
+                    auto lowerPad = functionConfig[PrimitiveFunctionAttribute::AttributeNameLowerPad].Value<NDShape>();
+                    auto upperPad = functionConfig[PrimitiveFunctionAttribute::AttributeNameUpperPad].Value<NDShape>();
+                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunctionAttribute::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                     //We only get here after validation so it is safe to assume unpooling is max
                     ASSIGN_NEW_NODE(MaxUnpoolingNode, network->GetDeviceId(), internalNodeName, AsTensorShape(unpoolingWindowShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
                     break;
@@ -1016,9 +1017,9 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::OneHot:
                 {
-                    auto numClass = functionConfig[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
-                    auto is_sparse = functionConfig[PrimitiveFunction::AttributeNameOneHotOutputSparse].Value<bool>();
-                    auto axis = functionConfig[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>();
+                    auto numClass = functionConfig[PrimitiveFunctionAttribute::AttributeNameNumClass].Value<size_t>();
+                    auto is_sparse = functionConfig[PrimitiveFunctionAttribute::AttributeNameOneHotOutputSparse].Value<bool>();
+                    auto axis = functionConfig[PrimitiveFunctionAttribute::AttributeNameOneHotAxis].Value<Axis>();
                     ASSIGN_NEW_NODE(OneHotNode, network->GetDeviceId(), numClass, is_sparse, axis.StaticAxisIndex(), internalNodeName);
                     break;
                 }
@@ -1070,37 +1071,37 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::Times:
                 {
-                    size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-                    auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
+                    size_t outputRank = functionConfig[PrimitiveFunctionAttribute::AttributeNameOutputRank].Value<size_t>();
+                    auto inferInputRankToMap = functionConfig[PrimitiveFunctionAttribute::AttributeNameInferInputRankToMap].Value<int>();
                     ASSIGN_NEW_NODE(TimesNode, network->GetDeviceId(), internalNodeName, outputRank, inferInputRankToMap);
                     break;
                 }
                 case PrimitiveOpType::TransposeTimes:
                 {
-                    size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+                    size_t outputRank = functionConfig[PrimitiveFunctionAttribute::AttributeNameOutputRank].Value<size_t>();
                     ASSIGN_NEW_NODE(TransposeTimesNode, network->GetDeviceId(), internalNodeName, outputRank);
                     break;
                 }
                 case PrimitiveOpType::Convolution:
                 {
-                    auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                    auto strides = functionConfig[PrimitiveFunctionAttribute::AttributeNameStrides].Value<NDShape>();
                     NDShape dilation = { 1 };
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameDilation))
-                        dilation = functionConfig[PrimitiveFunction::AttributeNameDilation].Value<NDShape>();
-                    auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
-                    auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
-                    auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
-                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-                    auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameDilation))
+                        dilation = functionConfig[PrimitiveFunctionAttribute::AttributeNameDilation].Value<NDShape>();
+                    auto lowerPad = functionConfig[PrimitiveFunctionAttribute::AttributeNameLowerPad].Value<NDShape>();
+                    auto upperPad = functionConfig[PrimitiveFunctionAttribute::AttributeNameUpperPad].Value<NDShape>();
+                    auto sharing = AsVector<bool>(functionConfig[PrimitiveFunctionAttribute::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
+                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunctionAttribute::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                    auto transpose = functionConfig[PrimitiveFunctionAttribute::AttributeNameTranspose].Value<bool>();
                     NDShape outputMapCount, kernelShape;
                     std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose);
                     NDShape outputShape = NDShape::Unknown();
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
-                        outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameOutputShape))
+                        outputShape = functionConfig[PrimitiveFunctionAttribute::AttributeNameOutputShape].Value<NDShape>();
                     auto groups = PrimitiveFunction::convolutionOpDefaultValueForGroups;
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameGroups))
-                        groups = functionConfig[PrimitiveFunction::AttributeNameGroups].Value<size_t>();
-                    auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameGroups))
+                        groups = functionConfig[PrimitiveFunctionAttribute::AttributeNameGroups].Value<size_t>();
+                    auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunctionAttribute::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
                     ASSIGN_NEW_NODE(ConvolutionNode, network->GetDeviceId(), internalNodeName,
                                     AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
                                     sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
@@ -1110,24 +1111,24 @@ namespace CNTK
                 }
                 case PrimitiveOpType::ConvolutionSequenceShape:
                 {
-                    auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                    auto strides = functionConfig[PrimitiveFunctionAttribute::AttributeNameStrides].Value<NDShape>();
                     NDShape dilation = { 1 };
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameDilation))
-                        dilation = functionConfig[PrimitiveFunction::AttributeNameDilation].Value<NDShape>();
-                    auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
-                    auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
-                    auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
-                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-                    auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameDilation))
+                        dilation = functionConfig[PrimitiveFunctionAttribute::AttributeNameDilation].Value<NDShape>();
+                    auto lowerPad = functionConfig[PrimitiveFunctionAttribute::AttributeNameLowerPad].Value<NDShape>();
+                    auto upperPad = functionConfig[PrimitiveFunctionAttribute::AttributeNameUpperPad].Value<NDShape>();
+                    auto sharing = AsVector<bool>(functionConfig[PrimitiveFunctionAttribute::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
+                    auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunctionAttribute::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                    auto transpose = functionConfig[PrimitiveFunctionAttribute::AttributeNameTranspose].Value<bool>();
                     NDShape outputMapCount, kernelShape;
                     std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose);
                     NDShape outputShape = NDShape::Unknown();
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
-                        outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameOutputShape))
+                        outputShape = functionConfig[PrimitiveFunctionAttribute::AttributeNameOutputShape].Value<NDShape>();
                     auto groups = PrimitiveFunction::convolutionOpDefaultValueForGroups;
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameGroups))
-                        groups = functionConfig[PrimitiveFunction::AttributeNameGroups].Value<size_t>();
-                    auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameGroups))
+                        groups = functionConfig[PrimitiveFunctionAttribute::AttributeNameGroups].Value<size_t>();
+                    auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunctionAttribute::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
                     ASSIGN_NEW_NODE(ConvolutionSequenceShapeNode, network->GetDeviceId(), internalNodeName,
                         AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides),
                         sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose,
@@ -1155,29 +1156,29 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::EditDistanceError:
                 {
-                    auto subPen = functionConfig[PrimitiveFunction::AttributeNameSubstitutionPenalty].Value<float>();
-                    auto delPen = functionConfig[PrimitiveFunction::AttributeNameDeletionPenalty].Value<float>();
-                    auto insPen = functionConfig[PrimitiveFunction::AttributeNameInsertionPenalty].Value<float>();
-                    auto squashInputs = functionConfig[PrimitiveFunction::AttributeNameSquashInputs].Value<bool>();
-                    auto tokensToIgnore = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameTokensToIgnore].Value<std::vector<DictionaryValue>>());
+                    auto subPen = functionConfig[PrimitiveFunctionAttribute::AttributeNameSubstitutionPenalty].Value<float>();
+                    auto delPen = functionConfig[PrimitiveFunctionAttribute::AttributeNameDeletionPenalty].Value<float>();
+                    auto insPen = functionConfig[PrimitiveFunctionAttribute::AttributeNameInsertionPenalty].Value<float>();
+                    auto squashInputs = functionConfig[PrimitiveFunctionAttribute::AttributeNameSquashInputs].Value<bool>();
+                    auto tokensToIgnore = AsVector<size_t>(functionConfig[PrimitiveFunctionAttribute::AttributeNameTokensToIgnore].Value<std::vector<DictionaryValue>>());
                     ASSIGN_NEW_NODE(EditDistanceErrorNode, network->GetDeviceId(), internalNodeName, subPen, delPen, insPen, squashInputs, tokensToIgnore);
                     break;
                 }
                 case PrimitiveOpType::LatticeSequenceWithSoftmax:
                 {
-                    auto symListPath = functionConfig[PrimitiveFunction::AttributeNameSymListPath].Value<wstring>();
-                    auto phonePath = functionConfig[PrimitiveFunction::AttributeNamePhonePath].Value<wstring>();
-                    auto stateListPath = functionConfig[PrimitiveFunction::AttributeNameStateListPath].Value<wstring>();
-                    auto transProbPath =  functionConfig[PrimitiveFunction::AttributeNameTransProbPath].Value<wstring>();
-                    auto latticeConfigPath = functionConfig[PrimitiveFunction::AttributeNameLatticeConfigPath].Value<wstring>();
-                    auto frameDropThresh = functionConfig[PrimitiveFunction::AttributeNameFrameDropThresh].Value<float>();
-                    auto doReferenceAlign = functionConfig[PrimitiveFunction::AttributeNameDoReferenceAlign].Value<bool>();
-                    auto seqGammarUsesMBR = functionConfig[PrimitiveFunction::AttributeNameSeqGammarUsesMBR].Value<bool>();
-                    auto seqGammarAMF = functionConfig[PrimitiveFunction::AttributeNameSeqGammarAMF].Value<float>();
-                    auto seqGammarLMF = functionConfig[PrimitiveFunction::AttributeNameSeqGammarLMF].Value<float>();
-                    auto seqGammarBMMIFactor = functionConfig[PrimitiveFunction::AttributeNameSeqGammarBMMIFactor].Value<float>();
-                    auto seqGammarWordPen = functionConfig[PrimitiveFunction::AttributeNameSeqGammarWordPen].Value<float>();
-                    auto hSmoothingWeight = functionConfig[PrimitiveFunction::AttributeNameHSmoothingWeight].Value<float>();
+                    auto symListPath = functionConfig[PrimitiveFunctionAttribute::AttributeNameSymListPath].Value<wstring>();
+                    auto phonePath = functionConfig[PrimitiveFunctionAttribute::AttributeNamePhonePath].Value<wstring>();
+                    auto stateListPath = functionConfig[PrimitiveFunctionAttribute::AttributeNameStateListPath].Value<wstring>();
+                    auto transProbPath =  functionConfig[PrimitiveFunctionAttribute::AttributeNameTransProbPath].Value<wstring>();
+                    auto latticeConfigPath = functionConfig[PrimitiveFunctionAttribute::AttributeNameLatticeConfigPath].Value<wstring>();
+                    auto frameDropThresh = functionConfig[PrimitiveFunctionAttribute::AttributeNameFrameDropThresh].Value<float>();
+                    auto doReferenceAlign = functionConfig[PrimitiveFunctionAttribute::AttributeNameDoReferenceAlign].Value<bool>();
+                    auto seqGammarUsesMBR = functionConfig[PrimitiveFunctionAttribute::AttributeNameSeqGammarUsesMBR].Value<bool>();
+                    auto seqGammarAMF = functionConfig[PrimitiveFunctionAttribute::AttributeNameSeqGammarAMF].Value<float>();
+                    auto seqGammarLMF = functionConfig[PrimitiveFunctionAttribute::AttributeNameSeqGammarLMF].Value<float>();
+                    auto seqGammarBMMIFactor = functionConfig[PrimitiveFunctionAttribute::AttributeNameSeqGammarBMMIFactor].Value<float>();
+                    auto seqGammarWordPen = functionConfig[PrimitiveFunctionAttribute::AttributeNameSeqGammarWordPen].Value<float>();
+                    auto hSmoothingWeight = functionConfig[PrimitiveFunctionAttribute::AttributeNameHSmoothingWeight].Value<float>();
 
                     computationNodePtr = New<LatticeSequenceWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName, symListPath, phonePath, stateListPath, transProbPath, latticeConfigPath,
                         hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen);
@@ -1185,8 +1186,8 @@ namespace CNTK
                 }
                 case PrimitiveOpType::ForwardBackward:
                 {
-                    auto delayContraint = functionConfig[PrimitiveFunction::AttributeNameDelayConstraint].Value<int>();
-                    auto blankTokenId = functionConfig[PrimitiveFunction::AttributeNameBlankTokenId].Value<size_t>();
+                    auto delayContraint = functionConfig[PrimitiveFunctionAttribute::AttributeNameDelayConstraint].Value<int>();
+                    auto blankTokenId = functionConfig[PrimitiveFunctionAttribute::AttributeNameBlankTokenId].Value<size_t>();
                     ASSIGN_NEW_NODE(ForwardBackwardNode, network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
                     break;
                 }
@@ -1202,7 +1203,7 @@ namespace CNTK
                     Variable inputOperandVar = functionInputs[0];
                     Variable initialStateVar = functionInputs[1];
 
-                    size_t offset = primitiveFunction->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
+                    size_t offset = primitiveFunction->Attributes()[PrimitiveFunctionAttribute::AttributeNameOffset].Value<size_t>();
                     if (op == PrimitiveOpType::PastValue)
                         ASSIGN_NEW_NODE(PastValueNode, network->GetDeviceId(), internalNodeName, AsTensorShape(inputOperandVar.Shape()), offset);
                     else
@@ -1213,24 +1214,24 @@ namespace CNTK
                 case PrimitiveOpType::ReduceElements:
                 {
                     bool keepDimensions = true;
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameReductionKeepDimensions))
-                        keepDimensions = functionConfig[PrimitiveFunction::AttributeNameReductionKeepDimensions].Value<bool>();
-                    auto reductionOpName = functionConfig[PrimitiveFunction::AttributeNameReductionOpName].Value<std::wstring>();
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameReductionKeepDimensions))
+                        keepDimensions = functionConfig[PrimitiveFunctionAttribute::AttributeNameReductionKeepDimensions].Value<bool>();
+                    auto reductionOpName = functionConfig[PrimitiveFunctionAttribute::AttributeNameReductionOpName].Value<std::wstring>();
                     std::vector<Axis> reductionAxis;
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameAxisVec))
                     {
-                        reductionAxis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                        reductionAxis = AsVector<Axis>(functionConfig[PrimitiveFunctionAttribute::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
                      }
-                    else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis))
+                    else if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameAxis))
                     {
-                        reductionAxis.push_back(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
+                        reductionAxis.push_back(functionConfig[PrimitiveFunctionAttribute::AttributeNameAxis].Value<Axis>());
                     }
                     else
                     {
                         RuntimeError("Failed to create computation node': Reduce operation %ls with no '%ls' or  '%ls' attributes",
                             PrimitiveOpTypeName(op).c_str(),
-                            PrimitiveFunction::AttributeNameAxis.c_str(),
-                            PrimitiveFunction::AttributeNameAxisVec.c_str()
+                            PrimitiveFunctionAttribute::AttributeNameAxis.c_str(),
+                            PrimitiveFunctionAttribute::AttributeNameAxisVec.c_str()
                         );
 
                     } 
@@ -1239,16 +1240,16 @@ namespace CNTK
                 }
                 case PrimitiveOpType::BatchNormalization:
                 {
-                    auto spatial = functionConfig[PrimitiveFunction::AttributeNameSpatial].Value<bool>();
-                    auto normalizationTimeConstant = functionConfig[PrimitiveFunction::AttributeNameNormalizationTimeConstant].Value<double>();
-                    auto blendTimeConstant = functionConfig[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
-                    auto epsilon = functionConfig[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
-                    auto useCuDNNEngine = functionConfig[PrimitiveFunction::AttributeNameUseCuDNNEngine].Value<bool>();
+                    auto spatial = functionConfig[PrimitiveFunctionAttribute::AttributeNameSpatial].Value<bool>();
+                    auto normalizationTimeConstant = functionConfig[PrimitiveFunctionAttribute::AttributeNameNormalizationTimeConstant].Value<double>();
+                    auto blendTimeConstant = functionConfig[PrimitiveFunctionAttribute::AttributeNameBlendTimeConstant].Value<double>();
+                    auto epsilon = functionConfig[PrimitiveFunctionAttribute::AttributeNameEpsilon].Value<double>();
+                    auto useCuDNNEngine = functionConfig[PrimitiveFunctionAttribute::AttributeNameUseCuDNNEngine].Value<bool>();
                     
                     bool disableRegularization = false;
-                    if (functionConfig.Contains(PrimitiveFunction::AttributeNameDisableRegularization))
+                    if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameDisableRegularization))
                     {
-                        disableRegularization = functionConfig[PrimitiveFunction::AttributeNameDisableRegularization].Value<bool>();
+                        disableRegularization = functionConfig[PrimitiveFunctionAttribute::AttributeNameDisableRegularization].Value<bool>();
                     }
                     
                     ASSIGN_NEW_NODE(BatchNormalizationNode, network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, disableRegularization, ImageLayoutKind::CHW);
@@ -1276,25 +1277,25 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::Splice:
                 {
-                    Axis spliceAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                    Axis spliceAxis = functionConfig[PrimitiveFunctionAttribute::AttributeNameAxis].Value<Axis>();
                     ASSIGN_NEW_NODE(RowStackNode, network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(spliceAxis));
                     break;
                 }
                 case PrimitiveOpType::Pad:
                 {
-                    auto head = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNamePaddingHead].Value<std::vector<DictionaryValue>>());
-                    auto foot = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNamePaddingFoot].Value<std::vector<DictionaryValue>>());
-                    auto mode = functionConfig[PrimitiveFunction::AttributeNamePaddingMode].Value<size_t>();
-                    auto constantValue = functionConfig[PrimitiveFunction::AttributeNamePaddingConstantValue].Value<double>();
+                    auto head = AsVector<size_t>(functionConfig[PrimitiveFunctionAttribute::AttributeNamePaddingHead].Value<std::vector<DictionaryValue>>());
+                    auto foot = AsVector<size_t>(functionConfig[PrimitiveFunctionAttribute::AttributeNamePaddingFoot].Value<std::vector<DictionaryValue>>());
+                    auto mode = functionConfig[PrimitiveFunctionAttribute::AttributeNamePaddingMode].Value<size_t>();
+                    auto constantValue = functionConfig[PrimitiveFunctionAttribute::AttributeNamePaddingConstantValue].Value<double>();
                     ASSIGN_NEW_NODE(PaddingNode, network->GetDeviceId(), internalNodeName, head, foot, (PaddingType)mode, constantValue);
                     break;
                 }
                 case PrimitiveOpType::OptimizedRNNStack:
                 {
-                    auto bidirectional = functionConfig[PrimitiveFunction::AttributeNameBidirectional].Value<bool>();
-                    auto numLayers = functionConfig[PrimitiveFunction::AttributeNameNumLayers].Value<size_t>();
-                    auto hiddenSize = functionConfig[PrimitiveFunction::AttributeNameHiddenSize].Value<size_t>();
-                    auto recurrentOp = functionConfig[PrimitiveFunction::AttributeNameRecurrentOp].Value<std::wstring>();
+                    auto bidirectional = functionConfig[PrimitiveFunctionAttribute::AttributeNameBidirectional].Value<bool>();
+                    auto numLayers = functionConfig[PrimitiveFunctionAttribute::AttributeNameNumLayers].Value<size_t>();
+                    auto hiddenSize = functionConfig[PrimitiveFunctionAttribute::AttributeNameHiddenSize].Value<size_t>();
+                    auto recurrentOp = functionConfig[PrimitiveFunctionAttribute::AttributeNameRecurrentOp].Value<std::wstring>();
 
                     ASSIGN_NEW_NODE(OptimizedRNNStackNode, network->GetDeviceId(), internalNodeName, bidirectional, numLayers, hiddenSize, recurrentOp);
                     break;
@@ -1325,10 +1326,10 @@ namespace CNTK
                 case PrimitiveOpType::Crop:
                     if (functionInputs.size() == 2)
                     {
-                        if (functionConfig.Contains(PrimitiveFunction::AttributeNameOffset))
+                        if (functionConfig.Contains(PrimitiveFunctionAttribute::AttributeNameOffset))
                         {
                             // Crop with given offsets.
-                            const auto& offsets = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameOffset].Value<std::vector<DictionaryValue>>());
+                            const auto& offsets = AsVector<size_t>(functionConfig[PrimitiveFunctionAttribute::AttributeNameOffset].Value<std::vector<DictionaryValue>>());
                             if (offsets.size() != 2)
                             {
                                 CNTK::LogicError("Vector of crop offsets must have size 2.");
@@ -1353,7 +1354,7 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::Cast:
                 {
-                    DataType outputType = (DataType)functionConfig[PrimitiveFunction::AttributeNameNewDataType].Value<int>();
+                    DataType outputType = (DataType)functionConfig[PrimitiveFunctionAttribute::AttributeNameNewDataType].Value<int>();
                     switch (outputType)
                     {
                     case DataType::Float:
@@ -1393,8 +1394,8 @@ namespace CNTK
 
                 if (computationNodePtr->Is<RngUser>())
                 {
-                    auto seed = functionConfig[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
-                    auto offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
+                    auto seed = functionConfig[PrimitiveFunctionAttribute::AttributeNameRngSeed].Value<size_t>();
+                    auto offset = functionConfig[PrimitiveFunctionAttribute::AttributeNameRngOffset].Value<size_t>();
                     computationNodePtr->As<RngUser>()->SetRngState(seed, offset);
                 }
             }
@@ -2323,16 +2324,16 @@ namespace CNTK
 
             for (const wstring& attribute : function->m_dirtyAttributes)
             {
-                if (attribute == PrimitiveFunction::AttributeNameDropoutRate)
+                if (attribute == PrimitiveFunctionAttribute::AttributeNameDropoutRate)
                 {
                     auto dropoutRate = function->m_attributes[attribute].Value<double>();
                     auto dropoutPtr = dynamic_cast<DropoutNodeBase*>(node.get());
                     assert(dropoutPtr != nullptr);
                     dropoutPtr->SetDropoutRate(dropoutRate);
                 }
-                else if (attribute == PrimitiveFunction::AttributeNameRngSeed)
+                else if (attribute == PrimitiveFunctionAttribute::AttributeNameRngSeed)
                 {
-                    auto seed = function->m_attributes[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
+                    auto seed = function->m_attributes[PrimitiveFunctionAttribute::AttributeNameRngSeed].Value<size_t>();
                     auto rngUserPtr = dynamic_cast<RngUser*>(node.get());
                     assert(rngUserPtr != nullptr);
                     rngUserPtr->SetRngState(seed);

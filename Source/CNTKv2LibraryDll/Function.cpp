@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "PrimitiveFunction.h"
+#include "PrimitiveFunctionAttribute.h"
 #include "CompositeFunction.h"
 #include "BlockFunction.h"
 #include "Utils.h"
@@ -1111,7 +1112,7 @@ namespace CNTK
             LogicError("SetAttribute cannot be invoked on an instance of function '%S'.", AsString().c_str());
         }
 
-        if (name == PrimitiveFunction::AttributeNameDropoutRate)
+        if (name == PrimitiveFunctionAttribute::AttributeNameDropoutRate)
         {
             double dropout;
             if (value.ValueType() == DictionaryValue::Type::Float)
@@ -1121,7 +1122,7 @@ namespace CNTK
 
             primitiveFunctionPtr->SetDropoutRate(dropout);
         }
-        else if (name == PrimitiveFunction::AttributeNameRngSeed)
+        else if (name == PrimitiveFunctionAttribute::AttributeNameRngSeed)
         {
             size_t seed;
             if (value.ValueType() == DictionaryValue::Type::Int)
@@ -1139,16 +1140,16 @@ namespace CNTK
 
     Dictionary& Function::GetCustomAttributes()
     {
-        if (!m_attributes.Contains(PrimitiveFunction::AttributeNameCustomAttributes))
+        if (!m_attributes.Contains(PrimitiveFunctionAttribute::AttributeNameCustomAttributes))
         {
             ResetCustomAttributes();
         }
-        return m_attributes[PrimitiveFunction::AttributeNameCustomAttributes].Value<Dictionary>();
+        return m_attributes[PrimitiveFunctionAttribute::AttributeNameCustomAttributes].Value<Dictionary>();
     }
 
     void Function::ResetCustomAttributes()
     {
-        m_attributes[PrimitiveFunction::AttributeNameCustomAttributes] = Dictionary();
+        m_attributes[PrimitiveFunctionAttribute::AttributeNameCustomAttributes] = Dictionary();
     }
 
     FunctionPtr NullaryOp(PrimitiveOpType op, Dictionary&& opConfig, const std::wstring& name)
@@ -1289,7 +1290,7 @@ namespace CNTK
             LogicError("Softmax: support only static axes.");
 
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = axis;
 
         if (((operand.Shape().Rank() == 1) && (axis.StaticAxisIndex() == 0)) ||
             (axis == Axis::AllStaticAxes()))
@@ -1318,7 +1319,7 @@ namespace CNTK
             LogicError("Softmax: only batch and static axes are supported.");
 
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = axis;
 
         auto operandPlaceholder = PlaceholderVariable();
         auto axMax = ReduceMax(operandPlaceholder, axis);
@@ -1341,8 +1342,8 @@ namespace CNTK
     {
         // f(x) = max(0,min(alpha*x+beta,1))
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
-        additionalProperties[PrimitiveFunction::AttributeNameBeta] = beta;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAlpha] = alpha;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameBeta] = beta;
 
         auto alphaConstant = Constant::Scalar(operand.GetDataType(), alpha);
         auto betaConstant = Constant::Scalar(operand.GetDataType(), beta);
@@ -1361,8 +1362,8 @@ namespace CNTK
     FunctionPtr TopK(const Variable& operand, size_t k, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis(0);
-        additionalProperties[PrimitiveFunction::AttributeNameNumItems] = k;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = Axis(0);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameNumItems] = k;
         return UnaryOp(PrimitiveOpType::TopK, operand, std::move(additionalProperties), name);
     }
 
@@ -1377,8 +1378,8 @@ namespace CNTK
         else
         {
             auto additionalProperties = Dictionary();
-            additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
-            additionalProperties[PrimitiveFunction::AttributeNameNumItems] = k;
+            additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = axis;
+            additionalProperties[PrimitiveFunctionAttribute::AttributeNameNumItems] = k;
 
             auto operandPlaceholder = PlaceholderVariable();
             auto firstAxis = Axis(0);
@@ -1395,8 +1396,8 @@ namespace CNTK
     FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxis1] = axis1;
-        additionalProperties[PrimitiveFunction::AttributeNameAxis2] = axis2;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis1] = axis1;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis2] = axis2;
         return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
     }
 
@@ -1407,7 +1408,7 @@ namespace CNTK
             LogicError("Transpose: Permutation vector must only contain static axes.");
 
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(permutation);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxisVec] = AsDictionaryValueVector(permutation);
         return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
     }
 
@@ -1436,14 +1437,14 @@ namespace CNTK
     FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameNumSamples] = numSamples;
-        additionalProperties[PrimitiveFunction::AttributeNameAllowDuplicates] = allowDuplicates;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameNumSamples] = numSamples;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAllowDuplicates] = allowDuplicates;
 
         if (seed == SentinelValueForAutoSelectRandomSeed)
             seed = Internal::GenerateRandomSeed(true);
 
-        additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
-        additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameRngSeed] = size_t(seed);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameRngOffset] = size_t(0);
 
         return UnaryOp(PrimitiveOpType::RandomSample, operand, std::move(additionalProperties), name);
     }
@@ -1451,14 +1452,14 @@ namespace CNTK
     FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, unsigned long seed, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameNumSamples] = numSamples;
-        additionalProperties[PrimitiveFunction::AttributeNameAllowDuplicates] = allowDuplicates;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameNumSamples] = numSamples;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAllowDuplicates] = allowDuplicates;
 
         if (seed == SentinelValueForAutoSelectRandomSeed)
             seed = Internal::GenerateRandomSeed(true);
 
-        additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
-        additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameRngSeed] = size_t(seed);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameRngOffset] = size_t(0);
 
         return UnaryOp(PrimitiveOpType::RandomSampleInclusionFrequency, operand, std::move(additionalProperties), name);
     }
@@ -1466,13 +1467,13 @@ namespace CNTK
     FunctionPtr Dropout(const Variable& operand, double dropoutRate, unsigned long seed, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameDropoutRate] = dropoutRate;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameDropoutRate] = dropoutRate;
 
         if (seed == SentinelValueForAutoSelectRandomSeed)
             seed = Internal::GenerateRandomSeed(true);
 
-        additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
-        additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameRngSeed] = size_t(seed);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameRngOffset] = size_t(0);
 
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
     }
@@ -1484,10 +1485,10 @@ namespace CNTK
         if (seed == SentinelValueForAutoSelectRandomSeed)
             seed = Internal::GenerateRandomSeed(true);
         additionalProperties.Add(
-            PrimitiveFunction::AttributeNameRandomDistributionType, type,
-            PrimitiveFunction::AttributeNameRandomDistributionArgs, AsDictionaryValueVector(args),
-            PrimitiveFunction::AttributeNameRngSeed, size_t(seed),
-            PrimitiveFunction::AttributeNameRngOffset, size_t(0));
+            PrimitiveFunctionAttribute::AttributeNameRandomDistributionType, type,
+            PrimitiveFunctionAttribute::AttributeNameRandomDistributionArgs, AsDictionaryValueVector(args),
+            PrimitiveFunctionAttribute::AttributeNameRngSeed, size_t(seed),
+            PrimitiveFunctionAttribute::AttributeNameRngOffset, size_t(0));
         return additionalProperties;
     }
 
@@ -1495,8 +1496,8 @@ namespace CNTK
     {
         auto additionalProperties = CreateRandomDistributionAttributes(type, args, seed);
         additionalProperties.Add(
-            PrimitiveFunction::AttributeNameNewShape, shape,
-            PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(dataType));
+            PrimitiveFunctionAttribute::AttributeNameNewShape, shape,
+            PrimitiveFunctionAttribute::AttributeNameNewDataType, static_cast<int>(dataType));
         return additionalProperties;
     }
 
@@ -1554,10 +1555,10 @@ namespace CNTK
     FunctionPtr Pad(const Variable& operand, PaddingMode mode, const std::vector<size_t>& head, const std::vector<size_t>& foot, double constantValue, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNamePaddingHead] = AsDictionaryValueVector(head);
-        additionalProperties[PrimitiveFunction::AttributeNamePaddingFoot] = AsDictionaryValueVector(foot);
-        additionalProperties[PrimitiveFunction::AttributeNamePaddingMode] = (size_t)mode;
-        additionalProperties[PrimitiveFunction::AttributeNamePaddingConstantValue] = constantValue;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePaddingHead] = AsDictionaryValueVector(head);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePaddingFoot] = AsDictionaryValueVector(foot);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePaddingMode] = (size_t)mode;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePaddingConstantValue] = constantValue;
         return UnaryOp(PrimitiveOpType::Pad, operand, std::move(additionalProperties), name);
     }
 
@@ -1669,7 +1670,7 @@ namespace CNTK
         NDShape newShape({ dim0, dim1 });
 
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxis] = Axis(onnx_axis);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = Axis(onnx_axis);
 
         auto operandPlaceholder = PlaceholderVariable();
 
@@ -1684,9 +1685,9 @@ namespace CNTK
             LogicError("Reshape: operation does not support reshaping dynamic axis");
 
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = replacementShape;
-        additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = beginAxis;
-        additionalProperties[PrimitiveFunction::AttributeNameEndAxis] = endAxis;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameNewShape] = replacementShape;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameBeginAxis] = beginAxis;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameEndAxis] = endAxis;
 
         return UnaryOp(PrimitiveOpType::Reshape, operand, std::move(additionalProperties), name);
     }
@@ -1698,14 +1699,14 @@ namespace CNTK
         // TODO: this code is needed for ONNX converter because ONNX requires squeeze axis. However, unit test failed with this code.
         // Need further investigation.
         //auto additionalProperties = Dictionary();
-        //additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(GetSqueezableAxes(operand.Shape()));
+        //additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxisVec] = AsDictionaryValueVector(GetSqueezableAxes(operand.Shape()));
         //return UnaryOp(PrimitiveOpType::Squeeze, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr Squeeze(const Variable& operand, const std::vector<Axis>& axes, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
         return UnaryOp(PrimitiveOpType::Squeeze, operand, std::move(additionalProperties), name);
     }
 
@@ -1719,7 +1720,7 @@ namespace CNTK
     FunctionPtr ZerosLike(const Variable& operand, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameFillValue] = 0.0;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = 0.0;
 
         return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
     }
@@ -1727,7 +1728,7 @@ namespace CNTK
     FunctionPtr OnesLike(const Variable& operand, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameFillValue] = 1.0;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = 1.0;
 
         return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
     }
@@ -1735,9 +1736,9 @@ namespace CNTK
     FunctionPtr CustomProxyOp(const std::vector<Variable>& operands, const std::wstring& customOp, const NDShape& outputShape, DataType outputType, const std::wstring& name)
     {
         auto attributes = Dictionary();
-        attributes[PrimitiveFunction::AttributeNameCustomOp] = customOp;
-        attributes[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
-        attributes.Add(PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(outputType));
+        attributes[PrimitiveFunctionAttribute::AttributeNameCustomOp] = customOp;
+        attributes[PrimitiveFunctionAttribute::AttributeNameOutputShape] = outputShape;
+        attributes.Add(PrimitiveFunctionAttribute::AttributeNameNewDataType, static_cast<int>(outputType));
         auto op = AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::CustomProxyOp, operands, std::move(attributes), name));
         return op;
     }
@@ -1745,7 +1746,7 @@ namespace CNTK
     FunctionPtr EyeLike(const Variable& operand, bool isOutputSparse, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameOutputSparse] = isOutputSparse;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameOutputSparse] = isOutputSparse;
         return UnaryOp(PrimitiveOpType::EyeLikeOp, operand, std::move(additionalProperties), name);
     }
 
@@ -1922,15 +1923,15 @@ namespace CNTK
     FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
-        additionalProperties[PrimitiveFunction::AttributeNameInferInputRankToMap] = inferInputRankToMap;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameOutputRank] = outputRank;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameInferInputRankToMap] = inferInputRankToMap;
         return BinaryOp(PrimitiveOpType::Times, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
     FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank /*= 1*/, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameOutputRank] = outputRank;
         return BinaryOp(PrimitiveOpType::TransposeTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
@@ -2066,7 +2067,7 @@ namespace CNTK
     FunctionPtr DepthToSpace(const Variable& input, size_t blockSize, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameBlockSize] = blockSize;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameBlockSize] = blockSize;
 
         auto inputPlaceholder = PlaceholderVariable(L"input");
 
@@ -2091,7 +2092,7 @@ namespace CNTK
     FunctionPtr SpaceToDepth(const Variable& input, size_t blockSize, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameBlockSize] = blockSize;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameBlockSize] = blockSize;
 
         auto inputPlaceholder = PlaceholderVariable(L"input");
 
@@ -2132,7 +2133,7 @@ namespace CNTK
 
         auto difference = Minus(predictionPlaceholder, targetPlaceholder);
         auto squaredDifference = ElementTimes(difference, difference);
-        auto squaredErrorComposite = Internal::ReduceElements(squaredDifference, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes());
+        auto squaredErrorComposite = Internal::ReduceElements(squaredDifference, PrimitiveFunctionAttribute::InternalSumReductionOpName, Axis::AllStaticAxes());
 
         return AsBlock(std::move(squaredErrorComposite), { { predictionPlaceholder, prediction }, { targetPlaceholder, targets } }, L"SquaredError", name);
     }
@@ -2188,11 +2189,11 @@ namespace CNTK
     FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& tokensToIgnore, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameSubstitutionPenalty] = subPen;
-        additionalProperties[PrimitiveFunction::AttributeNameDeletionPenalty] = delPen;
-        additionalProperties[PrimitiveFunction::AttributeNameInsertionPenalty] = insPen;
-        additionalProperties[PrimitiveFunction::AttributeNameSquashInputs] = squashInputs;
-        additionalProperties[PrimitiveFunction::AttributeNameTokensToIgnore] = AsDictionaryValueVector(tokensToIgnore);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSubstitutionPenalty] = subPen;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameDeletionPenalty] = delPen;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameInsertionPenalty] = insPen;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSquashInputs] = squashInputs;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameTokensToIgnore] = AsDictionaryValueVector(tokensToIgnore);
 
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
@@ -2200,19 +2201,19 @@ namespace CNTK
     FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& latticeConfigPath, float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameSymListPath] = symListPath;
-        additionalProperties[PrimitiveFunction::AttributeNamePhonePath] = phonePath;
-        additionalProperties[PrimitiveFunction::AttributeNameStateListPath] = stateListPath;
-        additionalProperties[PrimitiveFunction::AttributeNameTransProbPath] = transProbPath;
-        additionalProperties[PrimitiveFunction::AttributeNameLatticeConfigPath] = latticeConfigPath;
-        additionalProperties[PrimitiveFunction::AttributeNameHSmoothingWeight] = hSmoothingWeight;
-        additionalProperties[PrimitiveFunction::AttributeNameFrameDropThresh] = frameDropThresh;
-        additionalProperties[PrimitiveFunction::AttributeNameDoReferenceAlign] = doReferenceAlign;
-        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarUsesMBR] = seqGammarUsesMBR;
-        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarAMF] = seqGammarAMF;
-        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarLMF] = seqGammarLMF;
-        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarBMMIFactor] = seqGammarBMMIFactor;
-        additionalProperties[PrimitiveFunction::AttributeNameSeqGammarWordPen] = seqGammarWordPen;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSymListPath] = symListPath;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePhonePath] = phonePath;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameStateListPath] = stateListPath;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameTransProbPath] = transProbPath;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLatticeConfigPath] = latticeConfigPath;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameHSmoothingWeight] = hSmoothingWeight;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFrameDropThresh] = frameDropThresh;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameDoReferenceAlign] = doReferenceAlign;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSeqGammarUsesMBR] = seqGammarUsesMBR;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSeqGammarAMF] = seqGammarAMF;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSeqGammarLMF] = seqGammarLMF;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSeqGammarBMMIFactor] = seqGammarBMMIFactor;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSeqGammarWordPen] = seqGammarWordPen;
         std::vector<Variable> operands = { labels, prediction, scaledLogLikelihood, lattice };
 
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::LatticeSequenceWithSoftmax, operands, std::move(additionalProperties), name), name);
@@ -2221,8 +2222,8 @@ namespace CNTK
     FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameBlankTokenId] = blankTokenId;
-        additionalProperties[PrimitiveFunction::AttributeNameDelayConstraint] = delayConstraint;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameBlankTokenId] = blankTokenId;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameDelayConstraint] = delayConstraint;
 
         return BinaryOp(PrimitiveOpType::ForwardBackward, graph, features, std::move(additionalProperties), name);
     }
@@ -2235,23 +2236,23 @@ namespace CNTK
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameOffset] = DictionaryValue(offset);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameOffset] = DictionaryValue(offset);
         return BinaryOp(PrimitiveOpType::PastValue, operand, initialState, std::move(additionalProperties), name, false);
     }
 
     FunctionPtr FutureValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameOffset] = DictionaryValue(offset);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameOffset] = DictionaryValue(offset);
         return BinaryOp(PrimitiveOpType::FutureValue, operand, initialState, std::move(additionalProperties), name, false);
     }
 
     FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameNumClass] = numClass;
-        additionalProperties[PrimitiveFunction::AttributeNameOneHotOutputSparse] = outputSparse;
-        additionalProperties[PrimitiveFunction::AttributeNameOneHotAxis] = axis;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameNumClass] = numClass;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameOneHotOutputSparse] = outputSparse;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameOneHotAxis] = axis;
         return UnaryOp(PrimitiveOpType::OneHot, operand, std::move(additionalProperties), name);
     }
 
@@ -2263,7 +2264,7 @@ namespace CNTK
     FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const Axis& axis, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = axis;
 
         if (!axis.IsStaticAxis())
             LogicError("Gather operation only supports a single static axis.");
@@ -2284,32 +2285,32 @@ namespace CNTK
 
     FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, axis, name);
+        return Internal::ReduceElements(operand, PrimitiveFunctionAttribute::InternalSumReductionOpName, axis, name);
     }
 
     FunctionPtr ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalLogSumReductionOpName, axis, name);
+        return Internal::ReduceElements(operand, PrimitiveFunctionAttribute::InternalLogSumReductionOpName, axis, name);
     }
 
     FunctionPtr ReduceMean(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMeanReductionOpName, axis, name);
+        return Internal::ReduceElements(operand, PrimitiveFunctionAttribute::InternalMeanReductionOpName, axis, name);
     }
 
     FunctionPtr ReduceMax(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMaxReductionOpName, axis, name);
+        return Internal::ReduceElements(operand, PrimitiveFunctionAttribute::InternalMaxReductionOpName, axis, name);
     }
 
     FunctionPtr ReduceMin(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMinReductionOpName, axis, name);
+        return Internal::ReduceElements(operand, PrimitiveFunctionAttribute::InternalMinReductionOpName, axis, name);
     }
 
     FunctionPtr ReduceProd(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalProdReductionOpName, axis, name);
+        return Internal::ReduceElements(operand, PrimitiveFunctionAttribute::InternalProdReductionOpName, axis, name);
     }
 
     //multiple axes reduction below:
@@ -2319,11 +2320,11 @@ namespace CNTK
         const std::wstring opName, const std::wstring& name, const std::wstring reductionOpName = L"")
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
-        additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = keepDims;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameReductionKeepDimensions] = keepDims;
         if (!reductionOpName.empty())
         {
-            additionalProperties[PrimitiveFunction::AttributeNameReductionOpName] = reductionOpName;
+            additionalProperties[PrimitiveFunctionAttribute::AttributeNameReductionOpName] = reductionOpName;
         }
         
         auto operandPlaceholder = PlaceholderVariable(L"operand");
@@ -2351,38 +2352,38 @@ namespace CNTK
 
     FunctionPtr ReduceSum(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
     {
-        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalSumReductionOpName, axes); };
-        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalSumReductionOpName);
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunctionAttribute::InternalSumReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunctionAttribute::InternalSumReductionOpName);
     }
 
     FunctionPtr ReduceLogSum(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
     {
-        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalLogSumReductionOpName, axes); };
-        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalLogSumReductionOpName);
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunctionAttribute::InternalLogSumReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunctionAttribute::InternalLogSumReductionOpName);
     }
 
     FunctionPtr ReduceMean(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
     {
-        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalMeanReductionOpName, axes); };
-        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalMeanReductionOpName);
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunctionAttribute::InternalMeanReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunctionAttribute::InternalMeanReductionOpName);
     }
 
     FunctionPtr ReduceMax(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
     {
-        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalMaxReductionOpName, axes); };
-        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalMaxReductionOpName);
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunctionAttribute::InternalMaxReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunctionAttribute::InternalMaxReductionOpName);
     }
 
     FunctionPtr ReduceMin(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
     {
-        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalMinReductionOpName, axes); };
-        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalMinReductionOpName);
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunctionAttribute::InternalMinReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunctionAttribute::InternalMinReductionOpName);
     }
 
     FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
     {
-        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunction::InternalProdReductionOpName, axes); };
-        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunction::InternalProdReductionOpName);
+        auto func = [](const Variable& placeholder, const std::vector<Axis>& axes) { return Internal::ReduceElements(placeholder, PrimitiveFunctionAttribute::InternalProdReductionOpName, axes); };
+        return ReduceFunctionAsBlock(operand, axes, keepDims, func, L"ReduceElements", name, PrimitiveFunctionAttribute::InternalProdReductionOpName);
     }
 
     FunctionPtr ReduceL1(const Variable& operand, const std::vector<Axis>& axes, bool keepDims, const std::wstring& name)
@@ -2448,9 +2449,9 @@ namespace CNTK
     FunctionPtr MeanVarianceNormalization(const Variable& operand, double epsilon, const bool useStatsAcrossChannels, const bool doVarianceScaling, const std::wstring& name)
     {
         Dictionary additionalAttributes;
-        additionalAttributes[PrimitiveFunction::AttributeNameUseStatsAcrossChannels] = useStatsAcrossChannels;
-        additionalAttributes[PrimitiveFunction::AttributeNameDoVarianceScaling] = doVarianceScaling;
-        additionalAttributes[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
+        additionalAttributes[PrimitiveFunctionAttribute::AttributeNameUseStatsAcrossChannels] = useStatsAcrossChannels;
+        additionalAttributes[PrimitiveFunctionAttribute::AttributeNameDoVarianceScaling] = doVarianceScaling;
+        additionalAttributes[PrimitiveFunctionAttribute::AttributeNameEpsilon] = epsilon;
 
         if (epsilon < 0)
             InvalidArgument("Input argument epsilon must be non-negative.");
@@ -2642,9 +2643,9 @@ namespace CNTK
         const std::wstring& name/* = L""*/)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)poolingType;
-        additionalProperties[PrimitiveFunction::AttributeNameROIOutputShape] = roiOutputShape;
-        additionalProperties[PrimitiveFunction::AttributeNameSpatialScale] = spatialScale;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePoolingType] = (size_t)poolingType;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameROIOutputShape] = roiOutputShape;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSpatialScale] = spatialScale;
         return BinaryOp(PrimitiveOpType::ROIPooling, operand, rois, std::move(additionalProperties), name);
     }
 
@@ -2658,14 +2659,14 @@ namespace CNTK
         const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)poolingType;
-        additionalProperties[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowShape;
-        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
-        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
-        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});
-        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
-        additionalProperties[PrimitiveFunction::AttributeNameCeilOutDim] = ceilOutDim;
-        additionalProperties[PrimitiveFunction::AttributeNameIncludePad] = includePad;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePoolingType] = (size_t)poolingType;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePoolingWindowShape] = poolingWindowShape;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLowerPad] = NDShape({0});
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameUpperPad] = NDShape({0});
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameCeilOutDim] = ceilOutDim;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameIncludePad] = includePad;
 
         return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
     }
@@ -2681,14 +2682,14 @@ namespace CNTK
         const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)poolingType;
-        additionalProperties[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowShape;
-        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
-        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(std::vector<bool>({ false }));
-        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape(lowerPad);
-        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape(upperPad);
-        additionalProperties[PrimitiveFunction::AttributeNameCeilOutDim] = ceilOutDim;
-        additionalProperties[PrimitiveFunction::AttributeNameIncludePad] = includePad;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePoolingType] = (size_t)poolingType;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePoolingWindowShape] = poolingWindowShape;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(std::vector<bool>({ false }));
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLowerPad] = NDShape(lowerPad);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameUpperPad] = NDShape(upperPad);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameCeilOutDim] = ceilOutDim;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameIncludePad] = includePad;
 
         return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
     }
@@ -2702,12 +2703,12 @@ namespace CNTK
         const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)unpoolingType;
-        additionalProperties[PrimitiveFunction::AttributeNameUnpoolingWindowShape] = poolingWindowShape;
-        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
-        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
-        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});
-        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePoolingType] = (size_t)unpoolingType;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameUnpoolingWindowShape] = poolingWindowShape;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLowerPad] = NDShape({0});
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameUpperPad] = NDShape({0});
 
         std::vector<Variable> operands = { operand, poolingInput};
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Unpooling, operands, std::move(additionalProperties), name), name);
@@ -2728,12 +2729,12 @@ namespace CNTK
         const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameSpatial] = spatial;
-        additionalProperties[PrimitiveFunction::AttributeNameNormalizationTimeConstant] = normalizationTimeConstant;
-        additionalProperties[PrimitiveFunction::AttributeNameBlendTimeConstant] = blendTimeConstant;
-        additionalProperties[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
-        additionalProperties[PrimitiveFunction::AttributeNameUseCuDNNEngine] = useCuDNNEngine;
-        additionalProperties[PrimitiveFunction::AttributeNameDisableRegularization] = disableRegularization;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSpatial] = spatial;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameNormalizationTimeConstant] = normalizationTimeConstant;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameBlendTimeConstant] = blendTimeConstant;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameEpsilon] = epsilon;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameUseCuDNNEngine] = useCuDNNEngine;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameDisableRegularization] = disableRegularization;
 
         std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningCount };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization,
@@ -2746,10 +2747,10 @@ namespace CNTK
     FunctionPtr LocalResponseNormalization(const Variable& operand, size_t depthRadius, double bias, double alpha, double beta, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameDepthRadius] = depthRadius;
-        additionalProperties[PrimitiveFunction::AttributeNameBias] = bias;
-        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
-        additionalProperties[PrimitiveFunction::AttributeNameBeta] = beta;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameDepthRadius] = depthRadius;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameBias] = bias;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAlpha] = alpha;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameBeta] = beta;
 
         size_t kernelSize = 2 * depthRadius + 1;
         if (!(operand.IsPlaceholder()))
@@ -2795,7 +2796,7 @@ namespace CNTK
     FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = axis;
 
         std::vector<Variable> operandsCopy = operands;
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Splice, operandsCopy, std::move(additionalProperties), name), name);
@@ -2879,10 +2880,10 @@ namespace CNTK
     FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional, const std::wstring& recurrentOp, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameHiddenSize] = hiddenSize;
-        additionalProperties[PrimitiveFunction::AttributeNameNumLayers] = numLayers;
-        additionalProperties[PrimitiveFunction::AttributeNameBidirectional] = bidirectional;
-        additionalProperties[PrimitiveFunction::AttributeNameRecurrentOp] = recurrentOp;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameHiddenSize] = hiddenSize;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameNumLayers] = numLayers;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameBidirectional] = bidirectional;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameRecurrentOp] = recurrentOp;
 
         return BinaryOp(PrimitiveOpType::OptimizedRNNStack, operand, weights, std::move(additionalProperties), name);
     }
@@ -2895,7 +2896,7 @@ namespace CNTK
     FunctionPtr ELU(const Variable& operand, double alpha, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAlpha] = alpha;
 
         auto operandPlaceholder = PlaceholderVariable();
         auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
@@ -2908,8 +2909,8 @@ namespace CNTK
     FunctionPtr SELU(const Variable& operand, double gamma, double alpha, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameGamma] = gamma;
-        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameGamma] = gamma;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAlpha] = alpha;
 
         auto operandPlaceholder = PlaceholderVariable();
         auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
@@ -2923,7 +2924,7 @@ namespace CNTK
     FunctionPtr LeakyReLU(const Variable& operand, double alpha, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameAlpha] = alpha;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAlpha] = alpha;
 
         auto operandPlaceholder = PlaceholderVariable();
         auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
@@ -2963,12 +2964,12 @@ namespace CNTK
 
     FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalArgmaxReductionOpName, axis, name);
+        return Internal::ReduceElements(operand, PrimitiveFunctionAttribute::InternalArgmaxReductionOpName, axis, name);
     }
 
     FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalArgminReductionOpName, axis, name);
+        return Internal::ReduceElements(operand, PrimitiveFunctionAttribute::InternalArgminReductionOpName, axis, name);
     }
 
     FunctionPtr StopGradient(const Variable& operand, const std::wstring& name)
@@ -2991,14 +2992,14 @@ namespace CNTK
     FunctionPtr ToSequence(const Variable& operand, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name)
     {
         Dictionary additionalAttributes;
-        additionalAttributes[PrimitiveFunction::AttributeNameSequenceAxisNamePrefix] = sequenceAxisNamePrefix;
+        additionalAttributes[PrimitiveFunctionAttribute::AttributeNameSequenceAxisNamePrefix] = sequenceAxisNamePrefix;
         return UnaryOp(PrimitiveOpType::ToSequence, operand, std::move(additionalAttributes), name);
     }
 
     FunctionPtr ToSequence(const Variable& operand, const Variable& sequenceLengths, const std::wstring& sequenceAxisNamePrefix, const std::wstring& name)
     {
         Dictionary additionalAttributes;
-        additionalAttributes[PrimitiveFunction::AttributeNameSequenceAxisNamePrefix] = sequenceAxisNamePrefix;
+        additionalAttributes[PrimitiveFunctionAttribute::AttributeNameSequenceAxisNamePrefix] = sequenceAxisNamePrefix;
         return BinaryOp(PrimitiveOpType::ToSequence, operand, sequenceLengths, std::move(additionalAttributes), name, false);
     }
 
@@ -3127,12 +3128,12 @@ namespace CNTK
 
         FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
         {
-            return ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, name);
+            return ReduceElements(operand, PrimitiveFunctionAttribute::InternalSumReductionOpName, name);
         }
 
         FunctionPtr ReduceMax(const Variable& operand, const std::wstring& name)
         {
-            return ReduceElements(operand, PrimitiveFunction::InternalMaxReductionOpName, name);
+            return ReduceElements(operand, PrimitiveFunctionAttribute::InternalMaxReductionOpName, name);
         }
 
         FunctionPtr Softmax(const Variable& operand, const std::wstring& name)
@@ -3147,8 +3148,8 @@ namespace CNTK
         FunctionPtr Unpack(const Variable& operand, double paddingValue, bool supressMaskOutput, const std::wstring& name)
         {
             Dictionary additionalAttributes;
-            additionalAttributes[PrimitiveFunction::AttributeNameSequenceUnpackPaddingValue] = paddingValue;
-            additionalAttributes[PrimitiveFunction::AttributeNameSequenceUnpackSuppressMaskOutput] = supressMaskOutput;
+            additionalAttributes[PrimitiveFunctionAttribute::AttributeNameSequenceUnpackPaddingValue] = paddingValue;
+            additionalAttributes[PrimitiveFunctionAttribute::AttributeNameSequenceUnpackSuppressMaskOutput] = supressMaskOutput;
             return UnaryOp(PrimitiveOpType::UnpackSequence, operand, std::move(additionalAttributes), name);
         }
     }
@@ -3161,7 +3162,7 @@ namespace CNTK
     {
         std::vector<Variable> operands = { nodeInput, nodeReferent };
         Dictionary additionalAttributes;
-        additionalAttributes[PrimitiveFunction::AttributeNameOffset] = DictionaryValue({ offsetX, offsetY });
+        additionalAttributes[PrimitiveFunctionAttribute::AttributeNameOffset] = DictionaryValue({ offsetX, offsetY });
         return AsComposite(MakeSharedObject<PrimitiveFunction>(
             PrimitiveOpType::Crop,
             operands, std::move(additionalAttributes), name), name);
@@ -3197,7 +3198,7 @@ namespace CNTK
         std::vector<Variable> operands = { nodeInput };
         Dictionary additionalAttributes;
         additionalAttributes.Add(
-            PrimitiveFunction::AttributeNameNewDataType, static_cast<int>(outputType));
+            PrimitiveFunctionAttribute::AttributeNameNewDataType, static_cast<int>(outputType));
         return AsComposite(MakeSharedObject<PrimitiveFunction>(
             PrimitiveOpType::Cast,
             operands, std::move(additionalAttributes), name), name);
@@ -3242,8 +3243,8 @@ namespace CNTK
         FunctionPtr Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name)
         {
             auto additionalProperties = Dictionary();
-            additionalProperties[PrimitiveFunction::AttributeNameNewSequenceAxisLengthScalingFactor] = newDerivedSequenceAxisScalingAndAdditiveFactor.first;
-            additionalProperties[PrimitiveFunction::AttributeNameNewSequenceAxisLengthAdditiveFactor] = newDerivedSequenceAxisScalingAndAdditiveFactor.second;
+            additionalProperties[PrimitiveFunctionAttribute::AttributeNameNewSequenceAxisLengthScalingFactor] = newDerivedSequenceAxisScalingAndAdditiveFactor.first;
+            additionalProperties[PrimitiveFunctionAttribute::AttributeNameNewSequenceAxisLengthAdditiveFactor] = newDerivedSequenceAxisScalingAndAdditiveFactor.second;
             return UnaryOp(PrimitiveOpType::Where, condition, std::move(additionalProperties), name);
         }
 
@@ -3274,17 +3275,17 @@ namespace CNTK
             assert(axis.size() > 0 && axis.size() == beginIndex.size() && axis.size() == endIndex.size() && strides.size() == axis.size());
             if (axis.size() == 1)
             {
-                additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis[0];
-                additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = beginIndex[0];
-                additionalProperties[PrimitiveFunction::AttributeNameEndIndex] = endIndex[0];
-                additionalProperties[PrimitiveFunction::AttributeNameSliceStrides] = strides[0];
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = axis[0];
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameBeginIndex] = beginIndex[0];
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameEndIndex] = endIndex[0];
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameSliceStrides] = strides[0];
             }
             else
             {
-                additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axis);
-                additionalProperties[PrimitiveFunction::AttributeNameBeginIndexVec] = AsDictionaryValueVector(beginIndex);
-                additionalProperties[PrimitiveFunction::AttributeNameEndIndexVec] = AsDictionaryValueVector(endIndex);
-                additionalProperties[PrimitiveFunction::AttributeNameSliceStridesVec] = AsDictionaryValueVector(strides);
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxisVec] = AsDictionaryValueVector(axis);
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameBeginIndexVec] = AsDictionaryValueVector(beginIndex);
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameEndIndexVec] = AsDictionaryValueVector(endIndex);
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameSliceStridesVec] = AsDictionaryValueVector(strides);
             }
             return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
         }
@@ -3295,12 +3296,12 @@ namespace CNTK
                 (axis == Axis::AllStaticAxes()) ||
                 (axis == Axis::AllAxes()) ||
                 (axis == Axis::DefaultBatchAxis()) ||
-                ((reductionOpName == PrimitiveFunction::InternalSumReductionOpName) && (axis == Axis::OperandSequenceAxis())))
+                ((reductionOpName == PrimitiveFunctionAttribute::InternalSumReductionOpName) && (axis == Axis::OperandSequenceAxis())))
             {
                 auto additionalProperties = Dictionary();
-                additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
-                additionalProperties[PrimitiveFunction::AttributeNameReductionOpName] = reductionOpName;
-                additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = keepReducedDimensions;
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = axis;
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameReductionOpName] = reductionOpName;
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameReductionKeepDimensions] = keepReducedDimensions;
                 return UnaryOp(PrimitiveOpType::ReduceElements, operand, std::move(additionalProperties), name);
             }
 
@@ -3326,15 +3327,15 @@ namespace CNTK
                     (axis == Axis::AllStaticAxes()) ||
                     (axis == Axis::AllAxes()) ||
                     (axis == Axis::DefaultBatchAxis()); })
-                || ((reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
+                || ((reductionOpName == PrimitiveFunctionAttribute::InternalSumReductionOpName)
                     && std::any_of(axes.begin(), axes.end(),
                         [](const Axis& axis) {return axis == Axis::OperandSequenceAxis(); }))
                     )
             {
                 auto additionalProperties = Dictionary();
-                additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
-                additionalProperties[PrimitiveFunction::AttributeNameReductionOpName] = reductionOpName;
-                additionalProperties[PrimitiveFunction::AttributeNameReductionKeepDimensions] = keepReducedDimensions;
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameReductionOpName] = reductionOpName;
+                additionalProperties[PrimitiveFunctionAttribute::AttributeNameReductionKeepDimensions] = keepReducedDimensions;
                 return UnaryOp(PrimitiveOpType::ReduceElements, operand, std::move(additionalProperties), name);
             }
 
@@ -3762,10 +3763,10 @@ namespace CNTK
             FunctionPtr result = Plus(C, D);
 
             Dictionary attributes = Dictionary();
-            attributes[PrimitiveFunction::AttributeNameAlpha] = alpha;
-            attributes[PrimitiveFunction::AttributeNameBeta] = beta;
-            attributes[PrimitiveFunction::AttributeNameTransposeLeftOperand] = transA;
-            attributes[PrimitiveFunction::AttributeNameTransposeRightOperand] = transB;
+            attributes[PrimitiveFunctionAttribute::AttributeNameAlpha] = alpha;
+            attributes[PrimitiveFunctionAttribute::AttributeNameBeta] = beta;
+            attributes[PrimitiveFunctionAttribute::AttributeNameTransposeLeftOperand] = transA;
+            attributes[PrimitiveFunctionAttribute::AttributeNameTransposeRightOperand] = transB;
 
             return AsBlock(std::move(result),
                 { { operandAPlaceholder, operandA },{ operandBPlaceholder, operandB },{ operandCPlaceholder, operandC } },
@@ -3848,7 +3849,7 @@ namespace CNTK
             assert(begin == operand.Shape().Dimensions().cend());
 
             Dictionary attributes = Dictionary();
-            attributes[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
+            attributes[PrimitiveFunctionAttribute::AttributeNameAxisVec] = AsDictionaryValueVector(axes);
 
             Variable operandPlaceholder = PlaceholderVariable(operand.Shape(), L"operandPlaceholder", {});
 

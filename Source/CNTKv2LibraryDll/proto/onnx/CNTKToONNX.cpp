@@ -11,6 +11,7 @@
 #include "CNTKToONNX.h"
 #include "Utils.h"
 #include "Operators.h"
+#include "PrimitiveFunctionAttribute.h"
 #include "BlockFunction.h"
 #include <vector>
 #include <tuple>
@@ -1325,7 +1326,7 @@ std::string CNTKToONNXHelper::ToOPName(const FunctionPtr& src)
         }
         else if (src->OpName() == L"ReduceElements")
         {
-            wstring cntkAttributeOpName = (wstring)src->Attributes()[PrimitiveFunction::AttributeNameReductionOpName].Value<wstring>();
+            wstring cntkAttributeOpName = (wstring)src->Attributes()[PrimitiveFunctionAttribute::AttributeNameReductionOpName].Value<wstring>();
 
             const AttributesMapping& attributeMap = Operators::FindAttributeMap(src->OpName(), cntkAttributeOpName);
 
@@ -2472,13 +2473,13 @@ LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
             {
                 auto beginToMinusMustBeAPastValueOp = beginToWhere->Inputs()[1].Owner();
                 if (beginToMinusMustBeAPastValueOp->OpName() == L"PastValue")
-                    beginIndex = static_cast<int64_t>(beginToMinusMustBeAPastValueOp->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+                    beginIndex = static_cast<int64_t>(beginToMinusMustBeAPastValueOp->Attributes()[PrimitiveFunctionAttribute::AttributeNameOffset].Value<size_t>());
                 else
                     reportLogicError();
             }
             else if (beginToWhere->OpName() == L"FutureValue")
             {
-                beginIndex = -static_cast<int64_t>(beginToWhere->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+                beginIndex = -static_cast<int64_t>(beginToWhere->Attributes()[PrimitiveFunctionAttribute::AttributeNameOffset].Value<size_t>());
             }
             else
                 reportLogicError();
@@ -2489,13 +2490,13 @@ LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
             {
                 auto endToMinusMustBeAFutureValueOp = endToWhere->Inputs()[1].Owner();
                 if (endToMinusMustBeAFutureValueOp->OpName() == L"FutureValue")
-                    endIndex = -static_cast<int64_t>(endToMinusMustBeAFutureValueOp->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+                    endIndex = -static_cast<int64_t>(endToMinusMustBeAFutureValueOp->Attributes()[PrimitiveFunctionAttribute::AttributeNameOffset].Value<size_t>());
                 else
                     reportLogicError();
             }
             else if (endToWhere->OpName() == L"PastValue")
             {
-                endIndex = static_cast<int64_t>(endToWhere->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+                endIndex = static_cast<int64_t>(endToWhere->Attributes()[PrimitiveFunctionAttribute::AttributeNameOffset].Value<size_t>());
             }
             else
                 reportLogicError();
@@ -2503,22 +2504,22 @@ LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
     }
     else if (inputToWhere->OpName() == L"FutureValue")
     {
-        beginIndex = -static_cast<int64_t>(inputToWhere->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+        beginIndex = -static_cast<int64_t>(inputToWhere->Attributes()[PrimitiveFunctionAttribute::AttributeNameOffset].Value<size_t>());
     }
     else if (inputToWhere->OpName() == L"PastValue")
     {
-        endIndex = static_cast<int64_t>(inputToWhere->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+        endIndex = static_cast<int64_t>(inputToWhere->Attributes()[PrimitiveFunctionAttribute::AttributeNameOffset].Value<size_t>());
     }
     else if (inputToWhere->OpName() == L"Minus")
     {
         auto inputToMinus = inputToWhere->Inputs()[1].Owner();
         if (inputToMinus->OpName() == L"FutureValue")
         {
-            endIndex = -static_cast<int64_t>(inputToMinus->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+            endIndex = -static_cast<int64_t>(inputToMinus->Attributes()[PrimitiveFunctionAttribute::AttributeNameOffset].Value<size_t>());
         }
         else if (inputToMinus->OpName() == L"PastValue")
         {
-            beginIndex = static_cast<int64_t>(inputToMinus->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>());
+            beginIndex = static_cast<int64_t>(inputToMinus->Attributes()[PrimitiveFunctionAttribute::AttributeNameOffset].Value<size_t>());
         }
     }
 
@@ -3404,7 +3405,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
         }
         else if (src->OpName() == L"ReduceElements")
         {
-            wstring cntkAttributeOpName = (wstring)src->Attributes()[PrimitiveFunction::AttributeNameReductionOpName].Value<wstring>();
+            wstring cntkAttributeOpName = (wstring)src->Attributes()[PrimitiveFunctionAttribute::AttributeNameReductionOpName].Value<wstring>();
             const AttributesMapping& attributeMap = Operators::FindAttributeMap(src->OpName(), cntkAttributeOpName);
 
             auto keepReducedDimensions = (int64_t)((bool)src->Attributes()[L"reductionKeepDimensions"].Value<bool>() ? 1 : 0);

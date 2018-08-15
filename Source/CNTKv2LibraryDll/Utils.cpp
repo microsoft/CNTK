@@ -15,6 +15,7 @@
 #include "Serialization.h"
 #include <fcntl.h>
 #include "PrimitiveFunction.h"
+#include "PrimitiveFunctionAttribute.h"
 #include "RecurrentNodes.h"
 #include "Value.h"
 #include "CompositeFunction.h"
@@ -240,18 +241,18 @@ namespace CNTK
     void SetConvolutionProperties(Dictionary& additionalProperties, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
                                   const NDShape& dilation, bool sequential, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples)
     {
-        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
-        additionalProperties[PrimitiveFunction::AttributeNameDilation] = dilation;
-        additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
-        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
-        additionalProperties[PrimitiveFunction::AttributeNameSequential] = sequential;
-        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});
-        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
-        additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
-        additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
-        additionalProperties[PrimitiveFunction::AttributeNameKernelShape] = NDShape({0});
-        additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
-        additionalProperties[PrimitiveFunction::AttributeNameGroups] = groups;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameDilation] = dilation;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSequential] = sequential;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLowerPad] = NDShape({0});
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameUpperPad] = NDShape({0});
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameTranspose] = transpose;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameOutputShape] = outputShape;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameKernelShape] = NDShape({0});
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameGroups] = groups;
     }
 
     std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType)
@@ -1013,9 +1014,9 @@ namespace CNTK
     NDShape GetSqueezedShape(const NDShape& inputShape, const Dictionary& squeezeConfig)
     {
         // collect all indices that need to be squeezed
-        if (squeezeConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+        if (squeezeConfig.Contains(PrimitiveFunctionAttribute::AttributeNameAxisVec))
         {
-            auto axes = AsVector<Axis>(squeezeConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+            auto axes = AsVector<Axis>(squeezeConfig[PrimitiveFunctionAttribute::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
             return GetSqueezedShape(inputShape, axes);
         }
         else

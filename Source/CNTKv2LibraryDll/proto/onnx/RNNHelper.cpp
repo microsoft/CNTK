@@ -340,6 +340,7 @@ FunctionPtr RNNCell(Variable input,
 }
 
 #include "PrimitiveFunction.h"
+#include "PrimitiveFunctionAttribute.h"
 #include "BlockFunction.h"
 
 std::tuple<FunctionPtr, FunctionPtr> LSTMPComponent(Variable input,
@@ -987,8 +988,8 @@ void TraceLSTMPathes(const FunctionPtr &src,
         [](const std::vector<FunctionPtr> &path1, const std::vector<FunctionPtr> &path2) {
         FunctionPtr slice1 = *path1.rbegin();
         FunctionPtr slice2 = *path2.rbegin();
-        int beginIndex1 = slice1->Attributes()[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-        int beginIndex2 = slice2->Attributes()[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+        int beginIndex1 = slice1->Attributes()[PrimitiveFunctionAttribute::AttributeNameBeginIndex].Value<int>();
+        int beginIndex2 = slice2->Attributes()[PrimitiveFunctionAttribute::AttributeNameBeginIndex].Value<int>();
         return beginIndex1 < beginIndex2;
     });
 
