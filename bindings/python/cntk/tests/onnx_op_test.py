@@ -1172,12 +1172,29 @@ def test_ReduceL1(tmpdir, dtype):
         model = C.reduce_l1(x, 1)
         verify_one_input(model, data, tmpdir, 'ReduceL1_1')
 
+        model = C.reduce_l1(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceL1_2')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_l1(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceL1_3')
+
+        model = C.reduce_l1(x, C.Axis.all_axes())
+        verify_one_input(model, [data], tmpdir, 'ReduceL1_4')
+
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceL2(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=dtype)
         model = C.reduce_l2(data, 0)
         verify_no_input(model, tmpdir, 'ReduceL2_0')
+
+        model = C.reduce_l2(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceL2_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_l2(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceL2_2')
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceSumSquare(tmpdir, dtype):
@@ -1186,6 +1203,16 @@ def test_ReduceSumSquare(tmpdir, dtype):
         model = C.reduce_sum_square(data, 0)
         verify_no_input(model, tmpdir, 'ReduceSumSquare_0')
 
+        model = C.reduce_sum_square(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceSumSquare_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_sum_square(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceSumSquare_2')
+
+        model = C.reduce_sum_square(x, C.Axis.all_axes())
+        verify_one_input(model, [data], tmpdir, 'ReduceSumSquare_3')
+
 #ReduceLogSum
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceLogSum(tmpdir, dtype):
@@ -1193,7 +1220,14 @@ def test_ReduceLogSum(tmpdir, dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_log_sum_exp(data, axis=0)
 
-    verify_no_input(model, tmpdir, 'ReduceLogSum_0')
+        verify_no_input(model, tmpdir, 'ReduceLogSum_0')
+
+        model = C.reduce_log_sum_exp(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceLogSum_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_log_sum_exp(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceLogSum_2')
 
 #ReduceMax
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1203,6 +1237,13 @@ def test_ReduceMax(tmpdir, dtype):
         model = C.reduce_max(data, 0)
         verify_no_input(model, tmpdir, 'ReduceMax_0')
 
+        model = C.reduce_max(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceMax_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_max(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceMax_2')
+
 #ReduceMean
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceMean(tmpdir, dtype):
@@ -1210,6 +1251,13 @@ def test_ReduceMean(tmpdir, dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_mean(data, 0)
         verify_no_input(model, tmpdir, 'ReduceMean_0')
+
+        model = C.reduce_mean(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceMean_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_mean(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceMean_2')
 
 #ReduceMin
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1219,6 +1267,13 @@ def test_ReduceMin(tmpdir, dtype):
         model = C.reduce_min(data, 0)
         verify_no_input(model, tmpdir, 'ReduceMin_0')
 
+        model = C.reduce_min(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceMin_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_min(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceMin_2')
+
 #ReduceProd
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceProd(tmpdir, dtype):
@@ -1227,6 +1282,13 @@ def test_ReduceProd(tmpdir, dtype):
         model = C.reduce_prod(data, 0)
         verify_no_input(model, tmpdir, 'ReduceProd_0')
 
+        model = C.reduce_prod(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceProd_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_prod(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceProd_2')
+
 #ReduceSum
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceSum(tmpdir, dtype):
@@ -1234,6 +1296,25 @@ def test_ReduceSum(tmpdir, dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_sum(data, 0)
         verify_no_input(model, tmpdir, 'ReduceSum_0')
+
+        model = C.reduce_sum(data, [0, 1, 2])
+        verify_no_input(model, tmpdir, 'ReduceSum_1')
+
+        model = C.reduce_sum(data, [0, 2])
+        verify_no_input(model, tmpdir, 'ReduceSum_2')
+
+        model = C.reduce_sum(data, [0, 2], keepdims=False)
+        verify_no_input(model, tmpdir, 'ReduceSum_3')
+
+        model = C.reduce_sum(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceSum_4')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_sum(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceSum_5')
+
+        model = C.reduce_sum(x, C.Axis.all_axes())
+        verify_one_input(model, [data], tmpdir, 'ReduceSum_6')
 
 #Relu
 @pytest.mark.parametrize("dtype", DType_Config)
