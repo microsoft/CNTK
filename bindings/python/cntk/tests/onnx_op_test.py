@@ -57,18 +57,24 @@ def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
 def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
-    opname = model.owner.op_name
+
+    # outputs share the same owner
+    opname = model.outputs[0].owner.op_name
 
     loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
-    model_shape = model.shape
-    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
-        dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-        if opname not in set_of_batch_irrelevant_ops:
-            model_shape = (dim_denotation, ) + model_shape
+    if any(o.dynamic_axes == (C.Axis('defaultBatchAxis'),) for o in model.outputs):
         data.shape = (1, ) + data.shape
 
-    assert model_shape == loaded_model.shape
+    assert len(model.outputs) == len(loaded_model.outputs)
+
+    for i in range(0, len(model.outputs)):
+        output_shape = model.outputs[i].shape
+        if model.outputs[i].dynamic_axes == (C.Axis('defaultBatchAxis'),):
+            dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
+            if opname not in set_of_batch_irrelevant_ops:
+                output_shape = (dim_denotation, ) + output_shape
+        assert output_shape == loaded_model.outputs[i].shape
 
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
@@ -77,12 +83,14 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
         o0 = model.eval({model.arguments[0]:data})
         o1 = loaded_model.eval({loaded_model.arguments[0]:data})
 
-    if (type(o0) is list):
-        o0 = o0[0]
-    if (type(o1) is list):
-        o1 = o1[0]
+    if len(model.outputs) == 1:
+        assert np.allclose(o0, o1)
+    else:
+        for i in range(0, len(model.outputs)):
+            o0i = o0[model.outputs[i]]
+            o1i = o1[loaded_model.outputs[i]]
+            assert np.allclose(o0i, o1i)
 
-    assert np.allclose(o0, o1)
     return loaded_model
 
 def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None):
@@ -1444,6 +1452,15 @@ def test_Tanh(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         model = C.tanh(np.array([[1,2],[3,4]]).astype(dtype))
         verify_no_input(model, tmpdir, 'Tanh_0')
+
+#TopK
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_TopK(tmpdir, dtype):
+    input_size = 10
+    data = (np.arange(input_size,dtype=dtype)*0.1).reshape(1, input_size)
+    x = C.input_variable(input_size)
+    model = C.top_k(-x * C.log(x), 3)
+    verify_one_input(model, data, tmpdir, "top_k")
 
 #Transpose
 @pytest.mark.parametrize("dtype", DType_Config)
