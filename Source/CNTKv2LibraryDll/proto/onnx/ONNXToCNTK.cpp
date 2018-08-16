@@ -1910,7 +1910,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         // Asssumes that if CreateFunction was called with isSimpleBatchAxisOnnxOp = true
         // then the op was created with a PlaceholderVariable input.
-        auto operandPlaceholder = PlaceholderVariable(inputs[0].Shape(), L"operand", {});
+        auto operandPlaceholder = PlaceholderVariable(inputs[0].Shape(), inputs[0].GetDataType(), L"operand", {});
         FunctionPtr operandWithBatchAxis = ToBatch(operandPlaceholder);
         auto cntkFunctionWithBatchAxis = CreateFunction(node, inputs, graph, operandWithBatchAxis);
         FunctionPtr cntkFunctionWithStaticAxis = UnpackBatch(cntkFunctionWithBatchAxis, ToFixedWStringFromMultiByte(node->Name()));
@@ -2787,19 +2787,9 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "ImageScaler")
     {
-        double scale = GetNamedAttributeAsFloat(node, "scale", 1);
-        std::vector<float> bias = GetNamedAttributeAsFloatVec(node, "bias");
-        const NDShape &inputShape = inputs[0].Shape();
-        if (inputShape.Rank() == 4 && inputShape[3] == 1)
-        {
-            // CNTK does not have batch axis in shape dimensions.
-            Variable inputReshaped = Reshape(inputs[0], inputShape.SubShape(0, 3));
-            return ImageScaler(inputReshaped, scale, bias, ToFixedWStringFromMultiByte(node->Name()));
-        }
-        else
-        {
-            return ImageScaler(inputs[0], scale, bias, ToFixedWStringFromMultiByte(node->Name()));
-        }
+        float scale = GetNamedAttributeAsFloat(node, "scale", 1);
+        std::vector<float> bias = GetNamedAttributeAsFloatVec(node, "bias", std::vector<float>());
+        return ImageScaler(inputOperand0, scale, bias, ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "MeanVarianceNormalization")
     {
