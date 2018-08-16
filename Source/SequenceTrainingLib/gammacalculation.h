@@ -559,17 +559,18 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> RNNTPosterior(CPUDEVICE);
         RNNTPosterior.AssignRNNTScore(matrixOutputDistribution, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd,  uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
             uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, m_derivativeForF , m_derivativeForG ,-1,true);
-        //ElemType finalscore = 0;
-        //finalscore += -1 * beta.Get00Element();
+        ElemType finalscore = 0;
+        finalscore =  totalScore.Get00Element();
         //fprintf(stderr, "finalscore:%f\n", finalscore);
-        //if (finalscore > 50 || finalscore < 0)
-        //{
-            //fprintf(stderr, "framenum:%d\n", (int)(uttFrameNum[0]));
-            //matrixPhoneSeqs.Print("phone seq");
-            //matrixPhoneBounds.Print("phone bound");
-
-
-        //}
+        if (finalscore > 50 || finalscore < 0)
+        {
+            for (size_t i = 0; i < uttFrameNum.size(); i++)
+            {
+                fprintf(stderr, "framenum:%d\n", (int)(uttFrameNum[i]));                
+            }
+            matrixPhoneSeqs.Print("phone seq");
+            matrixPhoneBounds.Print("phone bound");
+        }
         /*alpha.Print("alpha");
         beta.Print("beta");
         prob.Print("prob");*/
