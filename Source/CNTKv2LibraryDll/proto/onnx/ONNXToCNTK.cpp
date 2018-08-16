@@ -3125,7 +3125,7 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
 {
     Variable inputOperand = inputs[0];
     Variable convolutionMap = inputs[1];
-    size_t numSpatialDim = convolutionMap.Shape().Rank() - 1; // This is conv op dimension, i.e. 2 for 2D conv, 3 for 3D conv.
+    size_t numSpatialDim = convolutionMap.Shape().Rank() - 2; // This is conv op dimension, i.e. 2 for 2D conv, 3 for 3D conv.
     size_t groups = GetNamedAttributeAsInt64(node, "group", 1);
     if (groups > 1)
         NOT_IMPLEMENTED;
@@ -3157,51 +3157,33 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
         // In this case we warn and use the default value of pads, i.e. pads is all zeros. 
         fprintf(stderr, "Warning: ConvTranpose - None of the three attributes, output_shape, pads, or auto_pad are specified. Assuming the default value (all zeros) for 'pads' attribute.");
         USE_PADS = true;
-        pads = std::vector<int64_t>(2 * (convolutionMap.Shape().Rank() - 2), 0);
+        pads = std::vector<int64_t>(2 * numSpatialDim, 0);
     }
 
     if (USE_OUTPUT_SHAPE)
     {
         outputShape = GetNamedAttributeAsShape(node, "output_shape", true);
-        for (int axis = 0; axis < outputShape.Rank(); axis++)
+        if (outputShape.Rank() != numSpatialDim + 1)
+            LogicError("ConvTranspose node's output shape attribute is of unexpected length.");
+        for (int axis = 0; axis < numSpatialDim; axis++)
         {
-            if (axis != outputShape.Rank() - 1)
-            {
-                int pads = (inputShape[axis] - 1) * strides[axis] + kernelShape[axis] - outputShape[axis];
-                cntkConvAutoPadding.push_back(pads > 0);
-            }
-            else
-            {
-                // We assume this is the channel dimension and since ONNX does not support
-                // padding (also strides, dilation) for channel dimension, we set this to
-                // false when creating CNTK node.
-                cntkConvAutoPadding.push_back(false);
-            }
+            int pads = (inputShape[axis] - 1) * strides[axis] + kernelShape[axis] - outputShape[axis];
+            cntkConvAutoPadding.push_back(pads > 0);
         }
     }
     else if (USE_PADS)
     {
         auto inputRank = inputShape.Rank() - 1; // Because we discount the batch axis.
-        auto padsPair = AdjustONNXPadsVecForCNTKConvTransposeOp(inputOperand, pads);
-        auto outputPadding = (HasNamedAttribute(node, "output_padding")) ? GetNamedAttributeAsInt64Vec(node, "output_padding") : std::vector<int64_t>(inputRank, 0);
+        auto padsPair = SplitAndReverseVec(pads);
+        auto outputPadding = (HasNamedAttribute(node, "output_padding")) ? GetNamedAttributeAsInt64Vec(node, "output_padding") : std::vector<int64_t>(numSpatialDim, 0);
         std::vector<size_t> outputShapeVect(inputRank, 0);
-        for (int axis = 0; axis < inputRank; axis++)
+        for (int axis = 0; axis < numSpatialDim; axis++)
         {
-            if (axis != inputRank - 1)
-            {
-                outputShapeVect[axis] = (inputShape[axis] - 1) * strides[axis] + kernelShape[axis] + 
-                    static_cast<size_t>(outputPadding[axis] - padsPair.first[axis] - padsPair.second[axis]);
-                cntkConvAutoPadding.push_back((padsPair.first[axis] + padsPair.second[axis]) > 0);
-            }
-            else
-            {
-                // This is the channel dimension 
-                outputShapeVect[axis] = kernelShape[kernelShape.Rank() - 2]; // Because kernel in C++ is in [HxWxOxI] format
-                // Since ONNX does not support padding (also strides, dilation) for channel dimension, 
-                // we set cntkConvAutoPadding to false when creating CNTK node.
-                cntkConvAutoPadding.push_back(false);
-            }
+            outputShapeVect[axis] = (inputShape[axis] - 1) * strides[axis] + kernelShape[axis] +
+                static_cast<size_t>(outputPadding[axis] - padsPair.first[axis] - padsPair.second[axis]);
+            cntkConvAutoPadding.push_back((padsPair.first[axis] + padsPair.second[axis]) > 0);
         }
+        outputShapeVect[numSpatialDim] = kernelShape[kernelShape.Rank() - 2]; // Because kernel in C++ is in [HxWxOxI] format
         outputShape = outputShape.AppendShape(NDShape(outputShapeVect));
     }
     else if (USE_AUTO_PAD)
@@ -3219,7 +3201,16 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
         default:
             NOT_IMPLEMENTED;
         }
+        outputShape = NDShape({ 0 });
     }
+
+    // At this point length of vectors strides, dilation, and cntkConvAutoPadding must be equal to
+    // number of spatial dimensions (2 for 2D conv, 3 for 3D conv). 
+    // In order to match the expected input for CNTK Convolution API we will append one more element
+    // in each for the "channel" axis. 
+    strides = strides.AppendShape({ 1 });
+    dilation = dilation.AppendShape({ 1 });
+    cntkConvAutoPadding.push_back(false);
 
     auto operandPlaceholder = PlaceholderVariable(inputOperand.Shape(), L"operand", {});
     auto convmapPlaceholder = PlaceholderVariable(convolutionMap.Shape(), L"convolutionMap", {});
