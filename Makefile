@@ -1618,6 +1618,7 @@ csharp: $(CSHARP_LIBS)
 ALL += csharp
 	
 # Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+# These dlls are being built in sequence right now to avoid random failres caused by race-condition with dotnet build
 V2LibraryCSTests.dll: csharp
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
@@ -1630,7 +1631,7 @@ V2LibraryCSTests.dll: csharp
 ALL += V2LibraryCSTests.dll
 
 # Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
-CNTKLibraryCSTrainingTest.dll: csharp
+CNTKLibraryCSTrainingTest.dll: csharp V2LibraryCSTests.dll
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
 	cd Tests/EndToEndTests/CNTKv2CSharp/CNTKLibraryCSTrainingTest && \
@@ -1641,7 +1642,7 @@ CNTKLibraryCSTrainingTest.dll: csharp
 ALL += CNTKLibraryCSTrainingTest.dll
 
 # Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
-CNTKLibraryCSEvalExamplesTest.dll: csharp
+CNTKLibraryCSEvalExamplesTest.dll: csharp CNTKLibraryCSTrainingTest.dll
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
 	cd Tests/EndToEndTests/EvalClientTests/CNTKLibraryCSEvalExamplesTest && \
