@@ -75,4 +75,4 @@ def test_onnx_model(model_name):
                 ref_outputs[i],
                 outputs[i],
                 rtol=1e-3,
-                atol=1e-5)
+                atol=1e-4)
