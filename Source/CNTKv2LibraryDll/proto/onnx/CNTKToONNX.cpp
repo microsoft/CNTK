@@ -1228,7 +1228,7 @@ bool IsBatchAxisOp(const FunctionPtr src)
 
 bool OpNeedONNXTypeMap(const std::string &cntkType)
 {
-    const vector<string> ops({"And", "Equal", "Greater", "Less", "Not", "Or", "Xor", "Gather", "ArgMax", "ArgMin", "TopK"});
+    const vector<string> ops({"And", "Equal", "Greater", "Less", "Not", "Or", "Xor", "Gather", "ArgMax", "ArgMin", "TopK", "Identity", "NoOp", "Alias" });
     for (auto o : ops)
     {
         if (cntkType == o)
@@ -1264,6 +1264,11 @@ void MapAndUpdateONNXType(const std::string &op, bool inputArg, int argOrder, CN
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
     else if (op == "TopK" && !inputArg && argOrder == 1)
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
+    else if (op == "Identity" && !inputArg)
+    {
+        // TODO: shall set output type the same as input.
+        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
+    }
     else
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_FLOAT);
 }
@@ -2626,7 +2631,21 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& initialSrc,
         if (IsBatchAxisOp(src))
             return CreateNodeForBatchAxisOp(src, graph, functionNodes, variableNodes, compositeOutputsMap);
         else
-            LogicError("Node '%S': Unsupported outside the context of batch axis ops.", src->AsString().c_str());
+        {
+            auto blockMapping = src->Inputs()[0].BlockFunctionVariableMapping();
+            if (blockMapping.IsInitialized())
+                return CreateNode(blockMapping.Owner(),
+                    graph,
+                    functionNodes,
+                    variableNodes,
+                    compositeOutputsMap);
+            else if (src->Inputs()[0].Owner())
+                return CreateNode(src->Inputs()[0].Owner(),
+                    graph,
+                    functionNodes,
+                    variableNodes,
+                    compositeOutputsMap);
+        }
     }
 
     //
@@ -2670,6 +2689,17 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& initialSrc,
     return functionNode; 
 }
 
+Variable SkipBatchPackUnpack(Variable input)
+{
+    if (input.Owner() &&
+        (input.Owner()->OpName() == L"UnpackBatchAxis" || input.Owner()->OpName() == L"ToBatchAxis"))
+    {
+        return input.Owner()->Inputs()[0];
+    }
+    else
+        return input;
+}
+
 void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
     LotusIR::Graph* graph,
     std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
@@ -2690,6 +2720,8 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             if (input.IsPlaceholder())
                 LogicError("Node '%S': Placeholder isn't supported currently.", src->AsString().c_str());
         }
+
+        input = SkipBatchPackUnpack(input);
 
         // Special case handling of LayerNormalization layer because it changes
         // ops dynamically based on value of inputs. If more such cases ops are seen,
@@ -2752,6 +2784,32 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             UpdateONNXType(input.GetDataType(), inputArgType);
         }
 
+        //
+        // Leaf nodes are data entry to the graph and need their own node with only output arg.
+        //
+        if (isConstant)
+        {
+            if (variableNodes.find(input) == variableNodes.end())
+            {
+                if (input.IsParameter() || input.IsConstant())
+                {
+                    auto srcTensor = input.IsParameter() ? Parameter(input).Value() : Constant(input).Value();
+
+                    onnx::TensorProto dstTensor;
+                    dstTensor.set_name(inputName);
+                    CopyTensor(srcTensor, dstTensor, &inputArgType);
+
+                    graph->AddInitializedTensor(dstTensor);
+                }
+            }
+        }
+        //
+        // If this input is output, then it is the ouput of an up stream node. Recursively add all upstream nodes.
+        // Pretty much, we are doing DFS.
+        //
+        else if (input.IsOutput())
+            CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
+
         LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(inputName, &inputArgType);
 
         inputs.push_back(&inputArg);
@@ -2797,32 +2855,6 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             *(dstTensor.mutable_dims()->Add()) = newShapeVec.size();
             graph->AddInitializedTensor(dstTensor);
         }
-
-        //
-        // Leaf nodes are data entry to the graph and need their own node with only output arg.
-        //
-        if (isConstant)
-        {
-            if (variableNodes.find(input) == variableNodes.end())
-            {
-                if (input.IsParameter() || input.IsConstant())
-                {
-                    auto srcTensor = input.IsParameter() ? Parameter(input).Value() : Constant(input).Value();
-
-                    onnx::TensorProto dstTensor;
-                    dstTensor.set_name(inputName);
-                    CopyTensor(srcTensor, dstTensor, &inputArgType);
-
-                    graph->AddInitializedTensor(dstTensor);
-                }
-            }
-        }
-        //
-        // If this input is output, then it is the ouput of an up stream node. Recursively add all upstream nodes.
-        // Pretty much, we are doing DFS.
-        //
-        else if (input.IsOutput())
-            CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
     }
 }
 
