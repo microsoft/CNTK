@@ -380,8 +380,3 @@ public:
     std::vector<std::wstring> m_mlfFiles;
 };
 }
-
-#ifdef _WIN32
-#else // assuming __unix__
-#pragma GCC diagnostic ignored "-pedantic"
-#endif
