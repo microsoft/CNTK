@@ -1620,6 +1620,9 @@ csharp: $(CSHARP_LIBS)
 ALL += csharp
 	
 # Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+# Since we are not building the .sln file as a whole using dotnet build, dotnet has no context of dependencies of each project. So dispatching the following builds in parallel
+# will create various race-conditions when they try to lock down some shared dependent files. Serializing the build here is only mitigating the race-conditions. A proper solution
+# would be either using msbuild on the whole solution(ideal but painful to change) or keeping multiple copies of CNTKLibraryManagedDll files for the dependent projects to consume.
 V2LibraryCSTests.dll: csharp
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
@@ -1632,7 +1635,7 @@ V2LibraryCSTests.dll: csharp
 ALL += V2LibraryCSTests.dll
 
 # Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
-CNTKLibraryCSTrainingTest.dll: csharp
+CNTKLibraryCSTrainingTest.dll: csharp V2LibraryCSTests.dll
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
 	cd Tests/EndToEndTests/CNTKv2CSharp/CNTKLibraryCSTrainingTest && \
@@ -1643,7 +1646,7 @@ CNTKLibraryCSTrainingTest.dll: csharp
 ALL += CNTKLibraryCSTrainingTest.dll
 
 # Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
-CNTKLibraryCSEvalExamplesTest.dll: csharp
+CNTKLibraryCSEvalExamplesTest.dll: csharp CNTKLibraryCSTrainingTest.dll
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
 	cd Tests/EndToEndTests/EvalClientTests/CNTKLibraryCSEvalExamplesTest && \
