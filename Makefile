@@ -1618,7 +1618,9 @@ csharp: $(CSHARP_LIBS)
 ALL += csharp
 	
 # Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
-# These dlls are being built in sequence right now to avoid random failres caused by race-condition with dotnet build
+# Since we are not building the .sln file as a whole using dotnet build, dotnet has no context of dependencies of each project. So dispatching the following builds in parallel
+# will create various race-conditions when they try to lock down some shared dependent files. Serializing the build here is only mitigating the race-conditions. A proper solution
+# would be either using msbuild on the whole solution(ideal but painful to change) or keeping multiple copies of CNTKLibraryManagedDll files for the dependent projects to consume.
 V2LibraryCSTests.dll: csharp
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
