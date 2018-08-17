@@ -21,28 +21,28 @@ backend_test = onnx.backend.test.BackendTest(cntk_backend, __name__)
 
 skip_models = [
     # These tests crash and prevent tests after them from running.
-    'resnet50', # Attempt to use DefaultLogger but none has been registered.
-    'vgg19',
-    'zfnet512',  # Attempt to use DefaultLogger but none has been registered.
 ]
 
 skip_ops = [
+    # Note after the fix for typenameToTypeProto initialization, no tests are crashing anymore.
+    # Thus the following is commented out for now, and subject to be removed in the future. 
+
     # These tests crash and prevent tests after them from running.
-    'test_operator_repeat_dim_overflow_cpu',
-    'test_operator_repeat_dim_overflow_cuda',
+    #'test_operator_repeat_dim_overflow_cpu',
+    #'test_operator_repeat_dim_overflow_cuda',
 
     # These use pre-ONNX 1.2 incompatible versions of the operators.
 
     # This test is incorrect in ONNX 1.2.
     # https://github.com/onnx/onnx/issues/1210
-    'test_log_softmax_lastdim_cpu',
-    'test_log_softmax_lastdim_cuda',
+    #'test_log_softmax_lastdim_cpu',
+    #'test_log_softmax_lastdim_cuda',
 
     # This is an experimental op.
-    'test_thresholdedrelu',
+    #'test_thresholdedrelu',
 
     # Unfinished local test implementation.
-    'test_arg_max_do_not_keepdims_example',
+    #'test_arg_max_do_not_keepdims_example',
 ]
 
 skip_tests = skip_models + skip_ops
