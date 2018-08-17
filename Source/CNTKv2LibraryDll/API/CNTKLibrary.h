@@ -4606,7 +4606,7 @@ namespace CNTK
                                      const std::wstring& name = L"");
 
     ///
-    /// Convolution transpose
+    /// Convolution transpose with auto padding
     ///
     CNTK_API FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
                                               const Variable& operand,
@@ -4618,6 +4618,20 @@ namespace CNTK
                                               size_t reductionRank = 1,
                                               size_t maxTempMemSizeInSamples = 0,
                                               const std::wstring& name = L"");
+    ///
+    /// Convolution transpose with explicit lower and upper pad values
+    ///
+    CNTK_API FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
+        const Variable& operand,
+        const NDShape& strides = { 1 },
+        const std::vector<bool>& sharing = { true },
+        const std::vector<size_t>& lowerPad = { 0 },
+        const std::vector<size_t>& upperPad = { 0 },
+        const NDShape& outputShape = { 0 },
+        const NDShape& dilation = { 1 },
+        size_t maxTempMemSizeInSamples = 0,
+        const std::wstring& name = L"");
+
 
     ///
     /// Pooling type.
