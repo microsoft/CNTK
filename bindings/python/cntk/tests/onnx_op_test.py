@@ -55,6 +55,11 @@ def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
     return loaded_model
 
 def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
+    # TODO: eventually we want this test method to be more general to suport 
+    # models with multiple inputs instead of just one input.
+    assert len(model.arguments) == 1
+    assert not model.arguments[0].has_sequence_axis()
+    
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
 
@@ -63,16 +68,19 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
 
     loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
-    if any(o.dynamic_axes == (C.Axis('defaultBatchAxis'),) for o in model.outputs):
+    # TODO: it is better to compare data.shape with model.arguments[0] and
+    # to pad batch dimension as needed.
+    if model.arguments[0].has_batch_axis():
         data.shape = (1, ) + data.shape
 
     assert len(model.outputs) == len(loaded_model.outputs)
 
+    dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
     for i in range(0, len(model.outputs)):
+        assert not model.outputs[i].has_sequence_axis()
         output_shape = model.outputs[i].shape
-        if model.outputs[i].dynamic_axes == (C.Axis('defaultBatchAxis'),):
-            dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-            if opname not in set_of_batch_irrelevant_ops:
+        if opname not in set_of_batch_irrelevant_ops:
+            if model.outputs[i].has_batch_axis():
                 output_shape = (dim_denotation, ) + output_shape
         assert output_shape == loaded_model.outputs[i].shape
 
@@ -107,12 +115,6 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
 
     loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
-
-    # in cases like with RNN models where models have both batch and sequence axis
-    # as dynamic axis, imported models will have the dynamic axes as free_dimensions in static shapes. 
-    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'), C.Axis('defaultDynamicAxis')):
-        assert (CNTK_FREEDIM_AXIS_DENOTATION, CNTK_FREEDIM_AXIS_DENOTATION, ) + model.shape == loaded_model.shape
-        
     dataOnnx = TranposeDynamicAxis(data)
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)

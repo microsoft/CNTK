@@ -1263,6 +1263,7 @@ void MapAndUpdateONNXType(const std::string &op, bool inputArg, int argOrder, CN
     else if ((op == "Greater" || op == "Less") && !inputArg)
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
     else if (op == "TopK" && !inputArg && argOrder == 1)
+        // the second output of TopK is index tensor of int64
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
     else
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_FLOAT);
@@ -2321,6 +2322,11 @@ LotusIR::Node *CNTKToONNXHelper::AddReshapeNodeAccordingToONNXVersion(Graph *gra
             {
                 
                 *(dstTensor.mutable_int64_data()->Add()) = ReshapeKeepInputDim;
+            }
+            else if (newShape[index] == NDShape::InferredDimension)
+            {
+                // TODO: add a test case for this code path.
+                *(dstTensor.mutable_int64_data()->Add()) = ReshapeInferredDim;
             }
             else
             {
