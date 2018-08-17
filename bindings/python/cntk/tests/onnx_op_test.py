@@ -68,20 +68,34 @@ def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
     return loaded_model
 
 def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08):
+    # TODO: eventually we want this test method to be more general to suport 
+    # models with multiple inputs instead of just one input.
+    assert len(model.arguments) == 1
+    assert not model.arguments[0].has_sequence_axis()
+    
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
-    opname = model.owner.op_name
+
+    # outputs share the same owner
+    opname = model.outputs[0].owner.op_name
 
     loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
-    model_shape = model.shape
-    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
-        dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-        if opname not in set_of_batch_irrelevant_ops:
-            model_shape = (dim_denotation, ) + model_shape
+    # TODO: it is better to compare data.shape with model.arguments[0] and
+    # to pad batch dimension as needed.
+    if model.arguments[0].has_batch_axis():
         data.shape = (1, ) + data.shape
 
-    assert model_shape == loaded_model.shape
+    assert len(model.outputs) == len(loaded_model.outputs)
+
+    dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
+    for i in range(0, len(model.outputs)):
+        assert not model.outputs[i].has_sequence_axis()
+        output_shape = model.outputs[i].shape
+        if opname not in set_of_batch_irrelevant_ops:
+            if model.outputs[i].has_batch_axis():
+                output_shape = (dim_denotation, ) + output_shape
+        assert output_shape == loaded_model.outputs[i].shape
 
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
@@ -90,12 +104,14 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
         o0 = model.eval({model.arguments[0]:data})
         o1 = loaded_model.eval({loaded_model.arguments[0]:data})
 
-    if (type(o0) is list):
-        o0 = o0[0]
-    if (type(o1) is list):
-        o1 = o1[0]
+    if len(model.outputs) == 1:
+        assert np.allclose(o0, o1, rtol, atol)
+    else:
+        for i in range(0, len(model.outputs)):
+            o0i = o0[model.outputs[i]]
+            o1i = o1[loaded_model.outputs[i]]
+            assert np.allclose(o0i, o1i, rtol, atol)
 
-    assert np.allclose(o0, o1, rtol, atol)
     return loaded_model
 
 def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None):
@@ -112,12 +128,6 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
 
     loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
-
-    # in cases like with RNN models where models have both batch and sequence axis
-    # as dynamic axis, imported models will have the dynamic axes as free_dimensions in static shapes. 
-    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'), C.Axis('defaultDynamicAxis')):
-        assert (CNTK_FREEDIM_AXIS_DENOTATION, CNTK_FREEDIM_AXIS_DENOTATION, ) + model.shape == loaded_model.shape
-        
     dataOnnx = TranposeDynamicAxis(data)
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
@@ -1455,6 +1465,15 @@ def test_Tanh(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         model = C.tanh(np.array([[1,2],[3,4]]).astype(dtype))
         verify_no_input(model, tmpdir, 'Tanh_0')
+
+#TopK
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_TopK(tmpdir, dtype):
+    input_size = 10
+    data = (np.arange(input_size,dtype=dtype)*0.1).reshape(1, input_size)
+    x = C.input_variable(input_size)
+    model = C.top_k(-x * C.log(x), 3)
+    verify_one_input(model, data, tmpdir, "top_k")
 
 #Transpose
 @pytest.mark.parametrize("dtype", DType_Config)
