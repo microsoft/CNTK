@@ -562,7 +562,7 @@ public:
         ElemType finalscore = 0;
         finalscore =  totalScore.Get00Element();
         //fprintf(stderr, "finalscore:%f\n", finalscore);
-        if (finalscore > 50 || finalscore < 0)
+        //if (finalscore > 50 || finalscore < 0)
         {
             for (size_t i = 0; i < uttFrameNum.size(); i++)
             {
