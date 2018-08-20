@@ -22,24 +22,13 @@ void BatchNormEngine<InoutType, StatType>::Forward(const InoutMat& in, const Sta
     // In inference mode, must only use running statistics
     assert(!inferenceOnly || ((expAvgFactor == 0.0) && (blendFactor == 1.0)));
     assert(std::isfinite(epsilon) && epsilon > 0);
-    if (!m_spatial)
-    {
-        assert(m_inOutT.GetNumElements() == scale.GetNumRows());
-        assert(m_inOutT.GetNumElements() == bias.GetNumRows());
-        assert(m_inOutT.GetNumElements() == runMean.GetNumRows());
-        assert(m_inOutT.GetNumElements() == runVariance.GetNumRows());
-    }
-    else
+    if (m_spatial)
     {
         assert((m_inOutT.GetNumElements() % scale.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % bias.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % runMean.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % runVariance.GetNumRows()) == 0);
     }
-    assert(scale.GetNumCols() == 1);
-    assert(bias.GetNumCols() == 1);
-    assert(runMean.GetNumCols() == 1);
-    assert(runVariance.GetNumCols() == 1);
 
     EnsureCompatible();
     ForwardCore(in, scale, bias, inferenceOnly, expAvgFactor, blendFactor, runMean, runVariance, out, epsilon, savedMean, savedInvStdDev);
