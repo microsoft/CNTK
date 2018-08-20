@@ -582,7 +582,6 @@ def test_Exp(tmpdir, dtype):
 #Flatten
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Flatten(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         shape = (2, 3, 4, 5)
         data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
