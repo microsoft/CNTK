@@ -787,14 +787,22 @@ public:
     {
         if (idx >= (int)m_axis.size())
             InvalidArgument("Slice BeginIndex call with invalid index (%d) >= axis size (%d)", idx, (int)m_axis.size()); 
-        return m_beginIndex[idx] >= 0 ? (size_t)m_beginIndex[idx] : (size_t)(m_beginIndex[idx] + InputRef(0).GetSampleLayout()[m_axis[idx] - 1]); 
+        const size_t dimSize = Input(0)->GetSampleLayout()[m_axis[idx] - 1];
+        size_t realBeginIndex = m_beginIndex[idx] >= 0 ? (size_t)m_beginIndex[idx] : (size_t)(m_beginIndex[idx] + dimSize);
+        // fix index out of bound issue. If index is n > dim, it represents dim.
+        if (realBeginIndex > dimSize) realBeginIndex = dimSize;
+        return realBeginIndex;
     }
     std::vector<int> EndIndex() const { return m_endIndex; }
     size_t EndIndex(int idx)   const 
     {
         if (idx >= (int)m_axis.size())
             InvalidArgument("Slice EndIndex call with invalid index (%d) >= axis size (%d)", idx, (int)m_axis.size());
-        return m_endIndex[idx]   >  0 ? (size_t)m_endIndex[idx] : (size_t)(m_endIndex[idx] + InputRef(0).GetSampleLayout()[m_axis[idx] - 1]); 
+        const size_t dimSize = Input(0)->GetSampleLayout()[m_axis[idx] - 1];
+        size_t realEndIndex = m_endIndex[idx]   >  0 ? (size_t)m_endIndex[idx] : (size_t)(m_endIndex[idx] + dimSize);
+        // fix index out of bound issue. If index is n > dim, it represents dim.
+        if (realEndIndex > dimSize) realEndIndex = dimSize;
+        return realEndIndex;
     }
     std::vector<int> Axis() const { return m_axis; }
     int Axis(int idx) const 

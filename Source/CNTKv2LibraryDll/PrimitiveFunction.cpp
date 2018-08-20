@@ -612,6 +612,9 @@ namespace CNTK
                                 {
                                     int realBeginIndex = (beginIndex[i] >= 0) ? beginIndex[i] : beginIndex[i] + sliceAxisDim;
                                     int realEndIndex = (endIndex[i] > 0) ? endIndex[i] : endIndex[i] + sliceAxisDim;
+                                    // fix index out of bound issue. If index is n > dim, it represents dim.
+                                    if (realBeginIndex > sliceAxisDim) realBeginIndex = sliceAxisDim;
+                                    if (realEndIndex > sliceAxisDim) realEndIndex = sliceAxisDim;
                                     if ((sliceAxisDim < realEndIndex) || (realEndIndex < realBeginIndex) || (realBeginIndex < 0))
                                         RuntimeError("Function '%S': Slice operation index range [%d,%d), interpreted as [%d,%d), is invalid for input '%S' shape '%S'.",
                                             AsString().c_str(),
