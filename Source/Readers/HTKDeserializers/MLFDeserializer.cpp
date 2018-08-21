@@ -15,14 +15,16 @@
 #include "MLFIndexBuilder.h"
 #include "MLFBinaryIndexBuilder.h"
 
-namespace CNTK {
+namespace CNTK
+{
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
 
 MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& cfg, bool primary)
     : DataDeserializerBase(primary),
-    m_corpus(corpus)
+      m_corpus(corpus),
+      m_textReader(true)
 {
     auto inputName = InitializeReaderParams(cfg, primary);
 
@@ -37,7 +39,8 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
 
 // TODO: Should be removed. Currently a lot of end to end tests still use this one.
 MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& labelConfig, const wstring& name)
-    : DataDeserializerBase(false)
+    : DataDeserializerBase(false),
+      m_textReader(true)
 {
     // The frame mode is currently specified once per configuration,
     // not in the configuration of a particular deserializer, but on a higher level in the configuration.
@@ -52,14 +55,16 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
     if (m_dimension > numeric_limits<ClassIdType>::max())
     {
         RuntimeError("Label dimension (%zu) exceeds the maximum allowed "
-            "value (%zu)\n", m_dimension, (size_t)numeric_limits<ClassIdType>::max());
+                     "value (%zu)\n",
+                     m_dimension, (size_t) numeric_limits<ClassIdType>::max());
     }
 
     // Same behavior as for the old deserializer - keep almost all in memory,
     // because there are a lot of none aligned sets.
     m_chunkSizeBytes = labelConfig(L"chunkSizeInBytes", g_64MB);
 
-    wstring precision = labelConfig(L"precision", L"float");;
+    wstring precision = labelConfig(L"precision", L"float");
+    ;
     m_elementType = AreEqualIgnoreCase(precision, L"float") ? DataType::Float : DataType::Double;
 
     m_withPhoneBoundaries = labelConfig(L"phoneBoundaries", "false");
@@ -71,7 +76,8 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
 
 MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, bool primary)
     : DataDeserializerBase(primary),
-    m_corpus(corpus)
+      m_corpus(corpus),
+      m_textReader(true)
 {
 }
 
@@ -95,7 +101,7 @@ void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const Con
     for (const auto& path : mlfPaths)
     {
         attempt(5, [this, path, enableCaching, corpus, stateListPath]() {
-            if (!stateListPath.empty())
+            if (m_textReader)
             {
                 MLFIndexBuilder builder(FileWrapper(path, L"rbS"), corpus);
                 builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
@@ -205,7 +211,7 @@ void MLFDeserializer::InitializeStream(const wstring& name)
     StreamInformation stream;
     stream.m_id = 0;
     stream.m_name = name;
-    stream.m_sampleLayout = NDShape({ m_dimension });
+    stream.m_sampleLayout = NDShape({m_dimension});
     stream.m_storageFormat = StorageFormat::SparseCSC;
     stream.m_elementType = m_elementType;
     m_streams.push_back(stream);
@@ -222,7 +228,7 @@ std::vector<ChunkInfo> MLFDeserializer::ChunkInfos()
         if (cd.m_id != i)
             RuntimeError("ChunkIdType overflow during creation of a chunk description.");
 
-        cd.m_numberOfSequences =  m_frameMode ? m_chunks[i]->NumberOfSamples() : m_chunks[i]->NumberOfSequences();
+        cd.m_numberOfSequences = m_frameMode ? m_chunks[i]->NumberOfSamples() : m_chunks[i]->NumberOfSequences();
         cd.m_numberOfSamples = m_chunks[i]->NumberOfSamples();
         chunks.push_back(cd);
     }
@@ -233,14 +239,13 @@ void MLFDeserializer::SequenceInfosForChunk(ChunkIdType, vector<SequenceInfo>& r
 {
     UNUSED(result);
     LogicError("MLF deserializer does not support primary mode, it cannot control chunking. "
-        "Please specify HTK deserializer as the first deserializer in your config file.");
+               "Please specify HTK deserializer as the first deserializer in your config file.");
 }
 
 ChunkPtr MLFDeserializer::GetChunk(ChunkIdType chunkId)
 {
     ChunkPtr result;
-    attempt(5, [this, &result, chunkId]()
-    {
+    attempt(5, [this, &result, chunkId]() {
         auto chunk = m_chunks[chunkId];
         auto& fileName = m_mlfFiles[m_chunkToFileIndex[chunk]];
 
@@ -256,7 +261,7 @@ ChunkPtr MLFDeserializer::GetChunk(ChunkIdType chunkId)
 bool MLFDeserializer::GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& result)
 {
     auto found = std::lower_bound(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(), std::make_tuple(key.m_sequence, 0, 0),
-        LessByFirstItem);
+                                  LessByFirstItem);
 
     if (found == m_keyToChunkLocation.end() || std::get<0>(*found) != key.m_sequence)
     {
@@ -265,7 +270,6 @@ bool MLFDeserializer::GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo&
 
     auto chunkId = std::get<1>(*found);
     auto sequenceIndexInChunk = std::get<2>(*found);
-
 
     result.m_chunkId = std::get<1>(*found);
     result.m_key = key;
@@ -287,5 +291,4 @@ bool MLFDeserializer::GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo&
     }
     return true;
 }
-
 }

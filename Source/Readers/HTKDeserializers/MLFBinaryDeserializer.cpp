@@ -67,7 +67,7 @@ MLFBinaryDeserializer::MLFBinaryDeserializer(CorpusDescriptorPtr corpus, const C
     : MLFDeserializer(corpus, primary)
 {
     auto inputName = InitializeReaderParams(cfg, primary);
-
+    m_textReader = false;
     if (m_frameMode)
         LogicError("TODO: support frame mode in Binary MLF deserializer.");
 

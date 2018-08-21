@@ -378,5 +378,6 @@ public:
 
     std::vector<std::shared_ptr<Index>> m_indices;
     std::vector<std::wstring> m_mlfFiles;
+    bool m_textReader;
 };
 }
