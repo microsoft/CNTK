@@ -7309,10 +7309,13 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
                 uttBeginForOutputditribution, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId, m_derivativeForF.Data(), m_derivativeForG.Data());
         //this->Print("RNNT score");
         totalScore(0, 0) = 0.0;
+        fprintf(stderr, "utt score: ");
         for (size_t utt = 0; utt < uttNum; utt++)
         {
+            fprintf(stderr, "%f ", scores[utt]);
             totalScore(0, 0) -= scores[utt];
         }
+        fprintf(stderr, "\n");
         //alpha.SetValue(0.0);
         //ElemType score= compute_alphas(prob.Data(), alpha.Data(), (int)maxFrameNum, (int)maxPhoneNum, phoneSeq.Data());
         //CPUMatrix<ElemType> trans_grads, predict_grads;
