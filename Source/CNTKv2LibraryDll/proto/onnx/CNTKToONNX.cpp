@@ -1390,9 +1390,17 @@ int64_t CNTKToONNXHelper::ConvertAxisToOnnx(const Axis &axis, const Variable &op
 
 std::vector<int64_t> CNTKToONNXHelper::ConvertAxesToOnnx(const std::vector<Axis> &axes, const Variable &operand)
 {
-    if (std::any_of(axes.cbegin(), axes.cend(), [](const Axis &axis) {return axis == Axis::AllStaticAxes(); }))
+    if (std::any_of(axes.cbegin(), axes.cend(), [](const Axis &axis) {return axis == Axis::AllStaticAxes() || axis == Axis::AllAxes(); }))
     {
         std::vector<int64_t> onnxAxes;
+        if (std::any_of(axes.cbegin(), axes.cend(), [](const Axis &axis) {return axis == Axis::AllAxes(); }))
+        {
+            for (int i = 0; i<operand.DynamicAxes().size(); i++)
+            {
+                onnxAxes.push_back(i);
+            }
+        }
+
         for (int i = 0; i < operand.Shape().Rank(); i++)
         {
             onnxAxes.push_back(i + operand.DynamicAxes().size());
@@ -3025,6 +3033,15 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             else if (src->Attributes().Contains(L"axis"))
                 reductionAxes.push_back((Axis)(src->Attributes()[L"axis"].Value<Axis>()));
 
+            // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
+            // For ONNX export we need to make sure we export keepdims as 0 (false). 
+            // The same applies for AllStaticAxes. 
+            if (reductionAxes.size() == 1 
+                && (reductionAxes[0] == Axis::DefaultBatchAxis() 
+                    || reductionAxes[0] == Axis::AllStaticAxes() 
+                    || reductionAxes[0] == Axis::AllAxes()))
+                keepReducedDimensions = 0;
+
             node->AddAttribute(attributesMap[L"keepdims"], keepReducedDimensions);
 
             std::vector<int64_t> axes = ConvertAxesToOnnx(reductionAxes, src->Inputs()[0]);
@@ -3404,7 +3421,11 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 reductionAxes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
                 // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
                 // For ONNX export we need to make sure we export keepdims as 0 (false). 
-                if (reductionAxes.size() == 1 && (reductionAxes[0] == Axis::DefaultBatchAxis()))
+                // The same applies for AllStaticAxes. 
+                if (reductionAxes.size() == 1 
+                    && (reductionAxes[0] == Axis::DefaultBatchAxis() 
+                        || reductionAxes[0] == Axis::AllStaticAxes() 
+                        || reductionAxes[0] == Axis::AllAxes()))
                     keepReducedDimensions = 0;
                 std::vector<int64_t> axes = ConvertAxesToOnnx(reductionAxes, src->Inputs()[0]);
                 node->AddAttribute("axes", axes);
@@ -3420,7 +3441,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
 
                 node->AddAttribute("axis", ax);
-            }
+            } 
 
             node->AddAttribute("keepdims", keepReducedDimensions);
         }
