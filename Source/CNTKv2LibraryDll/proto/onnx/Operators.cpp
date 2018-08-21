@@ -420,6 +420,11 @@ namespace ONNX
         { L"Unsqueeze",{ {
             { L"Unsqueeze", "Unsqueeze" },
         } } },
+        { L"TopK",{ {
+            { L"TopK", "TopK" },
+            { L"axis", "axis" },
+            { L"numItems", "k" },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,

@@ -1223,9 +1223,10 @@ std::vector<FunctionPtr> CreateRNNConstantOp(const Graph *graph, const Node *nod
     return returns;
 }
 
-std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const NodeArg *nodeArg,
-                                                                        const Node *parentNode, const Graph *graph, ONNXToCNTKVariableMap &constructedNodeArgVariableMap,
-                                                                        const DeviceDescriptor &computeDevice)
+std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const NodeArg *nodeArg, 
+    const Node *parentNode, const Graph *graph, 
+    ONNXToCNTKVariableMap &constructedNodeArgVariableMap, 
+    const DeviceDescriptor &computeDevice)
 {
     string parentONNXOpName = parentNode->OpType();
     std::string nodeName = nodeArg->Name();
@@ -2389,16 +2390,39 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
                 input.Shape()[input.Shape().Rank() - 1] == NDShape::FreeDimension &&
                 input.Shape()[input.Shape().Rank() - 2] == NDShape::FreeDimension; };
 
+        auto HasFreeDimensionAt0Axes = [](Variable input) {
+            return input.Shape().Rank() >= 1 &&
+                input.Shape()[input.Shape().Rank() - 1] == NDShape::FreeDimension; };
+
         bool input0HasBatchAndSequenceAxes = HasBatchAndSequenceAxes(inputs[0]);
         bool input1HasBatchAndSequenceAxes = HasBatchAndSequenceAxes(inputs[1]);
-        if (input0HasBatchAndSequenceAxes)
-            input0 = ToBatchAndSequence(inputs[0]);
-        if (input1HasBatchAndSequenceAxes)
-            input1 = ToBatchAndSequence(inputs[1]);
-        FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+        bool input0HasFreeDimensionAt0Axes = HasFreeDimensionAt0Axes(inputs[0]);
+        bool input1HasFreeDimensionAt0Axes = HasFreeDimensionAt0Axes(inputs[1]);
         if (input0HasBatchAndSequenceAxes || input1HasBatchAndSequenceAxes)
+        {
+            if (input0HasBatchAndSequenceAxes)
+                input0 = ToBatchAndSequence(inputs[0]);
+            if (input1HasBatchAndSequenceAxes)
+                input1 = ToBatchAndSequence(inputs[1]);
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
             cntkFunction = UnpackBatchAndSequence(cntkFunction);
-        return cntkFunction;
+            return cntkFunction;
+        }
+        else if (input0HasFreeDimensionAt0Axes || input1HasFreeDimensionAt0Axes)
+        {
+            if (input0HasFreeDimensionAt0Axes)
+                input0 = ToBatch(inputs[0], L"");
+            if (input1HasFreeDimensionAt0Axes)
+                input1 = ToBatch(inputs[1], L"");
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+            cntkFunction = UnpackBatch(cntkFunction, L"");
+            return cntkFunction;
+        }
+        else
+        {
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+            return cntkFunction;
+        }
     }
     else if (onnxOpName == "PRelu")
     {
@@ -2842,6 +2866,14 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "Atan")
     {
         FunctionPtr cntkFunction = Atan(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "TopK")
+    {
+        int64_t axisIndex = GetNamedAttributeAsInt64(node, "axis", (size_t)-1);
+        Axis axis = ConvertONNXAxisToCNTKCppApi(axisIndex, inputs[0]);
+        auto k = GetNamedAttributeAsInt64(node, "k", 1);
+        FunctionPtr cntkFunction = TopK(inputs[0], k, axis, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else
@@ -3323,8 +3355,12 @@ std::vector<Variable> ONNXToCNTKHelper::CreateCNTKInputsStartingFromIndex(const 
             }
             else
             {
-                Variable inputVariable = CreateLeafVariableOrConstant(nodeArg, node, graph, computeDevice);
-                inputs.push_back(inputVariable);
+                if (constructedNodeArgVariableMap.find(nodeArg->Name()) == constructedNodeArgVariableMap.end())
+                {
+                    Variable inputVariable = CreateLeafVariableOrConstant(nodeArg, node, graph, computeDevice);
+                    constructedNodeArgVariableMap.insert(ONNXToCNTKVariableMap::value_type(nodeArg->Name(), inputVariable));
+                }
+                inputs.push_back(constructedNodeArgVariableMap[nodeArg->Name()]);
             }
         }
     }
