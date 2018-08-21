@@ -1556,6 +1556,24 @@ def test_TopK(tmpdir, dtype):
     model = C.top_k(-x * C.log(x), 3)
     verify_one_input(model, data, tmpdir, "top_k")
 
+#TimesTranspose
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_TimesTranspose(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        np.random.seed(1)
+        data0 = np.random.rand(3, 4).astype(dtype)
+        input0 = C.input_variable(data0.shape, dtype = data0.dtype)
+
+        data1 = np.random.rand(4).astype(dtype)
+        input1 = C.input_variable(data1.shape, dtype = data1.dtype)
+        model = C.times_transpose(input0, input1)
+        verify_two_input(model, data0, data1, tmpdir, 'TimesTranspose_0')
+
+        data1 = np.random.rand(5, 4).astype(dtype)
+        input1 = C.input_variable(data1.shape, dtype = data1.dtype)
+        model = C.times_transpose(input0, input1)
+        verify_two_input(model, data0, data1, tmpdir, 'TimesTranspose_1')
+
 #Transpose
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Transpose(tmpdir, dtype):

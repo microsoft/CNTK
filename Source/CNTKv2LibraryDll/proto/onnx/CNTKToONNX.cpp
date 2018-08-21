@@ -338,6 +338,13 @@ private:
         std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
+    // Takes CNTK's TimesTranspose node and converts it into a series of ONNX nodes.
+    static LotusIR::Node * CreateONNXNodesForTimesTranspose(const FunctionPtr & src,
+        LotusIR::Graph * graph, std::unordered_map<FunctionPtr,
+        LotusIR::Node*>& functionNodes,
+        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+
     //
     // Method to create ONNX nodes that have an explicit batch axis from their CNTK
     // counterparts.
@@ -2636,6 +2643,10 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& initialSrc,
     {
         return CreateONNXNodesForSelect(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     }
+    else if (cntkOpName == "TransposeTimes")
+    {
+        return CreateONNXNodesForTimesTranspose(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+    }
     else if (cntkOpName == "UnpackBatchAxis")
     {
         if (IsBatchAxisOp(src))
@@ -4121,6 +4132,33 @@ LotusIR::NodeArg* CNTKToONNXHelper::LSTMOutputShapeAdapter(LotusIR::NodeArg& inp
     std::vector<int64_t> shape({ 0, 0, -1 });
     AddReshapeNodeAccordingToONNXVersion(graph, adapterBasename + "_Reshape", &transposeOutputArg, &reshapeOutputArg, shape);
     return &reshapeOutputArg;
+}
+
+LotusIR::Node* CNTKToONNXHelper::CreateONNXNodesForTimesTranspose(const FunctionPtr &src,
+    LotusIR::Graph* graph,
+    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
+    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+{
+    std::vector<LotusIR::NodeArg *> inputs; 
+    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
+
+    std::vector<LotusIR::NodeArg *> outputs;
+    ProcessOutputs(src, outputs, graph);
+
+    const std::string & outputName = outputs[0]->Name();
+
+    int rightInputRank = inputs[0]->Shape()->dim_size() - 1;
+
+    LotusIR::NodeArg &transposeOutputArg = graph->GetOrCreateNodeArg(outputName + "_transpose_out", nullptr);
+    LotusIR::Node* transposeNode = graph->AddNode(outputName + "_transpose", "Transpose", "", { inputs[0] }, { &transposeOutputArg });
+    transposeNode->AddAttribute("perm", ToINTS(rightInputRank == 2 ? vector<int>({ 1, 2, 0 }) : vector<int>({ 0, 1 })));
+
+    LotusIR::NodeArg &matmulOutputArg = graph->GetOrCreateNodeArg(outputName + "_matmul_out", nullptr);
+    LotusIR::Node* matmulNode = graph->AddNode(outputName + "_matmul", "MatMul", "", { inputs[1], &transposeOutputArg }, { &matmulOutputArg });
+    
+    functionNodes.emplace(src, matmulNode);
+    return matmulNode;
 }
 
 LotusIR::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr &src,
