@@ -477,9 +477,15 @@ def test_ConvTranspose(tmpdir, dtype, device_id):
         kernel_shape = (48, 32, 3, 3) # For convolution_transpose the shape is (I x O x W x H)
         kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = dtype))
 
-        conv_trans_model = C.convolution_transpose(kernel, x, strides=(2, 2), output_shape=(32, 32, 32), auto_padding = [False, True, True])
+        conv_trans_model_with_output_shape = C.convolution_transpose(kernel, x, strides=(2, 2), auto_padding = [False, True, True], output_shape=(32, 32, 32))
+        verify_one_input(conv_trans_model_with_output_shape, img, tmpdir, 'ConvTranspose_0', device)
 
-        verify_one_input(conv_trans_model, img, tmpdir, 'ConvTranspose_0', device)
+        conv_trans_model_without_output_shape = C.convolution_transpose(kernel, x, strides=(2, 1), dilation=(1, 1), auto_padding = [False, True, True])
+        verify_one_input(conv_trans_model_without_output_shape, img, tmpdir, 'ConvTranspose_1', device)
+
+        if device_id >= 0: # Dilated convolution is not supported on CPU, hence the following test is run only on GPU.
+            conv_trans_model_with_dilation = C.convolution_transpose(kernel, x, strides=(2, 1), dilation=(2, 1), auto_padding = [False, True, True])
+            verify_one_input(conv_trans_model_with_dilation, img, tmpdir, 'ConvTranspose_2', device)
 
 # DepthToSpace
 @pytest.mark.parametrize("dtype", DType_Config)
