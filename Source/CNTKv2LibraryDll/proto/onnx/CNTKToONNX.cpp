@@ -3336,8 +3336,9 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
 
             node->AddAttribute("alpha", alpha);
             node->AddAttribute("beta", beta);
-            node->AddAttribute("transA", transA);
-            node->AddAttribute("transB", transB);
+            // Swap transpose attribute to match the swapped inputs in ONNX order. 
+            node->AddAttribute("transA", transB);
+            node->AddAttribute("transB", transA);
         }
         else if (src->OpName() == L"Unsqueeze")
         {
@@ -3408,11 +3409,26 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 // This means that the length of kernel shape and strides is off by two or more which should not happen.
                 LogicError("Node '%S': kernel shape and strides dimensionality does not match.", src->AsString().c_str());
             }
-            auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
-
+            
             node->AddAttribute("kernel_shape", ToINTS(kernelShape));
             node->AddAttribute("strides", ToINTS(strides));
-            PutAutopadOrPadAttrInNode(node, autoPadding, kernelShape, ceilOutDim);
+
+            auto lowerPad = ToINTS(src->Attributes()[L"lowerPad"].Value<NDShape>());
+            auto upperPad = ToINTS(src->Attributes()[L"upperPad"].Value<NDShape>());
+            // lowerPad/upperPad is set to NDShape({0}) by default. 
+            // If this node has explicitly set the lowerPad and upperPad values(i.e. nodes that are constructed with lowerPad/upperPad values and autoPadding=False),
+            // export these values directly. Otherwise, check autoPadding and export accordingly. 
+            if (lowerPad.size() > 0 && upperPad.size() > 0 
+                && !(lowerPad.size() == 1 && upperPad.size() == 1 && lowerPad[0] == 0 && upperPad[0] == 0))
+            {
+                lowerPad.insert(lowerPad.end(), upperPad.cbegin(), upperPad.cend());
+                node->AddAttribute("pads", lowerPad);
+            }
+            else
+            {
+                auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
+                PutAutopadOrPadAttrInNode(node, autoPadding, kernelShape, ceilOutDim);
+            }
         }
         else if (src->OpName() == L"ReduceElements")
         {
