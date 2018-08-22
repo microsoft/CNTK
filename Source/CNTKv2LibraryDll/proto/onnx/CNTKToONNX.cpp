@@ -1214,18 +1214,33 @@ bool IsUnSupportedLayerNormalization(const FunctionPtr src)
     return cntkOpName == "LayerNormalization" && src->Output().HasSequenceAxis();
 }
 
+bool MatchOpSequence(const FunctionPtr src, std::vector<wstring> opSequence, FunctionPtr &op)
+{
+    FunctionPtr currentOp = src;
+    for (auto opName : opSequence)
+    {
+        if (currentOp == nullptr || currentOp->OpName() != opName)
+        {
+            return false;
+        }
+        currentOp = currentOp->Inputs().size() == 1 ? currentOp->Inputs()[0].Owner() : nullptr;
+    }
+    op = currentOp;
+    return true;
+}
+
 FunctionPtr SkipBatchAndSequenceAxisOp(const FunctionPtr src)
 {
-    if ((src->OpName() == L"ToSequenceOp" && src->Inputs()[0].Owner() &&
-        src->Inputs()[0].Owner()->OpName() == L"ToBatchAxis") ||
-        (src->OpName() == L"UnpackBatchAxis" && src->Inputs()[0].Owner() &&
-            src->Inputs()[0].Owner()->OpName() == L"UnpackSequenceOp"))
-        return src->Inputs()[0].Owner()->Inputs()[0].Owner();
-    else if (src->OpName() == L"UnpackBatchAxis" && src->Inputs()[0].Owner() &&
-        src->Inputs()[0].Owner()->OpName() == L"Sequence::Slice")
-        return src->Inputs()[0].Owner();
-    else
-        return src;
+    std::vector<wstring> toSequenceBatchOps({ L"ToSequenceOp", L"ToBatchAxis", L"TransposeAxes" }); 
+    std::vector<wstring> unpackSequenceBatchOps({ L"TransposeAxes", L"UnpackBatchAxis", L"UnpackSequenceOp" });
+    std::vector<wstring> unpackBatchSequenceSliceOps({ L"UnpackBatchAxis", L"Sequence::Slice" });
+
+    FunctionPtr op = src;
+    while (MatchOpSequence(op, toSequenceBatchOps, op) || 
+        MatchOpSequence(op, unpackSequenceBatchOps, op) || 
+        MatchOpSequence(op, unpackBatchSequenceSliceOps, op))
+        ;
+    return op;
 }
 
 bool IsBatchAxisOp(const FunctionPtr src)
@@ -1254,7 +1269,7 @@ bool IsBatchAxisOp(const FunctionPtr src)
 
 bool OpNeedONNXTypeMap(const std::string &cntkType)
 {
-    const vector<string> ops({"And", "Equal", "Greater", "Less", "Not", "Or", "Xor", "Gather", "ArgMax", "ArgMin", "TopK", "Identity", "NoOp", "Alias" });
+    const vector<string> ops({"And", "Equal", "Greater", "Less", "Not", "Or", "Xor", "Gather", "ArgMax", "ArgMin", "TopK" });
     for (auto o : ops)
     {
         if (cntkType == o)
@@ -1290,11 +1305,6 @@ void MapAndUpdateONNXType(const std::string &op, bool inputArg, int argOrder, CN
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
     else if (op == "TopK" && !inputArg && argOrder == 1)
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
-    else if (op == "Identity" && !inputArg)
-    {
-        // TODO: shall set output type the same as input.
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
-    }
     else
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_FLOAT);
 }
@@ -2659,13 +2669,16 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& initialSrc,
                                            std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
                                            const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
-    auto iter = functionNodes.find(initialSrc);
+    // try to skip batch and sequence pack unpack
+    FunctionPtr src = SkipBatchAndSequenceAxisOp(initialSrc);
+    if (!src)
+        // TODO: it could be a input NodeArg.
+        return nullptr;
+
+    auto iter = functionNodes.find(src);
     if (iter != functionNodes.end())
         return iter->second;
     
-    // try to skip batch and sequence pack unpack
-    FunctionPtr src = SkipBatchAndSequenceAxisOp(initialSrc);
-
     LotusIR::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
     std::string onnxOpName = ToOPName(src);
@@ -2793,6 +2806,19 @@ Variable SkipBatchPackUnpack(Variable input)
         return input;
 }
 
+bool TryMatchNodeArgType(onnx::TypeProto &argType, LotusIR::Graph* graph, const std::string &nodeArgName)
+{
+    const NodeArg* inputNodeArg = graph->FindNodeArg(nodeArgName);
+    if (inputNodeArg)
+    {
+        onnx::TensorProto_DataType inputType = inputNodeArg->TypeAsProto()->tensor_type().elem_type();
+        argType.mutable_tensor_type()->set_elem_type(inputType);
+        return true;
+
+    }
+    return false;
+}
+
 void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
     LotusIR::Graph* graph,
     std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
@@ -2842,6 +2868,13 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         bool isConstant = (input.IsParameter() || input.IsConstant()) &&
             !Operators::IgnoreConstantAndParameter(src->OpName(), inputIndex);
 
+        //
+        // If this input is output, then it is the ouput of an up stream node. Recursively add all upstream nodes.
+        // Pretty much, we are doing DFS.
+        //
+        if (input.IsOutput())
+            CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
+
         onnx::TypeProto inputArgType;
 
         if (cntkOpName == "Splice")
@@ -2869,7 +2902,16 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                 (*inputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim())[0].set_dim_param(FreeSequenceDimParam);
         }
 
-        if (OpNeedONNXTypeMap(cntkOpName))
+        // TODO: if it is an identity op, we shall peek its input node to find the correct tensor element type.
+
+        if (onnxOpName == "Identity")
+        {
+            // shall match the type of the NodeArg of the same name from upstream. 
+            string inputNodeArgName = ToLegacyString(ToUTF8(input.Uid()));
+            if (!TryMatchNodeArgType(inputArgType, graph, inputNodeArgName))
+                UpdateONNXType(src->Inputs()[0].GetDataType(), inputArgType);
+        }
+        else if (OpNeedONNXTypeMap(cntkOpName))
         {
             MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), inputArgType);
         }
@@ -2897,12 +2939,6 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                 }
             }
         }
-        //
-        // If this input is output, then it is the ouput of an up stream node. Recursively add all upstream nodes.
-        // Pretty much, we are doing DFS.
-        //
-        else if (input.IsOutput())
-            CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
 
         LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(inputName, &inputArgType);
 
@@ -2960,7 +2996,14 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
     for (const auto& output : src->Outputs())
     {
         auto outputArgType = ToTypeProto(output.Shape(), output.HasBatchAxis(), output.HasSequenceAxis());
-        if (OpNeedONNXTypeMap(onnxOpName))
+        if (onnxOpName == "Identity")
+        {
+            // shall match the type of the NodeArg of this Identity node's input
+            string inputNodeArgName = ToLegacyString(ToUTF8(src->Inputs()[0].Uid()));
+            if (!TryMatchNodeArgType(outputArgType, graph, inputNodeArgName))
+                UpdateONNXType(src->Inputs()[0].GetDataType(), outputArgType);
+        }
+        else if (OpNeedONNXTypeMap(onnxOpName))
         {
             MapAndUpdateONNXType(onnxOpName, false, outputIndex, output.GetDataType(), outputArgType);
         }
@@ -3525,11 +3568,12 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             const AttributesMapping& attributeMap = Operators::FindAttributeMap(src->OpName(), cntkAttributeOpName);
 
             auto keepReducedDimensions = (int64_t)((bool)src->Attributes()[L"reductionKeepDimensions"].Value<bool>() ? 1 : 0);
-
+            bool forceKeepReducedDimensions = false;
             // hack to make reduction with sequence axis pass bi-directional broadcast
             if (node->OpType() == "ReduceMean" && src->Inputs()[0].HasSequenceAxis())
             {
                 keepReducedDimensions = 1;
+                forceKeepReducedDimensions = true;
             }
 
             if (src->Attributes().Contains(L"axisVec"))
@@ -3539,10 +3583,11 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
                 // For ONNX export we need to make sure we export keepdims as 0 (false). 
                 // The same applies for AllStaticAxes. 
-                if (reductionAxes.size() == 1 
+                if (!forceKeepReducedDimensions && 
+                    (reductionAxes.size() == 1
                     && (reductionAxes[0] == Axis::DefaultBatchAxis() 
                         || reductionAxes[0] == Axis::AllStaticAxes() 
-                        || reductionAxes[0] == Axis::AllAxes()))
+                        || reductionAxes[0] == Axis::AllAxes())))
                     keepReducedDimensions = 0;
                 std::vector<int64_t> axes = ConvertAxesToOnnx(reductionAxes, src->Inputs()[0]);
                 node->AddAttribute("axes", axes);
@@ -3553,7 +3598,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
                 // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
                 // For ONNX export we need to make sure we export keepdims as 0 (false). 
-                if (axis == Axis::DefaultBatchAxis())
+                if (!forceKeepReducedDimensions && axis == Axis::DefaultBatchAxis())
                     keepReducedDimensions = 0;
                 int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
 
