@@ -3356,6 +3356,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             auto dilations = (NDShape)src->Attributes()[L"dilation"].Value<NDShape>();
             auto transpose = (bool)src->Attributes()[L"transpose"].Value<bool>();
             size_t groups = (src->Attributes().Contains(L"groups")) ? (size_t)src->Attributes()[L"groups"].Value<size_t>() : 1u;
+            bool ceilOutDim = (src->Attributes().Contains(L"ceilOutDim")) ? (bool)src->Attributes()[L"ceilOutDim"].Value<bool>() : false;
 
             //
             // Remove the channel part for ONNX. This is because ONNX, unlike CNTK, does
@@ -3373,9 +3374,10 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             if (transpose)
             {
                 auto outputShape = (NDShape)src->Attributes()[L"outputShape"].Value<NDShape>();
-                node->AddAttribute("output_shape", ToINTS(outputShape, src->Inputs()[1].HasBatchAxis()));
+                if(outputShape != NDShape({ 0 }))
+                    node->AddAttribute("output_shape", ToINTS(outputShape, src->Inputs()[1].HasBatchAxis()));
             }
-            PutAutopadOrPadAttrInNode(node, autoPadding, kernelShape);
+            PutAutopadOrPadAttrInNode(node, autoPadding, kernelShape, ceilOutDim);
         }
         else if (src->OpName() == L"Pooling")
         {
