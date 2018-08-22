@@ -1430,9 +1430,17 @@ int64_t CNTKToONNXHelper::ConvertAxisToOnnx(const Axis &axis, const Variable &op
 
 std::vector<int64_t> CNTKToONNXHelper::ConvertAxesToOnnx(const std::vector<Axis> &axes, const Variable &operand)
 {
-    if (std::any_of(axes.cbegin(), axes.cend(), [](const Axis &axis) {return axis == Axis::AllStaticAxes(); }))
+    if (std::any_of(axes.cbegin(), axes.cend(), [](const Axis &axis) {return axis == Axis::AllStaticAxes() || axis == Axis::AllAxes(); }))
     {
         std::vector<int64_t> onnxAxes;
+        if (std::any_of(axes.cbegin(), axes.cend(), [](const Axis &axis) {return axis == Axis::AllAxes(); }))
+        {
+            for (int i = 0; i<operand.DynamicAxes().size(); i++)
+            {
+                onnxAxes.push_back(i);
+            }
+        }
+
         for (int i = 0; i < operand.Shape().Rank(); i++)
         {
             onnxAxes.push_back(i + operand.DynamicAxes().size());
@@ -2397,6 +2405,11 @@ LotusIR::Node *CNTKToONNXHelper::AddReshapeNodeAccordingToONNXVersion(Graph *gra
                 
                 *(dstTensor.mutable_int64_data()->Add()) = ReshapeKeepInputDim;
             }
+            else if (newShape[index] == NDShape::InferredDimension)
+            {
+                // TODO: add a test case for this code path.
+                *(dstTensor.mutable_int64_data()->Add()) = ReshapeInferredDim;
+            }
             else
             {
                 *(dstTensor.mutable_int64_data()->Add()) = newShape[index];
@@ -2845,12 +2858,13 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         }
         else
         {
-            if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4)
-                && input.Shape().Rank() == 2)
-                // this is a workaround for brainscript models that have rank = 2 for BN inputs.
-                inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
-            else
-                inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
+            inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
+
+            // In case of BatchNormalization, if data (input[0]) is of type FP16, then all BN stats(inputs[1:4])
+            // need to be converted from FP32 to FP16 prior to getting exported to ONNX.
+            if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4) && src->Inputs()[0].GetDataType() == DataType::Float16)
+                input = Utils::ConvertVariableType<float, float16>(input, true);
+
             if (input.IsInput() && input.HasSequenceAxis())
                 (*inputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim())[0].set_dim_param(FreeSequenceDimParam);
         }
@@ -3129,6 +3143,15 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 reductionAxes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
             else if (src->Attributes().Contains(L"axis"))
                 reductionAxes.push_back((Axis)(src->Attributes()[L"axis"].Value<Axis>()));
+
+            // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
+            // For ONNX export we need to make sure we export keepdims as 0 (false). 
+            // The same applies for AllStaticAxes. 
+            if (reductionAxes.size() == 1 
+                && (reductionAxes[0] == Axis::DefaultBatchAxis() 
+                    || reductionAxes[0] == Axis::AllStaticAxes() 
+                    || reductionAxes[0] == Axis::AllAxes()))
+                keepReducedDimensions = 0;
 
             node->AddAttribute(attributesMap[L"keepdims"], keepReducedDimensions);
 
@@ -3515,7 +3538,11 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 reductionAxes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
                 // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
                 // For ONNX export we need to make sure we export keepdims as 0 (false). 
-                if (reductionAxes.size() == 1 && (reductionAxes[0] == Axis::DefaultBatchAxis()))
+                // The same applies for AllStaticAxes. 
+                if (reductionAxes.size() == 1 
+                    && (reductionAxes[0] == Axis::DefaultBatchAxis() 
+                        || reductionAxes[0] == Axis::AllStaticAxes() 
+                        || reductionAxes[0] == Axis::AllAxes()))
                     keepReducedDimensions = 0;
                 std::vector<int64_t> axes = ConvertAxesToOnnx(reductionAxes, src->Inputs()[0]);
                 node->AddAttribute("axes", axes);
@@ -3531,7 +3558,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
 
                 node->AddAttribute("axis", ax);
-            }
+            } 
 
             node->AddAttribute("keepdims", keepReducedDimensions);
         }
@@ -4425,11 +4452,11 @@ void CNTKToONNXHelper::ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
         inputArgType = ToTypeProto(input.Shape(), false, false, true); // Explicitly turning off batch and sequence axis.
         if (input.IsInput() && input.HasSequenceAxis())
             (*inputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim())[0].set_dim_param(FreeSequenceDimParam);
-        // TODO: Commented code below is a workaround for BN. Is is still needed?
-        //if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4)
-        //    && input.Shape().Rank() == 2)
-        //    // this is a workaround for brainscript models that have rank = 2 for BN inputs.
-        //    inputArgType = ToTypeProto(input.Shape().SubShape(0, input.Shape().Rank() - 1));
+
+        // In case of BatchNormalization, if data (input[0]) is of type FP16, then all BN stats(inputs[1:4])
+        // need to be converted from FP32 to FP16 prior to getting exported to ONNX.
+        if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4) && src->Inputs()[0].GetDataType() == DataType::Float16)
+            input = Utils::ConvertVariableType<float, float16>(input, true);
 
         if (OpNeedONNXTypeMap(cntkOpName))
         {

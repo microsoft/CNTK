@@ -1,0 +1,1553 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU W3550 @ 3.07GHz
+    Hardware threads: 4
+    Total Memory: 12580388 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu DeviceId=-1 timestamping=true Truncated=false speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]] shareNodeValueMatrices=true
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Aug 16 2016 02:54:53
+		Last modified date: Fri Aug 12 05:31:21 2016
+		Build type: Release
+		Build target: GPU
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+		CUB_PATH: c:\src\cub-1.4.1
+		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+		Build Branch: HEAD
+		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
+		Built by svcphil on Philly-Pool3
+		Build Path: c:\Jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+-------------------------------------------------------------------
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+08/16/2016 03:01:59: -------------------------------------------------------------------
+08/16/2016 03:01:59: Build info: 
+
+08/16/2016 03:01:59: 		Built time: Aug 16 2016 02:54:53
+08/16/2016 03:01:59: 		Last modified date: Fri Aug 12 05:31:21 2016
+08/16/2016 03:01:59: 		Build type: Release
+08/16/2016 03:01:59: 		Build target: GPU
+08/16/2016 03:01:59: 		Math lib: mkl
+08/16/2016 03:01:59: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+08/16/2016 03:01:59: 		CUB_PATH: c:\src\cub-1.4.1
+08/16/2016 03:01:59: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+08/16/2016 03:01:59: 		Build Branch: HEAD
+08/16/2016 03:01:59: 		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
+08/16/2016 03:01:59: 		Built by svcphil on Philly-Pool3
+08/16/2016 03:01:59: 		Build Path: c:\Jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+08/16/2016 03:01:59: -------------------------------------------------------------------
+08/16/2016 03:02:00: -------------------------------------------------------------------
+08/16/2016 03:02:00: GPU info:
+
+08/16/2016 03:02:00: 		Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB
+08/16/2016 03:02:00: -------------------------------------------------------------------
+
+08/16/2016 03:02:00: Running on cntk-muc02 at 2016/08/16 03:02:00
+08/16/2016 03:02:00: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu  DeviceId=-1  timestamping=true  Truncated=false  speechTrain=[SGD=[epochSize=2560]]  speechTrain=[SGD=[maxEpochs=2]]  speechTrain=[SGD=[numMBsToShowResult=1]]  shareNodeValueMatrices=true
+
+
+
+08/16/2016 03:02:00: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+08/16/2016 03:02:00: precision = "float"
+deviceId = $DeviceId$
+command = speechTrain
+frameMode = false
+truncated = true
+parallelTrain = false
+speechTrain = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntkSpeech.dnn"
+    traceLevel = 1
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 20
+        learningRatesPerMB = 0.5
+        numMBsToShowResult = 10
+        momentumPerMB = 0:0.9
+        maxEpochs = 4
+        keepCheckPointFiles = true       
+    ]
+    reader = [
+        verbosity = 0
+        randomize = true
+        deserializers = (
+            [   
+                type = "HTKFeatureDeserializer"
+                module = "HTKDeserializers"
+                input = [
+                    features = [
+                        dim = 363
+                        scpFile = "$DataDir$/glob_0000.scp"
+                    ]
+                ]
+            ]:
+            [
+                type = "HTKMLFDeserializer"
+                module = "HTKDeserializers"
+                input = [
+                    labels = [
+                        mlfFile = "$DataDir$/glob_0000.mlf"
+                        labelMappingFile = "$DataDir$/state.list"
+                        scpFile = "$DataDir$/glob_0000.scp"
+                        dim = 132
+                    ]
+                ]
+            ]
+        )
+    ]
+    BrainScriptNetworkBuilder = [
+        useSelfStabilization = true
+        // define basic I/O
+        baseFeatDim = 33
+        featDim = 11 * baseFeatDim
+        labelDim = 132
+        // hidden dimensions
+        innerCellDim  = 1024
+        hiddenDim     = 256
+        numLSTMLayers = 3        // number of hidden LSTM model layers
+        // features
+        features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed
+        realFeatures = Transpose (features)             //       and swapping them back to (featDim:1), for testing Transpose()
+        labels   = Input(labelDim, tag='label')
+        feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, realFeatures);
+        featNorm = MeanVarNorm(feashift)
+        // we define the LSTM locally for now, since the one in CNTK.core.bs has a slightly changed configuration that breaks this test
+        Stabilize (x, enabled=true) =
+            if enabled
+            then [
+beta = Exp (BS.Parameters.BiasParam ((1))) 
+                result = beta .* x
+            ].result
+            else x
+        LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
+        [
+            _privateInnards = [       // encapsulate the inner workings
+                dh = prevState.h // previous values
+                dc = prevState.c
+                // parameter macros--these carry their own weight matrices
+                B() = BS.Parameters.BiasParam (cellDim)
+                W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+                H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+                C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+                // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
+                it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
+                bit = it .* Tanh (W(x) + (H(dh) + B()))            // applied to tanh of input network
+                ft = Sigmoid (W(x) + B() + H(dh) + C(dc))          // forget-me-not gate(t)
+                bft = ft .* dc                                     // applied to cell(t-1)
+                ct = bft + bit                                     // c(t) is sum of both
+                ot = Sigmoid (W(x) + B() + H(dh) + C(ct))          // output gate(t)
+                ht = ot .* Tanh (ct)                               // applied to tanh(cell(t))
+            ]
+            c = _privateInnards.ct          // cell value
+            h = if outputDim != cellDim     // output/hidden state
+                then [                      // project
+                    Wmr = BS.Parameters.WeightParam (outputDim, cellDim);
+                    htp = Wmr * Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
+                ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
+                else _privateInnards.ht     // no projection
+            dim = outputDim
+        ]
+        RecurrentLSTMP (outputDim, cellDim=outputDim.dim, x, inputDim=x.dim, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
+        [
+            prevState = previousHook (lstmState)
+            inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization
+            lstmState = LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
+        ].lstmState // we return the state record (h,c)
+        // define the stack of hidden LSTM layers  --TODO: change to RecurrentLSTMPStack(), change stabilizer config
+        S(x) = Stabilize (x, enabled=useSelfStabilization)
+        LSTMoutput[k:1..numLSTMLayers] =
+            if k == 1
+            then /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
+            else /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
+        // and add a softmax layer on top
+        W = BS.Parameters.WeightParam (labelDim, hiddenDim)
+        B = BS.Parameters.BiasParam   (labelDim)
+        z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
+        // training
+        ce  = /*Pass*/ SumElements (ReduceLogSum (z) - TransposeTimes (labels,          z),  tag='criterion')  // manually-defined per-sample objective
+        err = /*Pass*/ SumElements (BS.Constants.One - TransposeTimes (labels, Hardmax (z)), tag='evaluation') // also track frame errors
+        // decoding
+        logPrior = LogPrior(labels)	 
+        ScaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
+    ]
+]
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu
+DeviceId=-1
+timestamping=true
+Truncated=false
+speechTrain=[SGD=[epochSize=2560]]
+speechTrain=[SGD=[maxEpochs=2]]
+speechTrain=[SGD=[numMBsToShowResult=1]]
+shareNodeValueMatrices=true
+
+08/16/2016 03:02:00: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+
+08/16/2016 03:02:00: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+08/16/2016 03:02:00: precision = "float"
+deviceId = -1
+command = speechTrain
+frameMode = false
+truncated = true
+parallelTrain = false
+speechTrain = [
+    action = "train"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu/models/cntkSpeech.dnn"
+    traceLevel = 1
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 20
+        learningRatesPerMB = 0.5
+        numMBsToShowResult = 10
+        momentumPerMB = 0:0.9
+        maxEpochs = 4
+        keepCheckPointFiles = true       
+    ]
+    reader = [
+        verbosity = 0
+        randomize = true
+        deserializers = (
+            [   
+                type = "HTKFeatureDeserializer"
+                module = "HTKDeserializers"
+                input = [
+                    features = [
+                        dim = 363
+                        scpFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.scp"
+                    ]
+                ]
+            ]:
+            [
+                type = "HTKMLFDeserializer"
+                module = "HTKDeserializers"
+                input = [
+                    labels = [
+                        mlfFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf"
+                        labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list"
+                        scpFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.scp"
+                        dim = 132
+                    ]
+                ]
+            ]
+        )
+    ]
+    BrainScriptNetworkBuilder = [
+        useSelfStabilization = true
+        // define basic I/O
+        baseFeatDim = 33
+        featDim = 11 * baseFeatDim
+        labelDim = 132
+        // hidden dimensions
+        innerCellDim  = 1024
+        hiddenDim     = 256
+        numLSTMLayers = 3        // number of hidden LSTM model layers
+        // features
+        features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed
+        realFeatures = Transpose (features)             //       and swapping them back to (featDim:1), for testing Transpose()
+        labels   = Input(labelDim, tag='label')
+        feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, realFeatures);
+        featNorm = MeanVarNorm(feashift)
+        // we define the LSTM locally for now, since the one in CNTK.core.bs has a slightly changed configuration that breaks this test
+        Stabilize (x, enabled=true) =
+            if enabled
+            then [
+beta = Exp (BS.Parameters.BiasParam ((1))) 
+                result = beta .* x
+            ].result
+            else x
+        LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
+        [
+            _privateInnards = [       // encapsulate the inner workings
+                dh = prevState.h // previous values
+                dc = prevState.c
+                // parameter macros--these carry their own weight matrices
+                B() = BS.Parameters.BiasParam (cellDim)
+                W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+                H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+                C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+                // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
+                it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
+                bit = it .* Tanh (W(x) + (H(dh) + B()))            // applied to tanh of input network
+                ft = Sigmoid (W(x) + B() + H(dh) + C(dc))          // forget-me-not gate(t)
+                bft = ft .* dc                                     // applied to cell(t-1)
+                ct = bft + bit                                     // c(t) is sum of both
+                ot = Sigmoid (W(x) + B() + H(dh) + C(ct))          // output gate(t)
+                ht = ot .* Tanh (ct)                               // applied to tanh(cell(t))
+            ]
+            c = _privateInnards.ct          // cell value
+            h = if outputDim != cellDim     // output/hidden state
+                then [                      // project
+                    Wmr = BS.Parameters.WeightParam (outputDim, cellDim);
+                    htp = Wmr * Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
+                ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
+                else _privateInnards.ht     // no projection
+            dim = outputDim
+        ]
+        RecurrentLSTMP (outputDim, cellDim=outputDim.dim, x, inputDim=x.dim, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
+        [
+            prevState = previousHook (lstmState)
+            inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization
+            lstmState = LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
+        ].lstmState // we return the state record (h,c)
+        // define the stack of hidden LSTM layers  --TODO: change to RecurrentLSTMPStack(), change stabilizer config
+        S(x) = Stabilize (x, enabled=useSelfStabilization)
+        LSTMoutput[k:1..numLSTMLayers] =
+            if k == 1
+            then /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
+            else /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
+        // and add a softmax layer on top
+        W = BS.Parameters.WeightParam (labelDim, hiddenDim)
+        B = BS.Parameters.BiasParam   (labelDim)
+        z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
+        // training
+        ce  = /*Pass*/ SumElements (ReduceLogSum (z) - TransposeTimes (labels,          z),  tag='criterion')  // manually-defined per-sample objective
+        err = /*Pass*/ SumElements (BS.Constants.One - TransposeTimes (labels, Hardmax (z)), tag='evaluation') // also track frame errors
+        // decoding
+        logPrior = LogPrior(labels)	 
+        ScaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
+    ]
+]
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu
+DeviceId=-1
+timestamping=true
+Truncated=false
+speechTrain=[SGD=[epochSize=2560]]
+speechTrain=[SGD=[maxEpochs=2]]
+speechTrain=[SGD=[numMBsToShowResult=1]]
+shareNodeValueMatrices=true
+
+08/16/2016 03:02:00: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+
+08/16/2016 03:02:00: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+configparameters: cntk.cntk:command=speechTrain
+configparameters: cntk.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance
+configparameters: cntk.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+configparameters: cntk.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+configparameters: cntk.cntk:deviceId=-1
+configparameters: cntk.cntk:frameMode=false
+configparameters: cntk.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu
+configparameters: cntk.cntk:parallelTrain=false
+configparameters: cntk.cntk:precision=float
+configparameters: cntk.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu
+configparameters: cntk.cntk:shareNodeValueMatrices=true
+configparameters: cntk.cntk:speechTrain=[
+    action = "train"
+    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu/models/cntkSpeech.dnn"
+    traceLevel = 1
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 20
+        learningRatesPerMB = 0.5
+        numMBsToShowResult = 10
+        momentumPerMB = 0:0.9
+        maxEpochs = 4
+        keepCheckPointFiles = true       
+    ]
+    reader = [
+        verbosity = 0
+        randomize = true
+        deserializers = (
+            [   
+                type = "HTKFeatureDeserializer"
+                module = "HTKDeserializers"
+                input = [
+                    features = [
+                        dim = 363
+                        scpFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.scp"
+                    ]
+                ]
+            ]:
+            [
+                type = "HTKMLFDeserializer"
+                module = "HTKDeserializers"
+                input = [
+                    labels = [
+                        mlfFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf"
+                        labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list"
+                        scpFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.scp"
+                        dim = 132
+                    ]
+                ]
+            ]
+        )
+    ]
+    BrainScriptNetworkBuilder = [
+        useSelfStabilization = true
+        // define basic I/O
+        baseFeatDim = 33
+        featDim = 11 * baseFeatDim
+        labelDim = 132
+        // hidden dimensions
+        innerCellDim  = 1024
+        hiddenDim     = 256
+        numLSTMLayers = 3        // number of hidden LSTM model layers
+        // features
+        features = Input((1 : featDim),  tag='feature') // TEST: Artificially reading data transposed
+        realFeatures = Transpose (features)             //       and swapping them back to (featDim:1), for testing Transpose()
+        labels   = Input(labelDim, tag='label')
+        feashift = RowSlice(featDim - baseFeatDim, baseFeatDim, realFeatures);
+        featNorm = MeanVarNorm(feashift)
+        // we define the LSTM locally for now, since the one in CNTK.core.bs has a slightly changed configuration that breaks this test
+        Stabilize (x, enabled=true) =
+            if enabled
+            then [
+beta = Exp (BS.Parameters.BiasParam ((1))) 
+                result = beta .* x
+            ].result
+            else x
+        LSTMP (outputDim, cellDim=outputDim, x, inputDim=x.dim, prevState, enableSelfStabilization=false) =
+        [
+            _privateInnards = [       // encapsulate the inner workings
+                dh = prevState.h // previous values
+                dc = prevState.c
+                // parameter macros--these carry their own weight matrices
+                B() = BS.Parameters.BiasParam (cellDim)
+                W(v) = BS.Parameters.WeightParam (cellDim, inputDim)  * Stabilize (v, enabled=enableSelfStabilization) // input-to-hidden
+                H(h) = BS.Parameters.WeightParam (cellDim, outputDim) * Stabilize (h, enabled=enableSelfStabilization) // hidden-to-hidden
+                C(c) = BS.Parameters.DiagWeightParam (cellDim)       .* Stabilize (c, enabled=enableSelfStabilization) // cell-to-hiddden (note: applied elementwise)
+                // note: the W(x) here are all different, they all come with their own set of weights; same for H(dh), C(dc), and B()
+                it = Sigmoid (W(x) + B() + H(dh) + C(dc))          // input gate(t)
+                bit = it .* Tanh (W(x) + (H(dh) + B()))            // applied to tanh of input network
+                ft = Sigmoid (W(x) + B() + H(dh) + C(dc))          // forget-me-not gate(t)
+                bft = ft .* dc                                     // applied to cell(t-1)
+                ct = bft + bit                                     // c(t) is sum of both
+                ot = Sigmoid (W(x) + B() + H(dh) + C(ct))          // output gate(t)
+                ht = ot .* Tanh (ct)                               // applied to tanh(cell(t))
+            ]
+            c = _privateInnards.ct          // cell value
+            h = if outputDim != cellDim     // output/hidden state
+                then [                      // project
+                    Wmr = BS.Parameters.WeightParam (outputDim, cellDim);
+                    htp = Wmr * Stabilize (_privateInnards.ht, enabled=enableSelfStabilization)
+                ].htp         // TODO: ^^ extend BS syntax to allow to say: then [ Wmr = WeightParam(outputDim, cellDim) ] in Wmr * Stabilize (...)
+                else _privateInnards.ht     // no projection
+            dim = outputDim
+        ]
+        RecurrentLSTMP (outputDim, cellDim=outputDim.dim, x, inputDim=x.dim, previousHook=BS.RNNs.PreviousHC, enableSelfStabilization=false) =
+        [
+            prevState = previousHook (lstmState)
+            inputDim1 = inputDim ; cellDim1 = cellDim ; enableSelfStabilization1 = enableSelfStabilization
+            lstmState = LSTMP (outputDim, cellDim=cellDim1, x, inputDim=inputDim1, prevState, enableSelfStabilization=enableSelfStabilization1)
+        ].lstmState // we return the state record (h,c)
+        // define the stack of hidden LSTM layers  --TODO: change to RecurrentLSTMPStack(), change stabilizer config
+        S(x) = Stabilize (x, enabled=useSelfStabilization)
+        LSTMoutput[k:1..numLSTMLayers] =
+            if k == 1
+            then /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (featNorm),        inputDim=baseFeatDim, enableSelfStabilization=useSelfStabilization).h
+            else /*BS.RNNs.*/ RecurrentLSTMP (hiddenDim, cellDim=innerCellDim, /*S*/ (LSTMoutput[k-1]), inputDim=hiddenDim,   enableSelfStabilization=useSelfStabilization).h
+        // and add a softmax layer on top
+        W = BS.Parameters.WeightParam (labelDim, hiddenDim)
+        B = BS.Parameters.BiasParam   (labelDim)
+        z = W * S(LSTMoutput[numLSTMLayers]) + B; // top-level input to Softmax
+        // training
+        ce  = /*Pass*/ SumElements (ReduceLogSum (z) - TransposeTimes (labels,          z),  tag='criterion')  // manually-defined per-sample objective
+        err = /*Pass*/ SumElements (BS.Constants.One - TransposeTimes (labels, Hardmax (z)), tag='evaluation') // also track frame errors
+        // decoding
+        logPrior = LogPrior(labels)	 
+        ScaledLogLikelihood = Pass (z - logPrior, tag='output') // using Pass() since we can't assign a tag to x - y
+    ]
+] [SGD=[epochSize=2560]] [SGD=[maxEpochs=2]] [SGD=[numMBsToShowResult=1]]
+
+configparameters: cntk.cntk:timestamping=true
+configparameters: cntk.cntk:truncated=false
+08/16/2016 03:02:00: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+08/16/2016 03:02:00: Commands: speechTrain
+08/16/2016 03:02:00: Precision = "float"
+08/16/2016 03:02:00: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu/models/cntkSpeech.dnn
+08/16/2016 03:02:00: CNTKCommandTrainInfo: speechTrain : 2
+08/16/2016 03:02:00: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 2
+
+08/16/2016 03:02:00: ##############################################################################
+08/16/2016 03:02:00: #                                                                            #
+08/16/2016 03:02:00: # Action "train"                                                             #
+08/16/2016 03:02:00: #                                                                            #
+08/16/2016 03:02:00: ##############################################################################
+
+08/16/2016 03:02:00: CNTKCommandTrainBegin: speechTrain
+Reading script file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.scp ... 948 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
+htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
+MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
+useParallelTrain option is not enabled. ParallelTrain config will be ignored.
+08/16/2016 03:02:01: Creating virgin network.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[132] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[132] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[132 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[132 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 33] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 33] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 33] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 33] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 33] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 33] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 33] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 33] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024 x 256] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1024] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
+Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 1.000000.
+
+Post-processing network...
+
+6 roots:
+	ScaledLogLikelihood = Pass()
+	ce = SumElements()
+	err = SumElements()
+	featNorm.invStdDev = InvStdDev()
+	featNorm.mean = Mean()
+	logPrior._ = Mean()
+
+Loop[0] --> Loop_LSTMoutput[1].lstmState.h.htp -> 35 nodes
+
+	LSTMoutput[1].prevState.h	LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result	LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0]	LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result	LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0]	LSTMoutput[1].prevState.c	LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result
+	LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1]	LSTMoutput[1].lstmState._privateInnards.ft._	LSTMoutput[1].lstmState._privateInnards.ft
+	LSTMoutput[1].lstmState._privateInnards.bft	LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result	LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0]	LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result	LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1]
+	LSTMoutput[1].lstmState._privateInnards.it._	LSTMoutput[1].lstmState._privateInnards.it	LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result
+	LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0]	LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]	LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z
+	LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1]	LSTMoutput[1].lstmState._privateInnards.bit	LSTMoutput[1].lstmState._privateInnards.ct
+	LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result	LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1]	LSTMoutput[1].lstmState._privateInnards.ot._
+	LSTMoutput[1].lstmState._privateInnards.ot	LSTMoutput[1].lstmState._privateInnards.ht.ElementTimesArgs[1]	LSTMoutput[1].lstmState._privateInnards.ht
+	LSTMoutput[1].lstmState.h.htp.TimesArgs[1].result	LSTMoutput[1].lstmState.h.htp
+
+Loop[1] --> Loop_LSTMoutput[2].lstmState.h.htp -> 35 nodes
+
+	LSTMoutput[2].prevState.h	LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result	LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0]	LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result	LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0]	LSTMoutput[2].prevState.c	LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result
+	LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1]	LSTMoutput[2].lstmState._privateInnards.ft._	LSTMoutput[2].lstmState._privateInnards.ft
+	LSTMoutput[2].lstmState._privateInnards.bft	LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result	LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0]	LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result	LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1]
+	LSTMoutput[2].lstmState._privateInnards.it._	LSTMoutput[2].lstmState._privateInnards.it	LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result
+	LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0]	LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]	LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z
+	LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1]	LSTMoutput[2].lstmState._privateInnards.bit	LSTMoutput[2].lstmState._privateInnards.ct
+	LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result	LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1]	LSTMoutput[2].lstmState._privateInnards.ot._
+	LSTMoutput[2].lstmState._privateInnards.ot	LSTMoutput[2].lstmState._privateInnards.ht.ElementTimesArgs[1]	LSTMoutput[2].lstmState._privateInnards.ht
+	LSTMoutput[2].lstmState.h.htp.TimesArgs[1].result	LSTMoutput[2].lstmState.h.htp
+
+Loop[2] --> Loop_LSTMoutput[3].lstmState.h.htp -> 35 nodes
+
+	LSTMoutput[3].prevState.h	LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result	LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0]	LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result	LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0]	LSTMoutput[3].prevState.c	LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result
+	LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1]	LSTMoutput[3].lstmState._privateInnards.ft._	LSTMoutput[3].lstmState._privateInnards.ft
+	LSTMoutput[3].lstmState._privateInnards.bft	LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result	LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0]	LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result	LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1]
+	LSTMoutput[3].lstmState._privateInnards.it._	LSTMoutput[3].lstmState._privateInnards.it	LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result
+	LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0]	LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]	LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z
+	LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1]	LSTMoutput[3].lstmState._privateInnards.bit	LSTMoutput[3].lstmState._privateInnards.ct
+	LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result	LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1]	LSTMoutput[3].lstmState._privateInnards.ot._
+	LSTMoutput[3].lstmState._privateInnards.ot	LSTMoutput[3].lstmState._privateInnards.ht.ElementTimesArgs[1]	LSTMoutput[3].lstmState._privateInnards.ht
+	LSTMoutput[3].lstmState.h.htp.TimesArgs[1].result	LSTMoutput[3].lstmState.h.htp
+
+Validating network. 286 nodes to process in pass 1.
+
+Validating --> W = LearnableParameter() :  -> [132 x 256]
+Validating --> z.PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> z.PlusArgs[0].TimesArgs[1].beta = Exp (z.PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState.h.Wmr = LearnableParameter() :  -> [256 x 1024]
+Validating --> LSTMoutput[3].lstmState.h.htp.TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState.h.htp.TimesArgs[1].beta = Exp (LSTMoutput[3].lstmState.h.htp.TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState.h.Wmr = LearnableParameter() :  -> [256 x 1024]
+Validating --> LSTMoutput[2].lstmState.h.htp.TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState.h.htp.TimesArgs[1].beta = Exp (LSTMoutput[2].lstmState.h.htp.TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState.h.Wmr = LearnableParameter() :  -> [256 x 1024]
+Validating --> LSTMoutput[1].lstmState.h.htp.TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState.h.htp.TimesArgs[1].beta = Exp (LSTMoutput[1].lstmState.h.htp.TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 33]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> features = InputValue() :  -> [1 x 363 x *]
+Validating --> realFeatures = TransposeDimensions (features) : [1 x 363 x *] -> [363 x 1 x *]
+Validating --> feashift = Slice (realFeatures) : [363 x 1 x *] -> [33 x 1 x *]
+Validating --> featNorm.mean = Mean (feashift) : [33 x 1 x *] -> [33 x 1]
+Validating --> featNorm.ElementTimesArgs[0] = Minus (feashift, featNorm.mean) : [33 x 1 x *], [33 x 1] -> [33 x 1 x *]
+Validating --> featNorm.invStdDev = InvStdDev (feashift) : [33 x 1 x *] -> [33 x 1]
+Validating --> featNorm = ElementTimes (featNorm.ElementTimesArgs[0], featNorm.invStdDev) : [33 x 1 x *], [33 x 1] -> [33 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta, featNorm) : [1], [33 x 1 x *] -> [33 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result) : [1024 x 33], [33 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 33]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta, featNorm) : [1], [33 x 1 x *] -> [33 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result) : [1024 x 33], [33 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 33]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta, featNorm) : [1], [33 x 1 x *] -> [33 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result) : [1024 x 33], [33 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 33]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta, featNorm) : [1], [33 x 1 x *] -> [33 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] = Times (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result) : [1024 x 33], [33 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[1].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0] = Plus (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[1].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0] = Plus (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[1].prevState.c) : [1], [0] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1] = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1] -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._ = Plus (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft = Sigmoid (LSTMoutput[1].lstmState._privateInnards.ft._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bft = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ft, LSTMoutput[1].prevState.c) : [1024 x 1 x *], [0] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[1].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0] = Plus (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[1].prevState.c) : [1], [0] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1] = ElementTimes (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1] -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._ = Plus (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it = Sigmoid (LSTMoutput[1].lstmState._privateInnards.it._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[1].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [1024], [1024] -> [1024]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z = Plus (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1] = Tanh (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit = ElementTimes (LSTMoutput[1].lstmState._privateInnards.it, LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ct = Plus (LSTMoutput[1].lstmState._privateInnards.bft, LSTMoutput[1].lstmState._privateInnards.bit) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[1].lstmState._privateInnards.ct) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1] = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._ = Plus (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot = Sigmoid (LSTMoutput[1].lstmState._privateInnards.ot._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ht.ElementTimesArgs[1] = Tanh (LSTMoutput[1].lstmState._privateInnards.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ht = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ot, LSTMoutput[1].lstmState._privateInnards.ht.ElementTimesArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState.h.htp.TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState.h.htp.TimesArgs[1].beta, LSTMoutput[1].lstmState._privateInnards.ht) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState.h.htp = Times (LSTMoutput[1].lstmState.h.Wmr, LSTMoutput[1].lstmState.h.htp.TimesArgs[1].result) : [256 x 1024], [1024 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[1].lstmState.h.htp) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[1].lstmState.h.htp) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[1].lstmState.h.htp) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta, LSTMoutput[1].lstmState.h.htp) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] = Times (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[2].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0] = Plus (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[2].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0] = Plus (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[2].prevState.c) : [1], [0] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1] = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1] -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._ = Plus (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft = Sigmoid (LSTMoutput[2].lstmState._privateInnards.ft._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bft = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ft, LSTMoutput[2].prevState.c) : [1024 x 1 x *], [0] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[2].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0] = Plus (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[2].prevState.c) : [1], [0] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1] = ElementTimes (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1] -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._ = Plus (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it = Sigmoid (LSTMoutput[2].lstmState._privateInnards.it._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[2].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [1024], [1024] -> [1024]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z = Plus (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1] = Tanh (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit = ElementTimes (LSTMoutput[2].lstmState._privateInnards.it, LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ct = Plus (LSTMoutput[2].lstmState._privateInnards.bft, LSTMoutput[2].lstmState._privateInnards.bit) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[2].lstmState._privateInnards.ct) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1] = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._ = Plus (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot = Sigmoid (LSTMoutput[2].lstmState._privateInnards.ot._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ht.ElementTimesArgs[1] = Tanh (LSTMoutput[2].lstmState._privateInnards.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ht = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ot, LSTMoutput[2].lstmState._privateInnards.ht.ElementTimesArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState.h.htp.TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState.h.htp.TimesArgs[1].beta, LSTMoutput[2].lstmState._privateInnards.ht) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState.h.htp = Times (LSTMoutput[2].lstmState.h.Wmr, LSTMoutput[2].lstmState.h.htp.TimesArgs[1].result) : [256 x 1024], [1024 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[2].lstmState.h.htp) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[2].lstmState.h.htp) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[2].lstmState.h.htp) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta, LSTMoutput[2].lstmState.h.htp) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] = Times (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._ = LearnableParameter() :  -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta = Exp (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._) : [1] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] = LearnableParameter() :  -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[3].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0] = Plus (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[3].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0] = Plus (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[3].prevState.c) : [1], [0] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1] = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1] -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._ = Plus (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft = Sigmoid (LSTMoutput[3].lstmState._privateInnards.ft._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bft = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ft, LSTMoutput[3].prevState.c) : [1024 x 1 x *], [0] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[3].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0] = Plus (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[3].prevState.c) : [1], [0] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1] = ElementTimes (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1] -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._ = Plus (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it = Sigmoid (LSTMoutput[3].lstmState._privateInnards.it._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[3].prevState.h) : [1], [0] -> [1]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [1] -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [1024], [1024] -> [1024]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z = Plus (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1] = Tanh (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit = ElementTimes (LSTMoutput[3].lstmState._privateInnards.it, LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ct = Plus (LSTMoutput[3].lstmState._privateInnards.bft, LSTMoutput[3].lstmState._privateInnards.bit) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[3].lstmState._privateInnards.ct) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1] = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._ = Plus (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot = Sigmoid (LSTMoutput[3].lstmState._privateInnards.ot._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ht.ElementTimesArgs[1] = Tanh (LSTMoutput[3].lstmState._privateInnards.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ht = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ot, LSTMoutput[3].lstmState._privateInnards.ht.ElementTimesArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState.h.htp.TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState.h.htp.TimesArgs[1].beta, LSTMoutput[3].lstmState._privateInnards.ht) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState.h.htp = Times (LSTMoutput[3].lstmState.h.Wmr, LSTMoutput[3].lstmState.h.htp.TimesArgs[1].result) : [256 x 1024], [1024 x 1 x *] -> [256 x 1 x *]
+Validating --> z.PlusArgs[0].TimesArgs[1].result = ElementTimes (z.PlusArgs[0].TimesArgs[1].beta, LSTMoutput[3].lstmState.h.htp) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> z.PlusArgs[0] = Times (W, z.PlusArgs[0].TimesArgs[1].result) : [132 x 256], [256 x 1 x *] -> [132 x 1 x *]
+Validating --> B = LearnableParameter() :  -> [132]
+Validating --> z = Plus (z.PlusArgs[0], B) : [132 x 1 x *], [132] -> [132 x 1 x *]
+Validating --> labels = InputValue() :  -> [132 x *]
+Validating --> logPrior._ = Mean (labels) : [132 x *] -> [132]
+Validating --> logPrior = Log (logPrior._) : [132] -> [132]
+Validating --> ScaledLogLikelihood._ = Minus (z, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
+Validating --> ScaledLogLikelihood = Pass (ScaledLogLikelihood._) : [132 x 1 x *] -> [132 x 1 x *]
+Validating --> ce.matrix.MinusArgs[0] = ReduceElements (z) : [132 x 1 x *] -> [1 x *]
+Validating --> ce.matrix.MinusArgs[1] = TransposeTimes (labels, z) : [132 x *], [132 x 1 x *] -> [1 x 1 x *]
+Validating --> ce.matrix = Minus (ce.matrix.MinusArgs[0], ce.matrix.MinusArgs[1]) : [1 x *], [1 x 1 x *] -> [1 x 1 x *]
+Validating --> ce = SumElements (ce.matrix) : [1 x 1 x *] -> [1]
+Validating --> BS.Constants.One = LearnableParameter() :  -> [1]
+Validating --> err.matrix.MinusArgs[1].rightMatrix = Hardmax (z) : [132 x 1 x *] -> [132 x 1 x *]
+Validating --> err.matrix.MinusArgs[1] = TransposeTimes (labels, err.matrix.MinusArgs[1].rightMatrix) : [132 x *], [132 x 1 x *] -> [1 x 1 x *]
+Validating --> err.matrix = Minus (BS.Constants.One, err.matrix.MinusArgs[1]) : [1], [1 x 1 x *] -> [1 x 1 x *]
+Validating --> err = SumElements (err.matrix) : [1 x 1 x *] -> [1]
+
+Validating network. 196 nodes to process in pass 2.
+
+Validating --> LSTMoutput[1].prevState.h = PastValue (LSTMoutput[1].lstmState.h.htp) : [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[1].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[1].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].prevState.c = PastValue (LSTMoutput[1].lstmState._privateInnards.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[1].prevState.c) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1] = ElementTimes (LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[1].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[1].prevState.c) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1] = ElementTimes (LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[1].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].prevState.h = PastValue (LSTMoutput[2].lstmState.h.htp) : [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[2].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[2].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].prevState.c = PastValue (LSTMoutput[2].lstmState._privateInnards.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[2].prevState.c) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1] = ElementTimes (LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[2].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[2].prevState.c) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1] = ElementTimes (LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[2].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].prevState.h = PastValue (LSTMoutput[3].lstmState.h.htp) : [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[3].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[3].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].prevState.c = PastValue (LSTMoutput[3].lstmState._privateInnards.ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[3].prevState.c) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1] = ElementTimes (LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta, LSTMoutput[3].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta, LSTMoutput[3].prevState.c) : [1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1] = ElementTimes (LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0], LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result) : [1024], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result = ElementTimes (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta, LSTMoutput[3].prevState.h) : [1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+
+Validating network. 45 nodes to process in pass 3.
+
+
+Validating network, final pass.
+
+
+
+131 out of 286 nodes do not share the minibatch layout with the input data.
+
+Post-processing network complete.
+
+08/16/2016 03:02:01: Created model with 286 nodes on CPU.
+
+08/16/2016 03:02:01: Training criterion node(s):
+08/16/2016 03:02:01: 	ce = SumElements
+
+08/16/2016 03:02:01: Evaluation criterion node(s):
+08/16/2016 03:02:01: 	err = SumElements
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 555 matrices, 344 are shared as 114, and 211 are not shared.
+
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._ : [1] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [33 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[1].lstmState.h.htp.TimesArgs[1].beta._ : [1] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 33] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [33 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState.h.htp.TimesArgs[1].beta._ : [1] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ct : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].prevState.c : [1024 x 1 x *] }
+	{ LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState.h.htp.TimesArgs[1].beta._ : [1] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ht : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._ : [1] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._ : [1] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[3].prevState.h : [256 x 1 x *] }
+	{ LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result : [33 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[1].prevState.h : [256 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [1024 x 256] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 33] (gradient)
+	  LSTMoutput[2].lstmState.h.htp.TimesArgs[1].result : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [1024 x 256] (gradient)
+	  LSTMoutput[2].lstmState.h.htp : [256 x 1 x *] }
+	{ LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result : [256 x 1 x *]
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ht : [1024 x 1 x *] }
+	{ LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  W : [132 x 256] (gradient)
+	  z : [132 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 33] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ct : [1024 x 1 x *] }
+	{ LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  ScaledLogLikelihood._ : [132 x 1 x *]
+	  ce.matrix.MinusArgs[0] : [1 x *]
+	  z.PlusArgs[0] : [132 x 1 x *]
+	  z.PlusArgs[0] : [132 x 1 x *] (gradient)
+	  z.PlusArgs[0].TimesArgs[1].beta : [1] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[3].lstmState.h.Wmr : [256 x 1024] (gradient)
+	  z.PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState.h.htp : [256 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1] : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._ : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ht.ElementTimesArgs[1] : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState.h.htp : [256 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ot : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[3].lstmState.h.htp.TimesArgs[1].result : [1024 x 1 x *] (gradient)
+	  ce.matrix : [1 x 1 x *] (gradient)
+	  ce.matrix.MinusArgs[1] : [1 x 1 x *]
+	  err.matrix.MinusArgs[1] : [1 x 1 x *]
+	  z : [132 x 1 x *] (gradient)
+	  z.PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result : [256 x 1 x *]
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] }
+	{ LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[2].lstmState.h.Wmr : [256 x 1024] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] }
+	{ LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *]
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState.h.htp.TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *]
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.it : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] }
+	{ feashift : [33 x 1 x *]
+	  featNorm : [33 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [33 x 1 x *]
+	  featNorm.ElementTimesArgs[0] : [33 x 1 x *]
+	  realFeatures : [363 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result : [33 x 1 x *]
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [33 x 1 x *]
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [33 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *]
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] }
+	{ LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[2].prevState.h : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[1].lstmState.h.Wmr : [256 x 1024] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [33 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ct : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].prevState.c : [1024 x 1 x *] }
+	{ ce.matrix : [1 x 1 x *]
+	  err.matrix.MinusArgs[1].rightMatrix : [132 x 1 x *] }
+	{ ce : [1] (gradient)
+	  err.matrix : [1 x 1 x *] }
+	{ B : [132] (gradient)
+	  ce.matrix.MinusArgs[0] : [1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ht : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState.h.htp : [256 x 1 x *] (gradient)
+	  ce.matrix.MinusArgs[1] : [1 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[1].prevState.h : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ct : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ht : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0] : [1024] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ht.ElementTimesArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0] : [1024] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._ : [1] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState.h.htp.TimesArgs[1].result : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._ : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[3].lstmState.h.htp.TimesArgs[1].beta : [1] (gradient)
+	  z.PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ht.ElementTimesArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].prevState.c : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bft : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.bft : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._ : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta : [1] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._ : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].prevState.c : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta : [1] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft : [1024 x 1 x *] }
+	{ LSTMoutput[2].lstmState.h.htp.TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *]
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._ : [1] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] : [1024 x 33] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[1].lstmState.h.htp.TimesArgs[1].result : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.it._ : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1] : [1024 x 1 x *] }
+	{ LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [1024 x 256] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] }
+	{ LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[2].prevState.h : [256 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] }
+	{ LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ct : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0] : [1024] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ht.ElementTimesArgs[1] : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._ : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ot : [1024 x 1 x *] }
+	{ LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient)
+	  LSTMoutput[3].lstmState.h.htp.TimesArgs[1].result : [1024 x 1 x *] }
+	{ LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ht : [1024 x 1 x *] }
+	{ LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [1024 x 256] (gradient)
+	  LSTMoutput[3].lstmState.h.htp : [256 x 1 x *] }
+	{ LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta : [1] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ft : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._ : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].prevState.c : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0] : [1024] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._ : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta : [1] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[3].prevState.h : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] : [1024] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta : [1] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._ : [1] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta : [1] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0] : [1024] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ht.ElementTimesArgs[1] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.bit : [1024 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.bft : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].result : [256 x 1 x *] (gradient)
+	  LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].result : [1024 x 1 x *] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._ : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0] : [1024] (gradient)
+	  LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1] : [1024 x 1 x *] (gradient) }
+
+
+08/16/2016 03:02:01: Training 6219945 parameters in 87 out of 87 parameter tensors and 269 nodes with gradient:
+
+08/16/2016 03:02:01: 	Node 'B' (LearnableParameter operation) : [132]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState.h.Wmr' (LearnableParameter operation) : [256 x 1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[1].lstmState.h.htp.TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState.h.Wmr' (LearnableParameter operation) : [256 x 1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[2].lstmState.h.htp.TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState.h.Wmr' (LearnableParameter operation) : [256 x 1024]
+08/16/2016 03:02:01: 	Node 'LSTMoutput[3].lstmState.h.htp.TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+08/16/2016 03:02:01: 	Node 'W' (LearnableParameter operation) : [132 x 256]
+08/16/2016 03:02:01: 	Node 'z.PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+
+
+08/16/2016 03:02:01: Precomputing --> 3 PreCompute nodes found.
+
+08/16/2016 03:02:01: 	featNorm.mean = Mean()
+08/16/2016 03:02:01: 	featNorm.invStdDev = InvStdDev()
+08/16/2016 03:02:01: 	logPrior._ = Mean()
+BlockRandomizer::StartEpoch: epoch 0: frames [0..252734] (first sequence at sample 0), data subset 0 of 1
+
+08/16/2016 03:02:02: Precomputing --> Completed.
+
+
+08/16/2016 03:02:02: Starting Epoch 1: learning rate per sample = 0.025000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+BlockRandomizer::StartEpoch: epoch 0: frames [0..2560] (first sequence at sample 0), data subset 0 of 1
+
+08/16/2016 03:02:02: Starting minibatch loop.
+08/16/2016 03:02:04:  Epoch[ 1 of 2]-Minibatch[   1-   1, 0.78%]: ce = 4.88298801 * 418; err = 0.99521531 * 418; time = 1.4418s; samplesPerSecond = 289.9
+08/16/2016 03:02:05:  Epoch[ 1 of 2]-Minibatch[   2-   2, 1.56%]: ce = 4.59713954 * 468; err = 0.91025641 * 468; time = 1.6241s; samplesPerSecond = 288.2
+08/16/2016 03:02:06:  Epoch[ 1 of 2]-Minibatch[   3-   3, 2.34%]: ce = 3.79830228 * 78; err = 0.65384615 * 78; time = 0.2926s; samplesPerSecond = 266.5
+08/16/2016 03:02:06:  Epoch[ 1 of 2]-Minibatch[   4-   4, 3.13%]: ce = 5.50696791 * 148; err = 0.81756757 * 148; time = 0.4864s; samplesPerSecond = 304.3
+08/16/2016 03:02:08:  Epoch[ 1 of 2]-Minibatch[   5-   5, 3.91%]: ce = 4.31618057 * 238; err = 0.91176471 * 238; time = 1.4368s; samplesPerSecond = 165.6
+08/16/2016 03:02:09:  Epoch[ 1 of 2]-Minibatch[   6-   6, 4.69%]: ce = 4.07120429 * 288; err = 0.90625000 * 288; time = 1.6453s; samplesPerSecond = 175.0
+08/16/2016 03:02:13:  Epoch[ 1 of 2]-Minibatch[   7-   7, 5.47%]: ce = 4.15909199 * 618; err = 0.88349515 * 618; time = 3.6091s; samplesPerSecond = 171.2
+08/16/2016 03:02:15:  Epoch[ 1 of 2]-Minibatch[   8-   8, 6.25%]: ce = 4.56687369 * 328; err = 0.92682927 * 328; time = 1.8079s; samplesPerSecond = 181.4
+08/16/2016 03:02:15: Finished Epoch[ 1 of 2]: [Training] ce = 4.47827413 * 2584; err = 0.90634675 * 2584; totalSamplesSeen = 2584; learningRatePerSample = 0.025; epochTime=12.3451s
+08/16/2016 03:02:15: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu/models/cntkSpeech.dnn.1'
+
+08/16/2016 03:02:15: Starting Epoch 2: learning rate per sample = 0.025000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+BlockRandomizer::StartEpoch: epoch 1: frames [2560..5120] (first sequence at sample 2584), data subset 0 of 1
+
+08/16/2016 03:02:15: Starting minibatch loop.
+08/16/2016 03:02:16:  Epoch[ 2 of 2]-Minibatch[   1-   1, 0.78%]: ce = 3.81991621 * 138; err = 0.73913043 * 138; time = 0.7846s; samplesPerSecond = 175.9
+08/16/2016 03:02:18:  Epoch[ 2 of 2]-Minibatch[   2-   2, 1.56%]: ce = 4.19142858 * 328; err = 0.92378049 * 328; time = 1.7474s; samplesPerSecond = 187.7
+08/16/2016 03:02:19:  Epoch[ 2 of 2]-Minibatch[   3-   3, 2.34%]: ce = 4.38246918 * 128; err = 0.96875000 * 128; time = 0.7306s; samplesPerSecond = 175.2
+08/16/2016 03:02:19:  Epoch[ 2 of 2]-Minibatch[   4-   4, 3.13%]: ce = 4.47557667 * 158; err = 0.94936709 * 158; time = 0.8530s; samplesPerSecond = 185.2
+08/16/2016 03:02:21:  Epoch[ 2 of 2]-Minibatch[   5-   5, 3.91%]: ce = 4.45825195 * 228; err = 0.95614035 * 228; time = 1.2536s; samplesPerSecond = 181.9
+08/16/2016 03:02:23:  Epoch[ 2 of 2]-Minibatch[   6-   6, 4.69%]: ce = 4.02229426 * 498; err = 0.86546185 * 498; time = 2.7427s; samplesPerSecond = 181.6
+08/16/2016 03:02:25:  Epoch[ 2 of 2]-Minibatch[   7-   7, 5.47%]: ce = 4.22601827 * 288; err = 0.92708333 * 288; time = 1.5260s; samplesPerSecond = 188.7
+08/16/2016 03:02:27:  Epoch[ 2 of 2]-Minibatch[   8-   8, 6.25%]: ce = 4.05615602 * 398; err = 0.90703518 * 398; time = 2.1690s; samplesPerSecond = 183.5
+08/16/2016 03:02:28:  Epoch[ 2 of 2]-Minibatch[   9-   9, 7.03%]: ce = 3.40287189 * 98; err = 0.72448980 * 98; time = 0.5418s; samplesPerSecond = 180.9
+08/16/2016 03:02:31:  Epoch[ 2 of 2]-Minibatch[  10-  10, 7.81%]: ce = 3.90451072 * 548; err = 0.91240876 * 548; time = 2.9909s; samplesPerSecond = 183.2
+08/16/2016 03:02:31: Finished Epoch[ 2 of 2]: [Training] ce = 4.09046792 * 2810; err = 0.89928826 * 2810; totalSamplesSeen = 5394; learningRatePerSample = 0.025; epochTime=15.3405s
+08/16/2016 03:02:31: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030156.514477\Speech\HTKDeserializers\LSTM_FullUtterance@release_cpu/models/cntkSpeech.dnn'
+08/16/2016 03:02:31: CNTKCommandTrainEnd: speechTrain
+
+08/16/2016 03:02:31: Action "train" complete.
+
+08/16/2016 03:02:31: __COMPLETED__

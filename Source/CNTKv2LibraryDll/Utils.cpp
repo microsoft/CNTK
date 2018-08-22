@@ -915,6 +915,50 @@ namespace CNTK
         return GetValueObjectFromCNTKImplMatrixAndMBLayout(varShape, var.DynamicAxes(), matrix, layout, readOnly);
     }
 
+    template <typename SrcType, typename DstType>
+    Variable Utils::ConvertVariableType(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice)
+    {
+        auto value_cpu = stat.GetValue()->DeepClone(computeDevice.CPUDevice(), true);
+        auto srcData = value_cpu->DataBuffer<SrcType>();
+
+        auto totalSize = stat.Shape().TotalSize();
+
+        //TODO: Consider using a vector/unique_ptr here to avoid potential memory leaks
+        DstType *dstData = new DstType[totalSize];
+
+        for (size_t index = 0; index < totalSize; index++)
+        {
+            dstData[index] = (DstType)(srcData[index]);
+        }
+
+        NDShape shape = stat.Shape();
+        if (reverseShape)
+        {
+            vector<size_t> shapeDims = shape.Dimensions();
+            std::reverse(shapeDims.begin(), shapeDims.end());
+            shape = shapeDims;
+        }
+
+        NDArrayViewPtr dstFinal(MakeSharedObject<NDArrayView>(AsDataType<DstType>(), shape, &dstData[0],
+            totalSize * sizeof(DstType), computeDevice.CPUDevice()));
+
+        if (computeDevice.Type() == DeviceKind::CPU)
+        {
+            Constant constantVariable(dstFinal);
+            return constantVariable;
+        }
+        else
+        {
+            NDArrayViewPtr dstFinalGPU(MakeSharedObject<NDArrayView>(AsDataType<DstType>(), StorageFormat::Dense, shape, computeDevice));
+            dstFinalGPU->CopyFrom(*dstFinal);
+            Constant constantVariable(dstFinalGPU);
+            return constantVariable;
+        }
+    }
+
+    template Variable Utils::ConvertVariableType<float, float16>(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice);
+    template Variable Utils::ConvertVariableType<float16, float>(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice);
+
     std::vector<Axis> GetSqueezableAxes(const NDShape& inputShape)
     {
         std::vector<Axis> axes;

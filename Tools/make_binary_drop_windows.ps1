@@ -28,11 +28,12 @@ if ($targetConfig -eq "CPU")
 # Include Files
 $includePath = "Source\Common\Include"
 $includePath20 = "Source\CNTKv2LibraryDll\API"
-$includeFiles = New-Object string[] 4
+$includeFiles = New-Object string[] 5
 $includeFiles[0] = Join-Path $includePath -ChildPath Eval.h
 $includeFiles[1] = Join-Path $includePath20 -ChildPath CNTKLibrary.h
 $includeFiles[2] = Join-Path $includePath20 -ChildPath CNTKLibraryInternals.h
 $includeFiles[3] = Join-Path $includePath20 -ChildPath CNTKLibraryC.h
+$includeFiles[4] = Join-Path $includePath20 -ChildPath HalfConverter.hpp
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
 # binaryDrop locations

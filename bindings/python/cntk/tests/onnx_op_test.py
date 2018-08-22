@@ -19,7 +19,7 @@ DIM_SIZE_FOR_NON_BATCH_OPS = 1
 # When adding a test for a new op, please check to see if 
 # that op needs to be added to this list (i.e. does that op 
 # get exported to an ONNX op with defined batch axis).
-set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization'}
+set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization', 'ImageScaler'}
 
 # List of CNTK ops for which output shape doesn't change regardless
 # of whether the input has batch axis or not.
@@ -31,19 +31,32 @@ set_of_batch_irrelevant_ops = {'Flatten'}
 #helpers
 #############
 def verify_no_input(model, tmpdir, name):
-    filename = os.path.join(str(tmpdir), name + R'.onnx')
-    model.save(filename, format=C.ModelFormat.ONNX)
+    opname = model.owner.op_name
 
-    loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+    loaded_model = None
+    loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
-    filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
-    loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
+    model_shape = model.shape
+    dim_denotation = None
+    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),) and opname not in set_of_batch_ops:
+        dim_denotation = DIM_SIZE_FOR_NON_BATCH_OPS
+    elif opname in set_of_batch_ops:
+        dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION
+    if not dim_denotation is None and opname not in set_of_batch_irrelevant_ops:
+        model_shape = (dim_denotation, ) + model_shape
 
-    assert model.shape == loaded_model.shape
+    assert model_shape == loaded_model.shape
 
-    o = model.eval()
-    o_ = loaded_model.eval()
-    assert np.allclose(o_, o)
+    o0 = model.eval()
+    o1 = loaded_model.eval()
+
+    if (type(o0) is list):
+        o0 = o0[0]
+    if (type(o1) is list):
+        o1 = o1[0]
+
+    assert np.allclose(o0, o1)
+    return loaded_model
 
 def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
     if not loaded_model:
@@ -54,7 +67,12 @@ def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
         loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
     return loaded_model
 
-def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
+def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08):
+    # TODO: eventually we want this test method to be more general to suport 
+    # models with multiple inputs instead of just one input.
+    assert len(model.arguments) == 1
+    assert not model.arguments[0].has_sequence_axis()
+    
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
 
@@ -63,16 +81,19 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
 
     loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
-    if any(o.dynamic_axes == (C.Axis('defaultBatchAxis'),) for o in model.outputs):
+    # TODO: it is better to compare data.shape with model.arguments[0] and
+    # to pad batch dimension as needed.
+    if model.arguments[0].has_batch_axis():
         data.shape = (1, ) + data.shape
 
     assert len(model.outputs) == len(loaded_model.outputs)
 
+    dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
     for i in range(0, len(model.outputs)):
+        assert not model.outputs[i].has_sequence_axis()
         output_shape = model.outputs[i].shape
-        if model.outputs[i].dynamic_axes == (C.Axis('defaultBatchAxis'),):
-            dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-            if opname not in set_of_batch_irrelevant_ops:
+        if opname not in set_of_batch_irrelevant_ops:
+            if model.outputs[i].has_batch_axis():
                 output_shape = (dim_denotation, ) + output_shape
         assert output_shape == loaded_model.outputs[i].shape
 
@@ -84,12 +105,12 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None):
         o1 = loaded_model.eval({loaded_model.arguments[0]:data})
 
     if len(model.outputs) == 1:
-        assert np.allclose(o0, o1)
+        assert np.allclose(o0, o1, rtol, atol)
     else:
         for i in range(0, len(model.outputs)):
             o0i = o0[model.outputs[i]]
             o1i = o1[loaded_model.outputs[i]]
-            assert np.allclose(o0i, o1i)
+            assert np.allclose(o0i, o1i, rtol, atol)
 
     return loaded_model
 
@@ -107,12 +128,6 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
 
     loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
 
-
-    # in cases like with RNN models where models have both batch and sequence axis
-    # as dynamic axis, imported models will have the dynamic axes as free_dimensions in static shapes. 
-    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'), C.Axis('defaultDynamicAxis')):
-        assert (CNTK_FREEDIM_AXIS_DENOTATION, CNTK_FREEDIM_AXIS_DENOTATION, ) + model.shape == loaded_model.shape
-        
     dataOnnx = TranposeDynamicAxis(data)
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
@@ -309,11 +324,11 @@ def test_AveragePool(tmpdir, dtype, device_id):
 #BatchNormalization
 def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        scale        = C.Parameter(init=init_scale, dtype=dtype)
-        bias         = C.Parameter(init=init_bias, dtype=dtype)
-        run_mean     = C.ops.constant(mean, shape=mean.shape, dtype=dtype)
-        run_variance = C.ops.constant(var,  shape=var.shape, dtype=dtype)
-        run_count    = C.ops.constant(0,               dtype=dtype)
+        scale        = C.Parameter(init=init_scale, dtype=np.float32)
+        bias         = C.Parameter(init=init_bias, dtype=np.float32)
+        run_mean     = C.ops.constant(mean, shape=mean.shape, dtype=np.float32)
+        run_variance = C.ops.constant(var,  shape=var.shape, dtype=np.float32)
+        run_count    = C.ops.constant(0,               dtype=np.float32)
 
         a = C.input_variable(shape=x.shape[1:], dtype=dtype, needs_gradient=False, name='a')
 
@@ -322,14 +337,15 @@ def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dty
 
         loaded_model = None
         for i in range(len(x)):
-            loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization', loaded_model=loaded_model)
+            if dtype==np.float16:
+                loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization', loaded_model=loaded_model, rtol = 1e-03, atol = 1e-03)
+            else:
+                loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization', loaded_model=loaded_model)
+
 
 # Case 1 - Non-Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_BatchNormalization(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
-
     sample = [  # 5 samples having 4 classes
             [1, 1, 2, 3],
             [0, 0, 0, 0],
@@ -337,11 +353,12 @@ def test_BatchNormalization(tmpdir, dtype):
             [1000, 1000, 1000, 1000],
             [10000, 10000, 10000, 10000]]
 
-    x = np.asarray(sample, dtype=dtype).reshape(-1,1)
-    scale = np.asarray([3])
-    bias = np.asarray([4])
-    mean = np.asarray([1])
-    var = np.asarray([2])
+    np.random.seed(1)
+    x = np.array(sample).reshape(-1,1).astype(dtype)
+    scale = np.array([3]).astype(np.float32)
+    bias = np.array([4]).astype(np.float32)
+    mean = np.array([1]).astype(np.float32)
+    var = np.array([2]).astype(np.float32)
     epsilon = 0.00001
 
     verify_BN(x, scale, bias, mean, var, epsilon, False, tmpdir, dtype)
@@ -349,10 +366,7 @@ def test_BatchNormalization(tmpdir, dtype):
 # Case 2 - Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SpatialBatchNormalization(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
-
-    x = np.random.randn(2, 3, 4, 5).astype(np.float32)
+    x = np.random.randn(2, 3, 4, 5).astype(dtype)
     scale = np.random.randn(3).astype(np.float32)
     bias = np.random.randn(3).astype(np.float32)
     mean = np.random.randn(3).astype(np.float32)
@@ -731,7 +745,6 @@ def test_HardSigmiod(tmpdir, dtype):
 #ImageScaler
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ImageScaler(tmpdir, dtype):
-    pytest.skip('Needs to be fixed after removal of batch axis change.')
     with C.default_options(dtype = dtype):
         input_height = 32
         input_width = 32
@@ -740,11 +753,11 @@ def test_ImageScaler(tmpdir, dtype):
         scalar = 1.5
         bias = [10, 20, 30]
 
-        model = C.image_scaler(image, scalar, bias);
+        model = C.image_scaler(image, scalar, bias)
         verify_no_input(model, tmpdir, 'ImageScaler_0')
 
         x = C.input_variable(np.shape(image)) 
-        model = C.image_scaler(x, scalar, bias);
+        model = C.image_scaler(x, scalar, bias)
         verify_one_input(model, image, tmpdir, 'ImageScaler_1')
 
 #LayerNormalization
@@ -827,7 +840,6 @@ def test_LogSoftmax(tmpdir, dtype):
 #LRN
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LRN(tmpdir, dtype, device_id):
-    #pytest.skip('Needs to be fixed after removal of batch axis change.')
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data, because it uses convolution.')
     device = cntk_device(device_id)
@@ -1182,12 +1194,29 @@ def test_ReduceL1(tmpdir, dtype):
         model = C.reduce_l1(x, 1)
         verify_one_input(model, data, tmpdir, 'ReduceL1_1')
 
+        model = C.reduce_l1(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceL1_2')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_l1(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceL1_3')
+
+        model = C.reduce_l1(x, C.Axis.all_axes())
+        verify_one_input(model, [data], tmpdir, 'ReduceL1_4')
+
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceL2(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=dtype)
         model = C.reduce_l2(data, 0)
         verify_no_input(model, tmpdir, 'ReduceL2_0')
+
+        model = C.reduce_l2(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceL2_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_l2(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceL2_2')
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceSumSquare(tmpdir, dtype):
@@ -1196,6 +1225,16 @@ def test_ReduceSumSquare(tmpdir, dtype):
         model = C.reduce_sum_square(data, 0)
         verify_no_input(model, tmpdir, 'ReduceSumSquare_0')
 
+        model = C.reduce_sum_square(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceSumSquare_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_sum_square(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceSumSquare_2')
+
+        model = C.reduce_sum_square(x, C.Axis.all_axes())
+        verify_one_input(model, [data], tmpdir, 'ReduceSumSquare_3')
+
 #ReduceLogSum
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceLogSum(tmpdir, dtype):
@@ -1203,7 +1242,14 @@ def test_ReduceLogSum(tmpdir, dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_log_sum_exp(data, axis=0)
 
-    verify_no_input(model, tmpdir, 'ReduceLogSum_0')
+        verify_no_input(model, tmpdir, 'ReduceLogSum_0')
+
+        model = C.reduce_log_sum_exp(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceLogSum_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_log_sum_exp(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceLogSum_2')
 
 #ReduceMax
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1213,6 +1259,13 @@ def test_ReduceMax(tmpdir, dtype):
         model = C.reduce_max(data, 0)
         verify_no_input(model, tmpdir, 'ReduceMax_0')
 
+        model = C.reduce_max(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceMax_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_max(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceMax_2')
+
 #ReduceMean
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceMean(tmpdir, dtype):
@@ -1220,6 +1273,13 @@ def test_ReduceMean(tmpdir, dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_mean(data, 0)
         verify_no_input(model, tmpdir, 'ReduceMean_0')
+
+        model = C.reduce_mean(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceMean_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_mean(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceMean_2')
 
 #ReduceMin
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1229,6 +1289,13 @@ def test_ReduceMin(tmpdir, dtype):
         model = C.reduce_min(data, 0)
         verify_no_input(model, tmpdir, 'ReduceMin_0')
 
+        model = C.reduce_min(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceMin_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_min(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceMin_2')
+
 #ReduceProd
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceProd(tmpdir, dtype):
@@ -1237,6 +1304,13 @@ def test_ReduceProd(tmpdir, dtype):
         model = C.reduce_prod(data, 0)
         verify_no_input(model, tmpdir, 'ReduceProd_0')
 
+        model = C.reduce_prod(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceProd_1')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_prod(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceProd_2')
+
 #ReduceSum
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ReduceSum(tmpdir, dtype):
@@ -1244,6 +1318,25 @@ def test_ReduceSum(tmpdir, dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
         model = C.reduce_sum(data, 0)
         verify_no_input(model, tmpdir, 'ReduceSum_0')
+
+        model = C.reduce_sum(data, [0, 1, 2])
+        verify_no_input(model, tmpdir, 'ReduceSum_1')
+
+        model = C.reduce_sum(data, [0, 2])
+        verify_no_input(model, tmpdir, 'ReduceSum_2')
+
+        model = C.reduce_sum(data, [0, 2], keepdims=False)
+        verify_no_input(model, tmpdir, 'ReduceSum_3')
+
+        model = C.reduce_sum(data, C.Axis.all_static_axes())
+        verify_no_input(model, tmpdir, 'ReduceSum_4')
+
+        x = C.input_variable(data.shape)
+        model = C.reduce_sum(x, C.Axis.default_batch_axis())
+        verify_one_input(model, [data], tmpdir, 'ReduceSum_5')
+
+        model = C.reduce_sum(x, C.Axis.all_axes())
+        verify_one_input(model, [data], tmpdir, 'ReduceSum_6')
 
 #Relu
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1376,8 +1469,9 @@ def test_Slice(tmpdir, dtype):
 def test_SequenceSlice(tmpdir, dtype, beginIndex, endIndex):
     batch_size = 1
     sequence_length = 5
-    feature_shape = (3,)
-    shape = (batch_size, sequence_length, *feature_shape)
+    input_size = 3
+    feature_shape = (input_size,)
+    shape = (batch_size, sequence_length, input_size)
     data = np.reshape(range(0, np.prod(shape)), shape).astype(dtype)
     testName = "test_sequence_slice_{0}.{1}".format(beginIndex, endIndex)
     print(testName)
