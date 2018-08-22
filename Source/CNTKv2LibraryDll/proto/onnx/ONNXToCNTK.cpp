@@ -59,7 +59,7 @@ private:
     static bool FixConstantShapeForConstantVariableInputPair(const std::vector<Variable> &inputs,
                                                              std::vector<Variable> &fixedInputs);
 
-    static const Node *GetChildNode(const Node *parentNode, const NodeArg *nodeArg);
+    static const Node *GetChildNode(const Node *parentNode, const NodeArg *nodeArg, int &nodeArgIndex);
 
     static std::vector<Axis> AttributeProtoToAxes(const AttributeProto &attributeProto);
     static Axis AttributeProtoToAxis(const AttributeProto &attributeProto);
@@ -601,14 +601,16 @@ const CNTK::Constant CNTK::ONNXToCNTKHelper::CreateConstantWithTensorData(CNTK::
     }
 }
 
-const Node *ONNXToCNTKHelper::GetChildNode(const Node *parentNode, const NodeArg *nodeArg)
+const Node *ONNXToCNTKHelper::GetChildNode(const Node *parentNode, const NodeArg *nodeArg, int &nodeArgIndex)
 {
     Node::NodeConstIterator itChildNode = parentNode->InputNodesBegin();
     for (; itChildNode != parentNode->InputNodesEnd(); ++itChildNode)
     {
         const Node *childNode = *itChildNode;
         const ConstPointerContainer<std::vector<NodeArg *>> &childOutputDefs = childNode->OutputDefs();
-        for (ConstPointerContainer<std::vector<NodeArg *>>::ConstIterator itChildOutput = childOutputDefs.begin(); itChildOutput != childOutputDefs.end(); ++itChildOutput)
+        nodeArgIndex = 0;
+        for (ConstPointerContainer<std::vector<NodeArg *>>::ConstIterator itChildOutput = childOutputDefs.begin(); 
+            itChildOutput != childOutputDefs.end(); ++itChildOutput, nodeArgIndex++)
         {
             const NodeArg *childOutput = *itChildOutput;
             if (childOutput == nodeArg)
@@ -2634,7 +2636,8 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             newShape = GetShapeFromInput(node->InputDefs()[1], graph);
         }
 
-        const Node *childNode = GetChildNode(node, node->InputDefs()[0]);
+        int nodeArgIndexDummy = 0;
+        const Node *childNode = GetChildNode(node, node->InputDefs()[0], nodeArgIndexDummy);
         if (childNode != nullptr && Operators::IsRNNOp(childNode->OpType()))
         {
             // Adjust for batch and sequence axes swap between CNTK and ONNX.
@@ -3337,13 +3340,20 @@ std::vector<Variable> ONNXToCNTKHelper::CreateCNTKInputsStartingFromIndex(const 
     for (int i = startIndex; i < inputDefs.size(); i++)
     {
         const NodeArg *nodeArg = inputDefs[i];
-        const Node *inputNode = GetChildNode(node, nodeArg);
+        // nodeArg may be one of outputDefs from another node inputNode
+        // in case there are multiple outputDefs, we need to know the index of the nodeArg
+        int nodeArgIndex = 0;
+        const Node *inputNode = GetChildNode(node, nodeArg, nodeArgIndex);
         if (inputNode != nullptr)
         {
             ONNXToCNTKMap::iterator itNodeMap = constructedNodeMap.find(const_cast<Node *>(inputNode));
             if (itNodeMap != constructedNodeMap.end())
             {
-                inputs.insert(inputs.end(), itNodeMap->second.begin(), itNodeMap->second.end());
+                std::vector<FunctionPtr> inputCNTKFunctionPtrs = itNodeMap->second;
+                for (auto f : inputCNTKFunctionPtrs)
+                {
+                    inputs.insert(inputs.end(), f->Outputs()[nodeArgIndex]);
+                }
             }
             else
             {

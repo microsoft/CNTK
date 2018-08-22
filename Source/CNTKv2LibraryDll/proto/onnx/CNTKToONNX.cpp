@@ -62,6 +62,9 @@ private:
         std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
+    static LotusIR::NodeArg &AddZerosConstantNodeArg(Graph *graph, const string &nodeArgName,
+        const std::vector<int64_t> &shape, CNTK::DataType dataType);
+
     static LotusIR::Node *AddReshapeNodeAccordingToONNXVersion(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t>& newShape);
 
 
@@ -89,8 +92,12 @@ private:
         LotusIR::Graph* graph);
     static LotusIR::Node *AddMatMulNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph,
         const std::string &out_arg_name);
+    static LotusIR::Node *AddAddNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph,
+        const std::string &out_arg_name);
     static LotusIR::Node *AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis);
     static LotusIR::Node *AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &toType);
+
+    static void TileInputIfNeeded(std::vector<LotusIR::NodeArg *> &orderedInputs, const FunctionPtr& src, LotusIR::Graph* graph);
 
     //
     //  Insert a reshape node in front of a given node and its output node arg
@@ -149,6 +156,10 @@ private:
     static void TraverseGraph(const FunctionPtr& src,
                               std::set<FunctionPtr>& visited,
                               std::unordered_map<Variable, Variable>& compositeOutputsMap);
+
+    static void SetTensorType(onnx::TensorProto& dst, CNTK::DataType dataType);
+
+    static void VectorToTensor(const std::vector<int64_t> &data, onnx::TensorProto& dst);
 
     //
     // Copy the content of NDArrayView to TensorProto, and do the needed
@@ -235,6 +246,12 @@ private:
     //
     static bool FilterInput(const FunctionPtr& src, const CNTK::Variable& input, size_t inputIndex);
 
+    //
+    // Converts axis (in CNTK C++ API sense) to index in ONNX sense assuming op may do broadcast
+    // across inputs. In such case, it shall take the highest axis.  
+    //
+    static int64_t CNTKToONNXHelper::ConvertAxisToOnnxBroadcastOfOp(const Axis &axis, const FunctionPtr &src);
+    
     //
     // Converts axis (in CNTK C++ API sense) to index in ONNX sense
     //
@@ -608,7 +625,7 @@ void AppendCNTKWeightToONNXTensor(DType *data, const NDShape &shape, onnx::Tenso
     }
 }
 
-void SetTensorType(onnx::TensorProto& dst, CNTK::DataType dataType)
+void CNTKToONNXHelper::SetTensorType(onnx::TensorProto& dst, CNTK::DataType dataType)
 {
     switch (dataType)
     {
@@ -905,6 +922,15 @@ void CNTKToONNXHelper::CopyRNNWeightTensors(const std::vector<NDArrayViewPtr> &s
     }
 
     CopyShapeTypeProtoToTensorProto(inputArgType, dst);
+}
+
+void CNTKToONNXHelper::VectorToTensor(const std::vector<int64_t> &data, onnx::TensorProto& dst)
+{
+    dst.set_data_type(onnx::TensorProto_DataType_INT64);
+    int totalSize = data.size();
+    for (size_t index = 0; index < totalSize; index++)
+        *(dst.mutable_int64_data()->Add()) = data[index];
+    *(dst.mutable_dims()->Add()) = totalSize;
 }
 
 void CNTKToONNXHelper::CopyTensor(const NDArrayViewPtr src, onnx::TensorProto& dst, onnx::TypeProto *inputArgType /*=nullptr*/)
@@ -1359,6 +1385,16 @@ bool CNTKToONNXHelper::FilterInput(const FunctionPtr& src, const CNTK::Variable&
     if (input.IsConstant())
         return !Operators::IsValidInputs(src->OpName(), inputIndex);
     return false;
+}
+
+int64_t CNTKToONNXHelper::ConvertAxisToOnnxBroadcastOfOp(const Axis &axis, const FunctionPtr &src)
+{
+    int64_t onnx_axis = 0;
+    for (int i = 0; i < src->Inputs().size(); i++)
+    {
+        onnx_axis = std::max(onnx_axis, ConvertAxisToOnnx(axis, src->Inputs()[i]));
+    }
+    return onnx_axis;
 }
 
 /*
@@ -2309,6 +2345,40 @@ LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
     return squeezedRNNNode;
 }
 
+LotusIR::NodeArg &CNTKToONNXHelper::AddZerosConstantNodeArg(Graph *graph, const string &nodeArgName,
+    const std::vector<int64_t> &shape, CNTK::DataType dataType)
+{
+    onnx::TypeProto shapeInputArgType = ToTypeProto(shape, false);
+    shapeInputArgType.mutable_tensor_type()->set_elem_type(ConvertDataTypeCNTKToTensorProto(dataType));
+    LotusIR::NodeArg &shapeInputArg = graph->GetOrCreateNodeArg(nodeArgName, &shapeInputArgType);
+
+    onnx::TensorProto dstTensor;
+    dstTensor.set_name(shapeInputArg.Name());
+    dstTensor.set_data_type(ConvertDataTypeCNTKToTensorProto(dataType));
+
+    int64_t totalSize = std::accumulate(shape.begin(), shape.end(), (int64_t)1, std::multiplies<int64_t>());
+    switch (dataType)
+    { 
+    case CNTK::DataType::Float16:
+        dstTensor.mutable_int32_data()->Resize((int)totalSize, 0);
+        break;
+    case CNTK::DataType::Float:
+        dstTensor.mutable_float_data()->Resize((int)totalSize, (float)0);
+        break;
+    case CNTK::DataType::Double:
+        dstTensor.mutable_double_data()->Resize((int)totalSize, 0);
+        break;
+    default:
+        NOT_IMPLEMENTED;
+    }
+
+    for (int index = 0; index < shape.size(); index++)
+        *(dstTensor.mutable_dims()->Add()) = shape[index];
+
+    graph->AddInitializedTensor(dstTensor);
+    return shapeInputArg;
+}
+
 LotusIR::Node *CNTKToONNXHelper::AddReshapeNodeAccordingToONNXVersion(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t> &newShape)
 {
     if (IsONNX1_2Supported())
@@ -2366,6 +2436,16 @@ LotusIR::Node *CNTKToONNXHelper::AddMatMulNode(LotusIR::NodeArg &nodeArg1, Lotus
         nodeArg1.Name() + string("_matmul"), "MatMul", "", { &nodeArg1, &nodeArg2 }, { &outputArg });
     return argMatMulNode;
 }
+
+LotusIR::Node *CNTKToONNXHelper::AddAddNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph,
+    const std::string &out_arg_name)
+{
+    LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, nullptr);
+    LotusIR::Node* argMatMulNode = graph->AddNode(
+        nodeArg1.Name() + string("_add"), "Add", "", { &nodeArg1, &nodeArg2 }, { &outputArg });
+    return argMatMulNode;
+}
+
 
 LotusIR::Node *CNTKToONNXHelper::AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis)
 {
@@ -3113,7 +3193,13 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
         else if (src->OpName() == L"Splice")
         {
             Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
-            int64_t axisIndex = ConvertAxisToOnnx(axis, src->Inputs()[0]);
+            int64_t axisIndex = ConvertAxisToOnnxBroadcastOfOp(axis, src);
+            //if (ToLegacyString(ToUTF8(src->Uid())) == "Splice3547")
+            //{
+            //    axisIndex = 2;
+            //    node->AddAttribute(attributesMap[L"axis"], axisIndex);
+            //}
+            //else
             node->AddAttribute(attributesMap[L"axis"], axisIndex);
         }
         else if (src->OpName() == L"Slice")
@@ -3517,6 +3603,83 @@ LotusIR::Node* FindByName(LotusIR::Graph* graph, const std::string &name)
     }
     return nullptr;
 }
+std::vector<int64_t> GetNodeArgShapeInCNTKCppForm(LotusIR::NodeArg *nodeArg)
+{
+    std::vector<int64_t> shape;
+    const TypeProto *typeProto = nodeArg->TypeAsProto();
+    for (int dim = 0; dim < typeProto->tensor_type().shape().dim_size(); dim++)
+    {
+        shape.push_back(typeProto->tensor_type().shape().dim()[dim].dim_value());
+    }
+    return shape;
+}
+
+// CNTK splice allows broadcast of both inputs before applying concatination. 
+// ONNX Concat is limited to cases input with of matching shapes only - i.e. dimensions 
+// must be equal except for concatination axis.
+void CNTKToONNXHelper::TileInputIfNeeded(std::vector<LotusIR::NodeArg *> &orderedInputs, const FunctionPtr& src, LotusIR::Graph* graph)
+{
+    if (src->OpName() != L"Splice")
+        return;
+
+    Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
+    int64_t concatAxis = ConvertAxisToOnnxBroadcastOfOp(axis, src);
+    std::vector<std::vector<int64_t>> shapes;
+    int max_rank = 0;
+    for (auto nodeArg : orderedInputs)
+    {
+        shapes.push_back(GetNodeArgShapeInCNTKCppForm(nodeArg));
+        max_rank = std::max(max_rank, shapes.rbegin()->size());
+    }
+
+    std::vector<int64_t> broadcast_shape(max_rank, 1);
+    for (int i = 0; i < shapes.size(); i++)
+    {
+        std::vector<int64_t> &shape_i = shapes[i];
+        for (int index_to_shape_i = 0; index_to_shape_i < shape_i.size(); index_to_shape_i++)
+        {
+            int onnx_axis = index_to_shape_i + (max_rank - shape_i.size());
+            if (onnx_axis == concatAxis)
+                // only check and update no-concat_axis dimensions
+                continue;
+            else if (broadcast_shape[onnx_axis] == 1)
+                broadcast_shape[onnx_axis] = shape_i[index_to_shape_i];
+            else if (broadcast_shape[onnx_axis] != shape_i[index_to_shape_i] && shape_i[index_to_shape_i] != 1)
+                LogicError("Invalid splice inputs shape");
+        }
+    }
+
+    // TODO: use ONNX Expand once ONNX version 7 is supported
+    // Without Expand op, we create a zeros constant of expected shape and apply broadcast add
+    // to get input to the right shape for concatination.    
+    for (int i = 0; i < orderedInputs.size(); i++)
+    {
+        std::vector<int64_t> &shape_i = shapes[i];
+        bool need_broadcast = shape_i.size() < max_rank;
+        while (shape_i.size() < max_rank)
+            shape_i.insert(shape_i.begin(), 1);
+
+        for (int onnx_axis = 0; onnx_axis < shape_i.size(); onnx_axis++)
+        {
+            if (onnx_axis != concatAxis && shape_i[onnx_axis] != broadcast_shape[onnx_axis])
+            {
+                shape_i[onnx_axis] = broadcast_shape[onnx_axis];
+                need_broadcast = true;
+            }
+        }
+
+        if (!need_broadcast)
+            continue;
+
+        LotusIR::NodeArg *nodeArg = orderedInputs[i];
+
+        LotusIR::NodeArg &nodeArg2 = AddZerosConstantNodeArg(graph, nodeArg->Name() + "_braodcast_for_desired_shape",
+            shape_i, src->Inputs()[i].GetDataType());
+        const std::string out_arg_name = nodeArg->Name() + "_post_braodcasted_with_desired_shape";
+        LotusIR::Node *node = AddAddNode(*nodeArg, nodeArg2, graph, out_arg_name);
+        orderedInputs[i] = const_cast<NodeArg*>(node->OutputDefs()[0]);
+    }
+}
 
 LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph* graph, const std::vector<LotusIR::NodeArg *>& inputs, const std::vector<LotusIR::NodeArg *>& outputs)
 {
@@ -3639,6 +3802,11 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
             LotusIR::NodeArg &addTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_Output_0"), &input0ArgType);
             node = graph->AddNode(nodeName + string("_add"), "Add",
                                   "", { &mulTensorOutputArg, input2 }, { &addTensorOutputArg });
+        }
+        else if (src->OpName() == L"Splice")
+        {
+            TileInputIfNeeded(orderedInputs, src, graph);
+            node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
         }
         else
             node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
