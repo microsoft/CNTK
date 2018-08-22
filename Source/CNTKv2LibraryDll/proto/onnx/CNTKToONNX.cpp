@@ -62,6 +62,8 @@ private:
         std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
+    // Create an ONNX NodeArg of desired shape with constant 0s as initial values. 
+    // The NodeArg is used to expand inputs of a CNTK splice op to a desired shape via broadcast.
     static LotusIR::NodeArg &AddZerosConstantNodeArg(Graph *graph, const string &nodeArgName,
         const std::vector<int64_t> &shape, CNTK::DataType dataType);
 
@@ -97,7 +99,7 @@ private:
     static LotusIR::Node *AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis);
     static LotusIR::Node *AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &toType);
 
-    static void TileInputIfNeeded(std::vector<LotusIR::NodeArg *> &orderedInputs, const FunctionPtr& src, LotusIR::Graph* graph);
+    static void BroadcastInputsIfNeeded(std::vector<LotusIR::NodeArg *> &orderedInputs, const FunctionPtr& src, LotusIR::Graph* graph);
 
     //
     //  Insert a reshape node in front of a given node and its output node arg
@@ -158,8 +160,6 @@ private:
                               std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
     static void SetTensorType(onnx::TensorProto& dst, CNTK::DataType dataType);
-
-    static void VectorToTensor(const std::vector<int64_t> &data, onnx::TensorProto& dst);
 
     //
     // Copy the content of NDArrayView to TensorProto, and do the needed
@@ -248,9 +248,9 @@ private:
 
     //
     // Converts axis (in CNTK C++ API sense) to index in ONNX sense assuming op may do broadcast
-    // across inputs. In such case, it shall take the highest axis.  
+    // across multiple inputs. In such case, it shall take the highest axis.  
     //
-    static int64_t CNTKToONNXHelper::ConvertAxisToOnnxBroadcastOfOp(const Axis &axis, const FunctionPtr &src);
+    static int64_t ConvertAxisToOnnxBroadcastOfOp(const Axis &axis, const FunctionPtr &src);
     
     //
     // Converts axis (in CNTK C++ API sense) to index in ONNX sense
@@ -924,15 +924,6 @@ void CNTKToONNXHelper::CopyRNNWeightTensors(const std::vector<NDArrayViewPtr> &s
     CopyShapeTypeProtoToTensorProto(inputArgType, dst);
 }
 
-void CNTKToONNXHelper::VectorToTensor(const std::vector<int64_t> &data, onnx::TensorProto& dst)
-{
-    dst.set_data_type(onnx::TensorProto_DataType_INT64);
-    int totalSize = data.size();
-    for (size_t index = 0; index < totalSize; index++)
-        *(dst.mutable_int64_data()->Add()) = data[index];
-    *(dst.mutable_dims()->Add()) = totalSize;
-}
-
 void CNTKToONNXHelper::CopyTensor(const NDArrayViewPtr src, onnx::TensorProto& dst, onnx::TypeProto *inputArgType /*=nullptr*/)
 {
     auto dataType = src->GetDataType();
@@ -1229,16 +1220,18 @@ bool MatchOpSequence(const FunctionPtr src, std::vector<wstring> opSequence, Fun
     return true;
 }
 
+// when importing ONNX models, we insert a sequence of ops to pack/uppack batch/sequence axis
+// thoes ops shall be removed to create an equivalent ONNX model. 
 FunctionPtr SkipBatchAndSequenceAxisOp(const FunctionPtr src)
 {
     std::vector<wstring> toSequenceBatchOps({ L"ToSequenceOp", L"ToBatchAxis", L"TransposeAxes" }); 
     std::vector<wstring> unpackSequenceBatchOps({ L"TransposeAxes", L"UnpackBatchAxis", L"UnpackSequenceOp" });
-    std::vector<wstring> unpackBatchSequenceSliceOps({ L"UnpackBatchAxis", L"Sequence::Slice" });
+    // std::vector<wstring> unpackBatchSequenceSliceOps({ L"UnpackBatchAxis", L"Sequence::Slice" });
 
     FunctionPtr op = src;
     while (MatchOpSequence(op, toSequenceBatchOps, op) || 
-        MatchOpSequence(op, unpackSequenceBatchOps, op) || 
-        MatchOpSequence(op, unpackBatchSequenceSliceOps, op))
+        MatchOpSequence(op, unpackSequenceBatchOps, op)) 
+        // ||  MatchOpSequence(op, unpackBatchSequenceSliceOps, op))
         ;
     return op;
 }
@@ -1304,6 +1297,7 @@ void MapAndUpdateONNXType(const std::string &op, bool inputArg, int argOrder, CN
     else if ((op == "Greater" || op == "Less") && !inputArg)
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
     else if (op == "TopK" && !inputArg && argOrder == 1)
+        // the second output of TopK is index tensor of int64
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
     else
         type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_FLOAT);
@@ -2363,6 +2357,7 @@ LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
     return squeezedRNNNode;
 }
 
+// Create an ONNX NodeArg of desired shape with constant 0s as initial values. 
 LotusIR::NodeArg &CNTKToONNXHelper::AddZerosConstantNodeArg(Graph *graph, const string &nodeArgName,
     const std::vector<int64_t> &shape, CNTK::DataType dataType)
 {
@@ -2738,6 +2733,8 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& initialSrc,
             return CreateNodeForBatchAxisOp(src, graph, functionNodes, variableNodes, compositeOutputsMap);
         else
         {
+            // this is a normal use of UnpackBatchAxis. ONNX does not treat batch axis specially so 
+            // we shall skip the op.
             auto blockMapping = src->Inputs()[0].BlockFunctionVariableMapping();
             if (blockMapping.IsInitialized())
                 return CreateNode(blockMapping.Owner(),
@@ -2840,6 +2837,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                 LogicError("Node '%S': Placeholder isn't supported currently.", src->AsString().c_str());
         }
 
+        // UnpackBatchAxis and ToBatchAxis is a noop in ONNX 
         input = SkipBatchPackUnpack(input);
 
         // Special case handling of LayerNormalization layer because it changes
@@ -2906,7 +2904,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
 
         if (onnxOpName == "Identity")
         {
-            // shall match the type of the NodeArg of the same name from upstream. 
+            // shall match the type of the same name NodeArg from upstream. 
             string inputNodeArgName = ToLegacyString(ToUTF8(input.Uid()));
             if (!TryMatchNodeArgType(inputArgType, graph, inputNodeArgName))
                 UpdateONNXType(src->Inputs()[0].GetDataType(), inputArgType);
@@ -2998,7 +2996,7 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
         auto outputArgType = ToTypeProto(output.Shape(), output.HasBatchAxis(), output.HasSequenceAxis());
         if (onnxOpName == "Identity")
         {
-            // shall match the type of the NodeArg of this Identity node's input
+            // shall match the type of this Identity node's input NodeArg.
             string inputNodeArgName = ToLegacyString(ToUTF8(src->Inputs()[0].Uid()));
             if (!TryMatchNodeArgType(outputArgType, graph, inputNodeArgName))
                 UpdateONNXType(src->Inputs()[0].GetDataType(), outputArgType);
@@ -3260,12 +3258,6 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
         {
             Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
             int64_t axisIndex = ConvertAxisToOnnxBroadcastOfOp(axis, src);
-            //if (ToLegacyString(ToUTF8(src->Uid())) == "Splice3547")
-            //{
-            //    axisIndex = 2;
-            //    node->AddAttribute(attributesMap[L"axis"], axisIndex);
-            //}
-            //else
             node->AddAttribute(attributesMap[L"axis"], axisIndex);
         }
         else if (src->OpName() == L"Slice")
@@ -3675,7 +3667,8 @@ LotusIR::Node* FindByName(LotusIR::Graph* graph, const std::string &name)
     }
     return nullptr;
 }
-std::vector<int64_t> GetNodeArgShapeInCNTKCppForm(LotusIR::NodeArg *nodeArg)
+
+std::vector<int64_t> GetShapeFromNodeArg(LotusIR::NodeArg *nodeArg)
 {
     std::vector<int64_t> shape;
     const TypeProto *typeProto = nodeArg->TypeAsProto();
@@ -3686,10 +3679,11 @@ std::vector<int64_t> GetNodeArgShapeInCNTKCppForm(LotusIR::NodeArg *nodeArg)
     return shape;
 }
 
-// CNTK splice allows broadcast of both inputs before applying concatination. 
-// ONNX Concat is limited to cases input with of matching shapes only - i.e. dimensions 
-// must be equal except for concatination axis.
-void CNTKToONNXHelper::TileInputIfNeeded(std::vector<LotusIR::NodeArg *> &orderedInputs, const FunctionPtr& src, LotusIR::Graph* graph)
+// CNTK splice allows broadcast of inputs before applying concatination. 
+// ONNX Concat is limited to matching input shape cases
+// i.e. inputs' dimensions shall be the equal except for the concatination axis.
+// for an example, see test_Concat_With_Broadcast in onnx_op_test.py.
+void CNTKToONNXHelper::BroadcastInputsIfNeeded(std::vector<LotusIR::NodeArg *> &orderedInputs, const FunctionPtr& src, LotusIR::Graph* graph)
 {
     if (src->OpName() != L"Splice")
         return;
@@ -3700,7 +3694,7 @@ void CNTKToONNXHelper::TileInputIfNeeded(std::vector<LotusIR::NodeArg *> &ordere
     int max_rank = 0;
     for (auto nodeArg : orderedInputs)
     {
-        shapes.push_back(GetNodeArgShapeInCNTKCppForm(nodeArg));
+        shapes.push_back(GetShapeFromNodeArg(nodeArg));
         max_rank = std::max(max_rank, shapes.rbegin()->size());
     }
 
@@ -3745,6 +3739,7 @@ void CNTKToONNXHelper::TileInputIfNeeded(std::vector<LotusIR::NodeArg *> &ordere
 
         LotusIR::NodeArg *nodeArg = orderedInputs[i];
 
+        // We insert an "Add" with broadcast to get desired shape that can be accepted by ONNX Concat. 
         LotusIR::NodeArg &nodeArg2 = AddZerosConstantNodeArg(graph, nodeArg->Name() + "_braodcast_for_desired_shape",
             shape_i, src->Inputs()[i].GetDataType());
         const std::string out_arg_name = nodeArg->Name() + "_post_braodcasted_with_desired_shape";
@@ -3877,7 +3872,7 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
         }
         else if (src->OpName() == L"Splice")
         {
-            TileInputIfNeeded(orderedInputs, src, graph);
+            BroadcastInputsIfNeeded(orderedInputs, src, graph);
             node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
         }
         else

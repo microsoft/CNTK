@@ -445,16 +445,20 @@ def test_Concat(tmpdir, dtype):
 
         verify_one_input(model, data1, tmpdir, 'Concat_1')
 
-def test_Concat_With_Broadcast(tmpdir):
-    with C.default_options(dtype = np.float32):
-        shape1 = [2,3,1,4,3]
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Concat_With_Broadcast(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        shape1 = [2,3,1,1,3]
         shape2 =   [1,3,4,1]
+        shape3 =     [3,4,1]
         axis = 2
-        data1 = np.random.uniform(-10, 10, shape1).astype(np.float32)
-        data2 = np.random.uniform(-10, 10, shape2).astype(np.float32)
+        data1 = np.random.uniform(-10, 10, shape1).astype(dtype)
+        data2 = np.random.uniform(-10, 10, shape2).astype(dtype)
+        data3 = np.random.uniform(-10, 10, shape3).astype(dtype)
         x = C.input_variable(shape1)
         y = C.constant(value=data2)
-        model = C.splice(x, y, axis=axis)
+        z = C.constant(value=data3)
+        model = C.splice(x, y, z, axis=axis)
         verify_one_input(model, data1, tmpdir, 'Concat_Braodcast')
 
 @pytest.mark.parametrize("dtype", DType_Config)
