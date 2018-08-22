@@ -2570,6 +2570,35 @@ namespace CNTK
 
     }
 
+    FunctionPtr Convolution(const Variable& convolutionMap,
+        const Variable& operand,
+        const NDShape& strides,
+        const std::vector<bool>& sharing,
+        const std::vector<size_t>& lowerPad,
+        const std::vector<size_t>& upperPad,
+        const NDShape& dilation,
+        size_t groups,
+        size_t maxTempMemSizeInSamples,
+        const std::wstring& name)
+    {
+        if (groups > 1 && !(operand.IsPlaceholder() || convolutionMap.IsPlaceholder()))
+        {
+            auto filterShape = convolutionMap.Shape();
+            auto filterRank = static_cast<int>(filterShape.Rank());
+            auto inputRank = static_cast<int>(operand.Shape().Rank());
+            auto M = filterShape[filterRank - 1]; // Number of output channels.
+            auto C = operand.Shape()[inputRank - 1]; // Number of input channels in operand.
+            auto kC = filterShape[filterRank - 2]; // Number of input channels in kernel.
+            if (M % groups)
+                LogicError("groups: number of output channels must be divisble by groups.");
+            if (C != (kC * groups))
+                LogicError("groups: number of input channels (C) must be equal to number of input kernel channels (kC) * groups (G).");
+        }
+
+        return Internal::Convolution(convolutionMap, operand, strides, sharing, lowerPad, upperPad, dilation, false,
+            { 0 }, groups, maxTempMemSizeInSamples, name);
+    }
+
     FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
         const Variable& operand,
         const NDShape& strides,

@@ -148,6 +148,10 @@ private:
     static FunctionPtr CreatePadOpForSameLowAutoPad(
         const Variable &input, NDShape kernelShape, NDShape strides, const double padValue);
     static FunctionPtr CreateCNTKConvNode(const Node *node, const std::vector<Variable> &inputs);
+    static FunctionPtr CreateCNTKConvNode(const Variable& inputOperand, const Variable& convolutionMap, bool useAutoPadForCntkConvApi,
+        const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& cntkConvAutoPadding, const std::vector<size_t>& lowerPad,
+        const std::vector<size_t>&  upperPad, const NDShape& dilation, size_t reductionRank, size_t groups, size_t maxTempMemSizeInSamples,
+        const std::string& name);
     static FunctionPtr CreateCNTKConvTransposeNode(const Node *node, const std::vector<Variable> &inputs);
     static FunctionPtr CreateCNTKConvTransposeNode(const Variable& inputOperand, const Variable& convolutionMap, bool useAutoPadForCntkConvApi,
         const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& cntkConvAutoPadding, const std::vector<size_t>& lowerPad,
@@ -2049,7 +2053,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
 
         if (hasAutoPad && hasPads)
         {
-            LogicError("Ambiguous Conv node specification. Both %s and %s attributes are specified. Only one of the two should be specified.",
+            LogicError("Ambiguous Pooling node specification. Both %s and %s attributes are specified. Only one of the two should be specified.",
                 "auto_pad", "pads");
         }
 
@@ -3152,6 +3156,7 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
 
     bool USE_OUTPUT_SHAPE, USE_PADS, USE_AUTO_PAD;
     std::tie(USE_OUTPUT_SHAPE, USE_PADS, USE_AUTO_PAD) = ConfigureConvTransposeNodePaddingOption(node);
+    pads = GetNamedAttributeAsInt64Vec(node, "pads", std::vector<int64_t>(2 * numSpatialDim, 0));
     // One of the three attributes output_shape, pads, or auto_pad should be specified.
     // If not, then we use default value (all zeros) for pads attribute below.
     if (!(USE_OUTPUT_SHAPE || USE_PADS || USE_AUTO_PAD))
@@ -3274,45 +3279,75 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Variable& inputO
 
 FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::vector<Variable> &inputs)
 {
+    Variable inputOperand = inputs[0];
     Variable convolutionMap = inputs[1];
     size_t numSpatialDim = convolutionMap.Shape().Rank() - 2; // This is conv op dimension, i.e. 2 for 2D conv, 3 for 3D conv.
 
     NDShape strides = GetNamedAttributeAsShape(node, "strides", false, NDShape(std::vector<size_t>(numSpatialDim, 1u)));
     NDShape dilation = GetNamedAttributeAsShape(node, "dilations", false, NDShape(std::vector<size_t>(numSpatialDim, 1u)));
-    // TODO: avoid hardcoded values
+    size_t groups = GetNamedAttributeAsInt64(node, "group", 1);
+    bool hasAutoPad = HasNamedAttribute(node, "auto_pad") && GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER") != "NOTSET";
+    bool hasPads = HasNamedAttribute(node, "pads");
+    NDShape kernelShape = GetNamedAttributeAsShape(node, "kernel_shape", false);
     std::vector<bool> sharing({true});
     size_t reductionRank = 1;
     size_t maxTempMemSizeInSamples = 0;
-    size_t groups = GetNamedAttributeAsInt64(node, "group", 1);
-
     std::vector<bool> cntkConvAutoPadding;
-    auto convOperand = GetNodeOperandWithPaddingResolved(/*output arg first*/ cntkConvAutoPadding, strides, node, inputs[0]);
+    std::vector<int64_t> pads;
+    std::pair<std::vector<size_t>, std::vector<size_t>> padsPair;
+    bool useAutoPadForCntkConvApi(true);
 
-    // At this point length of vectors strides, dilation, and cntkConvAutoPadding must be equal to
-    // number of spatial dimensions (2 for 2D conv, 3 for 3D conv). 
-    // In order to match the expected input for CNTK Convolution API we will append one more element
-    // in each for the "channel" axis. 
+    if (hasAutoPad && hasPads)
+    {
+        LogicError("Ambiguous Conv node specification. Both %s and %s attributes are specified. Only one of the two should be specified.",
+            "auto_pad", "pads");
+    }
+
+    if (hasAutoPad)
+    {
+        ConvAutoPadType auto_pad = ConvertStrToConvAutoPadType(GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER"));
+        switch (auto_pad)
+        {
+        case ConvAutoPadType::SAME_LOWER:
+        {
+            padsPair = CalcPaddingForSameLowerAutoPad(inputOperand, kernelShape, strides);
+            useAutoPadForCntkConvApi = false;
+            break;
+        }
+        case ConvAutoPadType::SAME_UPPER:
+            cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), numSpatialDim, true);
+            useAutoPadForCntkConvApi = true;
+            break;
+        case ConvAutoPadType::VALID:
+            cntkConvAutoPadding.insert(cntkConvAutoPadding.begin(), numSpatialDim, false);
+            useAutoPadForCntkConvApi = true;
+            break;
+        }
+    }
+    else // Either hasPads == true, i.e. pads was specified, or if pads is not specified then we use default pads value of 0.
+    {
+        pads = GetNamedAttributeAsInt64Vec(node, "pads", std::vector<int64_t>(2 * numSpatialDim, 0));
+        padsPair = SplitAndReverseVec(pads);
+        useAutoPadForCntkConvApi = false;
+    }
+
+    // At this point length of vectors strides, dilation, padsPair, and cntkConvAutoPadding must be equal to
+    // number of spatial dimensions (2 for 2D conv, 3 for 3D conv). In order to match the expected input for
+    // CNTK Convolution API we will append one more element in each for the "channel" axis. 
     strides = strides.AppendShape({ 1 });
     dilation = dilation.AppendShape({ 1 });
-    cntkConvAutoPadding.push_back(false);
+    if (useAutoPadForCntkConvApi)
+        cntkConvAutoPadding.push_back(false);
+    else
+    {
+        padsPair.first.push_back(0);
+        padsPair.second.push_back(0);
+    }
 
-    auto operandPlaceholder = PlaceholderVariable(convOperand.Shape(), L"operand", {});
-    auto convmapPlaceholder = PlaceholderVariable(convolutionMap.Shape(), L"convolutionMap", {});
-    FunctionPtr operandWithBatchAxis = ToBatch(operandPlaceholder);
-    FunctionPtr convResultWithBatchAxis = Convolution(
-        convmapPlaceholder,
-        operandWithBatchAxis,
-        strides,
-        sharing,
-        cntkConvAutoPadding,
-        dilation,
-        reductionRank,
-        groups,
-        maxTempMemSizeInSamples,
-        false);
-    FunctionPtr convResultWithStaticAxis = UnpackBatch(convResultWithBatchAxis, ToFixedWStringFromMultiByte(node->Name()));
-    FunctionPtr cntkConvFunction = AsBlock(std::move(convResultWithStaticAxis), { { operandPlaceholder, convOperand }, { convmapPlaceholder, convolutionMap } }, L"Convolution", ToFixedWStringFromMultiByte(node->Name()));
-    
+    FunctionPtr cntkConvFunction = CreateCNTKConvNode(inputOperand, convolutionMap, useAutoPadForCntkConvApi,
+        strides, sharing, cntkConvAutoPadding, padsPair.first, padsPair.second, dilation, reductionRank,
+        groups, maxTempMemSizeInSamples, node->Name());
+
     // TODO: support bias in CNTK op.
     if (inputs.size() == 3)
     {
@@ -3321,6 +3356,47 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Node *node, const std::ve
     }
     else
         return cntkConvFunction;
+}
+
+FunctionPtr ONNXToCNTKHelper::CreateCNTKConvNode(const Variable& inputOperand, const Variable& convolutionMap, bool useAutoPadForCntkConvApi,
+    const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& cntkConvAutoPadding, const std::vector<size_t>& lowerPad,
+    const std::vector<size_t>&  upperPad, const NDShape& dilation, size_t reductionRank, size_t groups, size_t maxTempMemSizeInSamples,
+    const std::string& name)
+{
+    auto operandPlaceholder = PlaceholderVariable(inputOperand.Shape(), L"operand", {});
+    auto convmapPlaceholder = PlaceholderVariable(convolutionMap.Shape(), L"convolutionMap", {});
+    FunctionPtr operandWithBatchAxis = ToBatch(operandPlaceholder);
+    FunctionPtr convResultWithBatchAxis;
+    if (useAutoPadForCntkConvApi)
+    {
+        convResultWithBatchAxis = Convolution(
+            convmapPlaceholder,
+            operandWithBatchAxis,
+            strides,
+            sharing,
+            cntkConvAutoPadding,
+            dilation,
+            reductionRank,
+            groups,
+            maxTempMemSizeInSamples,
+            false);
+    }
+    else
+    {
+        convResultWithBatchAxis = Convolution(
+            convmapPlaceholder,
+            operandWithBatchAxis,
+            strides,
+            sharing,
+            lowerPad,
+            upperPad,
+            dilation,
+            groups,
+            maxTempMemSizeInSamples);
+    }
+    FunctionPtr convResultWithStaticAxis = UnpackBatch(convResultWithBatchAxis, ToFixedWStringFromMultiByte(name));
+    return AsBlock(std::move(convResultWithStaticAxis), { { operandPlaceholder, inputOperand },
+        { convmapPlaceholder, convolutionMap } }, L"Convolution", ToFixedWStringFromMultiByte(name));
 }
 
 FunctionPtr ONNXToCNTKHelper::CreateCNTKFCNode(const std::wstring &nodeName, const std::vector<Variable> &inputs)

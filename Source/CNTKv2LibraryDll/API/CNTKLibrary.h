@@ -4591,7 +4591,7 @@ namespace CNTK
         return MeanVarianceNormalization(operand, defaultEpsilon, useStatsAcrossChannels, doVarianceScaling, name);
     }
     ///
-    /// Convolution
+    /// Convolution with auto padding
     ///
     CNTK_API FunctionPtr Convolution(const Variable& convolutionMap,
                                      const Variable& operand,
@@ -4604,6 +4604,19 @@ namespace CNTK
                                      size_t maxTempMemSizeInSamples = 0,
                                      bool sequential = false,
                                      const std::wstring& name = L"");
+    ///
+    /// Convolution with explicit lower and upper pad
+    ///
+    CNTK_API FunctionPtr Convolution(const Variable& convolutionMap,
+                                    const Variable& operand,
+                                    const NDShape& strides,
+                                    const std::vector<bool>& sharing,
+                                    const std::vector<size_t>& lowerPad,
+                                    const std::vector<size_t>& upperPad,
+                                    const NDShape& dilation,
+                                    size_t groups,
+                                    size_t maxTempMemSizeInSamples,
+                                    const std::wstring& name = L"");
 
     ///
     /// Convolution transpose with auto padding
