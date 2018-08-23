@@ -51,10 +51,10 @@ import numpy
 # we need to set printoptions to legacy to have consistent doctests. 
 def version(v):
     return tuple(map(int, v.split('.')))
+numpy.set_printoptions(precision=6, suppress=True)
 if version(numpy.__version__) >= version('1.14'):
-    numpy.set_printoptions(precision=6, suppress=True, legacy="1.13")
-else:
-    numpy.set_printoptions(precision=6, suppress=True)
+    numpy.set_printoptions(legacy="1.13")
+
 import cntk
 
 
