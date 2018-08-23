@@ -47,7 +47,14 @@ def pytest_generate_tests(metafunc):
 import numpy
 # Because of difference in precision across platforms, we restrict the output
 # precision and don't write in scientific notation
-numpy.set_printoptions(precision=6, suppress=True)
+# Also, due to the change of how arrays and numbers are printed which was introduced in numpy v1.14.0,
+# we need to set printoptions to legacy to have consistent doctests. 
+def version(v):
+    return tuple(map(int, v.split('.')))
+if version(numpy.__version__) >= version('1.14'):
+    numpy.set_printoptions(precision=6, suppress=True, legacy="1.13")
+else:
+    numpy.set_printoptions(precision=6, suppress=True)
 import cntk
 
 
