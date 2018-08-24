@@ -273,6 +273,11 @@ private:
     static LotusIR::Node* AddNode(const FunctionPtr& src, LotusIR::Graph* graph, const std::vector<LotusIR::NodeArg*>& inputs, const std::vector<LotusIR::NodeArg* >& outputs);
 
     //
+    // set node attribute for ReduceElements ops
+    // 
+    static void SetReduceElementsAttributes(const FunctionPtr src, Node *node);
+
+    //
     // Get ONNX 'pads' attribute value based on CNTK node's autoPadding attribute value.
     //
     static std::pair<std::vector<int>, std::vector<int> > GetONNXPadsAttributeFromCNTKNode(
@@ -2369,6 +2374,9 @@ LotusIR::NodeArg &CNTKToONNXHelper::AddZerosConstantNodeArg(Graph *graph, const 
     dstTensor.set_name(shapeInputArg.Name());
     dstTensor.set_data_type(ConvertDataTypeCNTKToTensorProto(dataType));
 
+    if (std::any_of(shape.begin(), shape.end(), [](int64_t dim) {return dim <= 0; }))
+        LogicError("Invalid splice inputs shape");
+
     int64_t totalSize = std::accumulate(shape.begin(), shape.end(), (int64_t)1, std::multiplies<int64_t>());
     switch (dataType)
     { 
@@ -3176,28 +3184,9 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 node->AddAttribute(attributesMap[L"newShape"], ToINTS(shape));
             }
         }
-        else if ((src->OpName() == L"ReduceL1") || (src->OpName() == L"ReduceL2") || (src->OpName() == L"ReduceSumSquare"))
+        if (src->OpName() == L"ReduceL1" || src->OpName() == L"ReduceL2" || src->OpName() == L"ReduceSumSquare")
         {
-            auto keepReducedDimensions = (int64_t)((bool) src->Attributes()[L"reductionKeepDimensions"].Value<bool>() ? 1 : 0);
-            std::vector<Axis> reductionAxes;
-            if (src->Attributes().Contains(L"axisVec"))
-                reductionAxes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
-            else if (src->Attributes().Contains(L"axis"))
-                reductionAxes.push_back((Axis)(src->Attributes()[L"axis"].Value<Axis>()));
-
-            // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
-            // For ONNX export we need to make sure we export keepdims as 0 (false). 
-            // The same applies for AllStaticAxes. 
-            if (reductionAxes.size() == 1 
-                && (reductionAxes[0] == Axis::DefaultBatchAxis() 
-                    || reductionAxes[0] == Axis::AllStaticAxes() 
-                    || reductionAxes[0] == Axis::AllAxes()))
-                keepReducedDimensions = 0;
-
-            node->AddAttribute(attributesMap[L"keepdims"], keepReducedDimensions);
-
-            std::vector<int64_t> axes = ConvertAxesToOnnx(reductionAxes, src->Inputs()[0]);
-            node->AddAttribute("axes", axes);
+            SetReduceElementsAttributes(src, node);
         }
         else if (src->OpName() == L"TransposeAxes")
         {
@@ -3556,50 +3545,70 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
         }
         else if (src->OpName() == L"ReduceElements")
         {
-            wstring cntkAttributeOpName = (wstring)src->Attributes()[PrimitiveFunction::AttributeNameReductionOpName].Value<wstring>();
-            const AttributesMapping& attributeMap = Operators::FindAttributeMap(src->OpName(), cntkAttributeOpName);
-
-            auto keepReducedDimensions = (int64_t)((bool)src->Attributes()[L"reductionKeepDimensions"].Value<bool>() ? 1 : 0);
-            bool forceKeepReducedDimensions = false;
-            // hack to make reduction with sequence axis pass bi-directional broadcast
-            if (node->OpType() == "ReduceMean" && src->Inputs()[0].HasSequenceAxis())
-            {
-                keepReducedDimensions = 1;
-                forceKeepReducedDimensions = true;
-            }
-
-            if (src->Attributes().Contains(L"axisVec"))
-            {
-                std::vector<Axis> reductionAxes;
-                reductionAxes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
-                // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
-                // For ONNX export we need to make sure we export keepdims as 0 (false). 
-                // The same applies for AllStaticAxes. 
-                if (!forceKeepReducedDimensions && 
-                    (reductionAxes.size() == 1
-                    && (reductionAxes[0] == Axis::DefaultBatchAxis() 
-                        || reductionAxes[0] == Axis::AllStaticAxes() 
-                        || reductionAxes[0] == Axis::AllAxes())))
-                    keepReducedDimensions = 0;
-                std::vector<int64_t> axes = ConvertAxesToOnnx(reductionAxes, src->Inputs()[0]);
-                node->AddAttribute("axes", axes);
-            }
-            else if (src->Attributes().Contains(L"axis"))
-            {
-                // py axis -> cpp (-axis -1) -> normalize (rank + axis)
-                Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
-                // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
-                // For ONNX export we need to make sure we export keepdims as 0 (false). 
-                if (!forceKeepReducedDimensions && axis == Axis::DefaultBatchAxis())
-                    keepReducedDimensions = 0;
-                int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
-
-                node->AddAttribute("axis", ax);
-            } 
-
-            node->AddAttribute("keepdims", keepReducedDimensions);
+            SetReduceElementsAttributes(src, node);
         }
     }
+}
+
+void CNTKToONNXHelper::SetReduceElementsAttributes(const FunctionPtr src, Node *node)
+{
+    std::wstring reductionOpName = src->OpName();
+    if (reductionOpName == L"ReduceElements")
+    {
+        reductionOpName = src->Attributes()[PrimitiveFunction::AttributeNameReductionOpName].Value<wstring>();
+    }
+
+    auto keepReducedDimensions = (int64_t)((bool)src->Attributes()[L"reductionKeepDimensions"].Value<bool>() ? 1 : 0);
+    bool forceKeepReducedDimensions = false;
+
+    if (src->Inputs()[0].HasSequenceAxis())
+    {
+        // TODO: IMPORTANT. this is a workaround related to how batch/sequence axes are unpacked and broadcased.
+        // in general, batch/sequence axes are moved to static axis position during unpacking and broadcasting. 
+        // as a result, a tensor may end up with duplicated batch/sequence axes.
+        // this is most often when there is a sequence axis. Set keepdims to 1 avoid 
+        // some of the cases but it is not the solution. 
+        // roughly here is a test code that would fail without this workaround:
+        // shape = (2, )
+        // batch_size = 1
+        // seq_len = 1
+        // data = generate_sequential_data((batch_size, seq_len, *shape))
+        // x1 = C.sequence.input_variable(shape)
+        // x1_reduced = C.reduce_mean(x1, 0, keepdims = False)
+        // model = x1 + x1_reduced
+        // model = C.reduce_mean(model, 0, keepdims = False)
+        // model.save(tmpdir + "/broadcast_sequence.onnx", format = C.ModelFormat.ONNX)
+        // loaded_model = C.Function.load(tmpdir + "/broadcast_sequence.onnx", format = C.ModelFormat.ONNX)
+        // o1 = loaded_model.eval({ loaded_model.arguments[0]: data })
+        keepReducedDimensions = 1;
+        forceKeepReducedDimensions = true;
+    }
+
+    std::vector<Axis> reductionAxes;
+    if (src->Attributes().Contains(L"axisVec"))
+        reductionAxes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
+    else if (src->Attributes().Contains(L"axis"))
+        reductionAxes.push_back((Axis)(src->Attributes()[L"axis"].Value<Axis>()));
+
+    // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true. 
+    // For ONNX export we need to make sure we export keepdims as 0 (false). 
+    // The same applies for AllStaticAxes. 
+    if (!forceKeepReducedDimensions &&
+        (reductionAxes.size() == 1
+            && (reductionAxes[0] == Axis::DefaultBatchAxis()
+                || reductionAxes[0] == Axis::AllStaticAxes()
+                || reductionAxes[0] == Axis::AllAxes())))
+        keepReducedDimensions = 0;
+    std::vector<int64_t> axes = ConvertAxesToOnnx(reductionAxes, src->Inputs()[0]);
+
+    if (reductionOpName == PrimitiveFunction::InternalArgmaxReductionOpName ||
+        reductionOpName == PrimitiveFunction::InternalArgminReductionOpName)
+        node->AddAttribute("axis", axes[0]);
+    else
+        if (reductionAxes[0] != Axis::AllAxes())
+            node->AddAttribute("axes", axes); 
+
+    node->AddAttribute("keepdims", keepReducedDimensions);
 }
 
 void CNTKToONNXHelper::PutAutopadOrPadAttrInNode(LotusIR::Node* node,

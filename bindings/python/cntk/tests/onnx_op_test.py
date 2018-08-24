@@ -83,7 +83,7 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
 
     # TODO: it is better to compare data.shape with model.arguments[0] and
     # to pad batch dimension as needed.
-    # Some tests have already expended batch axis to data (i.e. reduction test) 
+    # Some tests have already expanded batch axis to data (i.e. reduction test) 
     if model.arguments[0].has_batch_axis() and type(data)!=list:
         data.shape = (1, ) + data.shape
 

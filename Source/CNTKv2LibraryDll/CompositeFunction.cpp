@@ -943,6 +943,7 @@ namespace CNTK
                     for (size_t i = 0; i < replacementShape.Rank(); ++i)
                     {
                         if (replacementShape[i] == NDShape::InferredDimension)
+                        // TODO: shall NDShape::FreeDimension be considered here instead?
                             replacementShape[i] = 0;
                     }
 
