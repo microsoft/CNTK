@@ -40,22 +40,8 @@ skip_model_names = [
 ]
 
 skip_round_trip_model_names = [
-    # these are skipped due to known issues with gemm and pooling. 
-    'bvlc_alexnet',
-    'bvlc_googlenet',
-    'bvlc_reference_caffenet',
-    'bvlc_reference_rcnn_ilsvrc13',
-    'inception_v1',
-    'resnet50',
+    # Convolution Nan issue on Linux. 
     'shufflenet',
-    'vgg19',
-    'zfnet512',
-
-    'resnet3d',
-    'densenet121',
-    'inception_v2',
-    'mobilenetv2-1.0',
-    'squeezenet',
 ]
 
 @pytest.mark.parametrize('model_name, round_trip', 

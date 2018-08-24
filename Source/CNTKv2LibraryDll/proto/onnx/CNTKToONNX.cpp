@@ -2965,11 +2965,25 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         if (cntkOpName == "Reshape" && IsONNX1_2Supported())
         {
             // ONNX1.2 reshape node take shape as input instead of attribute. 
-            const std::vector<size_t>& shapeVec = src->Output().Shape().Dimensions();
+
+            // We can construct the shape input for onnx by two ways: 1. cntk node output shape, or 2. cntk node attribute "newShape".
+            // If there attribute "newShape" is missing, or attributes "beginAxis" and "endAxis" exists, we use cntk node output shape.
+            // such that we don't need to duplicate the shape inference logic here. 
+            // Otherwise we use the cntk node attribute "newShape". 
+            bool useOutputShape = [&]() {
+                if (!src->Attributes().Contains(L"newShape") || ((NDShape)src->Attributes()[L"newShape"].Value<NDShape>()).Rank() == 0)
+                    return true;
+                if (src->Attributes().Contains(L"beginAxis") && ((Axis)src->Attributes()[L"beginAxis"].Value<Axis>()).StaticAxisIndex() != 0)
+                    return true;
+                if (src->Attributes().Contains(L"endAxis") && ((Axis)src->Attributes()[L"endAxis"].Value<Axis>()).StaticAxisIndex() != src->Inputs()[0].Shape().Rank())
+                    return true;
+                return false;
+            }();
+            const NDShape shape = useOutputShape ? src->Output().Shape() : (NDShape)src->Attributes()[L"newShape"].Value<NDShape>();
 
             std::vector<int> newShapeVec;
             size_t numInferredDimensions(0);
-            for (const auto& axisSize : shapeVec)
+            for (const auto& axisSize : shape.Dimensions())
             {
                 if (axisSize == NDShape::InferredDimension)
                 {
@@ -3395,6 +3409,12 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             axisIndex += src->Inputs()[0].DynamicAxes().size();
             node->AddAttribute(attributesMap[L"axis"], axisIndex);
         }
+        else if (src->OpName() == L"Softmax_onnx" || src->OpName() == L"LogSoftmax_onnx" || src->OpName() == L"Hardmax_onnx")
+        {
+            Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
+            int64_t axisIndex = ConvertAxisToOnnx(axis, src->Inputs()[0]);
+            node->AddAttribute(attributesMap[L"axis"], axisIndex);
+        }
         else if (src->OpName() == L"Times")
         {
             size_t outputRank = src->Attributes()[L"outputRank"].Value<size_t>();
@@ -3484,7 +3504,8 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
         else if (src->OpName() == L"Unsqueeze")
         {
             std::vector<Axis> axes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
-            std::vector<int64_t> ax = ConvertAxesToOnnx(axes, src->Inputs()[0]);
+            // Pass in output operand, such that Unsqueeze axes can be converted based on output rank. 
+            std::vector<int64_t> ax = ConvertAxesToOnnx(axes, src->Outputs()[0]);
 
             node->AddAttribute("axes", ax);
         }

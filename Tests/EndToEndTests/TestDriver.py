@@ -188,6 +188,7 @@ class Test:
   @staticmethod
   def discoverAllTests():
     for dirName, subdirList, fileList in os.walk(thisDir):
+      # Temporarily disable these tests on Windows due to an issue introduced by adding onnx to our CI.
       if os.path.basename(dirName) == 'Keras' and windows:
         continue
       if 'testcases.yml' in fileList:

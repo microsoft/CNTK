@@ -1604,7 +1604,6 @@ namespace CNTK
     FunctionPtr Flatten(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         int cntk_index;
-        int onnx_axis;
 
         // We need to express in onnx axis system to help ONNX conversion.
         if (axis.IsStaticAxis())
@@ -1618,7 +1617,6 @@ namespace CNTK
                 // for CNTK reshape, cntk_index shall point to the one after 3 (2): cntk_index = axis + 1
                 // cntk_index (-1) needs to be converted to positive by rank + cntk_index = 3
                 int cntk_py_index = -axis.StaticAxisIndex() - 1;
-                onnx_axis = cntk_py_index + 1;
                 cntk_index = axis.StaticAxisIndex() + 1;
                 cntk_index += operand.Shape().Rank();
             }
@@ -1629,7 +1627,6 @@ namespace CNTK
                 // onnx_axis = 2, points to 3 in [#][[2], [3,4,5]]
                 // cntk_index = 1, points to 3 in [2,3,4,5]
                 int cntk_py_index = axis.StaticAxisIndex();
-                onnx_axis = cntk_py_index + 1;
                 cntk_index = axis.StaticAxisIndex();
             }
         }
@@ -1637,7 +1634,6 @@ namespace CNTK
         {
             // expected result: [[batch],[flatten sample]]([[#][2,3,4,5]])
             cntk_index = 0;
-            onnx_axis = 1;
         }
         else
         {
@@ -1670,7 +1666,7 @@ namespace CNTK
         NDShape newShape({ dim0, dim1 });
 
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = Axis(onnx_axis);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAxis] = Axis(cntk_index);
 
         auto operandPlaceholder = PlaceholderVariable();
 

@@ -2480,8 +2480,10 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Softmax" || onnxOpName == "LogSoftmax" || onnxOpName == "Hardmax")
     {
-        Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 1)), inputs[0]));
-        Variable input = Flatten(inputs[0], axis);
+        auto inputOperand0Placeholder = PlaceholderVariable(inputs[0].Shape(), inputs[0].GetDataType(), L"operand", {});
+
+        Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 1)), inputOperand0Placeholder));
+        Variable input = Flatten(inputOperand0Placeholder, axis);
         FunctionPtr cntkFunction;
         if (onnxOpName == "Softmax")
         {
@@ -2495,12 +2497,18 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         {
             cntkFunction = Hardmax(input, ToFixedWStringFromMultiByte(node->Name()));
         }
-        NDShape originalShape = inputs[0].Shape();
+        NDShape originalShape = inputOperand0Placeholder.Shape();
         assert(originalShape.Rank() > 0);
         // If original shape has free dimension(batch axis), we'll need to have reshape node infer that for us. 
         if (originalShape[originalShape.Rank() - 1] == NDShape::FreeDimension)
             originalShape[originalShape.Rank() - 1] = NDShape::InferredDimension;
-        return Reshape(cntkFunction, originalShape);
+        cntkFunction = Reshape(cntkFunction, originalShape);
+
+        auto additionalProperties = Dictionary();
+        additionalProperties[L"axis"] = axis;
+
+        return AsBlock(std::move(cntkFunction), {{inputOperand0Placeholder, inputs[0]}}, std::move(additionalProperties),
+            ToFixedWStringFromMultiByte(onnxOpName) + L"_onnx", ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "Softplus")
     {
@@ -2696,8 +2704,6 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     // { L"", "Split)
     else if (onnxOpName == "Slice")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
-
         std::vector<int64_t> starts64 = GetNamedAttributeAsInt64Vec(node, "starts");
         std::vector<int64_t> ends64 = GetNamedAttributeAsInt64Vec(node, "ends");
 
@@ -2716,10 +2722,13 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
                 e = 0;
         }
 
+        std::vector<Axis> axes;
+        if (HasNamedAttribute(node, "axes"))
+            axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes"), inputs[0]);
         // axes is optional so provide a default
         if (axes.empty())
         {
-            for (int i = 0; i < starts.size(); i++)
+            for (int i = starts.size() - 1; i >= 0; i--)
             {
                 Axis axis(i);
                 axes.push_back(axis);

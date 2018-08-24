@@ -254,6 +254,18 @@ namespace ONNX
             { L"LogSoftmax", "LogSoftmax" },
             { L"axis", "axis" },
         } } },
+        { L"Hardmax_onnx",{ {
+            { L"Hardmax_onnx", "Hardmax" },
+            { L"axis", "axis" },
+        } } },
+        { L"Softmax_onnx",{ {
+            { L"Softmax_onnx", "Softmax" },
+            { L"axis", "axis" },
+        } } },
+        { L"LogSoftmax_onnx",{ {
+            { L"LogSoftmax_onnx", "LogSoftmax" },
+            { L"axis", "axis" },
+        } } },
         { L"Softplus",{ {
             { L"Softplus", "Softplus" },
         } } },
