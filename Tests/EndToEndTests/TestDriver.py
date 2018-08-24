@@ -188,6 +188,8 @@ class Test:
   @staticmethod
   def discoverAllTests():
     for dirName, subdirList, fileList in os.walk(thisDir):
+      if os.path.basename(dirName) == 'Keras' and windows:
+        continue
       if 'testcases.yml' in fileList:
         testDir = dirName
         testName = os.path.basename(dirName)
