@@ -42,6 +42,12 @@ bool DSSMReader<ElemType>::ReadRecord(size_t /*readSample*/)
     return false; // not used
 }
 
+// utility function to round an integer up to a multiple of size
+size_t RoundUp(size_t value, size_t size)
+{
+    return ((value + size - 1) / size) * size;
+}
+
 // RecordsToRead - Determine number of records to read to populate record buffers
 // mbStartSample - the starting sample from which to read
 // tail - we are checking for possible remainer records to read (default false)
@@ -255,12 +261,6 @@ void DSSMReader<ElemType>::ReleaseMemory()
 template <class ElemType>
 void DSSMReader<ElemType>::SetupEpoch()
 {
-}
-
-// utility function to round an integer up to a multiple of size
-size_t RoundUp(size_t value, size_t size)
-{
-    return ((value + size - 1) / size) * size;
 }
 
 //StartMinibatchLoop - Startup a minibatch loop
