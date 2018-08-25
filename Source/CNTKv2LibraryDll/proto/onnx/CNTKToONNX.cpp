@@ -30,6 +30,7 @@ const std::string FreeSequenceDimParam = "None";
 const size_t numBiasInOnnxLstm = 2; // bias for W, and bias for R (also called H in CNTK).
 // TODO: support cases where batch size is not 1.
 const int FreeBatchSize = 1;
+class ScanOpMetaNode;
 
 namespace CNTK
 {
@@ -44,6 +45,9 @@ public:
     static void Copy(const FunctionPtr& src, LotusIR::Graph* dst);
 
 private:
+    static void ProcessLoops(const FunctionPtr& src);
+    static void DFSProcessLoops(const FunctionPtr& root, const FunctionPtr& src, 
+        std::vector<FunctionPtr> &currentPath, std::vector<std::shared_ptr<ScanOpMetaNode>> &scanOpMetaNodes);
     //
     // Recursively create ONNX nodes corresponding to each CNTK node.
     //
@@ -461,11 +465,213 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, LotusIR::Graph* dst)
     //
     TraverseGraph(src, visited, compositeOutputsMap);
 
+    ProcessLoops(src);
     //
     // Iterate through each node in CNTK graph and create an equivalent node
     // in ONNX graph.
     //
     CreateNode(src, dst, functionNodes, variableNodes, compositeOutputsMap);
+}
+
+void Fiber(FunctionPtr f, std::set<FunctionPtr> &body_nodes, std::vector<FunctionPtr> fiberPath)
+{
+    if (!f)
+    {
+        return;
+    }
+
+    if (body_nodes.find(f) != body_nodes.end())
+    {
+        // looped back to body, append path nodes to body_nodes
+        body_nodes.insert(fiberPath.begin(), fiberPath.end());
+        return;
+    }
+
+    fiberPath.push_back(f);
+    for (auto &i : f->Inputs())
+    { 
+        // avoid infinite loop
+        if (std::find(fiberPath.begin(), fiberPath.end(), i.Owner()) == fiberPath.end()) 
+            Fiber(i.Owner(), body_nodes, fiberPath);
+    }
+    fiberPath.pop_back();
+}
+
+FunctionPtr GetUnsearchedNode(std::set<FunctionPtr> &body_nodes, std::set<FunctionPtr> &visitedBody)
+{
+
+    for (auto it = body_nodes.begin(); it != body_nodes.end(); ++it)
+    {
+        if (visitedBody.find(*it) == visitedBody.end())
+            for (auto i : (*it)->Inputs())
+            {
+                if (i.Owner() && body_nodes.find(i.Owner()) == body_nodes.end())
+                    return *it;
+            }
+    }
+
+    return nullptr;
+}
+
+void CollectBodyAndStepOps(std::set<FunctionPtr> &body_nodes, std::set<FunctionPtr> &stepOps)
+{
+    std::set<FunctionPtr> visitedBody;
+    FunctionPtr startNode;
+    while (startNode = GetUnsearchedNode(body_nodes, visitedBody))
+    {
+        for (auto &i : startNode->Inputs())
+        {
+            std::vector<FunctionPtr> fiberPath;
+            Fiber(i.Owner(), body_nodes, fiberPath);
+        }
+        visitedBody.insert(startNode);
+    }
+
+    for (auto n : body_nodes)
+    {
+        if (n->Name() == L"PastValue" || n->Name() == L"FutureValue")
+        {
+            stepOps.insert(n);
+        }
+    }
+}
+
+void CNTKToONNXHelper::ProcessLoops(const FunctionPtr& src)
+{
+    std::vector<FunctionPtr> currentPath;
+    std::vector<std::shared_ptr<ScanOpMetaNode>> scanOpMetaNodes;
+    DFSProcessLoops(src, src, currentPath, scanOpMetaNodes);
+}
+
+void PrintNodes(std::set<FunctionPtr> &body_nodes)
+{
+    for (auto n : body_nodes)
+    {
+        std::cout << n->Name() << std::endl;
+    }
+}
+
+class ScanOpMetaNode
+{
+public:
+    std::set<FunctionPtr> body_nodes;
+    std::vector<Variable> scan_inputs;
+    std::vector<Variable> init_states;
+    std::vector<Variable> final_states;
+    std::vector<Variable> scan_outputs;
+};
+
+bool IsOutputOfScanBody(Variable output, const FunctionPtr root, std::set<FunctionPtr> &body_nodes)
+{
+    bool foundInputToExternalNode = false;
+    root->PreorderTraverse([&foundInputToExternalNode, &output, &body_nodes](const FunctionPtr& function) {
+        if (foundInputToExternalNode)
+            return;
+        else
+            if (body_nodes.find(function) != body_nodes.end())
+            {
+                for (auto i : function->Inputs())
+                {
+                    if (i == output || i.Uid() == output.Uid())
+                    {
+                        foundInputToExternalNode = true;
+                        return;
+                    }
+                }
+            }
+    });
+    if (foundInputToExternalNode)
+        return true;
+
+    // TODO: handle this case if it is a valid case:
+    // if it is a plain output.
+
+    return false;
+}
+
+void CNTKToONNXHelper::DFSProcessLoops(const FunctionPtr& root, const FunctionPtr& src, std::vector<FunctionPtr> &currentPath,
+    std::vector<std::shared_ptr<ScanOpMetaNode>> &scanOpMetaNodes)
+{
+    auto iter = std::find(currentPath.begin(), currentPath.end(), src);
+    if (iter != currentPath.end())
+    {
+        // construct a ScanOpMetaNode with body-inputs-outputs map so that it can be treated just as another op during CreateNode traversing.
+        // find a loop, all input to any node along the loop path
+        // need to collect scan axes, inputs, states, initial states, outputs of the loop
+        // specific to CNTK, axes are determined via step ops (e.g. PastValue, FutureValue ops means sequence axis)
+        // states are the step ops' outputs.
+        // inputs are collected after all nodes belong to the subgraph are collected, 
+        // we specifically want inputs with scan axis. 
+        // Inputs without scan axis can be treated as it is to keep the body graph minimal.
+        std::set<FunctionPtr> body_nodes(iter, currentPath.end());
+        std::vector<Variable> scan_inputs;
+        std::vector<Variable> init_states;
+        std::vector<Variable> final_states;
+        std::vector<Variable> scan_outputs;
+
+        std::set<FunctionPtr> stepOps;
+
+        CollectBodyAndStepOps(body_nodes, stepOps);
+
+        PrintNodes(body_nodes);
+        PrintNodes(stepOps);
+
+        for (auto n : body_nodes)
+        {
+            for (auto i : n->Inputs())
+            {
+                if (!i.Owner())
+                {
+                    if (i.HasSequenceAxis())
+                    {
+                        scan_inputs.push_back(i);
+                    }
+                }
+                else if (body_nodes.find(i.Owner()) == body_nodes.end())
+                {
+                    // i.Owner() is an node input to the body
+                    for (auto o : i.Owner()->Outputs())
+                    {
+                        if (o.Name() == i.Name() || o == i)
+                        {
+                            scan_inputs.push_back(o);
+                        }
+                    }
+                }
+            }
+        }
+
+        // state variables are second inputs to step ops 
+        for (auto o : stepOps)
+        {
+            init_states.push_back(o->Inputs()[1]);
+        }
+
+        // outputs are outputs of body nodes that are either into to another non-body node or to nowhere
+        for (auto n : body_nodes)
+        {
+            for (auto o : n->Outputs())
+            {
+                if (IsOutputOfScanBody(o, root, body_nodes))
+                    scan_outputs.push_back(o);
+            }
+        }
+
+        std::shared_ptr<ScanOpMetaNode> scanOpMetaNode(new ScanOpMetaNode);
+        scanOpMetaNode->body_nodes = body_nodes;
+        scanOpMetaNode->init_states = init_states;
+        scanOpMetaNode->scan_inputs = scan_inputs;
+        scanOpMetaNode->scan_outputs = scan_outputs;
+        scanOpMetaNodes.push_back(scanOpMetaNode);
+    }
+
+    currentPath.push_back(src);
+    for (auto i : src->Inputs())
+    {
+        if (i.Owner() != nullptr)
+            DFSProcessLoops(root, i.Owner(), currentPath, scanOpMetaNodes);
+    }
+    currentPath.pop_back();
 }
 
 void AddDataElementArrayViewToTensorProto(const NDArrayViewPtr src, int srcIndex, onnx::TensorProto& dst)
