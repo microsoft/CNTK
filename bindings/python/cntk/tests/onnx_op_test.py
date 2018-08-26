@@ -495,11 +495,11 @@ def test_ConvTranspose_without_OutputShape(tmpdir, dtype, device_id):
         kernel_shape = (24, 16, 3, 3) # For convolution_transpose the shape is (I x O x W x H)
         kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = dtype))
 
-        conv_trans_model_without_output_shape = C.convolution_transpose(kernel, x, strides=(2, 1), dilation=(1, 1), auto_padding = [False, True, True])
+        conv_trans_model_without_output_shape = C.convolution_transpose(kernel, x, strides=(2, 2), dilation=(1, 1), auto_padding = [False, True, True])
         verify_one_input(conv_trans_model_without_output_shape, img, tmpdir, 'test_ConvTranspose_without_OutputShape_0', device)
 
         if device_id >= 0: # Dilated convolution is not supported on CPU, hence the following test is run only on GPU.
-            conv_trans_model_with_dilation = C.convolution_transpose(kernel, x, strides=(2, 1), dilation=(2, 1), auto_padding = [False, True, True])
+            conv_trans_model_with_dilation = C.convolution_transpose(kernel, x, strides=(2, 2), dilation=(2, 2), auto_padding = [False, True, True])
             verify_one_input(conv_trans_model_with_dilation, img, tmpdir, 'test_ConvTranspose_without_OutputShape_1', device)
 
 # DepthToSpace
