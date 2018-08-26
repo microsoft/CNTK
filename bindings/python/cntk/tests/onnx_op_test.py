@@ -463,7 +463,7 @@ def test_Conv(tmpdir, dtype, device_id):
         verify_one_input(conv_model, img, tmpdir, 'Conv_0', device)
         
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_ConvTranspose(tmpdir, dtype, device_id):
+def test_ConvTranspose_with_OutputShape(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
@@ -478,14 +478,29 @@ def test_ConvTranspose(tmpdir, dtype, device_id):
         kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = dtype))
 
         conv_trans_model_with_output_shape = C.convolution_transpose(kernel, x, strides=(2, 2), auto_padding = [False, True, True], output_shape=(16, 16, 16))
-        verify_one_input(conv_trans_model_with_output_shape, img, tmpdir, 'ConvTranspose_0', device)
+        verify_one_input(conv_trans_model_with_output_shape, img, tmpdir, 'ConvTranspose_with_OutputShape_0', device)
+
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ConvTranspose_without_OutputShape(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype):
+        # Keep the shapes below as they are, because this tests an earlier bug.
+        input_shape = (24, 8, 8) 
+        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape) 
+
+        x = C.input_variable(input_shape)
+
+        kernel_shape = (24, 16, 3, 3) # For convolution_transpose the shape is (I x O x W x H)
+        kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = dtype))
 
         conv_trans_model_without_output_shape = C.convolution_transpose(kernel, x, strides=(2, 1), dilation=(1, 1), auto_padding = [False, True, True])
-        verify_one_input(conv_trans_model_without_output_shape, img, tmpdir, 'ConvTranspose_1', device)
+        verify_one_input(conv_trans_model_without_output_shape, img, tmpdir, 'test_ConvTranspose_without_OutputShape_0', device)
 
         if device_id >= 0: # Dilated convolution is not supported on CPU, hence the following test is run only on GPU.
             conv_trans_model_with_dilation = C.convolution_transpose(kernel, x, strides=(2, 1), dilation=(2, 1), auto_padding = [False, True, True])
-            verify_one_input(conv_trans_model_with_dilation, img, tmpdir, 'ConvTranspose_2', device)
+            verify_one_input(conv_trans_model_with_dilation, img, tmpdir, 'test_ConvTranspose_without_OutputShape_1', device)
 
 # DepthToSpace
 @pytest.mark.parametrize("dtype", DType_Config)
