@@ -83,7 +83,8 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
 
     # TODO: it is better to compare data.shape with model.arguments[0] and
     # to pad batch dimension as needed.
-    if model.arguments[0].has_batch_axis():
+    # Some tests have already expanded batch axis to data (i.e. reduction test) 
+    if model.arguments[0].has_batch_axis() and type(data)!=list:
         data.shape = (1, ) + data.shape
 
     assert len(model.outputs) == len(loaded_model.outputs)
@@ -443,6 +444,22 @@ def test_Concat(tmpdir, dtype):
         model = C.splice(x, y, axis=1)
 
         verify_one_input(model, data1, tmpdir, 'Concat_1')
+
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Concat_With_Broadcast(tmpdir, dtype):
+    with C.default_options(dtype = dtype):
+        shape1 = [2,3,1,1,3]
+        shape2 =   [1,3,4,1]
+        shape3 =     [3,4,1]
+        axis = 2
+        data1 = np.random.uniform(-10, 10, shape1).astype(dtype)
+        data2 = np.random.uniform(-10, 10, shape2).astype(dtype)
+        data3 = np.random.uniform(-10, 10, shape3).astype(dtype)
+        x = C.input_variable(shape1)
+        y = C.constant(value=data2)
+        z = C.constant(value=data3)
+        model = C.splice(x, y, z, axis=axis)
+        verify_one_input(model, data1, tmpdir, 'Concat_Braodcast')
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Conv(tmpdir, dtype, device_id):

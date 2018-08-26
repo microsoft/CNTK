@@ -59,7 +59,7 @@ private:
     static bool FixConstantShapeForConstantVariableInputPair(const std::vector<Variable> &inputs,
                                                              std::vector<Variable> &fixedInputs);
 
-    static const Node *GetChildNode(const Node *parentNode, const NodeArg *nodeArg);
+    static const Node *GetChildNode(const Node *parentNode, const NodeArg *nodeArg, int &nodeArgIndex);
 
     static std::vector<Axis> AttributeProtoToAxes(const AttributeProto &attributeProto);
     static Axis AttributeProtoToAxis(const AttributeProto &attributeProto);
@@ -131,6 +131,8 @@ private:
     static std::pair<std::vector<size_t>, std::vector<size_t>> SplitAndReverseVec(std::vector<int64_t> &pads);
     static std::pair<std::vector<size_t>, std::vector<size_t>> AdjustONNXPadsVecForCNTKPadOp(const Variable &operand, std::vector<int64_t> &pads);
     static NDShape ReverseShape(const NDShape &shape);
+
+    static std::pair<std::vector<Axis>, bool> GetReduceElementsAttributes(const Node *node, const Variable &input);
 
     static std::pair<Variable, Variable> BroadcastElementWiseInput(const Node *node,
                                                                    const Variable &input0, const Variable &input1);
@@ -601,14 +603,16 @@ const CNTK::Constant CNTK::ONNXToCNTKHelper::CreateConstantWithTensorData(CNTK::
     }
 }
 
-const Node *ONNXToCNTKHelper::GetChildNode(const Node *parentNode, const NodeArg *nodeArg)
+const Node *ONNXToCNTKHelper::GetChildNode(const Node *parentNode, const NodeArg *nodeArg, int &nodeArgIndex)
 {
     Node::NodeConstIterator itChildNode = parentNode->InputNodesBegin();
     for (; itChildNode != parentNode->InputNodesEnd(); ++itChildNode)
     {
         const Node *childNode = *itChildNode;
         const ConstPointerContainer<std::vector<NodeArg *>> &childOutputDefs = childNode->OutputDefs();
-        for (ConstPointerContainer<std::vector<NodeArg *>>::ConstIterator itChildOutput = childOutputDefs.begin(); itChildOutput != childOutputDefs.end(); ++itChildOutput)
+        nodeArgIndex = 0;
+        for (ConstPointerContainer<std::vector<NodeArg *>>::ConstIterator itChildOutput = childOutputDefs.begin(); 
+            itChildOutput != childOutputDefs.end(); ++itChildOutput, nodeArgIndex++)
         {
             const NodeArg *childOutput = *itChildOutput;
             if (childOutput == nodeArg)
@@ -1838,6 +1842,29 @@ std::pair<Variable, Variable> ONNXToCNTKHelper::BroadcastElementWiseInput(
     }
 }
 
+std::pair<std::vector<Axis>, bool> ONNXToCNTKHelper::GetReduceElementsAttributes(const Node *node, const Variable &input)
+{
+    bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+    std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), input);
+
+    // use default of all axes according to ONNX
+    if (axes.empty())
+    {
+        if (keepdims)
+            axes = vector<Axis>({ Axis::AllAxes() });
+        else
+        {
+            // In the case of keepdims being false, CNTK does not allow reduce on Axis::AllAxes(). 
+            // We have to list out all axes instead. 
+            if (input.DynamicAxes().size() != 0)
+                LogicError("ReduceElements with default on all axes is not supported with input of dynamic axis.");
+            axes.resize(input.Shape().Rank());
+            std::generate(axes.begin(), axes.end(), [static_axis = 0]() mutable { return Axis(static_axis++); });
+        }
+    }
+    return std::make_pair(axes, keepdims);
+}
+
 Axis ONNXToCNTKHelper::ConvertONNXAxisToCNTKCppApi(int64_t axis, const Variable &operand)
 {
     // reverse CNTKToONNXHelper::ConvertAxisToOnnx
@@ -2487,127 +2514,91 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "ReduceMax")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+        bool keepdims;
+        std::vector<Axis> axes;
 
-        // use default of all axes according to ONNX
-        if (axes.empty())
-        {
-            axes = vector<Axis>({ Axis::AllAxes() });
-        }
+        std::tie<std::vector<Axis>, bool>(axes, keepdims) = GetReduceElementsAttributes(node, inputs[0]);
 
-        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceMax(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceMin")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+        bool keepdims;
+        std::vector<Axis> axes;
 
-        // use default of all axes according to ONNX
-        if (axes.empty())
-        {
-            axes = vector<Axis>({ Axis::AllAxes() });
-        }
+        std::tie<std::vector<Axis>, bool>(axes, keepdims) = GetReduceElementsAttributes(node, inputs[0]);
 
-        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceMin(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceSum")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+        bool keepdims;
+        std::vector<Axis> axes;
 
-        // use default of all axes according to ONNX
-        if (axes.empty())
-        {
-            axes = vector<Axis>({ Axis::AllAxes() });
-        }
+        std::tie<std::vector<Axis>, bool>(axes, keepdims) = GetReduceElementsAttributes(node, inputs[0]);
 
-        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceSum(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceMean")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+        bool keepdims;
+        std::vector<Axis> axes;
 
-        // use default of all axes according to ONNX
-        if (axes.empty())
-        {
-            axes = vector<Axis>({ Axis::AllAxes() });
-        }
+        std::tie<std::vector<Axis>, bool>(axes, keepdims) = GetReduceElementsAttributes(node, inputs[0]);
 
-        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceMean(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceProd")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+        bool keepdims;
+        std::vector<Axis> axes;
 
-        // use default of all axes according to ONNX
-        if (axes.empty())
-        {
-            axes = vector<Axis>({ Axis::AllAxes() });
-        }
-        
-        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        std::tie<std::vector<Axis>, bool>(axes, keepdims) = GetReduceElementsAttributes(node, inputs[0]);
+
         FunctionPtr cntkFunction = ReduceProd(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceLogSumExp" || onnxOpName == "ReduceLogSum")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+        bool keepdims;
+        std::vector<Axis> axes;
 
-        // use default of all axes according to ONNX
-        if (axes.empty())
-        {
-            axes = vector<Axis>({ Axis::AllAxes() });
-        }
-        
-        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
+        std::tie<std::vector<Axis>, bool>(axes, keepdims) = GetReduceElementsAttributes(node, inputs[0]);
+
         FunctionPtr cntkFunction = ReduceLogSum(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceL1")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+        bool keepdims;
+        std::vector<Axis> axes;
 
-        // use default of all axes according to ONNX
-        if (axes.empty())
-        {
-            axes = vector<Axis>({ Axis::AllAxes() });
-        }
+        std::tie<std::vector<Axis>, bool>(axes, keepdims) = GetReduceElementsAttributes(node, inputs[0]);
 
-        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceL1(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceL2")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+        bool keepdims;
+        std::vector<Axis> axes;
 
-        // use default of all axes according to ONNX
-        if (axes.empty())
-        {
-            axes = vector<Axis>({ Axis::AllAxes() });
-        }
+        std::tie<std::vector<Axis>, bool>(axes, keepdims) = GetReduceElementsAttributes(node, inputs[0]);
 
-        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceL2(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "ReduceSumSquare")
     {
-        std::vector<Axis> axes = ConvertONNXAxesToCNTKCppApi(GetNamedAttributeAsInt64Vec(node, "axes", vector<int64_t>({})), inputs[0]);
+        bool keepdims;
+        std::vector<Axis> axes;
 
-        // use default of all axes according to ONNX
-        if (axes.empty())
-        {
-            axes = vector<Axis>({ Axis::AllAxes() });
-        }
+        std::tie<std::vector<Axis>, bool>(axes, keepdims) = GetReduceElementsAttributes(node, inputs[0]);
 
-        bool keepdims = GetNamedAttributeAsInt64(node, "keepdims", 1) == 1;
         FunctionPtr cntkFunction = ReduceSumSquare(inputs[0], axes, keepdims, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
@@ -2636,7 +2627,8 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             newShape = GetShapeFromInput(node->InputDefs()[1], graph);
         }
 
-        const Node *childNode = GetChildNode(node, node->InputDefs()[0]);
+        int nodeArgIndexDummy = 0;
+        const Node *childNode = GetChildNode(node, node->InputDefs()[0], nodeArgIndexDummy);
         if (childNode != nullptr && Operators::IsRNNOp(childNode->OpType()))
         {
             // Adjust for batch and sequence axes swap between CNTK and ONNX.
@@ -2881,26 +2873,6 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         LogicError("ONNX (%s) is not supported in CNTK", onnxOpName.c_str());
         return nullptr;
     }
-}
-
-std::pair<const Node *, int> FindParent(const Node *node)
-{
-    Node::NodeConstIterator it = node->OutputNodesBegin();
-    if (it != node->OutputNodesEnd())
-    {
-        const Node *parent = *it;
-        int index = 0;
-        for (auto nodeArg : parent->InputDefs())
-        {
-            // TODO: Check whether we should use node output arg name for the check below.
-            if (nodeArg->Name() == node->Name())
-            {
-                return std::make_pair(parent, index);
-            }
-            index++;
-        }
-    }
-    return std::make_pair(nullptr, -1);
 }
 
 std::pair<const Node *, int> FindParentAndChildIndex(const Node *node)
@@ -3329,13 +3301,20 @@ std::vector<Variable> ONNXToCNTKHelper::CreateCNTKInputsStartingFromIndex(const 
     for (int i = startIndex; i < inputDefs.size(); i++)
     {
         const NodeArg *nodeArg = inputDefs[i];
-        const Node *inputNode = GetChildNode(node, nodeArg);
+        // nodeArg may be one of outputDefs from another node inputNode
+        // in case there are multiple outputDefs, we need to know the index of the nodeArg
+        int nodeArgIndex = 0;
+        const Node *inputNode = GetChildNode(node, nodeArg, nodeArgIndex);
         if (inputNode != nullptr)
         {
             ONNXToCNTKMap::iterator itNodeMap = constructedNodeMap.find(const_cast<Node *>(inputNode));
             if (itNodeMap != constructedNodeMap.end())
             {
-                inputs.insert(inputs.end(), itNodeMap->second.begin(), itNodeMap->second.end());
+                std::vector<FunctionPtr> inputCNTKFunctionPtrs = itNodeMap->second;
+                for (auto f : inputCNTKFunctionPtrs)
+                {
+                    inputs.insert(inputs.end(), f->Outputs()[nodeArgIndex]);
+                }
             }
             else
             {

@@ -508,6 +508,7 @@ namespace ONNX
             { L"Softsign",{ 0 } },
             { L"ImageScaler",{ 0, 1, 2, 3 } },
             { L"MeanVarianceNormalization",{ 0 } },
+            { L"Sequence::Slice",{ 0, 1 } },
         };
 
         std::unordered_map<std::wstring, std::vector<int>> Operators::_cntkToONNXInputIndices = {
