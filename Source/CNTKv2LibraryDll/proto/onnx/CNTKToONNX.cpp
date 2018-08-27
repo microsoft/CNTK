@@ -57,6 +57,7 @@ private:
                                     std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
                                     const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
+    static FunctionPtr SkipBatchAndSequenceAxisOp(const FunctionPtr src);
     static LotusIR::Node* CreateSequenceSliceNode(const FunctionPtr& src,
         LotusIR::Graph* graph,
         std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
@@ -494,11 +495,12 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, LotusIR::Graph* dst)
     //
     TraverseGraph(src, visited, compositeOutputsMap);
 
+    FunctionPtr srcSkipped = SkipBatchAndSequenceAxisOp(src);
     //
     // Iterate through each node in CNTK graph and create an equivalent node
     // in ONNX graph.
     //
-    CreateNode(src, dst, functionNodes, variableNodes, compositeOutputsMap);
+    CreateNode(srcSkipped, dst, functionNodes, variableNodes, compositeOutputsMap);
 }
 
 void AddDataElementArrayViewToTensorProto(const NDArrayViewPtr src, int srcIndex, onnx::TensorProto& dst)
@@ -1233,18 +1235,53 @@ bool MatchOpSequence(const FunctionPtr src, std::vector<wstring> opSequence, Fun
     return true;
 }
 
-// when importing ONNX models, we insert a sequence of ops to pack/uppack batch/sequence axis
-// thoes ops shall be removed to create an equivalent ONNX model. 
-FunctionPtr SkipBatchAndSequenceAxisOp(const FunctionPtr src)
+bool MatchInputSequence(const Variable &input, std::vector<wstring> opSequence, Variable &inputSkipTo)
 {
-    std::vector<wstring> toSequenceBatchOps({ L"ToSequenceOp", L"ToBatchAxis", L"TransposeAxes" }); 
+    FunctionPtr currentOp = input.Owner();
+    for (int i = 0; i < opSequence.size(); i++)
+    {
+        auto opName = opSequence[i];
+        if (currentOp == nullptr || currentOp->OpName() != opName)
+        {
+            return false;
+        }
+        if (i < opSequence.size() - 1)
+            currentOp = currentOp->Inputs().size() == 1 ? currentOp->Inputs()[0].Owner() : nullptr;
+    }
+    inputSkipTo = currentOp->Inputs()[0];
+    return true;
+}
+
+Variable SkipBatchAndSequenceAxisInput(const Variable input)
+{
+    std::vector<wstring> toSequenceBatchOps({ L"ToSequenceOp", L"ToBatchAxis", L"TransposeAxes" });
     std::vector<wstring> unpackSequenceBatchOps({ L"TransposeAxes", L"UnpackBatchAxis", L"UnpackSequenceOp" });
-    // std::vector<wstring> unpackBatchSequenceSliceOps({ L"UnpackBatchAxis", L"Sequence::Slice" });
+
+    Variable nextInput = input;
+    bool skipped = false;
+    while (MatchInputSequence(nextInput, toSequenceBatchOps, nextInput) ||
+        MatchInputSequence(nextInput, unpackSequenceBatchOps, nextInput))
+    {
+        skipped = true;
+    }
+
+    if (!skipped)
+        return input;
+
+    if (nextInput.Owner() && nextInput.Owner()->OpName() == L"NoOp")
+        nextInput = nextInput.Owner()->Inputs()[0];
+
+    return nextInput;
+}
+
+FunctionPtr CNTKToONNXHelper::SkipBatchAndSequenceAxisOp(const FunctionPtr src)
+{
+    std::vector<wstring> toSequenceBatchOps({ L"ToSequenceOp", L"ToBatchAxis", L"TransposeAxes" });
+    std::vector<wstring> unpackSequenceBatchOps({ L"TransposeAxes", L"UnpackBatchAxis", L"UnpackSequenceOp" });
 
     FunctionPtr op = src;
-    while (MatchOpSequence(op, toSequenceBatchOps, op) || 
-        MatchOpSequence(op, unpackSequenceBatchOps, op)) 
-        // ||  MatchOpSequence(op, unpackBatchSequenceSliceOps, op))
+    while (MatchOpSequence(op, toSequenceBatchOps, op) ||
+        MatchOpSequence(op, unpackSequenceBatchOps, op))
         ;
     return op;
 }
@@ -1809,7 +1846,8 @@ LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
 
     // inputs
     std::vector<LotusIR::NodeArg *> nodeInputs;
-    PrepareRNNInput(Xs[0], graph, nodeInputs);
+    Variable input = SkipBatchAndSequenceAxisInput(Xs[0]);
+    PrepareRNNInput(input, graph, nodeInputs);
     PrepareLSTMWeightNode(graph, variableNodes, Ws, nullptr, nodeInputs);
     PrepareLSTMWeightNode(graph, variableNodes, Rs, &stabilizerDhCoefs[0], nodeInputs);
 
@@ -1890,8 +1928,8 @@ LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
     // TODO: Except X, all other inputs to LSTM are treated as constant.
     // It is highly unlikely that any other input is an output of an op.
     // We will investigate once it is real.
-    if (Xs[0].Owner().get() != nullptr)
-        CreateNode(Xs[0].Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
+    if (input.Owner().get() != nullptr)
+        CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
 
     auto nodeName = ToLegacyString(ToUTF8(src->Uid()));
     LotusIR::Node *lstmNode = graph->AddNode(nodeName, "LSTM", "", nodeInputs, nodeOutputs);
@@ -2102,7 +2140,8 @@ LotusIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
 
     // inputs
     std::vector<LotusIR::NodeArg *> nodeInputs;
-    PrepareRNNInput(Xs[0], graph, nodeInputs);
+    Variable input = SkipBatchAndSequenceAxisInput(Xs[0]);
+    PrepareRNNInput(input, graph, nodeInputs);
     PrepareRNNWeightNode(graph, variableNodes, Ws, nodeInputs, CopyGRUWeightTensors);
     PrepareGRUZRHWeightNode(graph, variableNodes, Rzrs, Rhs, nodeInputs);
 
@@ -2161,8 +2200,8 @@ LotusIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
     // TODO: Except X, all other inputs to GRU are treated as constant.
     // It is highly unlikely that any other input is an output of an op.
     // We will investigate once it is real.
-    if (Xs[0].Owner().get() != nullptr)
-        CreateNode(Xs[0].Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
+    if (input.Owner().get() != nullptr)
+        CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
 
     auto nodeName = ToLegacyString(ToUTF8(src->Uid()));
     LotusIR::Node *gruNode = graph->AddNode(nodeName, "GRU", "", nodeInputs, nodeOutputs);
@@ -2303,7 +2342,8 @@ LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
 
     // inputs
     std::vector<LotusIR::NodeArg *> nodeInputs;
-    PrepareRNNInput(Xs[0], graph, nodeInputs);
+    Variable input = SkipBatchAndSequenceAxisInput(Xs[0]);
+    PrepareRNNInput(input, graph, nodeInputs);
     PrepareRNNWeightNode(graph, variableNodes, Ws, nodeInputs, CopyRNNWeightTensors);
     PrepareRNNWeightNode(graph, variableNodes, Rs, nodeInputs, CopyRNNWeightTensors);
 
@@ -2347,8 +2387,8 @@ LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
         nodeOutputs.push_back(&outputArg);
     }
 
-    if (Xs[0].Owner().get() != nullptr)
-        CreateNode(Xs[0].Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
+    if (input.Owner().get() != nullptr)
+        CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
 
     auto nodeName = ToLegacyString(ToUTF8(src->Uid()));
     LotusIR::Node *rnnNode = graph->AddNode(nodeName, "RNN", "", nodeInputs, nodeOutputs);
@@ -2674,18 +2714,12 @@ LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
 // This is the main horsepower, it navigate CNTK graph recursivley while keep track of all visited nodes and variables,
 // and create the corresponding ONNX graph.
 //
-LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& initialSrc,
+LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                                            LotusIR::Graph* graph,
                                            std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
                                            std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
                                            const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
-    // try to skip batch and sequence pack unpack
-    FunctionPtr src = SkipBatchAndSequenceAxisOp(initialSrc);
-    if (!src)
-        // TODO: it could be a input NodeArg.
-        return nullptr;
-
     auto iter = functionNodes.find(src);
     if (iter != functionNodes.end())
         return iter->second;
@@ -2857,6 +2891,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                 LogicError("Node '%S': Placeholder isn't supported currently.", src->AsString().c_str());
         }
 
+        input = SkipBatchAndSequenceAxisInput(input);
         // UnpackBatchAxis and ToBatchAxis is a noop in ONNX 
         input = SkipBatchPackUnpack(input);
 
