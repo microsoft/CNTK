@@ -24,6 +24,13 @@ LocalTimelineRandomizerBase::LocalTimelineRandomizerBase(
   m_cleaner(maxNumberOfInvalidSequences),
   m_sweepCount(0),
   m_sampleCount(0),
+  /*
+  WARNING: As the deserializer might not have the chunk info (number of sequences
+  and number of samples) initially, m_originalChunkDescriptions should be used
+  with care. TODO: We might want to refactor the interface between readerShim,
+  Randomizer (and NoRandomizer), Indexer, MinibatchSource and Deserializer to sort this
+  out.
+  */
   m_originalChunkDescriptions(deserializer->ChunkInfos()),
   m_currentState(initialState)
 {
@@ -91,17 +98,29 @@ void LocalTimelineRandomizerBase::Refill()
 
 void LocalTimelineRandomizerBase::MoveToNextSequence()
 {
-    const auto& s = m_window.m_sequences[m_window.m_sequencePosition];
-    if (!IsEndOfSweep(s))
-        m_sampleCount += s.m_numberOfSamples;
+    //if (m_window.m_sequences.empty())
+    ////Note that it is the end of sweep, there willl a special sequence s_endOfSweep in the window so it won't be empty.
+    //{   //No sequences in the window for the current worker so refill the window,
+    //    //TODO To investigate: As one worker might move the chunk window faster than the other worker in distributed training, this might invalidate
+    //    //the expected order of samples in minibatches during the graident gathering step from all the workers; this will only be a concern for the very rare
+    //    //scenarios that a very specific order of samples are desired during the training.
+    //    m_window.m_sequencePosition = 0;
+    //    Refill();
+    //}
+    if (m_window.m_sequences.size() > 0)
+    {
+        const auto& s = m_window.m_sequences[m_window.m_sequencePosition];
+        if (!IsEndOfSweep(s))
+            m_sampleCount += s.m_numberOfSamples;
 
-    ++m_window.m_sequencePosition;
+        ++m_window.m_sequencePosition;
 
-    if (m_window.m_sequencePosition < m_window.m_sequences.size())
-        return;
-
+        //There are sequences in current window, no need to refill so return
+        if (m_window.m_sequencePosition < m_window.m_sequences.size())
+            return;
+        assert(m_window.m_sequencePosition == m_window.m_sequences.size());
+    }
     // We are at the end of the window, let's get the new one.
-    assert(m_window.m_sequencePosition == m_window.m_sequences.size());
     m_window.m_sequencePosition = 0;
     Refill();
 }

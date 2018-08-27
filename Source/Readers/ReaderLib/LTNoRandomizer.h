@@ -47,6 +47,12 @@ private:
         std::vector<SequenceInfo> m_sequenceInfos;
     };
 
-    mutable PrefetchedChunk m_prefetchedChunk;
+    struct PrefetchState
+    {
+        PrefetchedChunk m_prefetchedChunk;
+    };
+
+    mutable PrefetchState m_prefetchState;
+    mutable std::mutex m_prefetchStateMutex;
 };
 }

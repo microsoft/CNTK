@@ -10,6 +10,7 @@ from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
 from cntk import parameter, plus, reduce_sum
 import cntk as C
+import numpy as np
 
 def create_data_parallel_distributed_learner(learner, quantized, distributed_after):
     return distributed.data_parallel_distributed_learner(
@@ -224,6 +225,79 @@ def test_distributed_mb_source_again(tmpdir):
                 num_data_partitions=2, partition_index=i % 2)
             features = source.streams['features']
             assert(len(data) == 0 or data[features].num_samples == 3)
+
+
+def test_distributed_mb_source_single_sample(tmpdir):
+    import random
+    from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
+
+    #test the corner cases
+    ctf_data = '''0  |S0 1   |S1 1
+'''
+    ctf_file = str(tmpdir / '2seqtest.txt')
+    with open(ctf_file, 'w') as f:
+        f.write(ctf_data)
+
+    def new_a_ctf():
+        return CTFDeserializer(ctf_file, StreamDefs(
+        features=StreamDef(field='S0', shape=1),
+        labels=StreamDef(field='S1', shape=1)
+        ))
+
+    random.seed(1234)
+    mb_sources = []
+    for randomize in [True, False]:
+        mb_sources.append(MinibatchSource(new_a_ctf(), randomize=randomize))
+        mb_sources.append(MinibatchSource(new_a_ctf(), randomize=randomize, max_sweeps=random.randint(1, 10)))
+        mb_sources.append(MinibatchSource(new_a_ctf(), randomize=randomize, max_samples=random.randint(1, 30)))
+
+    for i in range(20):
+        for source in mb_sources:
+            data = source.next_minibatch(minibatch_size_in_samples=5,
+                                         num_data_partitions=2, partition_index=i % 2)
+            features = source.streams['features']
+            assert (len(data) == 0 or data[features].num_samples == 3 or data[features].num_samples == 2 or data[features].num_samples == 1)
+
+class MockDeserializer(C.io.UserDeserializer):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+        self._streams = [
+            C.io.StreamInformation('S0', 0, 'dense', np.float32, (1, )),
+            C.io.StreamInformation('S1', 1, 'dense', np.float32, (1, ))
+        ]
+        self.x_data = np.ones((1, 1), dtype=np.float32) * 2
+        self.y_data = np.ones((1, 1), dtype=np.float32) * 0
+
+    def stream_infos(self):
+        return self._streams
+
+    def num_chunks(self):
+        return 100
+
+    def get_chunk(self, chunk_id):
+        return {
+            'S0': self.x_data,
+            'S1': self.y_data
+        }
+
+def test_distributed_mb_source_single_sample_user_deserializer():
+    import random
+    from cntk.io import MinibatchSource
+
+    random.seed(1234)
+    mb_sources = []
+    for randomize in [False]:
+        mb_sources.append(MinibatchSource(MockDeserializer(), randomize=randomize))
+        mb_sources.append(MinibatchSource(MockDeserializer(), randomize=randomize, max_sweeps=random.randint(1, 10)))
+        mb_sources.append(MinibatchSource(MockDeserializer(), randomize=randomize, max_samples=random.randint(1, 30)))
+
+    for i in range(20):
+        for source in mb_sources:
+            data = source.next_minibatch(minibatch_size_in_samples=5,
+                                         num_data_partitions=2, partition_index=i % 2)
+            features = source.streams['S0']
+            assert (len(data) == 0 or data[features].num_samples == 3  or data[features].num_samples == 2  or data[features].num_samples == 1)
 
 
 def test_distributed(tmpdir):

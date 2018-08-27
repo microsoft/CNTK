@@ -45,7 +45,8 @@ inline void RandomShuffleMT(TVector& v, size_t begin, size_t end, std::mt19937_6
     for(size_t i = begin; i < end; ++i)
     {
         const size_t randomLocation = RandMT(i, end, rng);
-        std::swap(v[i], v[randomLocation]);
+        if (i != randomLocation)
+            std::swap(v[i], v[randomLocation]);
     }
 }
 
@@ -56,7 +57,8 @@ inline void RandomShuffleMT(TVector& v, std::mt19937_64& rng)
     {
         // Pick a random location and swap with current one
         const size_t randomLocation = RandMT(0, v.size(), rng);
-        std::swap(v[currentLocation], v[randomLocation]);
+        if (currentLocation != randomLocation)
+            std::swap(v[currentLocation], v[randomLocation]);
     }
 }
 
@@ -130,7 +132,8 @@ public:
                     // if range condition is fulfilled then swap
                     if (trand <= map[t] + randomizationrange / 2 && map[t] < trand + randomizationrange / 2 && (size_t) t <= map[trand] + randomizationrange / 2 && map[trand] < (size_t) t + randomizationrange / 2)
                     {
-                        std::swap(map[t], map[trand]);
+                        if (t != trand)
+                            std::swap(map[t], map[trand]);
                         break;
                     }
                     // but don't multi-swap stuff out of its range (for swapping positions that have been swapped before)

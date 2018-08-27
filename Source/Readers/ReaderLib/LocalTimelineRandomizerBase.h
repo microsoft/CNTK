@@ -6,6 +6,7 @@
 #pragma once
 
 #include <vector>
+#include <numeric>
 #include "SequenceEnumerator.h"
 #include "DataDeserializer.h"
 #include "ReaderUtil.h"
@@ -89,6 +90,15 @@ protected:
         if (it == state.end())
             RuntimeError("The required key '%ls' was not found in the checkpoint", key.c_str());
         return it->second;
+    }
+
+    static inline void UpdateChunkInfo(ChunkInfo& chunkInfo, const std::vector<SequenceInfo>& chunkSequenceInfos)
+    {
+        chunkInfo.m_numberOfSequences = chunkSequenceInfos.size();
+        chunkInfo.m_numberOfSamples = std::accumulate(chunkSequenceInfos.begin(), chunkSequenceInfos.end(), (size_t) 0u,
+                                                            [](size_t s, const SequenceInfo& info) {
+                                                                return s + info.m_numberOfSamples;
+                                                        });
     }
 
     void StopPrefetch()

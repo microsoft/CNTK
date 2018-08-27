@@ -8,6 +8,7 @@
 #pragma once
 
 #include <memory>
+#include <shared_mutex>
 
 namespace CNTK
 {
@@ -450,18 +451,18 @@ namespace CNTK
         std::once_flag m_chunkInfosInitFlag;
 
     public:
-        SwigDataDeserializer() { }
+        SwigDataDeserializer() {}
 
         // Interface implemented in Python.
-        virtual void _GetStreamInfos(std::vector<StreamInformation>&) { NOT_IMPLEMENTED; }
-        virtual void _GetChunkInfos(std::vector<ChunkInfo>&) { NOT_IMPLEMENTED; }
+        virtual std::vector<StreamInformation> _GetStreamInfos() { NOT_IMPLEMENTED; }
+        virtual std::vector<ChunkInfo> _GetChunkInfos() { NOT_IMPLEMENTED; }
         virtual PyObject* _GetChunk(ChunkIdType chunkId) { NOT_IMPLEMENTED; return nullptr;  }
 
         // Simple python redirectors.
         std::vector<StreamInformation> StreamInfos() override
         {
             std::call_once(m_streamInfosInitFlag, [this]() {
-                _GetStreamInfos(m_streamInfos);
+                m_streamInfos = _GetStreamInfos();
             });
 
             return m_streamInfos;
@@ -470,7 +471,7 @@ namespace CNTK
         std::vector<ChunkInfo> ChunkInfos() override
         {
             std::call_once(m_chunkInfosInitFlag, [this]() {
-                _GetChunkInfos(m_chunkInfos);
+                m_chunkInfos = _GetChunkInfos();
             });
 
             return m_chunkInfos;

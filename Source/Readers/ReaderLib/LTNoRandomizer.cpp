@@ -5,6 +5,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 #include "LTNoRandomizer.h"
+#include <mutex>
 
 namespace CNTK {
 
@@ -26,20 +27,26 @@ LTNoRandomizer::~LTNoRandomizer()
 
 void LTNoRandomizer::Prefetch() const
 {
-
+    std::lock_guard<std::mutex> lock(m_prefetchStateMutex);
     auto chunkId = m_originalChunkDescriptions[m_currentChunkPosition].m_id;
-    m_prefetchedChunk.m_info = m_originalChunkDescriptions[m_currentChunkPosition];
-    m_prefetchedChunk.m_data = m_deserializer->GetChunk(chunkId);
-    m_prefetchedChunk.m_sequenceInfos.clear();
-    m_prefetchedChunk.m_data->SequenceInfos(m_prefetchedChunk.m_sequenceInfos);
+    m_prefetchState.m_prefetchedChunk.m_info = m_originalChunkDescriptions[m_currentChunkPosition];
+    m_prefetchState.m_prefetchedChunk.m_data = m_deserializer->GetChunk(chunkId);
+    m_prefetchState.m_prefetchedChunk.m_sequenceInfos.clear();
+    m_prefetchState.m_prefetchedChunk.m_data->SequenceInfos(m_prefetchState.m_prefetchedChunk.m_sequenceInfos);
+    //m_originalChunkDescriptions[m_currentChunkPosition] might not have the counts of sequencs and samples
+    //especiallly for the deserializers without indexer, such as UserDeserializer
+    if (!m_prefetchState.m_prefetchedChunk.m_info.HasCountsInitiated())
+        UpdateChunkInfo(m_prefetchState.m_prefetchedChunk.m_info, m_prefetchState.m_prefetchedChunk.m_sequenceInfos);
 }
 
 void LTNoRandomizer::RefillSequenceWindow(SequenceWindow& window)
 {
-    window.m_sequences.assign(m_prefetchedChunk.m_sequenceInfos.begin(), m_prefetchedChunk.m_sequenceInfos.end());
-    window.m_dataChunks.clear();
-    window.m_dataChunks[m_prefetchedChunk.m_info.m_id] = m_prefetchedChunk.m_data;
-
+    {
+        std::lock_guard<std::mutex> lock(m_prefetchStateMutex);
+        window.m_sequences.assign(m_prefetchState.m_prefetchedChunk.m_sequenceInfos.begin(), m_prefetchState.m_prefetchedChunk.m_sequenceInfos.end());
+        window.m_dataChunks.clear();
+        window.m_dataChunks[m_prefetchState.m_prefetchedChunk.m_info.m_id] = m_prefetchState.m_prefetchedChunk.m_data;
+    }
     auto numberOfWorkers = Config().m_numberOfWorkers;
     if (numberOfWorkers > 1)
     {
@@ -47,8 +54,9 @@ void LTNoRandomizer::RefillSequenceWindow(SequenceWindow& window)
         size_t workerSequencePosition = 0;
         for (size_t i = 0; i < window.m_sequences.size(); ++i, ++m_currentSequencePosition)
         {
-            if (m_currentSequencePosition % numberOfWorkers == Config().m_workerRank)
-                std::swap(window.m_sequences[workerSequencePosition++], window.m_sequences[i]);
+            if (m_currentSequencePosition % numberOfWorkers == Config().m_workerRank && workerSequencePosition != i)
+                std::swap(window.m_sequences[workerSequencePosition], window.m_sequences[i]);
+            ++workerSequencePosition;
         }
 
         window.m_sequences.erase(window.m_sequences.begin() + workerSequencePosition, window.m_sequences.end());

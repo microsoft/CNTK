@@ -38,6 +38,8 @@ namespace CNTK {
 
     static const ChunkIdType ChunkIdMax = (ChunkIdType)(-1);
     static const unsigned int SequenceLenMax = (unsigned int)(-1);
+    static const size_t ChunkNumSequencesMax = std::numeric_limits<std::size_t>::max();
+    static const size_t ChunkNumSamplesMax = std::numeric_limits<std::size_t>::max();
 
     ///
     /// Defines main properties of a sequence.
@@ -171,6 +173,22 @@ namespace CNTK {
         ChunkIdType m_id;            /// Chunk id.
         size_t m_numberOfSamples;    /// Number of samples in the chunk.
         size_t m_numberOfSequences;  /// Number of sequences in the chunk.
+
+        ChunkInfo()
+            :m_id(ChunkIdMax), m_numberOfSamples(ChunkNumSamplesMax), m_numberOfSequences(ChunkNumSequencesMax)
+        {
+        }
+
+        ChunkInfo(ChunkIdType id, size_t numberOfSamples, size_t numberOfSequences)
+            :m_id(id), m_numberOfSamples(numberOfSamples), m_numberOfSequences(numberOfSequences)
+        {
+        }
+
+        inline bool HasCountsInitiated() const
+        {
+            return m_numberOfSamples != ChunkNumSamplesMax && m_numberOfSequences != ChunkNumSequencesMax;
+        }
+
     };
 
     ///

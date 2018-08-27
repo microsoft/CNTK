@@ -31,8 +31,15 @@ public:
     void Prefetch() const override;
 
 private:
-    void RandomizeWindow(size_t sweepCount, size_t chunkPositionOfWindow, size_t sequencePositionInWindow) const;
-    void RandomizeChunks(size_t sweepCount) const;
+    struct PrefetchState
+    {
+        std::mt19937_64 m_rng;
+        std::vector<ChunkInfo> m_prefetchedChunkDescriptions;
+        std::vector<SequenceInfo> m_prefetchedSequences;
+        std::vector<std::tuple<ChunkInfo, ChunkPtr>> m_prefetchedChunks;
+    };
+    void RandomizeWindow(PrefetchState& prefetchState, size_t sweepCount, size_t chunkPositionOfWindow, size_t sequencePositionInWindow) const;
+    void RandomizeChunks(PrefetchState& prefetchState, size_t sweepCount) const;
 
     const size_t m_randomizationRange;
     const size_t m_seedOffset;
@@ -44,11 +51,9 @@ private:
     // is fetched.
     size_t m_sweepCount;
 
-    // Do not store in the checkpoint, can be recalculated based on other members.
-    mutable std::mt19937_64 m_rng;
-    mutable std::vector<ChunkInfo> m_prefetchedChunkDescriptions;
-    mutable std::vector<SequenceInfo> m_prefetchedSequences;
-    mutable std::vector<std::tuple<ChunkInfo, ChunkPtr>> m_prefetchedChunks;
+
+    mutable PrefetchState m_prefetchState;
+    mutable std::mutex m_prefetchStateMutex;
 };
 
 }

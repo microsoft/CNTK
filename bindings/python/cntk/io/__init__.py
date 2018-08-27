@@ -1196,16 +1196,16 @@ class UserDeserializer(cntk_py.SwigDataDeserializer):
         '''
         raise NotImplementedError('should return data for the chunk.')
 
-    def _stream_infos(self, infos=None):
+    def _stream_infos(self):
         inner = self.stream_infos()
         if len(inner) == 0:
             raise ValueError('Deserializer must provide at least one stream')
-        infos.extend(inner)
 
         streams = {si.m_name: si for si in inner}
         self.streams = Record(**streams)
+        return inner
 
-    def _chunk_infos(self, infos=None):
+    def _chunk_infos(self):
         total = self.num_chunks()
         if total == 0:
             raise ValueError('Deserializer must provide at least one chunk')
@@ -1214,11 +1214,12 @@ class UserDeserializer(cntk_py.SwigDataDeserializer):
             t = cntk_py.ChunkInfo()
             t.m_id = i
             inner.append(t)
-        infos.extend(inner)
+        return inner
 
     def _get_chunk(self, chunk_id):
         # Make sure the python object exists
         # till the next call, so that the copy in C++ can
         # take place.
+        # TODO: In multi-threaded environment, there can be multiple calls to get_chunk simultaneous. This requires a better mechanism.
         self._last_chunk = self.get_chunk(chunk_id=chunk_id)
         return self._last_chunk;
