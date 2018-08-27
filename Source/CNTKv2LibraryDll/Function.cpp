@@ -2631,6 +2631,32 @@ namespace CNTK
         }
     }
 
+    FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
+        const Variable& operand,
+        const NDShape& strides,
+        const std::vector<bool>& sharing,
+        const std::vector<size_t>& lowerPad,
+        const std::vector<size_t>& upperPad,
+        const NDShape& outputShape,
+        const NDShape& dilation,
+        size_t maxTempMemSizeInSamples,
+        const std::wstring& name)
+    {
+        size_t groups = 1;
+        return Internal::Convolution(convolutionMap,
+            operand,
+            strides,
+            sharing,
+            lowerPad,
+            upperPad,
+            dilation,
+            true,
+            outputShape,
+            groups,
+            maxTempMemSizeInSamples,
+            name);
+    }
+
     FunctionPtr ROIPooling(const Variable& operand,
         const Variable& rois,
         PoolingType poolingType,
@@ -3409,6 +3435,26 @@ namespace CNTK
             const Variable& operand,
             const NDShape& strides,
             const std::vector<bool>& sharing,
+            const std::vector<size_t>& lowerPad,
+            const std::vector<size_t>& upperPad,
+            const NDShape& dilation,
+            bool transpose,
+            const NDShape& outputShape,
+            size_t groups,
+            size_t maxTempMemSizeInSamples,
+            const std::wstring& name)
+        {
+            auto additionalProperties = Dictionary();
+            auto defaultAutoPad = std::vector<bool>({ false });
+            SetConvolutionProperties(additionalProperties, strides, sharing, defaultAutoPad, lowerPad, upperPad, dilation, /*sequential =*/false, transpose, outputShape, groups, maxTempMemSizeInSamples);
+
+            return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
+        }
+
+        FunctionPtr Convolution(const Variable& convolutionMap,
+            const Variable& operand,
+            const NDShape& strides,
+            const std::vector<bool>& sharing,
             const std::vector<bool>& autoPadding,
             const NDShape& dilation,
             bool transpose,
@@ -3418,7 +3464,8 @@ namespace CNTK
             const std::wstring& name)
         {
             auto additionalProperties = Dictionary();
-            SetConvolutionProperties(additionalProperties, strides, sharing, autoPadding, dilation, /*sequential =*/false, transpose, outputShape, groups, maxTempMemSizeInSamples);
+            auto defaultPadVector = std::vector<size_t>({ 0 });
+            SetConvolutionProperties(additionalProperties, strides, sharing, autoPadding, defaultPadVector, defaultPadVector, dilation, /*sequential =*/false, transpose, outputShape, groups, maxTempMemSizeInSamples);
 
             return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);          
         }
@@ -3442,7 +3489,8 @@ namespace CNTK
                 LogicError("Convolution currently requires the main operand to have dynamic axes");
 
             auto additionalProperties = Dictionary();
-            SetConvolutionProperties(additionalProperties, strides, sharing, autoPadding, dilation, /*sequential =*/true, transpose, outputShape, groups, maxTempMemSizeInSamples);
+            auto defaultPadVector = std::vector<size_t>({ 0 });
+            SetConvolutionProperties(additionalProperties, strides, sharing, autoPadding, defaultPadVector, defaultPadVector, dilation, /*sequential =*/true, transpose, outputShape, groups, maxTempMemSizeInSamples);
 
             return BinaryOp(PrimitiveOpType::ConvolutionSequenceShape, convolutionMap, operand, std::move(additionalProperties), name);
         }

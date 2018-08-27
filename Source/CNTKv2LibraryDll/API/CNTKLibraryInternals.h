@@ -254,6 +254,8 @@ namespace CNTK
         CNTK_API FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, const Variable& shiftWindow, const Variable& numberOfNegativeSamples, const std::wstring& name = L"");
         CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
                                          const NDShape& dilation, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<size_t>& lowerPad,
+                                         const std::vector<size_t>& upperPad, const NDShape& dilation, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
         CNTK_API FunctionPtr ConvolutionSequenceShape(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
                                                       const NDShape& dilation, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
         CNTK_API FunctionPtr SpatialConvolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing,

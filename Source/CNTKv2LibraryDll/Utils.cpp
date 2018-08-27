@@ -238,16 +238,17 @@ namespace CNTK
         return !(*this == other);    
     }
 
-    void SetConvolutionProperties(Dictionary& additionalProperties, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
-                                  const NDShape& dilation, bool sequential, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples)
+    void SetConvolutionProperties(Dictionary& additionalProperties, const NDShape& strides, const std::vector<bool>& sharing, 
+        const std::vector<bool>& autoPadding, const std::vector<size_t>& lowerPad, const std::vector<size_t>& upperPad,
+        const NDShape& dilation, bool sequential, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples)
     {
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameStrides] = strides;
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameDilation] = dilation;
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameSharing] = AsDictionaryValueVector(sharing);
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameSequential] = sequential;
-        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLowerPad] = NDShape({0});
-        additionalProperties[PrimitiveFunctionAttribute::AttributeNameUpperPad] = NDShape({0});
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLowerPad] = NDShape(lowerPad);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameUpperPad] = NDShape(upperPad);
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameTranspose] = transpose;
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameOutputShape] = outputShape;
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameKernelShape] = NDShape({0});
