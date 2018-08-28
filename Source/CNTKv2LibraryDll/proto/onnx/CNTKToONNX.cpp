@@ -49,6 +49,16 @@ public:
 
 private:
     //
+    // CNTK uses Combine op to aggregate multiple outputs of a model.
+    // LotusIR creates outputs by collecting dangling output NodeArgs in a graph (cf. BuildConnections). 
+    // Often an aggregated CNTK output node is also an input to another node in the graph.
+    // This type of nodes are not dangling and thus are not treated as ONNX outputs.
+    // To solve this issue, we search for all such nodes and append to it a NoOp
+    // to make it dangling at the end.
+    //
+    static void HandleRootCombineOp(const FunctionPtr& src, LotusIR::Graph* dst);
+
+    //
     // Recursively create ONNX nodes corresponding to each CNTK node.
     //
     static LotusIR::Node* CreateNode(const FunctionPtr& src,
@@ -98,6 +108,7 @@ private:
         const std::string &out_arg_name);
     static LotusIR::Node *AddAddNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph,
         const std::string &out_arg_name);
+    static LotusIR::Node *AddIdentityOp(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &out_arg_name);
     static LotusIR::Node *AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis);
     static LotusIR::Node *AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &toType);
 
@@ -495,12 +506,63 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, LotusIR::Graph* dst)
     //
     TraverseGraph(src, visited, compositeOutputsMap);
 
+    // this is in case the last node is wrapped with batch and sequence pack/unpack plus transpose axis ops (via importing).
+    // in this case, the (un)packing op sequence will not get skipped in ProcessInputs.
+    // we need to handle this specific case at begining.
     FunctionPtr srcSkipped = SkipBatchAndSequenceAxisOp(src);
     //
     // Iterate through each node in CNTK graph and create an equivalent node
     // in ONNX graph.
     //
     CreateNode(srcSkipped, dst, functionNodes, variableNodes, compositeOutputsMap);
+
+
+    if (srcSkipped->OpName() == L"Combine")
+    {
+        HandleRootCombineOp(srcSkipped, dst);
+    }
+}
+
+void CNTKToONNXHelper::HandleRootCombineOp(const FunctionPtr& src, LotusIR::Graph* dst)
+{
+    // Graph::BuildConnections connects ending nodes to the sink node
+    // so that the ending nodes become output nodes. 
+    // When input to the last "Combine" node is also input to another node, it
+    // is not an ending node thus cannot become an output node. As for this, they cannot be used for inferencing.
+    // We fix this problem by connecting the node with a NoOp node to make it an ending node.
+    if (src->OpName() != L"Combine")
+        return;
+
+    const GraphNodes &nodes = dst->Nodes();
+    for (auto input : src->Inputs())
+    {
+        std::string nodeArgName = ToLegacyString(ToUTF8(input.Uid()));
+        const NodeArg* nodeArg = dst->FindNodeArg(nodeArgName);
+        if (!nodeArg)
+            continue;
+
+        bool foundOutputToInputNodeArg = false;
+        for (GraphNodes::ConstNodeIterator it = nodes.cbegin(); it != nodes.cend() && !foundOutputToInputNodeArg; ++it)
+        {
+            const Node &node = *it;
+            auto inputNodeArgs = node.InputDefs();
+            for (int i = 0; i < inputNodeArgs.size(); i++)
+            {
+                if (inputNodeArgs[i]->Name() == nodeArgName)
+                {
+                    foundOutputToInputNodeArg = true;
+                    break;
+                }
+            }
+        }
+
+        if (foundOutputToInputNodeArg)
+        {
+            // This nodeArg is not dangling. Append to it a NoOp so that it can be treated as output by LotusIR.
+            std::string out_arg_name = nodeArg->Name() + "_attach_noop_";
+            AddIdentityOp(const_cast<NodeArg &>(*nodeArg), dst, out_arg_name);
+        }
+    }
 }
 
 void AddDataElementArrayViewToTensorProto(const NDArrayViewPtr src, int srcIndex, onnx::TensorProto& dst)
@@ -2520,6 +2582,13 @@ LotusIR::Node *CNTKToONNXHelper::AddAddNode(LotusIR::NodeArg &nodeArg1, LotusIR:
     return argMatMulNode;
 }
 
+LotusIR::Node *CNTKToONNXHelper::AddIdentityOp(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &out_arg_name)
+{
+    LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, nullptr);
+    LotusIR::Node* identityNode = graph->AddNode(
+        nodeArg.Name() + string("_identity"), "Identity", "", { &nodeArg}, { &outputArg });
+    return identityNode;
+}
 
 LotusIR::Node *CNTKToONNXHelper::AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis)
 {
@@ -3257,6 +3326,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
 
                 Axis axis1 = (Axis)(src->Attributes()[L"axis1"].Value<Axis>()).StaticAxisIndex();
                 Axis axis2 = (Axis)(src->Attributes()[L"axis2"].Value<Axis>()).StaticAxisIndex();
+                // It is safe here to assume that the axis is a static axis.
                 int64_t axisIndex1 = ConvertAxisToOnnx(axis1, src->Inputs()[0]);
                 int64_t axisIndex2 = ConvertAxisToOnnx(axis2, src->Inputs()[0]);
                 std::swap(perm[axisIndex1], perm[axisIndex2]);
@@ -3312,53 +3382,15 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             else if (src->Attributes().Contains(L"axis"))
             {
                 Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
+                // CNTK slice only support single axis slice. 
+                // It is safe to assume that the axis is a static axis.
                 int64_t axisIndex = ConvertAxisToOnnx(axis, src->Inputs()[0]);
-                bool workaroundONNXRT = false;
-                // this code is to workaround a ONNXRT bug that fails
-                // to take axes attribute into consideration.
-                // we need to convert op attribute to a default ONNX case
-                // where axes is not set (or set to ordered indices).
-                if (workaroundONNXRT)
-                {
-                    bool hasBatchAxis = src->Inputs()[0].HasBatchAxis();
-                    NDShape inputShape = src->Inputs()[0].Shape();
-                    std::vector<int64_t> sliceAxes;
-                    int numDims = hasBatchAxis ? (inputShape.Rank() + 1) : inputShape.Rank();
-                    for (int onnxAxis = 0; onnxAxis < numDims; onnxAxis++)
-                    {
-                        sliceAxes.push_back(onnxAxis);
-                        if (onnxAxis == 0 && hasBatchAxis)
-                        {
-                            // batch axis
-                            beginIndex.push_back(0);
-                            endIndex.push_back(1);
-                        }
-                        else
-                        {
-                            if (axisIndex == onnxAxis)
-                            {
-                                beginIndex.push_back((int)(src->Attributes()[L"beginIndex"].Value<int>()));
-                                endIndex.push_back((int)(src->Attributes()[L"endIndex"].Value<int>()));
-                            }
-                            else
-                            {
-                                int cntkAxisIndex = numDims - onnxAxis - 1;
-                                beginIndex.push_back(0);
-                                endIndex.push_back(inputShape[cntkAxisIndex]);
-                            }
-                        }
-                    }
-                    node->AddAttribute(attributesMap[L"axes"], sliceAxes);
-                }
-                else
-                {
-                    std::vector<int64_t> sliceAxes;
-                    sliceAxes.push_back(axisIndex);
-                    node->AddAttribute(attributesMap[L"axes"], sliceAxes);
+                std::vector<int64_t> sliceAxes;
+                sliceAxes.push_back(axisIndex);
+                node->AddAttribute(attributesMap[L"axes"], sliceAxes);
 
-                    beginIndex.push_back((int)(src->Attributes()[L"beginIndex"].Value<int>()));
-                    endIndex.push_back((int)(src->Attributes()[L"endIndex"].Value<int>()));
-                }
+                beginIndex.push_back((int)(src->Attributes()[L"beginIndex"].Value<int>()));
+                endIndex.push_back((int)(src->Attributes()[L"endIndex"].Value<int>()));
             }
 
             std::vector<int64_t> beginIndex64 = Cast<int, int64_t>(beginIndex);
@@ -3460,6 +3492,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             {
                 axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
             }
+            // Flatten op takes single axis. It is safe here to assume that the axis is a static axis.
             int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]) + 1 /* TODO: Figure out how to remove this hardcoded 1 */;
             node->AddAttribute(attributesMap[L"axis"], ax);
         }
@@ -3481,6 +3514,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             if (src->Attributes().Contains(L"axis"))
             {
                 Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
+                // Gather op takes single axis. It is safe here to assume that the axis is a static axis.
                 int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
                 node->AddAttribute(attributesMap[L"axis"], ax);
             }
@@ -3526,6 +3560,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
         else if (src->OpName() == L"TopK")
         {
             Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
+            // TopK op takes single axis. It is safe here to assume that the axis is a static axis.
             int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
             node->AddAttribute(attributesMap[L"axis"], ax);
 
