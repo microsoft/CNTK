@@ -28,15 +28,12 @@ LTNoRandomizer::~LTNoRandomizer()
 void LTNoRandomizer::Prefetch() const
 {
     std::lock_guard<std::mutex> lock(m_prefetchStateMutex);
-    auto chunkId = m_originalChunkDescriptions[m_currentChunkPosition].m_id;
-    m_prefetchState.m_prefetchedChunk.m_info = m_originalChunkDescriptions[m_currentChunkPosition];
+    auto chunkId = m_deserializer->GetChunkInfo(m_currentChunkPosition).m_id;
+    assert(chunkId == m_currentChunkPosition);
+    m_prefetchState.m_prefetchedChunk.m_info = m_deserializer->GetChunkInfo(m_currentChunkPosition);
     m_prefetchState.m_prefetchedChunk.m_data = m_deserializer->GetChunk(chunkId);
     m_prefetchState.m_prefetchedChunk.m_sequenceInfos.clear();
     m_prefetchState.m_prefetchedChunk.m_data->SequenceInfos(m_prefetchState.m_prefetchedChunk.m_sequenceInfos);
-    //m_originalChunkDescriptions[m_currentChunkPosition] might not have the counts of sequencs and samples
-    //especiallly for the deserializers without indexer, such as UserDeserializer
-    if (!m_prefetchState.m_prefetchedChunk.m_info.HasCountsInitiated())
-        UpdateChunkInfo(m_prefetchState.m_prefetchedChunk.m_info, m_prefetchState.m_prefetchedChunk.m_sequenceInfos);
 }
 
 void LTNoRandomizer::RefillSequenceWindow(SequenceWindow& window)
@@ -63,14 +60,14 @@ void LTNoRandomizer::RefillSequenceWindow(SequenceWindow& window)
     }
 
     // If last chunk, add the sweep marker.
-    if (m_currentChunkPosition == m_originalChunkDescriptions.size() - 1)
+    if (m_currentChunkPosition == m_deserializer->GetNumChunks() - 1)
     {
         window.m_sequences.push_back(s_endOfSweep);
         m_currentSequencePosition = 0;
     }
 
     // Moving to the next chunk.
-    m_currentChunkPosition = (m_currentChunkPosition + 1) % m_originalChunkDescriptions.size();
+    m_currentChunkPosition = (m_currentChunkPosition + 1) % m_deserializer->GetNumChunks();
 }
 
 std::map<std::wstring, size_t> LTNoRandomizer::GetInnerState()

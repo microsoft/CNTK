@@ -1166,6 +1166,7 @@ class UserDeserializer(cntk_py.SwigDataDeserializer):
         super(UserDeserializer, self).__init__()
         self.__disown__()
         self._last_chunk = None
+        self.streams = None
 
     def stream_infos(self):
         '''
@@ -1185,35 +1186,25 @@ class UserDeserializer(cntk_py.SwigDataDeserializer):
 
     def get_chunk(self, chunk_id):
         '''
-        Should return a dictionary of stream name -> data of the chunk, where data is csr_matrix/numpy array in sample mode,
-        or a list of csr_matrix/numpy array in sequence mode.
+            Should return a dictionary of stream name -> data of the chunk, where data is csr_matrix/numpy array in sample mode,
+            or a list of csr_matrix/numpy array in sequence mode.
 
-        Args:
-            chunk_id(int): id of the chunk to be read, 0 <= chunk_id < num_chunks
+            Args:
+                chunk_id(int): id of the chunk to be read, 0 <= chunk_id < num_chunks
 
-        Returns:
-            dict containing the data
+            Returns:
+                dict containing the data
         '''
         raise NotImplementedError('should return data for the chunk.')
 
-    def _stream_infos(self):
+    def _get_stream_infos(self):
         inner = self.stream_infos()
         if len(inner) == 0:
             raise ValueError('Deserializer must provide at least one stream')
 
-        streams = {si.m_name: si for si in inner}
-        self.streams = Record(**streams)
-        return inner
-
-    def _chunk_infos(self):
-        total = self.num_chunks()
-        if total == 0:
-            raise ValueError('Deserializer must provide at least one chunk')
-        inner = []
-        for i in range(total):
-            t = cntk_py.ChunkInfo()
-            t.m_id = i
-            inner.append(t)
+        if not self.streams:
+            streams = {si.m_name: si for si in inner}
+            self.streams = Record(**streams)
         return inner
 
     def _get_chunk(self, chunk_id):
@@ -1223,3 +1214,6 @@ class UserDeserializer(cntk_py.SwigDataDeserializer):
         # TODO: In multi-threaded environment, there can be multiple calls to get_chunk simultaneous. This requires a better mechanism.
         self._last_chunk = self.get_chunk(chunk_id=chunk_id)
         return self._last_chunk;
+
+    def _get_num_chunks(self):
+        return self.num_chunks()

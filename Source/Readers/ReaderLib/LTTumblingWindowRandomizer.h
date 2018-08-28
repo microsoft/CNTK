@@ -51,6 +51,7 @@ private:
     // is fetched.
     size_t m_sweepCount;
 
+    std::vector<ChunkInfo> m_originalChunkDescriptions;
 
     mutable PrefetchState m_prefetchState;
     mutable std::mutex m_prefetchStateMutex;

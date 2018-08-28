@@ -33,6 +33,10 @@ LTTumblingWindowRandomizer::LTTumblingWindowRandomizer(
   m_sampleBasedRandomizationWindow(sampleBasedRandomizationWindow),
   m_sweepCount(0)
 {
+    for (ChunkIdType chunkId = 0; chunkId < m_deserializer->GetNumChunks(); ++chunkId)
+    {
+        m_originalChunkDescriptions.push_back(m_deserializer->GetChunkInfo(chunkId));
+    }
     std::lock_guard<std::mutex> lock(m_prefetchStateMutex);
     RandomizeChunks(m_prefetchState, m_sweepCount);
 }

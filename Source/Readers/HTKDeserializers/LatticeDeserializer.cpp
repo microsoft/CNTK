@@ -257,25 +257,6 @@ void LatticeDeserializer::InitializeStreams(const wstring& featureName)
     m_streams.push_back(stream);
 }
 
-// Gets information about available chunks.
-std::vector<ChunkInfo> LatticeDeserializer::ChunkInfos()
-{
-    std::vector<ChunkInfo> chunks;
-    chunks.reserve(m_chunks.size());
-    for (size_t i = 0; i < m_chunks.size(); ++i)
-    {
-        ChunkInfo cd;
-        cd.m_id = static_cast<ChunkIdType>(i);
-        if (cd.m_id != i)
-            RuntimeError("ChunkIdType overflow during creation of a chunk description.");
-
-        cd.m_numberOfSequences = m_chunks[i]->NumberOfSequences();
-        cd.m_numberOfSamples = m_chunks[i]->NumberOfSamples();
-        chunks.push_back(cd);
-    }
-    return chunks;
-}
-
 // Gets sequences for a particular chunk.
 // This information is used by the randomizer to fill in current windows of sequences.
 void LatticeDeserializer::SequenceInfosForChunk(ChunkIdType, vector<SequenceInfo>& result)

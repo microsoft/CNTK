@@ -188,15 +188,16 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             throw logic_error("Not implemented");
         }
 
-        virtual std::vector<ChunkInfo> ChunkInfos() override
+        virtual size_t GetNumChunks() override
         {
-            std::vector<ChunkInfo> result;
-            for (size_t i = 0; i < m_chunks.size(); ++i)
-            {
-                result.push_back(ChunkInfo{ (ChunkIdType)i, m_chunks[i]->SizeInSamples(), m_chunks[i]->SizeInSequences() });
-            }
-            return result;
+            return m_chunks.size();
         }
+
+        virtual ChunkInfo GetChunkInfo(ChunkIdType chunkId) override
+        {
+            return ChunkInfo{ chunkId, m_chunks[chunkId]->SizeInSamples(), m_chunks[chunkId]->SizeInSequences() };
+        }
+
 
         void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& descriptions) override
         {

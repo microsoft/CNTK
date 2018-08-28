@@ -30,8 +30,17 @@ public:
     // Retrieves a chunk of data.
     ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
-    // Get information about chunks.
-    std::vector<ChunkInfo> ChunkInfos() override;
+    size_t GetNumChunks() override { return m_index->Chunks().size(); }
+
+    ChunkInfo GetChunkInfo(ChunkIdType chunkId) override
+    {
+        return
+            ChunkInfo{
+                chunkId,
+                m_index->Chunks()[chunkId].NumberOfSamples(),
+                m_index->Chunks()[chunkId].NumberOfSequences()
+        };
+    }
 
     // Get information about particular chunk.
     void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result) override;

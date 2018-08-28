@@ -211,23 +211,6 @@ void MLFDeserializer::InitializeStream(const wstring& name)
     m_streams.push_back(stream);
 }
 
-std::vector<ChunkInfo> MLFDeserializer::ChunkInfos()
-{
-    std::vector<ChunkInfo> chunks;
-    chunks.reserve(m_chunks.size());
-    for (size_t i = 0; i < m_chunks.size(); ++i)
-    {
-        ChunkInfo cd;
-        cd.m_id = static_cast<ChunkIdType>(i);
-        if (cd.m_id != i)
-            RuntimeError("ChunkIdType overflow during creation of a chunk description.");
-
-        cd.m_numberOfSequences =  m_frameMode ? m_chunks[i]->NumberOfSamples() : m_chunks[i]->NumberOfSequences();
-        cd.m_numberOfSamples = m_chunks[i]->NumberOfSamples();
-        chunks.push_back(cd);
-    }
-    return chunks;
-}
 
 void MLFDeserializer::SequenceInfosForChunk(ChunkIdType, vector<SequenceInfo>& result)
 {

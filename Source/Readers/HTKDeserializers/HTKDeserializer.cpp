@@ -280,25 +280,6 @@ void HTKDeserializer::InitializeFeatureInformation()
     });
 }
 
-// Gets information about available chunks.
-std::vector<ChunkInfo> HTKDeserializer::ChunkInfos()
-{
-    std::vector<ChunkInfo> chunks;
-    chunks.reserve(m_chunks.size());
-
-    for (ChunkIdType i = 0; i < m_chunks.size(); ++i)
-    {
-        ChunkInfo cd;
-        cd.m_id = i;
-        cd.m_numberOfSamples = m_chunks[i].GetTotalFrames();
-        // In frame mode, each frame is represented as sequence.
-        // The augmentation is still done for frames in the same sequence only, please see GetSequenceById method.
-        cd.m_numberOfSequences = m_frameMode ? m_chunks[i].GetTotalFrames() : m_chunks[i].GetNumberOfUtterances();
-        chunks.push_back(cd);
-    }
-    return chunks;
-}
-
 // Gets sequences for a particular chunk.
 // This information is used by the randomizer to fill in current windows of sequences.
 void HTKDeserializer::SequenceInfosForChunk(ChunkIdType chunkId, vector<SequenceInfo>& result)

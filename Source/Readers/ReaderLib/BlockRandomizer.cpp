@@ -47,9 +47,9 @@ BlockRandomizer::BlockRandomizer(
 
     // Calculate total number of samples.
     m_sweepSizeInSamples = 0;
-    for (auto const & chunk : m_deserializer->ChunkInfos())
+    for (ChunkIdType chunkId = 0; chunkId < m_deserializer->GetNumChunks(); ++ chunkId)
     {
-        m_sweepSizeInSamples += chunk.m_numberOfSamples;
+        m_sweepSizeInSamples += m_deserializer->GetChunkInfo(chunkId).m_numberOfSamples;
     }
 }
 
@@ -205,7 +205,7 @@ std::pair<size_t, size_t> BlockRandomizer::LoadSequenceData(size_t globalSampleC
     auto process = [&](int i) -> void {
         const auto& description = m_sequenceBuffer[i];
         std::vector<SequenceDataPtr> sequenceData;
-        auto it = m_chunks.find(description.m_chunk->m_original->m_id);
+        auto it = m_chunks.find(description.m_chunk->m_original.m_id);
         if (it == m_chunks.end())
         {
             LogicError("Invalid chunk requested.");
@@ -371,10 +371,10 @@ void BlockRandomizer::LoadDataChunks(const ClosedOpenChunkInterval& windowRange)
             continue;
         }
 
-        auto it = m_chunks.find(chunk.m_original->m_id);
+        auto it = m_chunks.find(chunk.m_original.m_id);
         if (it != m_chunks.end())
         {
-            chunks[chunk.m_original->m_id] = it->second;
+            chunks[chunk.m_original.m_id] = it->second;
         }
         else
         {
@@ -395,14 +395,14 @@ void BlockRandomizer::LoadDataChunks(const ClosedOpenChunkInterval& windowRange)
         }
 
         auto const& chunk = m_chunkRandomizer->GetRandomizedChunks()[i];
-        if (chunk.m_original->m_id == m_prefetchedChunk && m_prefetch.valid())
+        if (chunk.m_original.m_id == m_prefetchedChunk && m_prefetch.valid())
         {
             // Taking prefetched chunk.
-            m_chunks[chunk.m_original->m_id] = m_prefetch.get();
+            m_chunks[chunk.m_original.m_id] = m_prefetch.get();
             if (m_verbosity >= Information)
                 fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in prefetched chunk %u (original chunk: %u), now %" PRIu64 " chunks in memory\n",
                 chunk.m_chunkId,
-                chunk.m_original->m_id,
+                chunk.m_original.m_id,
                 ++numLoadedChunks);
         }
         else
@@ -413,11 +413,11 @@ void BlockRandomizer::LoadDataChunks(const ClosedOpenChunkInterval& windowRange)
                 m_prefetch.wait();
             }
 
-            m_chunks[chunk.m_original->m_id] = m_deserializer->GetChunk(chunk.m_original->m_id);
+            m_chunks[chunk.m_original.m_id] = m_deserializer->GetChunk(chunk.m_original.m_id);
             if (m_verbosity >= Information)
                 fprintf(stderr, "BlockRandomizer::RetrieveDataChunks: paged in randomized chunk %u (original chunk: %u), now %" PRIu64 " chunks in memory\n",
                 chunk.m_chunkId,
-                chunk.m_original->m_id,
+                chunk.m_original.m_id,
                 ++numLoadedChunks);
         }
     }
@@ -438,9 +438,9 @@ ChunkIdType BlockRandomizer::GetChunkToPrefetch(const ClosedOpenChunkInterval& w
     {
         const auto& chunk = m_chunkRandomizer->GetRandomizedChunks()[current];
         if (chunk.m_chunkId % m_config.m_numberOfWorkers == m_config.m_workerRank &&
-            m_chunks.find(chunk.m_original->m_id) == m_chunks.end())
+            m_chunks.find(chunk.m_original.m_id) == m_chunks.end())
         {
-            toBePrefetched = chunk.m_original->m_id;
+            toBePrefetched = chunk.m_original.m_id;
             break;
         }
         ++current;

@@ -66,9 +66,10 @@
 %rename(nce_loss) CNTK::NCELoss;
 
 %rename(_register_deserializer_factory) CNTK::RegisterDeserializerFactory;
-%rename(_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos;
-%rename(_chunk_infos) CNTK::SwigDataDeserializer::_GetChunkInfos;
+%rename(_get_stream_infos) CNTK::SwigDataDeserializer::_GetStreamInfos;
 %rename(_get_chunk) CNTK::SwigDataDeserializer::_GetChunk;
+%rename(_get_num_chunks) CNTK::SwigDataDeserializer::_GetNumChunks;
+
 
 %include "CNTKWarnFilters.i"
 

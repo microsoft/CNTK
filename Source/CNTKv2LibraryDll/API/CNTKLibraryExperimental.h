@@ -184,10 +184,12 @@ namespace CNTK {
         {
         }
 
+
         inline bool HasCountsInitiated() const
         {
             return m_numberOfSamples != ChunkNumSamplesMax && m_numberOfSequences != ChunkNumSequencesMax;
         }
+
 
     };
 
@@ -201,15 +203,13 @@ namespace CNTK {
     class DataDeserializer
     {
     public:
+        virtual ChunkInfo GetChunkInfo(ChunkIdType chunkId) = 0;
+        virtual size_t GetNumChunks() = 0;
+
         ///
         /// Gets stream information for all streams this deserializer exposes.
         ///
         virtual std::vector<StreamInformation> StreamInfos() = 0;
-
-        ///
-        /// Gets metadata for chunks this deserializer exposes.
-        ///
-        virtual std::vector<ChunkInfo> ChunkInfos() = 0;
 
         ///
         /// Gets sequence infos for a given a chunk.

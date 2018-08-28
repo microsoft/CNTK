@@ -24,17 +24,9 @@ LocalTimelineRandomizerBase::LocalTimelineRandomizerBase(
   m_cleaner(maxNumberOfInvalidSequences),
   m_sweepCount(0),
   m_sampleCount(0),
-  /*
-  WARNING: As the deserializer might not have the chunk info (number of sequences
-  and number of samples) initially, m_originalChunkDescriptions should be used
-  with care. TODO: We might want to refactor the interface between readerShim,
-  Randomizer (and NoRandomizer), Indexer, MinibatchSource and Deserializer to sort this
-  out.
-  */
-  m_originalChunkDescriptions(deserializer->ChunkInfos()),
   m_currentState(initialState)
 {
-    if (m_originalChunkDescriptions.empty())
+    if (deserializer->GetNumChunks() == 0)
         RuntimeError("The deserializer does not have any data, the number of chunks is 0.");
 }
 

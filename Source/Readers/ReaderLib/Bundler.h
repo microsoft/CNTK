@@ -20,8 +20,15 @@ class Bundler : public DataDeserializerBase
 public:
     Bundler(const ConfigParameters& readerConfig, CorpusDescriptorPtr corpus, DataDeserializerPtr driver, std::vector<DataDeserializerPtr> deserializers, bool cleanse);
 
-    // Gets chunk descriptions.
-    virtual std::vector<ChunkInfo> ChunkInfos() override;
+    virtual ChunkInfo GetChunkInfo(ChunkIdType chunkId)
+    {
+        return m_chunks[chunkId];
+    }
+
+    virtual size_t GetNumChunks()
+    {
+        return m_chunks.size();
+    }
 
     // Gets sequence descriptions for a particular chunk.
     virtual void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result) override;

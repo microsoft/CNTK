@@ -54,12 +54,11 @@ void Bundler::CreateChunkDescriptions()
     if (m_verbosity)
         fprintf(stderr, "Bundler::CreateChunkDescriptions(): started\n");
 
-    auto chunks = m_primaryDeserializer->ChunkInfos();
-    if (chunks.size() < 1)
+    if (m_primaryDeserializer->GetNumChunks() < 1)
     {
         RuntimeError("Driving deserializer should at least provide one chunk.");
     }
-    if (ChunkIdMax < chunks.size())
+    if (ChunkIdMax < m_primaryDeserializer->GetNumChunks())
     {
         RuntimeError("Driving deserializer provided too many chunks.");
     }
@@ -69,14 +68,14 @@ void Bundler::CreateChunkDescriptions()
     // Creating a table of weak chunks for non driving deserializers.
     for (size_t i = 0; i < m_deserializers.size(); ++i)
     {
-        m_weakChunkTable.push_back(std::vector<std::weak_ptr<Chunk>>(m_deserializers[i]->ChunkInfos().size()));
+        m_weakChunkTable.push_back(std::vector<std::weak_ptr<Chunk>>(m_deserializers[i]->GetNumChunks()));
     }
 
-    m_chunks.reserve(chunks.size());
+    m_chunks.reserve(m_primaryDeserializer->GetNumChunks());
 
     if (m_verbosity)
     {
-        fprintf(stderr, "Bundler::CreateChunkDescriptions(): creating descriptions for %" PRIu64 " chunks\n", chunks.size());
+        fprintf(stderr, "Bundler::CreateChunkDescriptions(): creating descriptions for %" PRIu64 " chunks\n", m_primaryDeserializer->GetNumChunks());
         fprintf(stderr, "Bundler::CreateChunkDescriptions(): starting to clean chunks\n");
     }
 
@@ -84,23 +83,23 @@ void Bundler::CreateChunkDescriptions()
 
     // Build bundling chunks using underlying deserializers.
     std::vector<SequenceInfo> sequenceDescriptions;
-    sequenceDescriptions.reserve(chunks.front().m_numberOfSequences);
+    sequenceDescriptions.reserve(m_primaryDeserializer->GetChunkInfo(0).m_numberOfSequences);
     SequenceInfo s;
 
-    for (ChunkIdType chunkIndex = 0; chunkIndex < chunks.size(); ++chunkIndex)
+    for (ChunkIdType chunkIndex = 0; chunkIndex < m_primaryDeserializer->GetNumChunks(); ++chunkIndex)
     {
         size_t numberOfSamples = 0;
         size_t numberOfSequences = 0;
         sequenceDescriptions.clear();
 
         // Iterating thru all sequences and identifying whether they are valid among all deserializers.
-        m_primaryDeserializer->SequenceInfosForChunk(chunks[chunkIndex].m_id, sequenceDescriptions);
+        m_primaryDeserializer->SequenceInfosForChunk(m_primaryDeserializer->GetChunkInfo(chunkIndex).m_id, sequenceDescriptions);
         std::set<size_t> invalid;
 
         // Also remember necessary secondary chunks.
         std::vector<std::vector<ChunkIdType>> secondaryChunks;
         secondaryChunks.resize(m_deserializers.size());
-        secondaryChunks[0].push_back(chunks[chunkIndex].m_id);
+        secondaryChunks[0].push_back(m_primaryDeserializer->GetChunkInfo(chunkIndex).m_id);
         for (size_t sequenceIndex = 0; sequenceIndex < sequenceDescriptions.size(); ++sequenceIndex)
         {
             auto sequence = sequenceDescriptions[sequenceIndex];
@@ -150,7 +149,7 @@ void Bundler::CreateChunkDescriptions()
             cd.m_numberOfSamples = numberOfSamples;
             cd.m_numberOfSequences = numberOfSequences;
             cd.m_id = (ChunkIdType) m_chunks.size();
-            cd.m_original = chunks[chunkIndex];
+            cd.m_original = m_primaryDeserializer->GetChunkInfo(chunkIndex);
             cd.m_invalid = std::move(invalid);
             cd.m_secondaryChunks = std::move(secondaryChunks);
             m_chunks.push_back(cd);
@@ -165,11 +164,6 @@ void Bundler::CreateChunkDescriptions()
             " Keys of logical sequences do not match.");
 }
 
-// Gets chunk descriptions.
-std::vector<ChunkInfo> Bundler::ChunkInfos()
-{
-    return std::vector<ChunkInfo>(m_chunks.begin(), m_chunks.end());
-}
 
 // Gets sequence descriptions for a chunk.
 void Bundler::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& sequences)

@@ -204,24 +204,6 @@ void TextParser<ElemType>::Initialize()
     assert(m_index != nullptr);
 }
 
-template <class ElemType>
-std::vector<ChunkInfo> TextParser<ElemType>::ChunkInfos()
-{
-    assert(m_index != nullptr);
-
-    std::vector<ChunkInfo> result;
-    result.reserve(m_index->Chunks().size());
-    for (ChunkIdType i = 0; i < m_index->Chunks().size(); ++i)
-    {
-        result.push_back(ChunkInfo{
-                i,
-                m_index->Chunks()[i].NumberOfSamples(),
-                m_index->Chunks()[i].NumberOfSequences()
-        });
-    }
-
-    return result;
-}
 
 template <class ElemType>
 void TextParser<ElemType>::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result)

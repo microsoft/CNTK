@@ -162,22 +162,19 @@ namespace CNTK {
         });
     }
 
-    std::vector<ChunkInfo> Base64ImageDeserializerImpl::ChunkInfos()
+    size_t Base64ImageDeserializerImpl::GetNumChunks()
     {
-        // In case of multi crop the deserializer provides the same sequence NumMultiViewCopies times.
+        return m_index->NumberOfChunks();
+    }
+
+    ChunkInfo Base64ImageDeserializerImpl::GetChunkInfo(ChunkIdType chunkId)
+    {
         size_t sequencesPerInitialSequence = m_multiViewCrop ? ImageDeserializerBase::NumMultiViewCopies : 1;
-        std::vector<ChunkInfo> result;
-        result.reserve(m_index->NumberOfChunks() * sequencesPerInitialSequence);
-        for(uint32_t i = 0; i < m_index->NumberOfChunks(); ++i)
-        {
-            const auto& chunk = m_index->Chunks()[i];
-            ChunkInfo c;
-            c.m_id = i;
-            assert(chunk.NumberOfSamples() == chunk.NumberOfSequences());
-            c.m_numberOfSamples = c.m_numberOfSequences = chunk.NumberOfSequences() * sequencesPerInitialSequence;
-            result.push_back(c);
-        }
-        return result;
+        const auto& chunk = m_index->Chunks()[chunkId];
+        size_t num_sequences = chunk.NumberOfSequences() * sequencesPerInitialSequence;
+        return ChunkInfo{ chunkId,
+            num_sequences, //number of samples is the same as the number of sequences
+            num_sequences };
     }
 
     void Base64ImageDeserializerImpl::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result)

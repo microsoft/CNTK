@@ -27,9 +27,14 @@ public:
         return m_deserializer->StreamInfos();
     }
 
-    virtual std::vector<ChunkInfo> ChunkInfos() override
+    virtual ChunkInfo GetChunkInfo(ChunkIdType chunkId) override
     {
-        return m_deserializer->ChunkInfos();
+        return m_deserializer->GetChunkInfo(chunkId);
+    }
+
+    virtual size_t GetNumChunks() override
+    {
+        return m_deserializer->GetNumChunks();
     }
 
     virtual void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& descriptions) override

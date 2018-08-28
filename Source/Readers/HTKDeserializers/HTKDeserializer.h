@@ -26,8 +26,16 @@ public:
     // TODO: Should be removed, when legacy config goes away, expects configuration in a legacy mode.
     HTKDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& featureConfig, const std::wstring& featureName, bool primary);
 
-    // Get information about chunks.
-    virtual std::vector<ChunkInfo> ChunkInfos() override;
+    size_t GetNumChunks() override { return m_chunks.size(); }
+
+    ChunkInfo GetChunkInfo(ChunkIdType chunkId) override
+    {
+        return ChunkInfo{ chunkId,
+            m_chunks[chunkId].GetTotalFrames(),
+            m_frameMode ? m_chunks[chunkId].GetTotalFrames() : m_chunks[chunkId].GetNumberOfUtterances()
+        };
+    }
+
 
     // Get information about particular chunk.
     virtual void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result) override;

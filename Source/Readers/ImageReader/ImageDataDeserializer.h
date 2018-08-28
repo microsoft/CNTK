@@ -31,8 +31,18 @@ public:
     // Gets sequences by specified ids. Order of returned sequences corresponds to the order of provided ids.
     virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
-    // Gets chunk descriptions.
-    virtual std::vector<ChunkInfo> ChunkInfos() override;
+    size_t GetNumChunks() override { return m_imageSequences.size(); }
+
+    ChunkInfo GetChunkInfo(ChunkIdType chunkId) override
+    {
+        assert(m_imageSequences[chunkId].m_chunkId == chunkId);
+        return ChunkInfo{ chunkId,
+            1,
+            1
+        };
+    }
+
+
 
     // Gets sequence descriptions for the chunk.
     virtual void SequenceInfosForChunk(ChunkIdType, std::vector<SequenceInfo>&) override;

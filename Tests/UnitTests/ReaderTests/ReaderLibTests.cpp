@@ -161,10 +161,16 @@ public:
         throw logic_error("Not implemented");
     }
 
-    virtual std::vector<ChunkInfo> ChunkInfos() override
+    virtual size_t GetNumChunks() override
     {
-        return m_chunkDescriptions;
+        return m_chunkDescriptions.size();
     }
+
+    virtual ChunkInfo GetChunkInfo(ChunkIdType chunkId) override
+    {
+        return m_chunkDescriptions[chunkId];
+    }
+
 
     virtual void SequenceInfosForChunk(ChunkIdType chunkId, vector<SequenceInfo>& descriptions) override
     {
@@ -511,7 +517,7 @@ BOOST_AUTO_TEST_CASE(TestChunkBasedRandomization)
             auto& a = randomizedChunks1[i];
             auto& b = randomizedChunks2[i];
             BOOST_CHECK(a.m_chunkId == b.m_chunkId);
-            BOOST_CHECK(a.m_original->m_id == b.m_original->m_id);
+            BOOST_CHECK(a.m_original.m_id == b.m_original.m_id);
             BOOST_CHECK(a.m_samplePositionStart == b.m_samplePositionStart);
             BOOST_CHECK(a.m_sequencePositionStart == b.m_sequencePositionStart);
 
@@ -1571,8 +1577,8 @@ void CheckPackerOnSweep(
 
             if (performWorkerChunkCheck) // We know expected number of chunks.
             {
-                bool shouldAddOne = deserializer->ChunkInfos().size() % numWorkers > rank;
-                size_t expectedNumberOfChunks = deserializer->ChunkInfos().size() / numWorkers + (shouldAddOne ? 1 : 0);
+                bool shouldAddOne = deserializer->GetNumChunks() % numWorkers > rank;
+                size_t expectedNumberOfChunks = deserializer->GetNumChunks() / numWorkers + (shouldAddOne ? 1 : 0);
                 BOOST_REQUIRE_EQUAL(workerChunks.size(), expectedNumberOfChunks);
 
                 std::set<size_t> intersect;
@@ -1594,7 +1600,7 @@ void CheckPackerOnSweep(
                 BOOST_REQUIRE_EQUAL(numberOfSamplesInEpoch[e], sampleCount);
         }
 
-        BOOST_REQUIRE_EQUAL(totalChunks.size(), deserializer->ChunkInfos().size());
+        BOOST_REQUIRE_EQUAL(totalChunks.size(), deserializer->GetNumChunks());
 
         auto actual = ToSet(GetCorpus(allData));
         auto expected = ToSet(CorpusSubset(deserializer->Corpus().begin(), deserializer->Corpus().end()));

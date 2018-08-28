@@ -44,7 +44,7 @@ namespace CNTK {
         // Chunk id.
         ChunkIdType m_chunkId;
         // Pointer to the original chunk.
-        const ChunkInfo* m_original;
+        ChunkInfo m_original;
         // Position of the first sample of the chunk in the input.
         size_t m_samplePositionStart;
         // Position of the first sequence of the chunk in the input.
@@ -55,13 +55,13 @@ namespace CNTK {
         // Position of the last sample of the chunk in the input.
         size_t SampleEndPosition() const
         {
-            return m_original->m_numberOfSamples + m_samplePositionStart;
+            return m_original.m_numberOfSamples + m_samplePositionStart;
         }
 
         // Position of the last sequence of the chunk in the input.
         size_t SequenceEndPosition() const
         {
-            return m_original->m_numberOfSequences + m_sequencePositionStart;
+            return m_original.m_numberOfSequences + m_sequencePositionStart;
         }
     };
 
@@ -89,8 +89,7 @@ namespace CNTK {
         DataDeserializerPtr m_deserializer;
         // Randomized chunks.
         std::vector<RandomizedChunk> m_randomizedChunks;
-        // Original chunks.
-        std::vector<ChunkInfo> m_originalChunks;
+
 
         // Randomization range in samples.
         size_t m_randomizationRange;

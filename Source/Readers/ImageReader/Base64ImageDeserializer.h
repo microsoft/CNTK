@@ -20,8 +20,11 @@ namespace CNTK {
         // Get a chunk by id.
         ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
-        // Get chunk descriptions.
-        std::vector<ChunkInfo> ChunkInfos() override;
+
+
+        size_t GetNumChunks() override;
+
+        ChunkInfo GetChunkInfo(ChunkIdType chunkId) override;
 
         // Gets sequence descriptions for the chunk.
         void SequenceInfosForChunk(ChunkIdType, std::vector<SequenceInfo>&) override;

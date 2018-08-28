@@ -17,8 +17,7 @@ namespace CNTK {
         m_randomizationRange(randomizationRange),
         m_sampleBasedRandomizationWindow(sampleBasedRandomizationWindow)
     {
-        m_originalChunks = m_deserializer->ChunkInfos();
-        assert(m_originalChunks.size() < ChunkIdMax);
+        assert(m_deserializer->GetNumChunks() < ChunkIdMax);
     }
 
     // Gets randomized chunks.
@@ -31,8 +30,8 @@ namespace CNTK {
     void ChunkRandomizer::Randomize(size_t seed)
     {
         std::vector<ChunkIdType> randomizedChunkIndices;
-        randomizedChunkIndices.reserve(m_originalChunks.size());
-        for (ChunkIdType i = 0; i < m_originalChunks.size(); i++)
+        randomizedChunkIndices.reserve(m_deserializer->GetNumChunks());
+        for (ChunkIdType i = 0; i < m_deserializer->GetNumChunks(); i++)
         {
             randomizedChunkIndices.push_back(i);
         }
@@ -42,22 +41,22 @@ namespace CNTK {
 
         // Place randomized chunks on the timeline
         m_randomizedChunks.clear();
-        m_randomizedChunks.reserve(m_originalChunks.size());
+        m_randomizedChunks.reserve(m_deserializer->GetNumChunks());
 
         size_t samplePosition = 0;
         size_t sequencePosition = 0;
-        for (ChunkIdType chunkIndex = 0; chunkIndex < m_originalChunks.size(); chunkIndex++)
+        for (ChunkIdType chunkIndex = 0; chunkIndex < m_deserializer->GetNumChunks(); chunkIndex++)
         {
             // TODO: in case of the chunk-based randomization window, we couldn't care less
             // about samples. If we get rid of sample-based randomization, we could do away
             // with this sample counting altogether.
-            const size_t originalChunkIndex = randomizedChunkIndices.at(chunkIndex);
-            const size_t numberOfSamples = m_originalChunks[originalChunkIndex].m_numberOfSamples;
-            const size_t numberOfSequences = m_originalChunks[originalChunkIndex].m_numberOfSequences;
+            const ChunkIdType originalChunkIndex = randomizedChunkIndices.at(chunkIndex);
+            const size_t numberOfSamples = m_deserializer->GetChunkInfo(originalChunkIndex).m_numberOfSamples;
+            const size_t numberOfSequences = m_deserializer->GetChunkInfo(originalChunkIndex).m_numberOfSequences;
 
             RandomizedChunk randomizedChunk;
             randomizedChunk.m_chunkId = chunkIndex;
-            randomizedChunk.m_original = &m_originalChunks[originalChunkIndex];
+            randomizedChunk.m_original = m_deserializer->GetChunkInfo(originalChunkIndex);
             randomizedChunk.m_samplePositionStart = samplePosition;
             randomizedChunk.m_sequencePositionStart = sequencePosition;
             m_randomizedChunks.push_back(randomizedChunk);
@@ -80,7 +79,7 @@ namespace CNTK {
     {
         // For each chunk, compute the randomization range (w.r.t. the randomized chunk sequence)
         size_t halfWindowRange = m_randomizationRange / 2;
-        for (ChunkIdType chunkId = 0; chunkId < m_originalChunks.size(); chunkId++)
+        for (ChunkIdType chunkId = 0; chunkId < m_deserializer->GetNumChunks(); chunkId++)
         {
             auto& chunk = m_randomizedChunks[chunkId];
 
@@ -108,7 +107,7 @@ namespace CNTK {
             chunk.m_randomizationWindow.m_begin = std::min(chunk.m_randomizationWindow.m_begin, chunkId);
             chunk.m_randomizationWindow.m_end = std::max(chunk.m_randomizationWindow.m_end, chunkId + 1);
 
-            while (chunk.m_randomizationWindow.m_end < m_originalChunks.size() &&
+            while (chunk.m_randomizationWindow.m_end < m_deserializer->GetNumChunks() &&
                 m_randomizedChunks[chunk.m_randomizationWindow.m_end].SampleEndPosition() - chunk.m_samplePositionStart < halfWindowRange)
             {
                 // got more space, move window to the right.

@@ -114,9 +114,6 @@ protected:
 
     const static SequenceInfo s_endOfSweep; // Marker indicating end of the sweep.
 
-    // Original chunk descriptions.
-    const std::vector<ChunkInfo> m_originalChunkDescriptions;
-
     const DataDeserializerPtr m_deserializer;
 
     const EpochConfiguration& Config() const

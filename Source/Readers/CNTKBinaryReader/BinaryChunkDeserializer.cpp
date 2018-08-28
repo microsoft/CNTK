@@ -126,20 +126,6 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
     ReadChunkTable();
 }
 
-std::vector<ChunkInfo> BinaryChunkDeserializer::ChunkInfos()
-{
-    assert(m_chunkTable);
-
-    std::vector<ChunkInfo> result;
-    result.reserve(m_numChunks);
-
-    for (ChunkIdType i = 0; i < m_numChunks; i++ ) 
-    {
-        result.push_back(ChunkInfo{ i, m_chunkTable->GetNumSamples(i), m_chunkTable->GetNumSequences(i) });
-    }
-
-    return result;
-}
 
 void BinaryChunkDeserializer::SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result)
 {

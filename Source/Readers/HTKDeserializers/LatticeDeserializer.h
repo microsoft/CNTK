@@ -25,8 +25,15 @@ public:
     // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
     bool GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& s) override;
 
-    // Get information about chunks.
-    virtual std::vector<ChunkInfo> ChunkInfos() override;
+    size_t GetNumChunks() override { return m_chunks.size(); }
+
+    ChunkInfo GetChunkInfo(ChunkIdType chunkId) override
+    {
+        return ChunkInfo{ chunkId,
+            m_chunks[chunkId]->NumberOfSamples(),
+            m_chunks[chunkId]->NumberOfSequences()
+        };
+    }
 
     // Get information about particular chunk.
     virtual void SequenceInfosForChunk(ChunkIdType chunkId, std::vector<SequenceInfo>& result) override;

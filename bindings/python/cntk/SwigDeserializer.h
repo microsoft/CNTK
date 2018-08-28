@@ -8,7 +8,7 @@
 #pragma once
 
 #include <memory>
-#include <shared_mutex>
+#include <numeric>
 
 namespace CNTK
 {
@@ -444,37 +444,38 @@ namespace CNTK
     // to Python.
     class SwigDataDeserializer : public DataDeserializer
     {
-        std::vector<StreamInformation> m_streamInfos;
-        std::once_flag m_streamInfosInitFlag;
-
-        std::vector<ChunkInfo> m_chunkInfos;
-        std::once_flag m_chunkInfosInitFlag;
-
     public:
         SwigDataDeserializer() {}
 
         // Interface implemented in Python.
         virtual std::vector<StreamInformation> _GetStreamInfos() { NOT_IMPLEMENTED; }
-        virtual std::vector<ChunkInfo> _GetChunkInfos() { NOT_IMPLEMENTED; }
         virtual PyObject* _GetChunk(ChunkIdType chunkId) { NOT_IMPLEMENTED; return nullptr;  }
+        virtual int _GetNumChunks() { NOT_IMPLEMENTED; }
 
         // Simple python redirectors.
         std::vector<StreamInformation> StreamInfos() override
         {
-            std::call_once(m_streamInfosInitFlag, [this]() {
-                m_streamInfos = _GetStreamInfos();
-            });
-
-            return m_streamInfos;
+            return _GetStreamInfos();
         }
 
-        std::vector<ChunkInfo> ChunkInfos() override
+        size_t GetNumChunks() override
         {
-            std::call_once(m_chunkInfosInitFlag, [this]() {
-                m_chunkInfos = _GetChunkInfos();
-            });
+            return (size_t) _GetNumChunks();
+        }
 
-            return m_chunkInfos;
+        ChunkInfo GetChunkInfo(ChunkIdType chunkId) override
+        {
+            ChunkPtr chunk = GetChunk(chunkId);
+            std::vector<SequenceInfo> chunkSequenceInfos;
+            chunk->SequenceInfos(chunkSequenceInfos);
+
+            return ChunkInfo{
+                chunkId,
+                std::accumulate(chunkSequenceInfos.begin(), chunkSequenceInfos.end(), (size_t)0u,
+                    [](size_t s, const SequenceInfo& info) {
+                return s + info.m_numberOfSamples;
+            }),
+                chunkSequenceInfos.size() };
         }
 
         ChunkPtr GetChunk(ChunkIdType chunkId)
@@ -482,7 +483,7 @@ namespace CNTK
             auto chunk = _GetChunk(chunkId);
 
             GilStateGuard guard;
-            return std::make_shared<SwigChunk>(chunkId, m_streamInfos, chunk);
+            return std::make_shared<SwigChunk>(chunkId, StreamInfos(), chunk);
         }
 
         bool GetSequenceInfo(const SequenceInfo& primary, SequenceInfo& description) override
