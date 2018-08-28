@@ -59,7 +59,8 @@ public:
         InputRef(1).ValueFor(fr).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
         MaskMissingColumnsToZero(*m_maxIndexes0, InputRef(0).GetMBLayout(), fr);
         MaskMissingColumnsToZero(*m_maxIndexes1, InputRef(1).GetMBLayout(), fr);
-        m_maxIndexes0->Print("LM out");
+        //m_maxIndexes0->Print("LM out");
+        //m_maxIndexes1->Print("LSTM out");
         Value().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
 #if NANCHECK
         Value().HasNan("ClassificationError");
@@ -512,6 +513,9 @@ public:
 
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
+
+        //m_maxIndexes1->Print("LSTM output");
+        //m_maxIndexes0->Print("label output");
         Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_tokensToIgnore);
         Value().TransferToDeviceIfNotThere(Input(0)->GetDeviceId());
     }
@@ -615,6 +619,7 @@ public:
                 ExtractSampleSequence(firstSeq, columnIndices, squashInputs, tokensToIgnore, firstSeqVec);
                 ExtractSampleSequence(secondSeq, columnIndices, squashInputs, tokensToIgnore, secondSeqVec);
 
+                
                 //calculate edit distance
                 size_t firstSize = firstSeqVec.size();
                 size_t secondSize = secondSeqVec.size();
@@ -623,6 +628,20 @@ public:
                 else 
                     totalSampleNum += firstSize;
 
+                /*fprintf(stderr, "label: ");
+                for (size_t n = 0; n < firstSize; n++)
+                {
+                    fprintf(stderr, "%d ", firstSeqVec[n]);
+                }
+                fprintf(stderr, "\n");
+
+                fprintf(stderr, "output: ");
+                for (size_t n = 0; n < secondSize; n++)
+                {
+                    fprintf(stderr, "%d ", secondSeqVec[n]);
+                }
+                fprintf(stderr, "\n");*/
+                    
                 grid.Resize(firstSize + 1, secondSize + 1);
                 insMatrix.Resize(firstSize + 1, secondSize + 1);
                 delMatrix.Resize(firstSize + 1, secondSize + 1);

@@ -6879,6 +6879,17 @@ void _assignRNNTScore(
                         y = exp(x);
                     RNNTscore[probId] -= y;
                 }
+
+                if (u == phoneNum - 1 && t == uttFrameNum[uttId] - 1)
+                {
+                    size_t probId = tuID *totalPhoneNum + blankTokenId;
+                    x = alphaScore[alphaId] + prob[probId] - P_lx;
+                    if (x < LZERO)
+                        y = 0.0f;
+                    else
+                        y = exp(x);
+                    RNNTscore[probId] -= y;
+                }
                 //for (size_t k == 0; k < totalPhoneNum; k++)
                 
             }
@@ -7303,19 +7314,19 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
         
         m_derivativeForF.SetValue(0.0);
         m_derivativeForG.SetValue(0.0);
-        //_assignRNNTScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttFrameToChanInd,
-        //    uttBeginForOutputditribution, numParallelSequences, maxPhoneNum,  totalPhoneNum, blankTokenId);
-            _assignRNNTScore2(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttPhoneBeginIdx, uttFrameToChanInd, uttPhoneToChanInd,
-                uttBeginForOutputditribution, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId, m_derivativeForF.Data(), m_derivativeForG.Data());
+        _assignRNNTScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttFrameToChanInd,
+            uttBeginForOutputditribution, numParallelSequences, maxPhoneNum,  totalPhoneNum, blankTokenId);
+        //    _assignRNNTScore2(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttPhoneBeginIdx, uttFrameToChanInd, uttPhoneToChanInd,
+        //        uttBeginForOutputditribution, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId, m_derivativeForF.Data(), m_derivativeForG.Data());
         //this->Print("RNNT score");
         totalScore(0, 0) = 0.0;
-        fprintf(stderr, "utt score: ");
+        //fprintf(stderr, "utt score: ");
         for (size_t utt = 0; utt < uttNum; utt++)
         {
-            fprintf(stderr, "%f ", scores[utt]);
+            //fprintf(stderr, "%f ", scores[utt]);
             totalScore(0, 0) -= scores[utt];
         }
-        fprintf(stderr, "\n");
+        //fprintf(stderr, "\n");
         //alpha.SetValue(0.0);
         //ElemType score= compute_alphas(prob.Data(), alpha.Data(), (int)maxFrameNum, (int)maxPhoneNum, phoneSeq.Data());
         //CPUMatrix<ElemType> trans_grads, predict_grads;

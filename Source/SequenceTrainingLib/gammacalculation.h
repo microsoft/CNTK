@@ -562,7 +562,7 @@ public:
         ElemType finalscore = 0;
         finalscore =  totalScore.Get00Element();
         //fprintf(stderr, "finalscore:%f\n", finalscore);
-        //if (finalscore > 50 || finalscore < 0)
+        if (finalscore > 50 || finalscore < 0)
         {
             for (size_t i = 0; i < uttFrameNum.size(); i++)
             {
@@ -579,10 +579,10 @@ public:
         matrixOutputDistribution.ReleaseMemory();
 
         //compute derivatives for F and G
-        //m_derivativeForF.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-         //   numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 0);
-        //m_derivativeForG.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-           // numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);
+        m_derivativeForF.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 0);
+        m_derivativeForG.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);
 
         //m_derivativeForF.Print("derivative for F");
         //m_derivativeForG.Print("derivative for G");
