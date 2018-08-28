@@ -32,11 +32,11 @@ set_of_batch_irrelevant_ops = {'Flatten'}
 #helpers
 #############
 
-# this is to check whether input data is a bacth of sparse matrices 
+# check whether the input data is a bacth of sparse matrices 
 def is_list_of_sparse(data):
     return type(data)==list and type(data[0])==scipy.sparse.csr.csr_matrix
 
-# convert list of sparse data to dense matrix for ONNX models 
+# convert a list of sparse matrices to a dense matrix to be used in ONNX test cases 
 def sparse_to_dense(sparse_data):
     dense_data = [sparse_data[0].todense()]
     for i in range(1, len(dense_data)):
@@ -89,7 +89,7 @@ def SaveTensorProto(file_path, variable, data, onnx_value_info_proto):
         data=data.astype(np.bool)
         tp.raw_data = data.tobytes()
     else:
-        assert False, "Tensor element type not supported: " + onnx.TensorProto.DataType.Name(onnx_value_info_proto.type.tensor_type.elem_type)
+        assert False, R'Tensor element type not supported: ' + onnx.TensorProto.DataType.Name(onnx_value_info_proto.type.tensor_type.elem_type)
         
     with open(file_path, 'wb') as f:
         f.write(tp.SerializeToString())
@@ -124,19 +124,19 @@ def verify_no_input(model, tmpdir, name):
 
 def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
     onnx_model = None
-    test_model_path = os.path.join(tmpdir, r"test_" + name)
+    test_model_path = os.path.join(str(tmpdir), R'test_' + name)
     os.mkdir(test_model_path)
-    test_data_path = os.path.join(test_model_path, "test_data_set_0")
+    test_data_path = os.path.join(str(test_model_path), R'test_data_set_0')
     os.mkdir(test_data_path)
-    resave_model_path = os.path.join(tmpdir, R'resave' + name)
+    resave_model_path = os.path.join(str(tmpdir), R'resave' + name)
     os.mkdir(resave_model_path)
     if not loaded_model:
-        filename = os.path.join(test_model_path, name + R'.onnx')
+        filename = os.path.join(str(test_model_path), name + R'.onnx')
         model.save(filename, format=C.ModelFormat.ONNX)
         loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
         onnx_model = onnx.load(filename);
 
-        filename_resave = os.path.join(resave_model_path, name + R'_resave.onnx')
+        filename_resave = os.path.join(str(resave_model_path), name + R'_resave.onnx')
         loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
         
     return loaded_model, onnx_model, test_model_path, test_data_path
@@ -146,24 +146,24 @@ def save_test_data(model, onnx_model, test_data_path, input_data, output_data, n
         return;
 
     if (len(model.arguments) == 1):
-        SaveTensorProto(os.path.join(test_data_path, 'input_{0}.pb'.format(0)), 
+        SaveTensorProto(os.path.join(str(test_data_path), 'input_{0}.pb'.format(0)), 
                         model.arguments[0], input_data, onnx_model.graph.input[0]) #, data_type = np.int)
     else:
         for i in range(len(model.arguments)):
-            SaveTensorProto(os.path.join(test_data_path, 'input_{0}.pb'.format(i)), 
+            SaveTensorProto(os.path.join(str(test_data_path), 'input_{0}.pb'.format(i)), 
                             model.arguments[i], input_data[i], onnx_model.graph.input[i])
 
     if (len(model.outputs) > 1):
         for i in range(0, len(model.outputs)): 
             output_data_i = output_data[model.outputs[i]]
-            SaveTensorProto(os.path.join(test_data_path, 'output_{0}.pb'.format(i)), 
+            SaveTensorProto(os.path.join(str(test_data_path), 'output_{0}.pb'.format(i)), 
                             model.outputs[i], output_data_i, onnx_model.graph.output[i])
     else:
-        SaveTensorProto(os.path.join(test_data_path, 'output_{0}.pb'.format(0)), 
+        SaveTensorProto(os.path.join(str(test_data_path), 'output_{0}.pb'.format(0)), 
                         model.outputs[0], output_data, onnx_model.graph.output[0])
 
     # print out command line for onnx test runner
-    print(R"onnx_test_runner.exe -n " + name + " " + str(tmpdir))
+    print(R'onnx_test_runner.exe -n ' + name + ' ' + str(tmpdir))
 
 def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08):
     # TODO: eventually we want this test method to be more general to suport 
