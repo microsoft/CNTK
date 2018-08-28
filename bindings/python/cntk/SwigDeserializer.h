@@ -8,7 +8,6 @@
 #pragma once
 
 #include <memory>
-#include <shared_mutex>
 
 namespace CNTK
 {
