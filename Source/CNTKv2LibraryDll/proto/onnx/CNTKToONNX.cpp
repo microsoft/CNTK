@@ -2945,16 +2945,15 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     return functionNode; 
 }
 
-Variable SkipBatchPackUnpack(Variable input)
+Variable SkipDynamicAxisPackUnpack(Variable input)
 {
-    if (input.Owner() &&
-        (input.Owner()->OpName() == L"UnpackBatchAxis" || input.Owner()->OpName() == L"ToBatchAxis" ||
-            input.Owner()->OpName() == L"UnpackSequenceOp" || input.Owner()->OpName() == L"UnpackBatchAxis"))
+    std::set<std::wstring> ops({ L"UnpackBatchAxis" , L"ToBatchAxis" , L"UnpackSequenceOp" , L"UnpackBatchAxis" });
+    while (input.Owner() && ops.find(input.Owner()->OpName()) != ops.end())
     {
-        return input.Owner()->Inputs()[0];
-    }
-    else
-        return input;
+        input = input.Owner()->Inputs()[0];
+    } 
+    
+    return input;
 }
 
 bool TryMatchNodeArgType(onnx::TypeProto &argType, LotusIR::Graph* graph, const std::string &nodeArgName)
@@ -2993,7 +2992,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
 
         input = SkipBatchAndSequenceAxisInput(input);
         // UnpackBatchAxis and ToBatchAxis is a noop in ONNX 
-        input = SkipBatchPackUnpack(input);
+        input = SkipDynamicAxisPackUnpack(input);
 
         // Special case handling of LayerNormalization layer because it changes
         // ops dynamically based on value of inputs. If more such cases ops are seen,
