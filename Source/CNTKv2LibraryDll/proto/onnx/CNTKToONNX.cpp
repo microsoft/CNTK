@@ -3871,12 +3871,13 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
             // Currently we don't support outputRank > 1. Thus input1 shape has format [(1), a, outputRank],
             // where (1) is the optional batch axis and a the axis correspond to outputRank = 1.
             // When we support outputRank, the flag will be defined as (input1Rank - reductionRank - outputRank) == 1.
-            bool hasBatchAxis = (input1Rank - reductionRank) == 2;
+            bool input1HasBatchAxis = (input1Rank - reductionRank) == 2;
+            bool input2HasBatchAxis = (input2Rank - reductionRank) == 2;
 
             if (reductionRank > 1) // We need to insert reshape.
             {
-                onnx::TypeProto input1Reshape = ReduceRank(input1Shape, reductionRank, true, hasBatchAxis);
-                onnx::TypeProto input2Reshape = ReduceRank(input2Shape, reductionRank, false, hasBatchAxis);
+                onnx::TypeProto input1Reshape = ReduceRank(input1Shape, reductionRank, true, input1HasBatchAxis);
+                onnx::TypeProto input2Reshape = ReduceRank(input2Shape, reductionRank, false, input2HasBatchAxis);
 
                 UpdateONNXType(src->Inputs()[1].GetDataType(), input1Reshape);
                 UpdateONNXType(src->Inputs()[0].GetDataType(), input2Reshape);
