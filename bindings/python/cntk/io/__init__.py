@@ -1186,14 +1186,14 @@ class UserDeserializer(cntk_py.SwigDataDeserializer):
 
     def get_chunk(self, chunk_id):
         '''
-            Should return a dictionary of stream name -> data of the chunk, where data is csr_matrix/numpy array in sample mode,
-            or a list of csr_matrix/numpy array in sequence mode.
+        Should return a dictionary of stream name -> data of the chunk, where data is csr_matrix/numpy array in sample mode,
+        or a list of csr_matrix/numpy array in sequence mode.
 
-            Args:
-                chunk_id(int): id of the chunk to be read, 0 <= chunk_id < num_chunks
+        Args:
+            chunk_id(int): id of the chunk to be read, 0 <= chunk_id < num_chunks
 
-            Returns:
-                dict containing the data
+        Returns:
+            dict containing the data
         '''
         raise NotImplementedError('should return data for the chunk.')
 

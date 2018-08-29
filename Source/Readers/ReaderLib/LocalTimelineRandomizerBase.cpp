@@ -90,15 +90,6 @@ void LocalTimelineRandomizerBase::Refill()
 
 void LocalTimelineRandomizerBase::MoveToNextSequence()
 {
-    //if (m_window.m_sequences.empty())
-    ////Note that it is the end of sweep, there willl a special sequence s_endOfSweep in the window so it won't be empty.
-    //{   //No sequences in the window for the current worker so refill the window,
-    //    //TODO To investigate: As one worker might move the chunk window faster than the other worker in distributed training, this might invalidate
-    //    //the expected order of samples in minibatches during the graident gathering step from all the workers; this will only be a concern for the very rare
-    //    //scenarios that a very specific order of samples are desired during the training.
-    //    m_window.m_sequencePosition = 0;
-    //    Refill();
-    //}
     if (m_window.m_sequences.size() > 0)
     {
         const auto& s = m_window.m_sequences[m_window.m_sequencePosition];
