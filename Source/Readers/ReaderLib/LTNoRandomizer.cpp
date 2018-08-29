@@ -51,9 +51,12 @@ void LTNoRandomizer::RefillSequenceWindow(SequenceWindow& window)
         size_t workerSequencePosition = 0;
         for (size_t i = 0; i < window.m_sequences.size(); ++i, ++m_currentSequencePosition)
         {
-            if (m_currentSequencePosition % numberOfWorkers == Config().m_workerRank && workerSequencePosition != i)
-                std::swap(window.m_sequences[workerSequencePosition], window.m_sequences[i]);
-            ++workerSequencePosition;
+            if (m_currentSequencePosition % numberOfWorkers == Config().m_workerRank)
+            {
+                if (workerSequencePosition != i)
+                    std::swap(window.m_sequences[workerSequencePosition], window.m_sequences[i]);
+                ++workerSequencePosition;
+            }
         }
 
         window.m_sequences.erase(window.m_sequences.begin() + workerSequencePosition, window.m_sequences.end());
