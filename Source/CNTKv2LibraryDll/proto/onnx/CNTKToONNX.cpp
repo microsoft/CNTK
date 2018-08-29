@@ -2948,7 +2948,8 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
 Variable SkipBatchPackUnpack(Variable input)
 {
     if (input.Owner() &&
-        (input.Owner()->OpName() == L"UnpackBatchAxis" || input.Owner()->OpName() == L"ToBatchAxis"))
+        (input.Owner()->OpName() == L"UnpackBatchAxis" || input.Owner()->OpName() == L"ToBatchAxis" ||
+            input.Owner()->OpName() == L"UnpackSequenceOp" || input.Owner()->OpName() == L"UnpackBatchAxis"))
     {
         return input.Owner()->Inputs()[0];
     }
