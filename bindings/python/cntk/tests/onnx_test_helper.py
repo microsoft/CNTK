@@ -103,15 +103,13 @@ def create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name
     os.mkdir(test_model_path)
     test_data_path = os.path.join(str(test_model_path), R'test_data_set_0')
     os.mkdir(test_data_path)
-    resave_model_path = os.path.join(str(tmpdir), R'resave' + name)
-    os.mkdir(resave_model_path)
     if not loaded_model:
         filename = os.path.join(str(test_model_path), name + R'.onnx')
         model.save(filename, format=C.ModelFormat.ONNX)
         loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
         onnx_model = onnx.load(filename);
 
-        filename_resave = os.path.join(str(resave_model_path), name + R'_resave.onnx')
+        filename_resave = os.path.join(str(test_model_path), name + R'_resave.onnx')
         loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
         
     return loaded_model, onnx_model, test_model_path, test_data_path

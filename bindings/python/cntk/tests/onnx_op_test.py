@@ -706,7 +706,7 @@ def test_GRU(tmpdir, dtype):
                                                         activation = activation),   
                                            initial_state = initial_state,    
                                            go_backwards=backward)(x)
-            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype(dtype)
             verify_sequence_model(GRUModel, data, tmpdir, model_filename)
 
 
@@ -905,7 +905,7 @@ def test_LSTM(tmpdir, dtype):
                                         initial_state = initial_state,
                                         cell_dim = cell_dim,
                                         self_stabilization = enable_self_stabilization)(x)
-            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype(dtype)
             verify_sequence_model(LSTMmodel, data, tmpdir, model_filename)
 
 #MatMul

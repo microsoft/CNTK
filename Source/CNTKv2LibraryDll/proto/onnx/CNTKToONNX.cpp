@@ -67,7 +67,13 @@ private:
                                     std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
                                     const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
+    
+    static bool CheckCorrectTransposeAxisToSkipForSequenceAxisOpWrapper(FunctionPtr currentOp);
+    static bool MatchOpSequence(const FunctionPtr src, std::vector<wstring> opSequence, FunctionPtr &op);
+    static bool MatchInputSequence(const Variable &input, std::vector<wstring> opSequence, Variable &inputSkipTo);
+    static Variable SkipBatchAndSequenceAxisInput(const Variable input);
     static FunctionPtr SkipBatchAndSequenceAxisOp(const FunctionPtr src);
+
     static LotusIR::Node* CreateSequenceSliceNode(const FunctionPtr& src,
         LotusIR::Graph* graph,
         std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
@@ -1282,12 +1288,30 @@ bool IsUnSupportedLayerNormalization(const FunctionPtr src)
     return cntkOpName == "LayerNormalization" && src->Output().HasSequenceAxis();
 }
 
-bool MatchOpSequence(const FunctionPtr src, std::vector<wstring> opSequence, FunctionPtr &op)
+bool CNTKToONNXHelper::CheckCorrectTransposeAxisToSkipForSequenceAxisOpWrapper(FunctionPtr currentOp)
+{
+    if (currentOp->OpName() != L"TransposeAxes")
+        return true;
+
+    if (currentOp->Attributes().Contains(L"axis1") && currentOp->Attributes().Contains(L"axis2") &&
+        !currentOp->Inputs()[0].HasBatchAxis() && !currentOp->Inputs()[0].HasSequenceAxis())
+    {
+        Axis axis1 = (Axis)(currentOp->Attributes()[L"axis1"].Value<Axis>()).StaticAxisIndex();
+        Axis axis2 = (Axis)(currentOp->Attributes()[L"axis2"].Value<Axis>()).StaticAxisIndex();
+        int64_t axisIndex1 = ConvertAxisToOnnx(axis1, currentOp->Inputs()[0]);
+        int64_t axisIndex2 = ConvertAxisToOnnx(axis2, currentOp->Inputs()[0]);
+        // transpose between first and second of unpacked batch and sequence axes.
+        return axisIndex1 + axisIndex2 == 1;
+    }
+    return false;
+}
+
+bool CNTKToONNXHelper::MatchOpSequence(const FunctionPtr src, std::vector<wstring> opSequence, FunctionPtr &op)
 {
     FunctionPtr currentOp = src;
     for (auto opName : opSequence)
     {
-        if (currentOp == nullptr || currentOp->OpName() != opName)
+        if (currentOp == nullptr || currentOp->OpName() != opName || !CheckCorrectTransposeAxisToSkipForSequenceAxisOpWrapper(currentOp))
         {
             return false;
         }
@@ -1297,16 +1321,17 @@ bool MatchOpSequence(const FunctionPtr src, std::vector<wstring> opSequence, Fun
     return true;
 }
 
-bool MatchInputSequence(const Variable &input, std::vector<wstring> opSequence, Variable &inputSkipTo)
+bool CNTKToONNXHelper::MatchInputSequence(const Variable &input, std::vector<wstring> opSequence, Variable &inputSkipTo)
 {
     FunctionPtr currentOp = input.Owner();
     for (int i = 0; i < opSequence.size(); i++)
     {
         auto opName = opSequence[i];
-        if (currentOp == nullptr || currentOp->OpName() != opName)
+        if (currentOp == nullptr || currentOp->OpName() != opName || !CheckCorrectTransposeAxisToSkipForSequenceAxisOpWrapper(currentOp))
         {
             return false;
         }
+
         if (i < opSequence.size() - 1)
             currentOp = currentOp->Inputs().size() == 1 ? currentOp->Inputs()[0].Owner() : nullptr;
     }
@@ -1314,7 +1339,12 @@ bool MatchInputSequence(const Variable &input, std::vector<wstring> opSequence, 
     return true;
 }
 
-Variable SkipBatchAndSequenceAxisInput(const Variable input)
+// Here (in SkipBatchAndSequenceAxisInput and SkipBatchAndSequenceAxisOp) we heuristically skip wrapping op sequences 
+// that have been added when importing a model with ops that require sequence axis.
+// Skipping sequence of wrapping ops is a good to have to make the re-exported model clean and efficient.
+// Even we do not or have missed skipping of any wrapping sequence, 
+// the exported model shall still be valid and produce matching numbers.
+Variable CNTKToONNXHelper::SkipBatchAndSequenceAxisInput(const Variable input)
 {
     std::vector<wstring> toSequenceBatchOps({ L"ToSequenceOp", L"ToBatchAxis", L"TransposeAxes" });
     std::vector<wstring> unpackSequenceBatchOps({ L"TransposeAxes", L"UnpackBatchAxis", L"UnpackSequenceOp" });
