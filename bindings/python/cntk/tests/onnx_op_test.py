@@ -6,10 +6,12 @@
 import os
 import numpy as np
 import cntk as C
+import onnx
 import pytest
 from copy import deepcopy
 from cntk.ops.tests.ops_test_utils import cntk_device
 from itertools import product
+from .onnx_test_helper import transpose_dynamic_axis, create_and_populate_onnx_test_case_with_model_conversion, save_test_data
 
 CNTK_FREEDIM_AXIS_DENOTATION = -3
 DIM_SIZE_FOR_NON_BATCH_OPS = 1
@@ -27,14 +29,14 @@ set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMax
 # when the input has batch axis.
 set_of_batch_irrelevant_ops = {'Flatten'}
 
-#############
-#helpers
-#############
+##########################################
+## helper verification functions
+##########################################
 def verify_no_input(model, tmpdir, name):
     opname = model.owner.op_name
 
     loaded_model = None
-    loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
+    loaded_model, _, _, _ = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
 
     model_shape = model.shape
     dim_denotation = None
@@ -58,15 +60,6 @@ def verify_no_input(model, tmpdir, name):
     assert np.allclose(o0, o1)
     return loaded_model
 
-def try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model):
-    if not loaded_model:
-        filename = os.path.join(str(tmpdir), name + R'.onnx')
-        model.save(filename, format=C.ModelFormat.ONNX)
-        loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
-        filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
-        loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
-    return loaded_model
-
 def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08):
     # TODO: eventually we want this test method to be more general to suport 
     # models with multiple inputs instead of just one input.
@@ -79,7 +72,7 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
     # outputs share the same owner
     opname = model.outputs[0].owner.op_name
 
-    loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
+    loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
 
     # TODO: it is better to compare data.shape with model.arguments[0] and
     # to pad batch dimension as needed.
@@ -113,23 +106,18 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
             o1i = o1[loaded_model.outputs[i]]
             assert np.allclose(o0i, o1i, rtol, atol)
 
+    save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
+
     return loaded_model
 
 def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None):
-    def TranposeDynamicAxis(data):
-        rank = np.rank(data)
-        assert rank >= 2
-        perm = np.arange(rank)
-        perm[0], perm[1] = perm[1], perm[0]
-        return np.transpose(data, perm)
-
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
     opname = model.owner.op_name
 
-    loaded_model = try_save_load_resave_onnx_model(model, tmpdir, name, loaded_model)
+    loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
 
-    dataOnnx = TranposeDynamicAxis(data)
+    dataOnnx = transpose_dynamic_axis(data)
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
         o1 = loaded_model.eval({loaded_model.arguments[0]:dataOnnx}, device=device)
@@ -143,10 +131,11 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
     # if there is a sequence axis in the output, it must be swapped with batch axis 
     # to match the original CNTK model's output 
     if model.outputs[0].has_sequence_axis(): 
-        o1 = TranposeDynamicAxis(o1)
+        o1 = transpose_dynamic_axis(o1)
 
     assert np.allclose(o0, o1)
-    return loaded_model
+    
+    save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
 
 def verify_two_input(model, data1, data2, tmpdir, name):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
@@ -339,9 +328,9 @@ def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dty
         loaded_model = None
         for i in range(len(x)):
             if dtype==np.float16:
-                loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization', loaded_model=loaded_model, rtol = 1e-03, atol = 1e-03)
+                loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization_float16' + str(i), loaded_model=loaded_model, rtol = 1e-03, atol = 1e-03)
             else:
-                loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization', loaded_model=loaded_model)
+                loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization_float32' + str(i), loaded_model=loaded_model)
 
 
 # Case 1 - Non-Spatial BN with More > 1 batches    
@@ -708,7 +697,6 @@ def test_GRU(tmpdir, dtype):
 
         for config in list(product(direction_options, initial_state_options, activation_options)):
             model_filename = MakeGRUNameFromConfig(*config)
-            print(model_filename)
             backward, initial_state, activation =  config
     
             x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
@@ -716,7 +704,7 @@ def test_GRU(tmpdir, dtype):
                                                         activation = activation),   
                                            initial_state = initial_state,    
                                            go_backwards=backward)(x)
-            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype(dtype)
             verify_sequence_model(GRUModel, data, tmpdir, model_filename)
 
 
@@ -783,7 +771,7 @@ def test_LayerNormalization(tmpdir, dtype, device_id):
             data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
             input_operand = C.input_variable(shape=shape)
             model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.00001)(input_operand)
-            verify_one_input(model0, data, tmpdir, 'LayerNorm_0')
+            verify_one_input(model0, data, tmpdir, 'LayerNorm_0' + str(shape).replace(',', '_'))
 
         # This test point tests especially with epsilon = 0, because that creates a graph with 
         # different number of ops. However, we don't expect the numbers to match in round trip
@@ -915,7 +903,7 @@ def test_LSTM(tmpdir, dtype):
                                         initial_state = initial_state,
                                         cell_dim = cell_dim,
                                         self_stabilization = enable_self_stabilization)(x)
-            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype('f')
+            data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype(dtype)
             verify_sequence_model(LSTMmodel, data, tmpdir, model_filename)
 
 #MatMul
@@ -1422,7 +1410,6 @@ def test_RNN(tmpdir, dtype):
 
         for config in list(product(direction_options, num_layers_options, initial_state_options, activation_options)):
             model_filename = MakeRNNNameFromConfig(*config)
-            print(model_filename)
             direction, num_layers, initial_state, activation = config
     
             x = C.input_variable(input_dim, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')]) 
@@ -1477,7 +1464,6 @@ def test_SequenceSlice(tmpdir, dtype, beginIndex, endIndex):
     shape = (batch_size, sequence_length, input_size)
     data = np.reshape(range(0, np.prod(shape)), shape).astype(dtype)
     testName = "test_sequence_slice_{0}.{1}".format(beginIndex, endIndex)
-    print(testName)
     model = C.sequence.slice(C.sequence.input_variable((feature_shape)), beginIndex, endIndex)
     verify_sequence_model(model, data, tmpdir, testName)
 
