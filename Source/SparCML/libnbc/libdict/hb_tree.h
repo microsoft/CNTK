@@ -18,10 +18,10 @@ struct hb_tree;
 typedef struct hb_tree hb_tree;
 
 hb_tree *hb_tree_new __P((dict_cmp_func key_cmp, dict_del_func key_del,
-						  dict_del_func dat_del));
-dict	*hb_dict_new __P((dict_cmp_func key_cmp, dict_del_func key_del,
-						  dict_del_func dat_del));
-void	 hb_tree_destroy __P((hb_tree *tree, int del));
+                          dict_del_func dat_del));
+dict    *hb_dict_new __P((dict_cmp_func key_cmp, dict_del_func key_del,
+                          dict_del_func dat_del));
+void     hb_tree_destroy __P((hb_tree *tree, int del));
 
 int hb_tree_insert __P((hb_tree *tree, void *key, void *dat, int overwrite));
 int hb_tree_probe __P((hb_tree *tree, void *key, void **dat));
