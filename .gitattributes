@@ -163,3 +163,5 @@ Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_conv
 external/gsl text
 #certificates
 *.pfx binary
+
+Source/SparCML/libnbc/.libs/libnbc.a binary

@@ -248,8 +248,8 @@ public:
     virtual void WaitAny(MPI_Request* requests, int numRequests, int* index);
     virtual void Wait(MPI_Request* request);
     virtual int WaitAll(std::vector<MPI_Request>& requests);
-	
-	virtual MPI_Comm Communicator() const;
+
+    virtual MPI_Comm Communicator() const;
 };
 
 
@@ -1263,7 +1263,7 @@ void MPIWrapperEmpty::WaitAny(MPI_Request* requests, int numRequests, int* index
 
 MPI_Comm Communicator() const
 {
-    return MPI_COMM_NULL;	
+    return MPI_COMM_NULL;
 }
 
 #pragma warning(pop)
