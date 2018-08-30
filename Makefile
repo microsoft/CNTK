@@ -76,6 +76,8 @@ endif
 
 #### Configure based on options above
 
+DEFAULT_CXX:= $(CXX)
+
 # The mpic++ wrapper only adds MPI specific flags to the g++ command line.
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 ifneq ($(HAS_MPI),0)
@@ -92,13 +94,17 @@ PROTOC = $(PROTOBUF_PATH)/bin/protoc
 
 SOURCEDIR:= Source
 GSL_PATH:=$(SOURCEDIR)/../external/gsl
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, SparCML Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/Generated/Linux CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
+ONNX_PATH:=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx
+ONNX_REPO_PATH:=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, SparCML Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/API/Internals CNTKv2LibraryDll/Generated/Linux CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 INCLUDEPATH+=$(GSL_PATH)/include
+INCLUDEPATH+=$(ONNX_PATH)
+INCLUDEPATH+=$(ONNX_REPO_PATH)
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
-COMMON_FLAGS:= $(COMMON_FLAGS) -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11 -DCUDA_NO_HALF -D__CUDA_NO_HALF_OPERATORS__
+COMMON_FLAGS:= $(COMMON_FLAGS) -DONNX_NAMESPACE=onnx -DONNX_ML=1 -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++14 -DCUDA_NO_HALF -D__CUDA_NO_HALF_OPERATORS__
 CPPFLAGS:=
-CXXFLAGS:= $(SSE_FLAGS) $(CXXFLAGS) -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
+CXXFLAGS:= $(SSE_FLAGS) $(CXXFLAGS) -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS_LIST:=
 LDFLAGS:=
@@ -496,6 +502,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/PrimitiveFunction.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/PrimitiveFunctionAttribute.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/CompositeFunction.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/UserDefinedFunction.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
@@ -517,35 +524,35 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardFileWriter.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardUtils.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/logging/capture.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/logging/logging.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/status.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph_transformer.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/model.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/op.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/tensorutils.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/controlflow/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/experiments/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/generator/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/logical/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/logical/old.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/math/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/math/old.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/nn/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/nn/old.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/reduction/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/rnn/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/rnn/old.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/tensor/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/tensor/old.cpp \
-    $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/traditionalml/defs.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/data_type_utils.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/defs/schema.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/common/assertions.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-ml.pb.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-operators-ml.pb.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx/checker.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/logging/capture.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/logging/logging.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/status.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph_transformer.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/model.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/op.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/tensorutils.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/checker.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/common/assertions.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/controlflow/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/experiments/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/generator/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/logical/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/logical/old.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/math/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/math/old.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/nn/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/nn/old.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/reduction/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/rnn/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/rnn/old.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/tensor/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/tensor/old.cc \
+    $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/traditionalml/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/data_type_utils.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/schema.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.pb.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.pb.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/Operators.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/RNNHelper.cpp \
     $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/CNTKToONNX.cpp \
@@ -567,7 +574,8 @@ CNTKLIBRARY:=Cntk.Core-$(CNTK_COMPONENT_VERSION)
 CNTKLIBRARY_OBJ:=\
 	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(CNTKLIBRARY_SRC))) \
 	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(CNTKLIBRARY_SRC))) \
-	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTKLIBRARY_SRC)))
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTKLIBRARY_SRC))) \
+	$(patsubst %.cc, $(OBJDIR)/%.o, $(filter %.cc, $(CNTKLIBRARY_SRC)))
 
 CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
 ALL_LIBS+=$(CNTKLIBRARY_LIB)
@@ -680,13 +688,19 @@ EVAL_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 EVAL_OBJ:=\
 	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(EVAL_SRC))) \
 	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(EVAL_SRC))) \
-	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(EVAL_SRC)))
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(EVAL_SRC))) \
+	$(patsubst %.cc, $(OBJDIR)/%.o, $(filter %.cc, $(CNTKLIBRARY_SRC)))
 
 EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL_LIBS+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
-$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB)
+# only set lib name when asgd is true
+ifeq ("$(CNTK_ENABLE_ASGD)","true")
+MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
+endif
+
+$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
@@ -829,6 +843,8 @@ HTKDESERIALIZERS_SRC =\
 	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDeserializer.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFIndexBuilder.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFBinaryDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFBinaryIndexBuilder.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFUtils.cpp \
 
 HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
@@ -1107,7 +1123,7 @@ lMULTIVERSO:=-lmultiverso
 INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
 COMMON_FLAGS += -DASGD_PARALLEL_SUPPORT
 
-MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
+# MULTIVERSO_LIB has been set above
 
 ALL_LIBS+=$(MULTIVERSO_LIB)
 ifeq ("$(BUILDTYPE)","release")
@@ -1124,13 +1140,13 @@ $(MULTIVERSO_LIB):
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build/$(BUILDTYPE)
 	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
-		-DCMAKE_CXX_COMPILER=$(CXX) \
+		-DCMAKE_CXX_COMPILER=$(DEFAULT_CXX) \
 		-DOpenMP_CXX_FLAGS="" \
 		-DOpenMP_C_FLAGS="" \
 		-DBoost_NO_BOOST_CMAKE=TRUE \
 		-DBoost_NO_SYSTEM_PATHS=TRUE \
-		-DBOOST_ROOT:PATHNAME=$(BOOST_PATH) \
-		-DBOOST_LIBRARY_DIRS:FILEPATH=$(BOOST_PATH) \
+		-DBOOST_ROOT:PATH=$(BOOST_PATH) \
+		-DBOOST_LIBRARY_DIRS:PATH=$(BOOST_PATH) \
 		-DLIBRARY_OUTPUT_PATH=$(shell readlink -f $(LIBDIR)) \
 		-DEXECUTABLE_OUTPUT_PATH=$(shell readlink -f $(BINDIR)) \
 		-DCMAKE_BUILD_TYPE=$(MULTIVERSO_CMAKE_BUILDTYPE) \
@@ -1186,7 +1202,8 @@ CNTK_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 CNTK_OBJ :=\
 	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(CNTK_SRC))) \
 	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(CNTK_SRC))) \
-	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTK_SRC)))
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTK_SRC))) \
+	$(patsubst %.cc, $(OBJDIR)/%.o, $(filter %.cc, $(CNTKLIBRARY_SRC)))
 
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
@@ -1258,7 +1275,8 @@ UNITTEST_EVAL_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/EvalTests/EvalExtendedTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/EvalTests/stdafx.cpp
 
-UNITTEST_EVAL_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_EVAL_SRC))
+UNITTEST_EVAL_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_EVAL_SRC)) \
+					 $(patsubst %.cc, $(OBJDIR)/%.o, $(filter %.cc, $(CNTKLIBRARY_SRC)))
 
 UNITTEST_EVAL := $(BINDIR)/evaltests
 
@@ -1325,7 +1343,8 @@ UNITTEST_NETWORK_SRC += $(SGDLIB_SRC)
 UNITTEST_NETWORK_OBJ :=\
 	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(UNITTEST_NETWORK_SRC))) \
 	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(UNITTEST_NETWORK_SRC))) \
-	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(UNITTEST_NETWORK_SRC)))
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(UNITTEST_NETWORK_SRC))) \
+	$(patsubst %.cc, $(OBJDIR)/%.o, $(filter %.cc, $(CNTKLIBRARY_SRC)))
 
 UNITTEST_NETWORK := $(BINDIR)/networktests
 
@@ -1413,6 +1432,7 @@ CNTKLIBRARY_TESTS_SRC =\
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/TensorTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/ValueTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/SerializationTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/ConvolutionFunctionTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/LearnerTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/FunctionTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/DeviceSelectionTests.cpp \
@@ -1563,16 +1583,23 @@ endif
 ########################################
 # C# Support
 ########################################
+
 ifeq ("$(CSHARP_SUPPORT)","true")
-	
+
 # This is a short-term hack to shoehorn cmake into our build system. In the near future, we will fully migrate
 # to a cmake-based system and this hack will no longer be necessary.
+ifeq ("$(findstring debug,$(BUILDTYPE))","debug")
 
-ifeq ("$(BUILDTYPE)","debug")
-	CSHARP_BUILDTYPE:=Debug
-endif
-ifeq ("$(BUILDTYPE)","release")
-	CSHARP_BUILDTYPE:=Release
+CSHARP_BUILDTYPE:=Debug
+
+else ifeq ("$(findstring release,$(BUILDTYPE))","release")
+
+CSHARP_BUILDTYPE:=Release
+
+else
+
+$(error '$(BUILDTYPE)' does not resemble 'debug' or 'release')
+
 endif
 
 .PHONY: csharp
@@ -1581,26 +1608,54 @@ csharp: $(CSHARP_LIBS)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
 	mkdir -p bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE)
 	cd bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE) && \
-		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) && \
-		make
+		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) -DCNTK_BUILD_LIB_DIR_HACK=$(LIBDIR) && \
+		make clean && \
+		make all
+
 	mkdir -p bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)
 	cd bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE) && \
-		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) && \
+		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) -DCNTK_BUILD_LIB_DIR_HACK=$(LIBDIR) && \
 		make
 	cp --recursive bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/* $(LIBDIR)
 
 ALL += csharp
 	
 # Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+# Since we are not building the .sln file as a whole using dotnet build, dotnet has no context of dependencies of each project. So dispatching the following builds in parallel
+# will create various race-conditions when they try to lock down some shared dependent files. Serializing the build here is only mitigating the race-conditions. A proper solution
+# would be either using msbuild on the whole solution(ideal but painful to change) or keeping multiple copies of CNTKLibraryManagedDll files for the dependent projects to consume.
 V2LibraryCSTests.dll: csharp
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
 	cd Tests/UnitTests/V2LibraryCSTests && \
 		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
-		dotnet build /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE)
-	cp $(LIBDIR)/*.so Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)
+		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE)
+	cp -f Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/V2LibraryCSTests.* $(LIBDIR)
+	cp -f Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/Microsoft.VisualStudio.* $(LIBDIR)
 	
 ALL += V2LibraryCSTests.dll
+
+# Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+CNTKLibraryCSTrainingTest.dll: csharp V2LibraryCSTests.dll
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
+	cd Tests/EndToEndTests/CNTKv2CSharp/CNTKLibraryCSTrainingTest && \
+		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
+		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE) CNTKLibraryCSTrainingTest.csproj
+	cp -f Tests/EndToEndTests/CNTKv2CSharp/CNTKLibraryCSTrainingTest/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/*.* $(LIBDIR)
+	
+ALL += CNTKLibraryCSTrainingTest.dll
+
+# Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+CNTKLibraryCSEvalExamplesTest.dll: csharp CNTKLibraryCSTrainingTest.dll
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
+	cd Tests/EndToEndTests/EvalClientTests/CNTKLibraryCSEvalExamplesTest && \
+		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
+		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE) CNTKLibraryCSEvalExamplesTest.csproj
+	cp -f Tests/EndToEndTests/EvalClientTests/CNTKLibraryCSEvalExamplesTest/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/*.* $(LIBDIR)
+
+ALL += CNTKLibraryCSEvalExamplesTest.dll
 
 endif
 
@@ -1645,6 +1700,12 @@ $(OBJDIR)/%.pb.o : %.pb.cc $(BUILD_CONFIGURATION)
 	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
 $(OBJDIR)/%.o : %.cpp $(BUILD_CONFIGURATION)
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	@mkdir -p $(dir $@)
+	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
+
+$(OBJDIR)/%.o : %.cc $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)

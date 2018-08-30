@@ -109,7 +109,7 @@ struct MBLayout
     // -------------------------------------------------------------------
 
     MBLayout(size_t numParallelSequences, size_t numTimeSteps, const std::wstring &name)
-        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE)
+        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE), m_rightSplice(0)
     {
         Init(numParallelSequences, numTimeSteps);
         SetUniqueAxisName(name != L"" ? name : L"DynamicAxis");
@@ -141,6 +141,7 @@ struct MBLayout
 
         m_columnsValidityMask.SetValue(other->m_columnsValidityMask);
         m_writable = other->m_writable;
+        m_rightSplice = other->m_rightSplice;
 
         if (!keepName)
             m_axisName = other->m_axisName;
@@ -167,6 +168,7 @@ struct MBLayout
 
         m_columnsValidityMask = std::move(other->m_columnsValidityMask);
         m_writable = other->m_writable;
+        m_rightSplice = other->m_rightSplice;
 
         m_axisName = std::move(other->m_axisName);
     }
@@ -195,6 +197,14 @@ public:
         m_numGapFrames = 0;
         m_sequences.clear();
         m_writable = true;
+    }
+
+    void Init(size_t numParallelSequences, size_t numTimeSteps, size_t rightSplice)
+    {
+        Init(numParallelSequences, numTimeSteps);
+        m_rightSplice = rightSplice;
+        if (numTimeSteps < rightSplice)
+            m_rightSplice = 0;
     }
 
     // packing algorithm
@@ -489,6 +499,14 @@ public:
 
     bool HasGaps() const;
     bool HasGaps(const FrameRange &fr) const;
+    bool HasRightSplice() const
+    {
+        return m_rightSplice > 0;
+    }
+    size_t RightSplice() const
+    {
+        return m_rightSplice;
+    }
 
     // test boundary flags for a specific condition
     bool IsBeyondStartOrEnd(const FrameRange& fr) const;
@@ -583,6 +601,8 @@ private:
 
     // all sequences that live inside this minibatch
     vector<SequenceInfo> m_sequences;
+    // right splice for latency control blstm
+    size_t m_rightSplice;
 
 private:
     // -------------------------------------------------------------------
@@ -922,6 +942,7 @@ inline size_t MBLayout::GetActualNumSamples() const { return m_numFramesDeclared
 
 // return m_columnsValidityMask(,), which is lazily created here upon first call
 // only called from MaskMissingColumnsTo()
+// Update: also called from GatherNode::BackpropToNonLooping(). 
 // TODO: Can probably be faster by using the sequence array directly.
 // TODO: Or should we just blast m_distanceToStart to GPU, and maks based on that? It is small compared to features.
 inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE deviceId) const
@@ -930,7 +951,7 @@ inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE device
     // lazily compute the validity mask
     if (m_columnsValidityMask.IsEmpty())
     {
-        assert(HasGaps()); // must only be called if there are gaps
+        assert(HasGaps() || m_rightSplice != 0); // must only be called if there are gaps
         Lock();
 
         // Determine indices of all invalid columns in the minibatch
@@ -1213,7 +1234,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
 template <class ElemType>
 static inline void MaskMissingColumnsTo(Matrix<ElemType>& matrixToMask, const MBLayoutPtr& pMBLayout, const FrameRange& fr, ElemType val)
 {
-    if (pMBLayout && pMBLayout->HasGaps(fr))
+    if (pMBLayout && (pMBLayout->HasGaps(fr) || pMBLayout->HasRightSplice()))
     {
         const auto& maskMatrix = pMBLayout->GetColumnsValidityMask(matrixToMask.GetDeviceId());
 

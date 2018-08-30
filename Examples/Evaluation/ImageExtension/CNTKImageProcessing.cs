@@ -9,6 +9,9 @@ namespace CNTKImageProcessing
 {
     static class ImageProcessing
     {
+        public static float DefaultHorizontalResolution = 96;
+        public static float DefaultVerticalResolution = 96;
+        
         /// <summary>
         /// Extracts image pixels in CHW using parallelization
         /// </summary>
@@ -81,8 +84,10 @@ namespace CNTKImageProcessing
         public static Bitmap Resize(this Bitmap image, int width, int height, bool useHighQuality)
         {
             var newImg = new Bitmap(width, height);
-
-            newImg.SetResolution(image.HorizontalResolution, image.VerticalResolution);
+            // TODO this is an ugly hack only for Linux because of this bug (https://bugzilla.xamarin.com/show_bug.cgi?id=33310) in libGdiPlus that System.Drawing is using.
+            // remove this when the bug is fixed
+            newImg.SetResolution(image.HorizontalResolution == 0 ? DefaultHorizontalResolution : image.HorizontalResolution, 
+                                 image.VerticalResolution == 0 ? DefaultVerticalResolution : image.VerticalResolution);
 
             using (var g = Graphics.FromImage(newImg))
             {

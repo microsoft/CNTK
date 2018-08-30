@@ -19,8 +19,39 @@ using CNTKImageProcessing;
 
 namespace CNTKLibraryCSEvalExamples
 {
-    public class CNTKLibraryManagedExamples
+    public static class CNTKLibraryManagedExamples
     {
+        /// <summary>
+        /// Data used for all the example tests
+        /// </summary>
+        public static string ExampleTestDataDir;
+
+        /// <summary>
+        /// Vocal data used for sequence tests
+        /// </summary>
+        private static string VocabFile;
+
+        /// <summary>
+        /// Lable data used for sequence tests
+        /// </summary>
+        private static string LabelFile;
+
+        /// <summary>
+        /// Single sample image
+        /// </summary>
+        private static string SampleImage;
+
+        /// <summary>
+        /// Set up commonly used file paths
+        /// </summary>
+        public static void Setup()
+        {
+            ExampleTestDataDir = string.IsNullOrEmpty(ExampleTestDataDir) ? ExampleTestDataDir : ExampleTestDataDir + "/";
+            VocabFile = ExampleTestDataDir + "query.wl";
+            LabelFile = ExampleTestDataDir + "slots.wl";
+            SampleImage = ExampleTestDataDir + "00000.png";
+        }
+
         /// <summary>
         /// The example shows
         /// - how to load model.
@@ -39,7 +70,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Load the model.
                 // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-                string modelFilePath = "resnet20.dnn";
+                string modelFilePath = ExampleTestDataDir + "resnet20.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
                 Function modelFunc = Function.Load(modelFilePath, device);
 
@@ -55,9 +86,8 @@ namespace CNTKLibraryCSEvalExamples
                 // Image preprocessing to match input requirements of the model.
                 // This program uses images from the CIFAR-10 dataset for evaluation.
                 // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
-                string sampleImage = "00000.png";
-                ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
-                Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
+                ThrowIfFileNotExist(SampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", SampleImage));
+                Bitmap bmp = new Bitmap(Bitmap.FromFile(SampleImage));
                 var resized = bmp.Resize(imageWidth, imageHeight, true);
                 List<float> resizedCHW = resized.ParallelExtractCHW();
 
@@ -83,7 +113,7 @@ namespace CNTKLibraryCSEvalExamples
                 var outputVal = outputDataMap[outputVar];
                 var outputData = outputVal.GetDenseData<float>(outputVar);
 
-                Console.WriteLine("Evaluation result for image " + sampleImage);
+                Console.WriteLine("Evaluation result for image " + SampleImage);
                 PrintOutput(outputVar.Shape.TotalSize, outputData);
             }
             catch (Exception ex)
@@ -108,10 +138,10 @@ namespace CNTKLibraryCSEvalExamples
             {
                 Console.WriteLine("\n===== Evaluate batch of images =====");
 
-                string modelFilePath = "resnet20.dnn";
+                string modelFilePath = ExampleTestDataDir + "resnet20.dnn";
                 // This program uses images from the CIFAR-10 dataset for evaluation.
                 // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
-                var imageList = new List<string>() { "00000.png", "00001.png", "00002.png" };
+                var imageList = new List<string>() { ExampleTestDataDir + "00000.png", ExampleTestDataDir + "00001.png", ExampleTestDataDir + "00002.png" };
                 foreach (var image in imageList)
                 {
                     ThrowIfFileNotExist(image, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", image));
@@ -196,12 +226,12 @@ namespace CNTKLibraryCSEvalExamples
         {
             Console.WriteLine("\n===== Evaluate multiple images in parallel =====");
 
-            string modelFilePath = "resnet20.dnn";
+            string modelFilePath = ExampleTestDataDir + "resnet20.dnn";
             ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
 
             // This program uses images from the CIFAR-10 dataset for evaluation.
             // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
-            var imageFiles = new string[] { "00000.png", "00001.png", "00002.png", "00003.png", "00004.png" };
+            var imageFiles = new string[] { ExampleTestDataDir + "00000.png", ExampleTestDataDir + "00001.png", ExampleTestDataDir + "00002.png", ExampleTestDataDir + "00003.png", ExampleTestDataDir + "00004.png" };
             var imageList = new BlockingCollection<string>();
             foreach (var file in imageFiles)
             {
@@ -304,7 +334,7 @@ namespace CNTKLibraryCSEvalExamples
                 // For demo purpose, we first read the model into memory
                 // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-                string modelFilePath = "resnet20.dnn";
+                string modelFilePath = ExampleTestDataDir + "resnet20.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
                 var modelBuffer = File.ReadAllBytes(modelFilePath);
 
@@ -320,9 +350,8 @@ namespace CNTKLibraryCSEvalExamples
                 // Image preprocessing to match input requirements of the model.
                 // This program uses images from the CIFAR-10 dataset for evaluation.
                 // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
-                string sampleImage = "00000.png";
-                ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
-                Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
+                ThrowIfFileNotExist(SampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", SampleImage));
+                Bitmap bmp = new Bitmap(Bitmap.FromFile(SampleImage));
                 var resized = bmp.Resize(imageWidth, imageHeight, true);
                 List<float> resizedCHW = resized.ParallelExtractCHW();
 
@@ -370,7 +399,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Load the model.
                 // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-                string modelFilePath = "resnet20.dnn";
+                string modelFilePath = ExampleTestDataDir + "resnet20.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
                 Function modelFunc = Function.Load(modelFilePath, device);
 
@@ -385,9 +414,8 @@ namespace CNTKLibraryCSEvalExamples
                 // Image preprocessing to match input requirements of the model.
                 // This program uses images from the CIFAR-10 dataset for evaluation.
                 // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
-                string sampleImage = "00000.png";
-                ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
-                Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
+                ThrowIfFileNotExist(SampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", SampleImage));
+                Bitmap bmp = new Bitmap(Bitmap.FromFile(SampleImage));
                 var resized = bmp.Resize(imageWidth, imageHeight, true);
                 List<float> resizedCHW = resized.ParallelExtractCHW();
 
@@ -478,17 +506,15 @@ namespace CNTKLibraryCSEvalExamples
 
                 // The model atis.dnn is trained by <CNTK>/Examples/LanguageUnderstanding/ATIS/Python/LanguageUnderstanding.py
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
-                string modelFilePath = "atis.dnn";
+                string modelFilePath = ExampleTestDataDir + "atis.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS to create the model.", modelFilePath));
                 Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Read word and slot index files.
-                string vocabFile = "query.wl";
-                string labelFile = "slots.wl";
-                ThrowIfFileNotExist(vocabFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", vocabFile));
-                ThrowIfFileNotExist(labelFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", labelFile));
-                var vocabToIndex = buildVocabIndex(vocabFile);
-                var indexToSlots = buildSlotIndex(labelFile);
+                ThrowIfFileNotExist(VocabFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", VocabFile));
+                ThrowIfFileNotExist(LabelFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", LabelFile));
+                var vocabToIndex = buildVocabIndex(VocabFile);
+                var indexToSlots = buildSlotIndex(LabelFile);
 
                 // Get input variable
                 var inputVar = modelFunc.Arguments.Single();
@@ -586,17 +612,15 @@ namespace CNTKLibraryCSEvalExamples
 
                 // The model atis.dnn is trained by <CNTK>/Examples/LanguageUnderstanding/ATIS/Python/LanguageUnderstanding.py
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
-                string modelFilePath = "atis.dnn";
+                string modelFilePath = ExampleTestDataDir + "atis.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS to create the model.", modelFilePath));
                 Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Read word and slot index files.
-                string vocabFile = "query.wl";
-                string labelFile = "slots.wl";
-                ThrowIfFileNotExist(vocabFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", vocabFile));
-                ThrowIfFileNotExist(labelFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", labelFile));
-                var vocabToIndex = buildVocabIndex(vocabFile);
-                var indexToSlots = buildSlotIndex(labelFile);
+                ThrowIfFileNotExist(VocabFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", VocabFile));
+                ThrowIfFileNotExist(LabelFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", LabelFile));
+                var vocabToIndex = buildVocabIndex(VocabFile);
+                var indexToSlots = buildSlotIndex(LabelFile);
 
                 // Get input variable.
                 var inputVar = modelFunc.Arguments.Single();
@@ -713,17 +737,15 @@ namespace CNTKLibraryCSEvalExamples
 
                 // The model atis.dnn is trained by <CNTK>/Examples/LanguageUnderstanding/ATIS/Python/LanguageUnderstanding.py
                 // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
-                string modelFilePath = "atis.dnn";
+                string modelFilePath = ExampleTestDataDir + "atis.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS to create the model.", modelFilePath));
                 Function modelFunc = Function.Load(modelFilePath, device);
 
                 // Read word and slot index files.
-                string vocabFile = "query.wl";
-                string labelFile = "slots.wl";
-                ThrowIfFileNotExist(vocabFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", vocabFile));
-                ThrowIfFileNotExist(labelFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", labelFile));
-                var vocabToIndex = buildVocabIndex(vocabFile);
-                var indexToSlots = buildSlotIndex(labelFile);
+                ThrowIfFileNotExist(VocabFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", VocabFile));
+                ThrowIfFileNotExist(LabelFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", LabelFile));
+                var vocabToIndex = buildVocabIndex(VocabFile);
+                var indexToSlots = buildSlotIndex(LabelFile);
 
                 // Get input variable
                 var inputVar = modelFunc.Arguments.Single();
@@ -827,7 +849,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Load the model.
                 // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-                string modelFilePath = "resnet20.dnn";
+                string modelFilePath = ExampleTestDataDir + "resnet20.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
                 Function rootFunc = Function.Load(modelFilePath, device);
 
@@ -853,9 +875,8 @@ namespace CNTKLibraryCSEvalExamples
                 // Image preprocessing to match input requirements of the model.
                 // This program uses images from the CIFAR-10 dataset for evaluation.
                 // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
-                string sampleImage = "00000.png";
-                ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
-                Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
+                ThrowIfFileNotExist(SampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", SampleImage));
+                Bitmap bmp = new Bitmap(Bitmap.FromFile(SampleImage));
                 var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
                 List<float> resizedCHW = resized.ParallelExtractCHW();
 
@@ -899,7 +920,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Load the model.
                 // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py
                 // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
-                string modelFilePath = "resnet20.dnn";
+                string modelFilePath = ExampleTestDataDir + "resnet20.dnn";
                 ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
                 Function modelFunc = Function.Load(modelFilePath, device);
 
@@ -924,9 +945,8 @@ namespace CNTKLibraryCSEvalExamples
                 // Image preprocessing to match input requirements of the model.
                 // This program uses images from the CIFAR-10 dataset for evaluation.
                 // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
-                string sampleImage = "00000.png";
-                ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
-                Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
+                ThrowIfFileNotExist(SampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", SampleImage));
+                Bitmap bmp = new Bitmap(Bitmap.FromFile(SampleImage));
                 var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
                 List<float> resizedCHW = resized.ParallelExtractCHW();
 

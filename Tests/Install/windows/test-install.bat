@@ -24,7 +24,7 @@ and not combine_test and not evaluation_test and not fp16_test and not free_stat
 and not function_tests and not kernel_test and not linear_test and not non_diff_test and not recurrent_test ^
 and not reshaping_test and not sequence_test and not sparse_test and not stop_gradient_test ^
 and not userfunction_complex_test and not userfunction_test and not random_ops_test and not function_test ^
-and not onnx_format_test and not onnx_op_test and not persist_test and not tensor_test and not value_test ^
+and not onnx_format_test and not onnx_op_test and not onnx_model_test and not persist_test and not tensor_test and not value_test ^
 and not variables_test and not distributed_test and not trainer_test and not training_session and not misc_test
 
 where cntk && ^

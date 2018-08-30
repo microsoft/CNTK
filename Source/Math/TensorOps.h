@@ -51,10 +51,12 @@ OverloadUnaryMathFns(sqrt);
 OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
+OverloadUnaryMathFns(tan);
 OverloadUnaryMathFns(floor);
 OverloadUnaryMathFns(log1p);
 OverloadUnaryMathFns(asin);
 OverloadUnaryMathFns(acos);
+OverloadUnaryMathFns(atan);
 OverloadUnaryMathFns(sinh);
 OverloadUnaryMathFns(cosh);
 OverloadUnaryMathFns(asinh);
@@ -266,6 +268,12 @@ DECL ElemType Sigmoid(ElemType z)
 #endif
 }
 
+template <class ElemType>
+DECL ElemType StraightThrough(ElemType z)
+{
+    return z > (ElemType)0 ? (ElemType)1 : (ElemType)-1;
+}
+
 // Numerically stable Sigmoid, we can't remove the old one due to Speech dependency.
 template <class ElemType>
 DECL ElemType StableSigmoid(ElemType z)
@@ -284,6 +292,12 @@ DECL ElemType SigmoidDerivative(ElemType z)
 {
     ElemType v = Sigmoid(z);
     return v * (1 - v);
+}
+
+template <class ElemType>
+DECL ElemType StraightThroughDerivative(ElemType z)
+{
+    return fabs_(z) > (ElemType)1 ? (ElemType)0 : (ElemType)1;
 }
 
 template <class ElemType>
@@ -406,15 +420,18 @@ DefUnaryOp(Log, ClippedLog(a));
 DefUnaryOp(LinearRectifier, a > 0 ? a : (ElemType)0);
 DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Sin, sin_(a));
+DefUnaryOp(Tan, tan_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
 DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (ElemType)(exp_(a)-1));
 DefUnaryOp(StableSigmoid, StableSigmoid(a));
 DefUnaryOp(Asin, asin_(a));
 DefUnaryOp(Acos, acos_(a));
+DefUnaryOp(Atan, atan_(a));
 DefUnaryOp(Sinh, sinh_(a));
 DefUnaryOp(Cosh, cosh_(a));
 DefUnaryOp(Asinh, asinh_(a));
 DefUnaryOp(Atanh, atanh_(a));
+DefUnaryOp(StraightThrough, StraightThrough(a));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
@@ -451,7 +468,9 @@ DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > (Elem
 DefBinaryOp(ElementwiseProductWithLogDerivativeFromOutput, a* exp_(-b));
 DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b)); // note: b = input for cos()
 DefBinaryOp(ElementwiseProductWithSinDerivative, a * cos_(b)); // note: b = input for sin()
+DefBinaryOp(ElementwiseProductWithTanDerivative, a * (1 + tan_(b) * tan_(b))); // note: b = input for tan()
 DefBinaryOp(ElementwiseProductWithAsinDerivative, a / sqrt_(1 - b * b)); // note: b = input for asin()
+DefBinaryOp(ElementwiseProductWithAtanDerivative, a / (1 + b * b)); // note: b = input for atan()
 DefBinaryOp(ElementwiseProductWithAcosDerivative, -a / sqrt_(1 - b * b)); // note: b = input for acos()
 DefBinaryOp(ElementwiseProductWithAbsDerivative, a * Sgn(b)); // note: b = input for abs()
 DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = output
@@ -462,6 +481,7 @@ DefBinaryOp(ElementwiseProductWithSinhDerivative, a * cosh_(b)); // note: b = in
 DefBinaryOp(ElementwiseProductWithCoshDerivative, a * sinh_(b)); // note: b = input for cosh()
 DefBinaryOp(ElementwiseProductWithAsinhDerivative, a / sqrt_(1 + b * b)); // note: b = input for asinh()
 DefBinaryOp(ElementwiseProductWithAtanhDerivative, a / (1 - b * b)); // note: b = input for atanh()
+DefBinaryOp(ElementwiseProductWithStraightThroughDerivative, fabs_(b) <= (ElemType)1 ? a : (ElemType)0); // note: b = input for straightthrough()
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")

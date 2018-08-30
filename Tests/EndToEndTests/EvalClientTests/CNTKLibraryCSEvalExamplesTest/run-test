@@ -5,11 +5,11 @@
 set -x
 
 # Since we only use python to train a model for evaluation test, it is sufficient to train the model only with one python version.
-# Now it is trained with Python 2.7. If it is not supported anymore, need to use another python version.
+# Now it is trained with Python 3.5. If it is not supported anymore, need to use another python version.
 # TODO: have a better way to configure how run test only on a single python version
-PythonVer=$(python -c "import sys; sys.stdout.write(str(sys.version_info[0])); sys.stdout.flush()")
-if [ "$PythonVer" == "3" ]; then
-  echo Skip this test for Python 3.5/3.6. Run this test only on Python 2.7 to save test time.
+PythonVer=$(python -c "import sys; sys.stdout.write(str(sys.version_info[0])+str(sys.version_info[1])); sys.stdout.flush()")
+if [ "$PythonVer" != "35" ]; then
+  echo Skip this test for Python 2.7/3.6. Run this test only on Python 3.5 to save test time.
   # Simulate test completes.
   set +x
   echo Evaluation completes
@@ -24,10 +24,13 @@ fi
 
 if [ "$OS" == "Windows_NT" ]; then
   TestDataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`
+  RunTestDataDir=$TEST_BIN_DIR/data
 else
   TestDataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+  # On Linux, all dotnet dlls are built into lib dir, so keeping the data dir in the same location
+  RunTestDataDir=$TEST_BIN_DIR/../lib/data
 fi
-
+mkdir $RunTestDataDir
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
 [ "$TEST_DEVICE" == "cpu" ] && export CUDA_VISIBLE_DEVICES=-1
 
@@ -35,25 +38,35 @@ if [ "$TEST_DEVICE" == "cpu" ]; then
   echo Use pre-trained resnet_20_cifar_10 model and atis.dnn in $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY for tests on CPU device.
   # Unzip data only, without training model
   python train_models_for_evaluation.py -u -d $TEST_DEVICE || exit $?
-  cp $TestDataSourceDir/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn resnet20.dnn || exit $?
-  cp $TestDataSourceDir/PreTrainedModels/EvalModels/atis.dnn atis.dnn || exit $?
+  cp $TestDataSourceDir/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn $RunTestDataDir/resnet20.dnn || exit $?
+  cp $TestDataSourceDir/PreTrainedModels/EvalModels/atis.dnn $RunTestDataDir/atis.dnn || exit $?
 else
   echo Use the on-the-fly trained resnet_20_cifar_10 model for tests on GPU device.
   # Train resnet cifar model and atis model
   python train_models_for_evaluation.py -d $TEST_DEVICE || exit $?
-  mv resnet20_0.dnn resnet20.dnn || exit $?
-  mv atis_0.dnn atis.dnn || exit $?
+  mv resnet20_0.dnn $RunTestDataDir/resnet20.dnn || exit $?
+  mv atis_0.dnn $RunTestDataDir/atis.dnn || exit $?
 fi
-mv data/train/* . || exit $?
-cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl . || exit $?
-cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl . || exit $?
+mv data/train/* $RunTestDataDir || exit $?
+cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl $RunTestDataDir || exit $?
+cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl $RunTestDataDir || exit $?
 
 if [ "$OS" == "Windows_NT" ]; then
-  $TEST_BIN_DIR/CNTKLibraryCSEvalExamplesTest.exe
+  pushd $TEST_BIN_DIR > /dev/null
+  echo 'Running command "dotnet CNTKLibraryCSEvalExamplesTest.dll" `cygpath -aw $RunTestDataDir`'
+  dotnet CNTKLibraryCSEvalExamplesTest.dll `cygpath -aw $RunTestDataDir`
+  popd > /dev/null
 else
-  echo Cannot run CNTKLibraryCSEvalExampleTest on Linux.
-  exit 1
+  pushd $TEST_BIN_DIR/../lib > /dev/null
+  echo 'Running command "dotnet CNTKLibraryCSEvalExamplesTest.dll" $RunTestDataDir'
+  dotnet CNTKLibraryCSEvalExamplesTest.dll $RunTestDataDir
+  popd > /dev/null
 fi
+
+# This is created by train_models_for_evaluation.py, remove after test
+rm -rf ./data
+# Remove temp test data dir
+rm -rf $RunTestDataDir
 
 ExitCode=$?
 

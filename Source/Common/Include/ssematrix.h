@@ -1635,7 +1635,7 @@ void printmatf(const char *name, const M &m, FILE *f = stderr)
     fprintf(f, "\n###### %s (%d, %d) ######\n", name, m.rows(), m.cols());
     foreach_row (i, m)
     {
-        fprintf(f, "row: %d", i);
+        fprintf(f, "row: %lld", i);
         foreach_column (j, m)
         {
             if (j % 15 == 0)

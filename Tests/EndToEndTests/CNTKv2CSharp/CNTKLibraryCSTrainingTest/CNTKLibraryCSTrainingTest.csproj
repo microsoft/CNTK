@@ -7,6 +7,7 @@
   
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
+	<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <RootNamespace>CNTK.CNTKLibraryCSTrainingTest</RootNamespace>
 
     <IsPackable>false</IsPackable>

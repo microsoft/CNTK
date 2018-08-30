@@ -48,6 +48,12 @@ namespace CNTKLibraryCSEvalExamples
 #else
             Console.WriteLine("======== Evaluate model on CPU using GPU build ========");
 #endif
+            if (args.Length >= 1)
+            {
+                Console.WriteLine($"-------- running with test data in {args[0]} --------");
+                CNTKLibraryManagedExamples.ExampleTestDataDir = args[0];
+            }
+            CNTKLibraryManagedExamples.Setup();
 
             if (ShouldRunOnCpu())
             {

@@ -107,7 +107,9 @@
     <None Include="cntk\sample_installer.py" />
     <None Include="cntk\tensor.py" />
     <None Include="cntk\tests\onnx_format_test.py" />
+    <None Include="cntk\tests\onnx_model_test.py" />
     <None Include="cntk\tests\onnx_op_test.py" />
+    <None Include="cntk\tests\onnx_test_helper.py" />
     <None Include="cntk\tests\user_learner.py" />
     <None Include="cntk\tests\variables_test.py" />
     <None Include="cntk\train\distributed.py" />

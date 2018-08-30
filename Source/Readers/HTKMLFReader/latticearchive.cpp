@@ -137,7 +137,7 @@ static size_t tryfind(const MAPTYPE &map, const KEYTYPE &key, VALTYPE deflt)
             fflushOrDie(f);
 
             // write reference to TOC file   --note: TOC file is a headerless UTF8 file; so don't use fprintf %ls format (default code page)
-            fprintfOrDie(ftoc, "%s=%s[%llu]\n", msra::strfun::utf8(key).c_str(), ((i - brokeninputfiles) == 0) ? msra::strfun::utf8(outpath).c_str() : "", offset);
+            fprintfOrDie(ftoc, "%s=%s[%llu]\n", Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(key)).c_str(), ((i - brokeninputfiles) == 0) ? Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(outpath)).c_str() : "", offset);
             fflushOrDie(ftoc);
 
             fprintf(stderr, "written lattice to offset %llu as '%ls'\n", offset, key.c_str());
@@ -451,7 +451,7 @@ void lattice::dedup()
         const char *p = strchr(line, '=');
         if (p == NULL)
             RuntimeError("open: invalid TOC line (no = sign): %s", line);
-        const std::wstring key = msra::strfun::utf16(std::string(line, p - line));
+        const std::wstring key = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(std::string(line, p - line));
 
         fprintf(stderr, "convert: processing lattice '%ls'\n", key.c_str());
 
@@ -496,7 +496,7 @@ void lattice::dedup()
             fflushOrDie(f);
 
             // write reference to TOC file   --note: TOC file is a headerless UTF8 file; so don't use fprintf %ls format (default code page)
-            fprintfOrDie(ftoc, "%s=%s[%llu]\n", msra::strfun::utf8(key).c_str(), (i == 0) ? msra::strfun::utf8(outpath).c_str() : "", offset);
+            fprintfOrDie(ftoc, "%s=%s[%llu]\n", Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(key)).c_str(), (i == 0) ? Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(outpath)).c_str() : "", offset);
             fflushOrDie(ftoc);
 
             fprintf(stderr, "written converted lattice to offset %llu as '%ls'\n", offset, key.c_str());

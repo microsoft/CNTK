@@ -18,7 +18,7 @@ const std::string CNTK_ONNX_PRODUCER_VERSION = CNTK_VERSION;
 const std::string CNTK_ONNX_PRODUCER_VERSION = MACRO_TO_STRING(CNTK_VERSION);
 #endif
 
-namespace ONNXIR
+namespace LotusIR
 {
     class Model;
 }
@@ -28,6 +28,6 @@ namespace CNTK
     class CNTKToONNX
     {
     public:
-        static std::unique_ptr<ONNXIR::Model> CreateModel(const FunctionPtr& src);
+        static std::unique_ptr<LotusIR::Model> CreateModel(const FunctionPtr& src);
     };
 }

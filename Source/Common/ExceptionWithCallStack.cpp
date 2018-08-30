@@ -156,16 +156,30 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
 
 #ifdef _WIN32
 #ifndef CNTK_UWP
+    // Callstack generation on Windows is occasionally failing; disabling this functionality for now. Additional info:
+    //
+    // <extracted from email>
+    // NetworkTests.exe is hung creating a call stack for an expected exception thrown in the test code. A bit of googling suggests that the 
+    // problem could be due to an incompatibility between `programs linked with fastlink pdbs and older versions of DbgHelp.dll <https://developercommunity.visualstudio.com/content/problem/38625/debug-help-library-hangs-up.html>`_.
+    // On this machine it looks like we are using DbgHelp.dll version 10.0.14321.1024.
+    //
+    // TODO: WE SHOULD REMOVE THIS HACK ASAP.
+    //
+    char* const flagValue(std::getenv("CNTK_CI_NO_STACKTRACE"));
+
+    if (flagValue != nullptr && _strcmpi(flagValue, "1") == 0)
+        return write("Stack trace generation has been explicitly disabled\n");
+    // End hack
 
     // RtlCaptureStackBackTrace() is a kernel API without default binding, we must manually determine its function pointer.
     typedef USHORT(WINAPI * CaptureStackBackTraceType)(__in ULONG, __in ULONG, __out PVOID*, __out_opt PULONG);
     CaptureStackBackTraceType RtlCaptureStackBackTrace = (CaptureStackBackTraceType)(GetProcAddress(LoadLibrary(L"kernel32.dll"), "RtlCaptureStackBackTrace"));
     if (RtlCaptureStackBackTrace == nullptr) // failed somehow
-        return write("Failed to generate CALL STACK. GetProcAddress(\"RtlCaptureStackBackTrace\") failed with error " + msra::strfun::utf8(FormatWin32Error(GetLastError())) + "\n");
+        return write("Failed to generate CALL STACK. GetProcAddress(\"RtlCaptureStackBackTrace\") failed with error " + Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(FormatWin32Error(GetLastError())))  + "\n");
 
     HANDLE process = GetCurrentProcess();
     if (!SymInitialize(process, nullptr, TRUE))
-        return write("Failed to generate CALL STACK. SymInitialize() failed with error " + msra::strfun::utf8(FormatWin32Error(GetLastError())) + "\n");
+        return write("Failed to generate CALL STACK. SymInitialize() failed with error " + Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(FormatWin32Error(GetLastError()))) + "\n");
 
     // get the call stack
     void* callStack[MAX_CALLERS];
@@ -198,7 +212,7 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
             char buf[17];
             sprintf_s(buf, "%p", callStack[i]);
             callStackLine += buf;
-            write(callStackLine + " (SymFromAddr() error: " + msra::strfun::utf8(FormatWin32Error(error)) + ")\n");
+            write(callStackLine + " (SymFromAddr() error: " + Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(FormatWin32Error(error))) + ")\n");
         }
     }
 

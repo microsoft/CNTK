@@ -91,10 +91,15 @@ protected:
         return it->second;
     }
 
-    ~LocalTimelineRandomizerBase()
+    void StopPrefetch()
     {
         if (m_prefetch.valid())
             m_prefetch.wait_for(std::chrono::seconds(60));
+    }
+
+    ~LocalTimelineRandomizerBase()
+    {
+        StopPrefetch();
     }
 
     const static SequenceInfo s_endOfSweep; // Marker indicating end of the sweep.

@@ -236,7 +236,7 @@ if [[ $BUILD == 1 ]]; then
                 fi
                 msbuild.exe /nologo /verbosity:m /m /property:Configuration=$CONFIGURATION 1>&6 2>&7 || exit $?
             else
-                BUILD_DIR=build/$TARGET/$FLAVOR
+                BUILD_DIR=$CNTK_ROOT/build/$TARGET/$FLAVOR
                 if [[ $TARGET == "cpu" ]]; then
                     CUDAOPT=no
                 else

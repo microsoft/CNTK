@@ -1,10 +1,12 @@
+isPythonTest: No
+
 dataDir: .
 
 tags:
   # CPU-only for now.
-  - bvt-i (build_sku == 'cpu') and (os == 'windows')
-  - nightly-i (build_sku == 'cpu') and (os == 'windows')
-  - weekly-i (build_sku == 'cpu') and (os == 'windows')
+  - bvt-i (build_sku == 'cpu')
+  - nightly-i (build_sku == 'cpu')
+  - weekly-i (build_sku == 'cpu')
 
 testCases:
   Each test passes:

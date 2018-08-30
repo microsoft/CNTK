@@ -197,8 +197,8 @@ class NDArrayView(cntk_py.NDArrayView):
             >>> np_sliced = sliced.asarray()
             >>> # Result is an array of shape (2, 3)
             >>> print(np_sliced)
-            [[ 10.  20.  30.]
-             [ 40.  50.  60.]]
+            [[10. 20. 30.]
+             [40. 50. 60.]]
 
         Args:
           start_offset (tuple or list): shape of the same rank as this Value
@@ -343,7 +343,7 @@ class Value(cntk_py.Value):
                 raise ValueError('could not convert sample data to '
                                     'NumPy array')
 
-        elif sample.dtype in (np.float32, np.float64, np.float16):
+        elif sample.dtype in (bool, np.float32, np.float64, np.float16):
             if sample.dtype != var.dtype:
                 convert_to_var_dtype = True
 
@@ -351,7 +351,7 @@ class Value(cntk_py.Value):
             convert_to_var_dtype = True
 
         else:
-            raise ValueError('only integer, float32, float64 and float16 are '
+            raise ValueError('only integer, bool, float32, float64 and float16 are '
                              'supported, you gave %s' % sample.dtype)
 
         if convert_to_var_dtype:
@@ -484,11 +484,9 @@ class Value(cntk_py.Value):
             >>> z = C.times(i0, np.eye(num_classes))
             >>> value = C.Value.one_hot(sparse_indices, num_classes)
             >>> z.eval({i0: value})
-            [array([[ 0.,  1.,  0.,  0.,  0.,  0.],
-                    [ 0.,  0.,  0.,  0.,  0.,  0.],
-                    [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32),
-             array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
-            <BLANKLINE>
+            [array([[0., 1., 0., 0., 0., 0.],
+                   [0., 0., 0., 0., 0., 0.],
+                   [0., 0., 0., 0., 0., 1.]], dtype=float32), array([[0., 0., 0., 0., 1., 0.]], dtype=float32)]
             >>> num_classes = 6
             >>> sample_shape = (2, num_classes)
             >>> sparse_indices = [[1,5,3,2],[4,1]]

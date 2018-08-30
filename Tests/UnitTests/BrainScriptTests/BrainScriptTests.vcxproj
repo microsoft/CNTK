@@ -55,7 +55,7 @@
       <PreprocessorDefinitions>WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <UseFullPaths>true</UseFullPaths>
       <OpenMPSupport>true</OpenMPSupport>
-      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\Math;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\ComputationNetworkLib;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_INCLUDE_PATH);$(SolutionDir)Source\Math;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\CNTKv2LibraryDll\API\Internals</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4819</DisableSpecificWarnings>
     </ClCompile>
     <Link>

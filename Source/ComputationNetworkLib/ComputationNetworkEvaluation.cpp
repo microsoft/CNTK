@@ -11,6 +11,7 @@
 #include "RecurrentNodes.h"
 #include "InputAndParamNodes.h"
 #include "LinearAlgebraNodes.h"
+#include "SpecialPurposeNodes.h"
 #include <string>
 #include <vector>
 #include <list>
@@ -767,9 +768,12 @@ bool ComputationNetwork::ValidateNode(ComputationNodeBasePtr node, bool isFinalV
     auto nodeNeedsDynamicValidation = node->NeedsDynamicValidation();
     node->m_needsDynamicValidation |= node->ForceDynamicValidation();
     auto needsGradient = node->m_needsGradient;
+
     for (auto& child : children) // TODO: do we need a check that this is stable if isFinalValidationPass?
     {
-        node->m_needsGradient |= child->m_needsGradient;
+        // check if this is StopGradientNode. For this node it is ok to not backprop gradient.
+        if (node->OperationName() != OperationNameOf(StopGradientNode))
+            node->m_needsGradient |= child->m_needsGradient;
         node->m_needsDynamicValidation |= child->m_needsDynamicValidation;
     }
 

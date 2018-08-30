@@ -150,11 +150,12 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     if (allowUndeterminedVariable)
         *allowUndeterminedVariable = true; // be default we allow undetermined variables
 
-    wstring nodeType = msra::strfun::utf16(p_nodeType);
+    wstring nodeType = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(p_nodeType);
     bool ret = false;
          if (EqualInsensitive(nodeType, OperationNameOf(AbsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AcosNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AsinNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AtanNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AsinhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AtanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
@@ -239,6 +240,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(SquareErrorNode), L"SE")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SumColumnElementsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SumElementsNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(TanNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TimesNode))) ret = true;
     //else if (EqualInsensitive(nodeType, OperationNameOf(TransposeDimensionsNode))) ret = true; // not supported from NDL, use Transpose()
@@ -256,7 +258,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 
     // return the actual node name in the parameter if we found something
     if (ret)
-        p_nodeType = msra::strfun::utf8(nodeType);
+        p_nodeType = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(nodeType));
     return ret;
 }
 
