@@ -3770,7 +3770,7 @@ void CNTKToONNXHelper::PutAutopadOrPadAttrInNode(LotusIR::Node* node,
     // for 'auto_pad' is implied, and 'auto_pad' attribute should not (must not)
     // be explicitly specified/set.
     bool isExplicitPadValueNeeded = std::find(autoPadding.begin(), autoPadding.end(), false) != autoPadding.end();
-    if (isExplicitPadValueNeeded && !ceilOutDim)
+    if (isExplicitPadValueNeeded)
     {
         auto padsValueVectorsForONNX = GetONNXPadsAttributeFromCNTKNode(autoPadding, kernelShape, ceilOutDim);
         auto lowerPads = ToINTS(padsValueVectorsForONNX.first);
