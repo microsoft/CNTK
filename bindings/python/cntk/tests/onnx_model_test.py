@@ -9,7 +9,7 @@ import pytest
 import os
 import re
 
-import onnx
+onnx = pytest.importorskip("onnx")
 from onnx import numpy_helper
 
 # To test models locally, create folder 'onnx_models' and put in model folders. 
