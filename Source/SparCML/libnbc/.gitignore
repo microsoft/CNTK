@@ -1,0 +1,8 @@
+*.o
+*.lo
+*.Plo
+.deps/
+autom4te.cache/
+libtool
+of/Makefile
+Makefile

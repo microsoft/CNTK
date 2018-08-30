@@ -1,0 +1,26 @@
+0.8.1:
+- initial public release 
+
+0.8.2:
+- fixed minor bug in NBC_Iallgatherv()
+- added full Fortran bindings (use cmake)
+- improved performance of NBC_{Test,Wait}
+- MPI_IN_PLACE support
+
+0.9.1:
+- new buildsystem (autoconf)
+- enhanced Fortran bindings
+
+0.9.2:
+- OFED low-level interface
+- better large-message allreduce algorithm (shift pattern)
+
+0.9.3:
+- full profiling layer support
+
+0.9.4:
+- threading works for MPI_THREAD_MULTIPLE implementations
+
+0.9.5:
+- OFED threaded support
+- real-time thread option

@@ -57,8 +57,10 @@ public:
 
 private:
     void Ping(const char *msg) const;
-    MPI_Comm Communicator() const;
+public:
+    virtual MPI_Comm Communicator() const;
 
+private:
     void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
 
 public:
@@ -246,6 +248,8 @@ public:
     virtual void WaitAny(MPI_Request* requests, int numRequests, int* index);
     virtual void Wait(MPI_Request* request);
     virtual int WaitAll(std::vector<MPI_Request>& requests);
+	
+	virtual MPI_Comm Communicator() const;
 };
 
 
@@ -1255,6 +1259,11 @@ void MPIWrapperEmpty::Wait(MPI_Request* request)
 
 void MPIWrapperEmpty::WaitAny(MPI_Request* requests, int numRequests, int* index)
 {
+}
+
+MPI_Comm Communicator() const
+{
+    return MPI_COMM_NULL;	
 }
 
 #pragma warning(pop)

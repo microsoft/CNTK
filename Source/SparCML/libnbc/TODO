@@ -1,0 +1,3 @@
+- MPI-2 collectives ...
+- prevent different operations from matching - create different
+  communicators for different operations !!! easy and fast ;)

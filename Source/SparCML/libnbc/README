@@ -1,0 +1,17 @@
+* TODO:
+- support MPI-2 collectives
+- support MPI-2 Features (MPI_IN_PLACE)
+- support MPI-2 Requests (really? -> I don't think so - Generalized
+  Requests *SUCK*:)
+- BUG: if we issue on one node MPI_Igather and on another node
+  MPI_Ibcast, the packets will match illegally becase the tag assignment
+  is not aware of the collective type!
+
+* Missing for MPI-1:
+- add user defined operations (coll9, coll10, coll11, longuser)
+-- how do we ensure that we do not collide with Intrinsic Operations if
+   we issue NBC_Ops???
+-- we cannot issue NBC_Ops ... we need to issue MPI_Ops :-(. 
+-- hmm, we could simply wrap it and save the user defined op in a
+   list (hash) and search this every time we get called 
+   --> cool idea, let's do that ...
