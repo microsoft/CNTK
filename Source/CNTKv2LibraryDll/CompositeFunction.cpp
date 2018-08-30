@@ -1192,6 +1192,13 @@ namespace CNTK
                     ASSIGN_NEW_NODE(ForwardBackwardNode, network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
                     break;
                 }
+                case PrimitiveOpType::RNNT:
+                {
+                    auto delayContraint = functionConfig[PrimitiveFunctionAttribute::AttributeNameDelayConstraint].Value<int>();
+                    auto blankTokenId = functionConfig[PrimitiveFunctionAttribute::AttributeNameBlankTokenId].Value<size_t>();
+                    ASSIGN_NEW_NODE(RNNTNode, network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
+                    break;
+                }
                 case PrimitiveOpType::LambdaRank:
                     ASSIGN_NEW_NODE(LambdaRankNode, network->GetDeviceId(), internalNodeName);
                     break;
