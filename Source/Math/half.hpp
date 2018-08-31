@@ -11,7 +11,10 @@
 #include "../CNTKv2LibraryDll/API/HalfConverter.hpp"
 
 #if !defined(CPUONLY) && __has_include("cuda_fp16.h")
+#pragma warning(push)
+#pragma warning(disable : 4505) // disable warning from cuda header
 #include <cuda_fp16.h> // ASSUME CUDA9
+#pragma warning(pop)
 #else
 class alignas(2) __half
 {
