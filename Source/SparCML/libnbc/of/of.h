@@ -76,7 +76,9 @@ extern "C" {
 #define MPI_Keyval_create  PMPI_Keyval_create
 #define MPI_Recv           PMPI_Recv
 #define MPI_Send           PMPI_Send
-#define MPI_Type_extent    PMPI_Type_extent
+// error: 'int PMPI_Type_extent(MPI_Datatype, MPI_Aint*)' is deprecated: MPI_Type_extent is superseded by MPI_Type_get_extent in MPI-2.0 [-Werror=deprecated-declarations]
+//#define MPI_Type_extent PMPI_Type_extent
+#define MPI_Type_get_extent PMPI_Type_get_extent
 
 typedef struct {
   volatile uint32_t r_key; /* r_key of peer */

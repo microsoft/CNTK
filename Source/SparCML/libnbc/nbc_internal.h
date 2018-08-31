@@ -82,6 +82,8 @@ extern "C" {
 #define MPI_Send PMPI_Send
 #define MPI_Comm_size PMPI_Comm_size
 #define MPI_Comm_rank PMPI_Comm_rank
+// error: 'int PMPI_Type_extent(MPI_Datatype, MPI_Aint*)' is deprecated: MPI_Type_extent is superseded by MPI_Type_get_extent in MPI-2.0 [-Werror=deprecated-declarations]
+//#define MPI_Type_extent PMPI_Type_extent
 #define MPI_Type_get_extent PMPI_Type_get_extent
 #define MPI_Type_size PMPI_Type_size
 #define MPI_Pack_size PMPI_Pack_size
@@ -590,8 +592,7 @@ static __inline__ int NBC_Type_intrinsic(MPI_Datatype type) {
 /* let's give a try to inline functions */
 static __inline__ int NBC_Copy(void *src, int srccount, MPI_Datatype srctype, void *tgt, int tgtcount, MPI_Datatype tgttype, MPI_Comm comm) {
   int size, pos, res;
-  MPI_Aint lb;
-  MPI_Aint ext;
+  MPI_Aint lb, ext;
   void *packbuf;
 
   if((srctype == tgttype) && NBC_Type_intrinsic(srctype)) {
