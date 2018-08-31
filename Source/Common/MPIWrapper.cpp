@@ -1261,7 +1261,7 @@ void MPIWrapperEmpty::WaitAny(MPI_Request* requests, int numRequests, int* index
 {
 }
 
-MPI_Comm Communicator() const
+MPI_Comm MPIWrapperEmpty::Communicator() const
 {
     return MPI_COMM_NULL;
 }
