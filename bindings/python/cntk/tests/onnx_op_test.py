@@ -311,6 +311,13 @@ def test_AveragePool(tmpdir, dtype, device_id):
 
         verify_one_input(model, img, tmpdir, 'AveragePool_1', device)
 
+        # test for case of not padding but with ceilOutDim=True
+        img = np.reshape(np.arange(49, dtype=dtype), [1, 7, 7])
+        x = C.input_variable(img.shape)
+        model = C.pooling(x, C.AVG_POOLING, (7, 7), auto_padding = [False, False, False], ceil_out_dim=True)
+
+        verify_one_input(model, img, tmpdir, 'AveragePool_2', device)
+
 #BatchNormalization
 def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dtype):
     with C.default_options(dtype = dtype):
@@ -467,7 +474,51 @@ def test_Conv(tmpdir, dtype, device_id):
         conv_model = C.convolution(kernel, x, auto_padding = [False, True, True])
 
         verify_one_input(conv_model, img, tmpdir, 'Conv_0', device)
-        
+
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Conv_SpecialCase(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype):
+        input_shape = (3, 20, 32) 
+        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape) 
+
+        x = C.input_variable(input_shape)
+
+        kernel_shape = (3, 3, 3) # For convolution the shape is (O x I x W x H). Here O is omitted which is often the case in CNTK models. 
+        kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype = dtype))
+
+        conv_model = C.convolution(kernel, x, auto_padding = [False, True, True])
+
+        verify_one_input(conv_model, img, tmpdir, 'Conv_1', device)
+
+        kernel = C.Parameter((kernel_shape), init=C.glorot_uniform(), dtype=dtype, device=device)
+        conv_model = C.convolution(kernel, x, auto_padding = [False, True, True])
+
+        verify_one_input(conv_model, img, tmpdir, 'Conv_2', device)
+
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Conv_SpecialCase_Autopad(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
+    elif dtype == np.float16:
+        pytest.skip('Test is skipped on GPU with float16 data: asymmetric padding not supported by cuDnn')
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype):
+        # special case where for one axis CNTK pads upper, for other lower.
+        input_shape = (3, 7, 8)
+        img = np.reshape(np.arange(np.prod(input_shape), dtype=dtype), input_shape)
+        x = C.input_variable(input_shape)
+
+        kernel_shape = (3, 2, 3)
+        kernel = C.constant(value = np.ones(shape=(kernel_shape), dtype=dtype))
+        strides = (1, 2)
+
+        conv_model = C.convolution(kernel, x, auto_padding = [False, True, True], strides=strides)
+        verify_one_input(conv_model, img, tmpdir, 'Conv_3', device)
+
+
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ConvTranspose(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
@@ -485,6 +536,10 @@ def test_ConvTranspose(tmpdir, dtype, device_id):
 
         conv_trans_model_with_output_shape = C.convolution_transpose(kernel, x, strides=(2, 2), auto_padding = [False, True, True], output_shape=(16, 16, 16))
         verify_one_input(conv_trans_model_with_output_shape, img, tmpdir, 'ConvTranspose_with_OutputShape_0', device)
+
+        # test without outputShape
+        conv_trans_model_without_output_shape = C.convolution_transpose(kernel, x, strides=(2, 2), auto_padding = [False, True, True])
+        verify_one_input(conv_trans_model_without_output_shape, img, tmpdir, 'ConvTranspose_without_OutputShape_0', device)
 
 # DepthToSpace
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1006,6 +1061,12 @@ def test_MaxPool(tmpdir, dtype, device_id):
         x = C.input_variable(img.shape)
         model = C.pooling(x, C.MAX_POOLING, (2,2), (3,3))
         verify_one_input(model, img, tmpdir, 'MaxPool_1', device)
+
+        # test for case of not padding but with ceilOutDim=True
+        img = np.reshape(np.arange(112*112, dtype=dtype), [1, 112, 112])
+        x = C.input_variable(img.shape)
+        model = C.pooling(x, C.MAX_POOLING, (3, 3), (2, 2), auto_padding=[False, False, False], ceil_out_dim=True)
+        verify_one_input(model, img, tmpdir, 'MaxPool_2', device)
 
 #MaxRoiPool
 @pytest.mark.parametrize("dtype", DType_Config)

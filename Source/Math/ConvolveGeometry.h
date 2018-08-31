@@ -617,6 +617,27 @@ public:
         return TensorShape(dimsInput);
     }
 
+    // This is for a special case handling, where ceilOutDim = True and cntkAutoPadding = False.
+    // In CNTK, no paddings should be generated since autoPadding is False. 
+    // Yet due to ceilOutDim = True, the outputShape might end up 1 size larger, requiring
+    // an input of dimension that actually exceeds the current input. 
+    // E.g.
+    //      input dim: 112, kernel size: 3, stride: 2
+    // The output dim will end up 56. 
+    // This will require an input dim of 113. 
+    // This function returns the number of extra cells required.
+    // I.e. 1 in the above example: 113 - 112 = 1. 
+    int GetExtraCellsCount(size_t dim) const
+    {
+        int dilation = (int)GetDilation(dim);
+        int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
+        int inpSize = (int)m_inputShape[dim];
+        int outSize = (int)m_outputShape[dim];
+        int stride = (int)GetStride(dim);
+
+        return (outSize - 1) * stride + kernSize - inpSize;
+    }
+
     // Used in unit tests and during debugging.
     operator std::string() const
     {
