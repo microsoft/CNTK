@@ -75,10 +75,16 @@ extern "C" {
 #define MPI_Wtime PMPI_Wtime
 #define MPI_Testall PMPI_Testall
 #define MPI_Isend PMPI_Isend
-#define MPI_Keyval_create PMPI_Keyval_create
-#define MPI_Attr_get PMPI_Attr_get
+// 'PMPI_Keyval_create' is deprecated: MPI_Keyval_create is superseded by MPI_Comm_create_keyval in MPI-2.0 [-Wdeprecated-declarations]
+//#define MPI_Keyval_create PMPI_Keyval_create
+#define MPI_Keyval_create MPI_Comm_create_keyval
+// 'PMPI_Attr_get' is deprecated: MPI_Attr_get is superseded by MPI_Comm_get_attr in MPI-2.0 [-Wdeprecated-declarations]
+//#define MPI_Attr_get PMPI_Attr_get
+#define MPI_Attr_get MPI_Comm_get_attr
 #define MPI_Comm_dup PMPI_Comm_dup
-#define MPI_Attr_put PMPI_Attr_put
+// 'PMPI_Attr_put' is deprecated: MPI_Attr_put is superseded by MPI_Comm_set_attr in MPI-2.0 [-Wdeprecated-declarations]
+//#define MPI_Attr_put PMPI_Attr_put
+#define MPI_Attr_put MPI_Comm_set_attr
 #define MPI_Send PMPI_Send
 #define MPI_Comm_size PMPI_Comm_size
 #define MPI_Comm_rank PMPI_Comm_rank
