@@ -82,7 +82,7 @@ extern "C" {
 #define MPI_Send PMPI_Send
 #define MPI_Comm_size PMPI_Comm_size
 #define MPI_Comm_rank PMPI_Comm_rank
-#define MPI_Type_extent PMPI_Type_extent
+#define MPI_Type_get_extent PMPI_Type_get_extent
 #define MPI_Type_size PMPI_Type_size
 #define MPI_Pack_size PMPI_Pack_size
 #define MPI_Pack PMPI_Pack
@@ -590,14 +590,15 @@ static __inline__ int NBC_Type_intrinsic(MPI_Datatype type) {
 /* let's give a try to inline functions */
 static __inline__ int NBC_Copy(void *src, int srccount, MPI_Datatype srctype, void *tgt, int tgtcount, MPI_Datatype tgttype, MPI_Comm comm) {
   int size, pos, res;
+  MPI_Aint lb;
   MPI_Aint ext;
   void *packbuf;
 
   if((srctype == tgttype) && NBC_Type_intrinsic(srctype)) {
     /* if we have the same types and they are contiguous (intrinsic
      * types are contiguous), we can just use a single memcpy */
-    res = MPI_Type_extent(srctype, &ext);
-    if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Type_extent() (%i)\n", res); return res; }
+    res = MPI_Type_get_extent(srctype, &lb, &ext);
+    if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Type_get_extent() (%i)\n", res); return res; }
     memcpy(tgt, src, srccount*ext);
   } else {
     /* we have to pack and unpack */
@@ -619,13 +620,14 @@ static __inline__ int NBC_Copy(void *src, int srccount, MPI_Datatype srctype, vo
 
 static __inline__ int NBC_Unpack(void *src, int srccount, MPI_Datatype srctype, void *tgt, MPI_Comm comm) {
   int size, pos, res;
+  MPI_Aint lb;
   MPI_Aint ext;
 
   if(NBC_Type_intrinsic(srctype)) {
     /* if we have the same types and they are contiguous (intrinsic
      * types are contiguous), we can just use a single memcpy */
-    res = MPI_Type_extent(srctype, &ext);
-    if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Type_extent() (%i)\n", res); return res; }
+    res = MPI_Type_get_extent(srctype, &lb, &ext);
+    if (MPI_SUCCESS != res) { printf("MPI Error in MPI_Type_get_extent() (%i)\n", res); return res; }
     memcpy(tgt, src, srccount*ext);
 
   } else {
