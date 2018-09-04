@@ -6,8 +6,8 @@
 import os
 import numpy as np
 import cntk as C
-import onnx
 import pytest
+onnx = pytest.importorskip("onnx")
 from copy import deepcopy
 from cntk.ops.tests.ops_test_utils import cntk_device
 from itertools import product

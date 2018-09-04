@@ -6,7 +6,7 @@ channels:
 dependencies:
 - h5py=2.6.0=np111py34_2
 - jupyter=1.0.0=py34_3
-- matplotlib=1.5.3=np111py34_0
+- matplotlib=2.0.0=np111py34_0
 - numpy=1.11.2=py34_0
 - pandas=0.19.1=np111py34_0
 - pandas-datareader=0.2.1=py34_0

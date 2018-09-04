@@ -6,7 +6,8 @@
 import os
 import numpy as np
 import cntk as C
-import onnx
+import pytest
+onnx = pytest.importorskip("onnx")
 
 # check whether the input data is a batch of sparse matrices 
 def is_list_of_sparse(data):
