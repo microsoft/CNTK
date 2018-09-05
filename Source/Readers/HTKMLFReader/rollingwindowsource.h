@@ -561,7 +561,10 @@ class minibatchframesourcemulti : public minibatchsource
 public:
     // constructor
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
+    /* guoye: start */
+    // minibatchframesourcemulti(const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
     minibatchframesourcemulti(const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::pair<std::vector<msra::asr::htkmlfentry>, std::vector<unsigned int>>>> &labels,
+        /* guoye: end */
                               std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange, const std::vector<std::wstring> &pagepath, const bool mayhavenoframe = false, int addEnergy = 0)
         : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), numframes(0), timegetbatch(0), verbosity(2), maxvdim(0)
     {
@@ -656,7 +659,10 @@ public:
                     // HVite occasionally generates mismatching output --skip such files
                     if (!key.empty()) // (we have a key if supervised mode)
                     {
+                        /* guoye: start */
+                        // const auto &labseq = labels[0].find(key)->second; // (we already checked above that it exists)
                         const auto &labseq = labels[0].find(key)->second.first; // (we already checked above that it exists)
+                        /* guoye: end */
                         size_t labframes = labseq.empty() ? 0 : (labseq[labseq.size() - 1].firstframe + labseq[labseq.size() - 1].numframes);
                         if (abs((int) labframes - (int) feat.cols()) > 0)
                         {

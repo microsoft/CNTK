@@ -62,10 +62,17 @@ public:
 #endif
     }
 
+    /* guoye: start */
+    // void getlattices(const std::wstring& key, std::shared_ptr<const latticepair>& L, size_t expectedframes) const
     void getlattices(const std::wstring& key, std::shared_ptr<const latticepair>& L, size_t expectedframes, std::set<int>& specialwordids) const
+        /* guoye: end */
     {
         std::shared_ptr<latticepair> LP(new latticepair);
+        /* guoye: start */
+        // denlattices.getlattice(key, LP->second, expectedframes); // this loads the lattice from disk, using the existing L.second object
         denlattices.getlattice(key, LP->second, specialwordids, expectedframes); // this loads the lattice from disk, using the existing L.second object
+        // fprintf(stderr, "latticesource.h:getlattices: %ls \n", key.c_str());
+        /* guoye: end */
         L = LP;
     }
 

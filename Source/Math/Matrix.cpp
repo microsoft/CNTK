@@ -6098,7 +6098,10 @@ Matrix<ElemType>& Matrix<ElemType>::DropFrame(const Matrix<ElemType>& label, con
 /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label,
+    /* guoye: start */
+                                                       // const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha)
     const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha, bool MBR)
+    /* guoye: end */
 {
     DecideAndMoveToRightDevice(label, dnnoutput, gamma);
 
@@ -6112,7 +6115,10 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
                             m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
+        /* guoye: start */
+                            // m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
                             m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha, MBR),
+        /* guoye: end */
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
     return *this;

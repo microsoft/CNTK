@@ -226,6 +226,7 @@ __global__ void backwardlatticej(const size_t batchsize, const size_t startindex
                                                                   logEframescorrect, logaccbetas);
     }
 }
+/* guoye: start */
 __global__ void backwardlatticejEMBR(const size_t batchsize, const size_t startindex, const vectorref<float> edgeacscores,
     vectorref<msra::lattices::edgeinfowithscores> edges, vectorref<msra::lattices::nodeinfo> nodes,
     vectorref<double> edgelogbetas, vectorref<double> logbetas,
@@ -243,7 +244,7 @@ __global__ void backwardlatticejEMBR(const size_t batchsize, const size_t starti
         
     }
 }
-
+/* guoye: end */
 void latticefunctionsops::forwardbackwardlattice(const size_t *batchsizeforward, const size_t *batchsizebackward,
                                                  const size_t numlaunchforward, const size_t numlaunchbackward,
                                                  const size_t spalignunitid, const size_t silalignunitid,
@@ -343,7 +344,7 @@ void latticefunctionsops::forwardbackwardlattice(const size_t *batchsizeforward,
     }
 }
 
-
+/* guoye: start */
 void latticefunctionsops::backwardlatticeEMBR( const size_t *batchsizebackward, const size_t numlaunchbackward,
     const vectorref<float> &edgeacscores,
     const vectorref<msra::lattices::edgeinfowithscores> &edges,
@@ -382,7 +383,7 @@ void latticefunctionsops::backwardlatticeEMBR( const size_t *batchsizebackward, 
     
 }
 
-
+/* guoye: end */
 // -----------------------------------------------------------------------
 // sMBRerrorsignal -- accumulate difference of logEframescorrect and logEframescorrecttotal into errorsignal
 // -----------------------------------------------------------------------
@@ -399,7 +400,7 @@ __global__ void sMBRerrorsignalj(const vectorref<unsigned short> alignstateids, 
         msra::lattices::latticefunctionskernels::sMBRerrorsignalj(j, alignstateids, alignoffsets, edges, nodes, logpps, amf, logEframescorrect, logEframescorrecttotal, errorsignal, errorsignalneg);
     }
 }
-
+/* guoye: start */
 
 __global__ void EMBRerrorsignalj(const vectorref<unsigned short> alignstateids, const vectorref<unsigned int> alignoffsets,
     const vectorref<msra::lattices::edgeinfowithscores> edges, const vectorref<msra::lattices::nodeinfo> nodes,
@@ -414,6 +415,7 @@ __global__ void EMBRerrorsignalj(const vectorref<unsigned short> alignstateids, 
     }
 }
 
+/* guoye: end */
 
 // -----------------------------------------------------------------------
 // stateposteriors --accumulate a per-edge quantity into the states that the edge is aligned with
@@ -505,7 +507,7 @@ void latticefunctionsops::sMBRerrorsignal(const vectorref<unsigned short> &align
 #endif
 }
 
-
+/* guoye: start */
 void latticefunctionsops::EMBRerrorsignal(const vectorref<unsigned short> &alignstateids, const vectorref<unsigned int> &alignoffsets,
     const vectorref<msra::lattices::edgeinfowithscores> &edges, const vectorref<msra::lattices::nodeinfo> &nodes,
     const vectorref<double> &edgeweights, 
@@ -526,7 +528,7 @@ void latticefunctionsops::EMBRerrorsignal(const vectorref<unsigned short> &align
 
     
 }
-
+/* guoye: end */
 void latticefunctionsops::mmierrorsignal(const vectorref<unsigned short> &alignstateids, const vectorref<unsigned int> &alignoffsets,
                                          const vectorref<msra::lattices::edgeinfowithscores> &edges, const vectorref<msra::lattices::nodeinfo> &nodes,
                                          const vectorref<double> &logpps, matrixref<float> &errorsignal) const

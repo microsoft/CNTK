@@ -162,7 +162,7 @@ private:
                                                     dynamic_cast<vectorbaseimpl<doublevector, vectorref<double>> &>(Eframescorrectbuf),
                                                     logEframescorrecttotal, totalfwscore);
     }
-
+    /* guoye: start */
     void backwardlatticeEMBR(const size_t *batchsizebackward, const size_t numlaunchbackward,
         const floatvector &edgeacscores, const edgeinfowithscoresvector &edges,
         const nodeinfovector &nodes, doublevector &edgelogbetas, doublevector &logbetas,
@@ -177,6 +177,7 @@ private:
             dynamic_cast<vectorbaseimpl<doublevector, vectorref<double>> &>(logbetas),
             lmf, wp, amf, totalbwscore);
     }
+    /* guoye: end */
 
     void sMBRerrorsignal(const ushortvector &alignstateids,
                          const uintvector &alignoffsets,
@@ -198,6 +199,7 @@ private:
                                              logEframescorrecttotal, dengammasMatrixRef, dengammasbufMatrixRef);
     }
 
+    /* guoye: start */
     void EMBRerrorsignal(const ushortvector &alignstateids,
         const uintvector &alignoffsets,
         const edgeinfowithscoresvector &edges, const nodeinfovector &nodes,
@@ -215,6 +217,7 @@ private:
             dynamic_cast<const vectorbaseimpl<doublevector, vectorref<double>> &>(edgeweights),
             dengammasMatrixRef);
     }
+    /* guoye: end */
     void mmierrorsignal(const ushortvector &alignstateids, const uintvector &alignoffsets,
                         const edgeinfowithscoresvector &edges, const nodeinfovector &nodes,
                         const doublevector &logpps, Microsoft::MSR::CNTK::Matrix<float> &dengammas)
