@@ -262,14 +262,14 @@ class MockDeserializer(C.io.UserDeserializer):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-        self._streams = [
-            C.io.StreamInformation('S0', 0, 'dense', np.float32, (1, )),
-            C.io.StreamInformation('S1', 1, 'dense', np.float32, (1, ))
-        ]
         self.x_data = np.ones((1, 1), dtype=np.float32) * 2
         self.y_data = np.ones((1, 1), dtype=np.float32) * 0
 
     def stream_infos(self):
+        self._streams = [
+            C.io.StreamInformation('S0', 0, 'dense', np.float32, (1, )),
+            C.io.StreamInformation('S1', 1, 'dense', np.float32, (1, ))
+        ]
         return self._streams
 
     def num_chunks(self):
@@ -284,10 +284,10 @@ class MockDeserializer(C.io.UserDeserializer):
 def test_distributed_mb_source_single_sample_user_deserializer():
     import random
     from cntk.io import MinibatchSource
-
+    import pdb; pdb.set_trace()
     random.seed(1234)
     mb_sources = []
-    for randomize in [False]:
+    for randomize in [True, False]:
         mb_sources.append(MinibatchSource(MockDeserializer(), randomize=randomize))
         mb_sources.append(MinibatchSource(MockDeserializer(), randomize=randomize, max_sweeps=random.randint(1, 10)))
         mb_sources.append(MinibatchSource(MockDeserializer(), randomize=randomize, max_samples=random.randint(1, 30)))

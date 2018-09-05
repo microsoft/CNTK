@@ -37,19 +37,19 @@ private:
         std::vector<ChunkInfo> m_prefetchedChunkDescriptions;
         std::vector<SequenceInfo> m_prefetchedSequences;
         std::vector<std::tuple<ChunkInfo, ChunkPtr>> m_prefetchedChunks;
+
+        // Current chunk position that the randomizer works with.
+        ChunkIdType m_chunkPosition;
+        // Current sweep count, incremented when the next window
+        // is fetched.
+        size_t m_sweepCount;
     };
     void RandomizeWindow(PrefetchState& prefetchState, size_t sweepCount, size_t chunkPositionOfWindow, size_t sequencePositionInWindow) const;
-    void RandomizeChunks(PrefetchState& prefetchState, size_t sweepCount) const;
+    void RandomizeChunks(PrefetchState& prefetchStatet, size_t sweepCount) const;
 
     const size_t m_randomizationRange;
     const size_t m_seedOffset;
     const bool m_sampleBasedRandomizationWindow;
-
-    // Current chunk position that the randomizer works with.
-    ChunkIdType m_chunkPosition;
-    // Current sweep count, incremented when the next window
-    // is fetched.
-    size_t m_sweepCount;
 
     std::vector<ChunkInfo> m_originalChunkDescriptions;
 

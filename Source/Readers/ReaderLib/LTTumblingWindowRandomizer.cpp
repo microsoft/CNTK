@@ -29,16 +29,16 @@ LTTumblingWindowRandomizer::LTTumblingWindowRandomizer(
     : Base(deserializer, { { s_chunkPositionProperty, 0}, { s_sweepIndexProperty, 0} }, multithreadedGetNextSequences, maxNumberOfInvalidSequences),
   m_randomizationRange(randomizationRange),
   m_seedOffset(seedOffset),
-  m_chunkPosition(0),
-  m_sampleBasedRandomizationWindow(sampleBasedRandomizationWindow),
-  m_sweepCount(0)
+  m_sampleBasedRandomizationWindow(sampleBasedRandomizationWindow)
 {
+    std::lock_guard<std::mutex> lock(m_prefetchStateMutex);
+    m_prefetchState.m_chunkPosition = 0;
+    m_prefetchState.m_sweepCount = 0;
     for (ChunkIdType chunkId = 0; chunkId < m_deserializer->GetNumChunks(); ++chunkId)
     {
         m_originalChunkDescriptions.push_back(m_deserializer->GetChunkInfo(chunkId));
     }
-    std::lock_guard<std::mutex> lock(m_prefetchStateMutex);
-    RandomizeChunks(m_prefetchState, m_sweepCount);
+    RandomizeChunks(m_prefetchState, m_prefetchState.m_sweepCount);
 }
 
 void LTTumblingWindowRandomizer::RandomizeWindow(PrefetchState& prefetchState, size_t sweepCount, size_t chunkPositionOfWindow, size_t sequencePositionInWindow) const
@@ -58,10 +58,9 @@ void LTTumblingWindowRandomizer::RandomizeChunks(PrefetchState& prefetchState, s
 void LTTumblingWindowRandomizer::Prefetch() const
 {
     std::lock_guard<std::mutex> lock(m_prefetchStateMutex);
-    assert(m_prefetchState.m_prefetchedChunkDescriptions.size() > 0);
-    size_t numChunks = m_prefetchState.m_prefetchedChunkDescriptions.size();
-    size_t position = m_chunkPosition;
-    size_t sweepIndex = m_sweepCount;
+    size_t numChunks = m_deserializer->GetNumChunks();
+    size_t position = m_prefetchState.m_chunkPosition;
+    size_t sweepIndex = m_prefetchState.m_sweepCount;
 
     // Prefetch does not change any state that cannot be recalculated,
     // only prefetches data.
@@ -70,7 +69,7 @@ void LTTumblingWindowRandomizer::Prefetch() const
     m_prefetchState.m_prefetchedSequences.clear();
 
     size_t lastSequencePositionInWindow = 0;
-    size_t lastWindowPosition = m_chunkPosition;
+    size_t lastWindowPosition = m_prefetchState.m_chunkPosition;
     while (range > 0)
     {
         assert(position < numChunks);
@@ -131,19 +130,20 @@ void LTTumblingWindowRandomizer::RefillSequenceWindow(SequenceWindow& window)
     window.m_sequences = m_prefetchState.m_prefetchedSequences;
     for (const auto& s : window.m_sequences)
         if (IsEndOfSweep(s))
-            m_sweepCount++;
+            m_prefetchState.m_sweepCount++;
 
     for (const auto& c : m_prefetchState.m_prefetchedChunks)
         window.m_dataChunks.insert(std::make_pair(std::get<0>(c).m_id, std::get<1>(c)));
 
-    m_chunkPosition = (ChunkIdType)(m_chunkPosition + m_prefetchState.m_prefetchedChunks.size()) % m_originalChunkDescriptions.size();
+    m_prefetchState.m_chunkPosition = (ChunkIdType)(m_prefetchState.m_chunkPosition + m_prefetchState.m_prefetchedChunks.size()) % m_originalChunkDescriptions.size();
 }
 
 std::map<std::wstring, size_t> LTTumblingWindowRandomizer::GetInnerState()
 {
+    std::lock_guard<std::mutex> lock(m_prefetchStateMutex);
     std::map<std::wstring, size_t> state;
-    state[s_chunkPositionProperty] = m_chunkPosition;
-    state[s_sweepIndexProperty] = m_sweepCount;
+    state[s_chunkPositionProperty] = m_prefetchState.m_chunkPosition;
+    state[s_sweepIndexProperty] = m_prefetchState.m_sweepCount;
     return state;
 }
 
@@ -151,9 +151,9 @@ void LTTumblingWindowRandomizer::SetInnerState(const std::map<std::wstring, size
 {
     std::lock_guard<std::mutex> lock(m_prefetchStateMutex);
 
-    m_sweepCount = ValueFrom(state, s_sweepIndexProperty);
-    RandomizeChunks(m_prefetchState, m_sweepCount);
-    m_chunkPosition = (ChunkIdType)ValueFrom(state, s_chunkPositionProperty);
+    m_prefetchState.m_sweepCount = ValueFrom(state, s_sweepIndexProperty);
+    RandomizeChunks(m_prefetchState, m_prefetchState.m_sweepCount);
+    m_prefetchState.m_chunkPosition = (ChunkIdType)ValueFrom(state, s_chunkPositionProperty);
 }
 
 }
