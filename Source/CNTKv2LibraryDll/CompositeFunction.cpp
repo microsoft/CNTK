@@ -944,7 +944,12 @@ namespace CNTK
                     for (size_t i = 0; i < replacementShape.Rank(); ++i)
                     {
                         if (replacementShape[i] == NDShape::InferredDimension)
-                        // TODO: shall NDShape::FreeDimension be considered here instead?
+                            replacementShape[i] = 0;
+                        else if (replacementShape[i] == NDShape::FreeDimension)
+                            // ReshappingNodes::Validate() uses input sample (with free dimension being set) to calculate sampleLayout.
+                            // Set free dimension to 0 as well so that it can be inferred from sample.
+                            // The drawback is that we cannot support shapes with more than 1 inferred/free combined dimensions.
+                            // More work on ReshappingNodes is needed if it is required to handle more than 1 inferred/free combined dimensions.
                             replacementShape[i] = 0;
                     }
 

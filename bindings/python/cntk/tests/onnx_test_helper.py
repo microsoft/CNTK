@@ -8,6 +8,9 @@ import numpy as np
 import cntk as C
 import onnx
 
+CNTK_FREEDIM_AXIS_DENOTATION = -3
+DIM_SIZE_FOR_NON_BATCH_OPS = 1
+
 # check whether the input data is a batch of sparse matrices 
 def is_list_of_sparse(data):
     return type(data)==list and type(data[0])==scipy.sparse.csr.csr_matrix
@@ -29,6 +32,42 @@ def transpose_dynamic_axis(data):
     perm[0], perm[1] = perm[1], perm[0]
     return np.transpose(data, perm)
 
+# find index to the sequence axis in a ONNX tensor that would be converted from a CNTK variable.
+def get_sequence_axis_index(output_variable):
+    for i in range(0, len(output_variable.dynamic_axes)):
+        axis = output_variable.dynamic_axes[i]
+        if axis.is_sequence_axis:
+            return i
+    for i in range(0, len(output_variable.shape)):
+        if output_variable.shape[i] == CNTK_FREEDIM_AXIS_DENOTATION:
+            return i + len(output_variable.dynamic_axes)
+    return -1;
+
+# check whether two CNTK output variables have sequence axis at different dimensions. 
+# it indicates that data outputs need to be transposed before comparison.
+# it is safe to assume that sequence dimension is either 0 or 1.
+def compare_model_for_output_data_transpose(model_output, loaded_model_output):
+    model_sequence_index = get_sequence_axis_index(model_output)
+    loaded_model_sequence_index = get_sequence_axis_index(loaded_model_output)
+
+    return model_sequence_index != -1 and loaded_model_sequence_index != -1 and model_sequence_index != loaded_model_sequence_index
+
+# find index to the sequence axis in an ONNX tensor
+def get_onnx_free_dimension_index(onnx_value_info_proto):
+    indices = [onnx_free_dim_index for onnx_free_dim_index, d in enumerate(onnx_value_info_proto.type.tensor_type.shape.dim) if d.dim_param == "Sequence"]
+    if len(indices) != 1:
+        return -1;
+    return indices[0]
+
+# check whether a CNTK variable and a ONNX ValueInfoProto have sequence axis at different dimensions. 
+# it indicates that data outputs need to be transposed before comparison.
+# it is safe to assume that sequence dimension is either 0 or 1.
+def compare_output_for_data_transpose(variable, onnx_value_info_proto):
+    model_sequence_index = get_sequence_axis_index(variable)
+    loaded_model_sequence_index = get_onnx_free_dimension_index(onnx_value_info_proto)
+
+    return model_sequence_index != -1 and loaded_model_sequence_index != -1 and model_sequence_index != loaded_model_sequence_index
+
 # Save numpy data used for CNTK model in ONNX tensor format. The followings are handled in the function.
 # CNTK data is usually float. It can be sparse or dense.
 # ONNX tensor data type depends on its ValueInfoProto attribute. ONNX does not support sparse densors.
@@ -39,7 +78,10 @@ def save_cntk_data_as_onnx_tensor(file_path, variable, data, onnx_value_info_pro
     # swith to onnx shape: (sequence, batch, ...)
     if is_list_of_sparse(data):
         data = sparse_to_dense(data)
-    if variable.has_sequence_axis(): # and variable.is_input:
+
+    # compare free_dim indices between variable with onnx_value_info_proto
+    # they are at index 0 and 1. 
+    if compare_output_for_data_transpose(variable, onnx_value_info_proto):
         data = transpose_dynamic_axis(data)
 
     tp = onnx.TensorProto()
@@ -104,10 +146,19 @@ def create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name
     test_data_path = os.path.join(str(test_model_path), R'test_data_set_0')
     os.mkdir(test_data_path)
     if not loaded_model:
+        ## leave this line for debugging when needed
+        ## plot original model
+        #C.logging.graph.plot(model, os.path.join(str(test_model_path), name + ".pdf"))
+
         filename = os.path.join(str(test_model_path), name + R'.onnx')
         model.save(filename, format=C.ModelFormat.ONNX)
+
         loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
         onnx_model = onnx.load(filename);
+
+        ## leave this line for debugging when needed
+        ## plot loaded model
+        #C.logging.graph.plot(loaded_model, filename + ".pdf")
 
         filename_resave = os.path.join(str(test_model_path), name + R'_resave.onnx')
         loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
