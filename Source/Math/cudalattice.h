@@ -99,8 +99,6 @@ struct latticefunctions : public vectorbase<msra::lattices::empty>
                                         doublevector& logaccalphas, doublevector& logaccbetas,
                                         doublevector& logframescorrectedge, doublevector& logEframescorrect,
                                         doublevector& Eframescorrectbuf, double& logEframescorrecttotal, double& totalfwscore) = 0;
-
-    /* guoye: start */
     virtual void backwardlatticeEMBR(const size_t* batchsizebackward, const size_t numlaunchbackward,
         const floatvector& edgeacscores, const edgeinfowithscoresvector& edges,
         const nodeinfovector& nodes, doublevector& edgelogbetas, doublevector& logbetas,
@@ -109,7 +107,6 @@ struct latticefunctions : public vectorbase<msra::lattices::empty>
     virtual void EMBRerrorsignal(const ushortvector& alignstateids, const uintvector& alignoffsets,
         const edgeinfowithscoresvector& edges, const nodeinfovector& nodes,
         const doublevector& edgeweights,  Microsoft::MSR::CNTK::Matrix<float>& dengammas) = 0;
-    /* guoye: end */
 
 
     virtual void sMBRerrorsignal(const ushortvector& alignstateids, const uintvector& alignoffsets,

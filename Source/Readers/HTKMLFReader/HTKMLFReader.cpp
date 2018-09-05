@@ -26,10 +26,8 @@
 #include "ScriptableObjects.h"
 #include "HTKMLFReader.h"
 #include "TimerUtility.h"
-/* guoye: start */
 #include "fileutil.h"
 #include <string>
-/* guoye: end */
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
 #endif
@@ -103,7 +101,6 @@ void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
     }
 }
 
-/* guoye: start */
 void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string, int>& wordidmap, int start_id)
 {
     std::unordered_map<std::string, int>::iterator mp_itr;
@@ -129,7 +126,6 @@ void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string,
     fclose(f);
 }
 
-/* guoye: end */
 // Load all input and output data.
 // Note that the terms features imply be real-valued quantities and
 // labels imply categorical quantities, irrespective of whether they
@@ -147,9 +143,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     vector<vector<wstring>> infilesmulti;
     size_t numFiles;
     wstring unigrampath(L"");
-    /* guoye: start */
     wstring wordidmappath(L"");
-    /* guoye: end */
 
     size_t randomize = randomizeAuto;
     size_t iFeat, iLabel;
@@ -477,30 +471,22 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (readerConfig.Exists(L"unigram"))
         unigrampath = (const wstring&) readerConfig(L"unigram");
 
-    /*guoye: start */
     if (readerConfig.Exists(L"wordidmap"))
         wordidmappath = (const wstring&)readerConfig(L"wordidmap");
-    /*guoye: end */
 
     // load a unigram if needed (this is used for MMI training)
     msra::lm::CSymbolSet unigramsymbols;
-    /* guoye: start */
     std::set<int> specialwordids;
     std::vector<string> specialwords;
     std::unordered_map<std::string, int> wordidmap;
     std::unordered_map<std::string, int>::iterator wordidmap_itr;
-    /* guoye: end */
     
     std::unique_ptr<msra::lm::CMGramLM> unigram;
     size_t silencewordid = SIZE_MAX;
     size_t startwordid = SIZE_MAX;
     size_t endwordid = SIZE_MAX;
-    /* guoye: debug */
     if (unigrampath != L"")
- //   if(true)
     {
-        // RuntimeError("should not come here.");
-        /* guoye: start (this code order must be consistent with dbn.exe in main.cpp */
        
         unigram.reset(new msra::lm::CMGramLM());
        
@@ -510,20 +496,12 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         unigramsymbols["!sent_start"];
         unigramsymbols["!sent_end"];
         unigramsymbols["!silence"];
-      
-        /* guoye: end */
-        
+             
         unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
-
-        /* guoye: end  */
-       
-        
+   
         silencewordid = unigramsymbols["!silence"]; // give this an id (even if not in the LM vocabulary)
         startwordid = unigramsymbols["<s>"];
         endwordid = unigramsymbols["</s>"];
-        
-
-        /* guoye: start */
         
         specialwordids.clear();
         
@@ -556,7 +534,6 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         // this is to exclude the unknown words in lattice brought when merging the numerator lattice into denominator lattice.
         specialwordids.insert(0xfffff);
         
-        /* guoye: end */
         
     }
 
@@ -576,8 +553,6 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         int start_id = 6;
         readwordidmap(wordidmappath, wordidmap, start_id);
-
-        /* guoye: start */
 
         specialwordids.clear();
         specialwords.clear();
@@ -615,7 +590,6 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         // this is to exclude the unknown words in lattice brought when merging the numerator lattice into denominator lattice.
         specialwordids.insert(0xfffff);
-        /* guoye: end */
 
     }
 
@@ -658,41 +632,18 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
     double htktimetoframe = 100000.0; // default is 10ms
     // std::vector<msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>> labelsmulti;
-        /* guoye: start */
-        // std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> labelsmulti;
     std::vector<std::map<std::wstring, std::pair<std::vector<msra::asr::htkmlfentry>, std::vector<unsigned int>>>> labelsmulti;
-    // std::vector<std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence>> wordlabelsmulti;
-
-    /* debug to clean wordidmap */
-    // wordidmap.clear();
-    /* guoye: end */
     // std::vector<std::wstring> pagepath;
     foreach_index (i, mlfpathsmulti)
     {
-        /* guoye: start */
-        /*
-        const msra::lm::CSymbolSet* wordmap = unigram ? &unigramsymbols : NULL;
         msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence>
-        labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordmap, (map<string, size_t>*) NULL, htktimetoframe); // label MLF
-        */
-        msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence>
-        // msra::asr::htkmlfreader<msra::asr::htkmlfentry>
            labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordidmap, htktimetoframe); // label MLF
-        // labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordidmap, (map<string, size_t>*) NULL, htktimetoframe); // label MLF
-        /* guoye: end */
         // get the temp file name for the page file
 
         // Make sure 'msra::asr::htkmlfreader' type has a move constructor
         static_assert(std::is_move_constructible<msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence>>::value,
                       "Type 'msra::asr::htkmlfreader' should be move constructible!");
 
-        /* guoye: start */
-        // map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels = labels.get_wordlabels();
-        // guoye debug purpose
-        // fprintf(stderr, "debug to set wordlabels to empty");
-        // map<wstring, msra::lattices::lattice::htkmlfwordsequence> wordlabels;
-        // wordlabelsmulti.push_back(std::move(wordlabels));
-        /* guoye: end */
         labelsmulti.push_back(std::move(labels));
     }
 
@@ -705,11 +656,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         // now get the frame source. This has better randomization and doesn't create temp files
         bool useMersenneTwisterRand = readerConfig(L"useMersenneTwisterRand", false);
-        /* guoye: start */
-        // m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
-        // m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, wordlabelsmulti, specialwordids, m_featDims, m_labelDims,
         m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti,  specialwordids, m_featDims, m_labelDims,
-        /* guoye: end */
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 
                                                                          m_expandToUtt, m_maxUtteranceLength, m_truncated));
@@ -943,10 +890,8 @@ void HTKMLFReader<ElemType>::StartDistributedMinibatchLoop(size_t requestedMBSiz
         // for the multi-utterance process for lattice and phone boundary
         m_latticeBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
         m_labelsIDBufferMultiUtt.resize(m_numSeqsPerMB);
-        /* guoye: start */
         m_wlabelsIDBufferMultiUtt.resize(m_numSeqsPerMB);
         m_nwsBufferMultiUtt.resize(m_numSeqsPerMB);
-        /* guoye: end */
         m_phoneboundaryIDBufferMultiUtt.resize(m_numSeqsPerMB);
 
         if (m_frameMode && (m_numSeqsPerMB > 1))
@@ -1085,17 +1030,11 @@ void HTKMLFReader<ElemType>::StartMinibatchLoopToWrite(size_t mbSize, size_t /*e
 
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput,
-    /* guoye: start */
     vector<size_t>& uids, vector<size_t>& wids, vector<short>& nws, vector<size_t>& boundaries, vector<size_t>& extrauttmap)
-                                             // vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap)
-    /* guoye: end */
 {
     if (m_trainOrTest)
     {
-        /* guoye: start */
-        // return GetMinibatch4SEToTrainOrTest(latticeinput, uids, boundaries, extrauttmap);
         return GetMinibatch4SEToTrainOrTest(latticeinput, uids, wids, nws, boundaries, extrauttmap);
-        /* guoye: end */
     }
     else
     {
@@ -1105,30 +1044,21 @@ bool HTKMLFReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput,
     
-    /* guoye: start */
     std::vector<size_t>& uids, std::vector<size_t>& wids, std::vector<short>& nws, std::vector<size_t>& boundaries, std::vector<size_t>& extrauttmap)
-                  //                                        std::vector<size_t>& uids, std::vector<size_t>& boundaries, std::vector<size_t>& extrauttmap)
-
-    /* guoye: end */
 {
     latticeinput.clear();
     uids.clear();
-    /* guoye: start */
     wids.clear();
     nws.clear();
-    /* guoye: end */
     boundaries.clear();
     extrauttmap.clear();
     for (size_t i = 0; i < m_extraSeqsPerMB.size(); i++)
     {
         latticeinput.push_back(m_extraLatticeBufferMultiUtt[i]);
         uids.insert(uids.end(), m_extraLabelsIDBufferMultiUtt[i].begin(), m_extraLabelsIDBufferMultiUtt[i].end());
-        /* guoye: start */
         wids.insert(wids.end(), m_extraWLabelsIDBufferMultiUtt[i].begin(), m_extraWLabelsIDBufferMultiUtt[i].end());
 
         nws.insert(nws.end(), m_extraNWsBufferMultiUtt[i].begin(), m_extraNWsBufferMultiUtt[i].end());
-
-        /* guoye: end */
         boundaries.insert(boundaries.end(), m_extraPhoneboundaryIDBufferMultiUtt[i].begin(), m_extraPhoneboundaryIDBufferMultiUtt[i].end());
     }
 
@@ -1196,11 +1126,8 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
             m_extraLabelsIDBufferMultiUtt.clear();
             m_extraPhoneboundaryIDBufferMultiUtt.clear();
             m_extraSeqsPerMB.clear();
-            /* guoye: start */
             m_extraWLabelsIDBufferMultiUtt.clear();
-
             m_extraNWsBufferMultiUtt.clear();
-            /* guoye: end */
             if (m_noData && m_numFramesToProcess[0] == 0) // no data left for the first channel of this minibatch,
             {
                 return false;
@@ -1281,11 +1208,8 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                         {
                             m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
                             m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
-                            /* guoye: start */
                             m_extraWLabelsIDBufferMultiUtt.push_back(m_wlabelsIDBufferMultiUtt[i]);
-
                             m_extraNWsBufferMultiUtt.push_back(m_nwsBufferMultiUtt[i]);
-                            /* guoye: end */
                             m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                         }
                     }
@@ -1328,12 +1252,9 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                                 {
                                     m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[src]);
                                     m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[src]);
-                                    /* guoye: start */
                                     m_extraWLabelsIDBufferMultiUtt.push_back(m_wlabelsIDBufferMultiUtt[src]);
 
                                     m_extraNWsBufferMultiUtt.push_back(m_nwsBufferMultiUtt[src]);
-
-                                    /* guoye: end */
                                     m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[src]);
                                 }
 
@@ -2039,14 +1960,11 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
         m_phoneboundaryIDBufferMultiUtt[i] = m_mbiter->bounds();
         m_labelsIDBufferMultiUtt[i].clear();
         m_labelsIDBufferMultiUtt[i] = m_mbiter->labels();
-        /* guoye: start */
         m_wlabelsIDBufferMultiUtt[i].clear();
         m_wlabelsIDBufferMultiUtt[i] = m_mbiter->wlabels();
 
         m_nwsBufferMultiUtt[i].clear();
         m_nwsBufferMultiUtt[i] = m_mbiter->nwords();
-
-        /* guoye: end */
 
     }
 

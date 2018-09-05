@@ -72,7 +72,6 @@ public:
         return retVal;
     }
 
-    /* guoye: start */
     virtual bool getbatch(const size_t globalts,
         const size_t framesrequested, const size_t subsetnum, const size_t numsubsets, size_t &framesadvanced,
          std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids, std::vector<std::vector<size_t>> &wids, std::vector<std::vector<short>> &nws,
@@ -88,8 +87,6 @@ public:
         
         return retVal;
     }
-
-    /* guoye: end */
 
 
     virtual bool supportsbatchsubsetting() const
@@ -131,10 +128,8 @@ class minibatchiterator
 
     std::vector<msra::dbn::matrix> featbuf;                                                      // buffer for holding curernt minibatch's frames
     std::vector<std::vector<size_t>> uids;                                                       // buffer for storing current minibatch's frame-level label sequence
-    /* guoye: start */
     std::vector<std::vector<size_t>> wids;                                                       // buffer for storing current minibatch's word-level label sequence
     std::vector<std::vector<short>> nws;                                                       // buffer for storing current minibatch's number of words for each utterance
-    /* guoye: end */
     std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> transcripts; // buffer for storing current minibatch's word-level label sequences (if available and used; empty otherwise)
     std::vector<std::shared_ptr<const latticesource::latticepair>> lattices;                          // lattices of the utterances in current minibatch (empty in frame mode)
 
@@ -159,13 +154,11 @@ private:
 
             foreach_index (i, uids)
                 uids[i].clear();
-            /* guoye: start */
             foreach_index(i, wids)
                 wids[i].clear();
 
             foreach_index(i, nws)
                 nws[i].clear();
-            /* guoye: end */
             transcripts.clear();
             actualmbframes = 0;
             return;
@@ -174,10 +167,7 @@ private:
         assert(requestedmbframes > 0);
         const size_t requestedframes = std::min(requestedmbframes, epochendframe - mbstartframe); // (< mbsize at end)
         assert(requestedframes > 0);
-        /* guoye: start */
-        // source.getbatch(mbstartframe, requestedframes, subsetnum, numsubsets, mbframesadvanced, featbuf, uids, transcripts, lattices, sentendmark, phoneboundaries);
         source.getbatch(mbstartframe, requestedframes, subsetnum, numsubsets, mbframesadvanced, featbuf, uids, wids, nws, transcripts, lattices, sentendmark, phoneboundaries);
-        /* guoye: end */
         timegetbatch = source.gettimegetbatch();
         actualmbframes = featbuf[0].cols(); // for single i/o, there featbuf is length 1
         // note:
@@ -356,7 +346,6 @@ public:
         assert(uids.size() >= i + 1);
         return uids[i];
     }
-    /* guoye: start */
     // return the reference transcript word labels (word labels) for current minibatch
     /*const*/ std::vector<size_t> &wlabels()
     {
@@ -375,7 +364,6 @@ public:
         return nws[0];
     }
 
-    /* guoye: end */
 
     std::vector<size_t> &sentends()
     {

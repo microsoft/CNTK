@@ -342,17 +342,8 @@ public:
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
-        /* guoye: start */
-        // fprintf(stderr, "\n reshapingnodes.h: RequestMatricesBeforeBackprop: debug 5 \n");
-        /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        /* guoye: start */
-        // fprintf(stderr, "\n reshapingnodes.h: RequestMatricesBeforeBackprop: debug 6 \n");
-        /* guoye: end */
         RequestMatrixFromPool(m_tempGatherIndices, matrixPool, 1, InputRef(0).HasMBLayout());
-        /* guoye: start */
-        // fprintf(stderr, "\n reshapingnodes.h: RequestMatricesBeforeBackprop: debug 7 \n");
-        /* guoye: end */
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
@@ -517,21 +508,9 @@ public:
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
-        /* guoye: start */
-        // fprintf(stderr, "\n reshapingnodes.h: RequestMatricesBeforeBackprop: debug 1 \n");
-        /* guoye: end */
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        /* guoye: start */
-        // fprintf(stderr, "\n reshapingnodes.h: RequestMatricesBeforeBackprop: debug 2 \n");
-        /* guoye: end */
         RequestMatrixFromPool(m_tempScatterIndices, matrixPool, 1, HasMBLayout());
-        /* guoye: start */
-        // fprintf(stderr, "\n reshapingnodes.h: RequestMatricesBeforeBackprop: debug 3 \n");
-        /* guoye: end */
         RequestMatrixFromPool(m_tempUnpackedData, matrixPool, GetSampleLayout().GetNumElements(), HasMBLayout());
-        /* guoye: start */
-        // fprintf(stderr, "\n reshapingnodes.h: RequestMatricesBeforeBackprop: debug 4 \n");
-        /* guoye: end */
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override

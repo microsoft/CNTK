@@ -62,11 +62,8 @@ public:
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
         size_t actualMBSize;
-        /* guoye: start */
         size_t actualNumWords;
-        // while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr))
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr, actualNumWords))
-            /* guoye: end */
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
             m_net->ForwardProp(outputNodes);
@@ -234,11 +231,8 @@ public:
         char formatChar = !formattingOptions.isCategoryLabel ? 'f' : !formattingOptions.labelMappingFile.empty() ? 's' : 'u';
         std::string valueFormatString = "%" + formattingOptions.precisionFormat + formatChar; // format string used in fprintf() for formatting the values
 
-        /* guoye: start */
         size_t actualNumWords;
-        //for (size_t numMBsRun = 0; DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr); numMBsRun++)
         for (size_t numMBsRun = 0; DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr, actualNumWords); numMBsRun++)
-        /* guoye: end */
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
             m_net->ForwardProp(outputNodes);
