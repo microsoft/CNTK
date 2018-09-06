@@ -160,6 +160,8 @@ public:
     }
     void operator=(const SmallVector& other)
     {
+        if (m_data == other.m_data)
+            return;
         m_size = other.m_size;
         memcpy(m_data, other.m_data, other.m_size * sizeof(T));
     }
@@ -774,8 +776,7 @@ public:
     // pretty-printing, wstring version 
     operator std::wstring() const
     {
-        std::string s = this->operator std::string(); 
-        return msra::strfun::utf16(s);
+        return Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(this->operator std::string());
     }
 
 private:

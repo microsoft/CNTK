@@ -55,7 +55,7 @@ public:
         if (pass > ndlPassInitial && evaluateNode)
         {
             std::string name = nodeParam->GetName();
-            std::wstring wname = msra::strfun::utf16(name);
+            std::wstring wname = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(name);
             if (nodeParam->GetType() == ndlTypeDotParameter)
             {
                 // When we see a variable of the form "A.B" in a macro, we need to resolve it to an actual node, by first constructing it's
@@ -99,8 +99,8 @@ public:
                     // replacing "nameBeforeDot" with the fully qualified name of the node passed in as the parameter.
                     NDLScript<ElemType>* parentScript = resolvedParam->GetParentScript();
                     baseName = parentScript->GetBaseName();
-                    std::wstring resolvedParamName = msra::strfun::utf16(resolvedParam->GetName());
-                    wname = baseName.empty() ? resolvedParamName + L"." + msra::strfun::utf16(nameAfterDot) : baseName + L"." + resolvedParamName + L"." + msra::strfun::utf16(nameAfterDot);
+                    std::wstring resolvedParamName = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(resolvedParam->GetName());
+                    wname = baseName.empty() ? resolvedParamName + L"." + Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(nameAfterDot) : baseName + L"." + resolvedParamName + L"." + Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(nameAfterDot);
                 }
                 else if (!baseName.empty())
                 {
@@ -146,7 +146,7 @@ public:
         wstring baseName = baseNameP;
         if (script == NULL)
         {
-            std::wstring name = baseName + L"." + msra::strfun::utf16(node->GetName());
+            std::wstring name = baseName + L"." + Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(node->GetName());
             LogicError("no script for a parameter node in call to %ls\n", name.c_str());
         }
 
@@ -178,7 +178,7 @@ public:
                 {
                     // check for the fully quantified name in the computation network
                     // this is needed for MEL processing, since CN nodes names can be used as parameters in MEL
-                    std::wstring wname = msra::strfun::utf16(name);
+                    std::wstring wname = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(name);
                     if (m_net->NodeNameExists(wname))
                     {
                         void* np = (void*)m_net->GetNodeFromName(wname).get();
@@ -211,7 +211,7 @@ public:
             // everything else is illegal as a parameter
         default:
         {
-            std::wstring name = baseName + L"." + msra::strfun::utf16(node->GetName());
+            std::wstring name = baseName + L"." + Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(node->GetName());
             RuntimeError("Invalid parameter (macro definitions and arrays not allowed), see call to %ls\n", name.c_str());
         }
         break;
@@ -495,7 +495,7 @@ public:
                 std::vector<std::string> filePathVec = msra::strfun::split(ndlMacrosPaths, "+");
                 for (const auto& filePath : filePathVec)
                 {
-                    ndlScript.LoadConfigFileAndResolveVariables(msra::strfun::utf16(filePath), config);
+                    ndlScript.LoadConfigFileAndResolveVariables(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(filePath), config);
                 }
             }
         }

@@ -378,7 +378,7 @@ function default_use_csharp()
 {
     if [[ `command -v dotnet` && `command -v swig` && `command -v cmake` ]]
     then
-        echo yes
+       echo yes
     else
         echo no
     fi

@@ -87,7 +87,7 @@ enum class MatrixTranspose : char
 enum class SymMatrixType : char
 {
     Up = 'U',          // symmetric matrix is stored in the upper part
-    Low = 'L',         // symmetric matrix is stored in thelower part
+    Low = 'L',         // symmetric matrix is stored in the lower part
     Full = 'F',        // full populated
     NotSymmetric = 'N' // not a symmetric matrix
 };
@@ -2782,7 +2782,7 @@ template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNegativeSineOf(const CPUMatrix<ElemType>& a)
 {
     if (a.IsEmpty())
-        LogicError("AssignCosineOf: Matrix a is empty.");
+        LogicError("AssignNegativeSineOf: Matrix a is empty.");
 
     auto& us = *this;
     if (this != &a)
@@ -2793,6 +2793,33 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNegativeSineOf(const CPUMatrix<E
     {
         const ElemType v = a(i, j);
         us(i, j) = -sin(v);
+    }
+
+    return *this;
+}
+
+//[this]=tan([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceTan()
+{
+    return AssignTanOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTanOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignTanOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord(i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = tan(v);
     }
 
     return *this;
@@ -2847,6 +2874,33 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAsinOf(const CPUMatrix<ElemType>
     {
         const ElemType v = a(i, j);
         us(i, j) = asin(v);
+    }
+
+    return *this;
+}
+
+//[this]=atan([this]) element wise
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::InplaceAtan()
+{
+    return AssignAtanOf(*this);
+}
+
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAtanOf(const CPUMatrix<ElemType>& a)
+{
+    if (a.IsEmpty())
+        LogicError("AssignAtanOf: Matrix a is empty.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+#pragma omp parallel for
+    foreach_coord(i, j, a)
+    {
+        const ElemType v = a(i, j);
+        us(i, j) = atan(v);
     }
 
     return *this;
@@ -3284,16 +3338,22 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::GatherFromTarget(const CPUMatrix<ElemT
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements,
+    const CPUMatrix<char>* mask/*= nullptr*/)
 {
-    if (indices.IsEmpty() || values.IsEmpty())
+    if (indices.IsEmpty() || values.IsEmpty() || (mask && mask->IsEmpty()))
         LogicError("ScatterToIndices: input matrix is empty.");
+    if (mask && (indices.GetNumCols() % mask->GetNumCols() != 0))
+        LogicError("ScatterAccordingIndices: The number of columns(%zu) of the matrix slice to be masked is not a multiple of the number of columns(%zu) of the mask slice.",
+            indices.GetNumCols(), mask->GetNumCols());
 
     ElemType* indicesBufPtr = indices.Data();
     ElemType* valueBufPtr = values.Data();
+    char* maskBufPtr = mask ? mask->Data() : nullptr;
     ElemType* buffer = Data();
+    size_t numElemsPerMaskEntry = mask ? indices.GetNumCols() / mask->GetNumCols() * indices.GetNumRows() : 0;
 
-    ScatterValues(indicesBufPtr, valueBufPtr, buffer, (ElemType)1, indices.GetNumElements(), row_elements, this->GetNumCols());
+    ScatterValues(indicesBufPtr, valueBufPtr, buffer, static_cast<ElemType>(1), indices.GetNumElements(), row_elements, this->GetNumCols(), maskBufPtr, numElemsPerMaskEntry);
 
     return *this;
 }
@@ -7220,10 +7280,18 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step)
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/)
+{
+    ScatterValues(indices, value, data, alpha, num_indices, rows, cols, /*mask*/nullptr, /*numElemsPerMaskEntry*/0, indices_step);
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, char* mask, size_t numElemsPerMaskEntry, size_t indices_step/*=1*/)
 {
     if (!indices || !value || !data)
         LogicError("ScatterValues: input data is null.");
+    if (mask && (numElemsPerMaskEntry == 0))
+        RuntimeError("ScatterValues: numElemsPerMaskEntry must not be 0 when a mask is provided.");
 
 #pragma omp parallel
     {
@@ -7237,6 +7305,9 @@ void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, Elem
             auto col = (size_t)col_r;
             //ignore the elements that is not partitioned into this thread
             if (col % nthread != ithread)
+                continue;
+            //check if colMask is invalid
+            if (mask && mask[i * indices_step / numElemsPerMaskEntry] == 0)
                 continue;
 
             if (col >= cols)

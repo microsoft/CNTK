@@ -19,7 +19,7 @@
 #pragma warning(pop)
 
 #pragma warning(push)
-#pragma warning(disable : 4800 4267 4610 4512 4100 4510)
+#pragma warning(disable : 4800 4267 4610 4512 4100 4510 4505)
 #include "tensorboard/tensorboard.pb.h"
 #pragma warning(pop)
 
@@ -28,6 +28,8 @@
 #include "hostname.h"
 #include "tensorboard/TensorBoardUtils.h"
 #include "Utils.h"
+
+using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
@@ -62,7 +64,7 @@ namespace CNTK
 
             filename << L"events.out.tfevents." 
                 << std::setfill(L'0') << std::setw(10) << time
-                << L"." << ToWString(GetHostName());
+                     << L"." << ToFixedWStringFromMultiByte(GetHostName());
             return filename.str();
         }
 
@@ -95,7 +97,7 @@ namespace CNTK
 
             msra::files::make_intermediate_dirs(filePath);
 
-            m_file = fopenOrDie(ToString(filePath), "wb");
+            m_file = fopenOrDie(ToLegacyString(ToUTF8(filePath)), "wb");
             m_fileName = filePath;
 
             // Write the first record with the current version, and flush
@@ -118,7 +120,7 @@ namespace CNTK
 
             tensorflow::Summary* summary = event.mutable_summary();
             tensorflow::Summary::Value* summaryValue = summary->add_value();
-            summaryValue->set_tag(ToString(name));
+            summaryValue->set_tag(ToLegacyString(ToUTF8(name)));
             summaryValue->set_simple_value(value);
 
             WriteRecord(Serialize(event));
@@ -205,7 +207,7 @@ namespace CNTK
 
             for (size_t i = 0; i < batch_size; i++) {
                 tensorflow::Summary::Value* summaryValue = summary->add_value();
-                summaryValue->set_tag(ToString(name) + "/image/" + std::to_string(i));
+                summaryValue->set_tag(ToLegacyString(ToUTF8(name)) + "/image/" + std::to_string(i));
 
                 tensorflow::Summary::Image* summaryImage = summaryValue->mutable_image();
                 summaryImage->set_height(height);

@@ -4,10 +4,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "proto/onnx/core/common/common.h"
+#include "core/common/common.h"
 
-namespace ONNXIR
-{
+namespace LotusIR {
 constexpr const char* kNoOp = "NoOp";
 constexpr const char* kConstant = "Constant";
 constexpr const char* kFunctionOp = "_kFunctionOp";
@@ -17,4 +16,4 @@ constexpr const char* kMLDomain = "ai.onnx.ml";
 constexpr const char* kMSDomain = "com.microsoft";
 constexpr const char* kCpuExecutionProvider = "CPUExecutionProvider";
 constexpr const char* kCudaExecutionProvider = "CUDAExecutionProvider";
-} // namespace ONNXIR
+}  // namespace LotusIR

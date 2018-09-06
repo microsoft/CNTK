@@ -434,8 +434,8 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     Example:
          >>> c = C.Constant(1, (2,3))
          >>> c.value
-             array([[ 1.,  1.,  1.],
-                    [ 1.,  1.,  1.]], dtype=float32)
+             array([[1., 1., 1.],
+                    [1., 1., 1.]], dtype=float32)
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.

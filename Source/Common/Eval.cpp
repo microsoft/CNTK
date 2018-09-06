@@ -65,7 +65,7 @@ void Eval<ElemType>::GetEvalClass(const std::string& config)
         std::string::size_type end = config.find_first_of("\n \t", found);
         if (end != std::string::npos)
         {
-            module = msra::strfun::utf16(config.substr(found, end - found));
+            module = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(config.substr(found, end - found));
         }
     }
     // create a variable of each type just to call the proper templated version

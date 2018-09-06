@@ -401,11 +401,30 @@ public:
         return -(center - (kernSize - 1) / 2);
     }
 
-    int GetUpperPad(size_t dim) const
+    // GetUpperPad
+    // 
+    // There will be four cases
+    //      kernelSize  extraSize   padSizes                cuDnn & MKL (they only support symmetric padding)
+    // 1.   odd         even        lower = upper           supported
+    // 2.   even        odd         lower = upper           supported
+    // 3.   odd         odd         lower = upper + 1       supported with extra 1 padding on upperPad
+    // 4.   even        even        lower = upper - 1       unsupported
+    //
+    // extra size = (dim - 1) % stride
+    //
+    // So for cases where lower = upper + 1. We can simply decide to pad one extra for upperPad, 
+    // as it will yield the same shape and value results.
+    // However, for cases where lower = upper - 1. We cannot pad the extra for lowerPad, 
+    // as it will change the center of the kernel, and produce different value and maybe different shape results. 
+    //
+    // Parameter: 
+    //  bool trySymmetricAutoPad : if set to true, this function will return symmetric padding for case 3 by padding 1 extra on upperPad.
+    //                             This parameter is ignored if auto padding is not enabled. 
+    int GetUpperPad(size_t dim, bool trySymmetricAutoPad = false) const
     {
         if (!GetAutoPad(dim))
             return (int)m_upperPad[m_upperPad.size() == 1 ? 0 : dim];
-
+       
         int dilation = (int)GetDilation(dim);
         int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
         int inpSize = (int)m_inputShape[dim];
@@ -418,7 +437,23 @@ public:
         // Extra cells, to the left and right of "cells".
         int extra = inpSize - cells;
         int center = extra / 2;
-        return (kernSize - 1) - (kernSize - 1) / 2 - (extra - center);
+        int upperPad = (kernSize - 1) - (kernSize - 1) / 2 - (extra - center);
+
+        if (trySymmetricAutoPad && (kernSize % 2 == 1) && (extra % 2 == 1))
+        {
+            // case 3: pad extra 1 for upperPad to enable symmetric padding. 
+            upperPad++;
+        }
+        return upperPad;
+    }
+
+    // Return if padding is enabled for input channel axis. 
+    bool IsPaddingOverChannelAxis() const
+    {
+        size_t channelIdx = m_inputShape.GetRank() - 1;
+        assert(m_inputShape.GetRank() >= 1);
+        // check for lowerPad value. This value is incorrect when out channel size > 1. Check if channel stride is >= channel size in that case.
+        return (GetLowerPad(channelIdx) > 0) && (GetStride(channelIdx) < m_inputShape[channelIdx]);
     }
 
     // Computes output shape given input shape and other convolution parameters.
@@ -447,7 +482,13 @@ public:
         {
             assert(inputShape[i] >= 1);
             auto kernelShape_i = (i == kernelShape.GetRank() - 1) ? kernelShape[i] * groups : kernelShape[i];
-            if (kernelShape_i > inputShape[i])
+
+            // If lowerPad and upperPad are specified, include them in the minimum size check
+            // for input image that is done below. Otherwise (if autoPad is specified), just 
+            // check against kernel size only.
+            auto lowerPadValForSizeCheck = autoPad[autoPad.size() == 1 ? 0 : i] ? 0 : lowerPad[lowerPad.size() == 1 ? 0 : i];
+            auto upperPadValForSizeCheck = autoPad[autoPad.size() == 1 ? 0 : i] ? 0 : upperPad[upperPad.size() == 1 ? 0 : i];
+            if (kernelShape_i > (inputShape[i] + upperPadValForSizeCheck + lowerPadValForSizeCheck) )
             {
                 if(isFinalValidationPass || !needsDynamicValidation)
                     InvalidArgument("Convolution operation requires that kernel dim %d <= input dim %d.", (int)kernelShape_i, (int)inputShape[i]);
@@ -464,6 +505,7 @@ public:
             size_t lo = lowerPad[lowerPad.size() == 1 ? 0 : i];
             size_t hi = upperPad[upperPad.size() == 1 ? 0 : i];
             size_t dil = dilation[dilation.GetRank() == 1 ? 0 : i];
+
             if (autoPadCur)
             {
                 dim += dil * (kernelShape_i - 1);
@@ -481,7 +523,8 @@ public:
             if (!autoPadCur && (lo > 0 || hi > 0))
             {
                 size_t size = (dimOut - 1) * delta + kernelShape_i;
-                if (size != dim)
+                // size must be >= (lo + inputShape[i]) to cover all original input space(excluding padding).
+                if (size < (dim - hi))
                     InvalidArgument("Convolution requires that kernel fills the entire space if auto-padding is disabled.");
             }
 
@@ -594,12 +637,14 @@ public:
         return res.str();
     }
 
-    bool IsAsymmetricPadding() const
+    // For MKL, if auto padding is enabled, in some cases we can convert asymmetric padding to symmetric padding,
+    // with the same output shape and value. 
+    bool IsAsymmetricPadding(bool useMKL) const
     {
         for (size_t i = 0; i < KernelShape().size(); i++)
         {
             auto lowerPad = GetLowerPad(i);
-            auto upperPad = GetUpperPad(i);
+            auto upperPad = GetUpperPad(i, useMKL);
             auto stride = GetStride(i);
             if ((lowerPad != upperPad) && (stride < InputShape()[i]))
             {

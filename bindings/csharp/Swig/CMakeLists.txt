@@ -203,7 +203,7 @@ if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
     string(TOLOWER "${config}" lower_config)
     
     target_link_libraries(CSharpBindings
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../build/${lower_config}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}Cntk.Core${binary_name_suffix}${CMAKE_SHARED_LIBRARY_SUFFIX}
+        PRIVATE ${CNTK_BUILD_LIB_DIR_HACK}/${CMAKE_STATIC_LIBRARY_PREFIX}Cntk.Core${binary_name_suffix}${CMAKE_SHARED_LIBRARY_SUFFIX}
     )
 else()
     target_link_libraries(CSharpBindings

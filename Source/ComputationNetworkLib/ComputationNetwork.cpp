@@ -550,7 +550,9 @@ void ComputationNetwork::CollectInputAndLearnableParametersRec(const Computation
 {
     if (visited.find(node) != visited.end())    // allready got this one
         return;
-    else if (node->OperationName() == OperationNameOf(InputValue) || node->OperationName() == OperationNameOf(SparseInputValue))
+
+    visited.insert(node);
+    if (node->OperationName() == OperationNameOf(InputValue) || node->OperationName() == OperationNameOf(SparseInputValue))
         inputs.push_back(node);
     else if (node->OperationName() == OperationNameOf(LearnableParameter) && node->IsParameterUpdateRequired())
         learnableParameters.push_back(node);
@@ -561,7 +563,6 @@ void ComputationNetwork::CollectInputAndLearnableParametersRec(const Computation
         if (pcnode && pcnode->HasComputed())
             return;
         // recurse
-        visited.insert(node);
         for (const auto & input : node->GetInputs())
             CollectInputAndLearnableParametersRec(input, visited, inputs, learnableParameters);
     }

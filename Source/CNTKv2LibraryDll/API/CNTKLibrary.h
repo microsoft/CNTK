@@ -123,6 +123,8 @@ namespace CNTK
             return DataType::Int8;
         else if (std::is_same<ElementType, int16_t>())
             return DataType::Int16;
+        else if (std::is_same<ElementType, uint16_t>()) // In ONNX, float16 values must be converted to an uint16_t to prior writing to the buffer.
+            return DataType::Float16;
         else
             NOT_IMPLEMENTED;
     }
@@ -3907,6 +3909,16 @@ namespace CNTK
     CNTK_API FunctionPtr Cos(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise atan operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Atan(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise tan operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Tan(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise cosh operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Cosh(const Variable& operand, const std::wstring& name = L"");
@@ -4510,32 +4522,32 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in LogSum reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceLogSum(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceLogSum(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in Mean reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceMean(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceMean(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in Max reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceMax(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in Min reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceMin(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceMin(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
     ///
-    CNTK_API FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axis, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ReduceProd(const Variable& operand, const std::vector<Axis>& axes, bool keepDims = true, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in L1 norm reduction operation on specified tensor input operand along the specified axis
@@ -4595,10 +4607,11 @@ namespace CNTK
                                      size_t reductionRank = 1,
                                      size_t groups = 1,
                                      size_t maxTempMemSizeInSamples = 0,
+                                     bool sequential = false,
                                      const std::wstring& name = L"");
 
     ///
-    /// Convolution transpose
+    /// Convolution transpose with auto padding
     ///
     CNTK_API FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
                                               const Variable& operand,
@@ -4610,6 +4623,20 @@ namespace CNTK
                                               size_t reductionRank = 1,
                                               size_t maxTempMemSizeInSamples = 0,
                                               const std::wstring& name = L"");
+    ///
+    /// Convolution transpose with explicit lower and upper pad values
+    ///
+    CNTK_API FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
+                                            const Variable& operand,
+                                            const NDShape& strides,
+                                            const std::vector<bool>& sharing,
+                                            const std::vector<size_t>& lowerPad,
+                                            const std::vector<size_t>& upperPad,
+                                            const NDShape& outputShape,
+                                            const NDShape& dilation,
+                                            size_t maxTempMemSizeInSamples,
+                                            const std::wstring& name = L"");
+
 
     ///
     /// Pooling type.
@@ -4631,7 +4658,7 @@ namespace CNTK
                                     const std::wstring& name/* = L""*/);
 
     ///
-    /// TODO:
+    /// Create an instance of the CNTK built-in Pooling operation on specified tensor input operands with automatic padding option.
     ///
     CNTK_API FunctionPtr Pooling(const Variable& operand,
                                  PoolingType poolingType,
@@ -4641,6 +4668,19 @@ namespace CNTK
                                  const bool ceilOutDim = false,
                                  const bool includePad = false,
                                  const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in Pooling operation on specified tensor input operands with explicit lower and upper pad lengths.
+    ///
+    CNTK_API FunctionPtr Pooling(const Variable& operand,
+                                PoolingType poolingType,
+                                const NDShape& poolingWindowShape,
+                                const NDShape& strides,
+                                const std::vector<size_t>& lowerPad,
+                                const std::vector<size_t>& upperPad,
+                                const bool ceilOutDim = false,
+                                const bool includePad = false,
+                                const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in Unpooling operation on specified tensor input operands with the specified type and shape
@@ -4763,6 +4803,11 @@ namespace CNTK
     CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with specified alpha and with the specified input operand.
+    ///
+    CNTK_API FunctionPtr ELU(const Variable& operand, double alpha, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise scaled exponential linear unit operation with the specified input operand.
     ///
     CNTK_API FunctionPtr SELU(const Variable& operand, double gamma = 1.0507009873554804934193349852946, double alpha = 1.6732632423543772848170429916717, const std::wstring& name = L"");
@@ -4797,7 +4842,12 @@ namespace CNTK
     /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
- 
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise scaled exponential linear unit operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr StraightThrough(const Variable& operand, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in operator for converting the specified tensor operand into a sequence
     ///

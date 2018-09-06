@@ -236,7 +236,7 @@ function OpProtoBuf310VS17(
     $scriptDirectory = join-path $targetFolder "script"
     $buildDir = join-path $targetFolder $prodSubDir
     $downloadSource = "https://github.com/google/protobuf/archive/v3.1.0.zip"
-    $expectedHash = "ED0F3215AC60E6AE29B21CBFF53F8876E4CF8B4767FEC525CEF0DA6FDF6A4A73"
+    $expectedHash = "C07629F666312E43A4C2415AF77F6442178605A8658D975299C793CB89999212"
 
     @( @{ShortName = "PROTO310"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath } );
@@ -259,7 +259,7 @@ function OpProtoBuf310VS17Prebuild(
     $envVar = "PROTOBUF_PATH"
     $envValue = $targetPath
     $downloadSource = "https://cntk.ai/binarydrop/prerequisites/protobuf/protobuf-3.1.0-vs17.zip"
-    $expectedHash = "EB7D7533F8145C893FF83EECC14DDB0B00BCFE3AB17143AD1B3F9BFF4E4655FB"   
+    $expectedHash = "ED0F3215AC60E6AE29B21CBFF53F8876E4CF8B4767FEC525CEF0DA6FDF6A4A73"   
 
     @( @{ShortName = "PROTO310PRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },

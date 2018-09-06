@@ -80,7 +80,7 @@ for drop in $*; do
   IMAGE=cntk:installtest
   for base in Ubuntu16; do
     docker build --build-arg PY_VERSION=$PY_VERSION --build-arg WHEEL_BASE_URL=$WHEEL_BASE_URL -t $IMAGE -f Dockerfile-$base-$DOCKERFILE_SUFFIX .
-    $DOCKER_TO_RUN run --rm $IMAGE su - testuser -c "./run-test.sh $TEST_DEVICE"
+    $DOCKER_TO_RUN run --rm -e TEST_TAG=$TEST_TAG $IMAGE su - testuser -c "./run-test.sh $TEST_DEVICE"
     docker rmi $IMAGE
   done
 

@@ -292,7 +292,7 @@ public:
 
     GPUMatrix<ElemType>& AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
     GPUMatrix<ElemType>& GatherFromTarget(const GPUMatrix<ElemType>& indices, const GPUMatrix<ElemType>& target, size_t row_elements);
-    GPUMatrix<ElemType>& ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements);
+    GPUMatrix<ElemType>& ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements, const GPUMatrix<char>* mask = nullptr);
 
     GPUMatrix<ElemType> Transpose() const;
     GPUMatrix<ElemType>& AssignTransposeOf(const GPUMatrix<ElemType>& a);
@@ -391,11 +391,17 @@ public:
     GPUMatrix<ElemType>& InplaceNegativeSine();
     GPUMatrix<ElemType>& AssignNegativeSineOf(const GPUMatrix<ElemType>& a);
 
+    GPUMatrix<ElemType>& InplaceTan();
+    GPUMatrix<ElemType>& AssignTanOf(const GPUMatrix<ElemType>& a);
+
     GPUMatrix<ElemType>& InplaceAcos();
     GPUMatrix<ElemType>& AssignAcosOf(const GPUMatrix<ElemType>& a);
 
     GPUMatrix<ElemType>& InplaceAsin();
     GPUMatrix<ElemType>& AssignAsinOf(const GPUMatrix<ElemType>& a);
+
+    GPUMatrix<ElemType>& InplaceAtan();
+    GPUMatrix<ElemType>& AssignAtanOf(const GPUMatrix<ElemType>& a);
 
     GPUMatrix<ElemType>& InplaceCosh();
     GPUMatrix<ElemType>& AssignCoshOf(const GPUMatrix<ElemType>& a);

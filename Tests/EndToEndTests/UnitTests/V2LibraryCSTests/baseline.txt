@@ -8,9 +8,12 @@ Copyright (c) Microsoft Corporation.  All rights reserved.
 
 Starting test execution, please wait...
 Passed   TestSaveAndLoad
+Passed   TestSaveAndLoadToFile
+Passed   TestSetAndGetRandomSeed
+Passed   TestForceDeterministicAlgorithms
 Passed   TestShapeSpecialDimensions
 Passed   TestUtils
 
-Total tests: 3. Passed: 3. Failed: 0. Skipped: 0.
+Total tests: 6. Passed: 6. Failed: 0. Skipped: 0.
 Test Run Successful.
 Test execution time: 1.1198 Seconds

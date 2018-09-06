@@ -86,7 +86,7 @@ def train_and_eval(_base_model_file, _train_image_folder, _test_image_folder, _r
 
     if not testing:
         trained_model.save(_new_model_file)
-        print("Stored trained model at %s" % tl_model_file)
+        print("Stored trained model at %s" % _new_model_file)
 
     # evaluate test images
     with open(_results_file, 'w') as output_file:

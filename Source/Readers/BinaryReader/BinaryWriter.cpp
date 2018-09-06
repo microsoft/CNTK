@@ -343,7 +343,7 @@ Section* BinaryWriter<ElemType>::CreateSection(const ConfigParameters& config, S
     // add to section map
     if (sectionType != sectionTypeFile && sectionType != sectionTypeNull)
     {
-        std::wstring wsectionName = msra::strfun::utf16(sectionName);
+        std::wstring wsectionName = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(sectionName);
         // can't have identical names in a write configuration
         if (m_sections.find(wsectionName) != m_sections.end())
         {

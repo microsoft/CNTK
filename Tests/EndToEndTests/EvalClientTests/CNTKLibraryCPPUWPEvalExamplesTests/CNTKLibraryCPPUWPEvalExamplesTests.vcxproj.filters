@@ -53,9 +53,9 @@
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="UnitTestApp_TemporaryKey.pfx" />
     <None Include="$(SolutionDir)$(Platform)\$(Configuration)\Cntk.Core$(OutputSuffix)-$(CntkComponentVersion).dll" />
     <None Include="$(SolutionDir)$(Platform)\$(Configuration)\Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll" />
     <None Include="$(SolutionDir)$(Platform)\$(Configuration)\Math\libopenblas.dll" />
+    <None Include="GeneratedCode\CNTKDevelopmentTemporaryKey.pfx" />
   </ItemGroup>
 </Project>

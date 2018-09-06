@@ -133,6 +133,77 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     }
 }
 
+void TrainMNISTSeqClassifier(const DeviceDescriptor& device)
+{
+    const size_t inputDim = 28;
+    const size_t numOutputClasses = 10;
+    const size_t filterDim = 5;
+    const size_t numInputChannels = 1;
+    const size_t filterCount = 8;
+    const size_t filterCount2 = 16;
+    const size_t convStrides = 2;
+    const size_t convOutDim = inputDim / convStrides / convStrides;
+
+    auto input = InputVariable({inputDim * inputDim}, AsDataType<float>(), L"features");
+    auto scaledInput = ElementTimes(Constant::Scalar((float) 0.00390625f, device), input);
+    auto reshapedInput = Reshape(scaledInput, {inputDim, inputDim, numInputChannels});
+
+    auto unpackDefaultSeqInput = TransposeAxes(Sequence::First(reshapedInput), Axis(-1), Axis(-2));
+    auto packedInput = ToSequence(unpackDefaultSeqInput, Sequence::BroadcastAs(Constant::Scalar((float) inputDim), unpackDefaultSeqInput), L"MNIST ConvSeq Axis", L"ToSequence MNIST ConvSeq Axis");
+
+    auto labelsVar = InputVariable({numOutputClasses}, AsDataType<float>(), L"labels");
+
+    auto convParam = Parameter({filterDim, filterDim, numInputChannels, filterCount}, AsDataType<float>(), GlorotUniformInitializer(), device);
+    auto convFunc = Convolution(convParam, packedInput, {convStrides, convStrides, numInputChannels}, {true}, {true, true, false}, {1}, 1, 1, 0, true);
+
+    auto convb = Parameter({1, filterCount}, AsDataType<float>(), GlorotUniformInitializer(), device);
+    auto relu = LeakyReLU(Plus(convFunc, convb), 0.01);
+
+    auto convParam2 = Parameter({filterDim, filterDim, filterCount, filterCount2}, AsDataType<float>(), GlorotUniformInitializer(), device);
+    auto convFunc2 = Convolution(convParam2, relu, {convStrides, convStrides, filterCount}, {true}, {true, true, false}, { 1 }, 1, 1, 0, true);
+
+    auto convb2 = Parameter({1, filterCount2}, AsDataType<float>(), GlorotUniformInitializer(), device);
+    auto relu2 = LeakyReLU(Plus(convFunc2, convb2), 0.01);
+
+    auto unpackRelu2 = TransposeAxes(Sequence::Unpack(relu2, 0.0f, true), Axis(-1), Axis(-2));
+    unpackRelu2 = ToSequence(Reshape(unpackRelu2, {convOutDim, convOutDim, filterCount2, 1}), L"MNIST Output Original Seq Axis");
+
+    auto outTimesParams = Parameter({numOutputClasses, convOutDim, convOutDim, filterCount2}, AsDataType<float>(), GlorotUniformInitializer(), device);
+    auto outBiasParams = Parameter({numOutputClasses}, AsDataType<float>(), GlorotUniformInitializer(), device);
+
+    auto output = Plus(outBiasParams, Times(outTimesParams, unpackRelu2), L"output");
+
+    auto labelsVarCompat = Sequence::BroadcastAs(labelsVar, output);
+
+    auto trainingLoss = CrossEntropyWithSoftmax(output, labelsVarCompat, L"lossFunction");
+    auto prediction = ClassificationError(output, labelsVarCompat, L"predictionError");
+
+    // train
+
+    const size_t minibatchSize = 64;
+    const size_t numSamplesPerSweep = 60000;
+    const size_t numSweepsToTrainWith = 2;
+    const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
+
+    auto featureStreamName = L"features";
+    auto labelsStreamName = L"labels";
+    auto minibatchSource = TextFormatMinibatchSource(L"Train-28x28_cntk_text.txt", {{featureStreamName, inputDim * inputDim}, {labelsStreamName, numOutputClasses}});
+
+    auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
+
+    LearningRateSchedule learningRatePerSample = TrainingParameterPerSampleSchedule(0.003125);
+    auto trainer = CreateTrainer(output, trainingLoss, prediction, {SGDLearner(output->Parameters(), learningRatePerSample)});
+
+    size_t outputFrequencyInMinibatches = 20;
+    for (size_t i = 0; i < numMinibatchesToTrain; ++i)
+    {
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        trainer->TrainMinibatch({{input, minibatchData[featureStreamInfo]}, {labelsVar, minibatchData[labelStreamInfo]}}, device);
+        PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
+    }
+}
+
 void MNISTClassifierTests()
 {
     fprintf(stderr, "\nMNISTClassifierTests..\n");
@@ -140,5 +211,8 @@ void MNISTClassifierTests()
     if (ShouldRunOnCpu())
         TrainSimpleFeedForwardClassifier(DeviceDescriptor::CPUDevice());
     if (ShouldRunOnGpu())
+    {
         TrainMNISTClassifier(DeviceDescriptor::GPUDevice(0));
+        TrainMNISTSeqClassifier(DeviceDescriptor::GPUDevice(0));
+    }
 }

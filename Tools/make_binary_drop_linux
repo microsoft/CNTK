@@ -144,7 +144,8 @@ declare -a openfstFiles=("libfst.so.3")
 declare -a includeFiles=("Eval.h")
 
 # Include files 2.0
-declare -a includeFiles20=("CNTKLibrary.h" "CNTKLibraryInternals.h" "CNTKLibraryC.h")
+declare -a includeFiles20=("CNTKLibrary.h" "CNTKLibraryInternals.h" "CNTKLibraryC.h" "HalfConverter.hpp")
+declare -a includeInternalFiles20=("ComputationGraphAlgorithms.h" "EvaluatorWrapper.h" "PrimitiveFunctionAttribute.h" "PrimitiveFunction.h" "PrimitiveOpType.h")
 
 # Set dependency sources paths
 mklPath="/usr/local/lib"
@@ -166,8 +167,10 @@ baseDropPath="$basePath/cntk"
 baseBinariesPath="$baseDropPath/cntk"
 baseDependenciesPath="$baseBinariesPath/dependencies/lib"
 baseIncludePath="$baseDropPath/Include"
+baseIncludeInternalPath="$baseIncludePath/Internals"
 includePath="Source/Common/Include"
 includePath20="Source/CNTKv2LibraryDll/API"
+includeInternalPath20="$includePath20/Internals"
 extrasPath="Tools/cntk-binary-drop/linux/$targetConfiguration"
 
 # Make BinaryDrops directory
@@ -200,12 +203,15 @@ rm -f $baseBinariesPath/lib/java/Main.class
 
 # Make Include directory
 mkdir -p $baseIncludePath
+mkdir -p $baseIncludeInternalPath
 
 # Copy Include
 echo "Copying Include files..." >&3
 CopyFilesFromList $includePath includeFiles[@] $baseIncludePath
 echo "Copying Include files for Version 2..." >&3
 CopyFilesFromList $includePath20 includeFiles20[@] $baseIncludePath
+echo "Copying Include internal files for Version 2..." >&3
+CopyFilesFromList $includeInternalPath20 includeInternalFiles20[@] $baseIncludeInternalPath
 
 # Copy Examples
 echo "Copying Examples..." >&3

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using CNTK.CNTKLibraryCSTrainingTest;
 
 namespace CNTK.CSTrainingExamples
 {
@@ -21,8 +22,8 @@ namespace CNTK.CSTrainingExamples
         /// data folder is: CNTK/Examples/Image
         /// model folder is: CNTK/PretrainedModels
         /// </summary>
-        public static string ExampleImageFoler = "../../Examples/Image/DataSets";
-        public static string BaseResnetModelFile = "../../PretrainedModels/ResNet18_ImageNet_CNTK.model";
+        public static string ExampleImageFoler = TestCommon.TestDataDirPrefix;
+        public static string BaseResnetModelFile = TestCommon.TestDataDirPrefix + "/ResNet18_ImageNet_CNTK.model";
 
         private static string featureNodeName = "features";
         private static string lastHiddenNodeName = "z.x";
@@ -34,7 +35,7 @@ namespace CNTK.CSTrainingExamples
         /// by MinibatchSource.
         /// </summary>
         /// <param name="device">CPU or GPU device to run</param>
-        /// <param name="forceRetrain">Force to train the model if true. If false, 
+        /// <param name="forceReTrain">Force to train the model if true. If false, 
         /// it only evaluates the model is it exists. </param>
         public static void TrainAndEvaluateWithFlowerData(DeviceDescriptor device, bool forceReTrain = false)
         {

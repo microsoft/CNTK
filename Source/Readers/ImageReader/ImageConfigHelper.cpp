@@ -44,7 +44,7 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
 
     StreamInformation features;
     features.m_id = 0;
-    features.m_name = msra::strfun::utf16(featureSection.ConfigName());
+    features.m_name = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(featureSection.ConfigName());
     auto dims = ImageDimensions(w, h, c).AsTensorShape(m_dataFormat).GetDims();
     features.m_sampleLayout = NDShape(std::vector<size_t>(dims.begin(), dims.end()));
     features.m_storageFormat = StorageFormat::Dense;
@@ -54,7 +54,7 @@ ImageConfigHelper::ImageConfigHelper(const ConfigParameters& config)
 
     StreamInformation labelSection;
     labelSection.m_id = 1;
-    labelSection.m_name = msra::strfun::utf16(label.ConfigName());
+    labelSection.m_name = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(label.ConfigName());
     labelSection.m_sampleLayout = NDShape({ labelDimension });
     labelSection.m_storageFormat = StorageFormat::Dense;
 

@@ -1,60 +1,52 @@
 #pragma once
 
-#include "proto/onnx/core/common/common.h"
-#include "proto/onnx/core/graph/graph.h"
+#include "core/graph/graph.h"
+#include "core/common/common.h"
 
-namespace ONNXIR
-{
+namespace LotusIR {
 
 // The graph rewrite API for rewrite rules.
-class GraphEditor
-{
-public:
-    explicit GraphEditor(Graph* graph) noexcept
-        : graph_{graph} {}
+class GraphEditor {
+ public:
+  explicit GraphEditor(Graph* graph) noexcept : graph_{graph} {}
 
-    // Add a node in <graph_>.
-    Node* AddNode(const std::string& name,
-                  const std::string& op_type,
-                  const std::string& description,
-                  const std::vector<NodeArg*>& input_args,
-                  const std::vector<NodeArg*>& output_args,
-                  const std::string& domain = "")
-    {
-        return graph_->AddNode(name, op_type, description,
-                               input_args, output_args, nullptr, domain);
-    }
+  // Add a node in <graph_>.
+  Node* AddNode(const std::string& name,
+                const std::string& op_type,
+                const std::string& description,
+                const std::vector<NodeArg*>& input_args,
+                const std::vector<NodeArg*>& output_args,
+                const std::string& domain = "") {
+    return graph_->AddNode(name, op_type, description,
+                           input_args, output_args, nullptr, domain);
+  }
 
-    // Copy an existing node into this graph.
-    Node* AddNode(const Node& other)
-    {
-        return graph_->AddNode(other);
-    }
+  // Copy an existing node into this graph.
+  Node* AddNode(const Node& other) {
+    return graph_->AddNode(other);
+  }
 
-    // Remove a node from <graph_>.
-    bool RemoveNode(NodeIndex node_index)
-    {
-        return graph_->RemoveNode(node_index);
-    }
+  // Remove a node from <graph_>.
+  bool RemoveNode(NodeIndex node_index) {
+    return graph_->RemoveNode(node_index);
+  }
 
-    // Add control edge into <graph_>.
-    // The <dst> node does not consume any data output by
-    // <src>, but it's designed to be executed behind.
-    bool AddControlEdge(NodeIndex src, NodeIndex dst)
-    {
-        return graph_->AddControlEdge(src, dst);
-    }
+  // Add control edge into <graph_>.
+  // The <dst> node does not consume any data output by
+  // <src>, but it's designed to be executed behind.
+  bool AddControlEdge(NodeIndex src, NodeIndex dst) {
+    return graph_->AddControlEdge(src, dst);
+  }
 
-    // Resolve <graph_> after each editing.
-    Status Resolve()
-    {
-        return graph_->Resolve();
-    }
+  // Resolve <graph_> after each editing.
+  Lotus::Common::Status Resolve() {
+    return graph_->Resolve();
+  }
 
-private:
-    LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(GraphEditor);
+ private:
+  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(GraphEditor);
 
-    Graph* graph_;
+  Graph* graph_;
 };
 
 // The base class for rewrite rule. A rewrite rule represents a semantics-preserving
@@ -64,38 +56,34 @@ private:
 // a complex expression by an equivalent function-call). Unlike the more general
 // IGraphTransformer, a rewrite-rule is applied at a single node, representing the
 // root of an expression that is rewritten.
-class RewriteRule
-{
-public:
-    RewriteRule(const std::string& name, const std::string& desc)
-        : name_(name), desc_(desc)
-    {
-    }
+class RewriteRule {
+ public:
+  RewriteRule(const std::string& name, const std::string& desc)
+    : name_(name), desc_(desc) {
+  }
+    
+  virtual ~RewriteRule() = default;
 
-    virtual ~RewriteRule() = default;
+  // The name of this rewrite rule.
+  const std::string& Name() const noexcept {
+    return name_;
+  }
 
-    // The name of this rewrite rule.
-    const std::string& Name() const noexcept
-    {
-        return name_;
-    }
+  // An description of this rewrite rule.
+  const std::string& Description() const noexcept {
+    return desc_;
+  }
 
-    // An description of this rewrite rule.
-    const std::string& Description() const noexcept
-    {
-        return desc_;
-    }
-
-    // Apply the rewrite rule to a specific node.
-    // The transformation happens in-place. The return-value of node may be different
-    // from the input-value due to rewriting.
-    // The return value of "modified" indicates if the graph was modified or not.
-    virtual Status Apply(GraphEditor graph_editor, Node* node, bool* modified) = 0;
+  // Apply the rewrite rule to a specific node.
+  // The transformation happens in-place. The return-value of node may be different
+  // from the input-value due to rewriting.
+  // The return value of "modified" indicates if the graph was modified or not.
+  virtual Lotus::Common::Status Apply(GraphEditor graph_editor, Node* node, bool* modified) = 0;
 
 private:
-    LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(RewriteRule);
-
-    const std::string name_;
-    const std::string desc_;
+  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(RewriteRule);
+  
+  const std::string name_;
+  const std::string desc_;
 };
-} // namespace ONNXIR
+}  // namespace LotusIR

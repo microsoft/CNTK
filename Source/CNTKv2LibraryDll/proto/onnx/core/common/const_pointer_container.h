@@ -16,7 +16,7 @@ class ConstPointerContainer {
     using const_iterator = typename Container::const_iterator;
 
     /** Construct iterator for container that will return const T* entries.*/
-    ConstIterator(const_iterator position) noexcept : current_(position) {}
+    explicit ConstIterator(const_iterator position) noexcept : current_(position) {}
 
     bool operator==(const ConstIterator& other) const noexcept { return current_ == other.current_; }
     bool operator!=(const ConstIterator& other) const noexcept { return current_ != other.current_; }
@@ -31,7 +31,7 @@ class ConstPointerContainer {
   Construct wrapper class that will provide const access to the pointers in a container of non-const pointers.
   @param data Container with non-const pointers. e.g. std::vector<T*>
   */
-  ConstPointerContainer(const Container& data) noexcept : data_(data) {}
+  explicit ConstPointerContainer(const Container& data) noexcept : data_(data) {}
 
   size_t size() const noexcept { return data_.size(); }
 

@@ -66,6 +66,8 @@ public:
     // Reads the current line (i.e., everything that's left on the current line) into the provided 
     // string reference (omitting the trailing EOL). Returns false upon reaching the EOF.
     bool TryReadLine(std::string& str);
+
+    bool TryReadBinarySegment(size_t size, char* data);
     
     // Returns the current line number.
     inline size_t CurrentLineNumber() const { return m_lineNumber; }

@@ -255,7 +255,7 @@ public:
                     FILE* file = *outputStreams[node];
                     if (!node->GradientPtr())
                     {
-                        fprintf(stderr, "Warning: Gradient of node '%s' is empty. Not used in backward pass?", msra::strfun::utf8(node->NodeName().c_str()).c_str());
+                        fprintf(stderr, "Warning: Gradient of node '%s' is empty. Not used in backward pass?", Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(node->NodeName().c_str())).c_str());
                     }
                     else
                     {
