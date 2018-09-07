@@ -297,6 +297,11 @@ private:
     static void SetReduceElementsAttributes(const FunctionPtr src, Node *node);
 
     //
+    // Check if CNTK node's pad attribute value is correct with regard to ceilOutDim.
+    //
+    static void ValidatePadValueForCeilOutDim(const std::vector<int64_t> lowerPad, const std::vector<int64_t> upperPad, const std::vector<bool>& autoPadding,
+        const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides, const NDShape& dilation, bool transpose = false);
+    //
     // Get ONNX 'pads' attribute value based on CNTK node's autoPadding attribute value.
     //
     static std::pair<std::vector<int>, std::vector<int> > GetONNXPadsAttributeFromCNTKNode(
@@ -3885,6 +3890,9 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             auto kernelShape = (NDShape)src->Attributes()[L"poolingWindowShape"].Value<NDShape>();
             auto strides = (NDShape)src->Attributes()[L"strides"].Value<NDShape>();
             bool ceilOutDim = (bool)src->Attributes()[L"ceilOutDim"].Value<bool>();
+            auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
+            const NDShape& inputShape = src->Inputs()[0].Shape();
+
             if (strides.Rank() < kernelShape.Rank())
             {
                 // TODO: Try removing this branch. May not be needed after batch dimension fix.
@@ -3909,16 +3917,22 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
             // lowerPad/upperPad is set to NDShape({0}) by default. 
             // If this node has explicitly set the lowerPad and upperPad values(i.e. nodes that are constructed with lowerPad/upperPad values and autoPadding=False),
             // export these values directly. Otherwise, check autoPadding and export accordingly. 
+            bool isAllPadsZero = std::all_of(lowerPad.begin(), lowerPad.end(), [](int64_t i) { return i == 0; });
+            isAllPadsZero = isAllPadsZero & std::all_of(upperPad.begin(), upperPad.end(), [](int64_t i) { return i == 0; });
+            bool isAnyAutoPadTrue = std::any_of(autoPadding.begin(), autoPadding.end(), [](bool i) { return i; });
             if (lowerPad.size() > 0 && upperPad.size() > 0 
-                && !(lowerPad.size() == 1 && upperPad.size() == 1 && lowerPad[0] == 0 && upperPad[0] == 0))
+                && !(lowerPad.size() == 1 && upperPad.size() == 1 && lowerPad[0] == 0 && upperPad[0] == 0)
+                && !(isAllPadsZero && ceilOutDim)
+                && !isAnyAutoPadTrue)
             {
+                if (ceilOutDim)
+                    ValidatePadValueForCeilOutDim(lowerPad, upperPad, autoPadding, kernelShape, inputShape, strides,
+                        /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1), /*transpose=*/false);
                 lowerPad.insert(lowerPad.end(), upperPad.cbegin(), upperPad.cend());
                 node->AddAttribute("pads", lowerPad);
             }
             else
             {
-                const NDShape& inputShape = src->Inputs()[0].Shape();
-                auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
                 PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1), ceilOutDim, /*transpose=*/false);
             }
         }
@@ -3965,6 +3979,21 @@ void CNTKToONNXHelper::SetReduceElementsAttributes(const FunctionPtr src, Node *
 
     node->AddAttribute("keepdims", keepReducedDimensions);
 }
+
+void CNTKToONNXHelper::ValidatePadValueForCeilOutDim(const std::vector<int64_t> lowerPad, const std::vector<int64_t> upperPad, const std::vector<bool>& autoPadding,
+    const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides, const NDShape& dilations, bool transpose)
+{
+    auto padsValueVectorsForONNX = GetONNXPadsAttributeFromCNTKNode(autoPadding, kernelShape, inputShape, strides, dilations, /*ceilOutDim=*/true, transpose);
+    auto onnxLowerPads = ToINTS(padsValueVectorsForONNX.first);
+    auto onnxUpperPads = ToINTS(padsValueVectorsForONNX.second);
+
+    for (int i=0; i < onnxLowerPads.size(); ++i)
+    {
+        if (i >= lowerPad.size() || i >= upperPad.size() || (lowerPad[i] + upperPad[i] < onnxLowerPads[i] + onnxUpperPads[i]))
+            LogicError("Convolution/Convolution Transpose/Pooling. Pads value provided is not enough when ceilOutDim is true. ");
+    }
+}
+
 
 void CNTKToONNXHelper::PutPadAttrInNode(LotusIR::Node* node,
     const std::vector<bool>& autoPadding, const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides,
@@ -4318,6 +4347,10 @@ std::pair<std::vector<int>, std::vector<int>> CNTKToONNXHelper::GetONNXPadsAttri
             // When autoPadding is True
             padsValueVectorLower[i] = geometry->GetLowerPad(i);
             padsValueVectorUpper[i] = geometry->GetUpperPad(i);
+            if (padsValueVectorLower[i] < 0)
+                padsValueVectorLower[i] = 0;
+            if (padsValueVectorUpper[i] < 0)
+                padsValueVectorUpper[i] = 0;
         }
     }
     return std::make_pair(padsValueVectorLower, padsValueVectorUpper);
