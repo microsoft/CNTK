@@ -1071,11 +1071,15 @@ def test_MatMul_nd_2inputs_2(tmpdir, dtype):
 #Max
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Max(tmpdir, dtype):
-    with C.default_options(dtype = dtype):
-        data0 = np.asarray([1., 1., 1., 1.], dtype=dtype)
-        data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=dtype)
-        model = C.element_max(data0, data1)
-        verify_no_input(model, tmpdir, 'Max_0')
+    data0 = np.asarray([1., 1., 1., 1.], dtype=dtype)
+    data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=dtype)
+    model = C.element_max(data0, data1)
+    verify_no_input(model, tmpdir, 'Max_0')
+
+    data2 = np.asarray([-0.5, 0.26, 0.124, -0.1], dtype=dtype)
+    data3 = np.asarray([0.5, -0.26, -0.124, 0.1], dtype=dtype)
+    model = C.element_max(data0, data1, data2, data3)
+    verify_no_input(model, tmpdir, 'Max_0_4_inputs')
 
 #MaxPool
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1167,11 +1171,15 @@ def test_MeanVarianceNormalization(tmpdir, dtype):
 #Min
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Min(tmpdir, dtype):
-    with C.default_options(dtype = dtype):
-        data0 = np.asarray([1., 1., 1., 1.], dtype=dtype)
-        data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=dtype)
-        model = C.element_min(data0, data1)
-        verify_no_input(model, tmpdir, 'Min_0')
+    data0 = np.asarray([1., 1., 1., 1.], dtype=dtype)
+    data1 = np.asarray([0.5, 0.25, 0.125, 0.], dtype=dtype)
+    model = C.element_min(data0, data1)
+    verify_no_input(model, tmpdir, 'Min_0')
+
+    data2 = np.asarray([-0.5, 0.26, 0.124, -0.1], dtype=dtype)
+    data3 = np.asarray([0.5, -0.26, -0.124, 0.1], dtype=dtype)
+    model = C.element_min(data0, data1, data2, data3)
+    verify_no_input(model, tmpdir, 'Min_0_4_inputs')
 
 #Mul
 @pytest.mark.parametrize("dtype", DType_Config)
