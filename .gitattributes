@@ -165,3 +165,5 @@ external/gsl text
 Source/CNTKv2LibraryDll/proto/onnx/onnx_repo text
 #certificates
 *.pfx binary
+
+Source/SparCML/libnbc/.libs/libnbc.a binary
