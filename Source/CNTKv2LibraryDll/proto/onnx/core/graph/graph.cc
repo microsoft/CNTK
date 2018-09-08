@@ -815,15 +815,9 @@ class InferenceContextImpl : public onnx::InferenceContext {
   // std::vector<TypeProto_Tensor>& allOutputTypes_;
 };
 
-// A wrapper for invoking ONNX-defined shape+type inference for a single node.
-// Returns inferred shape+type for every output of the node in output parameter inferredShapes.
-Status GraphBase::InferOutputTypesAndShapes(LotusIR::Node& node, std::vector<TypeProto>& inferred_shapes) {
-  inferred_shapes.clear();
-  inferred_shapes.resize(node.OutputDefs().size());
-  auto schema = node.Op();
-  if (nullptr != schema) {
-    InferenceContextImpl context(node, inferred_shapes);
-    const std::set<std::string>  bidirBroadcastOpsToSkip({ "Add", "Sub", "Mul", "Div", "And", "Or", "Xor", 
+bool IsBidirBroadcastOpsToSkipInference(LotusIR::Node& node)
+{
+    const std::set<std::string>  bidirBroadcastOpsToSkip({ "Add", "Sub", "Mul", "Div", "And", "Or", "Xor",
         "Greater", "Less", "Equal", "Pow", });      // add for MatMul once any case raises
     if (bidirBroadcastOpsToSkip.find(node.OpType()) != bidirBroadcastOpsToSkip.end())
     {
@@ -832,22 +826,26 @@ Status GraphBase::InferOutputTypesAndShapes(LotusIR::Node& node, std::vector<Typ
         // Sub([“None”, 1, 64], [“None”, 1, 64]) ->[0, 1, 64] 
         // It should produce[“None”, 1, 64]
         // CNTK does shape inference itself so we shall skip this very specific case.
-        bool isTheCaseToSkipShapeInference = true;
         auto inputNodeArgs = node.InputDefs();
-        for (int i = 0; isTheCaseToSkipShapeInference && i < inputNodeArgs.size(); i++)
+        for (int i = 0; i < inputNodeArgs.size(); i++)
         {
             if (!inputNodeArgs[i]->Shape() || inputNodeArgs[i]->Shape()->dim_size() == 0 || !inputNodeArgs[i]->Shape()->dim()[0].has_dim_param())
-                isTheCaseToSkipShapeInference = false;
+                return false;
         }
-        if (!isTheCaseToSkipShapeInference)
-            schema->GetTypeAndShapeInferenceFunction()(context);
-        else
-        {
-            inferred_shapes.push_back(*node.OutputDefs()[0]->TypeAsProto());
-        }
+        return true;
     }
-    else
-        schema->GetTypeAndShapeInferenceFunction()(context);
+    return false;
+}
+
+// A wrapper for invoking ONNX-defined shape+type inference for a single node.
+// Returns inferred shape+type for every output of the node in output parameter inferredShapes.
+Status GraphBase::InferOutputTypesAndShapes(LotusIR::Node& node, std::vector<TypeProto>& inferred_shapes) {
+  inferred_shapes.clear();
+  inferred_shapes.resize(node.OutputDefs().size());
+  auto schema = node.Op();
+  if (nullptr != schema) {
+    InferenceContextImpl context(node, inferred_shapes); 
+    schema->GetTypeAndShapeInferenceFunction()(context);
   }
   return Status::OK();
 }
@@ -856,6 +854,9 @@ Status GraphBase::InferOutputTypesAndShapes(LotusIR::Node& node, std::vector<Typ
 GSL_SUPPRESS(f .23)  // spurious warning about inferred_type never being checked for null
 Status Graph::InferAndVerifyTypeMatch(Node& node,
                                       const OpSchema& op) {
+
+    if (IsBidirBroadcastOpsToSkipInference(node))
+        return Status::OK();
   auto& nodeName = node.Name();
 
   // <k> index used to navigate node->InputDefs().

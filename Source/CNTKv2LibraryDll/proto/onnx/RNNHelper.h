@@ -20,6 +20,9 @@ namespace LotusIR
     class Node;
 }
 
+// once an input is wrapped with to-batch/sequence, it shall not get wrapped again
+typedef std::unordered_map<CNTK::Variable, CNTK::FunctionPtr> VariableToFunctionPtr;
+
 const std::string LSTMInputBiasNameHint = "_bias_";
 const std::string LSTMInputInitialHNameHint = "_initial_h_";
 const std::string LSTMInputInitialCNameHint = "_initial_c_";
@@ -159,13 +162,16 @@ const string RNNDirectionReverse = "reverse";
 const string RNNDirectionForward = "forward";
 
 CNTK::FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
-    const std::vector<std::string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
+    const std::vector<std::string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
+    VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr);
 
 CNTK::FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
-    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
+    VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr);
 
 CNTK::FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<CNTK::Variable> &inputs, const std::string &direction,
-    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta);
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
+    VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr);
 
 void TraceLSTMPathes(const CNTK::FunctionPtr& src, string &f_activation, string &g_activation, string &h_activation,
     RNNDirection &direction, CNTK::Variable &initStateH, CNTK::Variable &initStateC, CNTK::Variable &peepholeCi, CNTK::Variable &peepholeCo, CNTK::Variable &peepholeCf,
@@ -182,6 +188,7 @@ std::string MapActivationNameCNTKToONNX(const std::string &cntkOp);
 
 std::vector<CNTK::FunctionPtr> GetRNNBlocksFromSingleOrBidirectionalRNN(const CNTK::FunctionPtr src, const std::string &RNNStepOpName);
 
-CNTK::Variable ToBatchAndSequence(CNTK::Variable input);
+CNTK::Variable ToBatchAndSequence(CNTK::Variable input, VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr);
 
+CNTK::FunctionPtr UnwrapRNNOps(CNTK::FunctionPtr rnnFunction, int numDirections);
 CNTK::FunctionPtr UnpackBatchAndSequence(CNTK::FunctionPtr rnnFunction, bool doTranspose = true);

@@ -15,6 +15,15 @@ namespace ONNXIR
 class Graph;
 }
 
+// ONNX reshape spec: In this case, the value is inferred from the size of the tensor and the remaining dimensions
+const int64_t ReshapeInferredDim = -1;
+// ONNX reshape spec: the actual dimension value is unchanged(i.e.taken from the input tensor).
+const int64_t ReshapeKeepInputDim = 0;
+const std::string FreeSequenceDimParam = "Sequence";
+const size_t numBiasInOnnxLstm = 2; // bias for W, and bias for R (also called H in CNTK).
+                                    // TODO: support cases where batch size is not 1.
+const int FreeBatchSize = 1;
+
 namespace CNTK
 {
 namespace ONNX
