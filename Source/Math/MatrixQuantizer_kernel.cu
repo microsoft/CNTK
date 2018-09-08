@@ -357,16 +357,19 @@ __global__ void _selectK(
     //typedef cub::BlockLoad<int, WARP_SIZE, ITEMS_PER_THREAD> BlockLoadT;
     typedef cub::BlockScan<int, WARP_SIZE> BlockScanT;
     typedef cub::BlockReduce<ElemType, WARP_SIZE> BlockReduceT;
+    typedef cub::BlockRadixSort<ElemType, WARP_SIZE, ITEMS_PER_THREAD, size_t> BlockRadixSortT;
 
     // Shared memory
     __shared__ union
     {
         typename BlockScanT::TempStorage scan;
         typename BlockReduceT::TempStorage reduce;
+        typename BlockRadixSortT::TempStorage sort;
     } temp_storage;
 
     // Calculate inf and 1 norm
     ElemType absVals[ITEMS_PER_THREAD];
+    size_t orgIdxs[ITEMS_PER_THREAD];
 
     int offset = (threadIdx.x * ITEMS_PER_THREAD);
     int idx = (blockIdx.x * DEFAULT_BUCKET_SIZE) + offset;
@@ -374,12 +377,40 @@ __global__ void _selectK(
     for(int i = 0; i < ITEMS_PER_THREAD; ++i) {
         if(idx + i < totalNumElements) {
             absVals[i] = fabs(curResidual[idx + i] + us[idx + i]);
+            orgIdxs[i] = idx + i;
         } else {
             absVals[i] = 0.0;
+            orgIdxs[i] = 0;
         }
     }
 
     __syncthreads();
+
+    int take[ITEMS_PER_THREAD];
+    int indices[ITEMS_PER_THREAD];
+
+#define USE_REAL_TOPK
+#ifdef USE_REAL_TOPK
+
+    BlockRadixSortT(temp_storage.sort).SortDescending(absVals, orgIdxs);
+
+    for (int i = 0; i < ITEMS_PER_THREAD; ++i)
+    {
+        take[i] = 0;
+        if (idx + i < totalNumElements)
+        {
+            // if it is in the topK
+            for (size_t j = 0; j < topK; j++)
+            {
+                if (orgIdxs[j] == (idx + i))
+                {
+                    take[i] = 1;
+                }
+            }
+        }
+    }
+
+#else // #ifdef USE_REAL_TOPK
 
     // Calc statistics
     //__shared__ ElemType infNorm;
@@ -415,9 +446,6 @@ __global__ void _selectK(
       //prob = topK / (oneNorm + DEFAULT_BUCKET_SIZE * eps);
     }
 
-    int take[ITEMS_PER_THREAD];
-    int indices[ITEMS_PER_THREAD];
-
     for(int i = 0; i < ITEMS_PER_THREAD; ++i) {
         if(idx + i < totalNumElements) {
             take[i] = (curand_uniform(&state) <= (prob * absVals[i])) ? 1 : 0;
@@ -429,6 +457,7 @@ __global__ void _selectK(
     }
 
     // TODO Hacky! (change to not only select the first k elements!)
+#endif // #ifdef USE_REAL_TOPK
 
     __syncthreads();
 
