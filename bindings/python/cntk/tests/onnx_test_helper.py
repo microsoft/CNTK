@@ -5,6 +5,7 @@
 
 import os
 import numpy as np
+import scipy
 import cntk as C
 import onnx
 
@@ -20,7 +21,7 @@ def sparse_to_dense(sparse_data):
     dense_data = [sparse_data[0].todense()]
     for i in range(1, len(dense_data)):
         dense_data = np.concatenate(dense_data, sparse_data[i].todense()) 
-    return dense_data
+    return np.array(dense_data)
 
 # ONNX models and CNTK models imported from ONNX are different from original CNTK models in that 
 # their inputs take data in the form of [sequence, batch, *feature] (as oppose to [batch, sequence, *feature]).
@@ -85,7 +86,7 @@ def save_cntk_data_as_onnx_tensor(file_path, variable, data, onnx_value_info_pro
         data = transpose_dynamic_axis(data)
 
     tp = onnx.TensorProto()
-    tp.name = variable.uid
+    tp.name = onnx_value_info_proto.name
 
     shape = np.shape(data)
     for i in range(0, len(shape)):
@@ -157,7 +158,7 @@ def create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name
         onnx_model = onnx.load(filename);
 
         ## leave this line for debugging when needed
-        ## plot loaded model
+        # plot loaded model
         #C.logging.graph.plot(loaded_model, filename + ".pdf")
 
         filename_resave = os.path.join(str(test_model_path), name + R'_resave.onnx')
@@ -165,26 +166,54 @@ def create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name
         
     return loaded_model, onnx_model, test_model_path, test_data_path
 
+# onnx model outputs are not necessarily in the same order as the original CNTK model.
+# it may also have additional outputs (those not being combined as output in a CNTK model).
+# when exporting a CNTK model, variable uid is used to name an onnx node arg. 
+# however, for some outputs, we have to extent it with a noop so it can be treated as onnx output.
+# in such case, the onnx output will have a name with uid as prefix (e.g. "Reshape3635_Output_0" + "_attach_noop_")
+# this funcion is to find an onnx output based on a CNTK variable uid according to above naming scheme.
+def find_onnx_value_info_proto_with_matching_name(onnx_outputs, cntk_output_uid, fallback_onnx_output):
+    for i in range(0, len(onnx_outputs)):
+        onnx_output_name = onnx_outputs[i].name
+        if onnx_output_name == cntk_output_uid:
+            return onnx_outputs[i]
+
+    # not able to find exact match. find a close one.
+    for i in range(0, len(onnx_outputs)):
+        onnx_output_name = onnx_outputs[i].name
+        if onnx_output_name.find(cntk_output_uid) == 0:
+            return onnx_outputs[i]
+
+    return fallback_onnx_output
+
 def save_test_data(model, onnx_model, test_data_path, input_data, output_data, name, tmpdir):
     if not onnx_model:
         return;
 
     if (len(model.arguments) == 1):
+        onnx_value_info_proto = find_onnx_value_info_proto_with_matching_name(
+            onnx_model.graph.input, model.arguments[0].uid, onnx_model.graph.input[0])
         save_cntk_data_as_onnx_tensor(os.path.join(str(test_data_path), 'input_{0}.pb'.format(0)), 
-                        model.arguments[0], input_data, onnx_model.graph.input[0]) #, data_type = np.int)
+                        model.arguments[0], input_data, onnx_value_info_proto) #, data_type = np.int)
     else:
         for i in range(len(model.arguments)):
+            onnx_value_info_proto = find_onnx_value_info_proto_with_matching_name(
+                onnx_model.graph.input, model.arguments[i].uid, onnx_model.graph.input[i])
             save_cntk_data_as_onnx_tensor(os.path.join(str(test_data_path), 'input_{0}.pb'.format(i)), 
-                            model.arguments[i], input_data[i], onnx_model.graph.input[i])
+                            model.arguments[i], input_data[i], onnx_value_info_proto)
 
-    if (len(model.outputs) > 1):
+    if (len(model.outputs) == 1):
+        onnx_value_info_proto = find_onnx_value_info_proto_with_matching_name(
+            onnx_model.graph.output, model.outputs[0].uid, onnx_model.graph.output[0])
+        save_cntk_data_as_onnx_tensor(os.path.join(str(test_data_path), 'output_{0}.pb'.format(0)), 
+                        model.outputs[0], output_data, onnx_value_info_proto)
+    else:
         for i in range(0, len(model.outputs)): 
             output_data_i = output_data[model.outputs[i]]
+            onnx_value_info_proto = find_onnx_value_info_proto_with_matching_name(
+                onnx_model.graph.output, model.outputs[i].uid, onnx_model.graph.output[i])
             save_cntk_data_as_onnx_tensor(os.path.join(str(test_data_path), 'output_{0}.pb'.format(i)), 
-                            model.outputs[i], output_data_i, onnx_model.graph.output[i])
-    else:
-        save_cntk_data_as_onnx_tensor(os.path.join(str(test_data_path), 'output_{0}.pb'.format(0)), 
-                        model.outputs[0], output_data, onnx_model.graph.output[0])
+                            model.outputs[i], output_data_i, onnx_value_info_proto)
 
     # print out command line for onnx test runner
     print(R'onnx_test_runner.exe -n ' + name + ' ' + str(tmpdir))

@@ -2437,9 +2437,27 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Softmax" || onnxOpName == "LogSoftmax" || onnxOpName == "Hardmax")
     {
+        int64_t onnxAxis = GetNamedAttributeAsInt64(node, "axis", 1);
+        if (onnxAxis == static_cast<int>(inputs[0].Shape().Rank() + inputs[0].DynamicAxes().size() - 1))
+        {
+            // in case of the last axis, ONNX and CNTK are equivalent
+            if (onnxOpName == "Softmax")
+            {
+                return Softmax(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+            }
+            else if (onnxOpName == "LogSoftmax")
+            {
+                return LogSoftmax(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+            }
+            else if (onnxOpName == "Hardmax")
+            {
+                return Hardmax(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+            }
+        }
+
         auto inputOperand0Placeholder = PlaceholderVariable(inputs[0].Shape(), inputs[0].GetDataType(), L"operand", {});
 
-        Axis axis(ConvertONNXAxisToCNTKCppApi(static_cast<int>(GetNamedAttributeAsInt64(node, "axis", 1)), inputOperand0Placeholder));
+        Axis axis(ConvertONNXAxisToCNTKCppApi(GetNamedAttributeAsInt64(node, "axis", 1), inputOperand0Placeholder));
         Variable input = Flatten(inputOperand0Placeholder, axis);
         FunctionPtr cntkFunction;
         if (onnxOpName == "Softmax")
