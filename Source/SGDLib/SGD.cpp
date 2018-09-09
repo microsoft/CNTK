@@ -844,7 +844,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         else
         {
             if (std::isnan(avgCriterion))
-                RuntimeError("The training criterion is not a number (NAN).");
+            {
+                wstring w = msra::strfun::wstrprintf(L"%ls.%ls", m_modelPath.c_str(), "debug");
+                // m_modelPath = m_modelPath + L "debug"
+                fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
+                net->Save(w);
+                RuntimeError("The training1 is not a number (NAN).");
+            }
         }
 
         // not loading previous values then set them
@@ -1547,7 +1553,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fflush(stderr);
 
             if (epochCriterion.IsNan())
-                RuntimeError("The training criterion is not a number (NAN).");
+            {
+                wstring w = msra::strfun::wstrprintf(L"%ls.%ls", m_modelPath.c_str(), "debug");
+                // m_modelPath = m_modelPath + L "debug"
+                fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
+                net->Save(w);
+                RuntimeError("The training2 is not a number (NAN).");
+            }
 
             // reset statistics for differential logging
             epochCriterionLastLogged  = epochCriterion;
