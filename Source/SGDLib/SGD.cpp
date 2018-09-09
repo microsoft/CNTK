@@ -853,7 +853,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // m_modelPath = m_modelPath + L "debug"
                 fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
                 net->Save(w);
-                RuntimeError("The training criterion is not a number (NAN).");
+                RuntimeError("The training is not a number (NAN).");
             }
 
             // not loading previous values then set them
@@ -1560,7 +1560,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     // m_modelPath = m_modelPath + L "debug"
                     fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
                     net->Save(w);
-                    RuntimeError("The training criterion is not a number (NAN).");
+                    RuntimeError("The training is not a number (NAN).");
                 }
 
                 // reset statistics for differential logging
