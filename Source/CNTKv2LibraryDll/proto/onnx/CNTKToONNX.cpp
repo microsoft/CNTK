@@ -3440,7 +3440,6 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
     }
 
     if (!Operators::IsRNNOp(opName) &&
-        opName.find("Sequence::") != 0 &&
         src->IsBlock() && 
         (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())) ||
         IsUnSupportedLayerNormalization(src))

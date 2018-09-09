@@ -183,7 +183,7 @@ private:
 
     static ConvAutoPadType ConvertStrToConvAutoPadType(const string &str);
 
-    static NDShape GetShapeFromInput(const NodeArg *shapeInput, const Graph *graph);
+    static std::vector<int64_t> GetShapeFromInput(const NodeArg *shapeInput, const Graph *graph);
 };
 
 } // namespace CNTK
@@ -1425,7 +1425,7 @@ ConvAutoPadType ONNXToCNTKHelper::ConvertStrToConvAutoPadType(const string &str)
         LogicError("Unknown value for %s attribute: %s", "auto_pad", str.c_str());
 }
 
-NDShape ONNXToCNTKHelper::GetShapeFromInput(const NodeArg *shapeInput, const Graph *graph)
+std::vector<int64_t> ONNXToCNTKHelper::GetShapeFromInput(const NodeArg *shapeInput, const Graph *graph)
 {
     const onnx::TensorProto *valueProto;
     if (!graph->GetInitializedTensor(shapeInput->Name(), &valueProto))
@@ -1437,14 +1437,7 @@ NDShape ONNXToCNTKHelper::GetShapeFromInput(const NodeArg *shapeInput, const Gra
     std::vector<int64_t> dimData(shapeSize);
     ::Lotus::Utils::TensorUtils::UnpackTensor(*valueProto, &dimData[0], shapeSize);
 
-    std::vector<size_t> dimensions;
-    for (int64_t dimVal : dimData)
-    {
-        dimensions.push_back(static_cast<size_t>(dimVal));
-    }
-    std::reverse(dimensions.begin(), dimensions.end());
-    NDShape shape(dimensions);
-    return shape;
+    return dimData;
 }
 
 } // namespace CNTK
@@ -1902,6 +1895,16 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else
         return CreateFunction(node, inputs, graph, sequenceWrapperInputToFunctionPtr, Variable());
+}
+
+template <class T, class V>
+static inline std::vector<V> CastVector(const std::vector<T>& v)
+{
+    std::vector<V> result;
+    result.reserve(v.size());
+    for (auto d : v)
+        result.push_back((V)d);
+    return result;
 }
 
 FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector<Variable> &inputs, const Graph *graph, 
@@ -2605,48 +2608,55 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         if (!inputs[0].DynamicAxes().empty())
             NOT_IMPLEMENTED;
 
-        NDShape newShape = GetShapeFromInput(node->InputDefs()[1], graph);
-
-        if (inputs[0].DynamicAxes().size() > 0)
-        {
-            if (newShape.Rank() == 1)
-                LogicError("Reshape: 'shape' attribute must include element for batch axis.");
-            newShape = newShape.SubShape(0, newShape.Rank() - inputs[0].DynamicAxes().size());
-        }
+        std::vector<int64_t> newShape = GetShapeFromInput(node->InputDefs()[1], graph);
+        std::vector<int64_t> inputShape = CastVector<size_t, int64_t>(inputs[0].Shape().Dimensions());
+        std::reverse(inputShape.begin(), inputShape.end());
 
         int inferredDimIndex = -1;
-        // process free and inferred dimensions
-        for (size_t index = 0; index < newShape.Rank(); ++index)
+        int totalInputSizeExceptFreeDim = 1, totalReshapeSizeExceptFreeAndInferredDim = 1;
+        // process free and inferred dimensions. ONNX dimensions are left aligned, likely starting with sequence, batch, then static axes.
+        // NDShape dimension order is reversed w.r.t. ONNX.
+        for (int index = 0; index < std::max(newShape.size(), inputShape.size()); index++)
         {
-            if (newShape[index] == ReshapeInferredDim)
+            if (index < inputShape.size() && newShape[index] != ReshapeKeepInputDim)
+                totalInputSizeExceptFreeDim *= inputShape[index];
+
+            if (index < newShape.size())
             {
-                if (inferredDimIndex == -1)
+                if (newShape[index] == ReshapeInferredDim)
                 {
-                    inferredDimIndex = index;
-                    // make inferred dimension 1 so new shape total size can be used 
-                    // to calcualte the inferred dimension
-                    newShape[index] = 1;
+                    if (inferredDimIndex == -1)
+                    {
+                        inferredDimIndex = index;
+                    }
+                    else
+                        LogicError("Reshape: 'shape' contains more than one inferred dimension.");
+                }
+                else if (newShape[index] == ReshapeKeepInputDim)
+                {
+                    if (index < inputShape.size())
+                        newShape[index] = inputShape[index];
+                    else
+                        LogicError("Reshape: 'shape' has a 'keep_dimension' without matching input dimension.");
                 }
                 else
-                    LogicError("Reshape: 'shape' contains more than one inferred dimension.");
-            }
-            else if (newShape[index] == ReshapeKeepInputDim)
-            {
-                newShape[index] = NDShape::FreeDimension;
+                {
+                    totalReshapeSizeExceptFreeAndInferredDim *= newShape[index];
+                }
             }
         }
 
         if (inferredDimIndex != -1)
         {
-            // TODO: add test case where free and inferred dimensions co-exist
-
-            if (inputs[0].Shape().TotalSize() % newShape.TotalSize() != 0)
+            if (totalInputSizeExceptFreeDim % totalReshapeSizeExceptFreeAndInferredDim != 0)
                 LogicError("Reshape: inferred dimension cannot be calculated from input and new shape size.");
-            int inferredDimSize = inputs[0].Shape().TotalSize() / newShape.TotalSize();
-            newShape[inferredDimIndex] = inferredDimSize;
+            newShape[inferredDimIndex] = totalInputSizeExceptFreeDim / totalReshapeSizeExceptFreeAndInferredDim;
         }
 
-        FunctionPtr cntkFunction = Reshape(inputs[0], newShape, ToFixedWStringFromMultiByte(node->Name()));
+        std::reverse(newShape.begin(), newShape.end());
+        NDShape newNDShape(CastVector<int64_t, size_t>(newShape));
+
+        FunctionPtr cntkFunction = Reshape(inputs[0], newNDShape, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "Unsqueeze")
