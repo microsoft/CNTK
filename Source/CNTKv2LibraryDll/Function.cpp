@@ -1299,6 +1299,7 @@ namespace CNTK
         }
         else
         {
+            // TODO: needs numerically stable implementation.
             auto operandPlaceholder = PlaceholderVariable();
             auto operandDelta = operandPlaceholder - ReduceMax(operandPlaceholder, axis);
             auto expOperandDelta = Exp(operandDelta);

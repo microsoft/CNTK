@@ -452,15 +452,25 @@ Variable GetInitialStateVariable(const std::vector<Variable> &inputs, int numDir
     return initialVariable;
 }
 
-Variable ToBatchAndSequence(Variable input)
+// sequenceWrapperInputToFunctionPtr is used when more than one RNN op takes one same variable as the input.
+// in this case, we only want to wrap RNN ops with the input once.
+Variable ToBatchAndSequence(Variable input, VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
+    if (sequenceWrapperInputToFunctionPtr.find(input) != sequenceWrapperInputToFunctionPtr.end())
+        return sequenceWrapperInputToFunctionPtr[input];
+
+    if (input.DynamicAxes().size() != 0)
+        return input;
+
     if(input.DynamicAxes().size() != 0)
         CNTK::LogicError("Input (%s) shall not have any dynamic axis", ToLegacyString(ToUTF8(input.Name())).c_str());
     if (input.Shape().Rank() < 2)
         CNTK::LogicError("Shape of input (%s) shall have rank that is equal or more than 2", ToLegacyString(ToUTF8(input.Name())).c_str());
 
     FunctionPtr transpose = TransposeAxes(input, Axis(input.Shape().Rank() - 2), Axis(input.Shape().Rank() - 1), L"");
-    FunctionPtr operandWithBatchAndSequenceAxis = ToSequence(ToBatch(transpose, L""), L"");
+    FunctionPtr toBatch = ToBatch(transpose, L"wrapper_sequence_axis");
+    FunctionPtr operandWithBatchAndSequenceAxis = ToSequence(toBatch, L"ONNX_export_RNN_wrapper_sequence_axis", L"");
+    sequenceWrapperInputToFunctionPtr[input] = operandWithBatchAndSequenceAxis;
     return operandWithBatchAndSequenceAxis;
 }
 
@@ -481,13 +491,35 @@ FunctionPtr UnpackBatchAndSequence(FunctionPtr rnnFunction, bool doTranspose)
         return cntkFunctionWithoutDynamicAxis;
 }
 
+
+FunctionPtr UnwrapRNNOps(FunctionPtr rnnFunction, int numDirections)
+{
+    // [#, *][dirs * hidden] 
+    FunctionPtr cntkFunctionWithoutSequenceAxis = Sequence::Unpack(rnnFunction, 0, L"");
+    // [#][*, dirs * hidden] 
+    FunctionPtr cntkFunctionWithoutDynamicAxis = UnpackBatch(cntkFunctionWithoutSequenceAxis, L"");
+    // [#, *, dirs * hidden] 
+
+    NDShape newShape = cntkFunctionWithoutDynamicAxis->Output().Shape();
+    int hidden = newShape[0] / numDirections;
+    newShape = newShape.AppendShape({ NDShape::FreeDimension });
+    newShape[2] = numDirections;
+    newShape[1] = FreeBatchSize;
+    newShape[0] = hidden;
+    // because FreeBatchSize = 1, we can skip transpose between # and dirs.
+    FunctionPtr cntkFunctionWithoutDynamicAxisFixedBatch = Reshape(cntkFunctionWithoutDynamicAxis, newShape, L"");
+    // [*, dirs, #, hidden]
+    return cntkFunctionWithoutDynamicAxisFixedBatch;
+}
+
 FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
-    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
+    VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
     Variable X;
-    X = ToBatchAndSequence(inputs[0]);
+    X = ToBatchAndSequence(inputs[0], sequenceWrapperInputToFunctionPtr);
     for (int dir = 0; dir < numDirections; dir++)
     {
         std::function<FunctionPtr(const Variable &)> iofActivationOp, cellActivationOp, hiddenActivationOp;
@@ -568,16 +600,17 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
         rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
 
-    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction, false);
+    FunctionPtr unpackedRnnFunction = UnwrapRNNOps(rnnFunction, outputHs.size());
     return unpackedRnnFunction;
 }
 
 FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
-    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
+    VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
-    Variable X = ToBatchAndSequence(inputs[0]);
+    Variable X = ToBatchAndSequence(inputs[0], sequenceWrapperInputToFunctionPtr);
 
     for (int dir = 0; dir < numDirections; dir++)
     {
@@ -633,16 +666,17 @@ FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &in
         rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
 
-    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction, false);
+    FunctionPtr unpackedRnnFunction = UnwrapRNNOps(rnnFunction, outputHs.size());
     return unpackedRnnFunction;
 }
 
 FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
-    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
+    VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
-    Variable X = ToBatchAndSequence(inputs[0]);
+    Variable X = ToBatchAndSequence(inputs[0], sequenceWrapperInputToFunctionPtr);
 
     for (int dir = 0; dir < numDirections; dir++)
     {
@@ -689,7 +723,7 @@ FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &in
         rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
 
-    FunctionPtr unpackedRnnFunction = UnpackBatchAndSequence(rnnFunction, false);
+    FunctionPtr unpackedRnnFunction = UnwrapRNNOps(rnnFunction, outputHs.size());
     return unpackedRnnFunction;
 }
 

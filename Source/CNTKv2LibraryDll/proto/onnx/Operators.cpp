@@ -437,6 +437,11 @@ namespace ONNX
             { L"axis", "axis" },
             { L"numItems", "k" },
         } } },
+        { L"Sequence::Softmax",{ {
+            { L"Sequence::Softmax", "Softmax" },
+        } } },
+
+        
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
