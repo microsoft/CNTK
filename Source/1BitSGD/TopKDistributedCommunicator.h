@@ -18,6 +18,11 @@
 #include "Constants.h"
 #include "NcclComm.h"
 #include <iostream>
+#if defined(_MSC_VER)
+#define NBC_Handle MPI_Request
+#else
+#include "libnbc/nbc.h"
+#endif
 
 namespace Microsoft {namespace MSR {namespace CNTK {
 
@@ -363,6 +368,9 @@ namespace CNTK
             CopyDataFromGPUToCPU(valuesToAggregate, residulesBeforeAggregate);
 
             std::vector<MPI_Request> allReduceRequests;
+            std::vector<NBC_Handle> sparseAllReduceHandles;
+            std::map<int, int> allReduceRequestsIndexMap;
+            std::map<int, int> sparseAllReduceHandlesIndexMap;
             for (auto i = 0; i < numValues; ++i)
             {
                 auto inputValue = valuesToAggregate[i];
@@ -415,17 +423,40 @@ namespace CNTK
                     }
                     else
                         LogicError("MPICommunicator: Unknown DataType.");
+
+                    if (allReduceRequests.size() != allReduceRequestsIndexMap.size())
+                    {
+                        allReduceRequestsIndexMap[allReduceRequests.size() - 1] = i;
+                    }
                 }
                 else
                 {
                     // TOPK
-                    // This seems to be a blocking call. 
-                    // TODO, see if can change to non blocking and append to allReduceRequests.
-                    // For now, start copying here
-                    if (inputValue->GetDataType() == DataType::Float)
-                        DoAllReduceAndUnTopKAsync<float>(i, inputValue, outputValue);
-                    else if (inputValue->GetDataType() == DataType::Double)
-                        DoAllReduceAndUnTopKAsync<double>(i, inputValue, outputValue);
+                    bool useAsyncReduce = true;
+#if defined(_MSC_VER)
+                    useAsyncReduce = false; // no libnbc on windows
+#endif
+
+                    if (useAsyncReduce)
+                    {
+                        if (inputValue->GetDataType() == DataType::Float)
+                            DoAllReduceAsync<float>(i, inputValue, &sparseAllReduceHandles);
+                        else if (inputValue->GetDataType() == DataType::Double)
+                            DoAllReduceAsync<double>(i, inputValue, &sparseAllReduceHandles);
+
+                        if (sparseAllReduceHandles.size() != sparseAllReduceHandlesIndexMap.size())
+                        {
+                            sparseAllReduceHandlesIndexMap[sparseAllReduceHandles.size() - 1] = i;
+                        }
+                    }
+                    else
+                    {
+                        // blocking call of all reduce
+                        if (inputValue->GetDataType() == DataType::Float)
+                            DoAllReduceAndUnTopKAsync<float>(i, inputValue, outputValue);
+                        else if (inputValue->GetDataType() == DataType::Double)
+                            DoAllReduceAndUnTopKAsync<double>(i, inputValue, outputValue);
+                    }
                 }
             }
 
@@ -439,37 +470,47 @@ namespace CNTK
             size_t numAllReduceRequestsCompleted = 0;
             while (numAllReduceRequestsCompleted < allReduceRequests.size())
             {
-                int idx = MPI_UNDEFINED;
-                m_mpi->WaitAny(allReduceRequests.data(), (int)allReduceRequests.size(), &idx);
-                if (idx == MPI_UNDEFINED)
+                int index = MPI_UNDEFINED;
+                m_mpi->WaitAny(allReduceRequests.data(), (int) allReduceRequests.size(), &index);
+                if (index == MPI_UNDEFINED)
                 {
                     break;
                 }
 
                 numAllReduceRequestsCompleted++;
 
+                int idx = allReduceRequestsIndexMap[index];
+
                 assert(idx < valuesToAggregate.size());
                 auto value = valuesToAggregate[idx];
 
                 if (ShouldCopyDataToCPU(value))
                 {
-                    if (!ShouldUseTopK(value))
-                    {
-                        auto view = valuesAfterAggregate[idx];
-                        auto size = GetBufferSize(view);
-                        auto& transferer = m_gpuDataTransferers[idx];
-                        auto& buffer = m_intermediateCPUBuffers[idx];
-                        transferer->CopyCPUToGPUAsync(buffer.data.get(), size, GetDataBuffer(view));
-                    }
-                    else
-                    {
-                        // TODO, currently this shouldn't be hit, cause topk allreduce is blocking call
-                        if (value->GetDataType() == DataType::Float)
-                            UnTopKAsync<float>(idx, value);
-                        else if (value->GetDataType() == DataType::Double)
-                            UnTopKAsync<double>(idx, value);
-                    }
+                    // TopK should never gets here, it should either be non-blocking-call which is handled in sparseAllReduceHandles,
+                    // or blocking call which the untopK happens right after the bc
+                    assert(!ShouldUseTopK(value));
+                    auto view = valuesAfterAggregate[idx];
+                    auto size = GetBufferSize(view);
+                    auto& transferer = m_gpuDataTransferers[idx];
+                    auto& buffer = m_intermediateCPUBuffers[idx];
+                    transferer->CopyCPUToGPUAsync(buffer.data.get(), size, GetDataBuffer(view));
                 }
+            }
+
+            for (int index = 0; index < sparseAllReduceHandles.size(); index++)
+            {
+#if !defined(_MSC_VER)
+                // There is no NBC_WaitAny, only NBC_Wait
+                NBC_Wait(&sparseAllReduceHandles[index], MPI_STATUS_IGNORE) || MpiFail("NBC_Wait");
+#endif
+
+                int idx = sparseAllReduceHandlesIndexMap[index];
+                assert(idx < valuesToAggregate.size());
+                auto value = valuesToAggregate[idx];
+                if (value->GetDataType() == DataType::Float)
+                    UnTopKAsync<float>(idx, value);
+                else if (value->GetDataType() == DataType::Double)
+                    UnTopKAsync<double>(idx, value);
             }
 
             // TODO: Should not wait, simply publishing event on the compute stream should be sufficient
@@ -617,7 +658,32 @@ namespace CNTK
         {
             auto v = GetMatrix<ElemType>(inputValue);
             size_t dim = v->GetNumRows() * v->GetNumCols();
-            GetCompressor<ElemType>(m_preAggregatedGradientCompressors[i]).AllReduce(GetSparcStreamAlloc<ElemType>(m_sendbufs[i]).m_buffer, GetSparcStreamAlloc<ElemType>(m_recvbufs[i]).m_buffer, dim);
+            GetCompressor<ElemType>(m_preAggregatedGradientCompressors[i]).AllReduce(
+                GetSparcStreamAlloc<ElemType>(m_sendbufs[i]).m_buffer,
+                GetSparcStreamAlloc<ElemType>(m_recvbufs[i]).m_buffer,
+                dim);
+        }
+
+        template <class ElemType>
+        void DoAllReduceAsync(size_t i, NDArrayViewPtr& inputValue, std::vector<NBC_Handle>* pAllReduceRequests)
+        {
+            auto v = GetMatrix<ElemType>(inputValue);
+            size_t nRow = v->GetNumRows();
+            size_t nCol = v->GetNumCols();
+            size_t dim = nRow * nCol;
+            size_t topK = GetTopK(DEFAULT_BUCKET_SIZE, m_topK);
+            //size_t numBuckets = dim / DEFAULT_BUCKET_SIZE;
+            size_t numBuckets = (dim + (DEFAULT_BUCKET_SIZE - 1)) / DEFAULT_BUCKET_SIZE;
+
+            pAllReduceRequests->push_back(NBC_Handle());
+
+            GetCompressor<ElemType>(m_preAggregatedGradientCompressors[i]).IallReduce(
+                GetSparcStreamAlloc<ElemType>(m_sendbufs[i]).m_buffer,
+                GetSparcStreamAlloc<ElemType>(m_recvbufs[i]).m_buffer,
+                topK * numBuckets,
+                dim,
+                m_mpi->Communicator(),
+                &(pAllReduceRequests->back()));
         }
 
         bool ShouldUseTopK(const NDArrayViewPtr& view)

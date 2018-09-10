@@ -174,6 +174,7 @@ public:
     virtual void WaitAny(MPI_Request* requests, int numRequests, int* index) = 0;
     virtual void Wait(MPI_Request* request) = 0;
     virtual int WaitAll(std::vector<MPI_Request>& requests) = 0;
+    virtual MPI_Comm Communicator() const = 0;
 };
 
 }}}

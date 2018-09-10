@@ -9,6 +9,12 @@
 #include "QuantizedMatrix.h"
 #include "MatrixQuantizerImpl.h"
 #include "c_allreduce_ring.h"
+#if defined(_MSC_VER)
+#define NBC_Handle MPI_Request
+#else
+#include "scl_iallreduce.h"
+#include "libnbc/nbc.h"
+#endif
 
 namespace Microsoft {namespace MSR {namespace CNTK {
 // TopK
@@ -50,6 +56,13 @@ public:
     void AllReduce(const struct stream *sendbuf, struct stream *recvbuf, unsigned dim)
     {
         c_allreduce_ring<unsigned, ElemType>(sendbuf, recvbuf, dim);
+    }
+
+    void IallReduce(struct stream* sendbuf, struct stream* recvbuf, unsigned k, unsigned dim, MPI_Comm comm, NBC_Handle *handle)
+    {
+#if !defined(_MSC_VER)
+        scl_iallreduce<unsigned, ElemType>(sendbuf, recvbuf, k, dim, comm, handle) || MpiFail("SclIAllReduce");
+#endif
     }
 
     int GetDeviceId() const
