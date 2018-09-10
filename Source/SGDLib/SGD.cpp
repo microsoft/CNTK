@@ -845,10 +845,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             if (std::isnan(avgCriterion))
             {
-                wstring w = msra::strfun::wstrprintf(L"%ls.%ls", m_modelPath.c_str(), "debug");
-                // m_modelPath = m_modelPath + L "debug"
-                fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
-                net->Save(w);
+                wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(100));
+                fprintf(stderr, "Saving model for debugging to:%ls", checkPointFileName.c_str());
+                net->Save(checkPointFileName);
                 RuntimeError("The training1 is not a number (NAN).");
             }
         }
@@ -1554,10 +1553,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             if (epochCriterion.IsNan())
             {
-                wstring w = msra::strfun::wstrprintf(L"%ls.%ls", m_modelPath.c_str(), "debug");
-                // m_modelPath = m_modelPath + L "debug"
-                fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
-                net->Save(w);
+                wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(100));
+                fprintf(stderr, "Saving model for debugging to:%ls", checkPointFileName.c_str());
+                net->Save(checkPointFileName);
                 RuntimeError("The training2 is not a number (NAN).");
             }
 
