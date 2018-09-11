@@ -149,7 +149,7 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
                     o1i = o1[loaded_model.outputs[j]]
                     if compare_model_for_output_data_transpose(model.outputs[i], loaded_model.outputs[j]):
                         o1i = transpose_dynamic_axis(o1i)
-                    if np.allclose(o0i, o1i):
+                    if np.shape(o0i) == np.shape(o1i) and np.allclose(o0i, o1i):
                         matched_indices.append(j)
                         break
             assert len(matched_indices) == i+1

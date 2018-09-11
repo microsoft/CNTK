@@ -31,9 +31,15 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 
 
 ## ONNX
+Support ONNX 1.2.2 release. 
 ### Updates
 - Updated CNTK's ONNX BatchNormalization op export/import to latest spec.
-
+- Added ONNX support for TopK op.
+- Added ONNX support for sequence ops: sequence.slice, sequence.first, sequence.last, sequence.reduce_sum, sequence.reduce_max, sequence.softmax. For these ops, there is no need to expand ONNX spec. CNTK ONNX exporter just builds computation equavalent graphs for these sequence ops.
+- Added full support for Softmax op.
+- Made CNTK broadcast ops compatible with ONNX specification.
+- Handle to_batch, to_sequence, unpack_batch, sequence.unpack ops in CNTK ONNX exporter.
+- ONNX tests to export ONNX test cases for other toolkits to run and to validate.
 ### Bug or minor fixes:
 
 
