@@ -2335,6 +2335,55 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUMatrix<
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, const int inputIndex)
+{
+    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
+        NOT_IMPLEMENTED;
+
+    if (a.GetNumCols() != b.GetNumCols())
+    {
+        LogicError("GPUSparseMatrix: AddSparseColumnIndex: matrix dimension mismatch.");
+    }
+
+    if (inputIndex == 0) {
+        GPUSPARSE_INDEX_TYPE *colzero = new GPUSPARSE_INDEX_TYPE[a.GetNumCols()+1]();
+        CUDA_CALL(cudaMemcpy(a.ColLocation(), colzero, sizeof(GPUSPARSE_INDEX_TYPE)*(a.GetNumCols() + 1), cudaMemcpyHostToDevice));
+        delete[] colzero;
+    }
+    a.PrepareDevice();
+    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+    SyncGuard syncGuard;
+    int nBlocks = (int)ceil(1.0 * n / 1024);
+    _sparseCSCAddColumnIndexsparseCSC<ElemType> << <nBlocks, 1024 >> >(a.GetNumCols(), a.ColLocation(), b.ColLocation());
+}
+
+// row stack sparse matrix b to sparse matrix a
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
+{
+    b.PrepareDevice();
+    
+    size_t* d_NzOffset = TracingGPUMemoryAllocator::Allocate<size_t>(a.GetComputeDeviceId(), a.GetNumCols());
+    CUDA_CALL(cudaMemcpy(d_NzOffset, NzOffset, sizeof(size_t)*a.GetNumCols(), cudaMemcpyHostToDevice));
+
+    if (a.GetFormat() == matrixFormatSparseCSR || b.GetFormat() == matrixFormatSparseCSR)
+        NOT_IMPLEMENTED;
+
+    if (a.GetNumCols() != b.GetNumCols() || a.GetNumRows() < b.GetNumRows())
+    {
+        LogicError("GPUSparseMatrix: AssignCopyOf: matrix dimension mismatch.");
+    }
+
+    CUDA_LONG n = (CUDA_LONG)a.GetNumCols();
+    SyncGuard syncGuard;
+    int nBlocks = (int)ceil(1.0 * n / 1024);
+    _sparseCSCAssignCopyOfsparseCSC<ElemType> << <nBlocks, 1024 >> >(RowOffset, a.GetNumCols(), d_NzOffset, a.RowLocation(), a.ColLocation(), a.Data(), b.RowLocation(), b.ColLocation(), b.Data());
+
+    CUDA_CALL(cudaMemcpy(NzOffset, d_NzOffset, sizeof(size_t)*a.GetNumCols(), cudaMemcpyDeviceToHost));
+    TracingGPUMemoryAllocator::Free<size_t>(a.GetComputeDeviceId(), d_NzOffset);
+}
+
+template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const
 {
     GPUSparseMatrix<ElemType> res(GetComputeDeviceId(), GetFormat());

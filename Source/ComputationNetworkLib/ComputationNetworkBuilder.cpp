@@ -109,9 +109,11 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowStackNode))                         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(SparseRowStackNode))                   return New<SparseRowStackNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ScatterPackedNode))                    return New<ScatterPackedNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))              return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LatticeSequenceWithSoftmaxNode))       return New<LatticeSequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ElementMaxNode))                       return New<ElementMaxNode<ElemType>>(forward<_Types>(_Args)...);
 #ifdef COMING_SOON
     else if (nodeType == OperationNameOf(SequenceDecoderNode))                  return New<SequenceDecoderNode<ElemType>>(forward<_Types>(_Args)...);
 #endif
@@ -120,6 +122,9 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
 #endif
     else if (nodeType == OperationNameOf(SigmoidNode))                          return New<SigmoidNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(StableSigmoidNode))                    return New<StableSigmoidNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(StochasticBinaryNode))                 return New<StochasticBinaryNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(AnnealTanhNode))                       return New<AnnealTanhNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(AnnealBinaryNode))                     return New<AnnealBinaryNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SinNode))                              return New<SinNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SinhNode))                             return New<SinhNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SliceNode))                            return New<SliceNode<ElemType>>(forward<_Types>(_Args)...);
@@ -636,9 +641,27 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Sigmo
 }
 
 template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::StochasticBinary(const ComputationNodePtr a, bool neuronST, bool RFAdjusted, bool passThrough, float annealRate, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<StochasticBinaryNode<ElemType>>(net.GetDeviceId(), nodeName, neuronST, RFAdjusted, passThrough, annealRate), { a });
+}
+
+template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Atanh(const ComputationNodePtr a, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<AtanhNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::AnnealTanh(const ComputationNodePtr a, const float annealRate, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<AnnealTanhNode<ElemType>>(net.GetDeviceId(), nodeName, annealRate), { a });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::AnnealBinary(const ComputationNodePtr a, const float annealRate, float annealSlope, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<AnnealBinaryNode<ElemType>>(net.GetDeviceId(), nodeName, annealRate, annealSlope), { a });
 }
 
 template <class ElemType>
@@ -939,6 +962,24 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowSt
     for (size_t i = 0; i < inputs.size(); i++)
         inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
     return net.AddNodeToNetAndAttachInputs(New<RowStackNode<ElemType>>(net.GetDeviceId(), nodeName), { inputs });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SparseRowStack(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName)
+{
+    vector<ComputationNodeBasePtr> inputs(pinputs.size());
+    for (size_t i = 0; i < inputs.size(); i++)
+        inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
+    return net.AddNodeToNetAndAttachInputs(New<SparseRowStackNode<ElemType>>(net.GetDeviceId(), nodeName), { inputs });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ElementMax(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName)
+{
+    vector<ComputationNodeBasePtr> inputs(pinputs.size());
+    for (size_t i = 0; i < inputs.size(); i++)
+        inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
+    return net.AddNodeToNetAndAttachInputs(New<ElementMaxNode<ElemType>>(net.GetDeviceId(), nodeName), { inputs });
 }
 
 template <class ElemType>

@@ -496,7 +496,7 @@ CNTK2 = [
     Sigmoid(_, tag='') = new ComputationNode [ operation = 'Sigmoid' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _AsNodes (_) /*plus the function args*/ ]
-
+    
     // 11. Criterion nodes
     // No changes here - we said the default input would be the label sequence here, against which the
     // empirical sequence is compared to. Keeping this for now.
@@ -552,6 +552,10 @@ CNTK2 = [
                                                                                         inputs = _ /*plus the function args*/ ]
 ]
 
+StochasticBinary(_, neuronST=true, RFAdjusted=false, passThrough=true, annealRate=1.0, tag='') = new ComputationNode [ operation = 'StochasticBinary' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+AnnealTanh(_, annealRate=1.0, tag='') = new ComputationNode [ operation = 'AnnealTanh' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+AnnealBinary(_, annealRate=1.0, annealSlope=1.0, tag='') = new ComputationNode [ operation = 'AnnealBinary' ; inputs = _AsNodes (_) /*plus the function args*/ ]
+
 # Parameter{} can do several forms of initialization.
 #  - initValue=scalar, value=array --> initialize from this value  --array form not implemented yet
 #  - initFromFilePath="..." --> read from a data file
@@ -592,6 +596,8 @@ Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag=
 RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 RowStack(inputs, axis=1, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
+SparseRowStack(inputs, tag='') = new ComputationNode [ operation = 'SparseRowStack' /*plus the function args*/ ]
+ElementMax(inputs, tag='') = new ComputationNode [ operation = 'ElementMax' /*plus the function args*/ ]
 EditDistanceError(leftInput, rightInput, subPen=1.0, delPen=1.0, insPen=1.0, squashInputs=false, tokensToIgnore=[||], tag='') = new ComputationNode [ operation = 'EditDistanceError' ; inputs = _AsNodes (leftInput : rightInput) /*plus the function args*/ ]
 LatticeSequenceWithSoftmax(labels, evaluation, scaledLogLikelihood, lattice, symListPath, phonePath, stateListPath, transProbPath, latticeConfigPath = "LatticeNode.config", hSmoothingWeight = 0.95, frameDropThresh = 1e-10, doReferenceAlign = false, seqGammarUsesMBR = false, seqGammarAMF = 14.0, seqGammarLMF = 14.0, seqGammarBMMIFactor = 0.0, seqGammarWordPen = 0.0, tag='') = new ComputationNode [ operation = 'LatticeSequenceWithSoftmax' ; inputs = _AsNodes (labels : evaluation : scaledLogLikelihood : lattice) /*plus the function args*/ ]
 ForwardBackward(graph, features, blankTokenId, delayConstraint=-1, tag='') = new ComputationNode [ operation = 'ForwardBackward' ; inputs = _AsNodes (graph : features) /*plus the function args*/ ]

@@ -234,6 +234,46 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.RowRepeat(NULL, num_repeat, name);
         }
     }
+    else if (cnNodeType == OperationNameOf(StochasticBinaryNode))
+    {
+        if (parameter.size() != 1)
+            RuntimeError("StochasticBinaryNode Usage: StochasticBinary(NodeName, neuronST=true, RFAdjusted=false, passThrough=true, annealRate=1.0).");
+        nodeParamCount = 1;
+        nodeParamStart = 0; 
+        if (pass == ndlPassInitial)
+        {
+            bool t_neuronST = node->GetOptionalParameter("neuronST", "true");
+            bool t_RFAdjusted = node->GetOptionalParameter("RFAdjusted", "false");
+            bool t_passThrough = node->GetOptionalParameter("passThrough", "false");
+            float t_annealRate = node->GetOptionalParameter("annealRate", "1.0");
+            nodePtr = builder.StochasticBinary(NULL, t_neuronST, t_RFAdjusted, t_passThrough, t_annealRate, name);
+        } 
+    }
+    else if (cnNodeType == OperationNameOf(AnnealTanhNode))
+    {
+        if (parameter.size() != 1)
+            RuntimeError("AnnealTanh Usage: AnnealTanh(NodeName, annealRate=1.0).");
+        nodeParamCount = 1;
+        nodeParamStart = 0;
+        if (pass == ndlPassInitial)
+        {
+            float t_annealRate = node->GetOptionalParameter("annealRate", "1.0");
+            nodePtr = builder.AnnealTanh(NULL, t_annealRate, name);
+        }
+    }
+    else if (cnNodeType == OperationNameOf(AnnealBinaryNode))
+    {
+        if (parameter.size() != 1)
+            RuntimeError("AnnealBinary Usage: AnnealTanh(NodeName, annealRate=1.0, annealSlope=1.0).");
+        nodeParamCount = 1;
+        nodeParamStart = 0;
+        if (pass == ndlPassInitial)
+        {
+            float t_annealRate = node->GetOptionalParameter("annealRate", "1.0");
+            float t_annealSlope = node->GetOptionalParameter("annealSlope", "1.0");
+            nodePtr = builder.AnnealBinary(NULL, t_annealRate, t_annealSlope, name);
+        }
+    }
     else if (cnNodeType == OperationNameOf(DiagonalNode))
     {
         if (parameter.size() != 1)
@@ -631,7 +671,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     {
         std::vector<void*> inputs = EvaluateParameters(node, baseName, nodeParamStart, nodeParamCount, pass);
 
-        if (cnNodeType == OperationNameOf(RowStackNode)) // support variable length inputs
+        if (cnNodeType == OperationNameOf(RowStackNode) || cnNodeType == OperationNameOf(ElementMaxNode)) // support variable length inputs
         {
             std::vector<ComputationNodeBasePtr> inputNodes;
             inputNodes.resize(inputs.size());

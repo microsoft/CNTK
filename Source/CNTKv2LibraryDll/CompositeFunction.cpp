@@ -889,6 +889,9 @@ namespace CNTK
                     ASSIGN_NEW_NODE(SliceNode, network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis), strides);
                     break;
                 }
+                case PrimitiveOpType::ElementMaxPooling:
+                    computationNodePtr = New<ElementMaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::RandomSample:
                 {
                     auto numSamples = functionConfig[PrimitiveFunctionAttribute::AttributeNameNumSamples].Value<size_t>();

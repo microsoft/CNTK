@@ -226,6 +226,8 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(ROIPoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowStackNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SparseRowStackNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ElementMaxNode))) ret = true;
 #ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceDecoderNode), L"SEWithSM")) ret = true;
 #endif
@@ -233,6 +235,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(LatticeSequenceWithSoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SinhNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(StochasticBinaryNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AnnealTanhNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AnnealBinaryNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput")) ret = true;

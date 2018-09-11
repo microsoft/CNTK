@@ -602,6 +602,19 @@ public:
     ElemType LogAdd(ElemType x, ElemType y);
 
 public:
+    // stochastic binary node
+    static void StochasticBinaryForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope);
+    static void StochasticBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope);
+    static void AnnealTanhForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope);
+    static void AnnealTanhBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const float annealSlope);
+    static void AnnealBinaryForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope);
+    static void AnnealBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const float annealSlope);
+
+    // assign the element wise max of matrix a and matrix b to matrix a
+    static void DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, const size_t InputIndex, const Matrix<ElemType>& nWords);
+    void AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient, const size_t InputIndex, const Matrix<ElemType>& nWords);
+
+public:
     // static BLAS functions
 
     // singular value decomposition of A as A = U*SIGMA*VT
@@ -653,6 +666,10 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+    
+    static void SparseAssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset);
+    static void AddSparseNumOfNZs(const Matrix<ElemType>& a, size_t* numNZs);
+    static void AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const int inputIndex);
 
     void TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
                      const std::array<size_t, 2>& offsets,

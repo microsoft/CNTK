@@ -456,6 +456,16 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::ElementProductOf(const GPUMatrix<
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b)
+{
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
+{
+}
+
+template <class ElemType>
 GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::operator+(const GPUSparseMatrix<ElemType>& a) const
 {
     return *this;
@@ -2099,6 +2109,41 @@ void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, 
 
 #pragma endregion Other helper functions
 
+template <class ElemType>
+void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope) {
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope) {
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AnnealTanhForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope) {
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AnnealTanhBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const float annealSlope) {
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AnnealBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope) {
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AnnealBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const float annealSlope) {
+}
+
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const size_t InputIndex, const GPUMatrix<ElemType>& nWords)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient, const size_t InputIndex, const GPUMatrix<ElemType>& nWords)
+{
+}
+
 #pragma region Static BLAS Functions
 template <class ElemType>
 void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& /*a*/, const bool transposeA, const GPUMatrix<ElemType>& /*b*/, const bool transposeB,
@@ -2202,6 +2247,16 @@ void GPUMatrix<ElemType>::AssignScaledDifference(const GPUMatrix<ElemType>& /*al
 //c[ci,cj] += a[ai,aj]
 template <class ElemType>
 void GPUMatrix<ElemType>::AddElementToElement(ElemType beta, const GPUMatrix<ElemType>& /*a*/, const size_t ai, const size_t aj, GPUMatrix<ElemType>& c, const size_t ci, const size_t cj)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DoElementMaxOf(GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AddElementMaxGradient(GPUMatrix<ElemType>& inputValue, GPUMatrix<ElemType>& outputValue, GPUMatrix<ElemType>& outputGradient, GPUMatrix<ElemType>& inputSum, GPUMatrix<ElemType>& randomSplit, size_t numInputs, size_t inputIndex)
 {
 }
 

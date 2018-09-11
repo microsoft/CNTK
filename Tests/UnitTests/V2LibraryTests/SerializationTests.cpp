@@ -358,6 +358,7 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::Tan) == 95 &&
                   static_cast<size_t>(PrimitiveOpType::Atan) == 96 &&
                   static_cast<size_t>(PrimitiveOpType::ConvolutionSequenceShape) == 97,
+                  static_cast<size_t>(PrimitiveOpType::ElementMaxPooling) == 98,
                   "PrimitiveOpType enum value was modified.");
 }
 

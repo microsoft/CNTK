@@ -187,12 +187,17 @@ public:
     ComputationNodePtr RowRepeat(const ComputationNodePtr a, const size_t num_repeat, const std::wstring nodeName = L"");
     ComputationNodePtr RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName = L"");
     ComputationNodePtr RowStack(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName = L"");
+    ComputationNodePtr SparseRowStack(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName = L"");
+    ComputationNodePtr ElementMax(const std::vector<ComputationNodePtr> pinputs, const std::wstring nodeName = L"");
 #ifdef COMING_SOON
     ComputationNodePtr SequenceDecoder(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr pairscore, const std::wstring nodeName = L"");
 #endif
     ComputationNodePtr SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName = L"");
     ComputationNodePtr LatticeSequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const ComputationNodePtr lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& LatticeSequenceWithSoftmax, float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, const std::wstring nodeName = L"");
     ComputationNodePtr Sigmoid(const ComputationNodePtr a, const std::wstring nodeName = L"");
+    ComputationNodePtr StochasticBinary(const ComputationNodePtr a, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealRate, const std::wstring nodeName = L"");
+    ComputationNodePtr AnnealTanh(const ComputationNodePtr a, const float annealRate, const std::wstring nodeName = L"");
+    ComputationNodePtr AnnealBinary(const ComputationNodePtr a, const float annealRate, float annealSlope, const std::wstring nodeName = L"");
     ComputationNodePtr Sin(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Sinh(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"");

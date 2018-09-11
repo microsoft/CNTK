@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) Microsoft. All rights reserved.
 // Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
@@ -22,6 +22,23 @@
 #include "half.hpp"
 #include "fpgeneric.h"
 #pragma pop_macro("TENSOR_OPS_DECL")
+
+#include <curand.h>
+#include <curand_kernel.h>
+
+// REVIEW alexeyk: disable warnings properly for GCC/clang
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4100) // 'identifier': unreferenced formal parameter
+#pragma warning(disable : 4127) // conditional expression is constant
+#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
+#pragma warning(disable : 4458) // declaration of 'identifier' hides class member
+#pragma warning(disable : 4515) // 'namespace': namespace uses itself
+#endif
+#include <cub/cub.cuh>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 // We would like to use 64-bit integer to support large matrices. However, CUDA seems to support only 32-bit integer
 // For now, use int32_t to ensure that both Linux and Windows see this as 32 bit integer type.
@@ -702,6 +719,121 @@ __global__ void _scaleAndAddScalar(
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     c[id] = (comp_t)alpha * (comp_t)a[0] + (comp_t)b[id];
 };
+
+template <class ElemType>
+__global__ void _generateRandomNumberNormalDistribution(float* vec, curandState *states, CUDA_LONG N, unsigned long long seed) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+	curand_init(seed, id, 0, &states[id]);
+	vec[id] = curand_uniform(&states[id]);
+}
+
+template <class ElemType>
+__global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, CUDA_LONG N, const float annealSlope) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+	b[id] = a[id] <= 0 ? -1 : 1;
+}
+
+template <class ElemType>
+__global__ void _stochasticbinaryBackward_PassThrough(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+    ingrad[id] = fabs_(a[id]) <= 1 ? outgrad[id] : 0;
+}
+
+template <class ElemType>
+__global__ void _stochasticbinaryBackward_Anneal(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N, const float annealSlope) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+    ElemType tanhx = tanh_(a[id] * annealSlope);
+	ingrad[id] = outgrad[id] * (1 - tanhx * tanhx) * annealSlope;
+}
+
+template <class ElemType>
+__global__ void _annealtanhForward(const ElemType* a, ElemType* b, CUDA_LONG N, const float annealSlope) {
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    b[id] = tanh_(a[id] * annealSlope);
+}
+
+template <class ElemType>
+__global__ void _annealtanhBackward(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N, const float annealSlope) {
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    ElemType tanhx = tanh_(a[id] * annealSlope);
+    ingrad[id] = outgrad[id] * (1 - tanhx * tanhx) * annealSlope;
+}
+
+template <class ElemType>
+__global__ void _annealbinaryForward(const ElemType* a, ElemType* b, CUDA_LONG N, const float annealSlope) {
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    b[id] = a[id] <= 0 ? -1 : 1;
+    //b[id] = tanh_(a[id] * annealSlope);
+}
+
+template <class ElemType>
+__global__ void _annealbinaryBackward(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N, const float annealSlope) {
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    ElemType tanhx = tanh_(a[id] * annealSlope);
+    ingrad[id] = outgrad[id] * (1 - tanhx * tanhx) * annealSlope;
+}
+
+template <class ElemType>
+__global__ void _doElementMaxOf(
+    ElemType *a,
+    const ElemType *b,
+    CUDA_LONG N,
+    const size_t inputindex,
+    const ElemType *nWords,
+    CUDA_LONG nRows)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    const CUDA_LONG iCol = id / nRows;
+    if (inputindex <= nWords[iCol])
+    {
+        a[id] = max(a[id], b[id]);
+    }
+}
+
+template <class ElemType>
+__global__ void _addElementMaxGradient(
+    ElemType *inputValue,
+    ElemType *outputValue,
+    ElemType *outputGradient,
+    ElemType *inputGradient,
+    CUDA_LONG N,
+    const size_t inputindex,
+    const ElemType *nWords,
+    CUDA_LONG nRows)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+
+    const CUDA_LONG iCol = id / nRows;
+    if (inputindex <= nWords[iCol] && inputValue[id] == outputValue[id])
+    {
+        inputGradient[id] = outputGradient[id];
+    }
+    else
+    {
+        inputGradient[id] = 0;
+    }
+}
 
 template <class ElemType>
 __global__ void _multiply1x1AndWeightedAdd(
@@ -3054,6 +3186,50 @@ __global__ void _sparseCSRElemMulDense(
     {
         int j = m_dCol[_i];
         c[IDX2C(id, j, M)] = b[IDX2C(id, j, M)] * m_dVal[_i];
+    }
+}
+
+template <class ElemType>
+__global__ void _sparseCSCAddColumnIndexsparseCSC(
+    const size_t n,
+    GPUSPARSE_INDEX_TYPE *aColIndex,
+    const GPUSPARSE_INDEX_TYPE *bColIndex
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+    aColIndex[id + 1] += bColIndex[id + 1];
+}
+
+template <class ElemType>
+__global__ void _sparseCSCAssignCopyOfsparseCSC(
+    const size_t RowOffset,
+    const size_t n,
+    size_t* NzOffset,
+    GPUSPARSE_INDEX_TYPE* aRowIndex,
+    GPUSPARSE_INDEX_TYPE* aColIndex,
+    ElemType* aData,
+    const GPUSPARSE_INDEX_TYPE* bRowIndex,
+    const GPUSPARSE_INDEX_TYPE* bColIndex,
+    const ElemType* bData
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= n)
+        return;
+
+    int start = aColIndex[id];
+
+    int startB = bColIndex[id];
+    int endB = bColIndex[id + 1];
+
+    while (startB < endB)
+    {
+        aRowIndex[start + NzOffset[id]] = bRowIndex[startB] + RowOffset;
+        aData[start + NzOffset[id]] = bData[startB];
+        NzOffset[id]++;
+        startB++;
     }
 }
 

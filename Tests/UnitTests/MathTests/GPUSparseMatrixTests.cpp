@@ -680,6 +680,98 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
 }
 
 
+BOOST_FIXTURE_TEST_CASE(GPUSparseAssignCopyOf, RandomSeedFixture)
+{
+    const float a_v[9] = { 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+    const int a_i[5] = { 0, 2, 4, 7, 9 };
+    const int a_j[9] = { 0, 2, 1, 3, 0, 2, 4, 1, 4 };
+    const int a_rowCount = 4;
+    const int a_colCount = 5;
+    const int a_size = a_rowCount + a_colCount;
+
+    GPUSparseMatrix<float> matrixA(c_deviceIdZero);
+    BOOST_CHECK(matrixA.IsEmpty());
+    matrixA.SetMatrixFromCSRFormat(a_i, a_j, a_v, a_size, a_rowCount, a_colCount);
+
+    GPUSparseMatrix<float> tMatrixA(matrixA.GetComputeDeviceId(), matrixFormatSparseCSC);
+    matrixA.ConvertToSparseFormat(matrixFormatSparseCSC, tMatrixA);
+
+    GPUSparseMatrix<float> matrixB(c_deviceIdZero);
+    BOOST_CHECK(matrixB.IsEmpty());
+    matrixB.SetMatrixFromCSRFormat(c_i, c_j, c_v, c_size, c_rowCount, c_colCount);
+
+    GPUSparseMatrix<float> tMatrixB(matrixB.GetComputeDeviceId(), matrixFormatSparseCSC);
+    matrixB.ConvertToSparseFormat(matrixFormatSparseCSC, tMatrixB);
+
+    GPUSparseMatrix<float> tmp(matrixB.GetComputeDeviceId(), matrixFormatSparseCSC);
+    tmp.Resize(tMatrixB.GetNumRows() + tMatrixA.GetNumRows(), tMatrixB.GetNumCols(), tMatrixA.NzCount() + tMatrixB.NzCount(), MatrixFormat::matrixFormatSparseCSC);
+
+    GPUSparseMatrix<float>::AddSparseColumnIndex(tmp, tMatrixA, 0);
+    GPUSparseMatrix<float>::AddSparseColumnIndex(tmp, tMatrixB, 1);
+
+    size_t* NzOffset = new size_t[a_colCount]();
+
+    GPUSparseMatrix<float>::AssignCopyOf(tmp, tMatrixB, NzOffset, 0);
+
+    for (int i = 0; i < a_colCount; i++)
+        cout << NzOffset[i] << " ";
+    cout << endl;
+
+
+    GPUSparseMatrix<float>::AssignCopyOf(tmp, tMatrixA, NzOffset, (int)tMatrixB.GetNumRows());
+
+    for (int i = 0; i < a_colCount; i++)
+        cout << NzOffset[i] << " ";
+    cout << endl;
+
+    GPUMatrix<float> rDense = tmp.CopyToDenseMatrix();
+    float *arrD = rDense.CopyToArray();
+
+    CPUMatrix<float> ccpu(c_rowCount * 2, c_colCount, arrD, MatrixFlags::matrixFlagNormal);
+    delete[] arrD;
+
+    BOOST_CHECK_EQUAL(1, ccpu(0, 0));
+    BOOST_CHECK_EQUAL(4, ccpu(0, 1));
+    BOOST_CHECK_EQUAL(0, ccpu(0, 2));
+    BOOST_CHECK_EQUAL(0, ccpu(0, 3));
+    BOOST_CHECK_EQUAL(0, ccpu(0, 4));
+    BOOST_CHECK_EQUAL(0, ccpu(1, 0));
+    BOOST_CHECK_EQUAL(2, ccpu(1, 1));
+    BOOST_CHECK_EQUAL(3, ccpu(1, 2));
+    BOOST_CHECK_EQUAL(0, ccpu(1, 3));
+    BOOST_CHECK_EQUAL(0, ccpu(1, 4));
+    BOOST_CHECK_EQUAL(5, ccpu(2, 0));
+    BOOST_CHECK_EQUAL(0, ccpu(2, 1));
+    BOOST_CHECK_EQUAL(0, ccpu(2, 2));
+    BOOST_CHECK_EQUAL(7, ccpu(2, 3));
+    BOOST_CHECK_EQUAL(8, ccpu(2, 4));
+    BOOST_CHECK_EQUAL(0, ccpu(3, 0));
+    BOOST_CHECK_EQUAL(0, ccpu(3, 1));
+    BOOST_CHECK_EQUAL(9, ccpu(3, 2));
+    BOOST_CHECK_EQUAL(0, ccpu(3, 3));
+    BOOST_CHECK_EQUAL(6, ccpu(3, 4));
+    BOOST_CHECK_EQUAL(1, ccpu(4, 0));
+    BOOST_CHECK_EQUAL(0, ccpu(4, 1));
+    BOOST_CHECK_EQUAL(1, ccpu(4, 2));
+    BOOST_CHECK_EQUAL(0, ccpu(4, 3));
+    BOOST_CHECK_EQUAL(0, ccpu(4, 4));
+    BOOST_CHECK_EQUAL(0, ccpu(5, 0));
+    BOOST_CHECK_EQUAL(1, ccpu(5, 1));
+    BOOST_CHECK_EQUAL(0, ccpu(5, 2));
+    BOOST_CHECK_EQUAL(1, ccpu(5, 3));
+    BOOST_CHECK_EQUAL(0, ccpu(5, 4));
+    BOOST_CHECK_EQUAL(1, ccpu(6, 0));
+    BOOST_CHECK_EQUAL(0, ccpu(6, 1));
+    BOOST_CHECK_EQUAL(1, ccpu(6, 2));
+    BOOST_CHECK_EQUAL(0, ccpu(6, 3));
+    BOOST_CHECK_EQUAL(1, ccpu(6, 4));
+    BOOST_CHECK_EQUAL(0, ccpu(7, 0));
+    BOOST_CHECK_EQUAL(1, ccpu(7, 1));
+    BOOST_CHECK_EQUAL(0, ccpu(7, 2));
+    BOOST_CHECK_EQUAL(0, ccpu(7, 3));
+    BOOST_CHECK_EQUAL(1, ccpu(7, 4));
+}
+
 BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixOneHot, RandomSeedFixture)
 {
     GPUSparseMatrix<double> result(c_deviceIdZero, matrixFormatSparseCSC);

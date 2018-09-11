@@ -5069,6 +5069,86 @@ void Matrix<ElemType>::RNNBackwardWeights(const Matrix<ElemType>& inputX, const 
                             NOT_IMPLEMENTED);
 }
 
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::StochasticBinaryForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope) {
+    if (a.GetDeviceId() < 0) { NOT_IMPLEMENTED; }
+    else if (a.GetMatrixType() == MatrixType::SPARSE) { NOT_IMPLEMENTED; }
+    else { GPUMatrix<ElemType>::StochasticBinaryForward( *a.m_GPUMatrix, *b.m_GPUMatrix, annealSlope); }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::StochasticBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope) {
+    if (a.GetDeviceId() < 0) { NOT_IMPLEMENTED; }
+    else if (a.GetMatrixType() == MatrixType::SPARSE) { NOT_IMPLEMENTED; }
+    else { GPUMatrix<ElemType>::StochasticBinaryBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix, neuronST, RFAdjusted, passThrough, annealSlope); }
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AnnealTanhForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope) {
+    if (a.GetDeviceId() < 0) { NOT_IMPLEMENTED; }
+    else if (a.GetMatrixType() == MatrixType::SPARSE) { NOT_IMPLEMENTED; }
+    else { GPUMatrix<ElemType>::AnnealTanhForward(*a.m_GPUMatrix, *b.m_GPUMatrix, annealSlope); }
+}
+template <class ElemType>
+void Matrix<ElemType>::AnnealTanhBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const float annealSlope) {
+    if (a.GetDeviceId() < 0) { NOT_IMPLEMENTED; }
+    else if (a.GetMatrixType() == MatrixType::SPARSE) { NOT_IMPLEMENTED; }
+    else { GPUMatrix<ElemType>::AnnealTanhBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix, annealSlope); }
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AnnealBinaryForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope) {
+    if (a.GetDeviceId() < 0) { NOT_IMPLEMENTED; }
+    else if (a.GetMatrixType() == MatrixType::SPARSE) { NOT_IMPLEMENTED; }
+    else { GPUMatrix<ElemType>::AnnealBinaryForward(*a.m_GPUMatrix, *b.m_GPUMatrix, annealSlope); }
+}
+template <class ElemType>
+void Matrix<ElemType>::AnnealBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const float annealSlope) {
+    if (a.GetDeviceId() < 0) { NOT_IMPLEMENTED; }
+    else if (a.GetMatrixType() == MatrixType::SPARSE) { NOT_IMPLEMENTED; }
+    else { GPUMatrix<ElemType>::AnnealBinaryBackward(*a.m_GPUMatrix, *output.m_GPUMatrix, *outgrad.m_GPUMatrix, *ingrad.m_GPUMatrix, annealSlope); }
+}
+
+// assign the element wise max of matrix a and matrix b to matrix a
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DoElementMaxOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, const size_t InputIndex, const Matrix<ElemType>& nWords)
+{
+    DecideAndMoveToRightDevice(a, b, nWords);
+
+    if (a.GetMatrixType() == DENSE && b.GetMatrixType() == DENSE)
+    {
+        GPUMatrix<ElemType>::DoElementMaxOf(*a.m_GPUMatrix, *b.m_GPUMatrix, InputIndex, *nWords.m_GPUMatrix);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::AddElementMaxGradient(Matrix<ElemType>& inputValue, Matrix<ElemType>& outputVale, Matrix<ElemType>& outputGradient, const size_t InputIndex, const Matrix<ElemType>& nWords)
+{
+    if (this->GetDeviceId() < 0)
+    {
+        NOT_IMPLEMENTED;
+    }
+    else
+    {
+        DecideAndMoveToRightDevice(*this, inputValue, outputVale, outputGradient);
+        DecideAndMoveToRightDevice(*this, nWords);
+
+        if (inputValue.GetMatrixType() == DENSE && outputVale.GetMatrixType() == DENSE &&
+            outputVale.GetMatrixType() == DENSE && this->GetMatrixType() == DENSE)
+        {
+            m_GPUMatrix->AddElementMaxGradient(*inputValue.m_GPUMatrix, *outputVale.m_GPUMatrix, *outputGradient.m_GPUMatrix, InputIndex, *nWords.m_GPUMatrix);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+}
+
 #pragma region Static BLAS Functions
 
 template <class ElemType>
@@ -5099,6 +5179,50 @@ void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, M
         { NOT_IMPLEMENTED; },
         { NOT_IMPLEMENTED; },
         { NOT_IMPLEMENTED; });
+}
+
+// AssginCopyOf matix b to a
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::SparseAssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
+{
+    DecideAndMoveToRightDevice(a, b);
+
+    if (b.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE && b.GetMatrixType() == MatrixType::SPARSE)
+    {
+        GPUSparseMatrix<ElemType>::AssignCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, NzOffset, RowOffset);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AddSparseNumOfNZs(const Matrix<ElemType>& a, size_t* numNZs)
+{
+
+    if (a.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE)
+    {
+        *numNZs += (*a.m_GPUSparseMatrix).NzCount();
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AddSparseColumnIndex(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const int inputIndex)
+{
+    DecideAndMoveToRightDevice(a, b);
+    if (a.GetDeviceId() >= 0 /*GPU*/ && a.GetMatrixType() == MatrixType::SPARSE && b.GetMatrixType() == MatrixType::SPARSE)
+    {
+        GPUSparseMatrix<ElemType>::AddSparseColumnIndex(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, inputIndex);
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
 }
 
 /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c</summary>

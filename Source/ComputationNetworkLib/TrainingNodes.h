@@ -2125,6 +2125,7 @@ public:
             Value().AssignInnerProductOf(InputRef(2).ValueFor(fr), *m_temp, false).ElementDivideBy(*m_sumOfWeights);
             Value() *= -numOfElements;
         }
+        //fprintf(stderr, "nRows %zu nCols %zu\n", Value().GetNumRows(), Value().GetNumCols());
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override

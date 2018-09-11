@@ -122,6 +122,7 @@ namespace CNTK
         { PrimitiveOpType::Tan, L"Tan" },
         { PrimitiveOpType::Atan, L"Atan" },
         { PrimitiveOpType::ConvolutionSequenceShape, L"ConvolutionSequenceShape" },
+        {PrimitiveOpType::ElementMaxPooling, L"ElementMaxPooling" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)

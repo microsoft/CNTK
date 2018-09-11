@@ -1314,6 +1314,119 @@ template class RowStackNode<float>;
 template class RowStackNode<double>;
 
 // -----------------------------------------------------------------------
+// SparseRowStack (input0, input1, ...)
+// stacks multiple inputs (include sparse and dense) on top of each other
+// The output is a sparse matrix
+// -----------------------------------------------------------------------
+template <class ElemType>
+class SparseRowStackNode : public ComputationNodeNonLooping<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"SparseRowStack";
+    }
+
+public:
+    DeclareConstructorFromConfig(SparseRowStackNode);
+    SparseRowStackNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+        //MarkValueNonSharable();
+    }
+
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override
+    {
+#ifdef _MSC_VER
+        auto& outputValuePtrRef = ValuePtrRef();
+#else
+        auto& outputValuePtrRef = this->template ValuePtrRef();
+#endif
+        if (outputValuePtrRef->GetMatrixType() != MatrixType::SPARSE)
+        {
+            outputValuePtrRef = std::make_shared<Matrix<ElemType>>(outputValuePtrRef->GetNumRows(),
+                outputValuePtrRef->GetNumCols(),
+                outputValuePtrRef->GetPreferredDeviceId(),
+                MatrixType::SPARSE,
+                MatrixFormat::matrixFormatSparseCSC);
+        }
+
+        auto& output = Value(); // output goes here
+
+        size_t numCols = 0;
+        size_t numRows = 0;
+        size_t numNZs = 0;
+
+        for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
+        {
+            let& input = Input(inputIndex)->Value();
+            Matrix<ElemType>::AddSparseNumOfNZs(input, &numNZs);
+            numRows += input.GetNumRows();
+            if (inputIndex == 0)
+                numCols = input.GetNumCols();
+        }
+        
+        output.Resize(numRows, numCols, numNZs);
+
+        for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
+        {
+            let& input = Input(inputIndex)->Value();
+            Matrix<ElemType>::AddSparseColumnIndex(output, input, inputIndex);
+        }
+
+        size_t *NzOffset = new size_t[numCols]();
+
+        size_t RowOffset = 0;
+        for (size_t inputIndex = 0; inputIndex < GetNumInputs(); inputIndex++)
+        {
+            let& input = Input(inputIndex)->Value();
+            Matrix<ElemType>::SparseAssignCopyOf(output, input, NzOffset, RowOffset);
+            RowOffset += input.GetNumRows();
+        }
+        delete[] NzOffset;
+    }
+
+    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        InvalidArgument("BackpropTo not supported for SparseRowStackNode");
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        // the dimension of column must be the same (i.e., the Minibatch size)
+        if (isFinalValidationPass)
+        {
+            for (int i = 0; i < GetNumInputs(); i++)
+            {
+                // the dimension of column must be the same (i.e., the Minibatch size)
+                if (i != 0 && Input(i)->GetSampleMatrixNumCols() != Input(i - 1)->GetSampleMatrixNumCols())
+                    LogicError("%ls: Minibatch layouts doesn't match between input nodes.", NodeDescription().c_str());
+            }
+
+        }
+        // calculate the row size of the output matrix
+        auto dims = Input(0)->GetSampleLayout().GetDims();
+        for (int i = 1; i < GetNumInputs(); i++)
+        {
+            dims[0] += Input(i)->GetSampleLayout().GetDims()[0];
+        }
+
+        SetDims(TensorShape(dims), HasMBLayout());
+    }
+};
+
+template class SparseRowStackNode<float>;
+template class SparseRowStackNode<double>;
+
+
+// -----------------------------------------------------------------------
 // RowRepeatNode (input) -- duplicate row(s) of a matrix multiple times
 // -----------------------------------------------------------------------
 
