@@ -146,9 +146,10 @@ private:
         NDShape &strides, const Node *node, const Variable& dataOperand, const double padValue = 0.0);
     //
     // This method computes pad values for Convolution/Pooling operations under ONNX SAME_LOWER or SAME_UPPER auto_pad. 
+    // Note: the shape format for inputWithBatchAxisShape is [N x C x D1 x D2 ... Dn], which includes batch axis.
     //
     static std::pair<std::vector<size_t>, std::vector<size_t>> CalcPaddingForSameLowerOrUpperAutoPad(
-        const Variable &input, const NDShape& kernelShape, const NDShape& strides, bool isSameUpper);
+        const NDShape& inputWithBatchAxisShape, const NDShape& kernelShape, const NDShape& strides, bool isSameUpper);
     //
     // This method computes pad values for ConvolutionTranspose operations under ONNX SAME_LOWER or SAME_UPPER auto_pad, or output_Shape. 
     //
@@ -2058,7 +2059,8 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             case ConvAutoPadType::SAME_UPPER:
             {
                 const bool isSameUpper = auto_pad == ConvAutoPadType::SAME_UPPER;
-                padsPair = CalcPaddingForSameLowerOrUpperAutoPad(inputOperand0, poolingWindowShape, strides, /*isSameUpper=*/isSameUpper);
+                const NDShape& inputWithBatchAxisShape = inputs[0].Shape();
+                padsPair = CalcPaddingForSameLowerOrUpperAutoPad(inputWithBatchAxisShape, poolingWindowShape, strides, /*isSameUpper=*/isSameUpper);
                 cntkFunction = Pooling(inputOperand0, onnxOpName == "AveragePool" ? PoolingType::Average : PoolingType::Max,
                     poolingWindowShape, strides, padsPair.first, padsPair.second, ceilOutDim, includePad, ToFixedWStringFromMultiByte(node->Name()));
                 break;
@@ -3080,22 +3082,21 @@ Variable ONNXToCNTKHelper::GetNodeOperandWithPaddingResolved(std::vector<bool> &
 }
 
 std::pair<std::vector<size_t>, std::vector<size_t>> ONNXToCNTKHelper::CalcPaddingForSameLowerOrUpperAutoPad(
-    const Variable &input, const NDShape& kernelShape, const NDShape& strides, bool isSameUpper)
+    const NDShape &inputWithBatchAxisShape, const NDShape& kernelShape, const NDShape& strides, bool isSameUpper)
 {
     // Quote here the ONNX definition for SAME_LOWER and SAME_UPPER, and the spec for outputShape and pads.
     //      SAME_UPPER or SAME_LOWER: output_spatial_shape[i] = ceil(input_spatial_shape[i] / strides_spatial_shape[i])
     //      pad_shape[i] = (output_spatial_shape[i] - 1) * strides_spatial_shape[i] + kernel_spatial_shape[i] - input_spatial_shape[i]
-    const NDShape& inputShape = input.Shape();
-    if (inputShape.Rank() <= 2)
-        LogicError("Convolution/Pooling, input must have shape [N x C x D1 x D2 x ... x Dn], instead of %ls", inputShape.AsString().c_str());
+    if (inputWithBatchAxisShape.Rank() <= 2)
+        LogicError("Convolution/Pooling, input must have shape [N x C x D1 x D2 x ... x Dn], instead of %ls", inputWithBatchAxisShape.AsString().c_str());
     std::vector<size_t> pads;
-    for (int dim = 0; dim < inputShape.Rank() - 2; dim++)
+    for (int dim = 0; dim < inputWithBatchAxisShape.Rank() - 2; dim++)
     {
         // Padding could be calcualted as: pad = (outDim - 1) * stride + kernel - inDim.
         // outDim = ceil(inDim / stride).
         size_t stride = strides[dim];
         size_t kernel = kernelShape[dim];
-        size_t inDim = inputShape[dim];
+        size_t inDim = inputWithBatchAxisShape[dim];
         size_t outDim = static_cast<size_t>(ceil(float(inDim) / stride));
         int pad = (outDim - 1) * stride + kernel - inDim;
         // Negative pad means input alone is enough and no extra pads are needed. 
@@ -3183,7 +3184,7 @@ FunctionPtr ONNXToCNTKHelper::CreatePadOpForSameLowerOrUpperAutoPad(
     const NDShape& inputShape = input.Shape();
     std::vector<size_t> begins;
     std::vector<size_t> ends;
-    std::tie<std::vector<size_t>, std::vector<size_t>>(begins, ends) = CalcPaddingForSameLowerOrUpperAutoPad(input, kernelShape, strides, isSameUpper);
+    std::tie<std::vector<size_t>, std::vector<size_t>>(begins, ends) = CalcPaddingForSameLowerOrUpperAutoPad(inputShape, kernelShape, strides, isSameUpper);
 
     if (std::all_of(begins.begin(), begins.end(), [](size_t pad) { return (pad == 0); })
         && std::all_of(ends.begin(), ends.end(), [](size_t pad) { return (pad == 0); }))
