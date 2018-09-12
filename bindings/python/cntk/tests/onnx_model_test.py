@@ -81,8 +81,6 @@ skip_model_names = [
     'test_top_k',
     'test_transpose_default',
     'test_upsample_nearest',
-    'test_averagepool_2d_pads',
-    'test_maxpool_2d_pads',
 ]
 
 skip_round_trip_model_names = [
@@ -134,8 +132,6 @@ skip_round_trip_model_names = [
     'test_top_k',
     'test_transpose_default',
     'test_upsample_nearest',
-    'test_averagepool_2d_pads',
-    'test_maxpool_2d_pads',
 ]
 
 @pytest.mark.parametrize('model_name, round_trip', 

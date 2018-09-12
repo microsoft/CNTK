@@ -244,20 +244,66 @@ public:
                 col += factorCol * coord;
                 factorCol *= (int)m_inputShape[i];
 
+                // 'key' is an offset that can be computed for each output cell.
+                // It is used to map from the output cell, to the effective input kernel mask.
+                //   (Pooling ignores padded NaN values, so kernel mask is used)
+                // The most essential point about 'key' is that there must never be a collision.
+                // That is, there must not exist two cells which have a different kernel mask, but producing the same key value.
+                // E.g., consider case of input shape: [5], stride: [1], kernel: [3], pad: [1, 1].
+                //          input:             [ x1 x2 x3 x4 x5 ]
+                //          padded input:  [ NaN x1 x2 x3 x4 x5 NaN ]
+                //          output:            [ y1 y2 y3 y4 y5 ]
+                //      There are 3 kernel masks for this case.
+                //      Case 1: For output cell y1, the effective kernel mask is
+                //          kernel mask:    [ 0  1  1  ]
+                //       => padded input:   [ __ x1 x2 ]
+                //      Case 2: For output cell y2(and y3,y4), the effective kernel mask is
+                //          kernel mask:    [ 1  1  1  ]
+                //       => padded input:   [ x1 x2 x3 ]
+                //      Case 3: For output cell y5, the effective kernel mask is
+                //          kernel mask:    [ 1  1  0  ]
+                //       => padded input:   [ x4 x5 __ ]
+                //      Thus there will be a total of 3 different 'key' values. y2, y3 and y4 should produce the same 'key' values. 
                 int width = (int)m_kernelShape[i];
                 int half = (width - 1) / 2;
+                // 'min' stands for the first input index along this axis that is covered by the current kernel.
+                //  if negative, -min is equal to the number of padded cells that are covered.
                 int min = coord - half;
+                // 'lim' stands for the last input index + 1 along this axis that is covered by the current kernel.
+                //  if lim > inputShape, lim - inputShape is equal to the number of padded cells that are covered.
                 int lim = min + width;
                 if (min < 0)
+                    // Case 1.
+                    // When min < 0, the current kernel covers (lower)padded values, thus the offset is recorded so that
+                    // a map from 'key' to the kernel mask can be established.
                     dkey[i] = min;
                 else if (lim > m_inputShape[i])
+                    // Case 3.
+                    // Similarly, when lim > inputShape, the current kernel covers (upper)padded values.
                     dkey[i] = lim - (int)m_inputShape[i];
                 else
+                    // Case 2.
+                    // No padded values are covered, the kernel mask is all ones and is shared.
                     dkey[i] = 0;
-                int dk = dkey[i] + half;
-                assert(0 <= dk);
-                assert(dk < width);
-                key = key * width + dk;
+                bool isAutoPad = GetAutoPad(i);
+                // Ignore hi/lo values when auto padding is true.
+                int hi = isAutoPad ? 0 : (int)m_upperPad[m_upperPad.size() == 1 ? 0 : i];
+                int lo = isAutoPad ? 0 : (int)m_lowerPad[m_lowerPad.size() == 1 ? 0 : i];
+                // dk contributes to the 'key' value for this particular axis.
+                // There are two properties for dk that must be satisfied.
+                //  1. dk \in (0, width + hi + lo].
+                //  2. there must not exist two cells which have a different kernel mask, but producing the same dk value.
+                // Both are required such that colision is avoided for 'key' when dk values for different axes are accumulated together.
+                // With careful calculations, we can show
+                // dk \in | [ half + 1, half + lo + 1)                      , min < 0
+                //        | ( half + lo + 1, width + hi + lo - half + 1)    , lim - inputShape > 0
+                //        | { half + lo + 1}                                , otherwise
+                // where half = (width - 1) / 2 and width = kernelShape.
+                // Since half \in [0, width), we can conclude dk \in [1, width + hi + lo + 1) = (0, width + hi + lo].
+                int dk = dkey[i] + half + lo + 1;
+                assert(0 < dk);
+                assert(dk <= (width + hi + lo));
+                key = key * (width + hi + lo) + dk;
             }
             assert(cur == 0);
             assert(0 <= kern);
