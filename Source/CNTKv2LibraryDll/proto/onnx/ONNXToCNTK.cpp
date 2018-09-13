@@ -2426,15 +2426,33 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Max")
     {
-        // TODO: Support more than 2 inputs.
-        FunctionPtr cntkFunction = ElementMax(inputs[0], inputs.size() > 1 ? inputs[1] : inputs[0], ToFixedWStringFromMultiByte(node->Name()));
-        return cntkFunction;
+        if (inputs.size() > 1)
+        {
+            FunctionPtr cntkFunction = ElementMax(inputs[0], inputs[1], ToFixedWStringFromMultiByte(node->Name()));
+            for (int i = 2; i < inputs.size(); i++) {
+                cntkFunction = ElementMax(cntkFunction, inputs[i], ToFixedWStringFromMultiByte(node->Name() + "_" + std::to_string(i)));
+            }
+            return cntkFunction;
+        }
+        else
+        {
+            return ElementMax(inputs[0], inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+        }
     }
     else if (onnxOpName == "Min")
     {
-        // TODO: Support more than 2 inputs.
-        FunctionPtr cntkFunction = ElementMin(inputs[0], inputs.size() > 1 ? inputs[1] : inputs[0], ToFixedWStringFromMultiByte(node->Name()));
-        return cntkFunction;
+        if (inputs.size() > 1)
+        {
+            FunctionPtr cntkFunction = ElementMin(inputs[0], inputs[1], ToFixedWStringFromMultiByte(node->Name()));
+            for (int i = 2; i < inputs.size(); i++) {
+                cntkFunction = ElementMin(cntkFunction, inputs[i], ToFixedWStringFromMultiByte(node->Name() + "_" + std::to_string(i)));
+            }
+            return cntkFunction;
+        }
+        else
+        {
+            return ElementMin(inputs[0], inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+        }
     }
     else if (onnxOpName == "Sum")
     {
