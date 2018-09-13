@@ -1,4 +1,4 @@
-set(CNTK_VERSION 2.5.1)
+set(CNTK_VERSION 2.6.0)
 
 # ----------------------------------------------------------------------
 # UnsupportedComponentError
