@@ -24,6 +24,9 @@ There is a breaking change in the **depth_to_space** and **space_to_depth** oper
 the permutation for how the depth dimension is placed as blocks in the spatial dimensions, and vice-versa, has been changed. Please refer to the updated doc
 examples for these two ops to see the change.
 
+### Tan and Atan
+Added support for trigonometric ops `Tan` and `Atan`.
+
 ### ELU
 Added support for `alpha` attribute in ELU op.
 
@@ -33,10 +36,12 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 ## Bug fixes
 - Updated doc for Convolution layer to include group and dilation arguments.
 - Added improved input validation for group convolution.
+- Updated `LogSoftMax` to use more numerically stable implementation.
 
 
 ## ONNX
 ### Updates
+- Updated CNTK's ONNX import/export to use ONNX 1.2 spec.
 - Major update to how batch and sequence axes are handled in export and import. As a result, the complex scenarios and edge cases are handled accurately.
 - Updated CNTK's ONNX `BatchNormalization` op export/import to latest spec.
 - Added model domain to ONNX model export.
@@ -52,10 +57,15 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 - Made CNTK broadcast ops compatible with ONNX specification.
 - Handle to_batch, to_sequence, unpack_batch, sequence.unpack ops in CNTK ONNX exporter.
 - ONNX tests to export ONNX test cases for other toolkits to run and to validate.
+- Fixed `Hardmax`/`Softmax`/`LogSoftmax` import/export.
+- Added support for `Select` op export.
+- Added import/export support for several trigonometric ops.
 
 
 ### Bug or minor fixes:
 - Updated LRN op to match ONNX 1.2 spec where the `size` attribute has the semantics of diameter, not radius.
+- Updated `Min`/`Max` import implementation to handle variadic inputs.
+- Fixed possible file corruption when resaving on top of existing ONNX model file.
 
 ## Misc
 
