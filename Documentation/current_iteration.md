@@ -18,6 +18,21 @@ The comparison numbers for this single node are as follows:
 | New implementation  | 6.581  | 9.963  | 5  |
 | Speedup/savings   Approx.  | 30%  Approx.  | 65-75%   Approx.  | 87% |
 
+## Sequential Convolution
+The implementation of sequential convolution in CNTK has been updated. The updated implementation creates a separate sequential convolution layer. Different from regular convolution layer, this operation convolves also on the dynamic axis(sequence), and filter_shape[0] is applied to that axis. The updated implementation supports broader cases, such as where stride > 1 for the sequence axis.
+
+For example, a sequential convolution over a batch of one-channel black-and-white images. The images have the same fixed height of 640, but each with width of variable lengths. The width is then represented by sequential axis. Padding is enabled, and strides for both width and height are 2.
+
+     >>> f = SequentialConvolution((3,3), reduction_rank=0, pad=True, strides=(2,2), activation=C.relu)
+     >>> x = C.input_variable(**Sequence[Tensor[640]])
+     >>> x.shape
+         (640,)
+     >>> h = f(x)
+     >>> h.shape
+         (320,)
+     >>> f.W.shape
+         (1, 1, 3, 3)
+
 ## Operators
 ### depth_to_space and space_to_depth
 There is a breaking change in the **depth_to_space** and **space_to_depth** operators. These have been updated to match ONNX specification, specifically
@@ -30,6 +45,9 @@ Added support for trigonometric ops `Tan` and `Atan`.
 ### ELU
 Added support for `alpha` attribute in ELU op.
 
+### Convolution
+Updated auto padding algorithms of `Convolution` to produce symmetric padding at best effort on CPU, without affecting the final convolution output values. This update increases the range of cases that could be covered by MKL API and improves the performance, E.g. ResNet50.
+
 ## Default arguments order
 There is a breaking change in the **arguments** property in CNTK python API. The default behavior has been updated to return arguments in python order instead of in C++ order. This way it will return arguments in the same order as they are fed into ops. If you wish to still get arguments in C++ order, you can simply override the global option. This change should only affect the following ops: Times, TransposeTimes, and Gemm(internal). 
 
@@ -37,7 +55,13 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 - Updated doc for Convolution layer to include group and dilation arguments.
 - Added improved input validation for group convolution.
 - Updated `LogSoftMax` to use more numerically stable implementation.
-
+- Fixed Gather op's incorrect gradient value.
+- Added validation for 'None' node in python clone substitution.
+- Added validation for padding channel axis in convolution.
+- Added CNTK native default lotusIR logger to fix the "Attempt to use DefaultLogger" error when loading some ONNX models.
+- Added proper initialization for ONNX TypeStrToProtoMap.
+- Updated python doctest to handle different print format for newer version numpy(version >= 1.14).
+- Fixed Pooling(CPU) to produce correct output values when kernel center is on padded input cells.
 
 ## ONNX
 ### Updates
@@ -60,10 +84,19 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 - Fixed `Hardmax`/`Softmax`/`LogSoftmax` import/export.
 - Added support for `Select` op export.
 - Added import/export support for several trigonometric ops.
-
+- Updated CNTK support for ONNX `MatMul` op.
+- Updated CNTK support for ONNX `Gemm` op.
+- Updated CNTK's ONNX `MeanVarianceNormalization` op export/import to latest spec.
+- Updated CNTK's ONNX `LayerNormalization` op export/import to latest spec.
+- Updated CNTK's ONNX `PRelu` op export/import to latest spec.
+- Updated CNTK's ONNX `Gather` op export/import to latest spec.
+- Updated CNTK's ONNX `ImageScaler` op export/import to latest spec.
+- Updated CNTK's ONNX `Reduce` ops export/import to latest spec.
+- Updated CNTK's ONNX `Flatten` op export/import to latest spec.
+- Added CNTK support for ONNX `Unsqueeze` op.
 
 ### Bug or minor fixes:
-- Updated LRN op to match ONNX 1.2 spec where the `size` attribute has the semantics of diameter, not radius.
+- Updated LRN op to match ONNX 1.2 spec where the `size` attribute has the semantics of diameter, not radius. Added validation if LRN kernel size is larger than channel size.
 - Updated `Min`/`Max` import implementation to handle variadic inputs.
 - Fixed possible file corruption when resaving on top of existing ONNX model file.
 
