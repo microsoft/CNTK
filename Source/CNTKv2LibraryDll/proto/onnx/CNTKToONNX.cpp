@@ -3292,10 +3292,17 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         {
             inputArgType = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
 
-            // In case of BatchNormalization, if data (input[0]) is of type FP16, then all BN stats(inputs[1:4])
-            // need to be converted from FP32 to FP16 prior to getting exported to ONNX.
-            if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4) && src->Inputs()[0].GetDataType() == DataType::Float16)
-                input = Utils::ConvertVariableType<float, float16>(input, true);
+            if (isConstant && cntkOpName == "BatchNormalization" && (inputIndex > 0 && inputIndex <= 4))
+            {
+                // In case of BatchNormalization, if data (input[0]) is of type FP16, then all BN stats(inputs[1:4])
+                // need to be converted from FP32 to FP16 prior to getting exported to ONNX
+                if (src->Inputs()[0].GetDataType() == DataType::Float16)
+                    input = Utils::ConvertVariableType<float, float16>(input, true);
+
+                // This is a workaround allowing CNTK V1 pretrained models to continue running after removal of sequence axis from input
+                if (input.Shape().Rank() > 1)
+                    inputArgType = ToTypeProto(input.Shape().SubShape(0, 1), input.HasBatchAxis(), input.HasSequenceAxis());
+            }
         }
 
         // TODO: if it is an identity op, we shall peek its input node to find the correct tensor element type.
@@ -3909,6 +3916,13 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
                 LogicError("Node '%S': kernel shape and strides dimensionality does not match.", src->AsString().c_str());
             }
             
+            // This is a workaround allowing CNTK V1 pretrained models to continue running after removal of sequence axis from inuput
+            if (src->Inputs()[0].Shape().Rank() - 1 != kernelShape.Rank() && kernelShape.Dimensions()[kernelShape.Rank() - 1] == 1)
+                kernelShape = kernelShape.SubShape(0, kernelShape.Rank() - 1);
+
+            if (src->Inputs()[0].Shape().Rank() - 1 != strides.Rank() && strides.Dimensions()[strides.Rank() - 1] == 1)
+                strides = strides.SubShape(0, strides.Rank() - 1);
+
             node->AddAttribute("kernel_shape", ToINTS(kernelShape));
             node->AddAttribute("strides", ToINTS(strides));
 
