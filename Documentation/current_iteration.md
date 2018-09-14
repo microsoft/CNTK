@@ -100,5 +100,41 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 - Updated `Min`/`Max` import implementation to handle variadic inputs.
 - Fixed possible file corruption when resaving on top of existing ONNX model file.
 
+## .Net Support
+The Cntk.Core.Managed library has officially been converted to .Net Standard and supports .Net Core and .Net Framework applications on both Windows and Linux. Starting from this release, .Net developers should be able to restore CNTK Nuget packages using new .Net SDK style project file with package management format set to PackageReference.
+
+The following C# code now works on both Windows and Linux:
+
+     >>> var weightParameterName = "weight";
+	 >>> var biasParameterName = "bias";
+	 >>> var inputName = "input";
+	 >>> var outputDim = 2;
+	 >>> var inputDim = 3;
+	 >>> Variable inputVariable = Variable.InputVariable(new int[] { inputDim }, DataType.Float, inputName);
+	 >>> var weightParameter = new Parameter(new int[] { outputDim, inputDim }, DataType.Float, 1, device, weightParameterName);
+	 >>> var biasParameter = new Parameter(new int[] { outputDim }, DataType.Float, 0, device, biasParameterName);
+	 >>> 
+     >>> Function modelFunc = CNTKLib.Times(weightParameter, inputVariable) + biasParameter;
+
+For example, simply adding an ItemGroup clause in the .csproj file of a .Net Core application is sufficient:
+     >>> <Project Sdk="Microsoft.NET.Sdk">
+     >>>
+     >>>   <PropertyGroup>
+     >>>     <TargetFramework>netcoreapp2.1</TargetFramework>
+     >>>     <Platforms>x64</Platforms>
+     >>>   </PropertyGroup>
+     >>>
+     >>>   <ItemGroup>
+     >>>     <PackageReference Include="CNTK.GPU" Version="2.6.0" />
+     >>>   </ItemGroup>
+     >>>
+     >>> </Project>
+
+### Bug or minor fixes:
+- Fixed C# string and char to native wstring and wchar UTF conversion issues on Linux.
+- Fixed multibyte and wide character conversions across the codebase.
+- Fixed Nuget package mechanism to pack for .Net Standard.
+- Fixed a memory leak issue in Value class in C# API where Dispose was not called upon object destruction.
+
 ## Misc
 
