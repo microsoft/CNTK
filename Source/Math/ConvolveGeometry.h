@@ -6,6 +6,8 @@
 
 #include "Basics.h"
 #include "TensorShape.h"
+#include "fast_divmod.h"
+#include "omp.h"
 #include <iterator>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -204,6 +206,16 @@ public:
         std::map<int, std::pair<int, int>>  mpkeystarts;
         mpkeystarts[keyInterior] = std::make_pair(0, 0);
 
+        std::vector<int> dims;
+        std::vector<fast_divmod> divmods_dim;
+        std::vector<fast_divmod> divmods_map;
+        for (size_t i = 0; i < dimCount; i++)
+        {
+            dims.push_back((int)(m_outputShape[i] / GetMapCount(i)));
+            divmods_dim.push_back(fast_divmod(dims[i]));
+            divmods_map.push_back(fast_divmod((int)GetMapCount(i)));
+        }
+
         IntVec dkey(dimCount);
         for (size_t row = 0; row < outputSize; row++)
         {
@@ -218,9 +230,14 @@ public:
             int cur = (int)row;
             for (size_t i = 0; i < dimCount; i++)
             {
-                int dim = (int)(m_outputShape[i] / GetMapCount(i));
-                int coord = cur % dim;
-                cur /= dim;
+                int dim = dims[i];
+                int coord = 0;
+
+                divmods_dim[i].divmod(cur, cur, coord);
+
+                //int dim = (int)(m_outputShape[i] / GetMapCount(i));
+                //int coord = cur % dim;
+                //cur /= dim;
 
                 // Kernel
                 if (!GetSharing(i))
@@ -232,8 +249,12 @@ public:
                 int maps = (int)GetMapCount(i);
                 if (maps > 1)
                 {
-                    kern += factorKern * (cur % maps);
-                    cur /= maps;
+                    int curModMap = 0;
+                    divmods_map[i].divmod(cur, cur, curModMap);
+                    kern += factorKern * curModMap;
+                    // add here
+                    //kern += factorKern * (cur % maps);
+                    //cur /= maps;
                     factorKern *= maps;
                 }
 
@@ -388,6 +409,7 @@ public:
             m_mpRowCol[row] = col;
             m_mpRowIwht[row] = kern * (int)kernelSize;
         }
+
         return true;
     }
 

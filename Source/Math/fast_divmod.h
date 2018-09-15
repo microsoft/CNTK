@@ -13,7 +13,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 namespace detail {
 
+#ifdef __CUDA_ARCH__
 __host__ __device__ __forceinline__
+#else
+inline
+#endif
 int mulhi(const int M, const int n) {
 #ifdef __CUDA_ARCH__
   return __mulhi(M, n);
@@ -30,9 +34,13 @@ class fast_divmod {
   fast_divmod(int d = 1) : d_(d), a_(0) {
     find_magic_numbers();
   }
+#ifdef __CUDA_ARCH__
   __host__ __device__
+#endif
   fast_divmod(const fast_divmod& other) : d_(other.d_), a_(other.a_), s_(other.s_), M_(other.M_) {};
+#ifdef __CUDA_ARCH__
   __host__ __device__
+#endif
   int div(int n) {
     // get high 32 bits of M * n
     int q = detail::mulhi(M_, n);
@@ -48,7 +56,9 @@ class fast_divmod {
 
     return q;
   }
+#ifdef __CUDA_ARCH__
   __host__ __device__
+#endif
   void divmod(int n, int& q, int& r) {
     // handle special cases
     if (d_ == 1) {
