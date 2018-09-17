@@ -131,6 +131,7 @@ namespace CNTK
             (op == PrimitiveOpType::EditDistanceError) ||
             (op == PrimitiveOpType::ClassificationError) ||
             (op == PrimitiveOpType::ForwardBackward) ||
+            (op == PrimitiveOpType::RNNT) ||
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::LambdaRank) ||
             (op == PrimitiveOpType::NDCG) ||
@@ -975,6 +976,15 @@ namespace CNTK
                             assert(m_inputs.size() == 2);
                             if (m_inputs[0].Shape().TotalSize() != m_inputs[1].Shape().TotalSize())
                                 InvalidArgument("ForwardBackward: The shapes of operands '%S' and '%S' must have the same total size.", m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
+
+                            outputShape = {};
+                            break;
+                        }
+                        case PrimitiveOpType::RNNT:
+                        {
+                            assert(m_inputs.size() == 3);
+                            if (m_inputs[0].Shape().TotalSize() != m_inputs[1].Shape().TotalSize())
+                                InvalidArgument("RNNT: The shapes of operands '%S' and '%S' must have the same total size.", m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
 
                             outputShape = {};
                             break;

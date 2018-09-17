@@ -5783,6 +5783,80 @@ __global__ void _assignTotalScore(ElemType *betaScore,
 }
 
 template<class ElemType>
+__global__ void _assignUserOp1(ElemType* us, 
+                              ElemType *in1,
+                              ElemType *in2,
+                              int BS,
+                              int frameNum,
+                              int phoneNum,
+                              int uttFrametoChanId,
+                              int uttPhonetoChanId,
+                              int uttBeginFrameId,
+                              int uttBeginPhoneId,
+                              int uttBeginOutId,
+                              int numParallelSeq,
+                              int numPhoneParallelSeq)
+{
+    const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    if(k < BS && t < frameNum )
+    {
+        for(int u=0; u< phoneNum; u++)
+        {
+            //printf("K:%d,t:%d,u:%d\n", k,t,u);    
+            us[IDX2C(k, uttBeginOutId+t*phoneNum+u,BS)] = in1[IDX3C(k,t+uttBeginFrameId,uttFrametoChanId, BS, numParallelSeq)] +
+             in2[IDX3C(k,u+uttBeginPhoneId,uttPhonetoChanId,BS,numPhoneParallelSeq)];
+        }
+    }
+}
+
+template<class ElemType>
+__global__ void _assignUserOp2(ElemType* us, 
+                              ElemType *in1,  
+                              int nRow,                            
+                              int frameNum,
+                              int phoneNum,
+                              int frameBeginId,
+                              int phoneBeginId,
+                              int frameChanId,
+                              int phoneChanId,
+                              int outBeinId,
+                              int numParallelSequences,
+                              int numPhoneParallelSequences,
+                              int s,
+                              int Idx)
+{
+    const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    
+    if(Idx == 0)
+    {
+        if(k < nRow && t < frameNum)
+        {
+            int timeId = (t+frameBeginId) * numParallelSequences + frameChanId;
+            for (int u=0; u< phoneNum; u++)
+            {
+                int tuId= outBeinId + t * phoneNum + u;
+                us[IDX2C(k,timeId,nRow)] += in1[IDX2C(k, tuId,nRow)];
+            }
+        }
+    }
+    else
+    {
+        if(k < nRow && t < phoneNum)
+        {
+            int timeId = (t+phoneBeginId) * numPhoneParallelSequences + phoneChanId;
+            for (int u=0; u< frameNum; u++)
+            {
+                int tuId= outBeinId + u * phoneNum + t;
+                us[IDX2C(k,timeId,nRow)] += in1[IDX2C(k, tuId,nRow)];
+            }
+        }
+    }
+            
+}
+
+template<class ElemType>
 __global__ void _assignOneHot(ElemType *indices,
                                   ElemType *targetBuffer,
                                   size_t num_class,

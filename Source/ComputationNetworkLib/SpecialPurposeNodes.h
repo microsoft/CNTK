@@ -1478,5 +1478,283 @@ public:
 };
 
 template class CustomProxyOpNode<float>;
+// -----------------------------------------------------------------------
+// RNNTNode (prediction, transcription )
+// RNNT training criterion, primarily based on the paper "Sequence Transduction with Recurrent Neural Networks", https://arxiv.org/pdf/1211.3711.pdf
+// blankTokenId (input): id of the blank token. If specified as SIZE_MAX, will be replaced with (numberOfLabels - 1)
+// 
+// -----------------------------------------------------------------------
+
+template<class ElemType>
+class RNNTNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"RNNT";
+    }
+public:
+    RNNTNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankTokenId = SIZE_MAX, int delayConstraint = -1) :
+        Base(deviceId, name), m_blankTokenId(blankTokenId)
+    {
+    }
+
+    RNNTNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RNNTNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        // Left node must be a scalar
+        if (inputIndex == 0)  //left derivative
+        {
+            BackpropToLeft(*m_derivativeForF, InputRef(inputIndex).Gradient(), Gradient());
+        }
+        else if (inputIndex == 1)  //backprop to transcription f
+        {
+            FrameRange frameRange(InputRef(1).GetMBLayout());
+            BackpropToF(InputRef(inputIndex).Gradient(), Gradient(), *m_derivativeForF);
+            InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
+            //InputRef(inputIndex).Gradient().Print("derivative for f");
+        }
+        else if (inputIndex == 2)  //backprop to transcription g
+        {
+            FrameRange frameRange(InputRef(2).GetMBLayout());
+            BackpropToG(InputRef(inputIndex).Gradient(), Gradient(), *m_derivativeForG);
+            InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
+            //InputRef(inputIndex).Gradient().Print("derivative for g");
+        }
+        else
+            RuntimeError("RNNTNode criterion expects only two inputs: labels and network output.");
+    }
+
+    void BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
+        const Matrix<ElemType>& gradientValues)
+    {
+#if DUMPOUTPUT
+        logSoftmaxOfRight.Print("RNNTNode Partial-logSoftmaxOfRight");
+        gradientValues.Print("RNNTNode Partial-gradientValues");
+        inputGradientValues.Print("RNNTNode Partial-Left-in");
+#endif
+
+        Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
+
+#if DUMPOUTPUT
+        inputGradientValues.Print("RNNTNode Partial-Left-out");
+#endif
+    }
+
+    void BackpropToF(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+        Matrix<ElemType> &RNNTDerivative)
+    {
+#if DUMPOUTPUT        
+        inputFunctionValues.Print("RNNTNode Partial-inputFunctionValues");
+        gradientValues.Print("RNNTNode Partial-gradientValues");
+        inputGradientValues.Print("RNNTNode Partial-Right-in");
+#endif  
+        //sum u for RNNT Derivative
+        //m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 0);
+        //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
+        // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
+        Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, inputGradientValues);
+
+#if DUMPOUTPUT
+        inputGradientValues.Print("RNNTNode Partial-Right");
+#endif
+    }
+
+    void BackpropToG(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+        Matrix<ElemType> &RNNTDerivative)
+    {
+#if DUMPOUTPUT        
+        inputFunctionValues.Print("RNNTNode Partial-inputFunctionValues");
+        gradientValues.Print("RNNTNode Partial-gradientValues");
+        inputGradientValues.Print("RNNTNode Partial-Right-in");
+#endif  
+        //sum u for RNNT Derivative
+        //m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 1);
+        //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
+        // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
+        Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, inputGradientValues);
+
+#if DUMPOUTPUT
+        inputGradientValues.Print("RNNTNode Partial-Right");
+#endif
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        /*auto MBLayoutPhone = InputRef(2).GetMBLayout();
+        auto MBLayoutFrame = InputRef(1).GetMBLayout();
+        size_t numchannelphone = MBLayoutPhone->GetNumParallelSequences();
+        size_t numchannelframe = MBLayoutFrame->GetNumParallelSequences();
+
+        size_t numuttphone = MBLayoutPhone->GetNumSequences();
+        size_t numuttframe = MBLayoutFrame->GetNumSequences();
+
+        fprintf(stderr, "numchannelphone:%zu, numchannelframe:%zu, numuttphone:%zu, numuttframe:%zu\n", numchannelphone, numchannelframe, numuttphone, numuttframe);
+
+        for (const auto& seq : MBLayoutFrame->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {               
+                continue;
+            }
+
+            fprintf(stderr, "FRAME: channelID:%zu beginframe:%zu, numframe:%zu\n", seq.s, seq.tBegin, seq.GetNumTimeSteps());
+        }
+        for (const auto& seq : MBLayoutPhone->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+
+            fprintf(stderr, "PHONE: channelID:%zu beginframe:%zu, numframe:%zu\n", seq.s, seq.tBegin, seq.GetNumTimeSteps());
+        }*/
+         
+//        size_t numParallelSeq = InputRef(0).GetMBLayout()->GetNumParallelSequences();
+        //size_t numSeq = MBLayoutPhone->GetNumSequences();
+        //size_t maxPhoneNum = 
+        //m_outputDensity->AssignUserOp1(InputRef(1).Value(), InputRef(2).Value(), numParallelSeq);
+        //m_outputDensity->Print("h");
+        //m_outputLogDistribution->AssignLogSoftmaxOf(*m_outputDensity, true);
+
+        //m_outputDensity->Resize(1, 1);
+
+
+        //m_RNNTDerivative->SwitchToMatrixType(m_outputLogDistribution->GetMatrixType(), m_outputLogDistribution->GetFormat(), false);
+        //m_RNNTDerivative->Resize(m_outputLogDistribution->GetNumRows(), m_outputLogDistribution->GetNumCols());
+
+        FrameRange fr(InputRef(0).GetMBLayout());
+        InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
+        // compute CTC score
+        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_maxIndexes, *m_derivativeForF, *m_derivativeForG,  InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId );
+
+#if NANCHECK
+        functionValues.HasNan("RNNTNode");
+#endif
+#if DUMPOUTPUT
+        functionValues.Print("RNNTNode");
+#endif
+    }
+
+    virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr; // no layout
+
+        if (isFinalValidationPass)
+        {
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() && // match vector dimension
+                Input(0)->HasMBLayout() &&
+                Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
+            {
+                LogicError("The Matrix dimension in the RNNTNode operation does not match.");
+            }
+
+            auto leftNode = dynamic_pointer_cast<LabelsToGraphNode<ElemType>>(Input(0));
+            if (!leftNode)
+                LogicError("RNNTNode: Please pass LabelsToGraph(labels) for second argument");
+        }
+
+        SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+    }
+
+    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<RNNTNode<ElemType>>(nodeP);
+
+            node->m_derivativeForF->SetValue(*m_derivativeForG);
+            //node->m_outputDistribution->SetValue(*m_outputDistribution);
+            node->m_derivativeForG->SetValue(*m_derivativeForF);
+            node->m_maxIndexes->SetValue(*m_maxIndexes);
+            node->m_maxValues->SetValue(*m_maxValues);
+            node->m_delayConstraint = m_delayConstraint;
+            //node->m_RNNTDerivative->SetValue(*m_RNNTDerivative);
+            node->m_tmpMatrix->SetValue(*m_tmpMatrix);
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_derivativeForG, matrixPool);
+        RequestMatrixFromPool(m_derivativeForF, matrixPool);
+        //RequestMatrixFromPool(m_outputDistribution, matrixPool);
+        RequestMatrixFromPool(m_maxIndexes, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
+        //RequestMatrixFromPool(m_RNNTDerivative, matrixPool);
+        RequestMatrixFromPool(m_tmpMatrix, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_derivativeForG, matrixPool);
+        ReleaseMatrixToPool(m_derivativeForF, matrixPool);
+        //ReleaseMatrixToPool(m_outputDistribution, matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes, matrixPool);
+        ReleaseMatrixToPool(m_maxValues, matrixPool);
+        //ReleaseMatrixToPool(m_RNNTDerivative, matrixPool);
+        ReleaseMatrixToPool(m_tmpMatrix, matrixPool);
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        Base::UpdateFunctionMBSize();
+
+        size_t cols = Input(0)->Value().GetNumCols();
+        m_maxIndexes->Resize(1, cols);
+        m_maxValues->Resize(1, cols);
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_delayConstraint;
+        fstream << m_blankTokenId;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_delayConstraint;
+        fstream >> m_blankTokenId;
+    }
+
+    int DelayConstraint() { return m_delayConstraint; }
+    size_t BlankTokenId() { return m_blankTokenId; }
+
+protected:
+    virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+    shared_ptr<Matrix<ElemType>> m_outputDensity;
+   // shared_ptr<Matrix<ElemType>> m_outputDistribution;
+    shared_ptr<Matrix<ElemType>> m_derivativeForF;
+    shared_ptr<Matrix<ElemType>> m_maxIndexes;
+    shared_ptr<Matrix<ElemType>> m_maxValues;
+    shared_ptr<Matrix<ElemType>> m_derivativeForG;
+    shared_ptr<Matrix<ElemType>> m_tmpMatrix;
+
+    msra::lattices::GammaCalculation<ElemType> m_GammaCal;
+    size_t m_blankTokenId;
+    int m_delayConstraint;
+};
+
+template class RNNTNode<float>;
+template class RNNTNode<double>;
 
 } } }

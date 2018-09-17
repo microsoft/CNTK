@@ -6230,6 +6230,109 @@ Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob,
     return *this;
 }
 
+// numParallelSequences (input): num of parallel sequences
+// mbsize (input): the maximum channel frame number
+// blankTokenId (input): id of the CTC blank token
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
+//      delayConstraint=-1 means no constraint
+template<class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+    const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution,
+    const vector<size_t>& uttPhoneToChanInd, const vector<size_t> & uttPhoneBeginIdx,
+    const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
+    Matrix<ElemType>& totalScore, const size_t blankTokenId, Matrix<ElemType>& m_derivativeForF, Matrix<ElemType>& m_derivativeForG, const int delayConstraint, const bool isColWise)
+{
+    //DecideAndMoveToRightDevice(prob, *this);
+    
+    _transferToDevice(CPUDEVICE);
+    prob._transferToDevice(CPUDEVICE);
+    totalScore._transferToDevice(CPUDEVICE);
+    m_derivativeForF._transferToDevice(CPUDEVICE);
+    m_derivativeForG._transferToDevice(CPUDEVICE);
+    
+    alpha.Resize(phoneSeq.GetNumRows(), numParallelSequences*maxFrameNum);
+    beta.Resize(phoneSeq.GetNumRows(), numParallelSequences*maxFrameNum);
+    Resize(prob.GetNumRows(), prob.GetNumCols());
+
+    alpha.SetValue(LZERO);
+    beta.SetValue(LZERO);
+    SetValue(LZERO);
+    SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
+    m_derivativeForG.Resize(prob.GetNumRows(), maxPhoneNum*numPhoneParallelSequences);
+    m_derivativeForF.Resize(prob.GetNumRows(), maxFrameNum*numParallelSequences);
+    m_derivativeForF.SetValue(0.0);
+    m_derivativeForG.SetValue(0.0);
+    DISPATCH_MATRIX_ON_FLAG(&prob,
+        this,
+        this->m_CPUMatrix->AssignRNNTScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, uttFrameToChanInd, uttFrameBeginIdx, 
+            uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_CPUMatrix, blankTokenId, *m_derivativeForF.m_CPUMatrix,
+            *m_derivativeForG.m_CPUMatrix, delayConstraint, isColWise),
+        this->m_GPUMatrix->AssignRNNTScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, uttFrameToChanInd, uttFrameBeginIdx,
+            uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_GPUMatrix, blankTokenId, *m_derivativeForF.m_GPUMatrix,
+            *m_derivativeForG.m_GPUMatrix, delayConstraint, isColWise),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED
+    );
+
+    return *this;
+}
+
+//user defined matrix operation 
+//this one is for RNN T output = input1(k,t) + input2(k,u).
+//inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
+template<class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
+    const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
+    const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
+{
+    
+    //in1._transferToDevice(CPUDEVICE);
+    //in2._transferToDevice(CPUDEVICE);
+    //_transferToDevice(CPUDEVICE);
+    DecideAndMoveToRightDevice(in1, *this);
+    //SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
+    //in1.Print("f");
+    //in2.Print("g");
+    DISPATCH_MATRIX_ON_FLAG(&in1,
+        this,
+        this->m_CPUMatrix->AssignUserOp1(*in1.m_CPUMatrix, *in2.m_CPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, 
+            uttFrameNum, uttPhoneNum, totalcol, numParallelSequences, numPhoneParallelSequences),
+        this->m_GPUMatrix->AssignUserOp1(*in1.m_GPUMatrix, *in2.m_GPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, 
+            uttFrameNum, uttPhoneNum, totalcol, numParallelSequences, numPhoneParallelSequences),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED
+    );
+
+    return *this;
+}
+
+//user defined matrix operation 
+//this one is for RNN T output = sum of u of (input1(k,t,u)).
+
+template<class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
+    const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
+    const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
+{
+
+    //in1._transferToDevice(CPUDEVICE);
+    //_transferToDevice(CPUDEVICE);
+    DecideAndMoveToRightDevice(in1, *this);
+    //SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&in1,
+        this,
+        this->m_CPUMatrix->AssignUserOp2(*in1.m_CPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx),
+        this->m_GPUMatrix->AssignUserOp2(*in1.m_GPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED
+    );
+
+    return *this;
+}
 #pragma endregion Static BLAS Functions
 
 // TensorView currently does not interface with sparse matrices. For now, we just catch this and throw.
