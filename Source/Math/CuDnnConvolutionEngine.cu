@@ -223,8 +223,31 @@ public:
           m_forceDeterministicAlgorithms(forceDeterministicAlgorithms),
           m_inputHasFreeDimension(inputHasFreeDimension)
     {
-        auto inShape = geometry->InputShape();
-        auto outShape = geometry->OutputShape();
+        UpdateShapeFromGeometry();
+    }
+
+    ConvolutionEngineKind EngineKind() const { return ConvolutionEngineKind::CuDnn; }
+
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
+
+    void UpdateGeometry(ConvolveGeometryPtr geometry)
+    {
+        m_geometry = geometry;
+        UpdateShapeFromGeometry();
+    }
+
+protected:
+    using Base::m_geometry;
+    using Base::m_deviceId;
+    using Base::m_imageLayout;
+    using Base::m_maxTempMemSizeInSamples;
+    using Base::m_poolKind;
+    using Base::m_poolIncludePad;
+
+    void UpdateShapeFromGeometry()
+    {
+        auto inShape = m_geometry->InputShape();
+        auto outShape = m_geometry->OutputShape();
 
         const size_t minDimSize = (size_t)3;    // minimum input and output size are 3 for cuDNN
         size_t input_size = inShape.GetRank();
@@ -241,16 +264,6 @@ public:
         m_inT.Set(TensorShape(inputDims), m_dataType);
         m_outT.Set(TensorShape(outputDims), m_dataType);
     }
-
-    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
-
-protected:
-    using Base::m_geometry;
-    using Base::m_deviceId;
-    using Base::m_imageLayout;
-    using Base::m_maxTempMemSizeInSamples;
-    using Base::m_poolKind;
-    using Base::m_poolIncludePad;
 
     void EnsureCompatible() override
     {
@@ -721,6 +734,17 @@ std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemT
 {
     return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind,
                                                               forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
+}
+
+template<class ElemType>
+std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemType>::UpdateGeometry(std::unique_ptr<ConvolutionEngine<ElemType>>& convEng, ConvolveGeometryPtr geometry)
+{
+    auto convEngPtr = dynamic_cast<CuDnnConvolutionEngine<ElemType>*>(convEng.release());
+    if (convEngPtr == nullptr)
+        LogicError("Update geometry can only be performed on cuDNN engine.");
+
+    convEngPtr->UpdateGeometry(geometry);
+    return std::unique_ptr<ConvolutionEngine<ElemType>>(convEngPtr);
 }
 
 template <class ElemType>

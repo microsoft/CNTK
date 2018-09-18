@@ -142,14 +142,15 @@ public:
     using typename Base::Mat;
 
 public:
-    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
+    ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad, bool computeConvGeometryExplicit = true)
         : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad),
-        //m_mpRowCol(0, 1, nullptr, deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
-        m_isConvGeometryComputed(geometry->ComputeConvGeometryExplicit()), // IMP NOTE: m_isConvGeometryComputed MUST be initialized before m_mpRowCol here in this list.
-        m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
+        m_isConvGeometryComputed(computeConvGeometryExplicit && geometry->ComputeConvGeometryExplicit()),
+        m_mpRowCol(m_isConvGeometryComputed ? geometry->MpRowCol().size() : 0, 1, m_isConvGeometryComputed ? const_cast<int*>(geometry->MpRowCol().data()) : nullptr,
+            deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
     {
-        assert(m_isConvGeometryComputed);
     }
+
+    ConvolutionEngineKind EngineKind() const { return ConvolutionEngineKind::Reference; }
 
 protected:
     using Base::m_geometry;
@@ -274,6 +275,8 @@ public:
     {
         m_padding = m_geometry->AutoPad()[0];
     }
+
+    ConvolutionEngineKind EngineKind() const { return ConvolutionEngineKind::Legacy; }
 
 protected:
     using Base::m_geometry;
@@ -566,10 +569,12 @@ public:
     using typename Base::Mat;
 
 public:
-    GemmConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad)
-        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad)
+    GemmConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad, bool computeConvGeometryExplicit = true)
+        : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad, computeConvGeometryExplicit)
     {
     }
+
+    ConvolutionEngineKind EngineKind() const { return ConvolutionEngineKind::Gemm; }
 
 protected:
     using typename Base::IntMatPtr;
@@ -954,7 +959,7 @@ protected:
             m_prevGeometry(nullptr)
         {}
 
-        bool Supported(const ConvolveGeometry* geometry, bool forward)
+        static bool Supported(const ConvolveGeometry* geometry, bool forward, bool backward)
         {
 #ifdef USE_MKLDNN
             //TODO: test code for linking with mkldnn.dll, will extend to support dilated convolution with MKL-DNN later
@@ -970,7 +975,12 @@ protected:
             }
 
             //MKL-DNN calls does not support 4th dimention now, we will update the code once MKL release the update.
-            return forward ? (geometry->InputShape().GetRank() < m_dimension) : (geometry->OutputShape().GetRank() < m_dimension);
+            return (!forward || (geometry->InputShape().GetRank() < m_dimension)) && (!backward || (geometry->OutputShape().GetRank() < m_dimension));
+        }
+
+        bool Supported(const ConvolveGeometry* geometry, bool forward)
+        {
+            return MKLConvolutionContext::Supported(geometry, forward, !forward);
         }
 
         void Prepare(size_t batchSize, const ConvolveGeometry* geometry, ContextIndex contextIndex)
@@ -1150,6 +1160,15 @@ public:
         return false;
 #endif
     }
+
+    static bool IsMklSupported(const ConvolveGeometry* geometry, const PoolKind& poolKind)
+    {
+#ifdef USE_MKL2017DNN
+        return poolKind == PoolKind::None && MKLConvolutionContext::Supported(geometry, /*forward=*/true, /*backward=*/true);
+#else
+        return false;
+#endif
+    }
 };
 
 template <class ElemType>
@@ -1167,6 +1186,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     // can be called from places like MEL with default parameters and never be used.
     // The check will be done later in engine's EnsureCompatible call if the egnine is actually used.
     auto engStr = (std::string)(*geometry);
+
     // Only legacy engine supports HWC layout.
     if (imageLayout == ImageLayoutKind::HWC)
     {
@@ -1185,7 +1205,7 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     {
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "%lsusing cuDNN convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
-
+        inputHasFreeDimension = false;
         return CuDnnConvolutionEngineFactory<ElemType>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind,
                                                                forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
     }
@@ -1197,7 +1217,8 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
             if (GetMathLibTraceLevel() > 0)
                 fprintf(stderr, "%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-            return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
+            bool computeConvGeometryExplicit = !GemmConvolutionEngine<ElemType>::IsMklSupported(geometry.get(), poolKind);
+            return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad, computeConvGeometryExplicit);
         }
 
         if (!isEnabled(ConvolutionEngineKind::Reference))
@@ -1222,7 +1243,8 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
                 if (GetMathLibTraceLevel() > 0)
                     fprintf(stderr, "%lsusing GEMM convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
-                return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad);
+                bool computeConvGeometryExplicit = !GemmConvolutionEngine<ElemType>::IsMklSupported(geometry.get(), poolKind);
+                return std::make_unique<GemmConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, poolIncludePad, computeConvGeometryExplicit);
             }
             RuntimeError("Gemm convolution is not supported/enabled. Cannot execute group convolution (groups > 1) on CPU.");
         }
@@ -1230,6 +1252,28 @@ std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Create
     }
     else
         LogicError("Invalid value for 'groups' parameter for convolution: groups must be greater than or equal to 1.");
+}
+
+template <class ElemType>
+std::unique_ptr<ConvolutionEngine<ElemType>> ConvolutionEngine<ElemType>::Update(std::unique_ptr<ConvolutionEngine<ElemType>>& convEng,
+    ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
+    ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind,
+    ConvolutionEngineKind enabledEngines,
+    std::wstring logPrefix, bool forceDeterministicAlgorithms,
+    bool poolIncludePad, bool inputHasFreeDimension)
+{
+    auto isEnabled = [=](ConvolutionEngineKind eng) { return ((int)enabledEngines & (int)eng) != 0; };
+    if (imageLayout != ImageLayoutKind::HWC && 
+        isEnabled(ConvolutionEngineKind::CuDnn) &&
+        CuDnnConvolutionEngineFactory<ElemType>::IsSupported(deviceId, geometry, poolKind) &&
+        convEng->EngineKind() == ConvolutionEngineKind::CuDnn)
+    {
+        return CuDnnConvolutionEngineFactory<ElemType>::UpdateGeometry(convEng, geometry);
+    }
+    else
+    {
+        return Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, enabledEngines, logPrefix, forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
+    }
 }
 
 // only GPU supports fp16 convolution
@@ -1256,6 +1300,7 @@ std::unique_ptr<ConvolutionEngine<half>> ConvolutionEngine<half>::Create(Convolv
         if (GetMathLibTraceLevel() > 0)
             fprintf(stderr, "%lsusing cuDNN convolution engine for geometry: %s.\n", logPrefix.c_str(), engStr.c_str());
 
+        inputHasFreeDimension = false;
         return CuDnnConvolutionEngineFactory<half>::Create(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind,
             forceDeterministicAlgorithms, poolIncludePad, inputHasFreeDimension);
     }

@@ -45,6 +45,8 @@ public:
 public:
     virtual ~ConvolutionEngine() = default;
 
+    virtual ConvolutionEngineKind EngineKind() const = 0;
+
     void Forward(const Mat& in, const Mat& kernel, Mat& out, Mat& workspace);
 
     void BackwardData(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace);
@@ -64,6 +66,13 @@ public:
                                                                ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
                                                                std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false,
                                                                bool poolIncludePad = false, bool inputHasFreeDimension = false);
+
+    static std::unique_ptr<ConvolutionEngine<ElemType>> Update(std::unique_ptr<ConvolutionEngine<ElemType>>& convEng,
+        ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId,
+        ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None,
+        ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
+        std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false,
+        bool poolIncludePad = false, bool inputHasFreeDimension = false);
 
     DISABLE_COPY_AND_MOVE(ConvolutionEngine);
 

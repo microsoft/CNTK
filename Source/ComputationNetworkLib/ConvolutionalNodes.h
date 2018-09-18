@@ -669,7 +669,7 @@ public:
         {
             bool recomputeConvGeometry = (m_convEng == nullptr) ? false : // For first minibatch, this flag must be false, so initial mem allocation can happen.
                                           (outputShape != m_convEng->Geometry()->OutputShape()) || (inputShape != m_convEng->Geometry()->InputShape());
-            if ((m_convEng == nullptr) || ((m_convEng != nullptr) && recomputeConvGeometry))
+            if (m_convEng == nullptr)
             {
                 auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
                                                                    m_kernelShape, m_mapCount, m_stride,
@@ -678,6 +678,16 @@ public:
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
                                                                 ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
                                                                 false, recomputeConvGeometry);
+            }
+            else if ((m_convEng != nullptr) && recomputeConvGeometry)
+            {
+                auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
+                                                                   m_kernelShape, m_mapCount, m_stride,
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, false, m_groups);
+                m_convEng = ConvolutionEngine<ElemType>::Update(m_convEng, geometry, m_deviceId, m_imageLayout,
+                    m_maxTempMemSizeInSamples, m_poolKind,
+                    ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
+                    false, recomputeConvGeometry);
             }
 
             if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())

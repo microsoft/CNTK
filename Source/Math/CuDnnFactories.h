@@ -18,6 +18,7 @@ public:
                                                                ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
                                                                PoolKind poolKind, bool forceDeterministicAlgorithms, 
                                                                bool poolIncludePad, bool inputHasFreeDimension);
+    static std::unique_ptr<ConvolutionEngine<ElemType>> UpdateGeometry(std::unique_ptr<ConvolutionEngine<ElemType>>& convEng, ConvolveGeometryPtr geometry);
     static bool IsSupported(DEVICEID_TYPE deviceId, ConvolveGeometryPtr geometry, PoolKind poolKind);
 };
 

@@ -2582,6 +2582,12 @@ std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemT
 }
 
 template <class ElemType>
+std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemType>::UpdateGeometry(std::unique_ptr<ConvolutionEngine<ElemType>>& convEng, ConvolveGeometryPtr geometry)
+{
+    RuntimeError("The code is compiled with CPUONLY macro.");
+}
+
+template <class ElemType>
 bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE, ConvolveGeometryPtr, PoolKind)
 {
     return false;
