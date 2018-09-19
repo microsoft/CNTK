@@ -54,14 +54,6 @@ namespace CNTK
     // onnx::OpSchemaRegistry::DomainToVersionRange::Instance().AddDomainToVersion(LotusIR::kOnnxDomain, 1, 5);
     const int ONNX2_1MAX_VERSION = 7;
 
-    // for debugging (and probably useful backward compatibility) propose, use this helper to tell 
-    // how to implement a conversion. It is used for reshape op.
-    bool IsONNX1_2Supported()
-    {
-        auto map = onnx::OpSchemaRegistry::DomainToVersionRange::Instance().Map();
-        return map.find(onnx::ONNX_DOMAIN) != map.end() && map[onnx::ONNX_DOMAIN].second == ONNX2_1MAX_VERSION;
-    }
-
     static void PrintGraph(FunctionPtr function, int spaces, bool useName = false)
     {
         if (function->Inputs().size() == 0)

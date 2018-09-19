@@ -29,8 +29,6 @@ using namespace onnx;
 
 namespace CNTK
 {
-    bool IsONNX1_2Supported();
-
 class CNTKToONNXHelper
 {
 public:
@@ -82,7 +80,7 @@ private:
     static LotusIR::NodeArg &AddZerosConstantNodeArg(Graph *graph, const string &nodeArgName,
         const std::vector<int64_t> &shape, CNTK::DataType dataType);
 
-    static LotusIR::Node *AddReshapeNodeAccordingToONNXVersion(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t>& newShape);
+    static LotusIR::Node *AddReshapeNodeImpl(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t>& newShape);
 
     static NodeArg* GetInputAdjustmentForBroadcast(LotusIR::Graph* graph, const FunctionPtr src, const Variable &input, int inputIndex, onnx::TypeProto &inputArgType);
 
@@ -114,7 +112,7 @@ private:
         const std::string &out_arg_name);
     static LotusIR::Node *AddIdentityOp(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &out_arg_name);
     static LotusIR::Node *AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis);
-    static LotusIR::Node *AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &toType);
+    static LotusIR::Node *AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, onnx::TensorProto_DataType toType);
     static LotusIR::Node *AddTransposeNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::vector<int64_t> &perm,
         onnx::TypeProto& transposeOutputArgType, const std::string &outputNodeArgName);
 
@@ -242,11 +240,6 @@ private:
 
     static std::vector<float> INTSToVecFloat(const std::vector<int64_t> &ints);
     static std::vector<int64_t> ConvertPermutationCNTKToONNX(const std::vector<Axis> &axes, bool hasBatchAxis);
-
-    //
-    // Convert DataType from CNTK TensorProto
-    //
-    static TensorProto_DataType ConvertDataTypeCNTKToTensorProto(CNTK::DataType newDataType);
 
     //
     // Convert data types from CNTK to ONNX.
@@ -1410,50 +1403,7 @@ bool IsBatchAxisOp(const FunctionPtr src)
     return isBatchAxisOp;
 }
 
-bool OpNeedONNXTypeMap(const std::string &cntkType)
-{
-    const vector<string> ops({"And", "Equal", "Greater", "Less", "Not", "Or", "Xor", "Gather", "ArgMax", "ArgMin", "TopK" });
-    for (auto o : ops)
-    {
-        if (cntkType == o)
-            return true;
-    }
-    return false;
-}
-
-// Generate ONNX nodes with correct tensor types.
-// We call this function to work around the type compatiblity issue between CNTK and ONNX.
-void MapAndUpdateONNXType(const std::string &op, bool inputArg, int argOrder, CNTK::DataType dataType,
-                          onnx::TypeProto &type)
-{
-    if (op == "And" || op == "Not" || op == "Or" || op == "Xor")
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
-    else if (!inputArg && (op == "ArgMax" || op == "ArgMin"))
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
-    else if (op == "Equal")
-    {
-        if (inputArg)
-        {
-            type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT32);
-        }
-        else
-        {
-            type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
-        }
-    }
-    else if (op == "Gather" && inputArg && argOrder == 0)
-        // Gather input order are switched so as a quick workaround I simply assume the swap
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT32);
-    else if ((op == "Greater" || op == "Less") && !inputArg)
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
-    else if (op == "TopK" && !inputArg && argOrder == 1)
-        // the second output of TopK is index tensor of int64
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
-    else
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_FLOAT);
-}
-
-TensorProto_DataType CNTKToONNXHelper::ConvertDataTypeCNTKToTensorProto(
+TensorProto_DataType ConvertDataTypeCNTKToTensorProto(
     CNTK::DataType newDataType)
 {
     // to TensorProto_DataType
@@ -1467,6 +1417,78 @@ TensorProto_DataType CNTKToONNXHelper::ConvertDataTypeCNTKToTensorProto(
         return TensorProto_DataType::TensorProto_DataType_FLOAT16;
     default:
         NOT_IMPLEMENTED;
+    }
+}
+
+bool OpNeedONNXTypeMap(const std::string &cntkType)
+{
+    const vector<string> ops({"And", "Equal", "Greater", "Less", "Not", "Or", "Xor", "Gather", "ArgMax", "ArgMin", "TopK" });
+    for (auto o : ops)
+    {
+        if (cntkType == o)
+            return true;
+    }
+    return false;
+}
+
+// Generate ONNX nodes with correct tensor types.
+// We call this function to work around the type compatiblity issue between CNTK and ONNX.
+TensorProto_DataType MapAndUpdateONNXType(const std::string &op, bool inputArg, int argOrder, CNTK::DataType dataType,
+                          onnx::TypeProto *type)
+{
+    if (op == "And" || op == "Not" || op == "Or" || op == "Xor")
+    {
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
+        return onnx::TensorProto_DataType_BOOL;
+    }
+    else if (!inputArg && (op == "ArgMax" || op == "ArgMin"))
+    {
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
+        return onnx::TensorProto_DataType_INT64;
+    }
+    else if (op == "Equal")
+    {
+        if (inputArg)
+        {
+            if (type)
+                type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT32);
+            return onnx::TensorProto_DataType_INT32;
+        }
+        else
+        {
+            if (type)
+                type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
+            return onnx::TensorProto_DataType_BOOL;
+        }
+    }
+    else if (op == "Gather" && inputArg && argOrder == 0)
+    {
+        // Gather input order are switched so as a quick workaround I simply assume the swap
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT32);
+        return onnx::TensorProto_DataType_INT32;
+    }
+    else if ((op == "Greater" || op == "Less") && !inputArg)
+    {
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
+        return onnx::TensorProto_DataType_BOOL;
+    }
+    else if (op == "TopK" && !inputArg && argOrder == 1)
+    {
+        // the second output of TopK is index tensor of int64
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
+        return onnx::TensorProto_DataType_INT64;
+    }
+    else
+    {
+        onnx::TensorProto_DataType tensorProto_DataType = ConvertDataTypeCNTKToTensorProto(dataType);
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(tensorProto_DataType);
+        return tensorProto_DataType;
     }
 }
 
@@ -2558,45 +2580,36 @@ LotusIR::NodeArg &CNTKToONNXHelper::AddZerosConstantNodeArg(Graph *graph, const 
     return shapeInputArg;
 }
 
-LotusIR::Node *CNTKToONNXHelper::AddReshapeNodeAccordingToONNXVersion(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t> &newShape)
+LotusIR::Node *CNTKToONNXHelper::AddReshapeNodeImpl(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t> &newShape)
 {
-    if (IsONNX1_2Supported())
-    {
-        onnx::TypeProto shapeInputArgType = ToTypeProto(std::vector<int64_t>({ (int64_t)newShape.size() }));
-        shapeInputArgType.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
+    onnx::TypeProto shapeInputArgType = ToTypeProto(std::vector<int64_t>({ (int64_t)newShape.size() }));
+    shapeInputArgType.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
 
-        LotusIR::NodeArg &shapeInputArg = graph->GetOrCreateNodeArg(output->Name() + "_shape", &shapeInputArgType);
+    LotusIR::NodeArg &shapeInputArg = graph->GetOrCreateNodeArg(output->Name() + "_shape", &shapeInputArgType);
 
-        onnx::TensorProto dstTensor;
-        dstTensor.set_name(shapeInputArg.Name());
-        dstTensor.set_data_type(onnx::TensorProto_DataType_INT64);
-        for (size_t index = 0; index < newShape.size(); index++)
-            if (newShape[index] == NDShape::FreeDimension)
-            {
+    onnx::TensorProto dstTensor;
+    dstTensor.set_name(shapeInputArg.Name());
+    dstTensor.set_data_type(onnx::TensorProto_DataType_INT64);
+    for (size_t index = 0; index < newShape.size(); index++)
+        if (newShape[index] == NDShape::FreeDimension)
+        {
                 
-                *(dstTensor.mutable_int64_data()->Add()) = ReshapeKeepInputDim;
-            }
-            else if (newShape[index] == NDShape::InferredDimension)
-            {
-                // TODO: add a test case for this code path.
-                *(dstTensor.mutable_int64_data()->Add()) = ReshapeInferredDim;
-            }
-            else
-            {
-                *(dstTensor.mutable_int64_data()->Add()) = newShape[index];
-            }
-        *(dstTensor.mutable_dims()->Add()) = newShape.size();
-        graph->AddInitializedTensor(dstTensor);
+            *(dstTensor.mutable_int64_data()->Add()) = ReshapeKeepInputDim;
+        }
+        else if (newShape[index] == NDShape::InferredDimension)
+        {
+            // TODO: add a test case for this code path.
+            *(dstTensor.mutable_int64_data()->Add()) = ReshapeInferredDim;
+        }
+        else
+        {
+            *(dstTensor.mutable_int64_data()->Add()) = newShape[index];
+        }
+    *(dstTensor.mutable_dims()->Add()) = newShape.size();
+    graph->AddInitializedTensor(dstTensor);
 
-        auto reshapeNode1 = graph->AddNode(nodeName, "Reshape", "", { input, &shapeInputArg }, { output });
-        return reshapeNode1;
-    }
-    else
-    {
-        LotusIR::Node *reshapeNode = graph->AddNode(nodeName, "Reshape", "", { input }, { output });
-        reshapeNode->AddAttribute("shape", ToINTS(Cast<int64_t, int>(newShape), false));
-        return reshapeNode;
-    }
+    auto reshapeNode1 = graph->AddNode(nodeName, "Reshape", "", { input, &shapeInputArg }, { output });
+    return reshapeNode1;
 }
 
 
@@ -2608,7 +2621,7 @@ LotusIR::Node *CNTKToONNXHelper::AddReshapeNode(LotusIR::NodeArg &nodeArg, const
     typeProto.mutable_tensor_type()->set_elem_type(elemType);
 
     LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(outArgName, &typeProto);
-    auto reshapeNode = AddReshapeNodeAccordingToONNXVersion(graph, nodeArg.Name() + string("_reshape"), 
+    auto reshapeNode = AddReshapeNodeImpl(graph, nodeArg.Name() + string("_reshape"), 
         const_cast<LotusIR::NodeArg *>(&nodeArg), &outputArg, newShape);
     return reshapeNode;
 }
@@ -2648,12 +2661,12 @@ LotusIR::Node *CNTKToONNXHelper::AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusI
     return argMaxNode;
 }
 
-LotusIR::Node *CNTKToONNXHelper::AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &toType)
+LotusIR::Node *CNTKToONNXHelper::AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, onnx::TensorProto_DataType toType)
 {
     // LotusIR::NodeArg inputArg(nodeArg.Name(), nullptr);
     LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeArg.Name() + "cast_out", nullptr);
     LotusIR::Node* castNode = graph->AddNode(nodeArg.Name() + string("_cast"), "Cast", "", { &nodeArg }, { &outputArg });
-    castNode->AddAttribute("to", toType);
+    castNode->AddAttribute("to", (int64_t)toType);
     return castNode;
 }
 
@@ -2695,7 +2708,7 @@ LotusIR::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const FunctionP
     UpdateONNXType(src->Outputs()[0].GetDataType(), typeProto);
     LotusIR::NodeArg *outputArg = &graph->GetOrCreateNodeArg(lstmToReshapeNodeArgName, &typeProto);
 
-    auto reshapeNode = AddReshapeNodeAccordingToONNXVersion(graph, nodeName + string("_reshape"),
+    auto reshapeNode = AddReshapeNodeImpl(graph, nodeName + string("_reshape"),
         const_cast<NodeArg *>(outputArgs.at(0)), outputArg, shape);
 
     return reshapeNode;
@@ -3316,7 +3329,26 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         }
         else if (OpNeedONNXTypeMap(cntkOpName))
         {
-            MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), inputArgType);
+            if (!input.IsOutput())
+            {
+                MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), &inputArgType);
+            }
+            else
+            {
+                // input NodeArg has already been created as an output NodeArg of the previous function node. 
+                // a Cast op needs to be inserted to get the desired type in ONNX.
+                TensorProto_DataType onnx_type = MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), nullptr);
+                if (ConvertDataTypeCNTKToTensorProto(input.GetDataType()) != onnx_type)
+                {
+                    UpdateONNXType(input.GetDataType(), inputArgType);
+                    LotusIR::NodeArg &castInputArg = graph->GetOrCreateNodeArg(inputName, &inputArgType);
+                    LotusIR::Node* castNode = AddCastNode(castInputArg, graph, onnx_type);
+                    inputs.push_back(const_cast<NodeArg *>(castNode->OutputDefs()[0]));
+
+                    // we already completed preparation of this input and can proceed to the next input.
+                    continue;
+                }
+            }
         }
         else
         {
@@ -3349,7 +3381,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
 
         inputs.push_back(&inputArg);
 
-        if (cntkOpName == "Reshape" && IsONNX1_2Supported())
+        if (cntkOpName == "Reshape")
         {
             // ONNX1.2 reshape node take shape as input instead of attribute. 
 
@@ -3424,7 +3456,7 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
         }
         else if (OpNeedONNXTypeMap(onnxOpName))
         {
-            MapAndUpdateONNXType(onnxOpName, false, outputIndex, output.GetDataType(), outputArgType);
+            MapAndUpdateONNXType(onnxOpName, false, outputIndex, output.GetDataType(), &outputArgType);
         }
         else
         {
@@ -3633,30 +3665,6 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
         }
         else if (src->OpName() == L"Reshape")
         {
-            if (!IsONNX1_2Supported())
-            {
-                // TODO: handle CNTK reshape with begin and end axes.
-                auto shapeVec = src->Output().Shape().Dimensions();
-                std::vector<int> newShapeVec;
-                size_t numInferredDimensions(0);
-                for (const auto& axisSize : shapeVec)
-                {
-                    if (axisSize == NDShape::InferredDimension)
-                    {
-                        numInferredDimensions++;
-                        if (numInferredDimensions > 1)
-                            LogicError("Reshape: Multiple InferredDimension not supported by ONNX.");
-                        else
-                            newShapeVec.push_back(ReshapeInferredDim);
-                    }
-                    else // REVIEW SPTIWARI: Should we fill 0 for FreeDimension here?
-                        newShapeVec.push_back(static_cast<int>(axisSize));
-                }
-                // Always add a 1 to the shape for batch axis in ONNX tensors.
-                if ((src->Inputs().size() > 0) && (src->Inputs()[0].HasBatchAxis()))
-                    newShapeVec.push_back(1);
-                node->AddAttribute(attributesMap[L"shape"], ToINTS(newShapeVec));
-            }
         }
         else if (src->OpName() == L"Splice")
         {
@@ -4158,42 +4166,7 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
 
     if (L"Embedding" == src->OpName())
     {
-        // WinML does not allow Cast between float and int. To workaround it, set workaroundWinMLNotSupportCastOfInt = true.
-        // otherwise use argmax, cast, gather which make more sense for an embedding operation.
-        bool workaroundWinMLNotSupportCastOfInt = true;
-        if (workaroundWinMLNotSupportCastOfInt)
-        {
-            LotusIR::Node* argMatMul = AddMatMulNode(*orderedInputs[1], *orderedInputs[0], graph, outputs[0]->Name());
-        }
-        else
-        {
-            int inputDataAxis = src->Inputs()[1].DynamicAxes().size();
-            LotusIR::Node* argMax = AddArgMaxNode(*orderedInputs[1], graph, inputDataAxis);
-            LotusIR::Node* int32Cast = AddCastNode(const_cast<LotusIR::NodeArg &>(*argMax->OutputDefs()[0]), graph, "INT32");
-
-            bool reshapeGather = true;
-            if (reshapeGather)
-            {
-                LotusIR::NodeArg &gatherIndexInputNodeArg = graph->GetOrCreateNodeArg(int32Cast->OutputDefs()[0]->Name(), nullptr);
-                LotusIR::NodeArg &gatherSourceInputNodeArg = graph->GetOrCreateNodeArg(orderedInputs[0]->Name(), nullptr);
-                LotusIR::NodeArg &gatherOutputArg = graph->GetOrCreateNodeArg(nodeName + "_gather_tmp", nullptr);
-                LotusIR::Node* gatherNode = graph->AddNode(nodeName + "_tmp", "Gather", "",
-                                                          {&gatherSourceInputNodeArg, &gatherIndexInputNodeArg}, {&gatherOutputArg});
-
-                LotusIR::NodeArg &reshapeInputNodeArg = graph->GetOrCreateNodeArg(gatherNode->OutputDefs()[0]->Name(), nullptr);
-                int input_size = src->Output().Shape()[0];
-                // std::vector<int> newShape({ SequenceLen, 1, input_size });
-                std::vector<int64_t> newShape({ (int64_t)NDShape::FreeDimension, 1, input_size });
-
-                auto reshapedGather = AddReshapeNodeAccordingToONNXVersion(graph, nodeName, &reshapeInputNodeArg, outputs[0], newShape);
-                return reshapedGather;
-            }
-            else
-            {
-                LotusIR::NodeArg &gatherIndexInputNodeArg = graph->GetOrCreateNodeArg(int32Cast->OutputDefs()[0]->Name(), nullptr);
-                graph->AddNode(nodeName, "Gather", "", { orderedInputs[0] , &gatherIndexInputNodeArg }, outputs);
-            }
-        }
+        LotusIR::Node* argMatMul = AddMatMulNode(*orderedInputs[1], *orderedInputs[0], graph, outputs[0]->Name());
     }
     else
     {
@@ -4234,8 +4207,8 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
                 //reshapeNode1->AddAttribute("shape", ToINTS(input1Reshape));
                 //reshapeNode2->AddAttribute("shape", ToINTS(input2Reshape));
 
-                AddReshapeNodeAccordingToONNXVersion(graph, nodeName + "_reshape0", orderedInputs[0], &inputOutput1Arg, ToINTS(input1Reshape));
-                AddReshapeNodeAccordingToONNXVersion(graph, nodeName + "_reshape1", orderedInputs[1], &inputOutput2Arg, ToINTS(input2Reshape));
+                AddReshapeNodeImpl(graph, nodeName + "_reshape0", orderedInputs[0], &inputOutput1Arg, ToINTS(input1Reshape));
+                AddReshapeNodeImpl(graph, nodeName + "_reshape1", orderedInputs[1], &inputOutput2Arg, ToINTS(input2Reshape));
 
                 node = graph->AddNode(nodeName, ToOPName(src), "", {&inputOutput1Arg, &inputOutput2Arg}, outputs);
             }
@@ -4838,7 +4811,7 @@ LotusIR::NodeArg* CNTKToONNXHelper::LSTMOutputShapeAdapter(LotusIR::NodeArg& inp
     UpdateONNXType(outputType, reshapeOutputArgType);
     LotusIR::NodeArg &reshapeOutputArg = graph->GetOrCreateNodeArg(adapterBasename + "_Reshape_Output", &reshapeOutputArgType);
     std::vector<int64_t> shape({ (int64_t)NDShape::FreeDimension, FreeBatchSize, (int64_t)(numDirections * hiddenSize) });
-    AddReshapeNodeAccordingToONNXVersion(graph, adapterBasename + "_Reshape", &transposeOutputArg, &reshapeOutputArg, shape);
+    AddReshapeNodeImpl(graph, adapterBasename + "_Reshape", &transposeOutputArg, &reshapeOutputArg, shape);
     return &reshapeOutputArg;
 }
 
@@ -5008,7 +4981,7 @@ void CNTKToONNXHelper::ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
 
         if (OpNeedONNXTypeMap(cntkOpName))
         {
-            MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), inputArgType); // TODO: Is this needed? Probably not.
+            MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), &inputArgType); // TODO: Is this needed? Probably not.
         }
         else
         {
@@ -5091,7 +5064,7 @@ void CNTKToONNXHelper::ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
         auto outputArgType = ToTypeProto(outputShape, false, output.HasSequenceAxis(), true);
         if (OpNeedONNXTypeMap(onnxOpName))
         {
-            MapAndUpdateONNXType(onnxOpName, false, 0, output.GetDataType(), outputArgType); // TODO: Is this needed? Probably not.
+            MapAndUpdateONNXType(onnxOpName, false, 0, output.GetDataType(), &outputArgType); // TODO: Is this needed? Probably not.
         }
         else
         {

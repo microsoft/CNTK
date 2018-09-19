@@ -2898,6 +2898,16 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "Cast")
     {
         TensorProto_DataType newDataType = static_cast<TensorProto_DataType>(GetNamedAttributeAsInt64(node, "to"));
+        if (newDataType != TensorProto_DataType::TensorProto_DataType_FLOAT &&
+            newDataType != TensorProto_DataType::TensorProto_DataType_DOUBLE &&
+            newDataType != TensorProto_DataType::TensorProto_DataType_FLOAT16)
+        {
+            // for cast to types not supported by CNTK, we simply pass it through
+            // CNTK data type is more adaptive. For example, an ONNX gather op requires
+            // int64_t or int. CNTK float16, float, and double are not accepted by 
+            // ONNX but it can input to an CNTK node.
+            return Alias(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+        }
         DataType cntkNewDataType = ConvertDataTypeTensorProtoToCNTK(newDataType);
         FunctionPtr cntkFunction = Cast(inputs[0], cntkNewDataType, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
