@@ -106,8 +106,6 @@
     <ClCompile Include="proto\onnx\core\graph\graph_transformer.cc">
       <Filter>proto\onnx\core\graph</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnx-ml.pb.cc.VS_wrapper.cpp" />
-    <ClCompile Include="proto\onnx\onnx-operators-ml.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="proto\onnx\core\graph\graph.cc">
       <Filter>proto\onnx\core\graph</Filter>
     </ClCompile>
@@ -137,6 +135,9 @@
     </ClCompile>
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\schema.cc">
       <Filter>proto\onnx\onnx_repo\onnx\defs</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnx-ml.pb.cc.VS_wrapper.cpp">
+      <Filter>proto\onnx</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
