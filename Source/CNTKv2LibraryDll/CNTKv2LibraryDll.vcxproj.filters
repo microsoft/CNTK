@@ -19,6 +19,7 @@
     <ClCompile Include="DistributedCommunicator.cpp" />
     <ClCompile Include="CompositeFunction.cpp" />
     <ClCompile Include="PrimitiveFunction.cpp" />
+    <ClCompile Include="PrimitiveFunctionAttribute.cpp" />
     <ClCompile Include="DistributedLearnerBase.cpp" />
     <ClCompile Include="DataParallelDistributedLearner.cpp" />
     <ClCompile Include="TrainingSession.cpp" />
@@ -93,18 +94,6 @@
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\traditionalml\defs.cc">
       <Filter>proto\onnx\onnx_repo\onnx\defs\traditionalml</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnx\defs\traditionalml\defs.cpp">
-      <Filter>proto\onnx\onnx\defs\traditionalml</Filter>
-    </ClCompile>
-    <ClCompile Include="proto\onnx\onnx\defs\data_type_utils.cpp">
-      <Filter>proto\onnx\onnx\defs</Filter>
-    </ClCompile>
-    <ClCompile Include="proto\onnx\onnx\defs\schema.cpp">
-      <Filter>proto\onnx\onnx\defs</Filter>
-    </ClCompile>
-    <ClCompile Include="proto\onnx\core\graph\graph.cpp">
-      <Filter>proto\onnx\core\graph</Filter>
-    </ClCompile>
     <ClCompile Include="proto\onnx\core\graph\model.cc">
       <Filter>proto\onnx\core\graph</Filter>
     </ClCompile>
@@ -117,26 +106,37 @@
     <ClCompile Include="proto\onnx\core\graph\graph_transformer.cc">
       <Filter>proto\onnx\core\graph</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnx\defs\math\old.cpp">
-      <Filter>proto\onnx\onnx\defs\math</Filter>
+    <ClCompile Include="proto\onnx\onnx-ml.pb.cc.VS_wrapper.cpp" />
+    <ClCompile Include="proto\onnx\onnx-operators-ml.pb.cc.VS_wrapper.cpp" />
+    <ClCompile Include="proto\onnx\core\graph\graph.cc">
+      <Filter>proto\onnx\core\graph</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnx\defs\nn\old.cpp">
-      <Filter>proto\onnx\onnx\defs\nn</Filter>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\logical\old.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs\logical</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnx\defs\rnn\old.cpp">
-      <Filter>proto\onnx\onnx\defs\rnn</Filter>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\tensor\old.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs\tensor</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnx\defs\tensor\old.cpp">
-      <Filter>proto\onnx\onnx\defs\tensor</Filter>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\math\old.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs\math</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnx\checker.cpp">
-      <Filter>proto\onnx\onnx</Filter>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\rnn\old.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs\rnn</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnx\defs\logical\old.cpp">
-      <Filter>proto\onnx\onnx\defs\logical</Filter>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\nn\old.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs\nn</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnx\common\assertions.cpp">
-      <Filter>proto\onnx\onnx\common</Filter>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\common\assertions.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\common</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\checker.cc">
+      <Filter>proto\onnx\onnx_repo\onnx</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\data_type_utils.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\schema.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -154,14 +154,26 @@
     <ClInclude Include="API\CNTKLibraryExperimental.h">
       <Filter>API</Filter>
     </ClInclude>
+    <ClInclude Include="API\Internals\ComputationGraphAlgorithms.h">
+      <Filter>API\Internals</Filter>
+    </ClInclude>
+    <ClInclude Include="API\Internals\EvaluatorWrapper.h">
+      <Filter>API\Internals</Filter>
+    </ClInclude>
+    <ClInclude Include="API\Internals\PrimitiveFunction.h">
+      <Filter>API\Internals</Filter>
+    </ClInclude>
+    <ClInclude Include="API\Internals\PrimitiveFunctionAttribute.h">
+      <Filter>API\Internals</Filter>
+    </ClInclude>
+    <ClInclude Include="API\Internals\PrimitiveOpType.h">
+      <Filter>API\Internals</Filter>
+    </ClInclude>
     <ClInclude Include="Serialization.h" />
     <ClInclude Include="Value.h" />
-    <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="BackCompat.h" />
     <ClInclude Include="CompositeFunction.h" />
-    <ClInclude Include="PrimitiveFunctionAttributes.h" />
-    <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="DataParallelDistributedLearner.h" />
     <ClInclude Include="tensorboard\TensorBoardUtils.h">
@@ -186,7 +198,6 @@
     <ClInclude Include="API\HalfConverter.hpp">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="EvaluatorWrapper.h" />
     <ClInclude Include="API\CNTKLibraryC.h">
       <Filter>API</Filter>
     </ClInclude>
@@ -295,16 +306,19 @@
     <ClInclude Include="proto\onnx\core\graph\utils.h">
       <Filter>proto\onnx\core\graph</Filter>
     </ClInclude>
-    <ClInclude Include="proto\onnx\core\common\CommonSTD.h">
-      <Filter>proto\onnx\core\common</Filter>
-    </ClInclude>
     <ClInclude Include="proto\onnx\onnx_repo\onnx\common\assertions.h">
       <Filter>proto\onnx\onnx_repo\onnx\common</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.h">
+      <Filter>proto\onnx</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">
       <UniqueIdentifier>{ea62180a-fb06-4f33-b472-243fab69be01}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="API\Internals">
+      <UniqueIdentifier>{ba31bf16-b001-406c-a437-a6e7841fc372}</UniqueIdentifier>
     </Filter>
     <Filter Include="proto">
       <UniqueIdentifier>{1a93e221-b14c-476a-a53d-c931030acd6e}</UniqueIdentifier>

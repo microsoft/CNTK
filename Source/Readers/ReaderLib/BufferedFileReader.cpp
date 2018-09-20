@@ -91,4 +91,27 @@ namespace CNTK {
 
         return result;
     }
+    
+    bool BufferedFileReader::TryReadBinarySegment(size_t size, char* data)
+    {
+        if (m_done)
+            return false;
+
+        bool result = false;
+        for (; !m_done; Refill())
+        {
+            auto start = m_buffer.data() + m_index;
+            size_t toRead = min(m_buffer.size() - m_index, size);
+            memcpy(data, start, toRead);
+            data += toRead;
+            size -= toRead;
+            m_index += toRead;
+
+            if (size == 0) {
+                return true;
+            }
+        }
+
+        return result;
+    }
 }

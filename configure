@@ -20,7 +20,7 @@ enable_csharp=
 
 # cntk build version
 # Modify both of the following during major release
-default_build_version="2.5.1"
+default_build_version="2.6"
 default_build_public="no"
 build_version=$default_build_version
 build_public=$default_build_public
@@ -376,13 +376,12 @@ enable_java=$(default_use_java)
 
 function default_use_csharp()
 {
-# TODO: Temporarily disabling csharp for Linux
-#    if [[ `command -v dotnet` && `command -v swig` && `command -v cmake` ]]
-#    then
-#        echo yes
-#    else
+    if [[ `command -v dotnet` && `command -v swig` && `command -v cmake` ]]
+    then
+       echo yes
+    else
         echo no
-#    fi
+    fi
 }
 enable_csharp=$(default_use_csharp)
 

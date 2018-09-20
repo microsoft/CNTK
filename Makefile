@@ -96,15 +96,15 @@ SOURCEDIR:= Source
 GSL_PATH:=$(SOURCEDIR)/../external/gsl
 ONNX_PATH:=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx
 ONNX_REPO_PATH:=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/Generated/Linux CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/API/Internals CNTKv2LibraryDll/Generated/Linux CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 INCLUDEPATH+=$(GSL_PATH)/include
 INCLUDEPATH+=$(ONNX_PATH)
 INCLUDEPATH+=$(ONNX_REPO_PATH)
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
-COMMON_FLAGS:= $(COMMON_FLAGS) -DONNX_NAMESPACE=onnx -DONNX_ML=1 -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11 -DCUDA_NO_HALF -D__CUDA_NO_HALF_OPERATORS__
+COMMON_FLAGS:= $(COMMON_FLAGS) -DONNX_NAMESPACE=onnx -DONNX_ML=1 -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++14 -DCUDA_NO_HALF -D__CUDA_NO_HALF_OPERATORS__
 CPPFLAGS:=
-CXXFLAGS:= $(SSE_FLAGS) $(CXXFLAGS) -std=c++0x -fopenmp -fpermissive -fPIC -fcheck-new
+CXXFLAGS:= $(SSE_FLAGS) $(CXXFLAGS) -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS_LIST:=
 LDFLAGS:=
@@ -502,6 +502,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/PrimitiveFunction.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/PrimitiveFunctionAttribute.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/CompositeFunction.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/UserDefinedFunction.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
@@ -694,7 +695,10 @@ EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL_LIBS+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
+# only set lib name when asgd is true
+ifeq ("$(CNTK_ENABLE_ASGD)","true")
 MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
+endif
 
 $(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
@@ -839,6 +843,8 @@ HTKDESERIALIZERS_SRC =\
 	$(SOURCEDIR)/Readers/HTKDeserializers/HTKMLFReader.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFDeserializer.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFIndexBuilder.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFBinaryDeserializer.cpp \
+	$(SOURCEDIR)/Readers/HTKDeserializers/MLFBinaryIndexBuilder.cpp \
 	$(SOURCEDIR)/Readers/HTKDeserializers/MLFUtils.cpp \
 
 HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
@@ -1427,6 +1433,7 @@ CNTKLIBRARY_TESTS_SRC =\
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/TensorTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/ValueTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/SerializationTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/ConvolutionFunctionTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/LearnerTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/FunctionTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/DeviceSelectionTests.cpp \
@@ -1577,16 +1584,23 @@ endif
 ########################################
 # C# Support
 ########################################
+
 ifeq ("$(CSHARP_SUPPORT)","true")
-	
+
 # This is a short-term hack to shoehorn cmake into our build system. In the near future, we will fully migrate
 # to a cmake-based system and this hack will no longer be necessary.
+ifeq ("$(findstring debug,$(BUILDTYPE))","debug")
 
-ifeq ("$(BUILDTYPE)","debug")
-	CSHARP_BUILDTYPE:=Debug
-endif
-ifeq ("$(BUILDTYPE)","release")
-	CSHARP_BUILDTYPE:=Release
+CSHARP_BUILDTYPE:=Debug
+
+else ifeq ("$(findstring release,$(BUILDTYPE))","release")
+
+CSHARP_BUILDTYPE:=Release
+
+else
+
+$(error '$(BUILDTYPE)' does not resemble 'debug' or 'release')
+
 endif
 
 .PHONY: csharp
@@ -1595,26 +1609,54 @@ csharp: $(CSHARP_LIBS)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
 	mkdir -p bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE)
 	cd bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE) && \
-		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) && \
-		make
+		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) -DCNTK_BUILD_LIB_DIR_HACK=$(LIBDIR) && \
+		make clean && \
+		make all
+
 	mkdir -p bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)
 	cd bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE) && \
-		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) && \
+		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) -DCNTK_BUILD_LIB_DIR_HACK=$(LIBDIR) && \
 		make
 	cp --recursive bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/* $(LIBDIR)
 
 ALL += csharp
 	
 # Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+# Since we are not building the .sln file as a whole using dotnet build, dotnet has no context of dependencies of each project. So dispatching the following builds in parallel
+# will create various race-conditions when they try to lock down some shared dependent files. Serializing the build here is only mitigating the race-conditions. A proper solution
+# would be either using msbuild on the whole solution(ideal but painful to change) or keeping multiple copies of CNTKLibraryManagedDll files for the dependent projects to consume.
 V2LibraryCSTests.dll: csharp
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
 	cd Tests/UnitTests/V2LibraryCSTests && \
 		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
-		dotnet build /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE)
-	cp $(LIBDIR)/*.so Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)
+		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE)
+	cp -f Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/V2LibraryCSTests.* $(LIBDIR)
+	cp -f Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/Microsoft.VisualStudio.* $(LIBDIR)
 	
 ALL += V2LibraryCSTests.dll
+
+# Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+CNTKLibraryCSTrainingTest.dll: csharp V2LibraryCSTests.dll
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
+	cd Tests/EndToEndTests/CNTKv2CSharp/CNTKLibraryCSTrainingTest && \
+		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
+		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE) CNTKLibraryCSTrainingTest.csproj
+	cp -f Tests/EndToEndTests/CNTKv2CSharp/CNTKLibraryCSTrainingTest/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/*.* $(LIBDIR)
+	
+ALL += CNTKLibraryCSTrainingTest.dll
+
+# Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
+CNTKLibraryCSEvalExamplesTest.dll: csharp CNTKLibraryCSTrainingTest.dll
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
+	cd Tests/EndToEndTests/EvalClientTests/CNTKLibraryCSEvalExamplesTest && \
+		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
+		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE) CNTKLibraryCSEvalExamplesTest.csproj
+	cp -f Tests/EndToEndTests/EvalClientTests/CNTKLibraryCSEvalExamplesTest/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/*.* $(LIBDIR)
+
+ALL += CNTKLibraryCSEvalExamplesTest.dll
 
 endif
 

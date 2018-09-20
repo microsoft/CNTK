@@ -1,9 +1,15 @@
 #!/bin/bash
 
 . $TEST_ROOT_DIR/run-test-common
+if [ "$OS" == "Windows_NT" ]; then
 
-VSTEST_CONSOLE=$(cygpath -au "$VS2017INSTALLDIR\\Common7\\IDE\\CommonExtensions\\Microsoft\\TestWindow\\vstest.console.exe")
+    VSTEST_CONSOLE=$(cygpath -au "$VS2017INSTALLDIR\\Common7\\IDE\\CommonExtensions\\Microsoft\\TestWindow\\vstest.console.exe")
 
-test -x "$VSTEST_CONSOLE" || exit $?
+    test -x "$VSTEST_CONSOLE" || exit $?
 
-"$VSTEST_CONSOLE" /inIsolation /Platform:x64 $(cygpath -aw "$TEST_BIN_DIR/V2LibraryCSTests.dll") || exit $?
+    "$VSTEST_CONSOLE" /inIsolation /Platform:x64 $(cygpath -aw "$TEST_BIN_DIR/V2LibraryCSTests.dll") || exit $?
+else
+
+    dotnet vstest /InIsolation /Platform:x64 /logger:"console;verbosity=detailed" $TEST_BIN_DIR/../lib/V2LibraryCSTests.dll || exit $?
+
+fi

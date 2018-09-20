@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using CNTK.CNTKLibraryCSTrainingTest;
 
 namespace CNTK.CSTrainingExamples
 {
@@ -18,7 +19,7 @@ namespace CNTK.CSTrainingExamples
         /// Execution folder is: CNTK/x64/BuildFolder
         /// Data folder is: CNTK/Tests/EndToEndTests/Image/Data
         /// </summary>
-        public static string ImageDataFolder = "../../Tests/EndToEndTests/Image/Data";
+        public static string ImageDataFolder =TestCommon.TestDataDirPrefix + "Tests/EndToEndTests/Image/Data";
 
         /// <summary>
         /// Train and evaluate a image classifier for MNIST data.

@@ -21,40 +21,28 @@ backend_test = onnx.backend.test.BackendTest(cntk_backend, __name__)
 
 skip_models = [
     # These tests crash and prevent tests after them from running.
-    'bvlc_alexnet',
-    'densenet121',
-    'inception_v1',
-    'inception_v2',
-    'resnet50',
-    'shufflenet',
-    'vgg16',
-    'vgg19',
-    'zfnet512',  # Attempt to use DefaultLogger but none has been registered.
-    'PixelShuffle'
 ]
 
 skip_ops = [
+    # Note after the fix for typenameToTypeProto initialization, no tests are crashing anymore.
+    # Thus the following is commented out for now, and subject to be removed in the future. 
+
     # These tests crash and prevent tests after them from running.
-    'test_max_one_input_cpu',
-    'test_max_one_input_cuda',
-    'test_min_one_input_cpu',
-    'test_min_one_input_cuda',
-    'test_reshape_extended_dims_cpu',
-    'test_reshape_extended_dims_cuda',
-    'test_reshape_negative_dim_cpu',
-    'test_reshape_negative_dim_cuda',
-    'test_reshape_one_dim_cpu',
-    'test_reshape_one_dim_cuda',
-    'test_reshape_reduced_dims_cpu',
-    'test_reshape_reduced_dims_cuda',
-    'test_reshape_reordered_dims_cpu',
-    'test_reshape_reordered_dims_cuda',
-    'test_pow_bcast_scalar_cpu',
-    'test_pow_bcast_scalar_cuda',
-    'test_operator_repeat_dim_overflow_cpu',
-    'test_operator_repeat_dim_overflow_cuda',
+    #'test_operator_repeat_dim_overflow_cpu',
+    #'test_operator_repeat_dim_overflow_cuda',
 
     # These use pre-ONNX 1.2 incompatible versions of the operators.
+
+    # This test is incorrect in ONNX 1.2.
+    # https://github.com/onnx/onnx/issues/1210
+    #'test_log_softmax_lastdim_cpu',
+    #'test_log_softmax_lastdim_cuda',
+
+    # This is an experimental op.
+    #'test_thresholdedrelu',
+
+    # Unfinished local test implementation.
+    #'test_arg_max_do_not_keepdims_example',
 ]
 
 skip_tests = skip_models + skip_ops

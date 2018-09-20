@@ -106,12 +106,13 @@ namespace CNTK
         StraightThrough = 94,
         Tan = 95,
         Atan = 96,
-        MarginInnerProduct = 97,
-        FeatureNormalize = 98,
-        AdditiveFullConnection = 99,
-        CenterLoss = 100,
-        ChannelMultiply = 101,
-        GlobalConcat = 102,
+        ConvolutionSequenceShape = 97,
+        MarginInnerProduct = 197,
+        FeatureNormalize = 198,
+        AdditiveFullConnection = 199,
+        CenterLoss = 200,
+        ChannelMultiply = 201,
+        GlobalConcat = 202,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

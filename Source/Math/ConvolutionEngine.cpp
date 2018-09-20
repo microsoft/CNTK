@@ -963,7 +963,10 @@ protected:
 #endif
 
             //MKL2017 does not support asymmetric padding yet
-            if (geometry->IsAsymmetricPadding()) return false;
+            if (geometry->IsAsymmetricPadding(/*useMKL=*/true)) {
+                fprintf(stderr, "WARNING: Detected asymmetric padding issue with lowerPad != higherPad, not supported by MKL. Switching to GEMM convolution engine. \n");
+                return false;
+            }
 
             //MKL-DNN calls does not support 4th dimention now, we will update the code once MKL release the update.
             return forward ? (geometry->InputShape().GetRank() < m_dimension) : (geometry->OutputShape().GetRank() < m_dimension);

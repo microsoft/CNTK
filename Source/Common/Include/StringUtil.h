@@ -5,9 +5,12 @@
 
 #pragma once
 
+#include <cctype>
 #include <codecvt>
+#include <cwctype>
 #include <string>
 #include <vector>
+#include <limits.h>
 
 #if defined(_MSC_VER)
 #include <cuchar>
@@ -40,6 +43,16 @@ namespace CNTK
 // Compares two ASCII strings ignoring the case.
 // TODO: Should switch to boost, boost::iequal should be used instead.
 // TODO: we already have EqualCI() in Basics.h which does the same thing.
+inline bool AreEqualIgnoreCase(char a, char b)
+{
+    return std::tolower(a) == std::tolower(b);
+}
+
+inline bool AreEqualIgnoreCase(wchar_t a, wchar_t b)
+{
+    return std::towlower(a) == std::towlower(b);
+}
+
 template <class TElement>
 inline bool AreEqualIgnoreCase(
     const std::basic_string<TElement, char_traits<TElement>, allocator<TElement>>& s1,
@@ -51,7 +64,7 @@ inline bool AreEqualIgnoreCase(
     }
 
     return std::equal(s1.begin(), s1.end(), s2.begin(), [](const TElement& a, const TElement& b) {
-        return std::tolower(a) == std::tolower(b);
+        return AreEqualIgnoreCase(a, b);
     });
 }
 
@@ -194,7 +207,7 @@ std::vector<unsigned char> ToUTF8Impl(T const* str, ConvertFuncT const& func)
     std::vector<unsigned char> buffer;
     std::string oneChar;
 
-    oneChar.resize(MB_CUR_MAX);
+    oneChar.resize(MB_LEN_MAX);
 
     std::mbstate_t state{}; // Initialize to zeros
 

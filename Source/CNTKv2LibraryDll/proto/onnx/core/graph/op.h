@@ -6,12 +6,11 @@
 #include "core/common/status.h"
 #include "core/graph/constants.h"
 
-using namespace onnx;
 using namespace Lotus::Common;
 
 namespace LotusIR {
-using AttrType = AttributeProto_AttributeType;
-using NodeAttributes = std::unordered_map<std::string, AttributeProto>;
+using AttrType = onnx::AttributeProto_AttributeType;
+using NodeAttributes = std::unordered_map<std::string, onnx::AttributeProto>;
 
 // This string array should exactly match the AttrType defined above.
 /*
@@ -44,8 +43,8 @@ static constexpr const char* kAttrTypeStrings[] =
 class TypeUtils {
  public:
   // Get attribute type given attribute proto data.
-  static Status GetType(const AttributeProto& attr, AttrType& type);
-  static bool IsValidAttribute(const AttributeProto& attribute);
+  static Status GetType(const onnx::AttributeProto& attr, AttrType& type);
+  static bool IsValidAttribute(const onnx::AttributeProto& attribute);
 };
 
 class MsOpRegistry {

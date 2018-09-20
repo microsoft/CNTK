@@ -196,6 +196,10 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
         // I.e. our chunks are a little larger than wanted (on av. half the av. utterance length).
         if (m_chunks.empty() || m_chunks.back().GetTotalFrames() > ChunkFrames)
         {
+            if (m_verbosity >= 2)
+            {
+                fprintf(stderr, "HTKDeserializer::InitializeChunkInfos: Splitting utterances into chunk[%u]...\n", chunkId);
+            }
             m_chunks.push_back(HTKChunkInfo(chunkId++));
         }
 

@@ -75,9 +75,7 @@ __declspec_noreturn static inline void ThrowFormattedVA(const char* format, va_l
     
     va_end(args_copy);
 
-#ifdef _DEBUG // print this to log, so we can see what the error is before throwing
     fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer.c_str());
-#endif
     throw ExceptionWithCallStack<E>(buffer, callstack);
 }
 

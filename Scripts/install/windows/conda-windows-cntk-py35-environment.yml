@@ -7,7 +7,7 @@ dependencies:
 - h5py=2.6.0=np111py35_2
 - imageio=2.2.0=py35_0
 - jupyter=1.0.0=py35_3
-- matplotlib=1.5.3=np111py35_0
+- matplotlib=2.0.0=np111py35_0
 - numpy=1.11.2=py35_0
 - pandas=0.19.1=np111py35_0
 - pandas-datareader=0.2.1=py35_0

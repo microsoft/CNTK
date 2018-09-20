@@ -418,3 +418,39 @@ def hierarchical_softmax_layer(input_var, label_index, label_dim, label_classes=
         all_probs.append(output_proba)
 
     return output_prob, class_probs, all_probs
+
+
+@typemap
+def fmeasure(output, target, beta=1):
+    """
+    This operation computes the f-measure between the output and target. If beta is set as one,
+    its called the f1-scorce or dice similarity coefficient. f1-scorce is monotonic in jaccard distance.
+
+    f-measure = (1 + beta ** 2) * precision * recall / (beta ** 2 * precision + recall)
+
+    This loss function is frequently used in semantic segmentation of images. Works with imbalanced classes, for
+    balanced classes you should prefer cross_entropy instead.
+    This operation works with both binary and multiclass classification.
+
+    Args:
+        output: the output values from the network
+        target: it is usually a one-hot vector where the hot bit corresponds to the label index
+        beta: greater than one weights recall higher than precision, less than one for the opposite.
+        Commonly chosen values are 0.5, 1 or 2.
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+
+    """
+
+    assert len(target.shape) == len(output.shape)
+
+    if len(output.shape) == 3:
+        axis = (1, 2)  # assumes that the first axis is the class axis
+    else:
+        axis = None
+
+    correct_predictions = C.reduce_sum(output * target, axis=axis)
+    precision = correct_predictions / C.reduce_sum(output, axis=axis)
+    recall = correct_predictions / C.reduce_sum(target, axis=axis)
+    return 1 - (1 + beta ** 2) * precision * recall / (beta ** 2 * precision + recall)

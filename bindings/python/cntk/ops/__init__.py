@@ -290,7 +290,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], dilation=(1,), reduction_rank=1, groups=1, max_temp_mem_size_in_samples=0, name=''):
+                auto_padding=[True], sequential=False, dilation=(1,), reduction_rank=1, groups=1, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -303,7 +303,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
     `convolution` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
     ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
-    The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
+    The first dimension, :math:`O`, is the number of convolution filters (i.e. the number of
     channels in the output). The second dimension, :math:`I`, must match the number of channels in the input, which can be ignored if `reduction_rank` is `0`.
     The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
     dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
@@ -339,6 +339,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          which means that all input channels are convolved to produce all output channels. A value of N would mean that the input (and output) channels are
          divided into N groups with the input channels in one group (say i-th input group) contributing to output channels in only one group (i-th output group).
          Number of input and output channels must be divisble by value of groups argument. Also, value of this argument must be strictly positive, i.e. groups > 0. 
+        sequential (bool, default False): flag if convolve over sequential axis. 
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -352,7 +353,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
     dilation = sanitize_shape(dilation)
     return convolution(convolution_map, operand, strides, sharing, auto_padding, dilation,
-                       reduction_rank, groups, max_temp_mem_size_in_samples, name)
+                       reduction_rank, groups, max_temp_mem_size_in_samples, sequential, name)
 
 @typemap
 def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
@@ -569,7 +570,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         blend_time_constant(float, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
-        use_cudnn_engine(bool, default True):
+        use_cudnn_engine(bool, default False):
         name (str, optional): the name of the Function instance in the network
         disable_regularization(bool, default False): turn off regularization in batch normalization
     Returns:
@@ -1812,11 +1813,15 @@ def asinh(x, name=''):
 @typemap
 def log_softmax(x, axis = None, name = ''):
     '''
-    Computes the logsoftmax normalized values of x. That is, y = x - log(reduce_sum(exp(x), axis)).
+    Computes the logsoftmax normalized values of x. That is, y = x - log(reduce_sum(exp(x), axis))
+    (the implementation uses an equivalent formula for numerical stability).
+
+    It is also possible to use `x - reduce_log_sum_exp(x, axis)` instead of log_softmax:
+    this can be faster (one reduce pass instead of two), but can behave slightly differently numerically.
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
-        axis (int): the axis of the inputs when coerced to 2D
+        axis (int): axis along which the logsoftmax operation will be performed (the default is the last axis)
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -2881,7 +2886,7 @@ def flatten(x, axis = None, name = ''):
 ##########################################################################
 
 @typemap
-def reduce_sum(x, axis=None, name=''):
+def reduce_sum(x, axis=None, keepdims=True, name=''):
     '''
     Computes the sum of the input tensor's elements across one axis or a list of axes. If the axis parameter
     is not specified then the sum will be computed over all static axes, which is
@@ -2917,6 +2922,7 @@ def reduce_sum(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -2927,11 +2933,11 @@ def reduce_sum(x, axis=None, name=''):
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
     axis = sanitize_multi_axis_reduction_list(axis)
-    return reduce_sum(x, axis, name)
+    return reduce_sum(x, axis, keepdims, name)
 
 
 @typemap
-def reduce_log_sum_exp(x, axis=None, name=''):
+def reduce_log_sum_exp(x, axis=None, keepdims=True, name=''):
     '''
     Computes the log of the sum of the exponentiations of the input tensor's
     elements across a specified axis or a list of specified axes.
@@ -2963,6 +2969,7 @@ def reduce_log_sum_exp(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -2974,11 +2981,11 @@ def reduce_log_sum_exp(x, axis=None, name=''):
     from cntk.cntk_py import reduce_log_sum
     x = sanitize_input(x)
     axis = sanitize_multi_axis_reduction_list(axis)
-    return reduce_log_sum(x, axis, name)
+    return reduce_log_sum(x, axis, keepdims, name)
 
 
 @typemap
-def reduce_mean(x, axis=None, name=''):
+def reduce_mean(x, axis=None, keepdims=True, name=''):
     '''
     Computes the mean of the input tensor's elements across a specified axis or a list of specified axes.
 
@@ -3014,6 +3021,7 @@ def reduce_mean(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -3024,11 +3032,11 @@ def reduce_mean(x, axis=None, name=''):
     from cntk.cntk_py import reduce_mean
     x = sanitize_input(x)
     axis = sanitize_multi_axis_reduction_list(axis)
-    return reduce_mean(x, axis, name)
+    return reduce_mean(x, axis, keepdims, name)
 
 
 @typemap
-def reduce_max(x, axis=None, name=''):
+def reduce_max(x, axis=None, keepdims=True, name=''):
     '''
     Computes the max of the input tensor's elements across a specified axis or a list of specified axes.
 
@@ -3057,6 +3065,7 @@ def reduce_max(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -3067,11 +3076,11 @@ def reduce_max(x, axis=None, name=''):
     from cntk.cntk_py import reduce_max
     x = sanitize_input(x)
     axis = sanitize_multi_axis_reduction_list(axis)
-    return reduce_max(x, axis, name)
+    return reduce_max(x, axis, keepdims, name)
 
 
 @typemap
-def reduce_min(x, axis=None, name=''):
+def reduce_min(x, axis=None, keepdims=True, name=''):
     '''
     Computes the min of the input tensor's elements across a specified axis or a list of specified axes.
 
@@ -3100,6 +3109,7 @@ def reduce_min(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a list of integers or a list of :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -3110,11 +3120,11 @@ def reduce_min(x, axis=None, name=''):
     from cntk.cntk_py import reduce_min
     x = sanitize_input(x)
     axis = sanitize_axis_list(axis)
-    return reduce_min(x, axis, name)
+    return reduce_min(x, axis, keepdims, name)
 
 
 @typemap
-def reduce_prod(x, axis=None, name=''):
+def reduce_prod(x, axis=None, keepdims=True, name=''):
     '''
     Computes the min of the input tensor's elements across the specified axis.
 
@@ -3143,6 +3153,7 @@ def reduce_prod(x, axis=None, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -3153,7 +3164,7 @@ def reduce_prod(x, axis=None, name=''):
     from cntk.cntk_py import reduce_prod
     x = sanitize_input(x)
     axis = sanitize_multi_axis_reduction_list(axis)
-    return reduce_prod(x, axis, name)
+    return reduce_prod(x, axis, keepdims, name)
 
 @typemap
 def reduce_l1(x, axis=None, keepdims = True, name=''):
@@ -3171,6 +3182,7 @@ def reduce_l1(x, axis=None, keepdims = True, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -3196,6 +3208,7 @@ def reduce_l2(x, axis=None, keepdims = True, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:
@@ -3221,6 +3234,7 @@ def reduce_sum_square(x, axis=None, keepdims = True, name=''):
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis` or a :obj:`list` or :obj:`tuple` of int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        keepdims (boolean): Keep the reduced dimension or not, default True mean keep reduced dimension
         name (str): the name of the Function instance in the network
 
     Returns:

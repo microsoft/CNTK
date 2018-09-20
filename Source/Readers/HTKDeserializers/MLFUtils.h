@@ -71,7 +71,7 @@ namespace CNTK {
         //  - original HTK
         //  - Dong's hacked format: ts te senonename senoneid
         static std::pair<size_t, size_t> ParseFrameRange(const std::vector<boost::iterator_range<char*>>& tokens, size_t byteOffset);
-
+        void Save(unsigned int firstFrame, unsigned int numFrames, size_t uid);
     private:
         void VerifyAndSaveRange(const std::pair<size_t, size_t>& frameRange, size_t uid, size_t byteOffset);
     };
