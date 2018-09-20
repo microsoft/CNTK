@@ -973,9 +973,9 @@ namespace CNTK
                         case PrimitiveOpType::GlobalConcat:
                         {
                             assert(m_inputs.size() == 1);
-                            size_t blockIndex = m_attributes[PrimitiveFunction::AttributeGlobalConcatBlockIndex].Value<size_t>();
-                            size_t growthRate = m_attributes[PrimitiveFunction::AttributeGlobalConcatGrowthRate].Value<size_t>();
-                            size_t segmentIndex = m_attributes[PrimitiveFunction::AttributeGlobalConcatSegmentIndex].Value<size_t>();
+                            size_t blockIndex = m_attributes[PrimitiveFunctionAttribute::AttributeGlobalConcatBlockIndex].Value<size_t>();
+                            size_t growthRate = m_attributes[PrimitiveFunctionAttribute::AttributeGlobalConcatGrowthRate].Value<size_t>();
+                            size_t segmentIndex = m_attributes[PrimitiveFunctionAttribute::AttributeGlobalConcatSegmentIndex].Value<size_t>();
                             NDShape outputDims = m_inputs[0].Shape();
                             if (0 == segmentIndex)
                                 globalConcatMap[blockIndex] = outputDims[2];

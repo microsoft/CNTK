@@ -333,44 +333,44 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(MarginInnerProductNode))
                 {
                     auto marginInnerProductNode = node->As<MarginInnerProductNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeMarginInnerProductOutputDimension] = marginInnerProductNode->m_outputDimension;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeMarginInnerProductBase] = marginInnerProductNode->m_base;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeMarginInnerProductGamma] = marginInnerProductNode->m_gamma;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeMarginInnerProductPower] = marginInnerProductNode->m_power;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeMarginInnerProductLambdaMin] = marginInnerProductNode->m_lambdaMin;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeMarginInnerProductMarginCoefficient] = marginInnerProductNode->m_marginCoefficient;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeMarginInnerProductOutputDimension] = marginInnerProductNode->m_outputDimension;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeMarginInnerProductBase] = marginInnerProductNode->m_base;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeMarginInnerProductGamma] = marginInnerProductNode->m_gamma;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeMarginInnerProductPower] = marginInnerProductNode->m_power;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeMarginInnerProductLambdaMin] = marginInnerProductNode->m_lambdaMin;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeMarginInnerProductMarginCoefficient] = marginInnerProductNode->m_marginCoefficient;
 
                     opType = PrimitiveOpType::MarginInnerProduct;
                 }
                 else if (node->OperationName() == OperationNameOf(FeatureNormalizeNode))
                 {
                     auto featureNormalizeNode = node->As<FeatureNormalizeNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeFeatureNormalizeNormalizeType] = featureNormalizeNode->m_normalizeType;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeFeatureNormalizeNormalizeType] = featureNormalizeNode->m_normalizeType;
 
                     opType = PrimitiveOpType::FeatureNormalize;
                 }
                 else if (node->OperationName() == OperationNameOf(AdditiveFullConnectionNode))
                 {
                     auto additiveFullConnectionNode = node->As<AdditiveFullConnectionNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeAdditiveFullConnectionOutputDimension] = additiveFullConnectionNode->m_outputDimension;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeAdditiveFullConnectionWeightNormalize] = additiveFullConnectionNode->m_weightNormalize;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeAdditiveFullConnectionBias] = additiveFullConnectionNode->m_bias;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeAdditiveFullConnectionAnnealBias] = additiveFullConnectionNode->m_annealBias;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeAdditiveFullConnectionBiasBase] = additiveFullConnectionNode->m_biasBase;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeAdditiveFullConnectionBiasGamma] = additiveFullConnectionNode->m_biasGamma;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeAdditiveFullConnectionBiasPower] = additiveFullConnectionNode->m_biasPower;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMin] = additiveFullConnectionNode->m_biasMin;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMax] = additiveFullConnectionNode->m_biasMax;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionOutputDimension] = additiveFullConnectionNode->m_outputDimension;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionWeightNormalize] = additiveFullConnectionNode->m_weightNormalize;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBias] = additiveFullConnectionNode->m_bias;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionAnnealBias] = additiveFullConnectionNode->m_annealBias;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasBase] = additiveFullConnectionNode->m_biasBase;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasGamma] = additiveFullConnectionNode->m_biasGamma;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasPower] = additiveFullConnectionNode->m_biasPower;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasMin] = additiveFullConnectionNode->m_biasMin;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasMax] = additiveFullConnectionNode->m_biasMax;
 
                     opType = PrimitiveOpType::AdditiveFullConnection;
                 }
                 else if (node->OperationName() == OperationNameOf(CenterLossNode))
                 {
                     auto centerLossNode = node->As<CenterLossNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeCenterLossLambda] = centerLossNode->m_lambda;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeCenterLossAlpha] = centerLossNode->m_alpha;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeCenterLossLabelDim] = centerLossNode->m_labelDim;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeCenterLossNormalize] = centerLossNode->m_normalize;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeCenterLossLambda] = centerLossNode->m_lambda;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeCenterLossAlpha] = centerLossNode->m_alpha;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeCenterLossLabelDim] = centerLossNode->m_labelDim;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeCenterLossNormalize] = centerLossNode->m_normalize;
 
                     opType = PrimitiveOpType::CenterLoss;
                 }
@@ -379,10 +379,10 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(GlobalConcatNode))
                 {
                     auto globalConcatNode = node->As<GlobalConcatNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeGlobalConcatBlockIndex] = globalConcatNode->m_blockIndex;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeGlobalConcatGrowthRate] = globalConcatNode->m_growthRate;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeGlobalConcatSegmentIndex] = globalConcatNode->m_segmentIndex;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeGlobalConcatSegmentNum] = globalConcatNode->m_segmentNum;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeGlobalConcatBlockIndex] = globalConcatNode->m_blockIndex;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeGlobalConcatGrowthRate] = globalConcatNode->m_growthRate;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeGlobalConcatSegmentIndex] = globalConcatNode->m_segmentIndex;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeGlobalConcatSegmentNum] = globalConcatNode->m_segmentNum;
 
                     opType = PrimitiveOpType::GlobalConcat;
                 }

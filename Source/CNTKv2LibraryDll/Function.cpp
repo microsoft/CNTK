@@ -2140,19 +2140,19 @@ namespace CNTK
     {
         std::vector<Variable> operands = {features, labels, weight};
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductOutputDimension] = outputDimension;
-        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductBase] = base;
-        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductGamma] = gamma;
-        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductPower] = power;
-        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductLambdaMin] = lambdaMin;
-        additionalProperties[PrimitiveFunction::AttributeMarginInnerProductMarginCoefficient] = marginCoefficient;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeMarginInnerProductOutputDimension] = outputDimension;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeMarginInnerProductBase] = base;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeMarginInnerProductGamma] = gamma;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeMarginInnerProductPower] = power;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeMarginInnerProductLambdaMin] = lambdaMin;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeMarginInnerProductMarginCoefficient] = marginCoefficient;
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::MarginInnerProduct, operands, std::move(additionalProperties), name), name);
     }
 
     FunctionPtr FeatureNormalize(const Variable& features, size_t normalizeType, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeFeatureNormalizeNormalizeType] = normalizeType;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeFeatureNormalizeNormalizeType] = normalizeType;
         return UnaryOp(PrimitiveOpType::FeatureNormalize, features, std::move(additionalProperties), name);
     }
 
@@ -2160,25 +2160,25 @@ namespace CNTK
     {
         std::vector<Variable> operands = {features, labels, weight};
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionOutputDimension] = outputDimension;
-        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionWeightNormalize] = weightNormalize;
-        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBias] = bias;
-        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionAnnealBias] = annealBias;
-        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBiasBase] = biasBase;
-        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBiasGamma] = biasGamma;
-        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBiasPower] = biasPower;
-        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMin] = biasMin;
-        additionalProperties[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMax] = biasMax;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionOutputDimension] = outputDimension;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionWeightNormalize] = weightNormalize;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBias] = bias;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionAnnealBias] = annealBias;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasBase] = biasBase;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasGamma] = biasGamma;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasPower] = biasPower;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasMin] = biasMin;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasMax] = biasMax;
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::AdditiveFullConnection, operands, std::move(additionalProperties), name), name);
     }
 
     FunctionPtr CenterLoss(const Variable& features, const Variable& labels, double lambda, double alpha, size_t labelDim, bool normalize, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeCenterLossLambda] = lambda;
-        additionalProperties[PrimitiveFunction::AttributeCenterLossAlpha] = alpha;
-        additionalProperties[PrimitiveFunction::AttributeCenterLossLabelDim] = labelDim;
-        additionalProperties[PrimitiveFunction::AttributeCenterLossNormalize] = normalize;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeCenterLossLambda] = lambda;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeCenterLossAlpha] = alpha;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeCenterLossLabelDim] = labelDim;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeCenterLossNormalize] = normalize;
         return BinaryOp(PrimitiveOpType::CenterLoss, labels, features, std::move(additionalProperties), name);
     }
 
@@ -2194,10 +2194,10 @@ namespace CNTK
     {
         Variable featureCopy = feature;
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeGlobalConcatBlockIndex] = blockIndex;
-        additionalProperties[PrimitiveFunction::AttributeGlobalConcatGrowthRate] = growthRate;
-        additionalProperties[PrimitiveFunction::AttributeGlobalConcatSegmentIndex] = segmentIndex;
-        additionalProperties[PrimitiveFunction::AttributeGlobalConcatSegmentNum] = segmentNum;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeGlobalConcatBlockIndex] = blockIndex;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeGlobalConcatGrowthRate] = growthRate;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeGlobalConcatSegmentIndex] = segmentIndex;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeGlobalConcatSegmentNum] = segmentNum;
         return UnaryOp(PrimitiveOpType::GlobalConcat, featureCopy, std::move(additionalProperties), name);
     }
 

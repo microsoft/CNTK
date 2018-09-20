@@ -1156,41 +1156,41 @@ namespace CNTK
                     break;
                 case PrimitiveOpType::MarginInnerProduct:
                 {
-                    auto outputDimension = functionConfig[PrimitiveFunction::AttributeMarginInnerProductOutputDimension].Value<size_t>();
-                    auto base = functionConfig[PrimitiveFunction::AttributeMarginInnerProductBase].Value<double>();
-                    auto gamma = functionConfig[PrimitiveFunction::AttributeMarginInnerProductGamma].Value<double>();
-                    auto power = functionConfig[PrimitiveFunction::AttributeMarginInnerProductPower].Value<double>();
-                    auto lambdaMin = functionConfig[PrimitiveFunction::AttributeMarginInnerProductLambdaMin].Value<double>();
-                    auto marginCoefficient = functionConfig[PrimitiveFunction::AttributeMarginInnerProductMarginCoefficient].Value<size_t>();
+                    auto outputDimension = functionConfig[PrimitiveFunctionAttribute::AttributeMarginInnerProductOutputDimension].Value<size_t>();
+                    auto base = functionConfig[PrimitiveFunctionAttribute::AttributeMarginInnerProductBase].Value<double>();
+                    auto gamma = functionConfig[PrimitiveFunctionAttribute::AttributeMarginInnerProductGamma].Value<double>();
+                    auto power = functionConfig[PrimitiveFunctionAttribute::AttributeMarginInnerProductPower].Value<double>();
+                    auto lambdaMin = functionConfig[PrimitiveFunctionAttribute::AttributeMarginInnerProductLambdaMin].Value<double>();
+                    auto marginCoefficient = functionConfig[PrimitiveFunctionAttribute::AttributeMarginInnerProductMarginCoefficient].Value<size_t>();
                     ASSIGN_NEW_NODE(MarginInnerProductNode, network->GetDeviceId(), internalNodeName, outputDimension, base, gamma, power, lambdaMin, marginCoefficient);
                     break;
                 }
                 case PrimitiveOpType::FeatureNormalize:
                 {
-                    auto normalizeType = functionConfig[PrimitiveFunction::AttributeFeatureNormalizeNormalizeType].Value<size_t>();
+                    auto normalizeType = functionConfig[PrimitiveFunctionAttribute::AttributeFeatureNormalizeNormalizeType].Value<size_t>();
                     ASSIGN_NEW_NODE(FeatureNormalizeNode, network->GetDeviceId(), internalNodeName, normalizeType);
                     break;
                 }
                 case PrimitiveOpType::AdditiveFullConnection:
                 {
-                    auto outputDimension = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionOutputDimension].Value<size_t>();
-                    auto weightNormalize = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionWeightNormalize].Value<bool>();
-                    auto bias = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBias].Value<double>();
-                    auto annealBias = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionAnnealBias].Value<bool>();
-                    auto biasBase = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasBase].Value<double>();
-                    auto biasGamma = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasGamma].Value<double>();
-                    auto biasPower = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasPower].Value<double>();
-                    auto biasMin = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMin].Value<double>();
-                    auto biasMax = functionConfig[PrimitiveFunction::AttributeAdditiveFullConnectionBiasMax].Value<double>();
+                    auto outputDimension = functionConfig[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionOutputDimension].Value<size_t>();
+                    auto weightNormalize = functionConfig[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionWeightNormalize].Value<bool>();
+                    auto bias = functionConfig[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBias].Value<double>();
+                    auto annealBias = functionConfig[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionAnnealBias].Value<bool>();
+                    auto biasBase = functionConfig[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasBase].Value<double>();
+                    auto biasGamma = functionConfig[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasGamma].Value<double>();
+                    auto biasPower = functionConfig[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasPower].Value<double>();
+                    auto biasMin = functionConfig[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasMin].Value<double>();
+                    auto biasMax = functionConfig[PrimitiveFunctionAttribute::AttributeAdditiveFullConnectionBiasMax].Value<double>();
                     ASSIGN_NEW_NODE(AdditiveFullConnectionNode, network->GetDeviceId(), internalNodeName, outputDimension, weightNormalize, bias, annealBias, biasBase, biasGamma, biasPower, biasMin, biasMax);
                     break;
                 }
                 case PrimitiveOpType::CenterLoss:
                 {
-                    auto lambda = functionConfig[PrimitiveFunction::AttributeCenterLossLambda].Value<double>();
-                    auto alpha = functionConfig[PrimitiveFunction::AttributeCenterLossAlpha].Value<double>();
-                    auto labelDim = functionConfig[PrimitiveFunction::AttributeCenterLossLabelDim].Value<size_t>();
-                    auto normalize = functionConfig[PrimitiveFunction::AttributeCenterLossNormalize].Value<bool>();
+                    auto lambda = functionConfig[PrimitiveFunctionAttribute::AttributeCenterLossLambda].Value<double>();
+                    auto alpha = functionConfig[PrimitiveFunctionAttribute::AttributeCenterLossAlpha].Value<double>();
+                    auto labelDim = functionConfig[PrimitiveFunctionAttribute::AttributeCenterLossLabelDim].Value<size_t>();
+                    auto normalize = functionConfig[PrimitiveFunctionAttribute::AttributeCenterLossNormalize].Value<bool>();
                     ASSIGN_NEW_NODE(CenterLossNode, network->GetDeviceId(), internalNodeName, lambda, alpha, labelDim, normalize);
                     break;
                 }
@@ -1201,10 +1201,10 @@ namespace CNTK
                 }
                 case PrimitiveOpType::GlobalConcat:
                 {
-                    auto blockIndex = functionConfig[PrimitiveFunction::AttributeGlobalConcatBlockIndex].Value<size_t>();
-                    auto growthRate = functionConfig[PrimitiveFunction::AttributeGlobalConcatGrowthRate].Value<size_t>();
-                    auto segmentIndex = functionConfig[PrimitiveFunction::AttributeGlobalConcatSegmentIndex].Value<size_t>();
-                    auto segmentNum = functionConfig[PrimitiveFunction::AttributeGlobalConcatSegmentNum].Value<size_t>();
+                    auto blockIndex = functionConfig[PrimitiveFunctionAttribute::AttributeGlobalConcatBlockIndex].Value<size_t>();
+                    auto growthRate = functionConfig[PrimitiveFunctionAttribute::AttributeGlobalConcatGrowthRate].Value<size_t>();
+                    auto segmentIndex = functionConfig[PrimitiveFunctionAttribute::AttributeGlobalConcatSegmentIndex].Value<size_t>();
+                    auto segmentNum = functionConfig[PrimitiveFunctionAttribute::AttributeGlobalConcatSegmentNum].Value<size_t>();
                     ASSIGN_NEW_NODE(GlobalConcatNode, network->GetDeviceId(), internalNodeName, blockIndex, growthRate, segmentIndex, segmentNum);
                     break;
                 }
