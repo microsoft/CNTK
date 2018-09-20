@@ -67,6 +67,7 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 ### Updates
 - Updated CNTK's ONNX import/export to use ONNX 1.2 spec.
 - Major update to how batch and sequence axes are handled in export and import. As a result, the complex scenarios and edge cases are handled accurately.
+- Added support for exporting and importing Float16 models.
 - Updated CNTK's ONNX `BatchNormalization` op export/import to latest spec.
 - Added model domain to ONNX model export.
 - Improved error reporting during import and export of ONNX models.
@@ -93,11 +94,13 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 - Updated CNTK's ONNX `ImageScaler` op export/import to latest spec.
 - Updated CNTK's ONNX `Reduce` ops export/import to latest spec.
 - Updated CNTK's ONNX `Flatten` op export/import to latest spec.
+- Added support for exporting CNTK's `TimesTranspose` op to ONNX.
 - Added CNTK support for ONNX `Unsqueeze` op.
 
 ### Bug or minor fixes:
 - Updated LRN op to match ONNX 1.2 spec where the `size` attribute has the semantics of diameter, not radius. Added validation if LRN kernel size is larger than channel size.
 - Updated `Min`/`Max` import implementation to handle variadic inputs.
+- Fixed CNTK's `Times` op export to handle the scenario where only one input has batch axis.
 - Fixed possible file corruption when resaving on top of existing ONNX model file.
 
 ## .Net Support
