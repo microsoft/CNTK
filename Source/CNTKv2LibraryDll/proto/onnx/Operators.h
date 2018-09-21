@@ -10,7 +10,7 @@
 
 #include <set>
 
-namespace ONNXIR
+namespace onnxruntime
 {
 class Graph;
 }

@@ -3,8 +3,8 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-#include "proto/onnx/core/graph/graph.h"
-#include "proto/onnx/core/graph/tensorutils.h"
+#include "core/graph/graph.h"
+#include "core/framework/tensorutils.h"
 
 #include "Utils.h"
 #include "Operators.h"
@@ -13,7 +13,7 @@
 #include "RNNHelper.h"
 #include "ONNXToCNTK.h"
 
-using namespace LotusIR;
+using namespace onnxruntime;
 using namespace CNTK;
 using namespace CNTK::ONNX;
 using namespace onnx;
@@ -299,9 +299,9 @@ CNTK::DataType ONNXToCNTKHelper::FromONNXType(onnx::TypeProto type)
     }
 }
 
-// helpers copied from LotusIR (Converter.cc). These functions will eventually
+// helpers copied from onnxruntime (Converter.cc). These functions will eventually
 // be replaced with functionalities of onnx core.
-bool IsLittleEndianOrder()
+bool CNTKIsLittleEndianOrder()
 {
     int n = 1;
     return (*(char *) &n == 1);
@@ -312,7 +312,7 @@ bool IsLittleEndianOrder()
 float UnpackFloat(const char *buf, int i)
 {
     float temp = 0;
-    if (IsLittleEndianOrder())
+    if (CNTKIsLittleEndianOrder())
     {
         memcpy((void *) &temp, (void *) buf, sizeof(char) * 4);
     }
@@ -349,7 +349,7 @@ double UnpackDouble(const char *buf, int i)
 {
     double temp = 0;
 
-    if (IsLittleEndianOrder())
+    if (CNTKIsLittleEndianOrder())
     {
         memcpy((void *) &temp, (void *) buf, sizeof(char) * 8);
     }
@@ -384,7 +384,7 @@ float16 UnpackFloat16(const char *buf, int i)
 {
     float16 temp = 0;
 
-    if (IsLittleEndianOrder())
+    if (CNTKIsLittleEndianOrder())
     {
         memcpy((void *) &temp, (void *) buf, sizeof(char) * 2);
     }
@@ -461,7 +461,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     {
         // It does not work using vector<bool> because resulted memory layout is not what we expect.
         bool *srcData = new bool[shape.TotalSize()];
-        ::Lotus::Utils::TensorUtils::UnpackTensor(valueProto, srcData, shape.TotalSize());
+        onnxruntime::Utils::TensorUtils::UnpackTensor(valueProto, srcData, shape.TotalSize());
 
         // CNTK does not support bool. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -476,7 +476,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     case TensorProto_DataType_INT32:
     {
         std::vector<int32_t> srcData(shape.TotalSize());
-        ::Lotus::Utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
+        onnxruntime::Utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
 
         // CNTK does not support int. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -490,7 +490,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     case TensorProto_DataType_INT64:
     {
         std::vector<int64_t> srcData(shape.TotalSize());
-        ::Lotus::Utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
+        onnxruntime::Utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
 
         // CNTK does not support int64_t. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -1445,7 +1445,7 @@ std::vector<int64_t> ONNXToCNTKHelper::GetShapeFromInput(const NodeArg *shapeInp
 
     auto shapeSize = valueProto->dims(0);
     std::vector<int64_t> dimData(shapeSize);
-    ::Lotus::Utils::TensorUtils::UnpackTensor(*valueProto, &dimData[0], shapeSize);
+    onnxruntime::Utils::TensorUtils::UnpackTensor(*valueProto, &dimData[0], shapeSize);
 
     return dimData;
 }
@@ -3456,7 +3456,7 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKFCNode(const std::wstring &nodeName, con
     return cntkFunction;
 }
 
-FunctionPtr ONNXToCNTK::CreateGraph(LotusIR::Graph *src, const DeviceDescriptor &computeDevice)
+FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescriptor &computeDevice)
 {
     FunctionPtr cntkModel;
 
@@ -3489,7 +3489,7 @@ FunctionPtr ONNXToCNTK::CreateGraph(LotusIR::Graph *src, const DeviceDescriptor 
     std::vector<FunctionPtr> functions;
     for (Node::NodeConstIterator it = itNodeFn->first->InputNodesBegin(); it != itNodeFn->first->InputNodesEnd(); ++it)
     {
-        // TODO: consulting LotusIR to see how to do this solidly.
+        // TODO: consulting onnxruntime to see how to do this solidly.
         // https://msasg.visualstudio.com/DefaultCollection/Shared%20Data/AIToolkits-CNTK/_queries?id=1134732&_a=edit&triage=true
         std::vector<FunctionPtr> &constructedFuncts = constructedFunctions[*it];
         for (int index = 0; index < constructedFuncts.size(); index++)

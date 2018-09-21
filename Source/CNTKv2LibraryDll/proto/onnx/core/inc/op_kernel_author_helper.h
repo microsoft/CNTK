@@ -5,7 +5,7 @@
 //-----------------------------------------------------------------------------
 #pragma once
 
-#include "op_kernel_author.h"
+#include "core/inc/op_kernel_author.h"
 #include <limits>
 #include <string>
 #include <vector>
@@ -13,12 +13,12 @@
 
 // Disable formatting, which is incorrect for ML_API macros
 // clang-format off
-namespace Lotus {
+namespace onnxruntime {
 using MLConstStringParam = const char*;
 
 class MLOpKernelContext;
 
-// TODO - Consider using this directly in Lotus and merging error handling
+// TODO - Consider using this directly in onnxruntime and merging error handling
 class MLStatusException : public std::exception {
  public:
   MLStatusException(const MLStatus& status) : status_(status) {
@@ -256,7 +256,7 @@ class MLOperatorAttributes {
 
 class MLOpKernelInfo : public MLOperatorAttributes {
  public:
-  MLOpKernelInfo(const IMLOpKernelInfo* impl) : impl_(impl), MLOperatorAttributes(impl) {}
+  MLOpKernelInfo(const IMLOpKernelInfo* impl) : MLOperatorAttributes(impl), impl_(impl) {}
 
   // For cases of interop where the caller needs to pass the unwrapped class across a boundary.
   const IMLOpKernelInfo* GetInterface() const noexcept {
@@ -296,7 +296,7 @@ class MLOpKernelInfo : public MLOperatorAttributes {
   MLOpKernelTensorShapeInfo GetTensorShapeInfo() const {
     const IMLOpKernelTensorShapeInfo* ret = nullptr;
     ML_CHECK_STATUS(impl_->GetTensorShapeInfo(&ret));
-    return MLOpKernelTensorShapeInfo(ret);
+    return {ret};
   }
 
  private:
@@ -305,7 +305,7 @@ class MLOpKernelInfo : public MLOperatorAttributes {
 
 class MLShapeInferenceContext : public MLOperatorAttributes {
  public:
-  MLShapeInferenceContext(IMLShapeInferenceContext* impl) : impl_(impl), MLOperatorAttributes(impl) {}
+  MLShapeInferenceContext(IMLShapeInferenceContext* impl) : MLOperatorAttributes(impl), impl_(impl) {}
 
   // For cases of interop where the caller needs to pass the unwrapped class across a boundary.
   const IMLShapeInferenceContext* GetInterface() const noexcept {
@@ -352,7 +352,7 @@ class MLShapeInferenceContext : public MLOperatorAttributes {
 
 class MLTypeInferenceContext : public MLOperatorAttributes {
  public:
-  MLTypeInferenceContext(IMLTypeInferenceContext* impl) : impl_(impl), MLOperatorAttributes(impl) {}
+  MLTypeInferenceContext(IMLTypeInferenceContext* impl) : MLOperatorAttributes(impl),impl_(impl) {}
 
   // For cases of interop where the caller needs to pass the unwrapped class across a boundary.
   const IMLTypeInferenceContext* GetInterface() const noexcept {
@@ -483,14 +483,14 @@ class MLOpTensor {
 
 class MLTemporaryDataDeleter {
  public:
-  MLTemporaryDataDeleter() : context_(nullptr) {}
+  MLTemporaryDataDeleter()  {}
   MLTemporaryDataDeleter(const MLOpKernelContext* context)
       : context_(context) {}
 
   void operator()(void* p) const;
 
  private:
-  const MLOpKernelContext* context_;
+  const MLOpKernelContext* context_{nullptr};
 };
 
 using MLTemporaryDataUniquePtr = std::unique_ptr<void, MLTemporaryDataDeleter>;
@@ -587,4 +587,4 @@ class MLOpKernel : public IMLOpKernel, public T {
   using T::Compute;
 };
 
-} // namespace Lotus
+} // namespace onnxruntime

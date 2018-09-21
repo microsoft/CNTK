@@ -1,32 +1,43 @@
-#pragma once
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 
+#pragma once
+#include <list>
+#include <unordered_map>
+#include <memory>
+#include <climits>
+#include <string>
 #include "core/graph/graph.h"
 
 #include "gsl/pointers"
 
-namespace LotusIR {
+namespace onnxruntime {
 typedef std::unordered_map<std::string, std::string> ModelMetaData;
+using ILotusOpSchemaRegistryList = std::list<std::shared_ptr<ILotusOpSchemaCollection>>;
 
 // A machine learning model representation class.
 // Besides a main <Graph>, it also holds basic information, say,
 // model version, model domain, model author, license etc.
 class Model {
  public:
-  const Version kNoVersion = INT64_MAX;
+  static constexpr Version kNoVersion = INT64_MAX;
 
   // Construct model from scratch.
   explicit Model(const std::string& graph_name,
                  bool is_onnx_domain_only = false,
                  const ModelMetaData& model_metadata = ModelMetaData(),
-                 const ILotusOpSchemaCollection* local_registry = nullptr);
+                 const ILotusOpSchemaRegistryList* local_registries = nullptr,
+                 const std::unordered_map<std::string, int>& domain_to_version = {});
 
   // NOTE: after calling this constructor, <*this> model will
   // hold a copy of <model_proto>.
-  explicit Model(const onnx::ModelProto& model_proto, const ILotusOpSchemaCollection* local_registry = nullptr);
+  explicit Model(const ONNX_NAMESPACE::ModelProto& model_proto,
+                 const ILotusOpSchemaRegistryList* local_registries = nullptr);
 
   // NOTE: after calling this constructor, <*this> model will
   // own the <model_proto>.
-  explicit Model(std::unique_ptr<onnx::ModelProto> model_proto, const ILotusOpSchemaCollection* local_registry = nullptr);
+  explicit Model(std::unique_ptr<ONNX_NAMESPACE::ModelProto> model_proto,
+                 const ILotusOpSchemaRegistryList* local_registries = nullptr);
 
   // Get model's IR version.
   // Return <kNoVersion> if not specified.
@@ -54,7 +65,7 @@ class Model {
   // Return null pointer if not specified.
   Version ModelVersion() const;
   // Set models' version.
-  void SetModelversion(LotusIR::Version model_version);
+  void SetModelversion(onnxruntime::Version model_version);
 
   // Get model's doc string.
   // Return null pointer if not specified.
@@ -65,52 +76,45 @@ class Model {
   const ModelMetaData& MetaData() const noexcept;
 
   // Get model's main graph.
-  // The return pointer is owned by <*this> model.
-  // TODO(Task:131) Model::MainGraph can return reference as the value is never null
-  Graph* MainGraph() noexcept;
-  const Graph* MainGraph() const noexcept;
+  Graph& MainGraph() noexcept;
+  const Graph& MainGraph() const noexcept;
 
   // Get model's serialization proto data.
-  onnx::ModelProto ToProto();
+  ONNX_NAMESPACE::ModelProto ToProto();
 
 #ifdef _WIN32
-  static Lotus::Common::Status Save(Model& model, const std::wstring& file_path);
+  static ::onnxruntime::common::Status Save(Model& model, const std::wstring& file_path);
 
   // TODO(Task:132) Use of shared_ptr<X>* in Load/Save methods is confusing.
-  static Lotus::Common::Status Load(const std::wstring& file_path, /*out*/ std::shared_ptr<Model>& p_model,
-                                    const ILotusOpSchemaCollection* local_registry = nullptr);
+  static ::onnxruntime::common::Status Load(const std::wstring& file_path, /*out*/ std::shared_ptr<Model>& p_model,
+                                            const ILotusOpSchemaRegistryList* local_registry = nullptr);
 #endif
-  static Lotus::Common::Status Save(Model& model, const std::string& file_path);
+  static ::onnxruntime::common::Status Save(Model& model, const std::string& file_path);
 
-  static Lotus::Common::Status Save(Model& model, int fd);
+  static ::onnxruntime::common::Status Save(Model& model, int fd);
 
-  static Lotus::Common::Status Load(std::istream& model_istream, onnx::ModelProto* p_model_proto);
+  static ::onnxruntime::common::Status Load(std::istream& model_istream, ONNX_NAMESPACE::ModelProto* p_model_proto);
 
-  static Lotus::Common::Status Load(const std::string& file_path,
-                                    /*out*/ std::shared_ptr<Model>& p_model,
-                                    const ILotusOpSchemaCollection* local_registry = nullptr);
+  static ::onnxruntime::common::Status Load(const std::string& file_path,
+                                            /*out*/ std::shared_ptr<Model>& p_model,
+                                            const ILotusOpSchemaRegistryList* local_registries = nullptr);
 
-  static Lotus::Common::Status Load(int fd, /*out*/ std::shared_ptr<Model>& p_model,
-                                    const ILotusOpSchemaCollection* local_registry = nullptr);
+  static ::onnxruntime::common::Status Load(int fd, /*out*/ std::shared_ptr<Model>& p_model,
+                                            const ILotusOpSchemaRegistryList* local_registries = nullptr);
 
   // 'int' rather than 'size_t' because of a protobuf design choice; let callers handle type checks
-  static Lotus::Common::Status LoadFromBytes(int count, void* pBytes, /*out*/ std::shared_ptr<Model>& p_model,
-                                             const ILotusOpSchemaCollection* local_registry = nullptr);
+  static ::onnxruntime::common::Status LoadFromBytes(int count, void* pBytes, /*out*/ std::shared_ptr<Model>& p_model,
+                                                     const ILotusOpSchemaRegistryList* local_registries = nullptr);
 
-  static Lotus::Common::Status Load(const onnx::ModelProto& model_proto, /*out*/ std::shared_ptr<Model>& p_model,
-                                    const ILotusOpSchemaCollection* local_registry = nullptr);
+  static ::onnxruntime::common::Status Load(const ONNX_NAMESPACE::ModelProto& model_proto, /*out*/ std::shared_ptr<Model>& p_model,
+                                            const ILotusOpSchemaRegistryList* local_registries = nullptr);
+
+  static ::onnxruntime::common::Status Load(std::unique_ptr<ONNX_NAMESPACE::ModelProto> p_model_proto, /*out*/ std::shared_ptr<Model>& p_model,
+                                            const ILotusOpSchemaRegistryList* local_registries = nullptr);
 
  private:
-  // Set <domain_to_version_> and <model_proto_> to contain related domains
-  // with latest version in OpSchemaRegistry.
-  // if <is_onnx_domain_only> is true, then only onnx domain will be contained.
-  // otherwise, ml domain will also be contained.
-  void AddImportOpSets(bool is_onnx_domain_only,
-                       /*out*/ gsl::not_null<std::unordered_map<std::string, int>*> domain_to_version,
-                       const ILotusOpSchemaCollection* local_registry);
-
   // Model data.
-  std::unique_ptr<onnx::ModelProto> model_proto_;
+  std::unique_ptr<ONNX_NAMESPACE::ModelProto> model_proto_;
 
   // This is a duplication of <model_proto_.metadata_props()>.
   // It gives better accessibility.
@@ -119,4 +123,4 @@ class Model {
   // Main graph of the model.
   std::unique_ptr<Graph> graph_;
 };
-}  // namespace LotusIR
+}  // namespace onnxruntime
