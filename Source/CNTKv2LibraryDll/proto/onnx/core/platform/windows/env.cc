@@ -128,7 +128,7 @@ class WindowsEnv : public Env {
   }
 
   common::Status FileOpenWr(const std::wstring& path, /*out*/ gsl::not_null<int*> p_fd) const override {
-    _wsopen_s(p_fd, path.c_str(), _O_CREAT | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+    _wsopen_s(p_fd, path.c_str(), _O_CREAT | O_TRUNC | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
     if (0 > *p_fd) {
       return common::Status(common::SYSTEM, errno);
     }
@@ -144,7 +144,7 @@ class WindowsEnv : public Env {
   }
 
   common::Status FileOpenWr(const std::string& path, /*out*/ gsl::not_null<int*> p_fd) const override {
-    _sopen_s(p_fd, path.c_str(), _O_CREAT | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+    _sopen_s(p_fd, path.c_str(), _O_CREAT | O_TRUNC | _O_SEQUENTIAL | _O_BINARY | _O_WRONLY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
     if (0 > *p_fd) {
       return common::Status(common::SYSTEM, errno);
     }
