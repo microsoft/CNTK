@@ -904,6 +904,37 @@ def test_LogSoftmax(tmpdir, dtype):
     model = C.log_softmax(x)
     verify_one_input(model, data, tmpdir, 'LogSoftmax_1')
 
+#LogAddExp
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LogAddExp(tmpdir, dtype):
+    shape = (2,3,4)
+
+    data_x = np.random.rand(*shape).astype(np.float32)
+    data_y = np.random.rand(*shape).astype(np.float32)
+
+    x = C.input_variable(shape)
+    y = C.input_variable(shape)
+
+    model = C.log_add_exp(x, y)
+
+    verify_two_input(model, data_x, data_y, tmpdir, 'LogAddExp_0')
+
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LogAddExp_Broadcast(tmpdir, dtype):
+    shape_x_arr = [(2,1,4), (2,1,4), (2,2,3,4)]
+    shape_y_arr = [(1,3,1), (3,1),   (1,1)]
+
+    for i, (shape_x, shape_y) in enumerate(list(zip(shape_x_arr, shape_y_arr))):
+        data_x = np.random.rand(*shape_x).astype(np.float32)
+        data_y = np.random.rand(*shape_y).astype(np.float32)
+
+        x = C.input_variable(shape_x)
+        y = C.input_variable(shape_y)
+
+        model = C.log_add_exp(x, y)
+
+        verify_two_input(model, data_x, data_y, tmpdir, 'LogAddExp_Broadcast_' + str(i))
+
 #LRN
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LRN(tmpdir, dtype, device_id):
