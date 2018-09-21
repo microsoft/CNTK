@@ -261,7 +261,6 @@
     <ClCompile Include="proto\onnx\core\graph\op.cc" />
     <ClCompile Include="proto\onnx\core\graph\tensorutils.cc" />
     <ClCompile Include="proto\onnx\onnx-ml.pb.cc.VS_wrapper.cpp" />
-    <ClCompile Include="proto\onnx\onnx-operators-ml.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="proto\onnx\ONNX.cpp" />
     <ClCompile Include="proto\onnx\ONNXToCNTK.cpp" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\checker.cc" />
