@@ -113,7 +113,7 @@ FunctionPtr ONNXFormat::Load(const std::wstring& filepath, const DeviceDescripto
 #ifdef _WIN32
     onnxruntime::common::Status loadStatus = onnxruntime::Model::Load(filepath, model);
 #else
-    onnxruntime::Common::Status loadStatus = onnxruntime::Model::Load(ToLegacyString(ToUTF8(filepath)), model);
+    onnxruntime::common::Status loadStatus = onnxruntime::Model::Load(ToLegacyString(ToUTF8(filepath)), model);
 #endif
     if (!loadStatus.IsOK())
         LogicError("Failed to load model: '%s'", loadStatus.ErrorMessage().c_str());

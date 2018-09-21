@@ -96,6 +96,8 @@ SOURCEDIR:= Source
 GSL_PATH:=$(SOURCEDIR)/../external/gsl
 ONNX_PATH:=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx
 ONNX_REPO_PATH:=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo
+ONNX_REPO_PATH+=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx
+ONNX_REPO_PATH+=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/include
 INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/API/Internals CNTKv2LibraryDll/Generated/Linux CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 INCLUDEPATH+=$(GSL_PATH)/include
@@ -526,12 +528,20 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/tensorboard/TensorBoardUtils.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/logging/capture.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/logging/logging.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/profiler.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/common/status.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/framework/tensorutils.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/function.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph_transformer.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph_transformer_mgr.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/model.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/op.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/tensorutils.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/schema_registry.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/platform/env.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/platform/env_time.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/platform/posix/env.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/platform/posix/env_time.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/platform/posix/stacktrace.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/checker.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/common/assertions.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/controlflow/defs.cc \

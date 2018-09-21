@@ -16,7 +16,7 @@ limitations under the License.
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <dlfcn.h>
+//#include <dlfcn.h>
 
 #include <thread>
 #include <vector>
@@ -158,39 +158,39 @@ class PosixEnv : public Env {
   }
 
   virtual common::Status LoadLibrary(const std::string& library_filename, void** handle) const override {
-    char* error_str = dlerror();  // clear any old error_str
-    *handle = dlopen(library_filename.c_str(), RTLD_NOW | RTLD_LOCAL);
-    error_str = dlerror();
-    if (!*handle) {
-      return common::Status(common::LOTUS, common::FAIL,
-                            "Failed to load library " + library_filename + " with error: " + error_str);
-    }
+    // char* error_str = dlerror();  // clear any old error_str
+    // *handle = dlopen(library_filename.c_str(), RTLD_NOW | RTLD_LOCAL);
+    // error_str = dlerror();
+    // if (!*handle) {
+    //   return common::Status(common::LOTUS, common::FAIL,
+    //                         "Failed to load library " + library_filename + " with error: " + error_str);
+    // }
     return common::Status::OK();
   }
 
   virtual common::Status UnloadLibrary(void* handle) const override {
-    if (!handle) {
-      return common::Status(common::LOTUS, common::FAIL, "Got null library handle");
-    }
-    char* error_str = dlerror();  // clear any old error_str
-    int retval = dlclose(handle);
-    error_str = dlerror();
-    if (retval != 0) {
-      return common::Status(common::LOTUS, common::FAIL,
-                            "Failed to unload library with error: " + std::string(error_str));
-    }
+    // if (!handle) {
+    //   return common::Status(common::LOTUS, common::FAIL, "Got null library handle");
+    // }
+    // char* error_str = dlerror();  // clear any old error_str
+    // int retval = dlclose(handle);
+    // error_str = dlerror();
+    // if (retval != 0) {
+    //   return common::Status(common::LOTUS, common::FAIL,
+    //                         "Failed to unload library with error: " + std::string(error_str));
+    // }
     return common::Status::OK();
   }
 
   virtual common::Status GetSymbolFromLibrary(void* handle, const std::string& symbol_name, void** symbol) const override {
-    char* error_str = dlerror();  // clear any old error str
-    *symbol = dlsym(handle, symbol_name.c_str());
-    error_str = dlerror();
-    if (error_str) {
-      return common::Status(common::LOTUS, common::FAIL,
-                            "Failed to get symbol " + symbol_name + " with error: " + error_str);
-    }
-    // it's possible to get a NULL symbol in our case when Schemas are not custom.
+    // char* error_str = dlerror();  // clear any old error str
+    // *symbol = dlsym(handle, symbol_name.c_str());
+    // error_str = dlerror();
+    // if (error_str) {
+    //   return common::Status(common::LOTUS, common::FAIL,
+    //                         "Failed to get symbol " + symbol_name + " with error: " + error_str);
+    // }
+    // // it's possible to get a NULL symbol in our case when Schemas are not custom.
     return common::Status::OK();
   }
 
@@ -210,12 +210,12 @@ class PosixEnv : public Env {
 
 }  // namespace
 
-#if defined(PLATFORM_POSIX) || defined(__ANDROID__)
+// #if defined(PLATFORM_POSIX) || defined(__ANDROID__)
 // REGISTER_FILE_SYSTEM("", PosixFileSystem);
 // REGISTER_FILE_SYSTEM("file", LocalPosixFileSystem);
 const Env& Env::Default() {
   return PosixEnv::Instance();
 }
-#endif
+// #endif
 
 }  // namespace onnxruntime

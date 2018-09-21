@@ -28,7 +28,7 @@
 #include "onnx/defs/schema.h"
 #include "onnx/onnx_pb.h"
 // liqun - need a common place to include 
-#include "onnx/onnx/onnx-operators-ml.pb.h"
+#include "onnx/onnx-operators-ml.pb.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop

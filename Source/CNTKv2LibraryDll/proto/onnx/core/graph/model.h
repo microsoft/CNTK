@@ -7,6 +7,7 @@
 #include <memory>
 #include <climits>
 #include <string>
+#include "core/graph/function_container.h"
 #include "core/graph/graph.h"
 
 #include "gsl/pointers"
