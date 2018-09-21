@@ -605,7 +605,7 @@ def test_gather_op_backward(device_id, precision):
     data = np.array([ [1.0, 1.2, 1.9], [2.3, 3.4, 3.9], [4.5, 5.7, 5.9], ]).astype(PRECISION_TO_TYPE[precision])
     indices = np.array([ 0, 2]).astype(PRECISION_TO_TYPE[precision]).astype(PRECISION_TO_TYPE[precision])
     expectd = np.array([[1., 1., 1.], [0., 0., 0.], [1., 1., 1.]]).astype(PRECISION_TO_TYPE[precision])
-    x = C.input_variable(**C.layers.typing.ParameterTensor[3, 3], needs_gradient=True, dtype=PRECISION_TO_TYPE[precision])
+    x = C.input_variable(dynamic_axes=[], shape=(3,3), needs_gradient=True, dtype=PRECISION_TO_TYPE[precision])
     i = C.constant(indices, dtype=PRECISION_TO_TYPE[precision])
     y = C.gather(x, i)
     grad = y.grad(data, wrt=[x])
