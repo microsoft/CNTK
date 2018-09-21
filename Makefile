@@ -552,6 +552,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/data_type_utils.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/schema.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.pb.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.pb.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/Operators.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/RNNHelper.cpp \
     $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/CNTKToONNX.cpp \
@@ -1681,11 +1682,20 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 
 BUILD_CONFIGURATION := Makefile $(BUILD_TOP)/Config.make
 
+$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.pb.cc : $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.proto $(BUILD_CONFIGURATION)
+	@echo $(SEPARATOR)
+	$(PROTOC) --proto_path=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/ --cpp_out=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.proto
+
+$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.pb.cc : $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.proto $(BUILD_CONFIGURATION)
+	@echo $(SEPARATOR)
+	$(PROTOC) --proto_path=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/ --cpp_out=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.proto
+
 %.pb.cc : %.proto $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
 	@echo compiling protobuf $<
 	@echo compiling protobuf $(dir $<)..
-	$(PROTOC) --proto_path=$(dir $<) --proto_path=$(dir $<).. --cpp_out=$(dir $<) $<
+	@echo compiling protobuf $(PROTOC)
+	$(PROTOC) --proto_path=$(dir $<) --cpp_out=$(dir $<) $<
 
 $(OBJDIR)/%.o : %.cu $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
