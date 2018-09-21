@@ -1692,19 +1692,21 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 
 BUILD_CONFIGURATION := Makefile $(BUILD_TOP)/Config.make
 
-$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.pb.cc : $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.proto $(BUILD_CONFIGURATION)
+%onnx-ml.pb.cc : %onnx-ml.proto $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
-	$(PROTOC) --proto_path=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/ --cpp_out=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.proto
+	@echo compiling protobuf $<
+	# protoc is confused if --proto_path is not set to an absolute path in below usage
+	$(PROTOC) --proto_path=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/ --cpp_out=$(dir $<).. $<
 
-$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.pb.cc : $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.proto $(BUILD_CONFIGURATION)
+%onnx-operators-ml.pb.cc : %onnx-operators-ml.proto $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
-	$(PROTOC) --proto_path=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/ --cpp_out=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.proto
+	@echo compiling protobuf $<
+	# protoc is confused if --proto_path is not set to an absolute path in below usage
+	$(PROTOC) --proto_path=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/ --cpp_out=$(dir $<).. $<
 
 %.pb.cc : %.proto $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
 	@echo compiling protobuf $<
-	@echo compiling protobuf $(dir $<)..
-	@echo compiling protobuf $(PROTOC)
 	$(PROTOC) --proto_path=$(dir $<) --cpp_out=$(dir $<) $<
 
 $(OBJDIR)/%.o : %.cu $(BUILD_CONFIGURATION)
