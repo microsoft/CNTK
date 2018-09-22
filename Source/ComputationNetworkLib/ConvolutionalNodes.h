@@ -355,7 +355,7 @@ public:
     ConvolutionNodeBaseExtended(const ScriptableObjects::IConfigRecordPtr configp)
         : ConvolutionNodeBaseExtended(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
             configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-                                      configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"), (*configp)(L"groups", 1))
+            configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"), (*configp)(L"groups", 1))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -366,7 +366,7 @@ public:
         Base::Save(fstream);
         fstream << m_convolution2D;
         m_dilation.Save(fstream);
-		// Save group information.
+        // Save group information.
         fstream << m_groups;
     }
 
@@ -411,11 +411,11 @@ public:
             {
                 m_dilation = TensorShape(1);
             }
-			// Load group information.
+            // Load group information.
             if (modelVersion >= CNTK_MODEL_VERSION_30)
             {
                 fstream >> m_groups;
-			}
+            }
         }
     }
 

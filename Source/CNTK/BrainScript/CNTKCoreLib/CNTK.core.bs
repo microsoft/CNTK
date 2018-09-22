@@ -136,7 +136,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
 
 
 GroupConvolutionalLayer {numInputChannels,
-						 numOutputChannels,
+                         numOutputChannels,
                          groups,
                          filterShape,         # e.g. (3:3)
                          bias = true,
