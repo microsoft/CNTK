@@ -1,10 +1,13 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 #include <cstring>
 #include "core/graph/constants.h"
 #include "core/graph/op.h"
-#include "core/graph/utils.h"
 
-using namespace onnx;
-namespace LotusIR {
+using namespace ONNX_NAMESPACE;
+using namespace ::onnxruntime::common;
+namespace onnxruntime {
 
 bool TypeUtils::IsValidAttribute(const AttributeProto& attr) {
   if (attr.name().empty()) {
@@ -64,4 +67,4 @@ Status TypeUtils::GetType(const AttributeProto& attr, AttrType& type) {
   }
   return Status::OK();
 }
-}  // namespace LotusIR
+}  // namespace onnxruntime

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 #ifdef _WIN32
 // disable some warnings from protobuf to pass Windows build
 #pragma warning(disable : 4244)
@@ -9,17 +12,20 @@
 #include <stack>
 
 #include "gsl/pointers"
+#include "core/graph/function.h"
 #include "core/graph/graph.h"
+#include "core/graph/indexed_sub_graph.h"
 #include "core/graph/op.h"
-#include "core/graph/utils.h"
 #include "core/common/logging/logging.h"
 #include "onnx/checker.h"
 #include "core/graph/schema_registry.h"
-using namespace onnx;
-using namespace onnx::Utils;
-using namespace onnx::checker;
+#include "core/graph/function_container.h"
+using namespace ONNX_NAMESPACE;
+using namespace ONNX_NAMESPACE::Utils;
+using namespace ONNX_NAMESPACE::checker;
+using namespace ::onnxruntime::common;
 
-namespace LotusIR {
+namespace onnxruntime {
 
 #define NO_CHANGE_ON_SYNC_FLAG(...)                  \
   do {                                               \
@@ -150,11 +156,28 @@ const OpSchema* Node::Op() const noexcept {
   return op_;
 }
 
+Node::Type Node::NodeType() const noexcept {
+  return node_type_;
+}
+
+void Node::SetNodeType(Node::Type node_type) noexcept {
+  node_type_ = node_type;
+}
+
+const ::onnxruntime::Function* Node::GetFunctionBody() const noexcept {
+  return func_body_;
+}
+
+void Node::SetFunctionBody(const ::onnxruntime::Function& func) {
+  func_body_ = &func;
+  op_ = &func.OpSchema();
+}
+
 const std::string& Node::GetExecutionProviderType() const noexcept {
   return execution_provider_type_;
 }
 
-void Node::SetExecutionProviderType(LotusIR::ProviderType execution_provider_type) {
+void Node::SetExecutionProviderType(onnxruntime::ProviderType execution_provider_type) {
   execution_provider_type_ = execution_provider_type;
 }
 
@@ -201,6 +224,9 @@ void Node::Init(const std::string& name,
   definitions_.input_defs = input_args;
   definitions_.output_defs = output_args;
   domain_ = domain;
+  if (kOnnxDomainAlias == domain_) {
+    domain_ = kOnnxDomain;
+  }
 
   // Set each arg count as 1 by default.
   // It could be adjusted when resolving the node with its operator
@@ -288,17 +314,16 @@ bool Node::ClearAttribute(const std::string& attr_name) {
 Status Node::UpdateInputArgCount() {
   // The node refers to a primitive operator.
   // Infer and verify node input arg type information.
-  auto total_arg_count = std::accumulate(definitions_.input_arg_count.cbegin(),
-                                         definitions_.input_arg_count.cend(), 0);
+  int total_arg_count = std::accumulate(definitions_.input_arg_count.cbegin(),
+                                        definitions_.input_arg_count.cend(), 0);
 
-  if (total_arg_count != definitions_.input_defs.size()) {
-    Status status(LOTUS, FAIL,
-                  "The sum of input arg count is not equal to size of input defs in node (" + name_ + ").");
-    return status;
+  if (total_arg_count < 0 || static_cast<size_t>(total_arg_count) != definitions_.input_defs.size()) {
+    return LOTUS_MAKE_STATUS(LOTUS, FAIL,
+                             "The sum of input arg count is not equal to size of input defs in node (", name_, ")");
   }
 
   // op_ is always valid when this is called
-  auto& op = *op_;
+  const ONNX_NAMESPACE::OpSchema& op = *Op();
 
   // Verify size of node arg count is same as input number in
   // operator definition.
@@ -344,40 +369,40 @@ const NodeAttributes& Node::GetAttributes() const noexcept {
   return attributes_;
 }
 
-void Node::ForEachDef(std::function<void(const LotusIR::NodeArg*, bool is_input)> func) const {
-  for (const gsl::not_null<const LotusIR::NodeArg*> arg : InputDefs()) {
+void Node::ForEachDef(std::function<void(const onnxruntime::NodeArg*, bool is_input)> func) const {
+  for (const gsl::not_null<const onnxruntime::NodeArg*> arg : InputDefs()) {
     if (!arg->Exists())
       continue;
     func(&*arg, true);
   }
-  for (const gsl::not_null<const LotusIR::NodeArg*> arg : OutputDefs()) {
+  for (const gsl::not_null<const onnxruntime::NodeArg*> arg : OutputDefs()) {
     if (!arg->Exists())
       continue;
     func(&*arg, false);
   }
 };
 
-void Node::ForEachInputDef(std::function<void(const LotusIR::NodeArg*)> func) const {
-  for (const gsl::not_null<const LotusIR::NodeArg*> arg : InputDefs()) {
+void Node::ForEachInputDef(std::function<void(const onnxruntime::NodeArg*)> func) const {
+  for (const gsl::not_null<const onnxruntime::NodeArg*> arg : InputDefs()) {
     if (!arg->Exists())
       continue;
     func(&*arg);
   }
 };
 
-void Node::ForEachOutputDef(std::function<void(const LotusIR::NodeArg*)> func) const {
-  for (const gsl::not_null<const LotusIR::NodeArg*> arg : OutputDefs()) {
+void Node::ForEachOutputDef(std::function<void(const onnxruntime::NodeArg*)> func) const {
+  for (const gsl::not_null<const onnxruntime::NodeArg*> arg : OutputDefs()) {
     if (!arg->Exists())
       continue;
     func(&*arg);
   }
 };
 
-void Node::ReplaceDefs(const std::map<const LotusIR::NodeArg*, LotusIR::NodeArg*>& replacements) {
+void Node::ReplaceDefs(const std::map<const onnxruntime::NodeArg*, onnxruntime::NodeArg*>& replacements) {
   std::vector<std::vector<NodeArg*>*> all_defs = {&definitions_.input_defs, &definitions_.output_defs};
 
   for (auto pair : replacements)
-    for (const gsl::not_null<std::vector<LotusIR::NodeArg*>*> defs : all_defs)
+    for (const gsl::not_null<std::vector<onnxruntime::NodeArg*>*> defs : all_defs)
       for (auto& def : *defs)
         if (def == pair.first)
           def = pair.second;
@@ -403,13 +428,14 @@ using google::protobuf::RepeatedPtrField;
 Graph::Graph(GraphProto* graph_proto,
              const std::unordered_map<std::string, int>& domain_to_version,
              Version ir_version,
-             const ILotusOpSchemaCollection* local_registry)
+             ILotusOpSchemaCollectionPtr schema_registry)
 
     : GraphBase(/* resolve needed */ true, /* proto sync needed */ false, domain_to_version, ir_version),
       graph_proto_{graph_proto},
       graph_type_{Type::Main},
-      local_registry_(local_registry) {
-  LOTUS_ENFORCE(graph_proto != nullptr, "Expected either name or graph_proto.");
+      schema_registry_(schema_registry),
+      function_container_(std::make_unique<FunctionContainer>()) {
+  LOTUS_ENFORCE(graph_proto != nullptr, "graph_proto cannot be null");
   ArgNameToTypeMap name_to_type_map;
 
   // these are all empty unless we received a graph_proto as input
@@ -468,6 +494,10 @@ Graph::Graph(GraphProto* graph_proto,
   for (auto node_proto : graph_proto_->node()) {
     AddNode(node_proto, name_to_type_map);
   }
+}
+
+Graph::Graph(const Graph& model_graph, ONNX_NAMESPACE::GraphProto& subgraph_proto)
+    : Graph(&subgraph_proto, model_graph.DomainToVersionMap(), model_graph.IrVersion(), model_graph.schema_registry_) {
 }
 
 Status GraphBase::VerifyNoDuplicateName(/*in*/ const std::unordered_set<std::string>& inputs_and_initializers,
@@ -654,7 +684,7 @@ void GraphBase::ReverseDFSFrom(const std::vector<const Node*>& from,
         sorted_nodes.push_back((*iter));
       }
       std::sort(sorted_nodes.begin(), sorted_nodes.end(), comp);
-      for (gsl::not_null<const LotusIR::Node*> in : sorted_nodes) {
+      for (gsl::not_null<const onnxruntime::Node*> in : sorted_nodes) {
         const NodeIndex idx = in->Index();
         if (!visited[idx]) {
           stack.emplace_back(in, false);
@@ -736,7 +766,7 @@ Status GraphBase::CheckIsAcyclic(std::vector<NodeIndex>& nodes_in_topological_or
     }
   }
 
-  if (NumberOfNodes() == nodes_in_topological_order.size()) {
+  if (num_of_nodes_ >= 0 && static_cast<size_t>(num_of_nodes_) == nodes_in_topological_order.size()) {
     return Status::OK();
   } else {
     return Status(LOTUS, FAIL, "Error: the graph is not acyclic.");
@@ -767,8 +797,8 @@ bool FullyDefinedType(const TypeProto& type_proto) {
 }
 
 // An implementation of the InferenceContext interface required by operator-specific
-// shape inference for Lotus graphs.
-class InferenceContextImpl : public onnx::InferenceContext {
+// shape inference for onnxruntime graphs.
+class InferenceContextImpl : public ONNX_NAMESPACE::InferenceContext {
  public:
   InferenceContextImpl(Node& node, std::vector<TypeProto>& inferred_shapes) noexcept
       : node_(node),
@@ -808,6 +838,12 @@ class InferenceContextImpl : public onnx::InferenceContext {
     return &allOutputTypes_[index];
   }
 
+  const TensorProto* getInputData(size_t) const override {
+    // TODO: this interface should be implemented with initializers
+    // so that more accurate shape inference could be done.
+    return nullptr;
+  }
+
  private:
   Node& node_;
   // allOutputTypes_ will be populated by the operator-specific shape inference.
@@ -815,36 +851,14 @@ class InferenceContextImpl : public onnx::InferenceContext {
   // std::vector<TypeProto_Tensor>& allOutputTypes_;
 };
 
-bool IsBidirBroadcastOpsToSkipInference(LotusIR::Node& node)
-{
-    const std::set<std::string>  bidirBroadcastOpsToSkip({ "Add", "Sub", "Mul", "Div", "And", "Or", "Xor",
-        "Greater", "Less", "Equal", "Pow", });      // add for MatMul once any case raises
-    if (bidirBroadcastOpsToSkip.find(node.OpType()) != bidirBroadcastOpsToSkip.end())
-    {
-        // It looks like ONNX shape inference routine bidirectionalBroadcastShapeInference
-        // does not handle this case right:
-        // Sub([“None”, 1, 64], [“None”, 1, 64]) ->[0, 1, 64] 
-        // It should produce[“None”, 1, 64]
-        // CNTK does shape inference itself so we shall skip this very specific case.
-        auto inputNodeArgs = node.InputDefs();
-        for (int i = 0; i < inputNodeArgs.size(); i++)
-        {
-            if (!inputNodeArgs[i]->Shape() || inputNodeArgs[i]->Shape()->dim_size() == 0 || !inputNodeArgs[i]->Shape()->dim()[0].has_dim_param())
-                return false;
-        }
-        return true;
-    }
-    return false;
-}
-
 // A wrapper for invoking ONNX-defined shape+type inference for a single node.
 // Returns inferred shape+type for every output of the node in output parameter inferredShapes.
-Status GraphBase::InferOutputTypesAndShapes(LotusIR::Node& node, std::vector<TypeProto>& inferred_shapes) {
+Status GraphBase::InferOutputTypesAndShapes(onnxruntime::Node& node, std::vector<TypeProto>& inferred_shapes) {
   inferred_shapes.clear();
   inferred_shapes.resize(node.OutputDefs().size());
   auto schema = node.Op();
   if (nullptr != schema) {
-    InferenceContextImpl context(node, inferred_shapes); 
+    InferenceContextImpl context(node, inferred_shapes);
     schema->GetTypeAndShapeInferenceFunction()(context);
   }
   return Status::OK();
@@ -854,9 +868,6 @@ Status GraphBase::InferOutputTypesAndShapes(LotusIR::Node& node, std::vector<Typ
 GSL_SUPPRESS(f .23)  // spurious warning about inferred_type never being checked for null
 Status Graph::InferAndVerifyTypeMatch(Node& node,
                                       const OpSchema& op) {
-
-    if (IsBidirBroadcastOpsToSkipInference(node))
-        return Status::OK();
   auto& nodeName = node.Name();
 
   // <k> index used to navigate node->InputDefs().
@@ -975,86 +986,25 @@ Status Graph::InferAndVerifyTypeMatch(Node& node,
                         ") does not match expected type (" + *inferred_type + ").");
     }
 
-    // Caching shape information (if available) for output_def 
-    // before setting type to inferred_type as inferred_type may
-    // not have shape information.
-    auto output_def_shape_ptr = output_def->Shape();
-    TensorShapeProto output_def_shape;
-    if (output_def_shape_ptr != nullptr)
-        output_def_shape.CopyFrom(*output_def_shape_ptr);
-
-    output_def->SetType(inferred_type);
+    if (existing_type == nullptr)
+      output_def->SetType(inferred_type);
 
     // Update output-shape if it was inferred:
-    if (onnx_inferred_type.has_tensor_type())
-    {
-        auto& tensor_type = onnx_inferred_type.tensor_type();
-        if (tensor_type.has_shape())
-        {
-            output_def->SetShape(tensor_type.shape());
-        }
-        else if (output_def_shape_ptr != nullptr)
-        {
-            output_def->SetShape(output_def_shape);
-        }
+    if (onnx_inferred_type.has_tensor_type()) {
+      auto& tensor_type = onnx_inferred_type.tensor_type();
+      if (tensor_type.has_shape() && (output_def->Shape() == nullptr)) {
+        // We update the shape only if it doesn't already exist.
+        // TODO: if a shape already exists, we should merge information from both shapes
+        output_def->SetShape(tensor_type.shape());
+      }
     }
   }
 
   return Status::OK();
-}  // namespace LotusIR
-
-#define enforce_non_empty_field(proto, field) \
-  do {                                        \
-    if (proto.field().empty()) {              \
-      fail_check(                             \
-          "Field '",                          \
-          #field,                             \
-          "' of ",                            \
-          #proto,                             \
-          " is required to be non-empty.");   \
-    }                                         \
-  } while (0)
-
-static void check_node(
-    const NodeProto& node,
-    const CheckerContext& ctx,
-    const LexicalScopeContext& lex_ctx,
-    const ILotusOpSchemaCollection& registry) {
-  enforce_non_empty_field(node, op_type);
-
-  if (node.input().empty() && node.output().empty()) {
-    fail_check(
-        "NodeProto (name: ",
-        node.name(),
-        ", type: ",
-        node.op_type(),
-        ") has zero input and zero output.");
-  }
-
-  // Resolve domain for node
-  const auto& opset_imports = ctx.get_opset_imports();
-  auto dit = opset_imports.find(node.domain());
-  if (dit == opset_imports.end()) {
-    fail_check("No opset import for domain '" + node.domain() + "'");
-  }
-  auto domain_version = dit->second;
-
-  for (const auto& attr : node.attribute()) {
-    check_attribute(attr, ctx, lex_ctx);
-  }
-
-  const auto* schema =
-      registry.Schema(node.op_type(), domain_version, node.domain());
-  if (!schema) {
-    fail_check(
-        "No Schema registered for " + node.op_type() +
-        " with domain_version of " + ONNX_NAMESPACE::to_string(domain_version));
-  }
-  schema->Verify(node);
-}
+}  // namespace onnxruntime
 
 // Apply type-inference and type-checking to all inputs and initializers:
-Lotus::Common::Status Graph::TypeCheckInputsAndInitializers() {
+::onnxruntime::common::Status Graph::TypeCheckInputsAndInitializers() {
   // Check that the type of every input is specified:
   for (auto* graph_input : GetInputs()) {
     if (nullptr == graph_input->Type()) {
@@ -1064,7 +1014,7 @@ Lotus::Common::Status Graph::TypeCheckInputsAndInitializers() {
   }
 
   // Note: The ONNX spec requires every initializer to be included in the graph input,
-  // but Lotus relaxes this requirement for various reasons.
+  // but onnxruntime relaxes this requirement for various reasons.
 
   // Infer/check type and shape for all initializers from their values
   for (auto& initializer_pair : name_to_initial_tensor_) {
@@ -1121,34 +1071,25 @@ Status Graph::VerifyNodeAndOpMatch(const std::vector<NodeIndex>& nodes_in_topolo
     CheckerContext ctx;
     ctx.set_ir_version(gsl::narrow_cast<int>(IrVersion()));
     ctx.set_opset_imports(DomainToVersionMap());
+    ctx.set_schema_registry(schema_registry_.get());
     LexicalScopeContext lsc;
     for (auto& kv : output_args) {
-      auto ignored = lsc.output_names.insert(kv.first);
+      GSL_SUPPRESS(es .84)
+      lsc.output_names.insert(kv.first);
     }
     NodeProto node_proto;
     node.ToProto(node_proto);
     auto& node_name = node.Name();
     auto& domain = node.Domain();
-    auto maxInclusiveVersion = DomainToVersionMap().find(domain)->second;
 
-    // check node from local schema first
-    if (local_registry_) {
-      try {
-        check_node(node_proto, ctx, lsc, *local_registry_);
-        node.op_ = local_registry_->Schema(node.OpType(), maxInclusiveVersion, node.Domain());
-      } catch (const std::exception& ex) {
-        LOGS_DEFAULT(WARNING) << "verify node from local registry failed: " << ex.what() << std::endl
-                              << "Will try to search from build in schema." << std::endl;
-      }
-    }
-
-    if (!node.op_) {
+    if (!node.Op()) {
       try {
         checker::check_node(node_proto, ctx, lsc);
       } catch (const std::exception& ex) {
         return Status(LOTUS, FAIL, ex.what());
       }
-      node.op_ = OpSchemaRegistry::Schema(node.OpType(), maxInclusiveVersion, node.Domain());
+      auto maxInclusiveVersion = DomainToVersionMap().find(domain)->second;
+      node.op_ = schema_registry_->GetSchema(node.OpType(), maxInclusiveVersion, node.Domain());
     }
 
     LOTUS_RETURN_IF_ERROR(node.UpdateInputArgCount());
@@ -1199,10 +1140,10 @@ Status Graph::VerifyInputAndInitializerNames(/*OUT*/ std::unordered_set<std::str
     }
   }
   for (auto& initializer_pair : name_to_initial_tensor_) {
-    auto result = inputs_and_initializers.insert(initializer_pair.first);
+    GSL_SUPPRESS(es .84)
+    inputs_and_initializers.insert(initializer_pair.first);
     // Initializers are expected to be included in inputs (according to ONNX spec).
-    // Lotus relaxes this constraint. No duplicate-name check here.
-    (result);
+    // onnxruntime relaxes this constraint. No duplicate-name check here.
   }
   return Status::OK();
 }
@@ -1244,8 +1185,8 @@ Status Graph::Resolve(bool no_proto_sync_required) {
 
 Status GraphBase::GetNodesInTopologicalOrder(gsl::not_null<const std::vector<NodeIndex>**> pp_nodes) const {
   if (graph_resolve_needed_) {
-    return Status{StatusCategory::LOTUS, StatusCode::FAIL,
-                  "Resolve() must be called before using the graph as modifications have been made to it."};
+    return Status(::onnxruntime::common::LOTUS, ::onnxruntime::common::FAIL,
+                  "Resolve() must be called before using the graph as modifications have been made to it.");
   }
 
   *pp_nodes = &nodes_in_topological_order_;
@@ -1575,15 +1516,15 @@ void Graph::SyncGraphInputsOutputs() {
   graph_proto_->clear_output();
   graph_proto_->clear_value_info();
 
-  for (const gsl::not_null<const LotusIR::NodeArg*> input_arg : GetInputs()) {
+  for (const gsl::not_null<const onnxruntime::NodeArg*> input_arg : GetInputs()) {
     *(graph_proto_->mutable_input()->Add()) = input_arg->ToProto();
   }
 
-  for (const gsl::not_null<const LotusIR::NodeArg*> output_arg : GetOutputs()) {
+  for (const gsl::not_null<const onnxruntime::NodeArg*> output_arg : GetOutputs()) {
     *(graph_proto_->mutable_output()->Add()) = output_arg->ToProto();
   }
 
-  for (const gsl::not_null<const LotusIR::NodeArg*> value_info : value_info_) {
+  for (const gsl::not_null<const onnxruntime::NodeArg*> value_info : value_info_) {
     *(graph_proto_->mutable_value_info()->Add()) = value_info->ToProto();
   }
 }
@@ -1591,8 +1532,10 @@ void Graph::SyncGraphInputsOutputs() {
 void Graph::CleanUnusedInitializers() {
   std::vector<std::string> unused_names;
   std::set<const NodeArg*> input_args;
-  for (const auto& node : Nodes())
-    node.ForEachInputDef([&input_args](const LotusIR::NodeArg* def) { auto ignored = input_args.insert(def); });
+  for (const auto& node : Nodes()) {
+    node.ForEachInputDef([&input_args](const onnxruntime::NodeArg* def) { GSL_SUPPRESS(es .84)
+                                                                      input_args.insert(def); });
+  }
 
   for (const auto& pv : name_to_initial_tensor_) {
     const std::string& s = pv.first;
@@ -1743,7 +1686,7 @@ Status Graph::SetGraphInputsOutputs() {
           const std::string& name = input_arg->Name();
           if (added_input_names.end() == added_input_names.find(name)) {
             // This graph input has not been added into <graph_inputs_>.
-            //// if (name_to_initial_tensor_.find(name) == name_to_initial_tensor_.end())
+            if (name_to_initial_tensor_.find(name) == name_to_initial_tensor_.end())
               graph_inputs.push_back(input_arg);
             added_input_names.insert(input_arg->Name());
           }
@@ -1810,4 +1753,57 @@ bool GraphBase::ReleaseNode(NodeIndex index) {
 
   return true;
 }
-}  // namespace LotusIR
+
+ILotusOpSchemaCollectionPtr Graph::GetSchemaRegistry() const {
+  return schema_registry_;
+}
+
+Node* Graph::FuseSubGraph(std::unique_ptr<::onnxruntime::IndexedSubGraph> sub_graph, const std::string& fused_node_name) {
+  LOTUS_ENFORCE(nullptr != sub_graph && nullptr != sub_graph->GetMetaDef());
+
+  auto func_meta_def = sub_graph->GetMetaDef();
+  LOTUS_ENFORCE(nullptr != func_meta_def);
+  std::vector<NodeArg*> input_args, output_args;
+  for (auto& arg_name : func_meta_def->inputs) {
+    input_args.push_back(GetNodeArg(arg_name));
+  }
+  for (auto& arg_name : func_meta_def->outputs) {
+    output_args.push_back(GetNodeArg(arg_name));
+  }
+  auto fused_node = AddNode(fused_node_name,
+                            func_meta_def->name,
+                            func_meta_def->doc_string,
+                            input_args,
+                            output_args,
+                            nullptr,
+                            func_meta_def->domain);
+
+  fused_node->SetNodeType(Node::Type::Fused);
+  function_container_->functions_.push_back(MakeFunction(*this, std::move(sub_graph)));
+  fused_node->SetFunctionBody(*(function_container_->functions_.back().get()));
+
+  // Remove nodes fused above.
+  auto& sub_graph_ref = function_container_->functions_.back()->GetIndexedSubGraph();
+  for (auto node_index : sub_graph_ref.nodes) {
+    RemoveNode(node_index);
+  }
+  return fused_node;
+}
+
+void Graph::CollectRootNodesAndRefs() {
+  auto max_size = MaxNodeIndex();
+  node_refs_.resize(max_size);
+
+  root_nodes_.clear();
+
+  for (auto& node : Nodes()) {
+    if (node.GetRelationships().input_edges.size() == 0 &&
+        !(IsSourceNode(node) || IsSinkNode(node))) {
+      root_nodes_.push_back(node.Index());
+    }
+    LOTUS_ENFORCE(node.Index() < max_size);
+    node_refs_[node.Index()] = node.GetInputEdgesCount();
+  }
+}
+
+}  // namespace onnxruntime

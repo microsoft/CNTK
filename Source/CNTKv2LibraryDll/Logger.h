@@ -9,14 +9,14 @@
 #include "core/common/logging/isink.h"
 
 namespace CNTK {
-class CNTKClogSink : public Lotus::Logging::ISink {
+class CNTKClogSink : public onnxruntime::Logging::ISink {
 public:
     CNTKClogSink()
         : stream_{&(std::clog)}, flush_{true}
     {}
 
-    void SendImpl(const Lotus::Logging::Timestamp &timestamp, 
-        const std::string &logger_id, const Lotus::Logging::Capture &message) override
+    void SendImpl(const onnxruntime::Logging::Timestamp &timestamp, 
+        const std::string &logger_id, const onnxruntime::Logging::Capture &message) override
     {
         UNUSED_PARAMETER(timestamp);
 
