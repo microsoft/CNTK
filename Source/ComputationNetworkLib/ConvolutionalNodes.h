@@ -215,7 +215,11 @@ protected:
     void InferReductionDims(const TensorShape& inputShape, const TensorShape& fromShape)
     {
         // If kernel has a lower rank than the input then the remaining dimensions are to be reduced over.
-        size_t filterRank = m_kernelShape.size();
+        size_t filterRank;
+        if (inputShape.size() > m_kernelShape.size())
+            filterRank = m_kernelShape.size();
+        else
+            filterRank = inputShape.size() - 1;
         FixTensorShape(filterRank, inputShape.size(), m_kernelShape, 1,     fromShape); // convolve over red dim; pool over 1
         FixTensorShape(filterRank, inputShape.size(), m_stride,      1,     fromShape); // stride for reduction dims is red dim or 1
         FixVectorShape(filterRank, inputShape.size(), m_autoPad,     false);            // no padding for reduction dims
@@ -351,7 +355,7 @@ public:
     ConvolutionNodeBaseExtended(const ScriptableObjects::IConfigRecordPtr configp)
         : ConvolutionNodeBaseExtended(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
             configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-            configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"))
+                                      configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"), configp->Get(L"dimDilation"), (*configp)(L"groups", 1))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -362,6 +366,8 @@ public:
         Base::Save(fstream);
         fstream << m_convolution2D;
         m_dilation.Save(fstream);
+		// Save group information.
+        fstream << m_groups;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -405,6 +411,11 @@ public:
             {
                 m_dilation = TensorShape(1);
             }
+			// Load group information.
+            if (modelVersion >= CNTK_MODEL_VERSION_30)
+            {
+                fstream >> m_groups;
+			}
         }
     }
 
