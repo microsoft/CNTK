@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-#include "proto/onnx/core/graph/graph.h"
+#include "core/graph/graph.h"
 
 #include "Operators.h"
 #include "Utils.h"

@@ -149,7 +149,7 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
                     o1i = o1[loaded_model.outputs[j]]
                     if compare_model_for_output_data_transpose(model.outputs[i], loaded_model.outputs[j]):
                         o1i = transpose_dynamic_axis(o1i)
-                    if np.allclose(o0i, o1i):
+                    if np.shape(o0i) == np.shape(o1i) and np.allclose(o0i, o1i):
                         matched_indices.append(j)
                         break
             assert len(matched_indices) == i+1
@@ -243,10 +243,8 @@ def test_And(tmpdir, dtype):
     model = C.element_and(x, data2)
     verify_one_input(model, data1, tmpdir, 'And_1')
 
-    # [#][2,4] And [#][4] requires apply reshape to input2 before broadcast.
-    # current ONNX version of reshape does not support tensor of bool. enable this test after ONNX 1.3.
-    #model = C.element_and(x, y)
-    #verify_two_input(model, data1, data2, tmpdir, 'And_2')
+    model = C.element_and(x, y)
+    verify_two_input(model, data1, data2, tmpdir, 'And_2')
 
 #Or
 def test_Or(tmpdir):
@@ -262,10 +260,8 @@ def test_Or(tmpdir):
     model = C.element_or(x, data2)
     verify_one_input(model, data1, tmpdir, 'Or_1')
 
-    # [#][2,4] Or [#][4] requires apply reshape to input2 before broadcast.
-    # current ONNX version of reshape does not support tensor of bool. enable this test after ONNX 1.3.
-    #model = C.element_or(x, y)
-    #verify_two_input(model, data1, data2, tmpdir, 'Or_2')
+    model = C.element_or(x, y)
+    verify_two_input(model, data1, data2, tmpdir, 'Or_2')
 
 #Xor
 def test_Xor(tmpdir):
@@ -281,10 +277,8 @@ def test_Xor(tmpdir):
     model = C.element_xor(x, data2)
     verify_one_input(model, data1, tmpdir, 'Xor_1')
 
-    # [#][2,4] Xor [#][4] requires apply reshape to input2 before broadcast.
-    # current ONNX version of reshape does not support tensor of bool. enable this test after ONNX 1.3.
-    #model = C.element_xor(x, y)
-    #verify_two_input(model, data1, data2, tmpdir, 'Xor_2')
+    model = C.element_xor(x, y)
+    verify_two_input(model, data1, data2, tmpdir, 'Xor_2')
 
 #Not
 @pytest.mark.parametrize("dtype", DType_Config)

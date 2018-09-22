@@ -1,12 +1,15 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 #include "core/common/logging/capture.h"
 #include "core/common/logging/logging.h"
 #include "gsl/span"
 #include "gsl/gsl_util"
 
-namespace Lotus {
+namespace onnxruntime {
 namespace Logging {
 
-void Capture::CapturePrintf(msvc_printf_check const char *format, ...) {
+void Capture::CapturePrintf(msvc_printf_check const char* format, ...) {
   va_list arglist;
   va_start(arglist, format);
 
@@ -17,7 +20,7 @@ void Capture::CapturePrintf(msvc_printf_check const char *format, ...) {
 
 // from https://github.com/KjellKod/g3log/blob/master/src/logcapture.cpp LogCapture::capturef
 // License: https://github.com/KjellKod/g3log/blob/master/LICENSE
-void Capture::ProcessPrintf(msvc_printf_check const char *format, va_list args) {
+void Capture::ProcessPrintf(msvc_printf_check const char* format, va_list args) {
   static constexpr auto kTruncatedWarningText = "[...truncated...]";
   static const int kMaxMessageSize = 2048;
   char message_buffer[kMaxMessageSize];
@@ -45,4 +48,4 @@ Capture::~Capture() {
   }
 }
 }  // namespace Logging
-}  // namespace Lotus
+}  // namespace onnxruntime

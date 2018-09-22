@@ -1,60 +1,30 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 #pragma once
 
 #include "core/common/common.h"
-#include "core/graph/graph.h"
-#include "core/graph/rewrite_rule.h"
+#include "core/graph/indexed_sub_graph.h"
 
-namespace LotusIR {
-// TODO: Design a loose way to register rewrite rules into RuleBasedGraphTransformer.
+namespace onnxruntime {
+class GraphBase;
+class Graph;
+class Node;
+}  // namespace onnxruntime
+
+namespace onnxruntime {
+
 // Function representation class.
-class Function : public GraphBase {
+class Function {
  public:
-  // Get <*this> function's schema.
-  const OpSchema& GetSchema() const noexcept {
-    return schema_;
-  }
+  virtual ~Function() {}
+  virtual const ONNX_NAMESPACE::OpSchema& OpSchema() const = 0;
 
- private:
-  OpSchema schema_;
+  virtual const onnxruntime::GraphBase& Body() const = 0;
+
+  virtual const IndexedSubGraph& GetIndexedSubGraph() const = 0;
 };
 
-// A function-inlining rewrite-rule. The plan with ONNX is to capture most optimizations
-// as function-inlining or function-extraction.
-class FunctionInliner : public RewriteRule {
- public:
-  FunctionInliner(const std::string& name, const std::string& desc,
-                  const Function& function)
-    : RewriteRule(name, desc) {
-    (function);
-  }
-
-  Status Apply(GraphEditor graph_editor, Node* node, bool* modified) override {
-    (graph_editor);
-    (node);
-    (modified);
-    LOTUS_NOT_IMPLEMENTED;
-    return Status::OK();
-  }
-};
-
-// A function-extraction rewrite-rule is the dual of function-inlining.
-// It identifies occurrences of the body of a function-definition and
-// replaces it by a call to the function.
-class FunctionExtraction : public RewriteRule {
- public:
-  FunctionExtraction(const std::string& name, const std::string& desc,
-                     const Function& function)
-    : RewriteRule(name, desc) {
-    (function);
-  }
-
-  Status Apply(GraphEditor graph_editor, Node* node, bool* modified) override {
-    (graph_editor);
-    (node);
-    (modified);
-    LOTUS_NOT_IMPLEMENTED;
-    return Status::OK();
-  }
-};
-
-}  // namespace LotusIR
+std::unique_ptr<Function> MakeFunction(const onnxruntime::Graph& graph,
+                                       std::unique_ptr<IndexedSubGraph> customized_func);
+}  // namespace onnxruntime

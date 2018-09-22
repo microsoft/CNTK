@@ -3,10 +3,10 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-#include "proto/onnx/core/graph/model.h"
-#include "proto/onnx/core/graph/graph.h"
-#include "proto/onnx/core/common/status.h"
-#include "proto/onnx/core/graph/schema_registry.h"
+#include "core/graph/model.h"
+#include "core/graph/graph.h"
+#include "core/common/status.h"
+#include "core/graph/schema_registry.h"
 
 #include "CNTKToONNX.h"
 #include "Utils.h"
@@ -24,39 +24,37 @@
 using namespace Microsoft::MSR::CNTK;
 using namespace CNTK::ONNX;
 using namespace CNTK;
-using namespace LotusIR;
+using namespace onnxruntime;
 using namespace onnx;
 
 namespace CNTK
 {
-    bool IsONNX1_2Supported();
-
 class CNTKToONNXHelper
 {
 public:
     //
     // Copy the entire CNTK graph to ONNX graph.
     //
-    static void Copy(const FunctionPtr& src, LotusIR::Graph* dst);
+    static void Copy(const FunctionPtr& src, onnxruntime::Graph* dst);
 
 private:
     //
     // CNTK uses Combine op to aggregate multiple outputs of a model.
-    // LotusIR creates outputs by collecting dangling output NodeArgs in a graph (cf. BuildConnections). 
+    // onnxruntime creates outputs by collecting dangling output NodeArgs in a graph (cf. BuildConnections). 
     // Often an aggregated CNTK output node is also an input to another node in the graph.
     // This type of nodes are not dangling and thus are not treated as ONNX outputs.
     // To solve this issue, we search for all such nodes and append to it a NoOp
     // to make it dangling at the end.
     //
-    static void HandleRootCombineOp(const FunctionPtr& src, LotusIR::Graph* dst);
+    static void HandleRootCombineOp(const FunctionPtr& src, onnxruntime::Graph* dst);
 
     //
     // Recursively create ONNX nodes corresponding to each CNTK node.
     //
-    static LotusIR::Node* CreateNode(const FunctionPtr& src,
-        LotusIR::Graph* graph,
-                                    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-                                    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static onnxruntime::Node* CreateNode(const FunctionPtr& src,
+        onnxruntime::Graph* graph,
+                                    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                     const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
     
@@ -66,111 +64,111 @@ private:
     static Variable SkipBatchAndSequenceAxisInput(const Variable input);
     static FunctionPtr SkipBatchAndSequenceAxisOp(const FunctionPtr src);
 
-    static LotusIR::Node* CreateSoftmaxLikeNode(const FunctionPtr& src,
-        LotusIR::Graph* graph,
-        std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static onnxruntime::Node* CreateSoftmaxLikeNode(const FunctionPtr& src,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap);
-    static LotusIR::Node* CreateSequenceSliceNode(const FunctionPtr& src,
-        LotusIR::Graph* graph,
-        std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static onnxruntime::Node* CreateSequenceSliceNode(const FunctionPtr& src,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
     // Create an ONNX NodeArg of desired shape with constant 0s as initial values. 
     // The NodeArg is used to expand inputs of a CNTK splice op to a desired shape via broadcast.
-    static LotusIR::NodeArg &AddZerosConstantNodeArg(Graph *graph, const string &nodeArgName,
+    static onnxruntime::NodeArg &AddZerosConstantNodeArg(Graph *graph, const string &nodeArgName,
         const std::vector<int64_t> &shape, CNTK::DataType dataType);
 
-    static LotusIR::Node *AddReshapeNodeAccordingToONNXVersion(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t>& newShape);
+    static onnxruntime::Node *AddReshapeNodeImpl(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t>& newShape);
 
-    static NodeArg* GetInputAdjustmentForBroadcast(LotusIR::Graph* graph, const FunctionPtr src, const Variable &input, int inputIndex, onnx::TypeProto &inputArgType);
+    static NodeArg* GetInputAdjustmentForBroadcast(onnxruntime::Graph* graph, const FunctionPtr src, const Variable &input, int inputIndex, onnx::TypeProto &inputArgType);
 
     // Processes inputs of a src CNTK op, creating ONNX nodes needed for the inputs.
     static void ProcessInputs(const FunctionPtr& src,
-        LotusIR::Graph* graph,
-        std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap,
-        std::vector<LotusIR::NodeArg *>& inputs);
+        std::vector<onnxruntime::NodeArg *>& inputs);
     static void ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
-        LotusIR::Graph* graph,
-        std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap,
-        std::vector<LotusIR::NodeArg *>& inputs);
+        std::vector<onnxruntime::NodeArg *>& inputs);
 
     // Processes outputs of a src CNTK op.
     static void ProcessOutputs(const FunctionPtr& src,
-        std::vector<LotusIR::NodeArg *>& outputs, Graph *graph);
+        std::vector<onnxruntime::NodeArg *>& outputs, Graph *graph);
     static void ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
-        std::vector<LotusIR::NodeArg *>& outputs, Graph *graph);
+        std::vector<onnxruntime::NodeArg *>& outputs, Graph *graph);
 
-    static LotusIR::Node *AddReshapeNode(LotusIR::NodeArg &nodeArg, const std::vector<int64_t> &newShape, const std::string &outArgName,
-        LotusIR::Graph* graph);
-    static LotusIR::Node *AddMatMulNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph,
+    static onnxruntime::Node *AddReshapeNode(onnxruntime::NodeArg &nodeArg, const std::vector<int64_t> &newShape, const std::string &outArgName,
+        onnxruntime::Graph* graph);
+    static onnxruntime::Node *AddMatMulNode(onnxruntime::NodeArg &nodeArg1, onnxruntime::NodeArg &nodeArg2, onnxruntime::Graph* graph,
         const std::string &out_arg_name);
-    static LotusIR::Node *AddAddNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph,
+    static onnxruntime::Node *AddAddNode(onnxruntime::NodeArg &nodeArg1, onnxruntime::NodeArg &nodeArg2, onnxruntime::Graph* graph,
         const std::string &out_arg_name);
-    static LotusIR::Node *AddIdentityOp(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &out_arg_name);
-    static LotusIR::Node *AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis);
-    static LotusIR::Node *AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &toType);
-    static LotusIR::Node *AddTransposeNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::vector<int64_t> &perm,
+    static onnxruntime::Node *AddIdentityOp(onnxruntime::NodeArg &nodeArg, onnxruntime::Graph* graph, const std::string &out_arg_name);
+    static onnxruntime::Node *AddArgMaxNode(onnxruntime::NodeArg &nodeArg, onnxruntime::Graph* graph, int axis);
+    static onnxruntime::Node *AddCastNode(onnxruntime::NodeArg &nodeArg, onnxruntime::Graph* graph, onnx::TensorProto_DataType toType);
+    static onnxruntime::Node *AddTransposeNode(onnxruntime::NodeArg &nodeArg, onnxruntime::Graph* graph, const std::vector<int64_t> &perm,
         onnx::TypeProto& transposeOutputArgType, const std::string &outputNodeArgName);
 
-    static void BroadcastInputsIfNeeded(std::vector<LotusIR::NodeArg *> &orderedInputs, const FunctionPtr& src, LotusIR::Graph* graph);
+    static void BroadcastInputsIfNeeded(std::vector<onnxruntime::NodeArg *> &orderedInputs, const FunctionPtr& src, onnxruntime::Graph* graph);
 
     //
     //  Insert a reshape node in front of a given node and its output node arg
     //
-    static LotusIR::Node *InsertReshapeNodeToCNTKFunction(const FunctionPtr &src, LotusIR::Node* node, const std::vector<int64_t> &shape, LotusIR::Graph* graph,
+    static onnxruntime::Node *InsertReshapeNodeToCNTKFunction(const FunctionPtr &src, onnxruntime::Node* node, const std::vector<int64_t> &shape, onnxruntime::Graph* graph,
         const std::string &nodeOutputName);
 
     //
     //  methods to create a RNN/LSTM/GRU node.
     //
-    static LotusIR::Node* CreateLSTMNode(const FunctionPtr& src,
-        LotusIR::Graph* graph,
-                                        std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-                                        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static onnxruntime::Node* CreateLSTMNode(const FunctionPtr& src,
+        onnxruntime::Graph* graph,
+                                        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                         const std::unordered_map<Variable, Variable>& compositeOutputsMap);
-    static LotusIR::Node *CreateGRUNode(const FunctionPtr &src,
-        LotusIR::Graph* graph,
-                                       std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-                                       std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static onnxruntime::Node *CreateGRUNode(const FunctionPtr &src,
+        onnxruntime::Graph* graph,
+                                       std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                       std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
-    static LotusIR::Node *CreateRNNNode(const FunctionPtr &src,
-        LotusIR::Graph* graph,
-                                       std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-                                       std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static onnxruntime::Node *CreateRNNNode(const FunctionPtr &src,
+        onnxruntime::Graph* graph,
+                                       std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                       std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
-    static void PrepareRNNInput(const Variable &X, Graph *graph, std::vector<LotusIR::NodeArg*> &nodeInputs);
-    static void PrepareLSTMInitialStateNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static void PrepareRNNInput(const Variable &X, Graph *graph, std::vector<onnxruntime::NodeArg*> &nodeInputs);
+    static void PrepareLSTMInitialStateNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                             const std::vector<Variable> &initialVariables, int batchSize, int cellSize,
-                                            const std::string &uid, std::vector<LotusIR::NodeArg *> &nodeInputs);
+                                            const std::string &uid, std::vector<onnxruntime::NodeArg *> &nodeInputs);
 
-    static void PrepareRNNWeightNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                     const std::vector<Variable> &Ws, std::vector<LotusIR::NodeArg *> &nodeInputs,
+    static void PrepareRNNWeightNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                     const std::vector<Variable> &Ws, std::vector<onnxruntime::NodeArg *> &nodeInputs,
                                      std::function<void(const std::vector<NDArrayViewPtr> &srcTensors,
                                                         onnx::TensorProto& dst, const onnx::TypeProto &inputArgType)>
                                          weightConverter);
-    static void PrepareGRUZRHWeightNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node *>& variableNodes,
-                                        const std::vector<Variable> &Rs, const std::vector<Variable> &Rh1s, std::vector<LotusIR::NodeArg *> &nodeInputs);
-    static void PrepareGRUBiasNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                   const std::vector<Variable> &Bs, std::vector<LotusIR::NodeArg *> &nodeInputs);
+    static void PrepareGRUZRHWeightNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node *>& variableNodes,
+                                        const std::vector<Variable> &Rs, const std::vector<Variable> &Rh1s, std::vector<onnxruntime::NodeArg *> &nodeInputs);
+    static void PrepareGRUBiasNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                   const std::vector<Variable> &Bs, std::vector<onnxruntime::NodeArg *> &nodeInputs);
 
-    static void PrepareRNNBiasNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                   const std::vector<Variable> &Bs, std::vector<LotusIR::NodeArg*> &nodeInputs);
+    static void PrepareRNNBiasNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                   const std::vector<Variable> &Bs, std::vector<onnxruntime::NodeArg*> &nodeInputs);
 
-    static void PrepareLSTMWeightNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                      const std::vector<Variable> &Ws, double *stabilizerConstants, std::vector<LotusIR::NodeArg *> &nodeInputs);
-    static void PrepareLSTMBiasNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                    const std::vector<Variable> &Ws, std::vector<LotusIR::NodeArg *> &nodeInputs);
-    static void PrepareLSTMPeepholeNode(LotusIR::Graph* graph,
-                                        std::unordered_map<Variable, LotusIR::Node*>& variableNodes, const std::vector<Variable> &Ps,
+    static void PrepareLSTMWeightNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                      const std::vector<Variable> &Ws, double *stabilizerConstants, std::vector<onnxruntime::NodeArg *> &nodeInputs);
+    static void PrepareLSTMBiasNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                    const std::vector<Variable> &Ws, std::vector<onnxruntime::NodeArg *> &nodeInputs);
+    static void PrepareLSTMPeepholeNode(onnxruntime::Graph* graph,
+                                        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes, const std::vector<Variable> &Ps,
                                         const std::vector<double> &stabilizerDcCoefs, const std::vector<double> &stabilizerCCoefs,
-                                        std::vector<LotusIR::NodeArg *> &nodeInputs);
+                                        std::vector<onnxruntime::NodeArg *> &nodeInputs);
     //
     // Traverse the entire graph and collect variable mapping between graph inside and outside the block.
     //
@@ -215,7 +213,7 @@ private:
     //
     // Copy supported attributes from CNTK node to corresponding ONNX node.
     //
-    static void CopyAttributes(const FunctionPtr &src, LotusIR::Node* node);
+    static void CopyAttributes(const FunctionPtr &src, onnxruntime::Node* node);
 
     //
     // Convert Axis object to actual tensor index.
@@ -242,11 +240,6 @@ private:
 
     static std::vector<float> INTSToVecFloat(const std::vector<int64_t> &ints);
     static std::vector<int64_t> ConvertPermutationCNTKToONNX(const std::vector<Axis> &axes, bool hasBatchAxis);
-
-    //
-    // Convert DataType from CNTK TensorProto
-    //
-    static TensorProto_DataType ConvertDataTypeCNTKToTensorProto(CNTK::DataType newDataType);
 
     //
     // Convert data types from CNTK to ONNX.
@@ -284,12 +277,12 @@ private:
     //
     // Argument orders between CNTK and ONNX aren't always the same.
     //
-    static std::vector<LotusIR::NodeArg* > MapInputsOrderToONNX(const FunctionPtr& src, const std::vector<LotusIR::NodeArg* >& inputs);
+    static std::vector<onnxruntime::NodeArg* > MapInputsOrderToONNX(const FunctionPtr& src, const std::vector<onnxruntime::NodeArg* >& inputs);
 
     //
     // Add current CNTK node to ONNX graph.
     //
-    static LotusIR::Node* AddNode(const FunctionPtr& src, LotusIR::Graph* graph, const std::vector<LotusIR::NodeArg*>& inputs, const std::vector<LotusIR::NodeArg* >& outputs);
+    static onnxruntime::Node* AddNode(const FunctionPtr& src, onnxruntime::Graph* graph, const std::vector<onnxruntime::NodeArg*>& inputs, const std::vector<onnxruntime::NodeArg* >& outputs);
 
     //
     // set node attribute for ReduceElements ops
@@ -311,17 +304,17 @@ private:
     //
     // Adds attributes 'pads' to saved node (typically convolution or pooling).
     //
-    static void PutPadAttrInNode(LotusIR::Node* node, const std::vector<bool>& autoPadding,
+    static void PutPadAttrInNode(onnxruntime::Node* node, const std::vector<bool>& autoPadding,
         const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides, const NDShape& dilation, bool ceilOutDim = false, bool transpose = false);
 
     //
     // Takes CNTK's OptimizedRNNStack node and converts it into a series of RNN/LSTM/GRU nodes
     // on the ONNX side.
     //
-    static LotusIR::Node* CreateONNXNodesForOptimizedRNNStack(const FunctionPtr &src,
-        LotusIR::Graph* graph,
-                                                             std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-                                                             std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static onnxruntime::Node* CreateONNXNodesForOptimizedRNNStack(const FunctionPtr &src,
+        onnxruntime::Graph* graph,
+                                                             std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                                             std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                                              const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
     //
@@ -367,38 +360,38 @@ private:
     //
     // Create a ONNX node for input weight for a recurrence node.
     //
-    static void CreateRecurrentWeightONNXNodes(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                               const Variable& Wcombined, std::vector<LotusIR::NodeArg*>& inputs, NDArrayViewPtr W, string WArgName = "");
+    static void CreateRecurrentWeightONNXNodes(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                               const Variable& Wcombined, std::vector<onnxruntime::NodeArg*>& inputs, NDArrayViewPtr W, string WArgName = "");
 
     //
     // Method to insert reshape and transpose nodes to the output of the ONNX LSTM output
     // so that it can be fed in as input to the next ONNX LSTM node.
     //
-    static LotusIR::NodeArg* LSTMOutputShapeAdapter(LotusIR::NodeArg& inputArg, onnx::TypeProto& inputArgType, LotusIR::Graph* graph,
+    static onnxruntime::NodeArg* LSTMOutputShapeAdapter(onnxruntime::NodeArg& inputArg, onnx::TypeProto& inputArgType, onnxruntime::Graph* graph,
                                                    size_t numDirections, size_t hiddenSize, CNTK::DataType outputType, string adapterBasename = "");
 
     // Takes CNTK's Select node and converts it into a series of ONNX nodes.
-    static LotusIR::Node * CreateONNXNodesForSelect(const FunctionPtr & src,
-        LotusIR::Graph * graph, std::unordered_map<FunctionPtr,
-        LotusIR::Node*>& functionNodes,
-        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static onnxruntime::Node * CreateONNXNodesForSelect(const FunctionPtr & src,
+        onnxruntime::Graph * graph, std::unordered_map<FunctionPtr,
+        onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
     // Takes CNTK's TimesTranspose node and converts it into a series of ONNX nodes.
-    static LotusIR::Node * CreateONNXNodesForTimesTranspose(const FunctionPtr & src,
-        LotusIR::Graph * graph, std::unordered_map<FunctionPtr,
-        LotusIR::Node*>& functionNodes,
-        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static onnxruntime::Node * CreateONNXNodesForTimesTranspose(const FunctionPtr & src,
+        onnxruntime::Graph * graph, std::unordered_map<FunctionPtr,
+        onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
     //
     // Method to create ONNX nodes that have an explicit batch axis from their CNTK
     // counterparts.
     //
-    static LotusIR::Node* CreateNodeForBatchAxisOp(const FunctionPtr &src,
-        LotusIR::Graph* graph,
-        std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-        std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    static onnxruntime::Node* CreateNodeForBatchAxisOp(const FunctionPtr &src,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
     // A helper function, to reverse any iterable container and return a copy
@@ -490,28 +483,28 @@ private:
 };
 } // namespace CNTK
 
-std::unique_ptr<LotusIR::Model> CNTKToONNX::CreateModel(const FunctionPtr& src)
+std::unique_ptr<onnxruntime::Model> CNTKToONNX::CreateModel(const FunctionPtr& src)
 {
-    std::unique_ptr<LotusIR::Model> model(new LotusIR::Model("CNTKGraph", true));
-    auto dstGraph = model->MainGraph();
-    CNTKToONNXHelper::Copy(src, dstGraph);
-    ::Lotus::Common::Status status = dstGraph->Resolve();
+    std::unique_ptr<onnxruntime::Model> model(new onnxruntime::Model("CNTKGraph", true));
+    auto &dstGraph = model->MainGraph();
+    CNTKToONNXHelper::Copy(src, &dstGraph);
+    onnxruntime::common::Status status = dstGraph.Resolve();
     if (!status.IsOK())
         LogicError("%s", status.ErrorMessage().c_str());
 
-    model->SetModelversion(static_cast<LotusIR::Version>(CNTK_ONNX_MODEL_VERSION)); // REVIEW sptiwari: This is the default. This and doc_string should be surfaced as graph's 'save' API input.
+    model->SetModelversion(static_cast<onnxruntime::Version>(CNTK_ONNX_MODEL_VERSION)); // REVIEW sptiwari: This is the default. This and doc_string should be surfaced as graph's 'save' API input.
     model->SetDomain(CNTK_ONNX_MODEL_DOMAIN);
     model->SetProducerVersion(CNTK_ONNX_PRODUCER_VERSION);
     model->SetProducerName(CNTK_ONNX_PRODUCER_NAME);
     return model;
 }
 
-void CNTKToONNXHelper::Copy(const FunctionPtr& src, LotusIR::Graph* dst)
+void CNTKToONNXHelper::Copy(const FunctionPtr& src, onnxruntime::Graph* dst)
 {
     std::set<FunctionPtr> visited;
     std::unordered_map<Variable, Variable> compositeOutputsMap;
-    std::unordered_map<FunctionPtr, LotusIR::Node*> functionNodes;
-    std::unordered_map<Variable, LotusIR::Node*> variableNodes;
+    std::unordered_map<FunctionPtr, onnxruntime::Node*> functionNodes;
+    std::unordered_map<Variable, onnxruntime::Node*> variableNodes;
 
     //
     // Traverse the graph and collect some information.
@@ -535,7 +528,7 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, LotusIR::Graph* dst)
     }
 }
 
-void CNTKToONNXHelper::HandleRootCombineOp(const FunctionPtr& src, LotusIR::Graph* dst)
+void CNTKToONNXHelper::HandleRootCombineOp(const FunctionPtr& src, onnxruntime::Graph* dst)
 {
     // Graph::BuildConnections connects ending nodes to the sink node
     // so that the ending nodes become output nodes. 
@@ -570,7 +563,7 @@ void CNTKToONNXHelper::HandleRootCombineOp(const FunctionPtr& src, LotusIR::Grap
 
         if (foundOutputToInputNodeArg)
         {
-            // This nodeArg is not dangling. Append to it a NoOp so that it can be treated as output by LotusIR.
+            // This nodeArg is not dangling. Append to it a NoOp so that it can be treated as output by onnxruntime.
             std::string out_arg_name = nodeArg->Name() + "_attach_noop_";
             AddIdentityOp(const_cast<NodeArg &>(*nodeArg), dst, out_arg_name);
         }
@@ -1410,50 +1403,7 @@ bool IsBatchAxisOp(const FunctionPtr src)
     return isBatchAxisOp;
 }
 
-bool OpNeedONNXTypeMap(const std::string &cntkType)
-{
-    const vector<string> ops({"And", "Equal", "Greater", "Less", "Not", "Or", "Xor", "Gather", "ArgMax", "ArgMin", "TopK" });
-    for (auto o : ops)
-    {
-        if (cntkType == o)
-            return true;
-    }
-    return false;
-}
-
-// Generate ONNX nodes with correct tensor types.
-// We call this function to work around the type compatiblity issue between CNTK and ONNX.
-void MapAndUpdateONNXType(const std::string &op, bool inputArg, int argOrder, CNTK::DataType dataType,
-                          onnx::TypeProto &type)
-{
-    if (op == "And" || op == "Not" || op == "Or" || op == "Xor")
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
-    else if (!inputArg && (op == "ArgMax" || op == "ArgMin"))
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
-    else if (op == "Equal")
-    {
-        if (inputArg)
-        {
-            type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT32);
-        }
-        else
-        {
-            type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
-        }
-    }
-    else if (op == "Gather" && inputArg && argOrder == 0)
-        // Gather input order are switched so as a quick workaround I simply assume the swap
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT32);
-    else if ((op == "Greater" || op == "Less") && !inputArg)
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
-    else if (op == "TopK" && !inputArg && argOrder == 1)
-        // the second output of TopK is index tensor of int64
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
-    else
-        type.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_FLOAT);
-}
-
-TensorProto_DataType CNTKToONNXHelper::ConvertDataTypeCNTKToTensorProto(
+TensorProto_DataType ConvertDataTypeCNTKToTensorProto(
     CNTK::DataType newDataType)
 {
     // to TensorProto_DataType
@@ -1467,6 +1417,78 @@ TensorProto_DataType CNTKToONNXHelper::ConvertDataTypeCNTKToTensorProto(
         return TensorProto_DataType::TensorProto_DataType_FLOAT16;
     default:
         NOT_IMPLEMENTED;
+    }
+}
+
+bool OpNeedONNXTypeMap(const std::string &cntkType)
+{
+    const vector<string> ops({"And", "Equal", "Greater", "Less", "Not", "Or", "Xor", "Gather", "ArgMax", "ArgMin", "TopK" });
+    for (auto o : ops)
+    {
+        if (cntkType == o)
+            return true;
+    }
+    return false;
+}
+
+// Generate ONNX nodes with correct tensor types.
+// We call this function to work around the type compatiblity issue between CNTK and ONNX.
+TensorProto_DataType MapAndUpdateONNXType(const std::string &op, bool inputArg, int argOrder, CNTK::DataType dataType,
+                          onnx::TypeProto *type)
+{
+    if (op == "And" || op == "Not" || op == "Or" || op == "Xor")
+    {
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
+        return onnx::TensorProto_DataType_BOOL;
+    }
+    else if (!inputArg && (op == "ArgMax" || op == "ArgMin"))
+    {
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
+        return onnx::TensorProto_DataType_INT64;
+    }
+    else if (op == "Equal")
+    {
+        if (inputArg)
+        {
+            if (type)
+                type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT32);
+            return onnx::TensorProto_DataType_INT32;
+        }
+        else
+        {
+            if (type)
+                type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
+            return onnx::TensorProto_DataType_BOOL;
+        }
+    }
+    else if (op == "Gather" && inputArg && argOrder == 0)
+    {
+        // Gather input order are switched so as a quick workaround I simply assume the swap
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT32);
+        return onnx::TensorProto_DataType_INT32;
+    }
+    else if ((op == "Greater" || op == "Less") && !inputArg)
+    {
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_BOOL);
+        return onnx::TensorProto_DataType_BOOL;
+    }
+    else if (op == "TopK" && !inputArg && argOrder == 1)
+    {
+        // the second output of TopK is index tensor of int64
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
+        return onnx::TensorProto_DataType_INT64;
+    }
+    else
+    {
+        onnx::TensorProto_DataType tensorProto_DataType = ConvertDataTypeCNTKToTensorProto(dataType);
+        if (type)
+            type->mutable_tensor_type()->set_elem_type(tensorProto_DataType);
+        return tensorProto_DataType;
     }
 }
 
@@ -1620,8 +1642,8 @@ std::vector<int64_t> CNTKToONNXHelper::ConvertAxesToOnnx(const std::vector<Axis>
     return onnxAxes;
 }
 
-// prepare an input node arg with correct name and meta data so that LotusIR can make the connection.
-void CNTKToONNXHelper::PrepareRNNInput(const Variable &X, Graph *graph, std::vector<LotusIR::NodeArg*> &nodeInputs)
+// prepare an input node arg with correct name and meta data so that onnxruntime can make the connection.
+void CNTKToONNXHelper::PrepareRNNInput(const Variable &X, Graph *graph, std::vector<onnxruntime::NodeArg*> &nodeInputs)
 {
     Variable input;
     wstring opName = X.Owner() ? X.Owner()->OpName() : L"";
@@ -1643,21 +1665,21 @@ void CNTKToONNXHelper::PrepareRNNInput(const Variable &X, Graph *graph, std::vec
         (*inputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim())[0].set_dim_param(FreeSequenceDimParam);
 
     UpdateONNXType(input.GetDataType(), inputArgType);
-    LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(inputName, &inputArgType);
+    onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(inputName, &inputArgType);
     nodeInputs.push_back(&inputArg);
 }
 
-void CNTKToONNXHelper::PrepareLSTMInitialStateNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+void CNTKToONNXHelper::PrepareLSTMInitialStateNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                                    const std::vector<Variable> &initialVariables, int batchSize, int cellSize,
-                                                   const std::string &uid, std::vector<LotusIR::NodeArg *> &nodeInputs)
+                                                   const std::string &uid, std::vector<onnxruntime::NodeArg *> &nodeInputs)
 {
     std::vector<int64_t> shape({ (int64_t)initialVariables.size(), batchSize , cellSize });
     bool doReverseVec = false;
     onnx::TypeProto inputArgType = ToTypeProto(shape, doReverseVec);
     UpdateONNXType(initialVariables[0].GetDataType(), inputArgType);
-    LotusIR::NodeArg& inputArg = graph->GetOrCreateNodeArg(uid, &inputArgType);
-    std::vector<LotusIR::NodeArg *> varOutputs({ &inputArg });
-    std::vector<LotusIR::NodeArg *> varInputs;
+    onnxruntime::NodeArg& inputArg = graph->GetOrCreateNodeArg(uid, &inputArgType);
+    std::vector<onnxruntime::NodeArg *> varOutputs({ &inputArg });
+    std::vector<onnxruntime::NodeArg *> varInputs;
     std::string inputName = inputArg.Name();
 
     std::vector<NDArrayViewPtr> srcTensors;
@@ -1676,10 +1698,10 @@ void CNTKToONNXHelper::PrepareLSTMInitialStateNode(LotusIR::Graph* graph, std::u
     nodeInputs.push_back(&inputArg);
 }
 
-void CNTKToONNXHelper::PrepareLSTMPeepholeNode(LotusIR::Graph* graph,
-                                               std::unordered_map<Variable, LotusIR::Node*>& variableNodes, const std::vector<Variable> &Ps,
+void CNTKToONNXHelper::PrepareLSTMPeepholeNode(onnxruntime::Graph* graph,
+                                               std::unordered_map<Variable, onnxruntime::Node*>& variableNodes, const std::vector<Variable> &Ps,
                                                const std::vector<double> &stabilizerDcCoefs, const std::vector<double> &stabilizerCCoefs,
-                                               std::vector<LotusIR::NodeArg *> &nodeInputs)
+                                               std::vector<onnxruntime::NodeArg *> &nodeInputs)
 {
     // this method is called when all Ps are valid parameter/constant variable.
     int hidden_size = Ps[0].Shape()[0];
@@ -1688,9 +1710,9 @@ void CNTKToONNXHelper::PrepareLSTMPeepholeNode(LotusIR::Graph* graph,
     std::vector<int64_t> shape({ directions, 3 * hidden_size });
     onnx::TypeProto inputArgType = ToTypeProto(shape, doReverseVec);
     UpdateONNXType(Ps[0].GetDataType(), inputArgType);
-    LotusIR::NodeArg& inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Ps[0].Uid())), &inputArgType);
-    std::vector<LotusIR::NodeArg *> varOutputs({ &inputArg });
-    std::vector<LotusIR::NodeArg *> varInputs;
+    onnxruntime::NodeArg& inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Ps[0].Uid())), &inputArgType);
+    std::vector<onnxruntime::NodeArg *> varOutputs({ &inputArg });
+    std::vector<onnxruntime::NodeArg *> varInputs;
     std::string inputName = inputArg.Name();
 
     std::vector<NDArrayViewPtr> srcTensors;
@@ -1728,8 +1750,8 @@ void CNTKToONNXHelper::PrepareLSTMPeepholeNode(LotusIR::Graph* graph,
     nodeInputs.push_back(&inputArg);
 }
 
-void CNTKToONNXHelper::PrepareLSTMBiasNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                           const std::vector<Variable> &Bs, std::vector<LotusIR::NodeArg *> &nodeInputs)
+void CNTKToONNXHelper::PrepareLSTMBiasNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                           const std::vector<Variable> &Bs, std::vector<onnxruntime::NodeArg *> &nodeInputs)
 {
     // TODO: sanity check for all variables to have the same shape and data types.
     // NDShape is in reversed order relative CNTK python so doReverseVec need to be true
@@ -1744,9 +1766,9 @@ void CNTKToONNXHelper::PrepareLSTMBiasNode(LotusIR::Graph* graph, std::unordered
     shape[1] *= 2;
     onnx::TypeProto inputArgType = ToTypeProto(shape, doReverseVec);
     UpdateONNXType(Bs[0].GetDataType(), inputArgType);
-    LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Bs[0].Uid())), &inputArgType);
-    std::vector<LotusIR::NodeArg*> varOutputs({ &inputArg });
-    std::vector<LotusIR::NodeArg*> varInputs;
+    onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Bs[0].Uid())), &inputArgType);
+    std::vector<onnxruntime::NodeArg*> varOutputs({ &inputArg });
+    std::vector<onnxruntime::NodeArg*> varInputs;
     std::string inputName = inputArg.Name();
 
     std::vector<NDArrayViewPtr> srcTensors;
@@ -1764,8 +1786,8 @@ void CNTKToONNXHelper::PrepareLSTMBiasNode(LotusIR::Graph* graph, std::unordered
     nodeInputs.push_back(&inputArg);
 }
 
-void CNTKToONNXHelper::PrepareLSTMWeightNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                             const std::vector<Variable> &Ws, double *stabilizerConstants, std::vector<LotusIR::NodeArg *> &nodeInputs)
+void CNTKToONNXHelper::PrepareLSTMWeightNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                             const std::vector<Variable> &Ws, double *stabilizerConstants, std::vector<onnxruntime::NodeArg *> &nodeInputs)
 {
     // TODO: sanity check for all variables to have the same shape and data types.
     // NDShape is in reversed order relative CNTK python so doReverseVec need to be true
@@ -1777,9 +1799,9 @@ void CNTKToONNXHelper::PrepareLSTMWeightNode(LotusIR::Graph* graph, std::unorder
     std::vector<int64_t> shape = Cast<size_t, int64_t>((NDShape({ Ws.size() }).AppendShape(Ws[0].Shape())).Dimensions());
     onnx::TypeProto inputArgType = ToTypeProto(shape, doReverseVec);
     UpdateONNXType(Ws[0].GetDataType(), inputArgType);
-    LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Ws[0].Uid())), &inputArgType);
-    std::vector<LotusIR::NodeArg *> varOutputs({&inputArg});
-    std::vector<LotusIR::NodeArg *> varInputs;
+    onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Ws[0].Uid())), &inputArgType);
+    std::vector<onnxruntime::NodeArg *> varOutputs({&inputArg});
+    std::vector<onnxruntime::NodeArg *> varInputs;
     std::string inputName = inputArg.Name();
 
     std::vector<NDArrayViewPtr> srcTensors;
@@ -1803,9 +1825,9 @@ std::string DeriveDirectionString(const std::vector<FunctionPtr> lstms,
     return lstms.size() == 2 ? RNNDirectionBidirection :(directionCount[RNNDirection::Backward] == 1 ? RNNDirectionReverse : RNNDirectionForward);
 }
 
-void AddEmptyInput(Graph *graph, std::vector<LotusIR::NodeArg *> &nodeInputs)
+void AddEmptyInput(Graph *graph, std::vector<onnxruntime::NodeArg *> &nodeInputs)
 {
-    LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg("", nullptr);
+    onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg("", nullptr);
     nodeInputs.emplace_back(&inputArg);
 }
 
@@ -1846,10 +1868,10 @@ Variable FindInputToRNN(int startIndex, std::vector<Variable> &inputs)
     return inputs[inputIndex];
 }
 
-LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
-                                               LotusIR::Graph* graph,
-                                               std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-                                               std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+onnxruntime::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
+                                               onnxruntime::Graph* graph,
+                                               std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                               std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                                const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     std::vector<FunctionPtr> lstms = GetRNNBlocksFromSingleOrBidirectionalRNN(src, "LSTM");
@@ -1955,7 +1977,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
     // Variable P;
 
     // inputs
-    std::vector<LotusIR::NodeArg *> nodeInputs;
+    std::vector<onnxruntime::NodeArg *> nodeInputs;
     Variable input = SkipBatchAndSequenceAxisInput(Xs[0]);
     PrepareRNNInput(input, graph, nodeInputs);
     PrepareLSTMWeightNode(graph, variableNodes, Ws, nullptr, nodeInputs);
@@ -1980,7 +2002,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
         {
             onnx::TypeProto inputArgType = ToTypeProto(std::vector<int64_t>({ 1 }), false);
             inputArgType.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT32);
-            LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(sequence_lens_inputName, &inputArgType);
+            onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(sequence_lens_inputName, &inputArgType);
             nodeInputs.push_back(&inputArg);
         }
         else
@@ -2022,7 +2044,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
         }
     }
 
-    std::vector<LotusIR::NodeArg *> nodeOutputs;
+    std::vector<onnxruntime::NodeArg *> nodeOutputs;
     std::string nodeOutputName, 
         nodeOutputNameBeforeReshape;
     std::tie<std::string, std::string>(nodeOutputName, nodeOutputNameBeforeReshape) = MakeRNNAndPostReshapeOutputNames(lstms, Yhs, src);
@@ -2031,7 +2053,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
         auto outputArgType = ToTypeProto(std::vector<int64_t>({ (int64_t)NDShape::FreeDimension, 
             (int64_t)Yhs.size(), FreeBatchSize, (int64_t)Yhs[0].Shape()[0]}), false);
         UpdateONNXType(Yhs[0].GetDataType(), outputArgType);
-        LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeOutputNameBeforeReshape, &outputArgType);
+        onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeOutputNameBeforeReshape, &outputArgType);
         nodeOutputs.push_back(&outputArg);
     }
 
@@ -2042,7 +2064,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
         CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
 
     auto nodeName = ToLegacyString(ToUTF8(src->Uid()));
-    LotusIR::Node *lstmNode = graph->AddNode(nodeName, "LSTM", "", nodeInputs, nodeOutputs);
+    onnxruntime::Node *lstmNode = graph->AddNode(nodeName, "LSTM", "", nodeInputs, nodeOutputs);
 
     lstmNode->AddAttribute("activations", activations);
     lstmNode->AddAttribute("direction", direction);
@@ -2057,14 +2079,14 @@ LotusIR::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
 
     std::vector<int64_t> shape({ (int64_t)NDShape::FreeDimension, 1, hidden_size });
 
-    LotusIR::Node *squeezedLSTMNode = InsertReshapeNodeToCNTKFunction(src, lstmNode, shape, graph, nodeOutputName);
+    onnxruntime::Node *squeezedLSTMNode = InsertReshapeNodeToCNTKFunction(src, lstmNode, shape, graph, nodeOutputName);
 
     functionNodes.emplace(src, squeezedLSTMNode);
     return squeezedLSTMNode;
 }
 
-void CNTKToONNXHelper::PrepareGRUBiasNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                          const std::vector<Variable> &Bs, std::vector<LotusIR::NodeArg *> &nodeInputs)
+void CNTKToONNXHelper::PrepareGRUBiasNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                          const std::vector<Variable> &Bs, std::vector<onnxruntime::NodeArg *> &nodeInputs)
 {
     // TODO: sanity check for all variables to have the same shape and data types.
     bool doReverseVec = false;
@@ -2076,9 +2098,9 @@ void CNTKToONNXHelper::PrepareGRUBiasNode(LotusIR::Graph* graph, std::unordered_
     // ONNX GRU spec has 2 bias, for forward and backward.
     onnx::TypeProto inputArgType = ToTypeProto(shape, doReverseVec);
     UpdateONNXType(Bs[0].GetDataType(), inputArgType);
-    LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Bs[0].Uid())), &inputArgType);
-    std::vector<LotusIR::NodeArg *> varOutputs({ &inputArg });
-    std::vector<LotusIR::NodeArg *> varInputs;
+    onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Bs[0].Uid())), &inputArgType);
+    std::vector<onnxruntime::NodeArg *> varOutputs({ &inputArg });
+    std::vector<onnxruntime::NodeArg *> varInputs;
     std::string inputName = inputArg.Name();
 
     std::vector<NDArrayViewPtr> srcTensors;
@@ -2096,17 +2118,17 @@ void CNTKToONNXHelper::PrepareGRUBiasNode(LotusIR::Graph* graph, std::unordered_
     nodeInputs.push_back(&inputArg);
 }
 
-void CNTKToONNXHelper::PrepareGRUZRHWeightNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                               const std::vector<Variable> &Rzrs, const std::vector<Variable> &Rhs, std::vector<LotusIR::NodeArg *> &nodeInputs)
+void CNTKToONNXHelper::PrepareGRUZRHWeightNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                               const std::vector<Variable> &Rzrs, const std::vector<Variable> &Rhs, std::vector<onnxruntime::NodeArg *> &nodeInputs)
 {
     int numDirections = Rzrs.size();
     int hiddenSize = Rzrs[0].Shape().Dimensions()[1];
     std::vector<int64_t> shape({ numDirections, GRUWeightDimensionHiddenMultiplier * hiddenSize, hiddenSize });
     onnx::TypeProto inputArgType = ToTypeProto(shape, false);
     UpdateONNXType(Rzrs[0].GetDataType(), inputArgType);
-    LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Rzrs[0].Uid())), &inputArgType);
-    std::vector<LotusIR::NodeArg *> varOutputs({ &inputArg });
-    std::vector<LotusIR::NodeArg *> varInputs;
+    onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Rzrs[0].Uid())), &inputArgType);
+    std::vector<onnxruntime::NodeArg *> varOutputs({ &inputArg });
+    std::vector<onnxruntime::NodeArg *> varInputs;
     std::string inputName = inputArg.Name();
 
     std::vector<NDArrayViewPtr> srcZRTensors, srcHTensors;
@@ -2127,8 +2149,8 @@ void CNTKToONNXHelper::PrepareGRUZRHWeightNode(LotusIR::Graph* graph, std::unord
     nodeInputs.push_back(&inputArg);
 }
 
-void CNTKToONNXHelper::PrepareRNNWeightNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                            const std::vector<Variable> &Ws, std::vector<LotusIR::NodeArg *> &nodeInputs,
+void CNTKToONNXHelper::PrepareRNNWeightNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                            const std::vector<Variable> &Ws, std::vector<onnxruntime::NodeArg *> &nodeInputs,
                                             std::function<void(const std::vector<NDArrayViewPtr> &srcTensors,
                                                                onnx::TensorProto& dst, const onnx::TypeProto &inputArgType)> weightConverter)
 {
@@ -2138,9 +2160,9 @@ void CNTKToONNXHelper::PrepareRNNWeightNode(LotusIR::Graph* graph, std::unordere
     std::vector<int64_t> shape = Cast<size_t, int64_t>((NDShape({Ws.size()}).AppendShape(Ws[0].Shape())).Dimensions());
     onnx::TypeProto inputArgType = ToTypeProto(shape, doReverseVec);
     UpdateONNXType(Ws[0].GetDataType(), inputArgType);
-    LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Ws[0].Uid())), &inputArgType);
-    std::vector<LotusIR::NodeArg *> varOutputs({&inputArg});
-    std::vector<LotusIR::NodeArg *> varInputs;
+    onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Ws[0].Uid())), &inputArgType);
+    std::vector<onnxruntime::NodeArg *> varOutputs({&inputArg});
+    std::vector<onnxruntime::NodeArg *> varInputs;
     std::string inputName = inputArg.Name();
 
     std::vector<NDArrayViewPtr> srcTensors;
@@ -2158,10 +2180,10 @@ void CNTKToONNXHelper::PrepareRNNWeightNode(LotusIR::Graph* graph, std::unordere
     nodeInputs.push_back(&inputArg);
 }
 
-LotusIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
-                                              LotusIR::Graph* graph,
-                                              std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-                                              std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+onnxruntime::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
+                                              onnxruntime::Graph* graph,
+                                              std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                              std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                               const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     std::vector<FunctionPtr> grus = GetRNNBlocksFromSingleOrBidirectionalRNN(src, "GRU");
@@ -2249,7 +2271,7 @@ LotusIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
     int hidden_size = grus[0]->Outputs()[0].Shape()[0];
 
     // inputs
-    std::vector<LotusIR::NodeArg *> nodeInputs;
+    std::vector<onnxruntime::NodeArg *> nodeInputs;
     Variable input = SkipBatchAndSequenceAxisInput(Xs[0]);
     PrepareRNNInput(input, graph, nodeInputs);
     PrepareRNNWeightNode(graph, variableNodes, Ws, nodeInputs, CopyGRUWeightTensors);
@@ -2286,12 +2308,12 @@ LotusIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
     std::string nodeOutputName, nodeOutputNameBeforeReshape;
     std::tie<std::string, std::string>(nodeOutputName, nodeOutputNameBeforeReshape) = MakeRNNAndPostReshapeOutputNames(grus, Yhs, src);
 
-    std::vector<LotusIR::NodeArg *> nodeOutputs;
+    std::vector<onnxruntime::NodeArg *> nodeOutputs;
     {
         auto outputArgType = ToTypeProto(std::vector<int64_t>({ (int64_t)NDShape::FreeDimension, 
             (int64_t)Yhs.size(), FreeBatchSize, (int64_t)Yhs[0].Shape()[0] }), false);
         UpdateONNXType(Yhs[0].GetDataType(), outputArgType);
-        LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeOutputNameBeforeReshape, &outputArgType);
+        onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeOutputNameBeforeReshape, &outputArgType);
         nodeOutputs.push_back(&outputArg);
 
         {
@@ -2302,7 +2324,7 @@ LotusIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
             const bool doReverseVec = false;
             auto outputArgType = ToTypeProto(std::vector<int64_t>({ (int64_t)Yhs.size(), batchSize, (int)Yh.Shape()[0] }), doReverseVec);
             UpdateONNXType(Yh.GetDataType(), outputArgType);
-            LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeName, &outputArgType);
+            onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeName, &outputArgType);
             nodeOutputs.push_back(&outputArg);
         }
     }
@@ -2314,7 +2336,7 @@ LotusIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
         CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
 
     auto nodeName = ToLegacyString(ToUTF8(src->Uid()));
-    LotusIR::Node *gruNode = graph->AddNode(nodeName, "GRU", "", nodeInputs, nodeOutputs);
+    onnxruntime::Node *gruNode = graph->AddNode(nodeName, "GRU", "", nodeInputs, nodeOutputs);
 
     gruNode->AddAttribute("activations", activations);
     gruNode->AddAttribute("direction", direction);
@@ -2328,13 +2350,13 @@ LotusIR::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
     // TODO: uncomment this code once LotusRT output shape matches ONNX
     // squeeze direction axis out. This is safe because it is not bi-directional node.
     std::vector<int64_t> shape({ (int64_t)NDShape::FreeDimension, 1, hidden_size });
-    LotusIR::Node *squeezedLSTMNode = InsertReshapeNodeToCNTKFunction(src, gruNode, shape, graph, nodeOutputName);
+    onnxruntime::Node *squeezedLSTMNode = InsertReshapeNodeToCNTKFunction(src, gruNode, shape, graph, nodeOutputName);
     functionNodes.emplace(src, squeezedLSTMNode);
     return squeezedLSTMNode;
 }
 
-void CNTKToONNXHelper::PrepareRNNBiasNode(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                          const std::vector<Variable> &Bs, std::vector<LotusIR::NodeArg *> &nodeInputs)
+void CNTKToONNXHelper::PrepareRNNBiasNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                          const std::vector<Variable> &Bs, std::vector<onnxruntime::NodeArg *> &nodeInputs)
 {
     // TODO: sanity check for all variables to have the same shape and data types.
     bool doReverseVec = false;
@@ -2346,9 +2368,9 @@ void CNTKToONNXHelper::PrepareRNNBiasNode(LotusIR::Graph* graph, std::unordered_
     // ONNX GRU spec has 2 bias, for forward and backward.
     onnx::TypeProto inputArgType = ToTypeProto(shape, doReverseVec);
     UpdateONNXType(Bs[0].GetDataType(), inputArgType);
-    LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Bs[0].Uid())), &inputArgType);
-    std::vector<LotusIR::NodeArg *> varOutputs({ &inputArg });
-    std::vector<LotusIR::NodeArg *> varInputs;
+    onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(Bs[0].Uid())), &inputArgType);
+    std::vector<onnxruntime::NodeArg *> varOutputs({ &inputArg });
+    std::vector<onnxruntime::NodeArg *> varInputs;
     std::string inputName = inputArg.Name();
 
     std::vector<NDArrayViewPtr> srcTensors;
@@ -2366,10 +2388,10 @@ void CNTKToONNXHelper::PrepareRNNBiasNode(LotusIR::Graph* graph, std::unordered_
     nodeInputs.push_back(&inputArg);
 }
 
-LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
-                                              LotusIR::Graph* graph,
-                                              std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-                                              std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+onnxruntime::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
+                                              onnxruntime::Graph* graph,
+                                              std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                              std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                               const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     std::vector<FunctionPtr> rnns = GetRNNBlocksFromSingleOrBidirectionalRNN(src, "RNNStep");
@@ -2451,7 +2473,7 @@ LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
     int hidden_size = rnns[0]->Outputs()[0].Shape()[0];
 
     // inputs
-    std::vector<LotusIR::NodeArg *> nodeInputs;
+    std::vector<onnxruntime::NodeArg *> nodeInputs;
     Variable input = SkipBatchAndSequenceAxisInput(Xs[0]);
     PrepareRNNInput(input, graph, nodeInputs);
     PrepareRNNWeightNode(graph, variableNodes, Ws, nodeInputs, CopyRNNWeightTensors);
@@ -2488,12 +2510,12 @@ LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
     std::string nodeOutputName, nodeOutputNameBeforeReshape;
     std::tie<std::string, std::string>(nodeOutputName, nodeOutputNameBeforeReshape) = MakeRNNAndPostReshapeOutputNames(rnns, Yhs, src);
 
-    std::vector<LotusIR::NodeArg *> nodeOutputs;
+    std::vector<onnxruntime::NodeArg *> nodeOutputs;
     {
         auto outputArgType = ToTypeProto(std::vector<int64_t>({ (int64_t)NDShape::FreeDimension, 
             (int64_t)Yhs.size(), FreeBatchSize, (int64_t)Yhs[0].Shape()[0] }), false);
         UpdateONNXType(Yhs[0].GetDataType(), outputArgType);
-        LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeOutputNameBeforeReshape, &outputArgType);
+        onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeOutputNameBeforeReshape, &outputArgType);
         nodeOutputs.push_back(&outputArg);
     }
 
@@ -2501,7 +2523,7 @@ LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
         CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap);
 
     auto nodeName = ToLegacyString(ToUTF8(src->Uid()));
-    LotusIR::Node *rnnNode = graph->AddNode(nodeName, "RNN", "", nodeInputs, nodeOutputs);
+    onnxruntime::Node *rnnNode = graph->AddNode(nodeName, "RNN", "", nodeInputs, nodeOutputs);
 
     rnnNode->AddAttribute("activations", activations);
     rnnNode->AddAttribute("direction", direction);
@@ -2515,18 +2537,18 @@ LotusIR::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
     //// TODO: uncomment this code once LotusRT output shape matches ONNX
     //// squeeze direction axis out. This is safe because it is not bi-directional node.
     std::vector<int64_t> shape({ (int64_t)NDShape::FreeDimension, 1, hidden_size });
-    LotusIR::Node *squeezedRNNNode = InsertReshapeNodeToCNTKFunction(src, rnnNode, shape, graph, nodeOutputName);
+    onnxruntime::Node *squeezedRNNNode = InsertReshapeNodeToCNTKFunction(src, rnnNode, shape, graph, nodeOutputName);
     functionNodes.emplace(src, squeezedRNNNode);
     return squeezedRNNNode;
 }
 
 // Create an ONNX NodeArg of desired shape with constant 0s as initial values. 
-LotusIR::NodeArg &CNTKToONNXHelper::AddZerosConstantNodeArg(Graph *graph, const string &nodeArgName,
+onnxruntime::NodeArg &CNTKToONNXHelper::AddZerosConstantNodeArg(Graph *graph, const string &nodeArgName,
     const std::vector<int64_t> &shape, CNTK::DataType dataType)
 {
     onnx::TypeProto shapeInputArgType = ToTypeProto(shape, false);
     shapeInputArgType.mutable_tensor_type()->set_elem_type(ConvertDataTypeCNTKToTensorProto(dataType));
-    LotusIR::NodeArg &shapeInputArg = graph->GetOrCreateNodeArg(nodeArgName, &shapeInputArgType);
+    onnxruntime::NodeArg &shapeInputArg = graph->GetOrCreateNodeArg(nodeArgName, &shapeInputArgType);
 
     onnx::TensorProto dstTensor;
     dstTensor.set_name(shapeInputArg.Name());
@@ -2558,112 +2580,103 @@ LotusIR::NodeArg &CNTKToONNXHelper::AddZerosConstantNodeArg(Graph *graph, const 
     return shapeInputArg;
 }
 
-LotusIR::Node *CNTKToONNXHelper::AddReshapeNodeAccordingToONNXVersion(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t> &newShape)
+onnxruntime::Node *CNTKToONNXHelper::AddReshapeNodeImpl(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t> &newShape)
 {
-    if (IsONNX1_2Supported())
-    {
-        onnx::TypeProto shapeInputArgType = ToTypeProto(std::vector<int64_t>({ (int64_t)newShape.size() }));
-        shapeInputArgType.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
+    onnx::TypeProto shapeInputArgType = ToTypeProto(std::vector<int64_t>({ (int64_t)newShape.size() }));
+    shapeInputArgType.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
 
-        LotusIR::NodeArg &shapeInputArg = graph->GetOrCreateNodeArg(output->Name() + "_shape", &shapeInputArgType);
+    onnxruntime::NodeArg &shapeInputArg = graph->GetOrCreateNodeArg(output->Name() + "_shape", &shapeInputArgType);
 
-        onnx::TensorProto dstTensor;
-        dstTensor.set_name(shapeInputArg.Name());
-        dstTensor.set_data_type(onnx::TensorProto_DataType_INT64);
-        for (size_t index = 0; index < newShape.size(); index++)
-            if (newShape[index] == NDShape::FreeDimension)
-            {
+    onnx::TensorProto dstTensor;
+    dstTensor.set_name(shapeInputArg.Name());
+    dstTensor.set_data_type(onnx::TensorProto_DataType_INT64);
+    for (size_t index = 0; index < newShape.size(); index++)
+        if (newShape[index] == NDShape::FreeDimension)
+        {
                 
-                *(dstTensor.mutable_int64_data()->Add()) = ReshapeKeepInputDim;
-            }
-            else if (newShape[index] == NDShape::InferredDimension)
-            {
-                // TODO: add a test case for this code path.
-                *(dstTensor.mutable_int64_data()->Add()) = ReshapeInferredDim;
-            }
-            else
-            {
-                *(dstTensor.mutable_int64_data()->Add()) = newShape[index];
-            }
-        *(dstTensor.mutable_dims()->Add()) = newShape.size();
-        graph->AddInitializedTensor(dstTensor);
+            *(dstTensor.mutable_int64_data()->Add()) = ReshapeKeepInputDim;
+        }
+        else if (newShape[index] == NDShape::InferredDimension)
+        {
+            // TODO: add a test case for this code path.
+            *(dstTensor.mutable_int64_data()->Add()) = ReshapeInferredDim;
+        }
+        else
+        {
+            *(dstTensor.mutable_int64_data()->Add()) = newShape[index];
+        }
+    *(dstTensor.mutable_dims()->Add()) = newShape.size();
+    graph->AddInitializedTensor(dstTensor);
 
-        auto reshapeNode1 = graph->AddNode(nodeName, "Reshape", "", { input, &shapeInputArg }, { output });
-        return reshapeNode1;
-    }
-    else
-    {
-        LotusIR::Node *reshapeNode = graph->AddNode(nodeName, "Reshape", "", { input }, { output });
-        reshapeNode->AddAttribute("shape", ToINTS(Cast<int64_t, int>(newShape), false));
-        return reshapeNode;
-    }
+    auto reshapeNode1 = graph->AddNode(nodeName, "Reshape", "", { input, &shapeInputArg }, { output });
+    return reshapeNode1;
 }
 
 
-LotusIR::Node *CNTKToONNXHelper::AddReshapeNode(LotusIR::NodeArg &nodeArg, const std::vector<int64_t> &newShape, const std::string &outArgName, 
-    LotusIR::Graph *graph)
+onnxruntime::Node *CNTKToONNXHelper::AddReshapeNode(onnxruntime::NodeArg &nodeArg, const std::vector<int64_t> &newShape, const std::string &outArgName, 
+    onnxruntime::Graph *graph)
 {
     onnx::TypeProto typeProto = ToTypeProto(newShape, false);
     onnx::TensorProto_DataType elemType = nodeArg.TypeAsProto()->tensor_type().elem_type();
     typeProto.mutable_tensor_type()->set_elem_type(elemType);
 
-    LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(outArgName, &typeProto);
-    auto reshapeNode = AddReshapeNodeAccordingToONNXVersion(graph, nodeArg.Name() + string("_reshape"), 
-        const_cast<LotusIR::NodeArg *>(&nodeArg), &outputArg, newShape);
+    onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(outArgName, &typeProto);
+    auto reshapeNode = AddReshapeNodeImpl(graph, nodeArg.Name() + string("_reshape"), 
+        const_cast<onnxruntime::NodeArg *>(&nodeArg), &outputArg, newShape);
     return reshapeNode;
 }
 
-LotusIR::Node *CNTKToONNXHelper::AddMatMulNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph, 
+onnxruntime::Node *CNTKToONNXHelper::AddMatMulNode(onnxruntime::NodeArg &nodeArg1, onnxruntime::NodeArg &nodeArg2, onnxruntime::Graph* graph, 
     const std::string &out_arg_name)
 {
-    LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, nullptr);
-    LotusIR::Node* argMatMulNode = graph->AddNode(
+    onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, nullptr);
+    onnxruntime::Node* argMatMulNode = graph->AddNode(
         nodeArg1.Name() + string("_matmul"), "MatMul", "", { &nodeArg1, &nodeArg2 }, { &outputArg });
     return argMatMulNode;
 }
 
-LotusIR::Node *CNTKToONNXHelper::AddAddNode(LotusIR::NodeArg &nodeArg1, LotusIR::NodeArg &nodeArg2, LotusIR::Graph* graph,
+onnxruntime::Node *CNTKToONNXHelper::AddAddNode(onnxruntime::NodeArg &nodeArg1, onnxruntime::NodeArg &nodeArg2, onnxruntime::Graph* graph,
     const std::string &out_arg_name)
 {
-    LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, nullptr);
-    LotusIR::Node* argMatMulNode = graph->AddNode(
+    onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, nullptr);
+    onnxruntime::Node* argMatMulNode = graph->AddNode(
         nodeArg1.Name() + string("_add"), "Add", "", { &nodeArg1, &nodeArg2 }, { &outputArg });
     return argMatMulNode;
 }
 
-LotusIR::Node *CNTKToONNXHelper::AddIdentityOp(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &out_arg_name)
+onnxruntime::Node *CNTKToONNXHelper::AddIdentityOp(onnxruntime::NodeArg &nodeArg, onnxruntime::Graph* graph, const std::string &out_arg_name)
 {
-    LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, nullptr);
-    LotusIR::Node* identityNode = graph->AddNode(
+    onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, nullptr);
+    onnxruntime::Node* identityNode = graph->AddNode(
         nodeArg.Name() + string("_identity"), "Identity", "", { &nodeArg}, { &outputArg });
     return identityNode;
 }
 
-LotusIR::Node *CNTKToONNXHelper::AddArgMaxNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, int axis)
+onnxruntime::Node *CNTKToONNXHelper::AddArgMaxNode(onnxruntime::NodeArg &nodeArg, onnxruntime::Graph* graph, int axis)
 {
-    // LotusIR::NodeArg inputArg(nodeArg.Name(), nullptr);
-    LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeArg.Name() + "argmax_out", nullptr);
-    LotusIR::Node* argMaxNode = graph->AddNode(nodeArg.Name() + string("_argmax"), "ArgMax", "", { &nodeArg }, { &outputArg });
+    // onnxruntime::NodeArg inputArg(nodeArg.Name(), nullptr);
+    onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeArg.Name() + "argmax_out", nullptr);
+    onnxruntime::Node* argMaxNode = graph->AddNode(nodeArg.Name() + string("_argmax"), "ArgMax", "", { &nodeArg }, { &outputArg });
     argMaxNode->AddAttribute("axis", (int64_t)axis);
     return argMaxNode;
 }
 
-LotusIR::Node *CNTKToONNXHelper::AddCastNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph, const std::string &toType)
+onnxruntime::Node *CNTKToONNXHelper::AddCastNode(onnxruntime::NodeArg &nodeArg, onnxruntime::Graph* graph, onnx::TensorProto_DataType toType)
 {
-    // LotusIR::NodeArg inputArg(nodeArg.Name(), nullptr);
-    LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeArg.Name() + "cast_out", nullptr);
-    LotusIR::Node* castNode = graph->AddNode(nodeArg.Name() + string("_cast"), "Cast", "", { &nodeArg }, { &outputArg });
-    castNode->AddAttribute("to", toType);
+    // onnxruntime::NodeArg inputArg(nodeArg.Name(), nullptr);
+    onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeArg.Name() + "cast_out", nullptr);
+    onnxruntime::Node* castNode = graph->AddNode(nodeArg.Name() + string("_cast"), "Cast", "", { &nodeArg }, { &outputArg });
+    castNode->AddAttribute("to", (int64_t)toType);
     return castNode;
 }
 
-LotusIR::Node *CNTKToONNXHelper::AddTransposeNode(LotusIR::NodeArg &nodeArg, LotusIR::Graph* graph,
+onnxruntime::Node *CNTKToONNXHelper::AddTransposeNode(onnxruntime::NodeArg &nodeArg, onnxruntime::Graph* graph,
     const std::vector<int64_t> &perm, onnx::TypeProto& transposeOutputArgType, const std::string &outputNodeArgName)
 {
-    LotusIR::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeArg.Name() + "transpose_out", &transposeOutputArgType);
+    onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeArg.Name() + "transpose_out", &transposeOutputArgType);
     onnx::TensorProto_DataType elementType = nodeArg.TypeAsProto()->tensor_type().elem_type();
     const_cast<TypeProto*>(outputArg.TypeAsProto())->mutable_tensor_type()->set_elem_type(elementType);
-    LotusIR::Node* transposeNode = graph->AddNode(nodeArg.Name() + string("_transpose"), "Transpose", "", { &nodeArg }, { &outputArg });
+    onnxruntime::Node* transposeNode = graph->AddNode(nodeArg.Name() + string("_transpose"), "Transpose", "", { &nodeArg }, { &outputArg });
     transposeNode->AddAttribute("perm", perm);
     return transposeNode;
 }
@@ -2673,7 +2686,7 @@ LotusIR::Node *CNTKToONNXHelper::AddTransposeNode(LotusIR::NodeArg &nodeArg, Lot
 // For now we simply treat a bidirectional LSTM as two separate LSTMs. We use this method to reshape
 // LSTM output to squeeze away the direction dimension.
 // TODO: extend this method to handle bidirection LSTMs.
-LotusIR::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const FunctionPtr &src, LotusIR::Node* node, const std::vector<int64_t> &shape, LotusIR::Graph* graph,
+onnxruntime::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const FunctionPtr &src, onnxruntime::Node* node, const std::vector<int64_t> &shape, onnxruntime::Graph* graph,
     const std::string &nodeOutputName)
 {
     FunctionPtr blockRoot = src->BlockRoot();
@@ -2693,19 +2706,19 @@ LotusIR::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const FunctionP
     std::string lstmToReshapeNodeArgName = nodeOutputName;
     onnx::TypeProto typeProto = ToTypeProto(shape, false);
     UpdateONNXType(src->Outputs()[0].GetDataType(), typeProto);
-    LotusIR::NodeArg *outputArg = &graph->GetOrCreateNodeArg(lstmToReshapeNodeArgName, &typeProto);
+    onnxruntime::NodeArg *outputArg = &graph->GetOrCreateNodeArg(lstmToReshapeNodeArgName, &typeProto);
 
-    auto reshapeNode = AddReshapeNodeAccordingToONNXVersion(graph, nodeName + string("_reshape"),
+    auto reshapeNode = AddReshapeNodeImpl(graph, nodeName + string("_reshape"),
         const_cast<NodeArg *>(outputArgs.at(0)), outputArg, shape);
 
     return reshapeNode;
 }
 
 // to handle discrepancy between CNTK and ONNX for softmax ops.
-LotusIR::Node* CNTKToONNXHelper::CreateSoftmaxLikeNode(const FunctionPtr& src,
-    LotusIR::Graph* graph,
-    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+onnxruntime::Node* CNTKToONNXHelper::CreateSoftmaxLikeNode(const FunctionPtr& src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
@@ -2739,9 +2752,9 @@ LotusIR::Node* CNTKToONNXHelper::CreateSoftmaxLikeNode(const FunctionPtr& src,
 
     bool needTranspose = (axisIndex != onnxRank - 1);
 
-    std::vector<LotusIR::NodeArg *> inputs;
+    std::vector<onnxruntime::NodeArg *> inputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
-    std::vector<LotusIR::NodeArg *> outputs;
+    std::vector<onnxruntime::NodeArg *> outputs;
     ProcessOutputs(src, outputs, graph);
 
     // set up NodeArg names so graph is properly connected.
@@ -2766,7 +2779,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateSoftmaxLikeNode(const FunctionPtr& src,
     // [d_0, ..., d_k, ..., d_n]
     std::vector<int64_t> transposeOutputShape = ToINTS(*inputs[0]->TypeAsProto());
 
-    LotusIR::NodeArg *inputToInnerSoftmaxArgNode = inputs[0];
+    onnxruntime::NodeArg *inputToInnerSoftmaxArgNode = inputs[0];
     if (needTranspose)
     {
         // [d_0, ..., d_k, ..., d_n] ->[d_0, ..., ..., d_n, d_k]
@@ -2783,13 +2796,13 @@ LotusIR::Node* CNTKToONNXHelper::CreateSoftmaxLikeNode(const FunctionPtr& src,
     onnx::TypeProto softmaxLikeOutputArgType = ToTypeProto(transposeOutputShape, false);
     UpdateONNXType(src->Output().GetDataType(), softmaxLikeOutputArgType);
 
-    LotusIR::NodeArg &innerSoftmaxLikeOutputArg = graph->GetOrCreateNodeArg(innerSoftmaxOutputNodeArgName, &softmaxLikeOutputArgType);
-    LotusIR::Node* softmaxLikeNode = graph->AddNode(nodeName, onnxOpName, "", { inputToInnerSoftmaxArgNode }, { &innerSoftmaxLikeOutputArg });
+    onnxruntime::NodeArg &innerSoftmaxLikeOutputArg = graph->GetOrCreateNodeArg(innerSoftmaxOutputNodeArgName, &softmaxLikeOutputArgType);
+    onnxruntime::Node* softmaxLikeNode = graph->AddNode(nodeName, onnxOpName, "", { inputToInnerSoftmaxArgNode }, { &innerSoftmaxLikeOutputArg });
 
     // always softmax on the last axes
     softmaxLikeNode->AddAttribute("axis", (int64_t)onnxRank - 1);
 
-    LotusIR::NodeArg *outputFromInnerSoftmaxArgNode = const_cast<LotusIR::NodeArg *>(softmaxLikeNode->OutputDefs()[0]);
+    onnxruntime::NodeArg *outputFromInnerSoftmaxArgNode = const_cast<onnxruntime::NodeArg *>(softmaxLikeNode->OutputDefs()[0]);
     if (needTranspose)
     {
         // [d_0, ..., ..., d_n, d_k] -> [d_0, ..., d_k, ..., d_n]
@@ -2820,10 +2833,10 @@ LotusIR::Node* CNTKToONNXHelper::CreateSoftmaxLikeNode(const FunctionPtr& src,
 // array([[1.], [3.]], dtype = float32)
 // output from exported ONNX model will be:
 // array([[padding_value], [3.]], dtype = float32)
-LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
-    LotusIR::Graph* graph,
-    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+onnxruntime::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     auto f = src->BlockRoot();
@@ -2905,10 +2918,10 @@ LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
         // where CNTK outputs from beginIndex to (and include) the last.
         endIndex = INT_MAX;
 
-    std::vector<LotusIR::NodeArg *> inputs;
+    std::vector<onnxruntime::NodeArg *> inputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
-    //std::vector<LotusIR::NodeArg *> outputs;
+    //std::vector<onnxruntime::NodeArg *> outputs;
     //ProcessOutputs(src, outputs, graph);
     auto outputArgType = ToTypeProto(src->Output().Shape(), src->Output().HasBatchAxis(), src->Output().HasSequenceAxis());
     UpdateONNXType(src->Output().GetDataType(), outputArgType);
@@ -2922,10 +2935,10 @@ LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
         sliceOutputName += "_PreReshape";
     }
 
-    LotusIR::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(sliceOutputName, &outputArgType);
+    onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(sliceOutputName, &outputArgType);
 
     const std::string & nodeName = ToLegacyString(ToUTF8(src->Name()));
-    LotusIR::Node *sequenceSliceNode = graph->AddNode(nodeName, "Slice", "", { inputs[inputs.size() - 1] }, { &outputNodeArg });
+    onnxruntime::Node *sequenceSliceNode = graph->AddNode(nodeName, "Slice", "", { inputs[inputs.size() - 1] }, { &outputNodeArg });
     sequenceSliceNode->AddAttribute("axes", std::vector<int64_t>({ int64_t(0) }));
     sequenceSliceNode->AddAttribute("ends", std::vector<int64_t>({ endIndex }));
     sequenceSliceNode->AddAttribute("starts", std::vector<int64_t>({ beginIndex }));
@@ -2947,17 +2960,17 @@ LotusIR::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& src,
 // This is the main horsepower, it navigate CNTK graph recursivley while keep track of all visited nodes and variables,
 // and create the corresponding ONNX graph.
 //
-LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
-                                           LotusIR::Graph* graph,
-                                           std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-                                           std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
+                                           onnxruntime::Graph* graph,
+                                           std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                           std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                            const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     auto iter = functionNodes.find(src);
     if (iter != functionNodes.end())
         return iter->second;
     
-    LotusIR::Node* functionNode = nullptr;
+    onnxruntime::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
     std::string onnxOpName = ToOPName(src);
 
@@ -3065,10 +3078,10 @@ LotusIR::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //
     else if (Operators::IsSupportedCNTKOP(src->OpName()))
     {
-        std::vector<LotusIR::NodeArg *> inputs;
+        std::vector<onnxruntime::NodeArg *> inputs;
         ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
-        std::vector<LotusIR::NodeArg *> outputs;
+        std::vector<onnxruntime::NodeArg *> outputs;
         ProcessOutputs(src, outputs, graph);
 
         //
@@ -3096,7 +3109,7 @@ Variable SkipDynamicAxisPackUnpack(Variable input, bool &dynamicAxisPackUnpackSk
     return input;
 }
 
-bool TryMatchNodeArgType(onnx::TypeProto &argType, LotusIR::Graph* graph, const std::string &nodeArgName)
+bool TryMatchNodeArgType(onnx::TypeProto &argType, onnxruntime::Graph* graph, const std::string &nodeArgName)
 {
     const NodeArg* inputNodeArg = graph->FindNodeArg(nodeArgName);
     if (inputNodeArg)
@@ -3133,7 +3146,7 @@ bool TryMatchNodeArgType(onnx::TypeProto &argType, LotusIR::Graph* graph, const 
 //      z = C.sequence.input_variable((2,)) + C.input_variable((3,2))
 //
 // input is not necessarily an input to src. It may be obtained via skipping of batch/sequence pack/unpack wrappers. 
-NodeArg* CNTKToONNXHelper::GetInputAdjustmentForBroadcast(LotusIR::Graph* graph, const FunctionPtr src, 
+NodeArg* CNTKToONNXHelper::GetInputAdjustmentForBroadcast(onnxruntime::Graph* graph, const FunctionPtr src, 
     const Variable &input, int inputIndex, onnx::TypeProto &inputArgType)
 {
     // TODO: do we need to get blockroot if it is a block function?
@@ -3186,18 +3199,18 @@ NodeArg* CNTKToONNXHelper::GetInputAdjustmentForBroadcast(LotusIR::Graph* graph,
         //UpdateONNXType(input.GetDataType(), inputArgType);
         std::string inputNodeArgName = ToLegacyString(ToUTF8(input.Uid()));
         std::string outputArgName = inputNodeArgName + "_reshaped_for_broadcast";
-        LotusIR::NodeArg &nodeArg = graph->GetOrCreateNodeArg(inputNodeArgName, &inputArgType);
+        onnxruntime::NodeArg &nodeArg = graph->GetOrCreateNodeArg(inputNodeArgName, &inputArgType);
         Node *reshapeNode = AddReshapeNode(nodeArg, newShape, outputArgName, graph);
         return const_cast<NodeArg *>(reshapeNode->OutputDefs()[0]);
     }
 }
 
 void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
-    LotusIR::Graph* graph,
-    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
     const std::unordered_map<Variable, Variable>& compositeOutputsMap,
-    std::vector<LotusIR::NodeArg *>& inputs)
+    std::vector<onnxruntime::NodeArg *>& inputs)
 {
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
     std::string onnxOpName = ToOPName(src);
@@ -3316,7 +3329,26 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         }
         else if (OpNeedONNXTypeMap(cntkOpName))
         {
-            MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), inputArgType);
+            if (!input.IsOutput())
+            {
+                MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), &inputArgType);
+            }
+            else
+            {
+                // input NodeArg has already been created as an output NodeArg of the previous function node. 
+                // a Cast op needs to be inserted to get the desired type in ONNX.
+                TensorProto_DataType onnx_type = MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), nullptr);
+                if (ConvertDataTypeCNTKToTensorProto(input.GetDataType()) != onnx_type)
+                {
+                    UpdateONNXType(input.GetDataType(), inputArgType);
+                    onnxruntime::NodeArg &castInputArg = graph->GetOrCreateNodeArg(inputName, &inputArgType);
+                    onnxruntime::Node* castNode = AddCastNode(castInputArg, graph, onnx_type);
+                    inputs.push_back(const_cast<NodeArg *>(castNode->OutputDefs()[0]));
+
+                    // we already completed preparation of this input and can proceed to the next input.
+                    continue;
+                }
+            }
         }
         else
         {
@@ -3343,13 +3375,13 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             }
         }
 
-        LotusIR::NodeArg *adjusted = GetInputAdjustmentForBroadcast(graph, src, input, inputIndex, inputArgType);
+        onnxruntime::NodeArg *adjusted = GetInputAdjustmentForBroadcast(graph, src, input, inputIndex, inputArgType);
 
-        LotusIR::NodeArg &inputArg = adjusted == nullptr ? graph->GetOrCreateNodeArg(inputName, &inputArgType) : *adjusted;
+        onnxruntime::NodeArg &inputArg = adjusted == nullptr ? graph->GetOrCreateNodeArg(inputName, &inputArgType) : *adjusted;
 
         inputs.push_back(&inputArg);
 
-        if (cntkOpName == "Reshape" && IsONNX1_2Supported())
+        if (cntkOpName == "Reshape")
         {
             // ONNX1.2 reshape node take shape as input instead of attribute. 
 
@@ -3392,7 +3424,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             onnx::TypeProto shapeInputArgType = ToTypeProto(std::vector<int64_t>({ (int64_t)newShapeVec.size() }));
             shapeInputArgType.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
 
-            LotusIR::NodeArg &shapeInputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(src->Output().Uid())) + "_shape", &shapeInputArgType);
+            onnxruntime::NodeArg &shapeInputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(src->Output().Uid())) + "_shape", &shapeInputArgType);
 
             inputs.push_back(&shapeInputArg);
 
@@ -3408,7 +3440,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
 }
 
 void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
-    std::vector<LotusIR::NodeArg *>& outputs, Graph *graph)
+    std::vector<onnxruntime::NodeArg *>& outputs, Graph *graph)
 {
     std::string onnxOpName = ToOPName(src);
     int outputIndex = 0;
@@ -3424,13 +3456,13 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
         }
         else if (OpNeedONNXTypeMap(onnxOpName))
         {
-            MapAndUpdateONNXType(onnxOpName, false, outputIndex, output.GetDataType(), outputArgType);
+            MapAndUpdateONNXType(onnxOpName, false, outputIndex, output.GetDataType(), &outputArgType);
         }
         else
         {
             UpdateONNXType(output.GetDataType(), outputArgType);
         }
-        LotusIR::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(output.Uid())), &outputArgType);
+        onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(output.Uid())), &outputArgType);
         outputs.emplace_back(&outputNodeArg);
         outputIndex++;
     }
@@ -3480,7 +3512,7 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
     visited.emplace(src);
 }
 
-void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* node)
+void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node* node)
 {
     auto lookup = Operators::CntkToONNXLookup();
     assert(lookup.count(src->OpName()) != 0);
@@ -3633,30 +3665,6 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, LotusIR::Node* nod
         }
         else if (src->OpName() == L"Reshape")
         {
-            if (!IsONNX1_2Supported())
-            {
-                // TODO: handle CNTK reshape with begin and end axes.
-                auto shapeVec = src->Output().Shape().Dimensions();
-                std::vector<int> newShapeVec;
-                size_t numInferredDimensions(0);
-                for (const auto& axisSize : shapeVec)
-                {
-                    if (axisSize == NDShape::InferredDimension)
-                    {
-                        numInferredDimensions++;
-                        if (numInferredDimensions > 1)
-                            LogicError("Reshape: Multiple InferredDimension not supported by ONNX.");
-                        else
-                            newShapeVec.push_back(ReshapeInferredDim);
-                    }
-                    else // REVIEW SPTIWARI: Should we fill 0 for FreeDimension here?
-                        newShapeVec.push_back(static_cast<int>(axisSize));
-                }
-                // Always add a 1 to the shape for batch axis in ONNX tensors.
-                if ((src->Inputs().size() > 0) && (src->Inputs()[0].HasBatchAxis()))
-                    newShapeVec.push_back(1);
-                node->AddAttribute(attributesMap[L"shape"], ToINTS(newShapeVec));
-            }
         }
         else if (src->OpName() == L"Splice")
         {
@@ -4009,7 +4017,7 @@ void CNTKToONNXHelper::ValidatePadValueForCeilOutDim(const std::vector<int64_t> 
 }
 
 
-void CNTKToONNXHelper::PutPadAttrInNode(LotusIR::Node* node,
+void CNTKToONNXHelper::PutPadAttrInNode(onnxruntime::Node* node,
     const std::vector<bool>& autoPadding, const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides,
     const NDShape& dilations, bool ceilOutDim, bool transpose)
 {
@@ -4027,18 +4035,18 @@ void CNTKToONNXHelper::PutPadAttrInNode(LotusIR::Node* node,
     node->AddAttribute("pads", lowerPads);
 }
 
-std::vector<LotusIR::NodeArg *> CNTKToONNXHelper::MapInputsOrderToONNX(const FunctionPtr& src, const std::vector<LotusIR::NodeArg *>& inputs)
+std::vector<onnxruntime::NodeArg *> CNTKToONNXHelper::MapInputsOrderToONNX(const FunctionPtr& src, const std::vector<onnxruntime::NodeArg *>& inputs)
 {
     if (Operators::HasInputIndexMap(src->OpName()))
     {
-        std::vector<LotusIR::NodeArg *> orderedInputs;
-        std::map<int, LotusIR::NodeArg *> orderedInputsMap;
+        std::vector<onnxruntime::NodeArg *> orderedInputs;
+        std::map<int, onnxruntime::NodeArg *> orderedInputsMap;
         auto map = Operators::ToONNXInputIndexMap(src->OpName());
 
         for (size_t inputIndex = 0; inputIndex < inputs.size(); ++inputIndex)
         {
             if (map[inputIndex] >= 0)
-                orderedInputsMap.insert(std::pair<int, LotusIR::NodeArg *>(map[inputIndex], inputs[inputIndex]));
+                orderedInputsMap.insert(std::pair<int, onnxruntime::NodeArg *>(map[inputIndex], inputs[inputIndex]));
         }
 
         for (const auto &item : orderedInputsMap)
@@ -4050,13 +4058,13 @@ std::vector<LotusIR::NodeArg *> CNTKToONNXHelper::MapInputsOrderToONNX(const Fun
     return inputs;
 }
 
-LotusIR::Node* FindByName(LotusIR::Graph* graph, const std::string &name)
+onnxruntime::Node* FindByName(onnxruntime::Graph* graph, const std::string &name)
 {
     GraphNodes &nodes = graph->Nodes();
 
-    for (LotusIR::GraphNodes::MutableNodeIterator it = nodes.begin(); it != nodes.begin(); ++it)
+    for (onnxruntime::GraphNodes::MutableNodeIterator it = nodes.begin(); it != nodes.begin(); ++it)
     {
-        LotusIR::Node &node = *it;
+        onnxruntime::Node &node = *it;
 
         auto outputNodeArgs = node.OutputDefs();
         for (int i = 0; i < outputNodeArgs.size(); i++)
@@ -4070,7 +4078,7 @@ LotusIR::Node* FindByName(LotusIR::Graph* graph, const std::string &name)
     return nullptr;
 }
 
-std::vector<int64_t> GetShapeFromNodeArg(LotusIR::NodeArg *nodeArg)
+std::vector<int64_t> GetShapeFromNodeArg(onnxruntime::NodeArg *nodeArg)
 {
     std::vector<int64_t> shape;
     const TypeProto *typeProto = nodeArg->TypeAsProto();
@@ -4085,7 +4093,7 @@ std::vector<int64_t> GetShapeFromNodeArg(LotusIR::NodeArg *nodeArg)
 // ONNX Concat is limited to matching input shape cases
 // i.e. inputs' dimensions shall be the equal except for the concatination axis.
 // for an example, see test_Concat_With_Broadcast in onnx_op_test.py.
-void CNTKToONNXHelper::BroadcastInputsIfNeeded(std::vector<LotusIR::NodeArg *> &orderedInputs, const FunctionPtr& src, LotusIR::Graph* graph)
+void CNTKToONNXHelper::BroadcastInputsIfNeeded(std::vector<onnxruntime::NodeArg *> &orderedInputs, const FunctionPtr& src, onnxruntime::Graph* graph)
 {
     if (src->OpName() != L"Splice")
         return;
@@ -4139,61 +4147,26 @@ void CNTKToONNXHelper::BroadcastInputsIfNeeded(std::vector<LotusIR::NodeArg *> &
         if (!need_broadcast)
             continue;
 
-        LotusIR::NodeArg *nodeArg = orderedInputs[i];
+        onnxruntime::NodeArg *nodeArg = orderedInputs[i];
 
         // We insert an "Add" with broadcast to get desired shape that can be accepted by ONNX Concat. 
-        LotusIR::NodeArg &nodeArg2 = AddZerosConstantNodeArg(graph, nodeArg->Name() + "_braodcast_for_desired_shape",
+        onnxruntime::NodeArg &nodeArg2 = AddZerosConstantNodeArg(graph, nodeArg->Name() + "_braodcast_for_desired_shape",
             shape_i, src->Inputs()[i].GetDataType());
         const std::string out_arg_name = nodeArg->Name() + "_post_braodcasted_with_desired_shape";
-        LotusIR::Node *node = AddAddNode(*nodeArg, nodeArg2, graph, out_arg_name);
+        onnxruntime::Node *node = AddAddNode(*nodeArg, nodeArg2, graph, out_arg_name);
         orderedInputs[i] = const_cast<NodeArg*>(node->OutputDefs()[0]);
     }
 }
 
-LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph* graph, const std::vector<LotusIR::NodeArg *>& inputs, const std::vector<LotusIR::NodeArg *>& outputs)
+onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime::Graph* graph, const std::vector<onnxruntime::NodeArg *>& inputs, const std::vector<onnxruntime::NodeArg *>& outputs)
 {
-    LotusIR::Node* node = nullptr;
-    std::vector<LotusIR::NodeArg *> orderedInputs = MapInputsOrderToONNX(src, inputs);
+    onnxruntime::Node* node = nullptr;
+    std::vector<onnxruntime::NodeArg *> orderedInputs = MapInputsOrderToONNX(src, inputs);
     auto nodeName = ToLegacyString(ToUTF8(src->Uid()));
 
     if (L"Embedding" == src->OpName())
     {
-        // WinML does not allow Cast between float and int. To workaround it, set workaroundWinMLNotSupportCastOfInt = true.
-        // otherwise use argmax, cast, gather which make more sense for an embedding operation.
-        bool workaroundWinMLNotSupportCastOfInt = true;
-        if (workaroundWinMLNotSupportCastOfInt)
-        {
-            LotusIR::Node* argMatMul = AddMatMulNode(*orderedInputs[1], *orderedInputs[0], graph, outputs[0]->Name());
-        }
-        else
-        {
-            int inputDataAxis = src->Inputs()[1].DynamicAxes().size();
-            LotusIR::Node* argMax = AddArgMaxNode(*orderedInputs[1], graph, inputDataAxis);
-            LotusIR::Node* int32Cast = AddCastNode(const_cast<LotusIR::NodeArg &>(*argMax->OutputDefs()[0]), graph, "INT32");
-
-            bool reshapeGather = true;
-            if (reshapeGather)
-            {
-                LotusIR::NodeArg &gatherIndexInputNodeArg = graph->GetOrCreateNodeArg(int32Cast->OutputDefs()[0]->Name(), nullptr);
-                LotusIR::NodeArg &gatherSourceInputNodeArg = graph->GetOrCreateNodeArg(orderedInputs[0]->Name(), nullptr);
-                LotusIR::NodeArg &gatherOutputArg = graph->GetOrCreateNodeArg(nodeName + "_gather_tmp", nullptr);
-                LotusIR::Node* gatherNode = graph->AddNode(nodeName + "_tmp", "Gather", "",
-                                                          {&gatherSourceInputNodeArg, &gatherIndexInputNodeArg}, {&gatherOutputArg});
-
-                LotusIR::NodeArg &reshapeInputNodeArg = graph->GetOrCreateNodeArg(gatherNode->OutputDefs()[0]->Name(), nullptr);
-                int input_size = src->Output().Shape()[0];
-                // std::vector<int> newShape({ SequenceLen, 1, input_size });
-                std::vector<int64_t> newShape({ (int64_t)NDShape::FreeDimension, 1, input_size });
-
-                auto reshapedGather = AddReshapeNodeAccordingToONNXVersion(graph, nodeName, &reshapeInputNodeArg, outputs[0], newShape);
-                return reshapedGather;
-            }
-            else
-            {
-                LotusIR::NodeArg &gatherIndexInputNodeArg = graph->GetOrCreateNodeArg(int32Cast->OutputDefs()[0]->Name(), nullptr);
-                graph->AddNode(nodeName, "Gather", "", { orderedInputs[0] , &gatherIndexInputNodeArg }, outputs);
-            }
-        }
+        onnxruntime::Node* argMatMul = AddMatMulNode(*orderedInputs[1], *orderedInputs[0], graph, outputs[0]->Name());
     }
     else
     {
@@ -4225,8 +4198,8 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
                 UpdateONNXType(src->Inputs()[1].GetDataType(), input1Reshape);
                 UpdateONNXType(src->Inputs()[0].GetDataType(), input2Reshape);
 
-                LotusIR::NodeArg &inputOutput1Arg = graph->GetOrCreateNodeArg(orderedInputs[0]->Name() + string("_reshape0"), &input1Reshape);
-                LotusIR::NodeArg &inputOutput2Arg = graph->GetOrCreateNodeArg(orderedInputs[1]->Name() + string("_reshape1"), &input2Reshape);
+                onnxruntime::NodeArg &inputOutput1Arg = graph->GetOrCreateNodeArg(orderedInputs[0]->Name() + string("_reshape0"), &input1Reshape);
+                onnxruntime::NodeArg &inputOutput2Arg = graph->GetOrCreateNodeArg(orderedInputs[1]->Name() + string("_reshape1"), &input2Reshape);
 
                 //auto reshapeNode1 = graph->AddNode(nodeName + string("_reshape0"), "Reshape", "", {orderedInputs[0]}, {&inputOutput1Arg});
                 //auto reshapeNode2 = graph->AddNode(nodeName + string("_reshape1"), "Reshape", "", {orderedInputs[1]}, {&inputOutput2Arg});
@@ -4234,8 +4207,8 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
                 //reshapeNode1->AddAttribute("shape", ToINTS(input1Reshape));
                 //reshapeNode2->AddAttribute("shape", ToINTS(input2Reshape));
 
-                AddReshapeNodeAccordingToONNXVersion(graph, nodeName + "_reshape0", orderedInputs[0], &inputOutput1Arg, ToINTS(input1Reshape));
-                AddReshapeNodeAccordingToONNXVersion(graph, nodeName + "_reshape1", orderedInputs[1], &inputOutput2Arg, ToINTS(input2Reshape));
+                AddReshapeNodeImpl(graph, nodeName + "_reshape0", orderedInputs[0], &inputOutput1Arg, ToINTS(input1Reshape));
+                AddReshapeNodeImpl(graph, nodeName + "_reshape1", orderedInputs[1], &inputOutput2Arg, ToINTS(input2Reshape));
 
                 node = graph->AddNode(nodeName, ToOPName(src), "", {&inputOutput1Arg, &inputOutput2Arg}, outputs);
             }
@@ -4257,19 +4230,19 @@ LotusIR::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, LotusIR::Graph*
             auto input0 = inputs[operandIndexInOnnxInputs];
             onnx::TypeProto input0ArgType = ToTypeProto(src->Inputs()[operandIndexInCntkInputs].Shape(), src->Inputs()[operandIndexInCntkInputs].HasBatchAxis());
             UpdateONNXType(src->Inputs()[operandIndexInCntkInputs].GetDataType(), input0ArgType);
-            LotusIR::NodeArg &mvnTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_mvn_output0"), &input0ArgType);
-            LotusIR::Node* mvnNode = graph->AddNode(nodeName + string("_MVN"), "MeanVarianceNormalization",
+            onnxruntime::NodeArg &mvnTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_mvn_output0"), &input0ArgType);
+            onnxruntime::Node* mvnNode = graph->AddNode(nodeName + string("_MVN"), "MeanVarianceNormalization",
                                                    "", { input0 }, { &mvnTensorOutputArg });
             mvnNode->AddAttribute("across_channels", static_cast<int64_t>(1));
             mvnNode->AddAttribute("normalize_variance", static_cast<int64_t>(1));
 
             auto input1 = inputs[scaleIndexInOnnxInputs];
-            LotusIR::NodeArg &mulTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_mul_output0"), &input0ArgType);
-            LotusIR::Node* mulNode = graph->AddNode(nodeName + string("_mul"), "Mul",
+            onnxruntime::NodeArg &mulTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_mul_output0"), &input0ArgType);
+            onnxruntime::Node* mulNode = graph->AddNode(nodeName + string("_mul"), "Mul",
                                                    "", { &mvnTensorOutputArg, input1 }, { &mulTensorOutputArg });
 
             auto input2 = inputs[biasIndexInOnnxInputs];
-            LotusIR::NodeArg &addTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_Output_0"), &input0ArgType);
+            onnxruntime::NodeArg &addTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_Output_0"), &input0ArgType);
             node = graph->AddNode(nodeName + string("_add"), "Add",
                                   "", { &mulTensorOutputArg, input2 }, { &addTensorOutputArg });
         }
@@ -4435,10 +4408,10 @@ void CNTKToONNXHelper::FillTensorWithScalar(const std::vector<NDArrayViewPtr> &s
         *(dst.mutable_dims()->Add()) = dim;
 }
 
-LotusIR::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const FunctionPtr &src,
-                                                                    LotusIR::Graph* graph,
-                                                                    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-                                                                    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const FunctionPtr &src,
+                                                                    onnxruntime::Graph* graph,
+                                                                    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                                                    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                                                     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     auto numLayers = (size_t)src->Attributes()[L"numLayers"].Value<size_t>();
@@ -4467,7 +4440,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const Funct
     std::tie<std::vector<NDArrayViewPtr>, std::vector<NDArrayViewPtr>, std::vector<NDArrayViewPtr>>(W, R, B) = SplitOptimzedRnnWtoIndivMats(Wm, numLayers, inputSize, hiddenSize, bidirectional, recurrentOp);
 
     // Step 3: Create ONNX nodes mirroring the implementation of OptimizedRNNStack.
-    LotusIR::Node *functionNode = nullptr;
+    onnxruntime::Node *functionNode = nullptr;
     bool inputNeedsShapeAdapter(false);
     auto ornnInput = src->Inputs()[0]; // CNTK OptimizedRNNStack node's input operand.
 
@@ -4500,18 +4473,18 @@ LotusIR::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const Funct
         ornnInputName = ToLegacyString(ToUTF8(inputItr->second.Uid()));
 
     // Create ONNX LSTM layers
-    LotusIR::NodeArg *layerInputOperandArg = &graph->GetOrCreateNodeArg(ornnInputName, &ornnInputArgType);
+    onnxruntime::NodeArg *layerInputOperandArg = &graph->GetOrCreateNodeArg(ornnInputName, &ornnInputArgType);
     for (size_t i = 0; i < numLayers; ++i)
     {
-        std::vector<LotusIR::NodeArg *> inputs;
-        std::vector<LotusIR::NodeArg *> outputs;
+        std::vector<onnxruntime::NodeArg *> inputs;
+        std::vector<onnxruntime::NodeArg *> outputs;
 
         // ==== Step 4. Create input nodes =====
         // Input operand X
         if (inputNeedsShapeAdapter)
         {
             std::string adapterBasename = ToLegacyString(ToUTF8(src->Uid())) + "_Adapter_" + std::to_string(i);
-            LotusIR::NodeArg* shapeAdaptedInputOperandArg = LSTMOutputShapeAdapter(*layerInputOperandArg, ornnOutputArgType, graph,
+            onnxruntime::NodeArg* shapeAdaptedInputOperandArg = LSTMOutputShapeAdapter(*layerInputOperandArg, ornnOutputArgType, graph,
                                                                                   numDirections, hiddenSize, ornnOutput.GetDataType(), adapterBasename);
             inputs.push_back(shapeAdaptedInputOperandArg);
         }
@@ -4533,7 +4506,7 @@ LotusIR::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const Funct
         int64_t outputSequence = 1;
         //Note: Important to keep the output arg name the same.
         auto outArgName = (i == numLayers - 1) ? ToLegacyString(ToUTF8(ornnOutput.Uid())) : ToLegacyString(ToUTF8(ornnOutput.Uid())) + "_" + std::to_string(i);
-        LotusIR::NodeArg &outputArg_Y = graph->GetOrCreateNodeArg(outArgName, &ornnOutputArgType);
+        onnxruntime::NodeArg &outputArg_Y = graph->GetOrCreateNodeArg(outArgName, &ornnOutputArgType);
         outputs.push_back(&outputArg_Y);
 
         // ==== Step 6. Add ONNX LSTM node ====
@@ -4773,16 +4746,16 @@ std::vector<NDArrayViewPtr> CNTKToONNXHelper::ToRnnBiasPerLayerOnnxFormat(std::v
     return Bonnx;
 }
 
-void CNTKToONNXHelper::CreateRecurrentWeightONNXNodes(LotusIR::Graph* graph, std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
-                                                      const Variable& Wcombined, std::vector<LotusIR::NodeArg *>& inputs, NDArrayViewPtr W, string WArgName)
+void CNTKToONNXHelper::CreateRecurrentWeightONNXNodes(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                                      const Variable& Wcombined, std::vector<onnxruntime::NodeArg *>& inputs, NDArrayViewPtr W, string WArgName)
 {
     auto WArgType = ToTypeProto(W->Shape(), false, false, false); // Last arg is false because we don't want shape reversal here.
     UpdateONNXType(Wcombined.GetDataType(), WArgType);
-    LotusIR::NodeArg &WArg = graph->GetOrCreateNodeArg(WArgName, &WArgType);
+    onnxruntime::NodeArg &WArg = graph->GetOrCreateNodeArg(WArgName, &WArgType);
     inputs.push_back(&WArg);
 
-    std::vector<LotusIR::NodeArg *> varInputs;
-    std::vector<LotusIR::NodeArg *> varOutputs;
+    std::vector<onnxruntime::NodeArg *> varInputs;
+    std::vector<onnxruntime::NodeArg *> varOutputs;
 
     varOutputs.push_back({&WArg});
 
@@ -4793,7 +4766,7 @@ void CNTKToONNXHelper::CreateRecurrentWeightONNXNodes(LotusIR::Graph* graph, std
     graph->AddInitializedTensor(dstTensor);
 }
 
-LotusIR::NodeArg* CNTKToONNXHelper::LSTMOutputShapeAdapter(LotusIR::NodeArg& inputArg, onnx::TypeProto& inputArgType, LotusIR::Graph* graph,
+onnxruntime::NodeArg* CNTKToONNXHelper::LSTMOutputShapeAdapter(onnxruntime::NodeArg& inputArg, onnx::TypeProto& inputArgType, onnxruntime::Graph* graph,
                                                           size_t numDirections, size_t hiddenSize, CNTK::DataType outputType, string adapterBasename)
 {
     // This adapter changes input format (this is output of previous layer) from
@@ -4814,7 +4787,7 @@ LotusIR::NodeArg* CNTKToONNXHelper::LSTMOutputShapeAdapter(LotusIR::NodeArg& inp
             transposeOutputArgType.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(inputShape.dim(static_cast<int>(x[index])).dim_value());
     }
     UpdateONNXType(outputType, transposeOutputArgType);
-    LotusIR::NodeArg &transposeOutputArg = graph->GetOrCreateNodeArg(adapterBasename + "_Transpose_Output", &transposeOutputArgType);
+    onnxruntime::NodeArg &transposeOutputArg = graph->GetOrCreateNodeArg(adapterBasename + "_Transpose_Output", &transposeOutputArgType);
     auto transposeNode = graph->AddNode(adapterBasename + "_Transpose", "Transpose", "", { &inputArg }, { &transposeOutputArg });
     transposeNode->AddAttribute("perm", x);
 
@@ -4836,50 +4809,50 @@ LotusIR::NodeArg* CNTKToONNXHelper::LSTMOutputShapeAdapter(LotusIR::NodeArg& inp
         reshapeOutputArgType.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(lastShape.dim(1).dim_value());
     reshapeOutputArgType.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(lastShape.dim(2).dim_value()*lastShape.dim(3).dim_value());
     UpdateONNXType(outputType, reshapeOutputArgType);
-    LotusIR::NodeArg &reshapeOutputArg = graph->GetOrCreateNodeArg(adapterBasename + "_Reshape_Output", &reshapeOutputArgType);
+    onnxruntime::NodeArg &reshapeOutputArg = graph->GetOrCreateNodeArg(adapterBasename + "_Reshape_Output", &reshapeOutputArgType);
     std::vector<int64_t> shape({ (int64_t)NDShape::FreeDimension, FreeBatchSize, (int64_t)(numDirections * hiddenSize) });
-    AddReshapeNodeAccordingToONNXVersion(graph, adapterBasename + "_Reshape", &transposeOutputArg, &reshapeOutputArg, shape);
+    AddReshapeNodeImpl(graph, adapterBasename + "_Reshape", &transposeOutputArg, &reshapeOutputArg, shape);
     return &reshapeOutputArg;
 }
 
-LotusIR::Node* CNTKToONNXHelper::CreateONNXNodesForTimesTranspose(const FunctionPtr &src,
-    LotusIR::Graph* graph,
-    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForTimesTranspose(const FunctionPtr &src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
-    std::vector<LotusIR::NodeArg *> inputs; 
+    std::vector<onnxruntime::NodeArg *> inputs; 
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
-    std::vector<LotusIR::NodeArg *> outputs;
+    std::vector<onnxruntime::NodeArg *> outputs;
     ProcessOutputs(src, outputs, graph);
 
     const std::string & outputName = outputs[0]->Name();
 
     int rightInputRank = inputs[0]->Shape()->dim_size() - 1;
 
-    LotusIR::NodeArg &transposeOutputArg = graph->GetOrCreateNodeArg(outputName + "_transpose_out", nullptr);
-    LotusIR::Node* transposeNode = graph->AddNode(outputName + "_transpose", "Transpose", "", { inputs[0] }, { &transposeOutputArg });
+    onnxruntime::NodeArg &transposeOutputArg = graph->GetOrCreateNodeArg(outputName + "_transpose_out", nullptr);
+    onnxruntime::Node* transposeNode = graph->AddNode(outputName + "_transpose", "Transpose", "", { inputs[0] }, { &transposeOutputArg });
     transposeNode->AddAttribute("perm", ToINTS(rightInputRank == 2 ? vector<int>({ 1, 2, 0 }) : vector<int>({ 0, 1 })));
 
-    LotusIR::NodeArg &matmulOutputArg = graph->GetOrCreateNodeArg(outputName + "_matmul_out", nullptr);
-    LotusIR::Node* matmulNode = graph->AddNode(outputName + "_matmul", "MatMul", "", { inputs[1], &transposeOutputArg }, { &matmulOutputArg });
+    onnxruntime::NodeArg &matmulOutputArg = graph->GetOrCreateNodeArg(outputName + "_matmul_out", nullptr);
+    onnxruntime::Node* matmulNode = graph->AddNode(outputName + "_matmul", "MatMul", "", { inputs[1], &transposeOutputArg }, { &matmulOutputArg });
     
     functionNodes.emplace(src, matmulNode);
     return matmulNode;
 }
 
-LotusIR::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr &src,
-    LotusIR::Graph* graph,
-    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr &src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
-    std::vector<LotusIR::NodeArg *> inputs;
+    std::vector<onnxruntime::NodeArg *> inputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
     assert(inputs.size() == 3);
 
-    std::vector<LotusIR::NodeArg *> outputs;
+    std::vector<onnxruntime::NodeArg *> outputs;
     ProcessOutputs(src, outputs, graph);
     assert(outputs.size() == 1);
 
@@ -4889,50 +4862,50 @@ LotusIR::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr &src
 
     const std::string & outputName = outputs[0]->Name();
 
-    LotusIR::NodeArg &absOutputArg = graph->GetOrCreateNodeArg(outputName + "_abs_out", nullptr);
+    onnxruntime::NodeArg &absOutputArg = graph->GetOrCreateNodeArg(outputName + "_abs_out", nullptr);
     graph->AddNode(outputName + "_abs", "Abs", "", { inputs[0] }, { &absOutputArg });
 
     // Add a Clip node equivalent to min(abs(flag), 1).
-    LotusIR::NodeArg &clipOutputArg = graph->GetOrCreateNodeArg(outputName + "_clip_out", nullptr);
-    LotusIR::Node* clipNode = graph->AddNode(outputName + "_clip", "Clip", "", { &absOutputArg }, { &clipOutputArg });
+    onnxruntime::NodeArg &clipOutputArg = graph->GetOrCreateNodeArg(outputName + "_clip_out", nullptr);
+    onnxruntime::Node* clipNode = graph->AddNode(outputName + "_clip", "Clip", "", { &absOutputArg }, { &clipOutputArg });
     clipNode->AddAttribute("min", 0.0f); // Should be unnecesary for ONNX, but currently required by CNTK.
     clipNode->AddAttribute("max", 1.0f);
 
-    LotusIR::NodeArg &ceilOutputArg = graph->GetOrCreateNodeArg(outputName + "_ceil_out", nullptr);
+    onnxruntime::NodeArg &ceilOutputArg = graph->GetOrCreateNodeArg(outputName + "_ceil_out", nullptr);
     graph->AddNode(outputName + "_ceil", "Ceil", "", { &clipOutputArg }, { &ceilOutputArg });
 
-    LotusIR::NodeArg &mulTrueOutputArg = graph->GetOrCreateNodeArg(outputName + "_mul_true_out", nullptr);
+    onnxruntime::NodeArg &mulTrueOutputArg = graph->GetOrCreateNodeArg(outputName + "_mul_true_out", nullptr);
     graph->AddNode(outputName + "_mul_true", "Mul", "", { &ceilOutputArg, inputs[1] }, { &mulTrueOutputArg });
 
-    LotusIR::NodeArg &oneOutputArg = graph->GetOrCreateNodeArg(outputName + "_one_out", nullptr);
-    LotusIR::Node* oneNode = graph->AddNode(outputName + "_one", "Constant", "", {}, { &oneOutputArg });
+    onnxruntime::NodeArg &oneOutputArg = graph->GetOrCreateNodeArg(outputName + "_one_out", nullptr);
+    onnxruntime::Node* oneNode = graph->AddNode(outputName + "_one", "Constant", "", {}, { &oneOutputArg });
     onnx::TensorProto oneTensor;
     oneTensor.set_data_type(onnx::TensorProto::FLOAT);
     oneTensor.add_float_data(1.0f);
     oneNode->AddAttribute("value", oneTensor);
 
-    LotusIR::NodeArg &oneSubOutputArg = graph->GetOrCreateNodeArg(outputName + "_one_sub_out", nullptr);
+    onnxruntime::NodeArg &oneSubOutputArg = graph->GetOrCreateNodeArg(outputName + "_one_sub_out", nullptr);
     graph->AddNode(outputName + "_sub_one", "Sub", "", { &oneOutputArg, &ceilOutputArg }, { &oneSubOutputArg });
 
-    LotusIR::NodeArg &mulFalseOutputArg = graph->GetOrCreateNodeArg(outputName + "_mul_false_out", nullptr);
+    onnxruntime::NodeArg &mulFalseOutputArg = graph->GetOrCreateNodeArg(outputName + "_mul_false_out", nullptr);
     graph->AddNode(outputName + "_mul_false", "Mul", "", { &oneSubOutputArg, inputs[2] }, { &mulFalseOutputArg });
 
-    LotusIR::Node* sumNode = graph->AddNode(outputName + "_sum", "Sum", "", { &mulTrueOutputArg, &mulFalseOutputArg }, { outputs[0] });
+    onnxruntime::Node* sumNode = graph->AddNode(outputName + "_sum", "Sum", "", { &mulTrueOutputArg, &mulFalseOutputArg }, { outputs[0] });
 
     functionNodes.emplace(src, sumNode);
     return sumNode;
 }
 
-LotusIR::Node* CNTKToONNXHelper::CreateNodeForBatchAxisOp(const FunctionPtr &src,
-    LotusIR::Graph* graph,
-    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+onnxruntime::Node* CNTKToONNXHelper::CreateNodeForBatchAxisOp(const FunctionPtr &src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
-    std::vector<LotusIR::NodeArg *> inputs;
+    std::vector<onnxruntime::NodeArg *> inputs;
     ProcessInputsForBatchAxisOp(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
-    std::vector<LotusIR::NodeArg *> outputs;
+    std::vector<onnxruntime::NodeArg *> outputs;
     ProcessOutputsForBatchAxisOp(src, outputs, graph);
 
     auto batchOp = src->Inputs()[0].Owner();
@@ -4944,11 +4917,11 @@ LotusIR::Node* CNTKToONNXHelper::CreateNodeForBatchAxisOp(const FunctionPtr &src
 }
 
 void CNTKToONNXHelper::ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
-    LotusIR::Graph* graph,
-    std::unordered_map<FunctionPtr, LotusIR::Node*>& functionNodes,
-    std::unordered_map<Variable, LotusIR::Node*>& variableNodes,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
     const std::unordered_map<Variable, Variable>& compositeOutputsMap,
-    std::vector<LotusIR::NodeArg *>& inputs)
+    std::vector<onnxruntime::NodeArg *>& inputs)
 {
     // This method assumes that it has been validated already that 
     // rootNode is a batch axis op with the following pattern: 
@@ -5008,14 +4981,14 @@ void CNTKToONNXHelper::ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
 
         if (OpNeedONNXTypeMap(cntkOpName))
         {
-            MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), inputArgType); // TODO: Is this needed? Probably not.
+            MapAndUpdateONNXType(onnxOpName, true, inputIndex, input.GetDataType(), &inputArgType); // TODO: Is this needed? Probably not.
         }
         else
         {
             UpdateONNXType(input.GetDataType(), inputArgType);
         }
 
-        LotusIR::NodeArg &inputArg = graph->GetOrCreateNodeArg(inputName, &inputArgType);
+        onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(inputName, &inputArgType);
         inputs.push_back(&inputArg);
 
         //
@@ -5047,7 +5020,7 @@ void CNTKToONNXHelper::ProcessInputsForBatchAxisOp(const FunctionPtr& rootNode,
 }
 
 void CNTKToONNXHelper::ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
-    std::vector<LotusIR::NodeArg *>& outputs, Graph *graph)
+    std::vector<onnxruntime::NodeArg *>& outputs, Graph *graph)
 {
     FunctionPtr topNode = nullptr;
     NDShape topNodeInputShape;
@@ -5091,13 +5064,13 @@ void CNTKToONNXHelper::ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
         auto outputArgType = ToTypeProto(outputShape, false, output.HasSequenceAxis(), true);
         if (OpNeedONNXTypeMap(onnxOpName))
         {
-            MapAndUpdateONNXType(onnxOpName, false, 0, output.GetDataType(), outputArgType); // TODO: Is this needed? Probably not.
+            MapAndUpdateONNXType(onnxOpName, false, 0, output.GetDataType(), &outputArgType); // TODO: Is this needed? Probably not.
         }
         else
         {
             UpdateONNXType(output.GetDataType(), outputArgType);
         }
-        LotusIR::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(output.Uid())), &outputArgType);
+        onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(output.Uid())), &outputArgType);
         outputs.emplace_back(&outputNodeArg);
     }
 }

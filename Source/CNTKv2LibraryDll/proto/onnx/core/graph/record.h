@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 #pragma once
 
 #include <assert.h>
@@ -8,8 +11,8 @@
 #include "core/common/common.h"
 #include "core/common/status.h"
 
-namespace Lotus {
-namespace Common {
+namespace onnxruntime {
+namespace common {
 template <class... Types>
 class Record {
  public:
@@ -31,7 +34,7 @@ class Record {
 
   Status GetName(int index, const std::string** pp_name) const {
     if (nullptr == pp_name || index >= names_.size()) {
-      return Status(LOTUS, StatusCode::INVALID_ARGUMENT);
+      return Status(LOTUS, common::INVALID_ARGUMENT);
     }
 
     *pp_name = &(names_[index]);
@@ -47,5 +50,5 @@ class Record {
 
   Values values_;
 };
-}  // namespace Common
-}  // namespace Lotus
+}  // namespace common
+}  // namespace onnxruntime

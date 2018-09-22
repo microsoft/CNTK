@@ -512,7 +512,7 @@ FunctionPtr UnwrapRNNOps(FunctionPtr rnnFunction, int numDirections)
     return cntkFunctionWithoutDynamicAxisFixedBatch;
 }
 
-FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+FunctionPtr CreateLSTM(const onnxruntime::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
     VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
@@ -604,7 +604,7 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
     return unpackedRnnFunction;
 }
 
-FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+FunctionPtr CreateGRU(const onnxruntime::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
     VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
@@ -670,7 +670,7 @@ FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &in
     return unpackedRnnFunction;
 }
 
-FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+FunctionPtr CreateRNN(const onnxruntime::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
     VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
