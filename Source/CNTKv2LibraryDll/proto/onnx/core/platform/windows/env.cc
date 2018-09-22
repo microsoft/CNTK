@@ -182,39 +182,39 @@ class WindowsEnv : public Env {
   }
 
   common::Status ReadFileAsString(const wchar_t* fname, std::string* out) const override {
-    if (!fname)
-      return common::Status(common::LOTUS, common::INVALID_ARGUMENT, "file name is nullptr");
-    if (!out) {
-      return common::Status(common::LOTUS, common::INVALID_ARGUMENT, "'out' cannot be NULL");
-    }
-    char errbuf[512];
-    HANDLE hFile = CreateFileW(fname, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-      int err = GetLastError();
-      _snprintf_s(errbuf, _TRUNCATE, "%s:%d open file %ls fail, errcode = %d", __FILE__, (int)__LINE__, fname, err);
-      return common::Status(common::LOTUS, common::FAIL, errbuf);
-    }
-    LARGE_INTEGER filesize;
-    if (!GetFileSizeEx(hFile, &filesize)) {
-      int err = GetLastError();
-      _snprintf_s(errbuf, _TRUNCATE, "%s:%d GetFileSizeEx %ls fail, errcode = %d", __FILE__, (int)__LINE__, fname, err);
-      CloseHandle(hFile);
-      return common::Status(common::LOTUS, common::FAIL, errbuf);
-    }
-    out->resize(filesize.QuadPart, '\0');
-    if (filesize.QuadPart > std_numeric_limits_DWORD_max) {
-      _snprintf_s(errbuf, _TRUNCATE, "%s:%d READ file %ls fail, file size too long", __FILE__, (int)__LINE__, fname);
-      CloseHandle(hFile);
-      //we can support that with a while loop
-      return common::Status(common::LOTUS, common::NOT_IMPLEMENTED, errbuf);
-    }
-    if (!ReadFile(hFile, (void*)out->data(), (DWORD)filesize.QuadPart, nullptr, nullptr)) {
-      int err = GetLastError();
-      _snprintf_s(errbuf, _TRUNCATE, "%s:%d ReadFileEx %ls fail, errcode = %d", __FILE__, (int)__LINE__, fname, err);
-      CloseHandle(hFile);
-      return common::Status(common::LOTUS, common::FAIL, errbuf);
-    }
-    CloseHandle(hFile);
+    //if (!fname)
+    //  return common::Status(common::LOTUS, common::INVALID_ARGUMENT, "file name is nullptr");
+    //if (!out) {
+    //  return common::Status(common::LOTUS, common::INVALID_ARGUMENT, "'out' cannot be NULL");
+    //}
+    //char errbuf[512];
+    //HANDLE hFile = CreateFileW(fname, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    //if (hFile == INVALID_HANDLE_VALUE) {
+    //  int err = GetLastError();
+    //  _snprintf_s(errbuf, _TRUNCATE, "%s:%d open file %ls fail, errcode = %d", __FILE__, (int)__LINE__, fname, err);
+    //  return common::Status(common::LOTUS, common::FAIL, errbuf);
+    //}
+    //LARGE_INTEGER filesize;
+    //if (!GetFileSizeEx(hFile, &filesize)) {
+    //  int err = GetLastError();
+    //  _snprintf_s(errbuf, _TRUNCATE, "%s:%d GetFileSizeEx %ls fail, errcode = %d", __FILE__, (int)__LINE__, fname, err);
+    //  CloseHandle(hFile);
+    //  return common::Status(common::LOTUS, common::FAIL, errbuf);
+    //}
+    //out->resize(filesize.QuadPart, '\0');
+    //if (filesize.QuadPart > std_numeric_limits_DWORD_max) {
+    //  _snprintf_s(errbuf, _TRUNCATE, "%s:%d READ file %ls fail, file size too long", __FILE__, (int)__LINE__, fname);
+    //  CloseHandle(hFile);
+    //  //we can support that with a while loop
+    //  return common::Status(common::LOTUS, common::NOT_IMPLEMENTED, errbuf);
+    //}
+    //if (!ReadFile(hFile, (void*)out->data(), (DWORD)filesize.QuadPart, nullptr, nullptr)) {
+    //  int err = GetLastError();
+    //  _snprintf_s(errbuf, _TRUNCATE, "%s:%d ReadFileEx %ls fail, errcode = %d", __FILE__, (int)__LINE__, fname, err);
+    //  CloseHandle(hFile);
+    //  return common::Status(common::LOTUS, common::FAIL, errbuf);
+    //}
+    //CloseHandle(hFile);
     return common::Status::OK();
   }
 
@@ -249,12 +249,12 @@ class WindowsEnv : public Env {
     // versions of Windows. For that reason, we try to look it up in
     // kernel32.dll at runtime and use an alternative option if the function
     // is not available.
-    HMODULE module = GetModuleHandleW(L"kernel32.dll");
-    if (module != nullptr) {
-      auto func = (FnGetSystemTimePreciseAsFileTime)GetProcAddress(
-          module, "GetSystemTimePreciseAsFileTime");
-      GetSystemTimePreciseAsFileTime_ = func;
-    }
+    //HMODULE module = GetModuleHandleW(L"kernel32.dll");
+    //if (module != nullptr) {
+    //  auto func = (FnGetSystemTimePreciseAsFileTime)GetProcAddress(
+    //      module, "GetSystemTimePreciseAsFileTime");
+    //  GetSystemTimePreciseAsFileTime_ = func;
+    //}
   }
 
   typedef VOID(WINAPI* FnGetSystemTimePreciseAsFileTime)(LPFILETIME);
