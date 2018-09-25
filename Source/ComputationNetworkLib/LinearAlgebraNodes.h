@@ -749,7 +749,7 @@ public:
                 }
                 else
                 {
-                    ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, false/*allowBroadcast*/);
+                    ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, true/*allowBroadcast*/);
                 }
                 return;
             }
