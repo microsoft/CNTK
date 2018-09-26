@@ -19,7 +19,7 @@ from .onnx_test_helper import CNTK_FREEDIM_AXIS_DENOTATION, DIM_SIZE_FOR_NON_BAT
 # When adding a test for a new op, please check to see if 
 # that op needs to be added to this list (i.e. does that op 
 # get exported to an ONNX op with defined batch axis).
-set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization', 'ImageScaler'}
+set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization', 'ImageScaler', 'Crop'}
 
 # List of CNTK ops for which output shape doesn't change regardless
 # of whether the input has batch axis or not.
@@ -1844,3 +1844,12 @@ def test_Atan(tmpdir, dtype):
     data = np.asarray([0.0, -0.5, 0.5, 1, -1], dtype)
     model = C.atan(data)
     verify_no_input(model, tmpdir, 'Atan_0')
+
+# Crop
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Crop_Manual(tmpdir, dtype):
+    x = C.input_variable((1,4,4), dtype=np.float32)
+    y = C.constant(np.ones((1,2,1), dtype=np.float32))
+    model = C.crop_manual(x, y, 1, 2)
+    data = np.asarray(range(4*4), dtype=np.float32).reshape((1,4,4))
+    verify_one_input(model, data, tmpdir, "Crop_Manual_0")

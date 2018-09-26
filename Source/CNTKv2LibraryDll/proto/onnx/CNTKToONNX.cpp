@@ -3263,6 +3263,12 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             if (src->Inputs().size() == 4 && inputIndex == 0 && input.IsConstant())
                 continue;
         }
+        else if (ToLegacyString(ToUTF8(src->OpName())) == "Crop")
+        {
+            // Export only the first input. In ONNX Crop accepts only 1 input, and there is no notion of referent input.
+            if (inputIndex > 0)
+                continue;
+        }
 
         if (FilterInput(src, input, inputIndex))
             continue;
@@ -3876,6 +3882,34 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
 
             size_t k = src->Attributes()[L"numItems"].Value<size_t>();
             node->AddAttribute(attributesMap[L"numItems"], static_cast<int64_t>(k));
+        }
+        else if (src->OpName() == L"Crop")
+        {
+            const NDShape& inputShape = src->Inputs()[0].Shape();
+            const NDShape& targetShape = src->Inputs()[1].Shape();
+
+            // ONNX Crop supports only input tensor of shape [N,C,H,W]. The spatial rank for both input and referent should equal to 3.
+            if (inputShape.Rank() != 3 || targetShape.Rank() != 3)
+                RuntimeError("ONNX Crop supports only input tensor of shape [N,C,H,W]. Including batch axis, input has rank %zu, referent has rank %zu. ",
+                    inputShape.Rank()+1, targetShape.Rank()+1);
+
+            size_t xOffset = inputShape[0] - targetShape[0];
+            size_t yOffset = inputShape[1] - targetShape[1];
+
+            if (src->Attributes().Contains(L"offset"))
+            {
+                // crop_manual
+                std::vector<size_t> offsets = AsVector<size_t>(src->Attributes()[L"offset"].Value<std::vector<DictionaryValue>>());
+                offsets.push_back(xOffset - offsets[0]);
+                offsets.push_back(yOffset - offsets[1]);
+                std::reverse(offsets.begin(), offsets.end());
+                node->AddAttribute(attributesMap[L"offset"], ToINTS(offsets));
+            }
+            else
+            {
+                // TODO : crop_automatic
+                RuntimeError("Exporting crop_automatic to ONNX is not supported yet.");
+            }
         }
     }
     else

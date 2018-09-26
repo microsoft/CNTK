@@ -446,6 +446,10 @@ namespace ONNX
         { L"LogPlus",{ {
             { L"LogPlus", "LogPlus" },
         } } },
+        { L"Crop", { {
+            { L"Crop", "Crop"},
+            { L"offset", "border"},
+        } } },
         
     };
 
@@ -587,6 +591,7 @@ namespace ONNX
             { "LRN" },
             { "MeanVarianceNormalization" },
             { "ImageScaler" },
+            { "Crop" },
         };
 
     }

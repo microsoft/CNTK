@@ -2930,6 +2930,44 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         FunctionPtr cntkFunction = TopK(inputs[0], k, axis, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
+    else if (onnxOpName == "Crop")
+    {
+        // inputShape: [W, H, C] x [N]
+        const NDShape& inputShape = inputOperand0.Shape();
+        if (inputShape.Rank() != 3)
+            RuntimeError("Crop input tensor must have shape [N,C,H,W]. ");
+        std::vector<int64_t> border = GetNamedAttributeAsInt64Vec(node, "border");
+        if (border.size() != 4)
+            RuntimeError("Crop attribute border must be a 1-D values of (leftBorder, topBorder, rightBorder, bottomBorder).");
+        const size_t leftBorder = border[0];
+        const size_t topBorder = border[1];
+        const size_t rightBorder = border[2];
+        const size_t bottomBorder = border[3];
+        NDShape targetShape = [&](){
+            const size_t channelSize = inputShape[inputShape.Rank() - 1];
+            if (HasNamedAttribute(node, "scale"))
+            {
+                // targetShape: [W, H]
+                NDShape targetShape = GetNamedAttributeAsShape(node, "scale", false);
+                if (targetShape.Rank() != 2)
+                    RuntimeError("Crop attribute scale must be a 1-D values of (height, width).");
+                // targetShape: [W, H, C]
+                targetShape.AppendShape(NDShape(channelSize));
+                return targetShape;
+            }
+            else
+            {
+                assert((inputShape[0] > (leftBorder + rightBorder)) && (inputShape[1] > (topBorder + bottomBorder)));
+                size_t targetWidth = inputShape[0] - leftBorder - rightBorder;
+                size_t targetHeight = inputShape[1] - topBorder - bottomBorder;
+
+                return NDShape({ targetWidth, targetHeight, channelSize });
+            }
+        }();
+        auto referent = Constant(targetShape, inputOperand0.GetDataType(), 0.0);
+        FunctionPtr cntkFunction = Crop(inputOperand0, referent, leftBorder, topBorder);
+        return cntkFunction;
+    }
     else
     {
         LogicError("ONNX (%s) is not supported in CNTK", onnxOpName.c_str());
