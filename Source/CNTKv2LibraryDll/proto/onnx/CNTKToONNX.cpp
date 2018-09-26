@@ -3904,7 +3904,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
         {
             auto kernelShape = (NDShape)src->Attributes()[L"poolingWindowShape"].Value<NDShape>();
             auto strides = (NDShape)src->Attributes()[L"strides"].Value<NDShape>();
-            bool ceilOutDim = (bool)src->Attributes()[L"ceilOutDim"].Value<bool>();
+            bool ceilOutDim = src->Attributes().Contains(L"ceilOutDim") ? (bool)src->Attributes()[L"ceilOutDim"].Value<bool>() : false;
             auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
             const NDShape& inputShape = src->Inputs()[0].Shape();
 
