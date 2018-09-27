@@ -202,6 +202,8 @@ private:
 
     static void FillTensorWithScalar(const std::vector<NDArrayViewPtr> &src, onnx::TensorProto &dst, const std::vector<int64_t> dstShape);
 
+    static onnxruntime::NodeArg& CreateScalarNode(Graph *graph, const string &nodeArgName, CNTK::DataType dataType, double value);
+
     //
     // Create an ONNX weight tensor for LSTM op. It handles memory mapping from CNTK to ONNX.
     //
@@ -307,6 +309,15 @@ private:
     static void PutPadAttrInNode(onnxruntime::Node* node, const std::vector<bool>& autoPadding,
         const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides, const NDShape& dilation, bool ceilOutDim = false, bool transpose = false);
 
+    //
+    // Takes CNTK's StraightThrough estimator node and converts it into a series of Greater+Cast+Mul+Sub
+    // nodes on the ONNX side.
+    //
+    static onnxruntime::Node* CreateONNXNodesForStraightThrough(const FunctionPtr &src,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
     //
     // Takes CNTK's OptimizedRNNStack node and converts it into a series of RNN/LSTM/GRU nodes
     // on the ONNX side.
@@ -3023,6 +3034,10 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     {
         return CreateONNXNodesForOptimizedRNNStack(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     }
+    else if (cntkOpName == "StraightThrough")
+    {
+        return CreateONNXNodesForStraightThrough(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+    }
     else if (cntkOpName == "Select")
     {
         return CreateONNXNodesForSelect(src, graph, functionNodes, variableNodes, compositeOutputsMap);
@@ -4406,6 +4421,81 @@ void CNTKToONNXHelper::FillTensorWithScalar(const std::vector<NDArrayViewPtr> &s
 
     for (auto dim : dstShape)
         *(dst.mutable_dims()->Add()) = dim;
+}
+
+onnxruntime::NodeArg& CNTKToONNXHelper::CreateScalarNode(Graph *graph, const string &nodeArgName,
+                                                         CNTK::DataType dataType, double value)
+{
+    // Notes:
+    // 1. Although we intend to create a scalar node, which should ideally be zero-dimensional,
+    //    we are creating a one-dimensional tensor with dim size 1. This is because that it is
+    //    possible that some machinery (such as broadcast for binary ops) may not handle empty 
+    //    tensor shape (zero-dimensional tensor) well.
+    // 2. We take the value of the scalar as a double type, but then typecast it to the suitable
+    //    type based on the CNTK::DataType provided as input.
+    onnx::TypeProto argTypeProto = ToTypeProto(std::vector<int64_t>({ 1 }), false);
+    argTypeProto.mutable_tensor_type()->set_elem_type(ConvertDataTypeCNTKToTensorProto(dataType));
+    onnxruntime::NodeArg &inputNodeArg = graph->GetOrCreateNodeArg(nodeArgName, &argTypeProto);
+
+    onnx::TensorProto dstTensor;
+    dstTensor.set_name(inputNodeArg.Name());
+    dstTensor.set_data_type(ConvertDataTypeCNTKToTensorProto(dataType));
+
+    switch (dataType)
+    {
+    case CNTK::DataType::Float16:
+        dstTensor.mutable_int32_data()->Add(static_cast<int>(value));
+        break;
+    case CNTK::DataType::Float:
+        dstTensor.mutable_float_data()->Add(static_cast<float>(value));
+        break;
+    case CNTK::DataType::Double:
+        dstTensor.mutable_double_data()->Add(value);
+        break;
+    default:
+        NOT_IMPLEMENTED;
+    }
+
+    *(dstTensor.mutable_dims()->Add()) = static_cast<int64_t>(1);
+    graph->AddInitializedTensor(dstTensor);
+    return inputNodeArg;
+}
+
+onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForStraightThrough(const FunctionPtr &src,
+                                                                    onnxruntime::Graph* graph,
+                                                                    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                                                    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                                                    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+{
+    // This method exports CNTK's StraighThrough estimator op through an ONNX sub-graph. 
+    // ONNX subgraph consists of Greater + Cast + Mul + Sub ops. 
+    std::vector<onnxruntime::NodeArg*> inputs;
+    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
+
+    std::vector<onnxruntime::NodeArg*> outputs;
+    ProcessOutputs(src, outputs, graph);
+
+    const std::string& outputName = outputs[0]->Name();
+
+    onnxruntime::NodeArg& scalarZeroOutputArg = CreateScalarNode(graph, outputName + "_zero_out", src->Inputs()[0].GetDataType(), 0.0);
+    onnxruntime::NodeArg& greaterOutputArg = graph->GetOrCreateNodeArg(outputName + "_greater_out", nullptr);
+    onnxruntime::Node* greaterNode = graph->AddNode(outputName + "_greater", "Greater", "", { inputs[0], &scalarZeroOutputArg }, { &greaterOutputArg });
+
+    onnxruntime::NodeArg& castOutputArg = graph->GetOrCreateNodeArg(outputName + "_cast_out", nullptr);
+    onnxruntime::Node* castNode = graph->AddNode(outputName + "_cat", "Cast", "", { &greaterOutputArg }, { &castOutputArg });
+    castNode->AddAttribute("to", static_cast<int64_t>(ConvertDataTypeCNTKToTensorProto(src->Inputs()[0].GetDataType())));
+
+    onnxruntime::NodeArg& scalarTwoOutputArg = CreateScalarNode(graph, outputName + "_two_out", src->Inputs()[0].GetDataType(), 2.0);
+
+    onnxruntime::NodeArg& mulOutputArg = graph->GetOrCreateNodeArg(outputName + "_mul_out", nullptr);
+    onnxruntime::Node* mulNode = graph->AddNode(outputName + "_mul", "Mul", "", { &castOutputArg, &scalarTwoOutputArg }, { &mulOutputArg });
+
+    onnxruntime::NodeArg& scalarOneOutputArg = CreateScalarNode(graph, outputName + "_one_out", src->Inputs()[0].GetDataType(), 1.0);
+    onnxruntime::NodeArg& subOutputArg = graph->GetOrCreateNodeArg(outputName + "_sub_out", nullptr);
+    onnxruntime::Node* subNode = graph->AddNode(outputName + "_sub", "Sub", "", { &mulOutputArg, &scalarOneOutputArg }, { outputs[0] });
+
+    functionNodes.emplace(src, subNode);
+    return subNode;
 }
 
 onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const FunctionPtr &src,
