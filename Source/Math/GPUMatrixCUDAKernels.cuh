@@ -15,7 +15,6 @@
 #include "CommonMatrix.h"
 #include "GPUMatrix.h"
 #include "TensorOps.h" // for exp_() etc.
-#include "device_functions.h"
 #include <cuda_runtime.h>
 #include <assert.h>
 #include <float.h>
