@@ -443,8 +443,9 @@ namespace ONNX
         { L"Sequence::Softmax",{ {
             { L"Sequence::Softmax", "Softmax" },
         } } },
-
-        
+        { L"StraightThrough",{ {
+            { L"StraightThrough", "StraightThrough" },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
