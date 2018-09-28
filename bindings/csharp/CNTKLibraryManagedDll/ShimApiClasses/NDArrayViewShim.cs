@@ -6,6 +6,7 @@
 //
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace CNTK
 {
@@ -18,8 +19,25 @@ namespace CNTK
         /// <param name="dataBuffer">data buffer</param>
         /// <param name="device">device</param>
         /// <param name="readOnly">whether the data is readonly</param>
-        public NDArrayView(NDShape viewShape, float[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.Length, device, readOnly)
+        public NDArrayView(NDShape viewShape, float[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, dataBuffer.Length, device, readOnly)
         {
+        }
+
+        /// <summary>
+        /// Constructor using float dense input.
+        /// </summary>
+        /// <param name="viewShape">shape of the data</param>
+        /// <param name="dataBuffer">data buffer</param>
+        /// <param name="numBufferElements">number of elements in buffer</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether the data is readonly</param>
+        public NDArrayView(NDShape viewShape, float[] dataBuffer, long numBufferElements, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)numBufferElements, device, readOnly)
+        {
+            if (numBufferElements < 0)
+            {
+                throw new ArgumentException("The length of numBufferElements must be greater or equal to zero.");
+            }
+            listOfGCHandles.Add(GCHandle.Alloc(dataBuffer, GCHandleType.Pinned));
         }
 
         /// <summary>
@@ -29,8 +47,25 @@ namespace CNTK
         /// <param name="dataBuffer">data buffer</param>
         /// <param name="device">device</param>
         /// <param name="readOnly">whether the data is readonly</param>
-        public NDArrayView(NDShape viewShape, double[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)dataBuffer.Length, device, readOnly)
+        public NDArrayView(NDShape viewShape, double[] dataBuffer, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, dataBuffer.Length, device, readOnly)
         {
+        }
+
+        /// <summary>
+        /// Constructor using double dense input.
+        /// </summary>
+        /// <param name="viewShape">shape of the data</param>
+        /// <param name="dataBuffer">data buffer</param>
+        /// <param name="numBufferElements">number of elements in buffer</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether the data is readonly</param>
+        public NDArrayView(NDShape viewShape, double[] dataBuffer, long numBufferElements, DeviceDescriptor device, bool readOnly = false) : this(viewShape, dataBuffer, (uint)numBufferElements, device, readOnly)
+        {
+            if (numBufferElements < 0)
+            {
+                throw new ArgumentException("The length of numBufferElements must be greater or equal to zero.");
+            }
+            listOfGCHandles.Add(GCHandle.Alloc(dataBuffer, GCHandleType.Pinned));
         }
 
         /// <summary>
@@ -42,7 +77,57 @@ namespace CNTK
         /// <param name="nonZeroValues">sparse values</param>
         /// <param name="device">device</param>
         /// <param name="readOnly">whether the data is readonly</param>
-        public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, float[] nonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)nonZeroValues.Length, device, readOnly)
+        public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, float[] nonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, nonZeroValues.Length, device, readOnly)
+        {
+            if (rowIndices.Length != nonZeroValues.Length)
+            {
+                throw new ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+            }
+            if (viewShape[viewShape.Rank - 1] + 1 != colStarts.Length)
+            {
+                throw new ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");
+            }
+        }
+
+        /// <summary>
+        /// Constructor using float sparse input.
+        /// </summary>
+        /// <param name="viewShape">shape of the date</param>
+        /// <param name="colStarts">starting colomn</param>
+        /// <param name="rowIndices">list of column indices</param>
+        /// <param name="nonZeroValues">sparse values</param>
+        /// <param name="numNonZeroValues">number of non-zero values</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether the data is readonly</param>
+        public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, float[] nonZeroValues, long numNonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)numNonZeroValues, device, readOnly)
+        {
+            if (numNonZeroValues < 0)
+            {
+                throw new ArgumentException("The length of nonZeroValues must be greater or equal to zero.");
+            }
+            if (rowIndices.Length != nonZeroValues.Length)
+            {
+                throw new ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+            }
+            if (viewShape[viewShape.Rank - 1] + 1 != colStarts.Length)
+            {
+                throw new ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");
+            }
+            listOfGCHandles.Add(GCHandle.Alloc(colStarts, GCHandleType.Pinned));
+            listOfGCHandles.Add(GCHandle.Alloc(rowIndices, GCHandleType.Pinned));
+            listOfGCHandles.Add(GCHandle.Alloc(nonZeroValues, GCHandleType.Pinned));
+        }
+
+        /// <summary>
+        /// Constructor using double sparse input.
+        /// </summary>
+        /// <param name="viewShape">shape of the data</param>
+        /// <param name="colStarts">starting column</param>
+        /// <param name="rowIndices">list of row indices</param>
+        /// <param name="nonZeroValues">sparse data</param>
+        /// <param name="device">device</param>
+        /// <param name="readOnly">whether the data is readonly</param>
+        public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, double[] nonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, nonZeroValues.Length, device, readOnly)
         {
             if (rowIndices.Length != nonZeroValues.Length)
             {
@@ -57,14 +142,19 @@ namespace CNTK
         /// <summary>
         /// Constructor using double sparse input.
         /// </summary>
-        /// <param name="viewShape">shape of the data</param>
-        /// <param name="colStarts">starting column</param>
-        /// <param name="rowIndices">list of row indices</param>
-        /// <param name="nonZeroValues">sparse data</param>
+        /// <param name="viewShape">shape of the date</param>
+        /// <param name="colStarts">starting colomn</param>
+        /// <param name="rowIndices">list of column indices</param>
+        /// <param name="nonZeroValues">sparse values</param>
+        /// <param name="numNonZeroValues">number of non-zero values</param>
         /// <param name="device">device</param>
         /// <param name="readOnly">whether the data is readonly</param>
-        public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, double[] nonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)nonZeroValues.Length, device, readOnly)
+        public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, double[] nonZeroValues, long numNonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)numNonZeroValues, device, readOnly)
         {
+            if (numNonZeroValues < 0)
+            {
+                throw new ArgumentException("The length of nonZeroValues must be greater or equal to zero.");
+            }
             if (rowIndices.Length != nonZeroValues.Length)
             {
                 throw new ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
@@ -73,7 +163,11 @@ namespace CNTK
             {
                 throw new ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");
             }
+            listOfGCHandles.Add(GCHandle.Alloc(colStarts, GCHandleType.Pinned));
+            listOfGCHandles.Add(GCHandle.Alloc(rowIndices, GCHandleType.Pinned));
+            listOfGCHandles.Add(GCHandle.Alloc(nonZeroValues, GCHandleType.Pinned));
         }
+
 
         /// <summary>
         /// Property Device.

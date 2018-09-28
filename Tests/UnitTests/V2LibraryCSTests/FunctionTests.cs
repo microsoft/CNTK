@@ -2,7 +2,11 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace CNTK.V2LibraryCSTests
@@ -65,6 +69,64 @@ namespace CNTK.V2LibraryCSTests
             CNTKLib.ForceDeterministicAlgorithms();
             var shouldForce = CNTKLib.ShouldForceDeterministicAlgorithms();
             Assert.AreEqual(true, shouldForce);
+        }
+
+        [TestMethod]
+        public void TestMemoryLiveness()
+        {
+            const int dim = 1000;
+            var device = DeviceDescriptor.UseDefaultDevice();
+
+            // NoOp function using alias: Only used to read memory through C++
+            var inputShape = NDShape.CreateNDShape(new[] {dim});
+            var input = CNTKLib.InputVariable(inputShape, DataType.Float);
+            var f = CNTKLib.Alias(input);
+
+            // Create objects in another thread to make the error more likely
+            var t = new Thread(() => {
+                object[] objs = new object[100];
+                int i = 0;
+                while (true)
+                {
+                    objs[i] = new object();
+                    i = (i + 1) % objs.Length;
+                }
+            });
+
+            t.Start();
+
+            for (int i = 0;; i++)
+            {
+                // Zero vector that lives longer than it's used
+                var data = new float[dim];
+
+                var dataShape = NDShape.CreateNDShape(new[] { dim, 1 });
+                var arrayView = new NDArrayView(dataShape, data, device);
+                var inputValue = new Value(arrayView);
+
+                // Force GC to trigger error
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+
+                var outputs = new Dictionary<Variable, Value>
+                {
+                    {f.Output, null }
+                };
+
+                f.Evaluate(new Dictionary<Variable, Value>
+                {
+                    {input, inputValue}
+                }, outputs, device);
+
+                var outputValue = outputs.Values.Single();
+                var outputData = outputValue.GetDenseData<float>(f.Output);
+
+                // Verify that the original data has not changed
+                Assert.IsTrue(data.All(x => Math.Abs(x - 0.0) < float.Epsilon), "Data has changed");
+
+                // Error if any value is not zero since the output should be the input (zero vector)
+                Assert.IsTrue(outputData.SelectMany(x => x).Any(x => Math.Abs(x-0.0) < float.Epsilon), "Output doesn't equal to input");
+            }
         }
 
     }

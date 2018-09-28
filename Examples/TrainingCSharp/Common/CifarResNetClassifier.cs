@@ -177,7 +177,7 @@ namespace CNTK.CSTrainingExamples
                 projectionMapValues[(i * (int)inputDim) + i] = 1.0f;
 
             var projectionMap = new NDArrayView(DataType.Float, new int[] { 1, 1, inputDim, outputDim }, device);
-            projectionMap.CopyFrom(new NDArrayView(new int[] { 1, 1, inputDim, outputDim }, projectionMapValues, (uint)projectionMapValues.Count(), device));
+            projectionMap.CopyFrom(new NDArrayView(new int[] { 1, 1, inputDim, outputDim }, projectionMapValues, projectionMapValues.Count(), device));
 
             return new Constant(projectionMap);
         }
