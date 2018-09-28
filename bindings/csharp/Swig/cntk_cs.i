@@ -7,6 +7,8 @@
 
 %include "CNTKManagedCommon.i"
 
+//This macro redefines the default macro provided by swig to overwrite the generated internal constructor.
+//The purpose of this is to add a new private variable that stores a list of GC handles which will be used to do memory pinning.
 %define SWIG_CSBODY_PROXY_NDARRAYVIEW(PTRCTOR_VISIBILITY, CPTR_VISIBILITY, TYPE...)
 // Proxy classes (base classes, ie, not derived classes)
 %typemap(csbody) TYPE %{
@@ -25,6 +27,7 @@
   }
 %}
 %enddef
+//Applying the above macro ONLY on CNTK::NDArrayView class
 SWIG_CSBODY_PROXY_NDARRAYVIEW(internal, internal, CNTK::NDArrayView)
 
 %ignore CNTK::Value::Dispose;
@@ -81,12 +84,45 @@ SWIG_CSBODY_PROXY_NDARRAYVIEW(internal, internal, CNTK::NDArrayView)
     }
 }
 
+//The following modifiers statements will change the corresponding c# constructors to be private. They are then wrapped in NDArrayViewShim.cs file
+//to create GC handle allocation for the input c# arrays for the purpose of memory pinning.
 %csmethodmodifiers CNTK::NDArrayView::NDArrayView(const NDShape&, float *, size_t, const DeviceDescriptor&, bool readOnly = false) "private" 
 %csmethodmodifiers CNTK::NDArrayView::NDArrayView(const NDShape&, double *, size_t, const DeviceDescriptor&, bool readOnly = false) "private" 
 %csmethodmodifiers CNTK::NDArrayView::NDArrayView(const NDShape&, const SparseIndexType*, const SparseIndexType*, const float*, size_t, const DeviceDescriptor&, bool readOnly = false) "private" 
 %csmethodmodifiers CNTK::NDArrayView::NDArrayView(const NDShape&, const SparseIndexType*, const SparseIndexType*, const double*, size_t, const DeviceDescriptor&, bool readOnly = false) "private" 
 %csmethodmodifiers CNTK::NDArrayView::NDArrayView(const NDShape&, const SparseIndexType*, const SparseIndexType*, const int8_t*, size_t, const DeviceDescriptor&, bool readOnly = false) "private" 
-%csmethodmodifiers CNTK::NDArrayView::NDArrayView(const NDShape&, const SparseIndexType*, const SparseIndexType*, const int16_t*, size_t, const DeviceDescriptor&, bool readOnly = false) "private" 
+%csmethodmodifiers CNTK::NDArrayView::NDArrayView(const NDShape&, const SparseIndexType*, const SparseIndexType*, const int16_t*, size_t, const DeviceDescriptor&, bool readOnly = false) "private"
+
+//ignore the default Dispose method in CNTK::NDArrayView
+%ignore CNTK::NDArrayView::Dispose;
+//This typemap will overwrite the default typemap(typemap(csdestruct, methodname="Dispose", methodmodifiers="public") SWIGTYPE) defined in swigwin-3.0.10\Lib\csharp\csharp.swg
+//to put in our custom dispose logic for the NDArrayView class. Note that this logic is specifically for NDArrayView class
+//since it directly implements IDisposable interface therefore no need to call base.Dispose.
+//If overwriting methods for a derived class, please follow the typemap defined for derived classes in swigwin-3.0.10\Lib\csharp\csharp.swg, i.e:
+//typemap(csdestruct_derived, methodname="Dispose", methodmodifiers="public") SWIGTYPE
+%typemap(csdestruct, methodname="Dispose", methodmodifiers="public") CNTK::NDArrayView {
+    lock(this) {
+      if (swigCPtr.Handle != global::System.IntPtr.Zero) {
+        if (swigCMemOwnBase) {
+          swigCMemOwnBase = false;
+		  if (listOfGCHandles.Count>0)
+          {
+              foreach (var handle in listOfGCHandles)
+              {
+			      //being super paranoid here
+                  if (handle.IsAllocated)
+                  {
+                      handle.Free();
+                  }
+              }
+          }
+          $imcall;
+        }
+        swigCPtr = new global::System.Runtime.InteropServices.HandleRef(null, global::System.IntPtr.Zero);
+      }
+      global::System.GC.SuppressFinalize(this);
+    }
+  }
 
 %extend CNTK::NDArrayView {
 
@@ -156,36 +192,6 @@ SWIG_CSBODY_PROXY_NDARRAYVIEW(internal, internal, CNTK::NDArrayView)
         return CNTK::NDArrayView::RandomUniform<double>(shape, rangeStart, rangeEnd, seed, device);
     }
 }
-
-%ignore CNTK::NDArrayView::Dispose;
-//This typemap will overwrite the default typemap(typemap(csdestruct, methodname="Dispose", methodmodifiers="public") SWIGTYPE) defined in swigwin-3.0.10\Lib\csharp\csharp.swg
-//to put in our custom dispose logic for the NDArrayView class. Note that this logic is specifically for NDArrayView class
-//since it directly implements IDisposable interface therefore no need to call base.Dispose.
-//If overwriting methods for a derived class, please follow the typemap defined for derived classes in swigwin-3.0.10\Lib\csharp\csharp.swg, i.e:
-//typemap(csdestruct_derived, methodname="Dispose", methodmodifiers="public") SWIGTYPE
-%typemap(csdestruct, methodname="Dispose", methodmodifiers="public") CNTK::NDArrayView {
-    lock(this) {
-      if (swigCPtr.Handle != global::System.IntPtr.Zero) {
-        if (swigCMemOwnBase) {
-          swigCMemOwnBase = false;
-		  if (listOfGCHandles.Count>0)
-          {
-              foreach (var handle in listOfGCHandles)
-              {
-			      //being super paranoid here
-                  if (handle.IsAllocated)
-                  {
-                      handle.Free();
-                  }
-              }
-          }
-          $imcall;
-        }
-        swigCPtr = new global::System.Runtime.InteropServices.HandleRef(null, global::System.IntPtr.Zero);
-      }
-      global::System.GC.SuppressFinalize(this);
-    }
-  }
 
 %extend CNTK::Constant {
     static CNTK::Constant CNTK::Constant::ScalarFloat(float value, const CNTK::DeviceDescriptor& device = CNTK::DeviceDescriptor::CPUDevice())

@@ -95,7 +95,7 @@ namespace CNTK.V2LibraryCSTests
 
             t.Start();
 
-            for (int i = 0;; i++)
+            for (int i = 0; i< 1000; i++)
             {
                 // Zero vector that lives longer than it's used
                 var data = new float[dim];

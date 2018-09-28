@@ -73,7 +73,7 @@ namespace CNTK
         /// </summary>
         /// <param name="viewShape">shape of the date</param>
         /// <param name="colStarts">starting colomn</param>
-        /// <param name="rowIndices">list of column indices</param>
+        /// <param name="rowIndices">list of row indices</param>
         /// <param name="nonZeroValues">sparse values</param>
         /// <param name="device">device</param>
         /// <param name="readOnly">whether the data is readonly</param>
@@ -94,7 +94,7 @@ namespace CNTK
         /// </summary>
         /// <param name="viewShape">shape of the date</param>
         /// <param name="colStarts">starting colomn</param>
-        /// <param name="rowIndices">list of column indices</param>
+        /// <param name="rowIndices">list of row indices</param>
         /// <param name="nonZeroValues">sparse values</param>
         /// <param name="numNonZeroValues">number of non-zero values</param>
         /// <param name="device">device</param>
@@ -144,7 +144,7 @@ namespace CNTK
         /// </summary>
         /// <param name="viewShape">shape of the date</param>
         /// <param name="colStarts">starting colomn</param>
-        /// <param name="rowIndices">list of column indices</param>
+        /// <param name="rowIndices">list of row indices</param>
         /// <param name="nonZeroValues">sparse values</param>
         /// <param name="numNonZeroValues">number of non-zero values</param>
         /// <param name="device">device</param>
