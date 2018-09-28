@@ -169,6 +169,9 @@
     <ClCompile Include="proto\onnx\core\platform\windows\stacktrace.cc">
       <Filter>proto\onnx\core\platform\windows</Filter>
     </ClCompile>
+    <ClCompile Include="proto\onnx\ControlFlowHelper.cpp">
+      <Filter>proto\onnx</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -390,6 +393,9 @@
     </ClInclude>
     <ClInclude Include="proto\onnx\core\platform\windows\debug_alloc.h">
       <Filter>proto\onnx\core\platform\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\ControlFlowHelper.h">
+      <Filter>proto\onnx</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

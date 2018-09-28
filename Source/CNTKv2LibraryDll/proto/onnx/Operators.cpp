@@ -231,6 +231,9 @@ namespace ONNX
         { L"StableSigmoid", { {
             { L"StableSigmoid", "Sigmoid" },
         } } },
+        { L"Sigmoid", { {
+            { L"Sigmoid", "Sigmoid" },
+        } } },
         { L"ElementMax", { {
             { L"ElementMax", "Max" },
         } } },
