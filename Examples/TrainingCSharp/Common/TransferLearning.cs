@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using CNTK.CNTKLibraryCSTrainingTest;
 
 namespace CNTK.CSTrainingExamples
 {
@@ -22,13 +21,17 @@ namespace CNTK.CSTrainingExamples
         /// data folder is: CNTK/Examples/Image
         /// model folder is: CNTK/PretrainedModels
         /// </summary>
-        public static string ExampleImageFoler = TestCommon.TestDataDirPrefix;
+        public static string ExampleImageFoler
+        {
+            get { return TestCommon.TestDataDirPrefix; }
+            set { TestCommon.TestDataDirPrefix = value; }
+        }
+
         public static string BaseResnetModelFile = TestCommon.TestDataDirPrefix + "/ResNet18_ImageNet_CNTK.model";
 
         private static string featureNodeName = "features";
         private static string lastHiddenNodeName = "z.x";
         private static int[] imageDims = new int[] { 224, 224, 3 };
-
         /// <summary>
         /// TrainAndEvaluateWithFlowerData shows how to do transfer learning with a MinibatchSource. MinibatchSource is constructed with 
         /// a map file that contains image file paths and labels. Data loading, image preprocessing, and batch randomization are handled 
