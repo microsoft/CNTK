@@ -19,7 +19,7 @@
   PTRCTOR_VISIBILITY $csclassname(global::System.IntPtr cPtr, bool cMemoryOwn) {
     swigCMemOwnBase = cMemoryOwn;
     swigCPtr = new global::System.Runtime.InteropServices.HandleRef(this, cPtr);
-	listOfGCHandles = new System.Collections.Generic.List<System.Runtime.InteropServices.GCHandle>();
+    listOfGCHandles = new System.Collections.Generic.List<System.Runtime.InteropServices.GCHandle>();
   }
 
   CPTR_VISIBILITY static global::System.Runtime.InteropServices.HandleRef getCPtr($csclassname obj) {
@@ -105,11 +105,11 @@ SWIG_CSBODY_PROXY_NDARRAYVIEW(internal, internal, CNTK::NDArrayView)
       if (swigCPtr.Handle != global::System.IntPtr.Zero) {
         if (swigCMemOwnBase) {
           swigCMemOwnBase = false;
-		  if (listOfGCHandles.Count>0)
+          if (listOfGCHandles.Count>0)
           {
               foreach (var handle in listOfGCHandles)
               {
-			      //being super paranoid here
+                  //being super paranoid here
                   if (handle.IsAllocated)
                   {
                       handle.Free();
