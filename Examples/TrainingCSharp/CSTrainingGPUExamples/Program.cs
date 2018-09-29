@@ -25,7 +25,7 @@ namespace CNTK.CSTrainingExamples
             Console.WriteLine($"======== running CifarResNet.TrainAndEvaluate using {device.Type} ========");
             CifarResNetClassifier.CifarDataFolder = "../../Examples/Image/DataSets/CIFAR-10";
             CifarResNetClassifier.TrainAndEvaluate(device, true);
-            TestCommon.TestDataDirPrefix = "../../Examples/Image/DataSets";
+            TestCommon.TestDataDirPrefix = "../../Examples/Image/DataSets/";
             string modelFileSourceDir = "../../PretrainedModels/ResNet_18.model";
             if (!File.Exists(modelFileSourceDir))
             {
