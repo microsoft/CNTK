@@ -26,19 +26,20 @@ namespace CNTK.CSTrainingExamples
             CifarResNetClassifier.CifarDataFolder = "../../Examples/Image/DataSets/CIFAR-10";
             CifarResNetClassifier.TrainAndEvaluate(device, true);
             TestCommon.TestDataDirPrefix = "../../Examples/Image/DataSets";
-            string modelFileSourceDir = "../../PretrainedModels/ResNet18_ImageNet_CNTK.model";
+            string modelFileSourceDir = "../../PretrainedModels/ResNet_18.model";
             if (!File.Exists(modelFileSourceDir))
             {
                 Console.WriteLine("Model file doesn't exist. Please run download_model.py in CNTK/CNTK/PretrainedModels");
                 Console.ReadKey();
                 return;
             }
-            File.Copy(modelFileSourceDir, TransferLearning.BaseResnetModelFile,/*overwrite*/true);
-            Console.WriteLine($"======== running TransferLearning.TrainAndEvaluateWithFlowerData using {device.Type} ========");
-            TransferLearning.TrainAndEvaluateWithFlowerData(device, true);
+
+            TransferLearning.BaseResnetModelFile = "ResNet_18.model";
+            File.Copy(modelFileSourceDir, TransferLearning.ExampleImageFolder + TransferLearning.BaseResnetModelFile,/*overwrite*/true);
             Console.WriteLine($"======== running TransferLearning.TrainAndEvaluateWithAnimalData using {device.Type} ========");
             TransferLearning.TrainAndEvaluateWithAnimalData(device, true);
 
+            TestCommon.TestDataDirPrefix = "../../";
             Console.WriteLine($"======== running LSTMSequenceClassifier.Train using {device.Type} ========");
             LSTMSequenceClassifier.Train(device);
         }
