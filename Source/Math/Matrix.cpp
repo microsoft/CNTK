@@ -5844,15 +5844,15 @@ bool Matrix<ElemType>::HasNan(const char* name) const
 
     if (IsEmpty())
         return false;
-
+    fprintf(stderr, "Check Nan values");
     // if GPU then first detect NaN there, will be faster
     if (GetDeviceId() != CPUDEVICE)
     {
         Matrix<ElemType> sum(GetDeviceId());
         sum.AssignSumOfElements(*this);
         auto x = sum.Get00Element();
-        if (!std::isnan(x))
-            return false;
+        if (std::isnan(x))
+            LogicError("Nan found");
     }
 
     // const auto & us = *this;
@@ -5862,6 +5862,7 @@ bool Matrix<ElemType>::HasNan(const char* name) const
         if (std::isnan(us(i, j)))
         {
             fprintf(stderr, "HasNan: NaN detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, (int) GetNumRows(), (int) GetNumCols());
+            LogicError("Nan found");
             return true;
         }
     return false;

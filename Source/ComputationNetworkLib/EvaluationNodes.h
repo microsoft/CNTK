@@ -62,6 +62,7 @@ public:
         Value().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
 //#if NANCHECK
         Value().HasNan("ClassificationError");
+        fprintf(stderr, "Check Nan values");
 //#endif
 #if DUMPOUTPUT
         Value().Print("ClassificationErrorNode");
