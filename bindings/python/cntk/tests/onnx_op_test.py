@@ -660,6 +660,32 @@ def test_Exp(tmpdir, dtype):
         model = C.exp(x)
         verify_one_input(model, data, tmpdir, 'Exp_1')
 
+#EyeLike
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_EyeLike(tmpdir, dtype):
+    dim_size = 4
+    with C.default_options(dtype = dtype):
+        data = np.arange(dim_size*dim_size, dtype=dtype).reshape((dim_size, dim_size))
+        x = C.input_variable((dim_size, dim_size), dtype=dtype, dynamic_axes=[])
+        model = C.eye_like(x, sparse_output=False)
+        output_ref = model.eval({x:data})
+        
+        # For this op, we use custom verfication because the output is sparse.
+        name = 'EyeLike_0'
+        test_model_path = os.path.join(str(tmpdir), R'test_' + name)
+        os.mkdir(test_model_path)
+        test_data_path = os.path.join(str(test_model_path), R'test_data_set_0')
+        os.mkdir(test_data_path)
+        filename = os.path.join(str(test_model_path), name + R'.onnx')
+        model.save(filename, format=C.ModelFormat.ONNX)
+        loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
+        onnx_model = onnx.load(filename);
+        # Below is the trick to convert the sprase tensor to dense.
+        z = C.times(loaded_model, np.eye(dim_size))
+        output_test = z.eval({z.arguments[0]:data})
+
+        assert np.allclose(output_test, output_ref, 1e-05, 1e-08)
+
 #Flatten
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Flatten(tmpdir, dtype):
@@ -1191,6 +1217,17 @@ def test_Neg(tmpdir, dtype):
         data0 = np.asarray([1., -1., -2., 1.], dtype=dtype)
         model = C.negate(data0)
         verify_no_input(model, tmpdir, 'Neg_0')
+
+#OnesLike
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_OnesLike(tmpdir, dtype):
+    if dtype==np.float16:
+        pytest.skip('Test is skipped with float16 data due to ONNX spec type inference bug.') # Can be removed when ONNX bug fix PR is merged.
+    with C.default_options(dtype = dtype):
+        data = np.arange(24, dtype=dtype).reshape((6, 4))
+        x = C.input_variable((6, 4), dtype=dtype)
+        model = C.ones_like(x)
+        verify_one_input(model, data, tmpdir, 'OnesLike_0')
 
 #OptimizedRNNStack
 OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
@@ -1771,6 +1808,17 @@ def test_Select(flag, if_true, if_false, tmpdir):
 
     model = C.element_select(flag, if_true, if_false_var)
     verify_one_input(model, if_false, tmpdir, 'Select_1_if_false')
+
+#ZerosLike
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_ZerosLike(tmpdir, dtype):
+    if dtype==np.float16:
+        pytest.skip('Test is skipped with float16 data due to ONNX spec type inference bug.') # Can be removed when ONNX bug fix PR is merged.
+    with C.default_options(dtype = dtype):
+        data = np.arange(24, dtype=dtype).reshape((6, 4))
+        x = C.input_variable((6, 4), dtype=dtype)
+        model = C.zeros_like(x)
+        verify_one_input(model, data, tmpdir, 'ZerosLike_0')
 
 # Cos
 @pytest.mark.parametrize("dtype", DType_Config)

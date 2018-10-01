@@ -443,6 +443,12 @@ namespace ONNX
         { L"StraightThrough",{ {
             { L"StraightThrough", "StraightThrough" },
         } } },
+        { L"ConstantOp",{ {
+            { L"ConstantOp", "ConstantLike" },
+        } } },
+        { L"EyeLikeOp",{ {
+            { L"EyeLikeOp", "EyeLike" },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,

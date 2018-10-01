@@ -1716,16 +1716,18 @@ namespace CNTK
 
     FunctionPtr ZerosLike(const Variable& operand, const std::wstring& name)
     {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = 0.0;
-
-        return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
+        return ConstantLike(operand, 0.0, name);
     }
 
     FunctionPtr OnesLike(const Variable& operand, const std::wstring& name)
     {
+        return ConstantLike(operand, 1.0, name);
+    }
+
+    FunctionPtr ConstantLike(const Variable& operand, const double fillValue, const std::wstring& name)
+    {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = 1.0;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = fillValue;
 
         return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
     }

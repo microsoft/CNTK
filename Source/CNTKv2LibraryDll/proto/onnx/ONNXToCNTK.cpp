@@ -2930,6 +2930,47 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         FunctionPtr cntkFunction = TopK(inputs[0], k, axis, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
+    else if (onnxOpName == "ConstantLike")
+    {
+        // We only support limited scenarios for ConstantLike in CNTK importer.
+        // Creating the output tensor from 'shape' attribute is not supported.
+        // Also, 'dtype' attribute is ignored (limitations of Cast op in CNTK),
+        // and the output tensor type is always the same as the input tensor type.
+        if (inputs.size() == 0)
+        {
+            if (!HasNamedAttribute(node, "shape"))
+                LogicError("ConstantLike: Either input tensor or 'shape' attribute must be provided.");
+            else
+                RuntimeError("ConstantLike: 'shape' attribute not supported in CNTK importer. Only tensor input supported.");
+        }
+        if (HasNamedAttribute(node, "dtype"))
+            fprintf(stderr, "Warning: ConstantLike - 'dtype' attributed is not supported in CNTK importer. Datatype of the input tensor is used for output type.");
+
+        float value = static_cast<double>(GetNamedAttributeAsFloat(node, "value", 0.0f));
+        return ConstantLike(inputs[0], value, ToFixedWStringFromMultiByte(node->Name()));
+    }
+    else if (onnxOpName == "EyeLike")
+    {
+        // We only support limited scenarios for EyeLike in CNTK importer.
+        // Only k=0 (main diagonal) is supported.
+        // Also, 'dtype' attribute is ignored (limitations of Cast op in CNTK),
+        // and the output tensor type is always the same as the input tensor type.
+        if (inputs[0].Shape().Rank() != 2)
+            LogicError("EyeLike: Input tensor must be 2D tensor.");
+        if (!HasNamedAttribute(node, "k"))
+        {
+            size_t k = static_cast<size_t>(GetNamedAttributeAsInt64(node, "k"));
+            if (k != 0)
+                NOT_IMPLEMENTED;
+        }
+        if (HasNamedAttribute(node, "dtype"))
+            fprintf(stderr, "Warning: ConstantLike - 'dtype' attributed is not supported in CNTK importer. Datatype of the input tensor is used for output type.");
+
+        // Note that we create EyeLike op with isOutputSparse=true (default).
+        // ONNX does not have any explicit control on this, so just for efficiency
+        // we choose sparse output.
+        return EyeLike(inputs[0], true, ToFixedWStringFromMultiByte(node->Name()));
+    }
     else
     {
         LogicError("ONNX (%s) is not supported in CNTK", onnxOpName.c_str());

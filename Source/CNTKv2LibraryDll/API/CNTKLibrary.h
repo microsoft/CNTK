@@ -4173,6 +4173,12 @@ namespace CNTK
     CNTK_API FunctionPtr OnesLike(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of a constant operation. This produces a constant tensor with specified fill value
+    /// with the shape and dynamic axes specified by the operand.
+    ///
+    CNTK_API FunctionPtr ConstantLike(const Variable& operand, const double fillValue = 0.0, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of a eye-like operation. This produces ones with the shape and dynamic axes specified by the operand.
     ///
     CNTK_API FunctionPtr EyeLike(const Variable& operand, bool isOutputSparse, const std::wstring& name = L"");

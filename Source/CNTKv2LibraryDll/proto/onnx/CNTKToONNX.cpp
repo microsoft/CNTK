@@ -3876,6 +3876,23 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             size_t k = src->Attributes()[L"numItems"].Value<size_t>();
             node->AddAttribute(attributesMap[L"numItems"], static_cast<int64_t>(k));
         }
+        else if (src->OpName() == L"ConstantOp")
+        {
+            float value = 0.0f;
+            if (src->Attributes().Contains(L"fillValue"))
+                value = (float)src->Attributes()[L"fillValue"].Value<double>();
+            node->AddAttribute("value", value);
+        }
+        else if (src->OpName() == L"EyeLikeOp")
+        {
+            if (src->Attributes().Contains(L"OutputSparse"))
+            {
+                auto value = (bool)src->Attributes()[L"OutputSparse"].Value<bool>();
+                if (value)
+                    fprintf(stderr, "Warning: EyeLikeOp - Op is configured for sparse output. Sparse is not supported in ONNX. Exporting as dense.");
+            }
+            node->AddAttribute("k", static_cast<int64_t>(0));
+        }
     }
     else
     {
@@ -4468,7 +4485,8 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForStraightThrough(const Fun
                                                                     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     // This method exports CNTK's StraighThrough estimator op through an ONNX sub-graph. 
-    // ONNX subgraph consists of Greater + Cast + Mul + Sub ops. 
+    // ONNX subgraph consists of Greater + Cast + Mul + Sub ops. It is essentially doing:
+    // Output = Cast(Input > 0)*2 - 1;
     std::vector<onnxruntime::NodeArg*> inputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
