@@ -19,7 +19,7 @@ from .onnx_test_helper import CNTK_FREEDIM_AXIS_DENOTATION, DIM_SIZE_FOR_NON_BAT
 # When adding a test for a new op, please check to see if 
 # that op needs to be added to this list (i.e. does that op 
 # get exported to an ONNX op with defined batch axis).
-set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization', 'ImageScaler'}
+set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization', 'ImageScaler', 'Crop'}
 
 # List of CNTK ops for which output shape doesn't change regardless
 # of whether the input has batch axis or not.
@@ -903,6 +903,37 @@ def test_LogSoftmax(tmpdir, dtype):
     x = C.input_variable(data.shape, dtype=dtype)
     model = C.log_softmax(x)
     verify_one_input(model, data, tmpdir, 'LogSoftmax_1')
+
+#LogAddExp
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LogAddExp(tmpdir, dtype):
+    shape = (2,3,4)
+
+    data_x = np.random.rand(*shape).astype(np.float32)
+    data_y = np.random.rand(*shape).astype(np.float32)
+
+    x = C.input_variable(shape)
+    y = C.input_variable(shape)
+
+    model = C.log_add_exp(x, y)
+
+    verify_two_input(model, data_x, data_y, tmpdir, 'LogAddExp_0')
+
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LogAddExp_Broadcast(tmpdir, dtype):
+    shape_x_arr = [(2,1,4), (2,1,4), (2,2,3,4)]
+    shape_y_arr = [(1,3,1), (3,1),   (1,1)]
+
+    for i, (shape_x, shape_y) in enumerate(list(zip(shape_x_arr, shape_y_arr))):
+        data_x = np.random.rand(*shape_x).astype(np.float32)
+        data_y = np.random.rand(*shape_y).astype(np.float32)
+
+        x = C.input_variable(shape_x)
+        y = C.input_variable(shape_y)
+
+        model = C.log_add_exp(x, y)
+
+        verify_two_input(model, data_x, data_y, tmpdir, 'LogAddExp_Broadcast_' + str(i))
 
 #LRN
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1813,3 +1844,12 @@ def test_Atan(tmpdir, dtype):
     data = np.asarray([0.0, -0.5, 0.5, 1, -1], dtype)
     model = C.atan(data)
     verify_no_input(model, tmpdir, 'Atan_0')
+
+# Crop
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Crop_Manual(tmpdir, dtype):
+    x = C.input_variable((1,4,4), dtype=np.float32)
+    y = C.constant(np.ones((1,2,1), dtype=np.float32))
+    model = C.crop_manual(x, y, 1, 2)
+    data = np.asarray(range(4*4), dtype=np.float32).reshape((1,4,4))
+    verify_one_input(model, data, tmpdir, "Crop_Manual_0")
