@@ -11,6 +11,7 @@ namespace CNTK.CSTrainingExamples
     {
         static void Main(string[] args)
         {
+            TestCommon.TestDataDirPrefix = "../../";
             var device = DeviceDescriptor.CPUDevice;
             Console.WriteLine($"======== running LogisticRegression.TrainAndEvaluate using {device.Type} ========");
             LogisticRegression.TrainAndEvaluate(device);

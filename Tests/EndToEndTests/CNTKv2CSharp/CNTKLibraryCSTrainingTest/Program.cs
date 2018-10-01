@@ -148,9 +148,4 @@ namespace CNTK.CNTKLibraryCSTrainingTest
             LSTMSequenceClassifier.Train(device);
         }
     }
-
-    public static class TestCommon
-    {
-        public static string TestDataDirPrefix;
-    }
 }
