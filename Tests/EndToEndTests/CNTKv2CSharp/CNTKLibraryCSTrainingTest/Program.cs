@@ -8,7 +8,6 @@ using CNTK;
 using CNTK.CSTrainingExamples;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace CNTK.CNTKLibraryCSTrainingTest
 {
@@ -83,7 +82,6 @@ namespace CNTK.CNTKLibraryCSTrainingTest
                     case "TransferLearningTest":
                         TransferLearning.BaseResnetModelFile = "ResNet_18.model";
                         Console.WriteLine($"======== running TransferLearning.TrainAndEvaluate with animal data using {device.Type} ========");
-                        Thread.Sleep(20000);
                         TransferLearning.TrainAndEvaluateWithAnimalData(device, true);
                         break;
 
