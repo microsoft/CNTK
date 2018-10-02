@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Internals/ComputationGraphAlgorithms.h"
+#include "core/graph/graph.h"
 
 namespace CNTK
 {
@@ -15,6 +16,7 @@ namespace CNTK
 
         std::string m_initialStateName;
         std::string m_stateOutputName;
+        onnx::TensorProto m_initialStateTensor;
         int m_delay;
     };
 
@@ -183,4 +185,16 @@ namespace CNTK
             }
         }
     }
+
+    //onnxruntime::Graph SliceSequenceAxisFromGraph(onnxruntime::Graph *srcGraph)
+    //{
+    //    std::unique_ptr<onnxruntime::Model> scanSubModel(new onnxruntime::Model("CNTKGraph", true));
+    //    onnxruntime::Graph &graph = scanSubModel->MainGraph();
+
+    //    for (auto &node : srcGraph->Nodes())
+    //    {
+    //    }
+
+    //    return nullptr;
+    //}
 }
