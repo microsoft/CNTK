@@ -124,6 +124,9 @@ void LocalTimelineRandomizerBase::GetNextSequenceDescriptions(size_t maxSampleCo
         m_chunkBuffer.clear();
         // Set the end-of-epoch flag (true when the current batch is last in an epoch).
         result.m_endOfEpoch = IsEndReached();
+        // No data fetched for this worker, move to next sequence
+        // (esp. for LTNoRandomizer which alternates sequences within a chunk for workers)
+        MoveToNextSequence();
         return;
     }
 
@@ -132,14 +135,15 @@ void LocalTimelineRandomizerBase::GetNextSequenceDescriptions(size_t maxSampleCo
 
     m_sequenceBuffer.clear();
     m_chunkBuffer.clear();
-    while (samplesLoaded < maxSampleCount && !IsEndReached())
+//    while (samplesLoaded < maxSampleCount && !IsEndReached())
+    for (;samplesLoaded < maxSampleCount && !IsEndReached(); MoveToNextSequence())
     {
         const SequenceInfo& sequence = m_window.m_sequences[m_window.m_sequencePosition];
         if (IsEndOfSweep(sequence))
         {
             m_sweepCount++;
             result.m_endOfSweep = true;
-            MoveToNextSequence();
+            //MoveToNextSequence();
             continue;
         }
 
@@ -163,7 +167,7 @@ void LocalTimelineRandomizerBase::GetNextSequenceDescriptions(size_t maxSampleCo
         atLeastOneSequenceNeeded = false;
 
         // Moving to next sequence.
-        MoveToNextSequence();
+        //MoveToNextSequence();
     }
 
     // Set the end-of-epoch flag (true when the current batch is last in an epoch).

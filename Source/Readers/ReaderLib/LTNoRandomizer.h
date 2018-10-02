@@ -32,11 +32,6 @@ public:
     void Prefetch() const override;
 
 private:
-    // Current chunk position.
-    ChunkIdType m_currentChunkPosition;
-
-    // Current sequence position.
-    size_t m_currentSequencePosition;
 
     // Prefetched chunk, expandable - no need to include in a checkpoint.
     // Can be recomputed after restore.
@@ -50,6 +45,11 @@ private:
     struct PrefetchState
     {
         PrefetchedChunk m_prefetchedChunk;
+        // Current chunk position.
+        ChunkIdType m_currentChunkPosition;
+
+        // Current sequence position.
+        size_t m_currentSequencePosition;
     };
 
     mutable PrefetchState m_prefetchState;

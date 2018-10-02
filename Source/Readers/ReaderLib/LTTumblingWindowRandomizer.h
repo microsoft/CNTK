@@ -45,7 +45,7 @@ private:
         size_t m_sweepCount;
     };
     void RandomizeWindow(PrefetchState& prefetchState, size_t sweepCount, size_t chunkPositionOfWindow, size_t sequencePositionInWindow) const;
-    void RandomizeChunks(PrefetchState& prefetchStatet, size_t sweepCount) const;
+    void RandomizeChunks(PrefetchState& prefetchState, size_t sweepCount) const;
 
     const size_t m_randomizationRange;
     const size_t m_seedOffset;

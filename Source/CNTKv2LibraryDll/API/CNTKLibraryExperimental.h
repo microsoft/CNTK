@@ -230,6 +230,16 @@ namespace CNTK {
 
         virtual ~DataDeserializer() = default;
 
+        std::vector<ChunkInfo> GetChunkInfoList()
+        {
+            std::vector<ChunkInfo> chunkDescriptions;
+            for (ChunkIdType chunkId = 0; chunkId < GetNumChunks(); ++chunkId)
+            {
+                chunkDescriptions.push_back(GetChunkInfo(chunkId));
+            }
+            return chunkDescriptions;
+        }
+
     protected:
         DataDeserializer() = default;
     };
