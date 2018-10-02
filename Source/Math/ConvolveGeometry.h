@@ -182,15 +182,18 @@ public:
         int keyInterior = 0;
         for (size_t i = 0; i < dimCount; i++)
         {
-            int width = (int)m_kernelShape[i];
-            keyInterior = keyInterior * width + (width - 1) / 2;
+            int width = static_cast<int>(m_kernelShape[i]);
+            bool isAutoPad = GetAutoPad(i);
+            int hi = isAutoPad ? 0 : static_cast<int>(m_upperPad[m_upperPad.size() == 1 ? 0 : i]);
+            int lo = isAutoPad ? 0 : static_cast<int>(m_lowerPad[m_lowerPad.size() == 1 ? 0 : i]);
+            keyInterior = keyInterior * (width + hi + lo) + (width - 1) / 2 + lo + 1;
         }
 
         m_runs.resize(2 * kernelSize + 2, -1);
         m_indices.resize(kernelSize + 1);
         m_runs[0] = 0; // Skip count
-        m_runs[1] = (int)kernelSize; // Count of entries
-        m_indices[0] = (int)kernelSize;
+        m_runs[1] = static_cast<int>(kernelSize); // Count of entries
+        m_indices[0] = static_cast<int>(kernelSize);
         for (size_t i = 0; i < kernelSize; i++)
         {
             m_runs[2 + i] = support[i];
@@ -215,10 +218,10 @@ public:
             int factorKern = 1;
             int factorCol = 1;
             int key = 0;
-            int cur = (int)row;
+            int cur = static_cast<int>(row);
             for (size_t i = 0; i < dimCount; i++)
             {
-                int dim = (int)(m_outputShape[i] / GetMapCount(i));
+                int dim = static_cast<int>(m_outputShape[i] / GetMapCount(i));
                 int coord = cur % dim;
                 cur /= dim;
 
@@ -238,11 +241,11 @@ public:
                 }
 
                 // Transform coord to input index space.
-                coord *= (int)GetStride(i);
+                coord *= static_cast<int>(GetStride(i));
                 coord += m_start[i];
 
                 col += factorCol * coord;
-                factorCol *= (int)m_inputShape[i];
+                factorCol *= static_cast<int>(m_inputShape[i]);
 
                 // 'key' is an offset that can be computed for each output cell.
                 // It is used to map from the output cell, to the effective input kernel mask.
@@ -264,7 +267,7 @@ public:
                 //          kernel mask:    [ 1  1  0  ]
                 //       => padded input:   [ x4 x5 __ ]
                 //      Thus there will be a total of 3 different 'key' values. y2, y3 and y4 should produce the same 'key' values. 
-                int width = (int)m_kernelShape[i];
+                int width = static_cast<int>(m_kernelShape[i]);
                 int half = (width - 1) / 2;
                 // 'min' stands for the first input index along this axis that is covered by the current kernel.
                 //  if negative, -min is equal to the number of padded cells that are covered.
@@ -280,15 +283,15 @@ public:
                 else if (lim > m_inputShape[i])
                     // Case 3.
                     // Similarly, when lim > inputShape, the current kernel covers (upper)padded values.
-                    dkey[i] = lim - (int)m_inputShape[i];
+                    dkey[i] = lim - static_cast<int>(m_inputShape[i]);
                 else
                     // Case 2.
                     // No padded values are covered, the kernel mask is all ones and is shared.
                     dkey[i] = 0;
                 bool isAutoPad = GetAutoPad(i);
                 // Ignore hi/lo values when auto padding is true.
-                int hi = isAutoPad ? 0 : (int)m_upperPad[m_upperPad.size() == 1 ? 0 : i];
-                int lo = isAutoPad ? 0 : (int)m_lowerPad[m_lowerPad.size() == 1 ? 0 : i];
+                int hi = isAutoPad ? 0 : static_cast<int>(m_upperPad[m_upperPad.size() == 1 ? 0 : i]);
+                int lo = isAutoPad ? 0 : static_cast<int>(m_lowerPad[m_lowerPad.size() == 1 ? 0 : i]);
                 // dk contributes to the 'key' value for this particular axis.
                 // There are two properties for dk that must be satisfied.
                 //  1. dk \in (0, width + hi + lo].
