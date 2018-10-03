@@ -844,7 +844,25 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         else
         {
             if (std::isnan(avgCriterion))
-                RuntimeError("The training criterion is not a number (NAN).");
+            {
+                //let allNodes = net->GetAllNodes();
+                //for (auto n : allNodes) {
+                //    auto nP = dynamic_cast<LearnableParameter<ElemType>*>(*n);
+                //    if (nP != nullptr)
+                //    {
+                //        nP->PrintNodeValuesToFile(true, true, stderr);
+                //    }
+                //    //let b = n->ValuePtr();
+                //}
+                /*Microsoft::MSR::CNTK::File fP(stderr);
+                net->DumpAllNodesToStream( true, true, fP);*/
+                wstring w = msra::strfun::wstrprintf(L"%ls.model.%d", m_modelPath.c_str(), (int)m_mpi->CurrentNodeRank());
+                // m_modelPath = m_modelPath + L "debug"
+                fprintf(stderr, "Saving1 model for debugging to:%ls", w.c_str());
+                net->Save(w);
+
+                RuntimeError("The1 training criterion is not a number (NAN).");
+            }
         }
 
         // not loading previous values then set them
@@ -1546,8 +1564,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (m_traceLevel > 0)
                 fflush(stderr);
 
-            if (epochCriterion.IsNan())
-                RuntimeError("The training criterion is not a number (NAN).");
+            if (epochCriterion.IsNan()) {
+                wstring w = msra::strfun::wstrprintf(L"%ls.model.%d", m_modelPath.c_str(), (int)m_mpi->CurrentNodeRank());
+                // m_modelPath = m_modelPath + L "debug"
+                fprintf(stderr, "Saving2 model for debugging to:%ls", w.c_str());
+                net->Save(w);
+                RuntimeError("The2 training criterion is not a number (NAN).");
+            }
+                
 
             // reset statistics for differential logging
             epochCriterionLastLogged  = epochCriterion;
