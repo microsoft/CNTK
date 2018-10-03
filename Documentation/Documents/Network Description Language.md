@@ -347,7 +347,7 @@ Special nodes need to be identified for CNTK to automatically do back propagatio
 
 #### Node Arrays
 
-CNTK supports multiple nodes for each type, so all these values are arrays. However, In many cases there will only be a single node for each node type. The array syntax (parenthesis) must be used when setting these special nodes, even if there is only one element. If more than one element is include, the entries are comma separated and surrounded by parenthesis. For example:
+CNTK supports multiple nodes for each type, so all these values are arrays. However, in many cases there will only be a single node for each node type. The array syntax (parenthesis) must be used when setting these special nodes, even if there is only one element. If more than one element is included, the entries are comma separated and surrounded by parenthesis. For example:
 
 ```
     FeatureNodes=(features)
@@ -739,7 +739,7 @@ This node will often be tagged as an “Eval” node to allow the CNTK to print 
 
 ### Dropout
 
-Compute a new matrix with *dropoutRate* perecent set to zero. The values that are set to zero are randomly chosen. This is commonly used to prevent overfitting during the training process.
+Compute a new matrix with *dropoutRate* percent set to zero. The values that are set to zero are randomly chosen. This is commonly used to prevent overfitting during the training process.
 
 `Dropout(matrix)`
 
@@ -874,7 +874,7 @@ PastValue and FutureValue nodes are used in recurrent networks, allow creation o
 
 `rows` – number of rows in the node
 
-`cols` – number of cols in the node. This value is often ommit since the length of a sequence varies
+`cols` – number of cols in the node. This value is often omitted since the length of a sequence varies
 
 `timeStep` – \[default = 1\] number of time steps toward the past and future
 
