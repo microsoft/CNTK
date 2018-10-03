@@ -1437,11 +1437,20 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         {
             if (nSamplesSinceLastModelSync >= blockSizePerWorker)
             {
+                wstring w = msra::strfun::wstrprintf(L"%ls.model_prior.%d", m_modelPath.c_str(), (int)m_mpi->CurrentNodeRank());
+                // m_modelPath = m_modelPath + L "debug"
+                fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
+                net->Save(w);
+
                 bool synced = m_pMASGDHelper->OnArrivingAtSyncPoint(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
                 if (synced)
                 {
                     nSamplesSinceLastModelSync = 0;
                 }
+                w = msra::strfun::wstrprintf(L"%ls.model_after.%d", m_modelPath.c_str(), (int)m_mpi->CurrentNodeRank());
+                // m_modelPath = m_modelPath + L "debug"
+                fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
+                net->Save(w);
             }
             // prepare break condition
             if (useDistributedMBReading)
