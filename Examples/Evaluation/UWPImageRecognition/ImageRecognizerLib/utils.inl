@@ -31,18 +31,6 @@ inline bool does_file_exist(std::wstring  file_name)
     return std::experimental::filesystem::exists(file_name);
 }
 
-inline std::wstring strtowstr(const std::string& str)
-{
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-    return converter.from_bytes(str);
-}
-
-inline std::string wstrtostr(const std::wstring& wstr)
-{
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-    return converter.to_bytes(wstr);
-}
-
 inline std::vector<std::wstring> read_class_names(const std::wstring filename)
 {
     std::vector<std::wstring> classNames;

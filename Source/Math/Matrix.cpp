@@ -3692,15 +3692,18 @@ Matrix<ElemType>& Matrix<ElemType>::GatherFromTarget(const Matrix<ElemType>& ind
     return *this;
 }
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::ScatterToIndices(const Matrix<ElemType>& values, const Matrix<ElemType>& indices, size_t row_elements)
+Matrix<ElemType>& Matrix<ElemType>::ScatterToIndices(const Matrix<ElemType>& values, const Matrix<ElemType>& indices, size_t row_elements, const Matrix<char>* mask/* = nullptr*/)
 {
-    if (indices.IsEmpty() || values.IsEmpty())
+    if (indices.IsEmpty() || values.IsEmpty() || (mask && mask->IsEmpty()))
         LogicError("ScatterAccordingIndices: input matrix is empty.");
+    if (mask && (indices.GetNumCols() % mask->GetNumCols() != 0))
+        LogicError("ScatterAccordingIndices: The number of columns(%zu) of the matrix slice to be masked is not a multiple of the number of columns(%zu) of the mask slice.",
+            indices.GetNumCols(), mask->GetNumCols());
 
     DISPATCH_MATRIX_ON_FLAG(&values,
                             this,
-                            m_CPUMatrix->ScatterToIndices(*values.m_CPUMatrix, *indices.m_CPUMatrix, row_elements),
-                            m_GPUMatrix->ScatterToIndices(*values.m_GPUMatrix, *indices.m_GPUMatrix, row_elements),
+                            m_CPUMatrix->ScatterToIndices(*values.m_CPUMatrix, *indices.m_CPUMatrix, row_elements, mask ? mask->m_CPUMatrix.get() : nullptr),
+                            m_GPUMatrix->ScatterToIndices(*values.m_GPUMatrix, *indices.m_GPUMatrix, row_elements, mask ? mask->m_GPUMatrix.get() : nullptr),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 

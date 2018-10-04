@@ -279,12 +279,71 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
     backward = (1 / np.prod(pooling_window)) * np.ones_like(input_operand)
 
     from cntk import pooling
-    input_op = pooling(a, AVG_POOLING, pooling_window, strides, auto_padding=[True])
+    # The test example data above do not use padding.
+    # Expected backward result is also computed based on no padding.
+    # So here auto_padding is explicitly set to False.
+    # auto_padding = True is tested in a separate test case below.
+    input_op = pooling(a, AVG_POOLING, pooling_window, strides, auto_padding=[False])
 
     forward_input = {a: input_operand}
 
     expected_forward = AA([result])
     expected_backward = {a: backward}
+
+    unittest_helper(input_op, forward_input, expected_forward,
+                expected_backward, device_id=device_id, precision=precision)
+
+AVG_POOLING_AUTOPAD_DATA = [
+    ([1, 1, 1, 6, 6],
+     (1, 5, 3),
+     (1, 1, 1),
+     [[[[ 7.5,  8.,   9.,  10.,  11.,  11.5,],
+        [10.5, 11.,  12.,  13.,  14.,  14.5,],
+        [13.5, 14.,  15.,  16.,  17.,  17.5,],
+        [19.5, 20.,  21.,  22.,  23.,  23.5,],
+        [22.5, 23.,  24.,  25.,  26.,  26.5,],
+        [25.5, 26.,  27.,  28.,  29.,  29.5,]]]],
+     [[[[[0.6527778,  0.9138889,  0.7833333,  0.7833333,  0.91388893, 0.65277785],
+         [0.8194445,  1.1472223,  0.9833333,  0.9833333,  1.1472223,  0.81944454],
+         [1.0277778,  1.438889,   1.2333333,  1.2333333,  1.438889,   1.0277779 ],
+         [1.0277778,  1.438889,   1.2333333,  1.2333333,  1.4388889,  1.0277778 ],
+         [0.8194445,  1.1472223,  0.9833333,  0.9833333,  1.1472222,  0.8194445 ],
+         [0.6527778,  0.91388893, 0.78333336, 0.78333336, 0.91388893, 0.6527778 ]]]]]),
+    ([1, 1, 1, 6, 6],
+     (1, 5, 3),
+     (1, 2, 2),
+     [[[[ 7.5,  9.,  11. ],
+        [13.5, 15.,  17. ],
+        [22.5, 24.,  26. ]]]],
+     [[[[[0.26666668, 0.44444448, 0.17777778, 0.35555556, 0.17777778, 0.17777778,],
+         [0.26666668, 0.44444448, 0.17777778, 0.35555556, 0.17777778, 0.17777778,],
+         [0.39166668, 0.6527778,  0.2611111,  0.5222222,  0.2611111,  0.2611111, ],
+         [0.225,      0.375,      0.15,       0.3,        0.15,       0.15,      ],
+         [0.225,      0.375,      0.15,       0.3,        0.15,       0.15,      ],
+         [0.125,      0.20833334, 0.08333334, 0.16666667, 0.08333334, 0.08333334,]]]]])
+]
+@pytest.mark.parametrize("input_size, pooling_window, strides, result, backward_result", AVG_POOLING_AUTOPAD_DATA)
+def test_op_avg_pooling_auto_padding(input_size, pooling_window, strides, result, backward_result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(1, total_size + 1, 1, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = C.sequence.input_variable(shape=input_operand.shape[2:],
+                         dtype=sanitize_dtype_cntk(precision),
+                         needs_gradient=True,
+                         name='a')
+
+    from cntk import pooling
+    input_op = pooling(a, AVG_POOLING, pooling_window, strides, auto_padding=[True])
+
+    forward_input = {a: input_operand}
+
+    expected_forward = AA([result])
+    expected_backward = {a: backward_result}
 
     unittest_helper(input_op, forward_input, expected_forward,
                 expected_backward, device_id=device_id, precision=precision)
@@ -319,7 +378,18 @@ MAX_POOLING_DATA = [
      [[[[ 19.,  21.,  23.,  24.],
         [ 35.,  37.,  39.,  40.],
         [ 51.,  53.,  55.,  56.],
-        [ 59.,  61.,  63.,  64.]]]])
+        [ 59.,  61.,  63.,  64.]]]]),
+
+    ([1, 1, 1, 6, 6],
+     (5, 3),
+     (1, 1),
+     [True],
+     [[[[14., 15., 16., 17., 18., 18.,],
+        [20., 21., 22., 23., 24., 24.,],
+        [26., 27., 28., 29., 30., 30.,],
+        [32., 33., 34., 35., 36., 36.,],
+        [32., 33., 34., 35., 36., 36.,],
+        [32., 33., 34., 35., 36., 36.,]]]])
 ]
 
 
@@ -390,7 +460,8 @@ def test_op_max_unpooling(input_size, pooling_window, strides, autopad, result, 
 
     forward_input = {a: input_operand}
 
-    expected_forward = backward * input_operand
+    # backward are not all ones when there is padding.
+    expected_forward = (backward > 0).astype(np.float32) * input_operand
     expected_backward = {a: backward}
 
     unittest_helper(u,
@@ -1012,6 +1083,20 @@ def test_group_conv(groups, num_output_channels, num_input_channels, input_tenso
 
     assert np.allclose(output_test, output_ref, atol=1e-4)
     assert np.allclose(output_grad_test, output_grad_ref, atol=1e-4)
+
+def test_group_conv_shape(device_id):
+    x = C.input_variable((16, 64, 64))
+    param = C.parameter((16, 1, 3, 3))
+    y_pad_channel = C.convolution(param, x, groups=16)
+    y_pad_channel_2 = C.convolution(param, x, groups=16, auto_padding=[True, True, True])
+    y_not_pad_channel = C.convolution(param, x, groups=16, auto_padding=[False, True, True])
+    
+    # Though in most cases unintended, padding in channel axis is expected and supported behavior when auto_padding is not specified or set to [True, ..]. 
+    assert np.allclose(y_pad_channel.shape, (256, 64, 64))
+    assert np.allclose(y_pad_channel_2.shape, (256, 64, 64))
+    # Explicit specification is required if we don't want padding on channel
+    assert np.allclose(y_not_pad_channel.shape, (16, 64, 64))
+
 
 FREE_STATIC_AXES_MAX_POOLING_DATA = [
     ((1, 4, 6, 6), # warmup_input_size: Defines the input size used for first run with free static axes.

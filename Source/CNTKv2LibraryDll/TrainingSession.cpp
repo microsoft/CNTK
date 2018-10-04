@@ -477,7 +477,7 @@ namespace CNTK
                     continue;
                 }
 
-                auto expectedNumber = msra::strfun::utf8(suffix);
+                auto expectedNumber = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(suffix));
                 char* tmp = nullptr;
                 int value = strtol(expectedNumber.c_str(), &tmp, 10);
                 if (tmp != expectedNumber.c_str() + expectedNumber.size())

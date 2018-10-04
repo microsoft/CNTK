@@ -12,6 +12,7 @@
 
 using namespace CNTK;
 using namespace CNTK::ONNX;
+using namespace Microsoft::MSR::CNTK;
 
 std::string MapActivationNameONNXToCNTK(const std::string &onnxOp)
 {
@@ -232,6 +233,8 @@ std::pair<FunctionPtr, FunctionPtr> LSTMPCell(Variable input,
     size_t outputDim = prevOutput.Shape()[0];
     int stacked_dim = (int)outputDim;
 
+    // computation order shall follow what is in bindings\python\cntk\layers\blocks.py
+    // lstm(dh, dc, x)
     FunctionPtr proj4;
     if (B.IsInitialized())
     {
@@ -279,6 +282,9 @@ FunctionPtr GRUCell(Variable input,
     size_t outputDim = prevOutput.Shape()[0];
     int stacked_dim = (int)outputDim;
 
+    // computation order shall follow what is in bindings\python\cntk\layers\blocks.py
+    // gru(dh, x)
+
     FunctionPtr projx3;
     if (B.IsInitialized())
         projx3 = Plus(B, Times(W, input));
@@ -322,16 +328,19 @@ FunctionPtr RNNCell(Variable input,
     Variable prevOutput,
     Constant &W, Constant &R, Constant &B)
 {
+    // computation order shall follow what is in bindings\python\cntk\layers\blocks.py
+    // rnn_step(dh, x)
     FunctionPtr proj = Times(W, input) + Times(R, prevOutput);
-    ;
+
     if (B.IsInitialized())
-        proj = B + proj;
+        proj = proj + B;
 
     FunctionPtr h = activationOp(proj);
     return h;
 }
 
 #include "PrimitiveFunction.h"
+#include "PrimitiveFunctionAttribute.h"
 #include "BlockFunction.h"
 
 std::tuple<FunctionPtr, FunctionPtr> LSTMPComponent(Variable input,
@@ -418,7 +427,7 @@ const std::vector<Variable> FindByNameHint(const std::vector<Variable> &inputs, 
     std::vector<Variable> variables;
     for (auto v : inputs)
     {
-        if (ToString(v.Name()).find(hint) != -1)
+        if (ToLegacyString(ToUTF8(v.Name())).find(hint) != -1)
         {
             variables.push_back(v);
         }
@@ -443,18 +452,80 @@ Variable GetInitialStateVariable(const std::vector<Variable> &inputs, int numDir
     return initialVariable;
 }
 
-FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
-    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
+// sequenceWrapperInputToFunctionPtr is used when more than one RNN op takes one same variable as the input.
+// in this case, we only want to wrap RNN ops with the input once.
+Variable ToBatchAndSequence(Variable input, VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
+{
+    if (sequenceWrapperInputToFunctionPtr.find(input) != sequenceWrapperInputToFunctionPtr.end())
+        return sequenceWrapperInputToFunctionPtr[input];
+
+    if (input.DynamicAxes().size() != 0)
+        return input;
+
+    if(input.DynamicAxes().size() != 0)
+        CNTK::LogicError("Input (%s) shall not have any dynamic axis", ToLegacyString(ToUTF8(input.Name())).c_str());
+    if (input.Shape().Rank() < 2)
+        CNTK::LogicError("Shape of input (%s) shall have rank that is equal or more than 2", ToLegacyString(ToUTF8(input.Name())).c_str());
+
+    FunctionPtr transpose = TransposeAxes(input, Axis(input.Shape().Rank() - 2), Axis(input.Shape().Rank() - 1), L"");
+    FunctionPtr toBatch = ToBatch(transpose, L"wrapper_sequence_axis");
+    FunctionPtr operandWithBatchAndSequenceAxis = ToSequence(toBatch, L"ONNX_export_RNN_wrapper_sequence_axis", L"");
+    sequenceWrapperInputToFunctionPtr[input] = operandWithBatchAndSequenceAxis;
+    return operandWithBatchAndSequenceAxis;
+}
+
+FunctionPtr UnpackBatchAndSequence(FunctionPtr rnnFunction, bool doTranspose)
+{
+    FunctionPtr cntkFunctionWithoutSequenceAxis = Sequence::Unpack(rnnFunction, 0, L"");
+    FunctionPtr cntkFunctionWithoutDynamicAxis = UnpackBatch(cntkFunctionWithoutSequenceAxis, L"");
+    if (doTranspose)
+    {
+        FunctionPtr transpose = TransposeAxes(cntkFunctionWithoutDynamicAxis,
+            Axis(cntkFunctionWithoutDynamicAxis->Output().Shape().Rank() - 2),
+            Axis(cntkFunctionWithoutDynamicAxis->Output().Shape().Rank() - 1), L"");
+        return transpose;
+    }
+    else
+        // in case of RNN ops, transpose is inserted after the op so we do not do transpose again
+        // TODO: do not transpose after RNN ops so we have one code path here.
+        return cntkFunctionWithoutDynamicAxis;
+}
+
+
+FunctionPtr UnwrapRNNOps(FunctionPtr rnnFunction, int numDirections)
+{
+    // [#, *][dirs * hidden] 
+    FunctionPtr cntkFunctionWithoutSequenceAxis = Sequence::Unpack(rnnFunction, 0, L"");
+    // [#][*, dirs * hidden] 
+    FunctionPtr cntkFunctionWithoutDynamicAxis = UnpackBatch(cntkFunctionWithoutSequenceAxis, L"");
+    // [#, *, dirs * hidden] 
+
+    NDShape newShape = cntkFunctionWithoutDynamicAxis->Output().Shape();
+    int hidden = newShape[0] / numDirections;
+    newShape = newShape.AppendShape({ NDShape::FreeDimension });
+    newShape[2] = numDirections;
+    newShape[1] = FreeBatchSize;
+    newShape[0] = hidden;
+    // because FreeBatchSize = 1, we can skip transpose between # and dirs.
+    FunctionPtr cntkFunctionWithoutDynamicAxisFixedBatch = Reshape(cntkFunctionWithoutDynamicAxis, newShape, L"");
+    // [*, dirs, #, hidden]
+    return cntkFunctionWithoutDynamicAxisFixedBatch;
+}
+
+FunctionPtr CreateLSTM(const onnxruntime::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
+    VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
+    Variable X;
+    X = ToBatchAndSequence(inputs[0], sequenceWrapperInputToFunctionPtr);
     for (int dir = 0; dir < numDirections; dir++)
     {
         std::function<FunctionPtr(const Variable &)> iofActivationOp, cellActivationOp, hiddenActivationOp;
         std::tie<std::function<FunctionPtr(const Variable &)>, std::function<FunctionPtr(const Variable &)>, std::function<FunctionPtr(const Variable &)>>(iofActivationOp, cellActivationOp, hiddenActivationOp) = GetActivations(activations, activation_alpha, activation_beta, dir);
 
         // the first a few inputs are (in order): X, numDirections * W, numDirections * R
-        Variable X = inputs[0];
         Variable W = inputs[1 + dir];
         Variable R = inputs[1 + numDirections + dir];
         Variable B;
@@ -516,29 +587,37 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
             X, { (size_t)hiddenDim }, iofActivationOp, cellActivationOp, hiddenActivationOp,
             recurrenceHookH, recurrenceHookC, (Constant &)W, (Constant &)R, (Constant &)B,
             (Constant &)Ci, (Constant &)Cf, (Constant &)Co);
+
         outputHs.push_back(outputH);
     }
+
+    FunctionPtr rnnFunction;
     if (outputHs.size() == 1)
-        return outputHs[0];
+        rnnFunction = outputHs[0];
     else
     {
         std::vector<Variable> operands({ outputHs[0], outputHs[1] });
-        return Splice(operands, Axis(0), ToWString(node->Name()));
+        rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
+
+    FunctionPtr unpackedRnnFunction = UnwrapRNNOps(rnnFunction, outputHs.size());
+    return unpackedRnnFunction;
 }
 
-FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
-    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
+FunctionPtr CreateGRU(const onnxruntime::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
+    VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
+    Variable X = ToBatchAndSequence(inputs[0], sequenceWrapperInputToFunctionPtr);
+
     for (int dir = 0; dir < numDirections; dir++)
     {
         std::function<FunctionPtr(const Variable &)> fActivationOp, gActivationOp;
         std::tie<std::function<FunctionPtr(const Variable &)>, std::function<FunctionPtr(const Variable &)>>(fActivationOp, gActivationOp) = GetGRUActivations(activations, activation_alpha, activation_beta, dir);
 
         // the first a few inputs are (in order): X, numDirections * W, numDirections * R, numDirections * H1
-        Variable X = inputs[0];
         Variable W = inputs[1 * numDirections + dir - ((numDirections == 2) ? 1 : 0)];
         Variable R = inputs[2 * numDirections + dir - ((numDirections == 2) ? 1 : 0)];
 
@@ -577,27 +656,34 @@ FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &in
             recurrenceHook, (Constant &)W, (Constant &)R, (Constant &)H1, (Constant &)B);
         outputHs.push_back(outputH);
     }
+
+    FunctionPtr rnnFunction;
     if (outputHs.size() == 1)
-        return outputHs[0];
+        rnnFunction = outputHs[0];
     else
     {
         std::vector<Variable> operands({ outputHs[0], outputHs[1] });
-        return Splice(operands, Axis(0), ToWString(node->Name()));
+        rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
+
+    FunctionPtr unpackedRnnFunction = UnwrapRNNOps(rnnFunction, outputHs.size());
+    return unpackedRnnFunction;
 }
 
-FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
-    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta)
+FunctionPtr CreateRNN(const onnxruntime::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+    const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
+    VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
     int numDirections = direction == RNNDirectionBidirection ? 2 : 1;
     std::vector<FunctionPtr> outputHs;
+    Variable X = ToBatchAndSequence(inputs[0], sequenceWrapperInputToFunctionPtr);
+
     for (int dir = 0; dir < numDirections; dir++)
     {
         std::function<FunctionPtr(const Variable &)> activationOp =
             GetRNNActivations(activations, activation_alpha, activation_beta, dir);
 
         // the first a few inputs are (in order): X, numDirections * W, numDirections * R, numDirections * H1
-        Variable X = inputs[0];
         Variable W = inputs[1 * numDirections + dir - ((numDirections == 2) ? 1 : 0)];
         Variable R = inputs[2 * numDirections + dir - ((numDirections == 2) ? 1 : 0)];
         Variable B;
@@ -627,13 +713,18 @@ FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &in
             recurrenceHook, (Constant &)W, (Constant &)R, (Constant &)B);
         outputHs.push_back(outputH);
     }
+
+    FunctionPtr rnnFunction;
     if (outputHs.size() == 1)
-        return outputHs[0];
+        rnnFunction = outputHs[0];
     else
     {
         std::vector<Variable> operands({ outputHs[0], outputHs[1] });
-        return Splice(operands, Axis(0), ToWString(node->Name()));
+        rnnFunction = Splice(operands, Axis(0), ToFixedWStringFromMultiByte(node->Name()));
     }
+
+    FunctionPtr unpackedRnnFunction = UnwrapRNNOps(rnnFunction, outputHs.size());
+    return unpackedRnnFunction;
 }
 
 template <typename FunctionType>
@@ -678,11 +769,11 @@ std::string FindActivation(const std::vector<FunctionPtr> &path, int nth)
             {
                 std::unordered_multimap<std::wstring, AttributesMapping>::const_iterator itLookup = Operators::CntkToONNXLookup().find(opName);
                 if (itLookup == Operators::CntkToONNXLookup().cend())
-                    CNTK::LogicError("Invalid activation (%s)", ToString(opName).c_str());
+                    CNTK::LogicError("Invalid activation (%s)", ToLegacyString(ToUTF8(opName)).c_str());
 
                 std::unordered_map<std::wstring, std::string>::const_iterator itMap = (*itLookup).second.map.find(opName);
                 if (itMap == (*itLookup).second.map.cend())
-                    CNTK::LogicError("Invalid activation (%s)", ToString(opName).c_str());
+                    CNTK::LogicError("Invalid activation (%s)", ToLegacyString(ToUTF8(opName)).c_str());
                 return itMap->second;
             }
             count++;
@@ -833,7 +924,7 @@ void TraceLSTMPathes(const FunctionPtr &src,
     }
     else
     {
-        CNTK::LogicError("Node %s (%s) is not a valid LSTM node", ToString(src->Name()).c_str(), ToString(src->Uid()).c_str());
+        CNTK::LogicError("Node %s (%s) is not a valid LSTM node", ToLegacyString(ToUTF8(src->Name())).c_str(), ToLegacyString(ToUTF8(src->Uid())).c_str());
     }
 
     // set up traverse boundary
@@ -931,8 +1022,8 @@ void TraceLSTMPathes(const FunctionPtr &src,
         [](const std::vector<FunctionPtr> &path1, const std::vector<FunctionPtr> &path2) {
         FunctionPtr slice1 = *path1.rbegin();
         FunctionPtr slice2 = *path2.rbegin();
-        int beginIndex1 = slice1->Attributes()[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-        int beginIndex2 = slice2->Attributes()[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+        int beginIndex1 = slice1->Attributes()[PrimitiveFunctionAttribute::AttributeNameBeginIndex].Value<int>();
+        int beginIndex2 = slice2->Attributes()[PrimitiveFunctionAttribute::AttributeNameBeginIndex].Value<int>();
         return beginIndex1 < beginIndex2;
     });
 
@@ -986,7 +1077,7 @@ FunctionPtr TraverseGraphFindFirstRNNOp(FunctionPtr src)
         for (auto f : front)
         {
             if (f.IsOutput() && f.Owner())
-                if (IsActivationOp(ToString(f.Owner()->OpName())))
+                if (IsActivationOp(ToLegacyString(ToUTF8(f.Owner()->OpName()))))
                     return f.Owner();
                 else
                 {
@@ -1020,7 +1111,7 @@ void TraceGRUPathes(const FunctionPtr &src, string &f_activation, string &g_acti
     }
     else
     {
-        CNTK::LogicError("Node %s (%s) is not a valid GRU node", ToString(src->Name()).c_str(), ToString(src->Uid()).c_str());
+        CNTK::LogicError("Node %s (%s) is not a valid GRU node", ToLegacyString(ToUTF8(src->Name())).c_str(), ToLegacyString(ToUTF8(src->Uid())).c_str());
     }
 
     // set up traverse boundary
@@ -1036,7 +1127,7 @@ void TraceGRUPathes(const FunctionPtr &src, string &f_activation, string &g_acti
     FunctionPtr gActivation = TraverseGraphFindFirstRNNOp(src->BlockRoot());
 
     f_activation = "Sigmoid";
-    g_activation = MapActivationNameCNTKToONNX(ToString(gActivation->OpName()));
+    g_activation = MapActivationNameCNTKToONNX(ToLegacyString(ToUTF8(gActivation->OpName())));
 }
 
 void TraceRNNPathes(const FunctionPtr &src, string &activation,
@@ -1059,17 +1150,17 @@ void TraceRNNPathes(const FunctionPtr &src, string &activation,
     }
     else
     {
-        CNTK::LogicError("Node %s (%s) is not a valid RNN node", ToString(src->Name()).c_str(), ToString(src->Uid()).c_str());
+        CNTK::LogicError("Node %s (%s) is not a valid RNN node", ToLegacyString(ToUTF8(src->Name())).c_str(), ToLegacyString(ToUTF8(src->Uid())).c_str());
     }
 
     FunctionPtr activationFunction = src->BlockRoot();
-    activation = MapActivationNameCNTKToONNX(ToString(activationFunction->OpName()));
+    activation = MapActivationNameCNTKToONNX(ToLegacyString(ToUTF8(activationFunction->OpName())));
 }
 
 std::vector<FunctionPtr> GetRNNBlocksFromSingleOrBidirectionalRNN(const FunctionPtr src, const std::string &RNNStepOpName)
 {
     std::vector<FunctionPtr> rnns;
-    if (ToString(src->OpName()) == RNNStepOpName)
+    if (ToLegacyString(ToUTF8(src->OpName())) == RNNStepOpName)
     {
         rnns.push_back(src);
     }
@@ -1088,7 +1179,7 @@ std::vector<FunctionPtr> GetRNNBlocksFromSingleOrBidirectionalRNN(const Function
     // For single direction RNN,  rnns.size() == 1. For bidirectional RNN, rnns.size() == 2.
     // It is an error otherwise.
     if (rnns.size() == 0 || rnns.size() > 2 ||
-        std::any_of(rnns.cbegin(), rnns.cend(), [RNNStepOpName](const FunctionPtr &f) { return ToString(f->OpName()) != RNNStepOpName; }))
+        std::any_of(rnns.cbegin(), rnns.cend(), [RNNStepOpName](const FunctionPtr &f) { return ToLegacyString(ToUTF8(f->OpName())) != RNNStepOpName; }))
     {
         CNTK::LogicError("Invalid number of RNN ops to construct an ONNX %s node.", RNNStepOpName.c_str());
     }

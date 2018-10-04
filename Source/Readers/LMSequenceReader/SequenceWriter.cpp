@@ -137,7 +137,7 @@ void LMSequenceWriter<ElemType>::Save(std::wstring& outputFile, const Matrix<Ele
     {
         FILE* ofs;
         msra::files::make_intermediate_dirs(outputFile);
-        string str(outputFile.begin(), outputFile.end());
+        string str(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(outputFile)));
         ofs = fopen(str.c_str(), "wt");
         if (ofs == nullptr)
             RuntimeError("Cannot open %s for writing", str.c_str());

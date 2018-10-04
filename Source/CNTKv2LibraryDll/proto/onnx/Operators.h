@@ -10,10 +10,19 @@
 
 #include <set>
 
-namespace ONNXIR
+namespace onnxruntime
 {
 class Graph;
 }
+
+// ONNX reshape spec: In this case, the value is inferred from the size of the tensor and the remaining dimensions
+const int64_t ReshapeInferredDim = -1;
+// ONNX reshape spec: the actual dimension value is unchanged(i.e.taken from the input tensor).
+const int64_t ReshapeKeepInputDim = 0;
+const std::string FreeSequenceDimParam = "Sequence";
+const size_t numBiasInOnnxLstm = 2; // bias for W, and bias for R (also called H in CNTK).
+                                    // TODO: support cases where batch size is not 1.
+const int FreeBatchSize = 1;
 
 namespace CNTK
 {
@@ -68,6 +77,23 @@ public:
     {
         return _optimizedRnnOpNameToOnnxOpName;
     }
+
+    //
+    // Check if this CNTK op corresponds to an ONNX op that has a defined batch axis.
+    //
+    static inline bool IsOpExportedWithBatchAxis(const std::wstring& opName)
+    {
+        return _cntkOpsExportedWithBatchAxis.find(opName) != _cntkOpsExportedWithBatchAxis.end();
+    }
+
+    //
+    // Check if the ONNX op is a simple op with batch axis.
+    //
+    static inline bool IsSimpleBatchAxisOnnxOp(const std::string& opName)
+    {
+        return _onnxSimpleBatchAxisOps.find(opName) != _onnxSimpleBatchAxisOps.end();
+    }
+
 
     static std::tuple<int, int> GetElementWiseInputIndices(const std::wstring& opName);
 
@@ -134,6 +160,8 @@ private:
     static std::set<std::wstring>_optimizedRnnStackOpNames;
     static std::unordered_map<std::wstring, std::string> _optimizedRnnOpNameToOnnxOpName;
     static std::set<std::wstring> _cntkLayerOPName;
+    static std::set<std::wstring> _cntkOpsExportedWithBatchAxis;
+    static std::set<std::string> _onnxSimpleBatchAxisOps;
 };
 
 } // namespace ONNX

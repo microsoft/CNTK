@@ -16,5 +16,8 @@ namespace CNTK
     public:
         static void Save(const FunctionPtr& src, const std::wstring& filepath);
         static FunctionPtr Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+    private:
+        static void InitializeLotusIR();
+        static std::once_flag op_schema_initializer_flag_;
     };
 }

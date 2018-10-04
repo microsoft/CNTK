@@ -698,7 +698,7 @@ void renameOrDie(const std::wstring& from, const std::wstring& to)
 void copyOrDie(const string& from, const string& to)
 {
     // Call wide string implementation.
-    copyOrDie(s2ws(from), s2ws(to));
+    copyOrDie(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(from), Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(to));
 }
 
 void copyOrDie(const wstring& from, const wstring& to)
@@ -881,7 +881,7 @@ CHAR* fgetline(FILE* f, CHAR* buf, int size)
     {
         basic_string<CHAR> example(p, n < 100 ? n : 100);
         uint64_t filepos = fgetpos(f); // (for error message only)
-        RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int) filepos, (int) size - 1, msra::strfun::utf8(example).c_str());
+        RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int) filepos, (int) size - 1, Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(example)).c_str());
     }
 
     // remove newline at end
@@ -1933,7 +1933,7 @@ void expand_wildcards(const wstring& path, vector<wstring>& paths)
 
     for (unsigned int i = 0; i < globResult.gl_pathc; ++i)
     {
-        paths.push_back(msra::strfun::utf16(globResult.gl_pathv[i]));
+        paths.push_back(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(globResult.gl_pathv[i]));
     }
     globfree(&globResult);
 #endif
@@ -2022,7 +2022,7 @@ std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::w
     if (dwError != ERROR_NO_MORE_FILES)
         RuntimeError("Error iterating directory '%ls'", directory.c_str());
 #else
-    std::string d = msra::strfun::utf8(directory);
+    std::string d = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(directory));
     auto dirp = opendir(d.c_str());
     dirent *dp = nullptr;
     struct stat st = {};
@@ -2040,7 +2040,7 @@ std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::w
         if ((st.st_mode & S_IFDIR) != 0)
             continue;
 
-        result.push_back(msra::strfun::utf16(fileName));
+        result.push_back(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(fileName));
     }
     closedir(dirp);
 #endif
@@ -2111,27 +2111,4 @@ static inline std::wstring mbstowcs(const std::string& p) // input: MBCS
     // OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);
-}
-
-wstring s2ws(const string& str)
-{
-#ifdef __unix__
-    return mbstowcs(str);
-#else
-    typedef std::codecvt_utf8<wchar_t> convert_typeX;
-    std::wstring_convert<convert_typeX, wchar_t> converterX;
-    return converterX.from_bytes(str);
-
-#endif
-}
-
-string ws2s(const wstring& wstr)
-{
-#ifdef __unix__
-    return wcstombs(wstr);
-#else
-    typedef codecvt_utf8<wchar_t> convert_typeX;
-    wstring_convert<convert_typeX, wchar_t> converterX;
-    return converterX.to_bytes(wstr);
-#endif
 }

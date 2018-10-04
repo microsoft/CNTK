@@ -590,6 +590,28 @@ def test_gather_op_with_axis(device_id, precision):
     assert np.allclose(output, z)
 
 
+def test_gather_op_backward(device_id, precision):
+    a_data = [AA([[0],[1]], dtype=PRECISION_TO_TYPE[precision]),
+              AA([[3],[4]], dtype=PRECISION_TO_TYPE[precision])]
+    a = C.input_variable((2,1), dtype=PRECISION_TO_TYPE[precision])
+    r_data = np.arange(12).reshape(6,2).astype(PRECISION_TO_TYPE[precision])
+    r = C.parameter(shape=r_data.data, init=r_data)
+    g = C.gather(r, a)
+    grad = g.grad(a_data, wrt=[r])
+    expectd = np.asarray([[1., 1.], [1., 1.], [0., 0.], [1., 1.], [1., 1.], [0., 0.]]).astype(PRECISION_TO_TYPE[precision])
+    assert np.array_equal(grad, expectd)
+
+    # test without dynamic axis
+    data = np.array([ [1.0, 1.2, 1.9], [2.3, 3.4, 3.9], [4.5, 5.7, 5.9], ]).astype(PRECISION_TO_TYPE[precision])
+    indices = np.array([ 0, 2]).astype(PRECISION_TO_TYPE[precision]).astype(PRECISION_TO_TYPE[precision])
+    expectd = np.array([[1., 1., 1.], [0., 0., 0.], [1., 1., 1.]]).astype(PRECISION_TO_TYPE[precision])
+    x = C.input_variable(dynamic_axes=[], shape=(3,3), needs_gradient=True, dtype=PRECISION_TO_TYPE[precision])
+    i = C.constant(indices, dtype=PRECISION_TO_TYPE[precision])
+    y = C.gather(x, i)
+    grad = y.grad(data, wrt=[x])
+    assert np.allclose(expectd, grad)
+
+
 def test_convert_dynamic_axis():
     #test fix batch size
     batch_size = 4

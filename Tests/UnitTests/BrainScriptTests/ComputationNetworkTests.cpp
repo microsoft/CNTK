@@ -53,7 +53,7 @@ void compareNetworks(const wstring & modelPath)
     BOOST_TEST(actualNetwork == expectedNetwork, boost::test_tools::per_element());
 
     actualNetworkStream.close();
-    remove(ws2s(actualNetworkPath).c_str());
+    remove(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(actualNetworkPath)).c_str());
 }
 
 BOOST_AUTO_TEST_CASE(CompareNetworkStructureFromModel)

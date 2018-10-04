@@ -446,7 +446,7 @@ const std::wstring& Section::GetName()
         return m_name;
 
     // if name is not set yet, get it from the description header
-    std::wstring nameDescription(msra::strfun::utf16(m_sectionHeader->nameDescription));
+    std::wstring nameDescription(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(m_sectionHeader->nameDescription));
     auto firstColon = nameDescription.find_first_of(L':');
     if (firstColon != npos && nameDescription.size() >= firstColon)
     {

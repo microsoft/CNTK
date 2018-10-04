@@ -82,7 +82,7 @@
  
 -%typemap(in) wchar_t * %{ $1 = ($1_ltype)$input; %}
 +%typemap(in) wchar_t * 
-+%{ std::wstring $1_buffer(UTF8ToWString(reinterpret_cast<char const *>($input)));
++%{ std::wstring $1_buffer(UTF16ToWString($input));
 +   $1 = const_cast<wchar_t *>($1_buffer.c_str());  %}
 +
  %typemap(out) wchar_t * %{ $result = (wchar_t *)$1; %}

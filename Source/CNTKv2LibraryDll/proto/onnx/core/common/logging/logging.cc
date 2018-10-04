@@ -1,6 +1,9 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 #include <exception>
 #include <ctime>
-#include "core/common/CommonSTD.h"
+
 #include "core/common/exceptions.h"
 #include "core/common/logging/isink.h"
 #include "core/common/logging/logging.h"
@@ -12,10 +15,10 @@
 #include <sys/syscall.h>
 #endif
 
-namespace Lotus {
+namespace onnxruntime {
 namespace Logging {
-const char *Category::Lotus = "Lotus";
-const char *Category::System = "System";
+const char* Category::onnxruntime = "onnxruntime";
+const char* Category::System = "System";
 
 using namespace std::chrono;
 
@@ -26,13 +29,13 @@ a static LoggingManager is created at startup, the file scope statics here may n
 initialized.
 */
 
-static std::atomic<void *> &DefaultLoggerManagerInstance() noexcept {
+static std::atomic<void*>& DefaultLoggerManagerInstance() noexcept {
   // this atomic is to protect against attempts to log being made after the default LoggingManager is destroyed.
   // Theoretically this can happen if a Logger instance is still alive and calls Log via its internal
   // pointer to the LoggingManager.
   // As the first thing LoggingManager::Log does is check the static DefaultLoggerManagerInstance() is not null,
   // any further damage should be prevented (in theory).
-  static std::atomic<void *> default_instance;
+  static std::atomic<void*> default_instance;
   return default_instance;
 }
 
@@ -44,12 +47,12 @@ static std::atomic<void *> &DefaultLoggerManagerInstance() noexcept {
 #pragma warning(disable : 26426)
 #endif
 
-static std::mutex &DefaultLoggerMutex() noexcept {
+static std::mutex& DefaultLoggerMutex() noexcept {
   static std::mutex mutex;
   return mutex;
 }
 
-std::unique_ptr<Logger> &LoggingManager::GetDefaultLogger() noexcept {
+std::unique_ptr<Logger>& LoggingManager::GetDefaultLogger() noexcept {
   static std::unique_ptr<Logger> default_logger;
   return default_logger;
 }
@@ -58,9 +61,9 @@ std::unique_ptr<Logger> &LoggingManager::GetDefaultLogger() noexcept {
 #pragma warning(pop)
 #endif
 
-static minutes InitLocaltimeOffset(const time_point<system_clock> &epoch) noexcept;
+static minutes InitLocaltimeOffset(const time_point<system_clock>& epoch) noexcept;
 
-const LoggingManager::Epochs &LoggingManager::GetEpochs() noexcept {
+const LoggingManager::Epochs& LoggingManager::GetEpochs() noexcept {
   // we save the value from system clock (which we can convert to a timestamp) as well as the high_resolution_clock.
   // from then on, we use the delta from the high_resolution_clock and apply that to the
   // system clock value.
@@ -71,7 +74,7 @@ const LoggingManager::Epochs &LoggingManager::GetEpochs() noexcept {
 }
 
 LoggingManager::LoggingManager(std::unique_ptr<ISink> sink, Severity default_min_severity, bool filter_user_data,
-                               const InstanceType instance_type, const std::string *default_logger_id,
+                               const InstanceType instance_type, const std::string* default_logger_id,
                                int default_max_vlog_level)
     : sink_{std::move(sink)},
       default_min_severity_{default_min_severity},
@@ -117,10 +120,10 @@ LoggingManager::~LoggingManager() {
   }
 }
 
-void LoggingManager::CreateDefaultLogger(const std::string &logger_id) {
+void LoggingManager::CreateDefaultLogger(const std::string& logger_id) {
   // this method is only called from ctor in scope where DefaultLoggerMutex() is already locked
 
-  unique_ptr<Logger> &default_logger{GetDefaultLogger()};
+  std::unique_ptr<Logger>& default_logger{GetDefaultLogger()};
 
   if (default_logger != nullptr) {
     throw std::logic_error("Default logger already set. ");
@@ -141,11 +144,11 @@ std::unique_ptr<Logger> LoggingManager::CreateLogger(std::string logger_id,
   return logger;
 }
 
-void LoggingManager::Log(const std::string &logger_id, const Capture &message) const {
+void LoggingManager::Log(const std::string& logger_id, const Capture& message) const {
   sink_->Send(GetTimestamp(), logger_id, message);
 }
 
-static minutes InitLocaltimeOffset(const time_point<system_clock> &epoch) noexcept {
+static minutes InitLocaltimeOffset(const time_point<system_clock>& epoch) noexcept {
   // convert the system_clock time_point (UTC) to localtime and gmtime to calculate the difference.
   // we do this once, and apply that difference in GetTimestamp().
   // NOTE: If we happened to be running over a period where the time changed (e.g. daylight saving started)
@@ -169,15 +172,15 @@ static minutes InitLocaltimeOffset(const time_point<system_clock> &epoch) noexce
   return minutes{static_cast<int64_t>(seconds / 60)};
 }
 
-std::exception LoggingManager::LogFatalAndCreateException(const char *category,
-                                                          const CodeLocation &location,
-                                                          const char *format_str, ...) {
+std::exception LoggingManager::LogFatalAndCreateException(const char* category,
+                                                          const CodeLocation& location,
+                                                          const char* format_str, ...) {
   std::string exception_msg;
 
   // create Capture in separate scope so it gets destructed (leading to log output) before we throw.
   {
-    Lotus::Logging::Capture c{Lotus::Logging::LoggingManager::DefaultLogger(),
-                              Lotus::Logging::Severity::kFATAL, category, Lotus::Logging::DataType::SYSTEM, location};
+    ::onnxruntime::Logging::Capture c{::onnxruntime::Logging::LoggingManager::DefaultLogger(),
+                                      ::onnxruntime::Logging::Severity::kFATAL, category, ::onnxruntime::Logging::DataType::SYSTEM, location};
     va_list args;
     va_start(args, format_str);
 
@@ -192,9 +195,9 @@ std::exception LoggingManager::LogFatalAndCreateException(const char *category,
 
 unsigned int GetThreadId() {
 #ifdef _WIN32
-  return (unsigned int)GetCurrentThreadId();
+  return static_cast<unsigned int>(GetCurrentThreadId());
 #else
-  return (unsigned int)syscall(SYS_gettid);
+  return static_cast<unsigned int>(syscall(SYS_gettid));
 #endif
 }
 
@@ -203,11 +206,11 @@ unsigned int GetThreadId() {
 //
 unsigned int GetProcessId() {
 #ifdef _WIN32
-  return (unsigned int)GetCurrentProcessId();
+  return static_cast<unsigned int>(GetCurrentProcessId());
 #else
-  return (unsigned int)syscall(SYS_getpid);
+  return static_cast<unsigned int>(syscall(SYS_getpid));
 #endif
 }
 
 }  // namespace Logging
-}  // namespace Lotus
+}  // namespace onnxruntime

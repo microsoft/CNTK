@@ -2109,7 +2109,15 @@ public:
                 row_elements *= dims[i];
             }
 
-            sourceGradient.ScatterToIndices(outputGradient, indices, row_elements);
+            if (InputRef(0).HasMBLayout())
+            {
+                const auto& indicesMask = InputRef(0).GetMBLayout()->GetColumnsValidityMask(indices.GetDeviceId());
+                sourceGradient.ScatterToIndices(outputGradient, indices, row_elements, &indicesMask);
+            }
+            else
+            {
+                sourceGradient.ScatterToIndices(outputGradient, indices, row_elements);
+            }
         }
         else
         {

@@ -50,8 +50,7 @@ void DoCommand(const ConfigParameters& configRoot)
     Eval<ElemType> eval(config);
 
     auto dataReader = make_shared<DataReader>(readerConfig);
-    string strPath(modelPath.begin(), modelPath.end());
-    eval.CreateNetwork(strPath);
+    eval.CreateNetwork(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(modelPath)));
     dataReader->StartMinibatchLoop(mbSize, 0, inputMatrices.GetStreamDescriptions(), epochSize);
     eval.StartEvaluateMinibatchLoop(outputName);
     while (dataReader->GetMinibatch(inputMatrices))

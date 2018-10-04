@@ -84,6 +84,10 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         m_packingMode = PackingMode::sequence;
     }
 
+    m_rightSplice = config(L"rightSplice", 0);
+    if (m_rightSplice > m_truncationLength)
+        InvalidArgument("rightSplice should not be greater than truncation length");
+
     m_precision = config("precision", "float");
 
     // Creating deserializers.
@@ -309,7 +313,7 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
         if (inputBody.find("transforms") == inputBody.end())
             continue;
 
-        std::wstring inputName = msra::strfun::utf16(section.first);
+        std::wstring inputName = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(section.first);
 
         // Read transformers in order and appending them to the transformer pipeline.
         argvector<ConfigParameters> transforms = inputBody("transforms");
@@ -356,6 +360,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg, const std::m
     if (m_packingMode == PackingMode::truncated)
     {
         config.m_truncationSize = m_truncationLength;
+        config.m_rightSplice = m_rightSplice;
     }
 
     ReaderBase::StartEpoch(config, inputDescriptions);

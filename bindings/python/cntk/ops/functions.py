@@ -534,9 +534,31 @@ class Function(cntk_py.Function):
     @typemap
     def arguments(self):
         '''
-        List of all input variables of the Function that are not of type Parameter or Constant
+        List of all input variables of the Function that are not of type Parameter or Constant.
+        
+        Note that due to the different matrix storage format in C++(column major) and Python(row major),
+        the order of arguments for some ops(Times, TransposeTimes, and Gemm) in C++ and Python are not the same. 
+        In previous CNTK versions, the default for this api was to return arguments in C++ order. 
+        Now the default for this api is set to python order. This way it will return arguments in the same order as they are fed into ops.
+        If you wish to still get arguments in C++ order, you can simply override the global option.
+        
+        Example:
+         >>> import cntk as C
+         >>> a = C.input_variable((3,4), name='a')
+         >>> b = C.input_variable((4,5), name='b')
+         >>> c = C.times(a, b)
+         >>> c.arguments    # python order
+             (Input('a', [#], [3 x 4]), Input('b', [#], [4 x 5]))
+
+         >>> from cntk.default_options import set_global_option
+         >>> set_global_option('python_operand_order', False)
+         >>> c.arguments    # C++ order
+             (Input('b', [#], [4 x 5]), Input('a', [#], [3 x 4]))
+
         '''
-        return super(Function, self).arguments()
+        from ..default_options import get_global_option
+        python_operand_order = get_global_option('python_operand_order', True)
+        return super(Function, self).arguments(python_operand_order)
 
     @property
     @typemap
@@ -636,6 +658,9 @@ class Function(cntk_py.Function):
         substitutions = substitutions or {}
         if not isinstance(substitutions, dict):
             raise TypeError("Variable substitution map must be a dictionary")
+        for prev_node, new_node in substitutions.items():
+            if not new_node or not prev_node:
+                raise AttributeError("Cannot replace node: " + str(prev_node) + " with node: " + str(new_node) + ". Neither node can be None.")
         return super(Function, self).clone(method, substitutions)
 
     @property

@@ -499,6 +499,18 @@ def test_op_gather_sparse(device_id):
     assert np.array_equal(res, [[[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1]], [[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0]], [[1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]]])
 
 
+def test_op_gather_grad(device_id):
+    dim = 10
+    ii = C.sequence.input_variable(())
+    param = C.parameter((dim, 1), init=np.reshape(np.arange(dim), (dim,1)).astype(np.float32))
+    ss = C.gather(param, ii)
+    data = [[0], [0,1,2], [1,2,3,4,5, 6]]
+    grad1 = ss.grad(data, wrt=[param])
+    ss2 = C.times(C.one_hot(ii, num_classes=dim, sparse_output=False), param)
+    grad2 = ss2.grad(data, wrt=[param])
+    assert np.array_equal(grad1, grad2)
+
+
 def test_op_scatter_sparse(device_id):
     input_sparse_indices = [[1, 3, 5, 5], [2, 4], [0, 2]]
     vocab_size = 6

@@ -13,7 +13,7 @@ namespace CNTK.CSTrainingExamples
         /// Execution folder is: CNTK/x64/BuildFolder
         /// Data folder is: CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data
         /// </summary>
-        public static string DataFolder = "../../Tests/EndToEndTests/Text/SequenceClassification/Data";
+        public static string DataFolder = TestCommon.TestDataDirPrefix + "Tests/EndToEndTests/Text/SequenceClassification/Data";
 
         /// <summary>
         /// Build and train a RNN model.

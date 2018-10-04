@@ -15,6 +15,7 @@
 #include "Serialization.h"
 #include <fcntl.h>
 #include "PrimitiveFunction.h"
+#include "PrimitiveFunctionAttribute.h"
 #include "RecurrentNodes.h"
 #include "Value.h"
 #include "CompositeFunction.h"
@@ -235,6 +236,24 @@ namespace CNTK
     bool Dictionary::operator!=(const Dictionary& other) const
     {
         return !(*this == other);    
+    }
+
+    void SetConvolutionProperties(Dictionary& additionalProperties, const NDShape& strides, const std::vector<bool>& sharing, 
+        const std::vector<bool>& autoPadding, const std::vector<size_t>& lowerPad, const std::vector<size_t>& upperPad,
+        const NDShape& dilation, bool sequential, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples)
+    {
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameDilation] = dilation;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSequential] = sequential;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLowerPad] = NDShape(lowerPad);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameUpperPad] = NDShape(upperPad);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameTranspose] = transpose;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameOutputShape] = outputShape;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameKernelShape] = NDShape({0});
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameGroups] = groups;
     }
 
     std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType)
@@ -462,38 +481,12 @@ namespace CNTK
         mode = mode | O_BINARY;
         fd = _wopen(filePath.c_str(), mode, 0644);
 #else
-        fd = open(ToString(filePath).c_str(), mode, 0644);
+        fd = open(ToLegacyString(ToUTF8(filePath)).c_str(), mode, 0644);
 #endif
         if (fd < 0)
             RuntimeError("Cannot open file '%S' for %s.", filePath.c_str(), (readOnly ? "reading" : "writing"));
 
         return fd;
-    }
-
-    std::string ToString(const std::wstring& wstring)
-    {
-#ifdef _MSC_VER
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-        return converter.to_bytes(wstring);
-#else
-        const auto length = wstring.length() * sizeof(std::wstring::value_type) + 1;
-        char buf[length];
-        const auto res = std::wcstombs(buf, wstring.c_str(), sizeof(buf));
-        return (res >= 0) ? buf : "";
-#endif
-    }
-
-    std::wstring ToWString(const std::string& string)
-    {
-#ifdef _MSC_VER
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-        return converter.from_bytes(string);
-#else
-        const auto length = string.length() + 1;
-        wchar_t buf[length];
-        const auto res = std::mbstowcs(buf, string.c_str(),  sizeof(buf));
-        return (res >= 0) ? buf : L"";
-#endif
     }
 
     bool IsFirstOutputOfMultiOutputFunction(const Variable& var)
@@ -924,6 +917,50 @@ namespace CNTK
         return GetValueObjectFromCNTKImplMatrixAndMBLayout(varShape, var.DynamicAxes(), matrix, layout, readOnly);
     }
 
+    template <typename SrcType, typename DstType>
+    Variable Utils::ConvertVariableType(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice)
+    {
+        auto value_cpu = stat.GetValue()->DeepClone(computeDevice.CPUDevice(), true);
+        auto srcData = value_cpu->DataBuffer<SrcType>();
+
+        auto totalSize = stat.Shape().TotalSize();
+
+        //TODO: Consider using a vector/unique_ptr here to avoid potential memory leaks
+        DstType *dstData = new DstType[totalSize];
+
+        for (size_t index = 0; index < totalSize; index++)
+        {
+            dstData[index] = (DstType)(srcData[index]);
+        }
+
+        NDShape shape = stat.Shape();
+        if (reverseShape)
+        {
+            vector<size_t> shapeDims = shape.Dimensions();
+            std::reverse(shapeDims.begin(), shapeDims.end());
+            shape = shapeDims;
+        }
+
+        NDArrayViewPtr dstFinal(MakeSharedObject<NDArrayView>(AsDataType<DstType>(), shape, &dstData[0],
+            totalSize * sizeof(DstType), computeDevice.CPUDevice()));
+
+        if (computeDevice.Type() == DeviceKind::CPU)
+        {
+            Constant constantVariable(dstFinal);
+            return constantVariable;
+        }
+        else
+        {
+            NDArrayViewPtr dstFinalGPU(MakeSharedObject<NDArrayView>(AsDataType<DstType>(), StorageFormat::Dense, shape, computeDevice));
+            dstFinalGPU->CopyFrom(*dstFinal);
+            Constant constantVariable(dstFinalGPU);
+            return constantVariable;
+        }
+    }
+
+    template Variable Utils::ConvertVariableType<float, float16>(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice);
+    template Variable Utils::ConvertVariableType<float16, float>(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice);
+
     std::vector<Axis> GetSqueezableAxes(const NDShape& inputShape)
     {
         std::vector<Axis> axes;
@@ -978,9 +1015,9 @@ namespace CNTK
     NDShape GetSqueezedShape(const NDShape& inputShape, const Dictionary& squeezeConfig)
     {
         // collect all indices that need to be squeezed
-        if (squeezeConfig.Contains(PrimitiveFunction::AttributeNameAxisVec))
+        if (squeezeConfig.Contains(PrimitiveFunctionAttribute::AttributeNameAxisVec))
         {
-            auto axes = AsVector<Axis>(squeezeConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+            auto axes = AsVector<Axis>(squeezeConfig[PrimitiveFunctionAttribute::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
             return GetSqueezedShape(inputShape, axes);
         }
         else

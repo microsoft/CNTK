@@ -1,9 +1,11 @@
-#include "core/common/CommonSTD.h"
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
+
 #include "core/common/status.h"
 #include "core/common/common.h"
 
-namespace Lotus {
-namespace Common {
+namespace onnxruntime {
+namespace common {
 Status::Status(StatusCategory category, int code, const std::string& msg) {
   // state_ will be allocated here causing the status to be treated as a failure
   LOTUS_ENFORCE(code != static_cast<int>(MLStatus::OK));
@@ -20,11 +22,11 @@ bool Status::IsOK() const noexcept {
 }
 
 StatusCategory Status::Category() const noexcept {
-  return IsOK() ? StatusCategory::NONE : state_->category;
+  return IsOK() ? common::NONE : state_->category;
 }
 
 int Status::Code() const noexcept {
-  return IsOK() ? static_cast<int>(StatusCode::OK) : state_->code;
+  return IsOK() ? static_cast<int>(common::OK) : state_->code;
 }
 
 const std::string& Status::ErrorMessage() const noexcept {
@@ -38,11 +40,11 @@ std::string Status::ToString() const {
 
   std::string result;
 
-  if (StatusCategory::SYSTEM == state_->category) {
+  if (common::SYSTEM == state_->category) {
     result += "SystemError";
     result += " : ";
     result += std::to_string(errno);
-  } else if (StatusCategory::LOTUS == state_->category) {
+  } else if (common::LOTUS == state_->category) {
     result += "[LotusError]";
     result += " : ";
     result += std::to_string(Code());
@@ -78,5 +80,5 @@ const std::string& Status::EmptyString() noexcept {
 #pragma warning(pop)
 #endif
 
-}  // namespace Common
-}  // namespace Lotus
+}  // namespace common
+}  // namespace onnxruntime
