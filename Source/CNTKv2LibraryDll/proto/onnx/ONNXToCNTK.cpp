@@ -1993,14 +1993,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Sum")
     {
-        // TODO: this is experimental code to load Facebook Caffe models.
-        // Need to investigate cases here operands' dimensions do not match.
-        FunctionPtr cntkFunction = inputs[0];
-        for (int i = 1; i < inputs.size(); i++)
-        {
-            cntkFunction = Plus(cntkFunction, inputs[i]);
-        }
-        cntkFunction->SetName(ToFixedWStringFromMultiByte(node->Name()));
+        FunctionPtr cntkFunction = Sum(inputs, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "HardSigmoid")
@@ -2396,7 +2389,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
                 input0 = ToBatchAndSequence(inputs[0], sequenceWrapperInputToFunctionPtr);
             if (input1HasBatchAndSequenceAxes)
                 input1 = ToBatchAndSequence(inputs[1], sequenceWrapperInputToFunctionPtr);
-            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1, ToFixedWStringFromMultiByte(node->Name()));
             cntkFunction = UnpackBatchAndSequence(cntkFunction);
             return cntkFunction;
         }
@@ -2406,13 +2399,13 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
                 input0 = ToBatch(inputs[0], L"");
             if (input1HasFreeDimensionAt0Axes)
                 input1 = ToBatch(inputs[1], L"");
-            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1, ToFixedWStringFromMultiByte(node->Name()));
             cntkFunction = UnpackBatch(cntkFunction, L"");
             return cntkFunction;
         }
         else
         {
-            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1, ToFixedWStringFromMultiByte(node->Name()));
             return cntkFunction;
         }
     }
@@ -2965,7 +2958,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             }
         }();
         auto referent = Constant(targetShape, inputOperand0.GetDataType(), 0.0);
-        FunctionPtr cntkFunction = Crop(inputOperand0, referent, leftBorder, topBorder);
+        FunctionPtr cntkFunction = Crop(inputOperand0, referent, leftBorder, topBorder, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else
