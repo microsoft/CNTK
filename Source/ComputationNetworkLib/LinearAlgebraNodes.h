@@ -53,14 +53,14 @@ class BiVfsmnNode : public ComputationNode<ElemType>, public NumInputs<3>
 public:
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name),
-          m_flags(deviceId)
+          m_flags(1, 32768+8192, deviceId)
     {
     }
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride)
         : Base(deviceId, name),
           m_lOrder(lOrder), m_rOrder(rOrder),
           m_lStride(lStride), m_rStride(rStride),
-          m_flags(deviceId)
+          m_flags(1, 32768+8192, deviceId)
     {
     }
     BiVfsmnNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -101,9 +101,10 @@ public:
         if (hidMaxLen * paraNum != nFrames) {
             LogicError("[BiVfsmnNode] construct flag matrix related error.");
         }
-        m_flags.Resize(1, nFrames);
+        // m_flags.Resize(1, nFrames);
         size_t count = 0;
-
+        int curDevId = m_flags.GetDeviceId();
+        m_flags.TransferFromDeviceToDevice(curDevId, CPUDEVICE, false, false, false); 
         for (size_t i = 0; i < hidSequences.size(); ++i)
         {
             let& hidSeq = hidSequences[i];
@@ -122,6 +123,7 @@ public:
                 ++count;
             }
         }
+        m_flags.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
         if (count != nFrames) {
             LogicError("[BiVfsmnNode] not construct full flag matrix.");
         }
