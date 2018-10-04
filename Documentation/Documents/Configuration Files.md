@@ -1154,7 +1154,7 @@ The key class that is used to allow the JIT evaluation of configuration strings 
 
 Configuration files are mainly made up of a hierarchy of Configuration Sets (*ConfigParameters*), which are dictionaries of *ConfigValue*. This class provides access to the configuration values and automatically searches up the hierarchy of ConfigParameter classes if a value is not found on the current level. The hierarchy is maintained by the order of class instantiations on the stack. ConfigParameters should only be created on the stack.
 
-In configuration files the ‘name=value’ named pair are usually separated by newlines. However, they also can be separated by other characters and placed on the same line. The default separator for ConfigParmeters is a ‘;’ (semicolon). This can be overridden by placing the alternate separator character immediately following the opening brace. For example ‘\[|’ causes ‘|’ to be the separator for that ConfigParameter instance:
+In configuration files the ‘name=value’ named pair are usually separated by newlines. However, they also can be separated by other characters and placed on the same line. The default separator for ConfigParameters is a ‘;’ (semicolon). This can be overridden by placing the alternate separator character immediately following the opening brace. For example ‘\[|’ causes ‘|’ to be the separator for that ConfigParameter instance:
 
 ```
 name=[|parameter1=value1|parameter2=value2|parameter3=value3]
@@ -1268,7 +1268,7 @@ void DoTrain(const ConfigParameters& config)
 }
 ```
 
-The code above is very easy to code, you simply delare a config, or basic type variable on the stack and assign something from a ConfigParameters class to that variable (i.e. int i = config(”setting”,”default”). Both parameters with defaults and those that don’t are used in the sample code above. The ConfigValue class takes care of parsing the value to be the correct type, and is returned by config() references above.
+The code above is very easy to code, you simply declare a config, or basic type variable on the stack and assign something from a ConfigParameters class to that variable (i.e. int i = config(”setting”,”default”). Both parameters with defaults and those that don’t are used in the sample code above. The ConfigValue class takes care of parsing the value to be the correct type, and is returned by config() references above.
 
 The Config classes are meant to be used on the stack as shown in this example. Storing them in member variables or allocating using ‘new’ or other methods is not supported. The reason for this is an internal pointer is used to link to parent instances of config classes. This allows us to trace “up the stack” and look at all the config parameters that exist at a higher level. Since our search traverses up the stack, we need to ensure that all the parent configuration classes still exist, which is guaranteed if all config parameters are stack allocated and have lifetimes that extend past any children.
 

@@ -1939,7 +1939,7 @@ In configuration files the ‘name=value’ named pair are usually separated
  by newlines.
  However, they also can be separated by other characters and placed on the
  same line.
- The default separator for ConfigParmeters is a ‘;’ (semicolon).
+ The default separator for ConfigParameters is a ‘;’ (semicolon).
  This can be overridden by placing the alternate separator character immediately
  following the opening brace.
  For example ‘[|’ causes ‘|’ to be the separator for that ConfigParameter

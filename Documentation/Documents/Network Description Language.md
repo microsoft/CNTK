@@ -739,7 +739,7 @@ This node will often be tagged as an “Eval” node to allow the CNTK to print 
 
 ### Dropout
 
-Compute a new matrix with *dropoutRate* perecent set to zero. The values that are set to zero are randomly chosen. This is commonly used to prevent overfitting during the training process.
+Compute a new matrix with *dropoutRate* percent set to zero. The values that are set to zero are randomly chosen. This is commonly used to prevent overfitting during the training process.
 
 `Dropout(matrix)`
 
@@ -878,7 +878,7 @@ PastValue and FutureValue nodes are used in recurrent networks, allow creation o
 
 `timeStep` – \[default = 1\] number of time steps toward the past and future
 
-`defaultHiddenActivity` – \[default = 0.1\] default value to use when passing the sequence bounday or when the value is missing.
+`defaultHiddenActivity` – \[default = 0.1\] default value to use when passing the sequence boundary or when the value is missing.
 
 #### Returns
 
