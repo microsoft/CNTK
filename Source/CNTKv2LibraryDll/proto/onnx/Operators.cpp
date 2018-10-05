@@ -453,7 +453,6 @@ namespace ONNX
         { L"OneHotOp", { {
             { L"OneHotOp", "OneHotEncoder"},
         } } },
-        
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,

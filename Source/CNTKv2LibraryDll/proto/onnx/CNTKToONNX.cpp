@@ -4563,20 +4563,10 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOneHotOp(const FunctionPt
     if (src->Attributes().Contains(L"oneHotOutputSparse") && 
         (bool)src->Attributes()[L"oneHotOutputSparse"].Value<bool>())
         fprintf(stderr, "Warning: OneHotOp - 'oneHotOutputSparse' is set to true, but it will be exported as false in ONNX because ONNX does have sparse support.");
-    //int64_t onehotAxis = src->Attributes().Contains(L"onehotAxis") ?
-    //    ConvertAxisToOnnx((Axis)(src->Attributes()[L"onehotAxis"].Value<Axis>()), src->Inputs()[0]) : -1;
-
+    
     auto inputRank = src->Inputs()[0].Shape().Rank();
-
-    int64_t onehotAxis;
-    if (src->Attributes().Contains(L"onehotAxis"))
-    {
-        Axis onehotAxisAxis = (Axis)(src->Attributes()[L"onehotAxis"].Value<Axis>());
-        onehotAxis = inputRank - onehotAxisAxis.StaticAxisIndex();
-        // onehotAxis = ConvertAxisToOnnx(onehotAxisAxis, src->Inputs()[0]);
-    }
-    else
-        onehotAxis = -1;
+    int64_t onehotAxis = src->Attributes().Contains(L"onehotAxis") ?
+        inputRank - ((Axis)(src->Attributes()[L"onehotAxis"].Value<Axis>())).StaticAxisIndex(): -1;
 
     std::vector<onnxruntime::NodeArg*> inputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
@@ -4595,16 +4585,18 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOneHotOp(const FunctionPt
     oneHotNode->AddAttribute("cats_int64s", catsVector);
     oneHotNode->AddAttribute("zeros", static_cast<int64_t>(1)); // CNTK produces zeros for labels that are outside the range of numClass.
 
+    // If the deafult value for 'axis` attribute is not used,
+    // then insert a transpose node to achieve the effect, because
+    // ai.onnx.ml.OneHotEncoder does not support 'axis' yet.
     onnxruntime::Node* outputNode;
     if (needsTransposeNode)
     {
-        auto onnxInputRank = inputRank + src->Inputs()[0].DynamicAxes().size();
+        auto onnxInputRank = inputRank + src->Inputs()[0].DynamicAxes().size(); // Total rank including the dynamic axes
+        // CNTK op's 'axis' canot be used for dynamic axes and does not take them into account.
+        // So, we need to offset the 'axis' value by the number of dynamic axes.
         auto onnxAxis = onehotAxis + src->Inputs()[0].DynamicAxes().size();
         auto onnxOutputRank = onnxInputRank + 1;
-        //std::vector<int64_t> permVector(onnxOutputRank);
-        //std::iota(permVector.begin(), permVector.end(), 0);
-        ////std::swap(permVector[onnxOutputRank -1], permVector[onnxAxis]); // swap the last dimension to onnxAxis index.
-        //std::rotate(permVector.rbegin(), permVector.rbegin() + onnxAxis + 1, permVector.rend()); // Right circular shift.
+        //Create the 'erm' vector for transpose node.
         std::vector<int64_t> permVector(onnxOutputRank-1);
         std::iota(permVector.begin(), permVector.end(), 0);
         permVector.insert(permVector.begin() + onnxAxis, onnxOutputRank - 1);
