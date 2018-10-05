@@ -213,10 +213,10 @@ namespace CNTK
 
     public:
 
-        static const std::wstring AttributeNameLOrder = L"lOrder";
-        static const std::wstring AttributeNameROrder = L"rOrder";
-        static const std::wstring AttributeNameLStride = L"lStride";
-        static const std::wstring AttributeNameRStride = L"rStride";
+        static const std::wstring AttributeNameLOrder; // = L"lOrder";
+        static const std::wstring AttributeNameROrder; // = L"rOrder";
+        static const std::wstring AttributeNameLStride; // = L"lStride";
+        static const std::wstring AttributeNameRStride; // = L"rStride";
     
         static const size_t convolutionOpDefaultValueForGroups = 1;
 
