@@ -450,6 +450,9 @@ namespace ONNX
             { L"Crop", "Crop"},
             { L"offset", "border"},
         } } },
+        { L"OneHotOp", { {
+            { L"OneHotOp", "OneHotEncoder"},
+        } } },
         
     };
 
