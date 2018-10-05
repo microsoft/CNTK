@@ -450,7 +450,9 @@ namespace ONNX
             { L"Crop", "Crop"},
             { L"offset", "border"},
         } } },
-        
+        { L"OneHotOp", { {
+            { L"OneHotOp", "OneHotEncoder"},
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
