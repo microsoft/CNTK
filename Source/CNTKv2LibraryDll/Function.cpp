@@ -2808,10 +2808,10 @@ namespace CNTK
                         const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameLOrder] = lOrder;
-        additionalProperties[PrimitiveFunction::AttributeNameROrder] = rOrder;
-        additionalProperties[PrimitiveFunction::AttributeNameLStride] = lStride;
-        additionalProperties[PrimitiveFunction::AttributeNameRStride] = rStride;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLOrder] = lOrder;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameROrder] = rOrder;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLStride] = lStride;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameRStride] = rStride;
         std::vector<Variable> operands = { in, lFilter, rFilter };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BiVfsmn,
                                             operands,
