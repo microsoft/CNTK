@@ -4818,22 +4818,23 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemory(const GPUMatrix<ElemType>& in,   
                                                const GPUMatrix<ElemType>& l_filter,// DxN1 TODO: +1
                                                const GPUMatrix<ElemType>& r_filter,// DxN2
                                                const GPUMatrix<ElemType>& flags,   // 1xT
+                                               int flag_stride,
                                                int l_order, int r_order,
                                                int l_stride, int r_stride,
                                                GPUMatrix<ElemType>& out)
 {
-    assert(in.GetNumRows() == l_filter.GetNumRows());
-    assert(in.GetNumRows() == r_filter.GetNumRows());
-    assert(in.GetNumCols() == flags.GetNumCols());
-    assert(l_filter.GetNumCols() == l_order);
-    assert(r_filter.GetNumCols() == r_order);
+    if (in.GetNumRows() != l_filter.GetNumRows() || in.GetNumRows() != r_filter.GetNumRows() ||
+        in.GetNumCols() != flags.GetNumCols() || l_filter.GetNumCols() != l_order || r_filter.GetNumCols() != r_order)
+    {
+        LogicError("[ComputeBiVfsmnMemory] dim mismatch");
+    }
 
     CUDA_LONG N = (CUDA_LONG) out.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     out.PrepareDevice();
     SyncGuard syncGuard;
     _computeBiVfsmnMemory<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-        in.Data(), l_filter.Data(), r_filter.Data(), flags.Data(),
+        in.Data(), l_filter.Data(), r_filter.Data(), flags.Data(), flag_stride,
         N, (CUDA_LONG) out.GetNumRows(), (CUDA_LONG) out.GetNumCols(),
         (CUDA_LONG) l_order, (CUDA_LONG) r_order, (CUDA_LONG) l_stride, (CUDA_LONG) r_stride,
         out.Data());
@@ -4845,22 +4846,26 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemoryGradient(
     const GPUMatrix<ElemType>& l_filter,
     const GPUMatrix<ElemType>& r_filter,
     const GPUMatrix<ElemType>& flags,
+    int flag_stride,
     int l_order, int r_order,
     int l_stride, int r_stride,
     GPUMatrix<ElemType>& inputGradientValues)
 {
-    assert(gradientValues.GetNumRows() == l_filter.GetNumRows());
-    assert(gradientValues.GetNumRows() == r_filter.GetNumRows());
-    assert(gradientValues.GetNumCols() == flags.GetNumCols());
-    assert(l_filter.GetNumCols() == l_order);
-    assert(r_filter.GetNumCols() == r_order);
+    if (gradientValues.GetNumRows() != l_filter.GetNumRows()
+        || gradientValues.GetNumRows() != r_filter.GetNumRows()
+        || gradientValues.GetNumCols() != flags.GetNumCols()
+        || l_filter.GetNumCols() != l_order
+        || r_filter.GetNumCols() != r_order)
+    {
+        LogicError("[ComputeBiVfsmnMemoryGradient] dim mismatch");
+    }
 
     CUDA_LONG N = (CUDA_LONG) inputGradientValues.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     inputGradientValues.PrepareDevice();
     SyncGuard syncGuard;
     _computeBiVfsmnMemoryGradient<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-        gradientValues.Data(), l_filter.Data(), r_filter.Data(), flags.Data(),
+        gradientValues.Data(), l_filter.Data(), r_filter.Data(), flags.Data(), flag_stride,
         N, (CUDA_LONG) inputGradientValues.GetNumRows(), (CUDA_LONG) inputGradientValues.GetNumCols(),
         (CUDA_LONG) l_order, (CUDA_LONG) r_order, (CUDA_LONG) l_stride, (CUDA_LONG) r_stride,
         inputGradientValues.Data());
@@ -4871,11 +4876,15 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
     const GPUMatrix<ElemType>& gradientValues,
     const GPUMatrix<ElemType>& inputValues,
     const GPUMatrix<ElemType>& flags,
+    int flag_stride,
     int l_order, int l_stride,
     GPUMatrix<ElemType>& leftFilterGradientValues)
 {
-    assert(leftFilterGradientValues.GetNumRows() == gradientValues.GetNumRows());
-    assert(leftFilterGradientValues.GetNumCols() == l_order);
+    if (leftFilterGradientValues.GetNumRows() != gradientValues.GetNumRows()
+        || leftFilterGradientValues.GetNumCols() != l_order)
+    {
+        LogicError("[ComputeBiVfsmnLeftFilterGradient] dim mismatch");
+    }
 
     CUDA_LONG rows = (CUDA_LONG) gradientValues.GetNumRows();
     CUDA_LONG cols = (CUDA_LONG) gradientValues.GetNumCols();
@@ -4887,7 +4896,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
     SyncGuard syncGuard;
 
     _computeBiVfsmnLeftFilterGradient<ElemType><<<dimGrid, dimBlock, 0, t_stream>>>(
-        gradientValues.Data(), inputValues.Data(), flags.Data(),
+        gradientValues.Data(), inputValues.Data(), flags.Data(), flag_stride,
         (CUDA_LONG) rows, (CUDA_LONG) cols,
         (CUDA_LONG) l_order, (CUDA_LONG) l_stride,
         leftFilterGradientValues.Data());
@@ -4898,11 +4907,15 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
     const GPUMatrix<ElemType>& gradientValues,
     const GPUMatrix<ElemType>& inputValues,
     const GPUMatrix<ElemType>& flags,
+    int flag_stride,
     int r_order, int r_stride,
     GPUMatrix<ElemType>& rightFilterGradientValues)
 {
-    assert(rightFilterGradientValues.GetNumRows() == gradientValues.GetNumRows());
-    assert(rightFilterGradientValues.GetNumCols() == r_order);
+    if (rightFilterGradientValues.GetNumRows() != gradientValues.GetNumRows()
+        || rightFilterGradientValues.GetNumCols() != r_order)
+    {
+        LogicError("[ComputeBiVfsmnRightFilterGradient] dim mismatch");
+    }
 
     CUDA_LONG rows = (CUDA_LONG) gradientValues.GetNumRows();
     CUDA_LONG cols = (CUDA_LONG) gradientValues.GetNumCols();
@@ -4914,7 +4927,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
     SyncGuard syncGuard;
 
     _computeBiVfsmnRightFilterGradient<ElemType><<<dimGrid, dimBlock, 0, t_stream>>>(
-        gradientValues.Data(), inputValues.Data(), flags.Data(),
+        gradientValues.Data(), inputValues.Data(), flags.Data(), flag_stride,
         (CUDA_LONG) rows, (CUDA_LONG) cols,
         (CUDA_LONG) r_order, (CUDA_LONG) r_stride,
         rightFilterGradientValues.Data());

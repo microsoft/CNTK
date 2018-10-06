@@ -646,6 +646,7 @@ public:
                                      const GPUMatrix<ElemType>& l_filter,// DxN1 TODO: +1
                                      const GPUMatrix<ElemType>& r_filter,// DxN2
                                      const GPUMatrix<ElemType>& flags,   // 1xT
+                                     int flag_stride,
                                      int l_order, int r_order,
                                      int l_stride, int r_stride,
                                      GPUMatrix<ElemType>& out);
@@ -653,17 +654,20 @@ public:
                                              const GPUMatrix<ElemType>& l_filter,
                                              const GPUMatrix<ElemType>& r_filter,
                                              const GPUMatrix<ElemType>& flags,
+                                             int flag_stride,
                                              int l_order, int r_order,
                                              int l_stride, int r_stride,
                                              GPUMatrix<ElemType>& inputGradientValues);
     static void ComputeBiVfsmnLeftFilterGradient(const GPUMatrix<ElemType>& gradientValues,
                                                  const GPUMatrix<ElemType>& inputValues,
                                                  const GPUMatrix<ElemType>& flags,
+                                                 int flag_stride,
                                                  int l_order, int l_stride,
                                                  GPUMatrix<ElemType>& leftFilterGradientValues);
     static void ComputeBiVfsmnRightFilterGradient(const GPUMatrix<ElemType>& gradientValues,
                                                   const GPUMatrix<ElemType>& inputValues,
                                                   const GPUMatrix<ElemType>& flags,
+                                                  int flag_stride,
                                                   int r_order, int r_stride,
                                                   GPUMatrix<ElemType>& rightFilterGradientValues);
 

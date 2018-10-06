@@ -7034,6 +7034,7 @@ void CPUMatrix<ElemType>::ComputeBiVfsmnMemory(
     const CPUMatrix<ElemType>& l_filter,// DxN1 TODO: +1
     const CPUMatrix<ElemType>& r_filter,// DxN2
     const CPUMatrix<ElemType>& flags,   // 1xT
+    int flag_stride,
     int l_order, int r_order,
     int l_stride, int r_stride,
     CPUMatrix<ElemType>& out)
@@ -7055,7 +7056,7 @@ void CPUMatrix<ElemType>::ComputeBiVfsmnMemory(
             // lookback
             for (int order = 0; order < l_order; ++order)
             {
-                shift_index = c - order * l_stride;
+                shift_index = c - order * l_stride * flag_stride;
                 if (shift_index >= 0 && flags(0, c) == flags(0, shift_index))
                 {
                     value += in(r, shift_index) * l_filter(r, order);
@@ -7064,7 +7065,7 @@ void CPUMatrix<ElemType>::ComputeBiVfsmnMemory(
             // lookahead
             for (int order = 1; order <= r_order; ++order)
             {
-                shift_index = c + order * r_stride;
+                shift_index = c + order * r_stride * flag_stride;
                 if (shift_index < cols && flags(0, c) == flags(0, shift_index))
                 {
                     value += in(r, shift_index) * r_filter(r, order-1);

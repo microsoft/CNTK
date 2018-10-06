@@ -22,8 +22,27 @@
 #include <set>
 #include "Quantizers.h"
 #include "InputAndParamNodes.h"
+// #include <iostream>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+// template<class ElemType>
+// void PrintMatrix(const Matrix<ElemType>& in)
+// {
+//     double temp = 0.0;
+//     std::cout << std::endl;
+//     std::cout << in.GetNumRows() << "x" << in.GetNumCols() << std::endl;
+//     for (int r = 0; r < in.GetNumRows(); ++r)
+//     {
+//         for (int c = 0; c < in.GetNumCols(); ++c)
+//         {
+//             temp = in(r, c);
+//             std::cout << temp << " ";
+//         }
+//         std::cout << std::endl;
+//     }
+//     std::cout << std::endl;
+// }
 
 template <class ElemType>
 class BiVfsmnNode : public ComputationNode<ElemType>, public NumInputs<3>
@@ -57,21 +76,19 @@ public:
         }
 
         // BEGIN DEBUG
-        /*
-        std::cout << m_lOrder << " " << m_rOrder << " " << m_lStride << " " << m_rStride << std::endl;
-        std::cout << Input(0)->Value().GetNumRows() << " " << Input(0)->Value().GetNumCols() << std::endl;
-        std::cout << Input(1)->Value().GetNumRows() << " " << Input(1)->Value().GetNumCols() << std::endl;
-        std::cout << Input(2)->Value().GetNumRows() << " " << Input(2)->Value().GetNumCols() << std::endl;
-        std::cout << Value().GetNumRows() << " " << Value().GetNumCols() << std::endl;
-        auto in0MBLayout = InputRef(0).GetMBLayout();
-        auto in0Sequences = in0MBLayout->GetAllSequences();
-        for (size_t i = 0; i < in0Sequences.size(); ++i)
-        {
-            let& in0Seq = in0Sequences[i];
-            std::cout << in0Seq.seqId << " " << in0Seq.s << " " << in0Seq.tBegin << " " << in0Seq.tEnd << std::endl;
-        }
-        std::cout << in0MBLayout->GetNumTimeSteps() << " " << in0MBLayout->GetNumParallelSequences() << std::endl;
-        */
+        // std::cout << m_lOrder << " " << m_rOrder << " " << m_lStride << " " << m_rStride << std::endl;
+        // std::cout << Input(0)->Value().GetNumRows() << " " << Input(0)->Value().GetNumCols() << std::endl;
+        // std::cout << Input(1)->Value().GetNumRows() << " " << Input(1)->Value().GetNumCols() << std::endl;
+        // std::cout << Input(2)->Value().GetNumRows() << " " << Input(2)->Value().GetNumCols() << std::endl;
+        // std::cout << Value().GetNumRows() << " " << Value().GetNumCols() << std::endl;
+        // auto in0MBLayout = InputRef(0).GetMBLayout();
+        // auto in0Sequences = in0MBLayout->GetAllSequences();
+        // for (size_t i = 0; i < in0Sequences.size(); ++i)
+        // {
+        //     let& in0Seq = in0Sequences[i];
+        //     std::cout << in0Seq.seqId << " " << in0Seq.s << " " << in0Seq.tBegin << " " << in0Seq.tEnd << std::endl;
+        // }
+        // std::cout << in0MBLayout->GetNumTimeSteps() << " " << in0MBLayout->GetNumParallelSequences() << std::endl;
         // END DEBUG
 
         // BEGIN construct flag matrix
@@ -79,8 +96,13 @@ public:
         auto hidMBLayout  = InputRef(0).GetMBLayout();
         auto hidSequences = hidMBLayout->GetAllSequences();
         size_t hidMaxLen  = hidMBLayout->GetNumTimeSteps();
+        size_t paraNum = hidMBLayout->GetNumParallelSequences();
         size_t nFrames    = InputRef(0).Value().GetNumCols();
+        if (hidMaxLen * paraNum != nFrames) {
+            LogicError("[BiVfsmnNode] construct flag matrix related error.");
+        }
         m_flags.Resize(1, nFrames);
+        size_t count = 0;
 
         for (size_t i = 0; i < hidSequences.size(); ++i)
         {
@@ -95,9 +117,15 @@ public:
             size_t end = hidSeq.tEnd <= hidMaxLen ? hidSeq.tEnd : hidMaxLen;
             for (size_t j = begin; j < end; ++j)
             {
-                m_flags(0, slot * hidMaxLen + j) = id;
+                // m_flags(0, slot * hidMaxLen + j) = id;
+                m_flags(0, j * paraNum + slot) = id;
+                ++count;
             }
         }
+        if (count != nFrames) {
+            LogicError("[BiVfsmnNode] not construct full flag matrix.");
+        }
+        // PrintMatrix(m_flags);
         // END construct flag matrix
 
         // Get Matrix (can not do this because copy constructor is deleted)
@@ -108,8 +136,9 @@ public:
         // auto ffilter = Input(2)->Value();
 
         // forward computation
+        m_flagStride = paraNum;
         Matrix<ElemType>::ComputeBiVfsmnMemory(Input(0)->Value(), Input(1)->Value(), Input(2)->Value(),
-                                               m_flags, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                                               m_flags, m_flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
                                                Value());
     }
 
@@ -118,27 +147,28 @@ public:
         if (!fr.IsAllFrames()) {
             LogicError("BiVfsmnNode node should not be in a loop now.");
         }
-        // std::cout << m_lOrder << " " << m_rOrder << " " << m_lStride << " " << m_rStride << std::endl;
+        // std::cout << "In BiVfsmnNode BackpropTo()" << std::endl;
+        // std::cout << m_lOrder << " " << m_rOrder << " " << m_lStride << " " << m_rStride << " " << m_flagStride << std::endl;
 
         if (inputIndex == 0)
         {
             Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
                 Gradient(), Input(1)->Value(), Input(2)->Value(),
-                m_flags, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                m_flags, m_flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
                 Input(0)->Gradient());
         }
         else if (inputIndex == 1)
         {
             Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
                 Gradient(), Input(0)->Value(),
-                m_flags, m_lOrder, m_lStride,
+                m_flags, m_flagStride, m_lOrder, m_lStride,
                 Input(1)->Gradient());
         }
         else if (inputIndex == 2)
         {
             Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
                 Gradient(), Input(0)->Value(),
-                m_flags, m_rOrder, m_rStride,
+                m_flags, m_flagStride, m_rOrder, m_rStride,
                 Input(2)->Gradient());
         }
         else
@@ -199,6 +229,7 @@ public:
 
 protected:
     Matrix<ElemType> m_flags;  // use Matrix<size_t>?
+    size_t m_flagStride;
     size_t m_lOrder;
     size_t m_rOrder;
     size_t m_lStride;
@@ -823,6 +854,22 @@ private:
 public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
+        // BEGIN DEBUG
+        // auto in0MBLayout = InputRef(0).GetMBLayout();
+        // if (in0MBLayout == nullptr) {
+        //     in0MBLayout = InputRef(1).GetMBLayout();
+        // }
+        // if (in0MBLayout) {
+        //     auto in0Sequences = in0MBLayout->GetAllSequences();
+        //     for (size_t i = 0; i < in0Sequences.size(); ++i)
+        //     {
+        //         let& in0Seq = in0Sequences[i];
+        //         std::cout << in0Seq.seqId << " " << in0Seq.s << " " << in0Seq.tBegin << " " << in0Seq.tEnd << std::endl;
+        //     }
+        //     std::cout << in0MBLayout->GetNumTimeSteps() << " " << in0MBLayout->GetNumParallelSequences() << std::endl;
+        // }
+        //END DEBUG
+
         // If argument A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
         // This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
         auto inputMBLayout = InputRef(0).GetMBLayout();
