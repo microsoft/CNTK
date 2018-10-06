@@ -71,7 +71,7 @@ section2=[
 
 ### Organization
 
-In CNTK configuration files Parameter Sets are organized in a hierarchical fashion. The actual data values are not evaluated until a CNTK components requests the value. When a value is requested, by a component, it will search that components section of the configuration file, if the value is not found, it will continue looking in the parent parameter set and continue looking in parent parameter sets until the parameter is found, or the top level of the configuration hierarchy is reached without a match.
+In CNTK configuration files Parameter Sets are organized in a hierarchical fashion. The actual data values are not evaluated until a CNTK component requests the value. When a value is requested, by a component, it will search that components section of the configuration file, if the value is not found, it will continue looking in the parent parameter set and continue looking in parent parameter sets until the parameter is found, or the top level of the configuration hierarchy is reached without a match.
 
 ### Default Values
 
@@ -79,7 +79,7 @@ Most parameters in configuration files have a default value which will be used i
 
 ### Repeated Values
 
-If a parameter name is specified more than once, the last value set to that value is the one that will be maintained. The only exception to this is in parameter sets, which are surrounded by ‘\[‘ square braces ‘\]’, in these cases the values inside the braces are considered to be a parameter set, and will be added to the currently existing parameter set. For example:
+If a parameter name is specified more than once, the last value set to that value is the one that will be maintained. The only exception to this is in parameter sets, which are surrounded by ‘\[‘ square braces ‘\]’, in these cases the values inside the braces are considered to be a parameter set and will be added to the currently existing parameter set. For example:
 
 ```
 params=[a=1;b=2;c=3]
@@ -192,7 +192,7 @@ mnistTrain=[
     action=train
     …
 ```
-The **mnistTrain** section will execute the **train** action, and the **mnistTest** section will execute **eval**. The names of the sections is arbitrary, but the configuration parameter names must be command and action.
+The **mnistTrain** section will execute the **train** action, and the **mnistTest** section will execute **eval**. The names of the sections are arbitrary, but the configuration parameter names must be command and action.
 
 ### Precision
 
@@ -224,7 +224,7 @@ all | Use all the available GPU devices (will use PTask engine if more than one 
 
 ### Log Files
 
-Log files are redirection of the normal standard error output. All log information is sent to standard error, and will appear on the console screen unless the stderr parameter is defined, or some other form of user redirection is active. The stderr parameter defines the directory and the prefix for the log file. The suffix is defined by what commands are being run. As an example if “abc” is the setting “abc\_mnistTrain.log” would be the log file name. It is important to note that this file is overwritten on subsequent executions if the stderr parameter and the command being run are identical.
+Log files are the redirection of the normal standard error output. All log information is sent to standard error and will appear on the console screen unless the stderr parameter is defined, or some other form of user redirection is active. The stderr parameter defines the directory and the prefix for the log file. The suffix is defined by what commands are being run. As an example, if “abc” is the setting “abc\_mnistTrain.log” would be the log file name. It is important to note that this file is overwritten on subsequent executions if the stderr parameter and the command being run are identical.
 
 ```
 #commands used will be appended the stderr name to create a path 
@@ -232,7 +232,7 @@ stderr=c:\cntk\log\cntk # “_mnistTrain_mnistTest.log” would be appended
 traceLevel=0 # larger values mean more output
 ```
 
-The **traceLevel** parameter is uniformly used by the code in CNTK to specify how much extra output (verbosity) is desired. The default value is 0 (zero) and specifies minimal output, the higher the number the more output can be expected. Currently 0-limited output, 1-medium output, 2-verbose output are the only values supported.
+The **traceLevel** parameter is uniformly used by the code in CNTK to specify how much extra output (verbosity) is desired. The default value is 0 (zero) and specifies minimal output, the higher the number the more output can be expected. Currently, 0-limited output, 1-medium output, 2-verbose output are the only values supported.
 
 ### Top Level Parameters
 
@@ -248,9 +248,9 @@ It can also be advantageous to specify parameters that often change all in one a
 
 ### Command Section
 
-A command section is a top level section of the configuration file that contains an action parameter. The command parameter at the root level determines which command sections will be executed, and in what order. The **mnistTrain** command section uses the **train** **action** to train a Deep Neural Network (DNN) using Stochastic Gradient Descent (SGD). It uses the Network Description Language (NDL) to define the network, and the UCIFastReader component to obtain its data. All the necessary information to complete this training is included in the command section. There are many other parameters that could be provided, but most have reasonable default values that have been found to provide good results for many datasets.
+A command section is a top-level section of the configuration file that contains an action parameter. The command parameter at the root level determines which command sections will be executed, and in what order. The **mnistTrain** command section uses the **train** **action** to train a Deep Neural Network (DNN) using Stochastic Gradient Descent (SGD). It uses the Network Description Language (NDL) to define the network, and the UCIFastReader component to obtain its data. All the necessary information to complete this training is included in the command section. There are many other parameters that could be provided, but most have reasonable default values that have been found to provide good results for many datasets.
 
-Under the command section there may be one or more sub-sections. These sub-sections vary by the **action** specified in the command section. In our example we used the **train action**, which includes the following subsections:
+Under the command section, there may be one or more sub-sections. These sub-sections vary by the **action** specified in the command section. In our example we used the **train action**, which includes the following subsections:
 
 sub-section     | Options              | Description
 ---|---|---
@@ -263,7 +263,7 @@ sub-section     | Options              | Description
                 | SequenceReader       | Reads text-based files that contain word sequences, for predicting word sequences.
                 | LUSequenceReader     | Reads text-based files that contain word sequences, used for language understanding.
 
-For the Network Builder and the Trainer the existence of the sub-section name tells the train action which component to use. For example, **NDLNetworkBuilder** is specified in our example, so CNTK will use the NDL Network Builder to define the network. Similarly **SGD** is specified, so that trainer will be used. The reader sub-section is a little different, and is always called **reader**, the **readerType** parameter in the sub-section defines which reader will actually be used. Readers are implemented as separate DLLs, and the name of the reader is also the name of the DLL file that will be loaded.
+For the Network Builder and the Trainer the existence of the sub-section name tells the train action which component to use. For example, **NDLNetworkBuilder** is specified in our example, so CNTK will use the NDL Network Builder to define the network. Similarly, **SGD** is specified, so that trainer will be used. The reader sub-section is a little different, and is always called **reader**, the **readerType** parameter in the sub-section defines which reader will actually be used. Readers are implemented as separate DLLs, and the name of the reader is also the name of the DLL file that will be loaded.
 
 ```
 mnistTrain=[
@@ -309,7 +309,7 @@ epochSize=60000
 
 **minibatchSize** is the number of records that will be taken from the dataset and processed at once. There is often a tradeoff in training accuracy and the size of the minibatch. Particularly for GPUs, a larger minibatch is usually better, since the GPUs are most efficient when doing operations on large chunks of data. For large dataset values that are powers of 2 are most often specified, 512 and 1024 are often good choices to start with. Since the MNIST dataset is so small, we have chosen a smaller minibatch size for the example.
 
-**epochSize** is the number of dataset records that will be processed in a training pass. It is most often set to be the same as the dataset size, but can be smaller or larger that the dataset. It defaults to the size of the dataset if not present in the configuration file. It can also be set to zero for SGD, which has the same meaning.
+**epochSize** is the number of dataset records that will be processed in a training pass. It is most often set to be the same as the dataset size but can be smaller or larger than the dataset. It defaults to the size of the dataset if not present in the configuration file. It can also be set to zero for SGD, which has the same meaning.
 
 ```
 SGD=[
@@ -319,7 +319,7 @@ SGD=[
 ]
 ```
 
-**modelPath** is the path to the model file, and will be the name used when a model is completely trained. For epochs prior to the final model a number will be appended to the end signifying the epoch that was saved (i.e. myModel.dnn.5). These intermediate files are important to allow the training process to restart after an interruption. Training will automatically resume at the first non-existent epoch when training is restarted.
+**modelPath** is the path to the model file and will be the name used when a model is completely trained. For epochs prior to the final model, a number will be appended to the end signifying the epoch that was saved (i.e. myModel.dnn.5). These intermediate files are important to allow the training process to restart after an interruption. Training will automatically resume at the first non-existent epoch when training is restarted.
 
 **learningRatesPerMB** is the learning rate per minibatch used by SGD to update parameter matrices. This parameter is actually an array, and can be used as follows: 0.001\*10:0.0005 to specify that for the first 10 epochs 0.001 should be used and then 0.0005 should be used for the remainder of the epochs.
 
@@ -335,13 +335,13 @@ The NDL (Network Description Language) Network Builder component will be used by
 
 **load** specifies what sections of NDL to load. Multiple sections can be specified via a “:” separated list. The sections specified by **load** are generally used to define macros, for use by the **run** section. If using an external file via the **networkDescription** parameter, as in the example, the **load** parameter identifies the section(s) in that file to load. This parameter overrides any **load** parameters that may already exist in the file. If no **networkDescription** file is specified, **load** identifies a section in the current configuration file. It must exist where a regular configuration search will find it (peer or closer to the root of the hierarchy)
 
-**ndlMacros** is the file path where NDL macros may be loaded. This parameter is usually used to load a default set of NDL macros that can be used by all NDL scripts. Multiple NDL files, each specifying different sets of macros, can be loaded by specifying a “+” separated list of file paths for this “ndlMacros” parameters. In order to share this parameter with other Command Sections which also expect an “ndlMacros” parameter (eg, for MEL scripts), one should define it at the root level of the configuration file.
+**ndlMacros** is the file path where NDL macros may be loaded. This parameter is usually used to load a default set of NDL macros that can be used by all NDL scripts. Multiple NDL files, each specifying different sets of macros, can be loaded by specifying a “+” separated list of file paths for this “ndlMacros” parameters. In order to share this parameter with other Command Sections which also expect a “ndlMacros” parameter (eg, for MEL scripts), one should define it at the root level of the configuration file.
 
-**randomSeedOffset** is a parameter which allows you to run an experiment with a different random initializations to the learnable parameters which are meant to be initialized randomly (either uniform or Gaussian). Whatever non-negative number is specified via “randomSeedOffset” will be added to the seed which would have otherwise been used. The default value is 0.
+**randomSeedOffset** is a parameter which allows you to run an experiment with different random initializations to the learnable parameters which are meant to be initialized randomly (either uniform or Gaussian). Whatever non-negative number is specified via “randomSeedOffset” will be added to the seed which would have otherwise been used. The default value is 0.
 
 ### Reader Parameters
 
-The reader section is used for all types of readers and the **readerType** parameter identifies which reader will be used. For our example, we are using the UCIFastReader, which reads text-based UCI format data. The format of UCI data is a line of space-delimited floating point feature and label values for each data record. The label information is either at the beginning or the end of each line, if label information is included in the dataset.
+The reader section is used for all types of readers and the **readerType** parameter identifies which reader will be used. For our example, we are using the UCIFastReader, which reads text-based UCI format data. The format of UCI data is a line of space-delimited floating-point feature and label values for each data record. The label information is either at the beginning or the end of each line if label information is included in the dataset.
 
 ```
 readerType=UCIFastReader
@@ -365,15 +365,15 @@ reader=[
 ]
 ```
 
-The two sub-sections in the reader section identify two different data sets. In our example they are named **features** and **labels**, though any names could be used. These names need to match the names used in the NDL network definition Inputs in our example, so the correct definition is used for each input dataset. Each of these sections for the UCIFastReader have the following parameters:
+The two sub-sections in the reader section identify two different datasets. In our example, they are named **features** and **labels**, though any names could be used. These names need to match the names used in the NDL network definition Inputs in our example, so the correct definition is used for each input dataset. Each of these sections for the UCIFastReader has the following parameters:
 
 **dim** is the number of columns of data that are contained in this dataset
 
 **start** is the column (zero-based) where the data columns start for this dataset
 
-**file** is the file that contains the dataset. This parameter has been moved up from the features and labels subsections, because UCIFastReader requires the file be the same, and moving up a level is an excellent way to make sure this restriction is met.
+**file** is the file that contains the dataset. This parameter has been moved up from the features and labels subsections because UCIFastReader requires the file be the same, and moving up a level is an excellent way to make sure this restriction is met.
 
-**labelDim** is the number of possible label values that are possible for the dataset, and belongs in any label section. In MNIST this value is 10, because MNIST is a number recognition application, and there are only 10 possible digits that can be recognized
+**labelDim** is the number of possible label values that are possible for the dataset and belongs in any label section. In MNIST this value is 10, because MNIST is a number recognition application, and there are only 10 possible digits that can be recognized
 
 **labelMappingFile** is the path to a file that lists all the possible label values, one per line, which might be text or numeric. The line number is the identifier that will be used by CNTK to identify that label. In our example this file has been moved to the root level to share with other Command Sections. In this case, it’s important that the Evaluation Command Section share the same label mapping as the trainer, otherwise, the evaluation results will not be accurate.
 
@@ -391,7 +391,7 @@ This will load the requested configuration file, and execute any command section
 
 ### Configuration override
 
-It is common to have a configuration that can be used as a base configuration, and modify only a few parameters for each experimental run. This can be done in a few different ways, one of which is to override settings on the command line. For example if I wanted to override the model file path, I could simply modify my command line:
+It is common to have a configuration that can be used as a base configuration, and modify only a few parameters for each experimental run. This can be done in a few different ways, one of which is to override settings on the command line. For example, if I wanted to override the model file path, I could simply modify my command line:
 
 ```
 cn.exe configFile=config.txt stderr=c:\temp\newpath
@@ -413,7 +413,7 @@ Another way to do this is with layered configuration files:
 
 ### Layered Configuration Files
 
-Instead of overriding some parts of a configuration file using command line parameters, one can also specify multiple configuration files, where the latter files override the earlier ones. This allows a user to have a “master” configuration file, and then specify, in a separate configuration file, which parameters of the master they would like to override for a given run of CNTK. This can be accomplished by either specifying a ‘+’ separated list of configuration files, or by using the “configFile=” tag multiple times. The following are equivalent:
+Instead of overriding some parts of a configuration file using command line parameters, one can also specify multiple configuration files, where the latter files override the earlier ones. This allows a user to have a “master” configuration file, and then specify, in a separate configuration file, which parameters of the master they would like to override for a given run of CNTK. This can be accomplished by either specifying a ‘+’ separated list of configuration files or by using the “configFile=” tag multiple times. The following are equivalent:
 
 ```
 cn.exe configFile=config1.txt+config2.txt
@@ -456,8 +456,8 @@ speechTrain=[
 ]]]] 
 ```
 
-Here, “Root”,“RunName”, “DataSet1\_Dim”, and “DataSet1\_Features” are variables specified elsewhere in the configuration (at a scope visible from the point at which they are used). When interpreting this configuration file, the parser would replace every string of the form “$VarName$” with the string “VarValue”, where “VarValue” represents the value of the variable called “VarName”. The variable resolution process is recursive; for example, if A=$B$, B=$C$, and C=HelloWorld.txt, then A would be resolved as “HelloWorld.txt”.
-Notice that because it is equivalent for a user to specify the value of a variable in a configuration file vs. at the command line, the values for these variables can be specified in either location. Recall that the value of a variable is determined by the last time it is assigned, whether that happens to be in a configuration file, or on the command line. Thus, if “Root” is defined in config1.txt, but overridden at the command-line, then the value specified at the command-line would be the one used to resolve instances of $Root$ in configFile1.txt. One useful feature is that if ‘stderr’ or ‘modelPath’ point to directories which do not exist, these directories will be created by CNTK; this allows you to specify something like: “stderr=$Root$\\$RunName$\\$RunName$.log”, even if the directory “$Root$\\$RunName$” doesn’t exist.
+Here, “Root” ,“RunName”, “DataSet1\_Dim”, and “DataSet1\_Features” are variables specified elsewhere in the configuration (at a scope visible from the point at which they are used). When interpreting this configuration file, the parser would replace every string of the form “$VarName$” with the string “VarValue”, where “VarValue” represents the value of the variable called “VarName”. The variable resolution process is recursive; for example, if A=$B$, B=$C$, and C=HelloWorld.txt, then A would be resolved as “HelloWorld.txt”.
+Notice that because it is equivalent for a user to specify the value of a variable in a configuration file vs. at the command line, the values for these variables can be specified in either location. Recall that the value of a variable is determined by the last time it is assigned, whether that happens to be in a configuration file, or on the command line. Thus, if “Root” is defined in config1.txt, but overridden at the command-line, then the value specified at the command-line would be the one used to resolve instances of $Root$ in configFile1.txt. One useful feature is that if ‘stderr’ or ‘modelPath’ point to directories which do not exist, these directories will be created by CNTK; this allows you to specify something like “stderr=$Root$\\$RunName$\\$RunName$.log”, even if the directory “$Root$\\$RunName$” doesn’t exist.
 
 ## User Reference
 
@@ -510,13 +510,13 @@ The following actions are currently supported in the CNTK. The command sections 
 
     -   \[Reader\] – reader configuration section to read the test dataset
 
--   **createLabelMap** – creates a label mapping file from the dataset for readers that support it. Currently UCIFastReader is the only reader that supports this action.
+-   **createLabelMap** – creates a label mapping file from the dataset for readers that support it. Currently, UCIFastReader is the only reader that supports this action.
 
     -   section – the section name (usually a *train* section) which has the reader sub-section that will be used to generate the label mapping file. The labelMappingFile property in this reader section will be written to with the results of the map file generation.
 
     -   minibatchSize – the minibatch size to use when creating the label mapping file
 
--   **edit** – execute an Model Editing Language (MEL) script.
+-   **edit** – execute a Model Editing Language (MEL) script.
 
     -   editPath – the path to the Model Editing Language (MEL) script to be executed
 
@@ -528,7 +528,7 @@ The following actions are currently supported in the CNTK. The command sections 
 
     -   minibatchSize – the minibatch size to use when reading and processing the dataset
 
-    -   epochSize – {0} size of epoch, if not specified or set to zero entire dataset will be read once.
+    -   epochSize – {0} size of an epoch, if not specified or set to zero entire dataset will be read once.
 
     -   modelPath – path to the model file to evaluate
 
@@ -546,7 +546,7 @@ The following actions are currently supported in the CNTK. The command sections 
 
     -   originalModelFileName – file name for the model that will be adapted
 
-    -   refNodeName – name of the node in the computational network which will be used for KL divergence regularization (see SGD section for additional parameters required)
+    -   refNodeName – The name of the node in the computational network which will be used for KL divergence regularization (see SGD section for additional parameters required)
 
 -   **cv** – Use Cross Validation to evaluate a series of epoch model for the best results
 
@@ -554,11 +554,11 @@ The following actions are currently supported in the CNTK. The command sections 
 
     -   minibatchSize – the minibatch size to use when reading and processing the dataset
 
-    -   epochSize – {0} size of epoch, if not specified or set to zero entire dataset will be read once.
+    -   epochSize – {0} size of an epoch, if not specified or set to zero entire dataset will be read once.
 
     -   modelPath – path to the model file to evaluate, epoch files have the epoch number appended to the end of this path name
 
-    -   crossValidationInterval – array of 3 integers identifying the starting epoch, epoch increment and final epoch to evaluate.
+    -   crossValidationInterval – an array of 3 integers identifying the starting epoch, epoch increment and final epoch to evaluate.
 
     -   sleepTimeBetweenRuns – how many seconds to wait between runs
 
@@ -574,11 +574,11 @@ The following actions are currently supported in the CNTK. The command sections 
 
     -   minibatchSize – the minibatch size to use when reading and processing the dataset
 
-    -   epochSize – {0} size of epoch, if not specified or set to zero entire dataset will be read once.
+    -   epochSize – {0} size of an epoch, if not specified or set to zero entire dataset will be read once.
 
     -   modelPath – path to the model file we are using to process the input data
 
-    -   outputPath – output path to write file in a text based format. Either the writer config, or the outputPath will be used.
+    -   outputPath – output path to write file in a text-based format. Either the writer config or the outputPath will be used.
 
     -   outputNodeNames – an array of one or more output node names to be written to a file
 
@@ -623,7 +623,7 @@ all | Use all the available GPU devices (will use PTask engine if more than one 
 
 -   **stderr** – optional path to where the log files will be stored. This is a redirection of stderr to a file, if not specified the output will be output to the normal stderr device (usually the console). The path here defines the directory and the prefix for the log file. The suffix is defined by what commands are being run and will be appended to create the file name. For example if “stderr=c:\\abc” and “command=mnistTrain” the log file would be named “c:\\abc\_mnistTrain.log”.
 
--   **traceLevel** – \[{0}\] the level of output to stderr that is desired. The higher the number the more output can be expected. Currently 0-limited output, 1-medium output, 2-verbose output are the only values supported.
+-   **traceLevel** – \[{0}\] the level of output to stderr that is desired. The higher the number the more output can be expected. Currently, 0-limited output, 1-medium output, 2-verbose output are the only values supported.
 
 ### Network Builders
 
@@ -639,7 +639,7 @@ The NDL (Network Description Language) Network Builder component takes a config 
 
 -   **run** – (optional) the section containing the NDL that will be executed. If using an external file the run parameter may already exist in that file and identifies the sections in that file that will be executed as NDL scripts. This parameter in NDLNetworkBuilder section will override those settings. If no networkDescription file is specified, a section with the given name will be searched for in the current configuration file. It must exist where a regular configuration search will find it (peer or closer to the root of the hierarchy)
 
--   **load** – (optional) the section(s) in the same file that contain NDL macros to be loaded. If specified t must exist where a regular configuration search will find it (peer or closer to the root of the hierarchy)
+-   **load** – (optional) the section(s) in the same file that contains NDL macros to be loaded. If specified t must exist where a regular configuration search will find it (peer or closer to the root of the hierarchy)
 
 -   **ndlMacros** – (optional) path to an NDL macros file, normally defined at the root level so it could be shared with other Command Sections. This parameter is usually used to load a default set of NDL macros that can be used by all NDL scripts.
 
@@ -675,11 +675,11 @@ reader=[
 ]
 ```
 
-The sub-sections in the reader section identify the different data records. In our example they are named **features** and **labels**, though any names could be used. If NDL was used to create the network, these section names should match the names of the input nodes in the NDL network definition. These names will be used as the matrix names passed back from the reader and name matching ensures the correct records are assigned to the correct inputs.
+The sub-sections in the reader section identify the different data records. In our example, they are named **features** and **labels**, though any names could be used. If NDL was used to create the network, these section names should match the names of the input nodes in the NDL network definition. These names will be used as the matrix names passed back from the reader and name matching ensures the correct records are assigned to the correct inputs.
 
 #### UCIFastReader
 
-UCIFastReader reads text-based UCI format data. The format of UCI data is a line of space-delimited floating point feature and label values for each data record. The label information is either at the beginning or the end of each line, if label information is included in the dataset.
+UCIFastReader reads text-based UCI format data. The format of UCI data is a line of space-delimited floating-point feature and label values for each data record. The label information is either at the beginning or the end of each line, if label information is included in the dataset.
 
 The following parameters can be used to customize the behavior of the reader:
 
@@ -687,7 +687,7 @@ The following parameters can be used to customize the behavior of the reader:
 
 -   **minibatchMode** – \[{Partial},Full\] the mode for minibatches when the end of the epoch is reached. In partial minibatch mode, if the remaining records are less than a full minibatch, only those read will be returned (a partial minibatch). I Full minibatch mode, no partial minibatches will be returned, instead those records will be skipped.
 
-Each of the data record sub-sections have the following parameters:
+Each of the data record sub-sections has the following parameters:
 
 -   **dim** - the number of columns of data that are contained in this data record
 
@@ -695,7 +695,7 @@ Each of the data record sub-sections have the following parameters:
 
 -   **file** - the file that contains the dataset. This parameter may be moved up to the reader section level to ensure the file is the same for all the sections, as UCIFastReader requires.
 
-In addition if the data record sub-section is defining labels the following parameters need to be defined:
+In addition, if the data record sub-section is defining labels the following parameters need to be defined:
 
 -   **labelDim** – the number of possible label values that are possible for the dataset. For example, for the MNIST dataset this value is 10, because MNIST is a number recognition application, and there are only 10 possible digits that can be recognized
 
@@ -703,7 +703,7 @@ In addition if the data record sub-section is defining labels the following para
 
 -   **labelType** – \[{Category},Regression,None\] the type of label
 
-The UCIFastReader is a text-based reader, and though it is optimized for speed, is still significantly slower than reading binary files. To improve training speed that may be limited by the data reader the content of the dataset can be cached the first time through the dataset, and subsequently read from a binary cache saved to disk. UCIFastReader uses BinaryReader and BinaryWriter to make this cache and to read from it. BinaryReader and BinaryWriter support multiple datasets in a single file, so data read from multiple files can all be cached in a single file. Please refer to BinaryWriter to see a sample of how to setup a UCIFastReader with caching.
+The UCIFastReader is a text-based reader, and though it is optimized for speed, is still significantly slower than reading binary files. To improve training speed that may be limited by the data reader the content of the dataset can be cached the first time through the dataset, and subsequently read from a binary cache saved to disk. UCIFastReader uses BinaryReader and BinaryWriter to make this cache and to read from it. BinaryReader and BinaryWriter support multiple datasets in a single file, so data read from multiple files can all be cached in a single file. Please refer to BinaryWriter to see a sample of how to set up a UCIFastReader with caching.
 
 #### HTKMLFReader
 
@@ -751,7 +751,7 @@ For training and evaluation the following need to be defined:
 
     -   **targetDim** – dimension of the target if labelToTargetMapping is desired.
 
-The following two sections can currently be used instead of input and output subsections if there is only one input and one output. However, the previous syntax is recommended
+The following two sections can currently be used instead of input and output subsections if there are only one input and one output. However, the previous syntax is recommended
 
 -   **\[features\]** – subsection defining the features data, must use this name
 
@@ -804,7 +804,7 @@ SequenceReader is a reader that reads text string. It is mostly often used for l
 </s> mr. <unk> is chairman of <unk> n.v. the dutch publishing group </s>
 ```
 
-Symbol &lt;/s&gt; is used to denote both beginning and ending of a sentence. However, this symbol can be specified by beginSequence and endSequence.
+Symbol &lt;/s&gt; is used to denote both the beginning and end of a sentence. However, this symbol can be specified by beginSequence and endSequence.
 
 The parameters used for the SequenceReader are shared with other reader types. However, it has some unique parameters as follows:
 
@@ -850,11 +850,11 @@ EOS O
 
 consists of some unique setups as follows:
 
-The LUSequenceReader assumes that the last column is the label and all other columns are inputs. The beginning and ending of a sentence are specified using beginning and ending symbols. In the above example, they are BOS and EOS, respectively, for the beginning and ending symbols.
+The LUSequenceReader assumes that the last column is the label and all other columns are inputs. The beginning and end of a sentence are specified using beginning and ending symbols. In the above example, they are BOS and EOS, respectively, for the beginning and end symbols.
 
 The LUSequenceReader has some unique setups as follows:
 
--   wordContext – this specifies a context window. For example, wordContext=0:1:2 specifies a context window of 3. In this context window, it reads input at a current time, the next time and the time after the next time. Another example would be wordContext=0:-1. In this example, LUSequencReader reads a context window of 2 that consist of the current input and the immediate last input.
+-   wordContext – this specifies a context window. For example, wordContext=0:1:2 specifies a context window of 3. In this context window, it reads input at a current time, the next time and the time after the next time. Another example would be wordContext=0:-1. In this example, LUSequencReader reads a context window of 2 that consists of the current input and the immediate last input.
 
 -   Nbruttsineachrecurrentiter – this specifies the maximum number of sentences in a minibatch.
 
@@ -889,13 +889,13 @@ A subsection is for input label information.
 
 BinaryReader is a reader that uses a hierarchal file format to store potentially multiple datasets in an efficient way. It uses memory mapped files with a moving window of viewable data to support files larger than can be held in memory at once. More details about the file format are in the BinaryWriter Section.
 
-The parameters used for the binary reader are quite simple as most of the required information concerning the file is contained in the file headers. The binary reader will also be called when a configuration is setup to cache UCIFastReader if the binary cached file exists.
+The parameters used for the binary reader are quite simple as most of the required information concerning the file is contained in the file headers. The binary reader will also be called when a configuration is set up to cache UCIFastReader if the binary cached file exists.
 
 The following parameters can be used to customize the behavior of the reader:
 
 -   **minibatchMode** – \[{Partial},Full\] the mode for minibatches when the end of the epoch is reached. In partial minibatch mode, if the remaining records are less than a full minibatch, only those read will be returned (a partial minibatch). I Full minibatch mode, no partial minibatches will be returned, instead those records will be skipped.
 
--   **file** – array of files paths to load. Each file may contain one or more datasets. The dataset names used when the file was created will be used when the file is read.
+-   **file** – an array of files paths to load. Each file may contain one or more datasets. The dataset names used when the file was created will be used when the file is read.
 
 ### Writers
 
@@ -907,9 +907,9 @@ writerType=BinaryReader # NOTE: BinaryReader.dll also implements BinaryWriter
 
 #### BinaryWriter
 
-BinaryWriter is an implementation of a hierarchal file format the mirrors the configuration file. I uses memory mapped files to enable large files that do not fit in memory to be written and read using a moving window into the file. The binary writer is also used as a Cache mechanism for UCIFastReader to allow for much faster access to data after the dataset has been read once.
+BinaryWriter is an implementation of a hierarchal file format the mirrors the configuration file. It uses memory mapped files to enable large files that do not fit in memory to be written and read using a moving window into the file. The binary writer is also used as a Cache mechanism for UCIFastReader to allow for much faster access to data after the dataset has been read once.
 
-The following is an example of a BinaryWriter definition. Since it is most commonly used as a cache for UCIFastReader, this definition is show as a UCIFastReader cache. The parameters needed for BinaryWriter are in bold type below:
+The following is an example of a BinaryWriter definition. Since it is most commonly used as a cache for UCIFastReader, this definition is shown as a UCIFastReader cache. The parameters needed for BinaryWriter are in bold type below:
 
 ```
     # Parameter values for the reader with cache
@@ -929,7 +929,7 @@ The following is an example of a BinaryWriter definition. Since it is most commo
       # if calculated size would be bigger, that is used instead
       wsize=256
 
-      #wrecords - number of records we should allocate space for in the file
+      #wrecords - the number of records we should allocate space for in the file
       # files cannot be expanded, so this should be large enough. 
       wrecords=60000
 
@@ -986,33 +986,33 @@ The example above shows all the parameters necessary to create a Binary file wit
 
 -   **wsize** – used in conjunction with wfile, defines how large (in Megabytes) the initial filesize should be. It must be large enough to contain all data or an error will occur. Once the file is completely written it will shrink down to its actual size.
 
--   **wrecords** – the number of records that will be written to disk. Different subsections can override this value if the number of records for a subsection are different (as is the case for the label mapping table subsection)
+-   **wrecords** – the number of records that will be written to disk. Different subsections can override this value if the number of records for a subsection is different (as is the case for the label mapping table subsection)
 
-> Each subsection in the configuration will create a corresponding subsection in the binary file. The name used for the subsection in the configuration file will be saved for each subsection, and will be name used to refer to the data when it is read later. Each subsection must have a few parameters:
+> Each subsection in the configuration will create a corresponding subsection in the binary file. The name used for the subsection in the configuration file will be saved for each subsection and will be a name used to refer to the data when it is read later. Each subsection must have a few parameters:
 
 -   **sectionType** – the type of section this config section is describing. The possibilities are:
 
 **Section Type** | **Description**
 ---|---
 Data | data section (floating point values)
-Labels | label data (floating point values). For category labels the integer part of this floating point value will be interpreted as an index into the label mapping table.
+Labels | label data (floating point values). For category labels, the integer part of this floating point value will be interpreted as an index into the label mapping table.
 LabelMapping | label mapping table (array of strings)
 Stats | data statistics. can compute the following statistics across the entire dataset: `sum:count:mean:variance:stdDev:max:min:range:rootMeanSquare`
 CategoryLabels | labels in category format (floating point type - all zeros with a single 1.0 per column that matches the mapping table) This format is directly usable in this form for training, so it can be stored in this form.
 
 -   **elementSize** – size in bytes of the elements. If this value is not specified, it will default to the sizeof(ElemType), where ElemType is either float or double based on the precision specified in the configuration file.
 
--   **wref** – A reference to the section that holds the data referenced by these labels. It is often best to store both the labels and the data in the same file so they remain associated with each other. If separate label and data binary files that were generated at different times are used together an error will occur (as they are likely not aligned to each other)
+-   **wref** – A reference to the section that holds the data referenced by these labels. It is often best to store both the labels and the data in the same file so they remain associated with each other. If separate label and data binary files that were generated at different times are used together an error will occur (as they are likely not aligned with each other)
 
 -   **dim** – used for categoryLabels format sections. It contains the number of columns of category data, which will contain all zeros except for a single 1.0 for each row.
 
 ## Programmer Reference
 
-This section covers topics that are of interest to those who wish to modify the code and use the provided classes in there code. The first section covers configuration files and their use from a programmer’s perspective. The second section covers Reader/Writer interfaces for data input/output. The third section covers the CNTKMath library, and the last section covers using PTask to enable a computation node to participate in multi-GPU processing.
+This section covers topics that are of interest to those who wish to modify the code and use the provided classes in their code. The first section covers configuration files and their use from a programmer’s perspective. The second section covers Reader/Writer interfaces for data input/output. The third section covers the CNTKMath library, and the last section covers using PTask to enable a computation node to participate in multi-GPU processing.
 
 ### Configuration Files
 
-Configuration files, and easy manipulation of these files is a main feature of CNTK. The configuration files make the users life much easier, and the programmer interface is also quite simple to use. The programmer interface to the configuration files is contained in a few C++ classes and focuses on “just-in-time” evaluation of the parameter values. The idea is simple, leave the configuration values in string format until they actually need to be parsed into some other form.
+Configuration files and easy manipulation of these files is a main feature of CNTK. The configuration files make the user's life much easier, and the programmer interface is also quite simple to use. The programmer interface to the configuration files is contained in a few C++ classes and focuses on “just-in-time” evaluation of the parameter values. The idea is simple, leave the configuration values in string format until they actually need to be parsed into some other form.
 
 #### Configuration Formats
 
@@ -1021,8 +1021,8 @@ The following is a summary of the different formats the configuration classes ca
 Config Type | C++ type | Format | Notes
 ---|---|---|---
 integer | int, long, short, size_t | [-]###### | Optional sign and numeric digits. All signed and unsigned integer numeric types
-floating=point | float, double | [-]####.#####[e{+-}###] | Numeric digits with a decimal point,  optional sign,optional scientific notation
-string | std::wstring, std::string | Any valid character | If contained in an array or dictionary and the default separator is contained in the string (i.e. c:\temp in an array) use alternate separator.
+floating=point | float, double | [-]####.#####[e{+-}###] | Numeric digits with a decimal point,  optional sign, optional scientific notation
+string | std::wstring, std::string | Any valid character | If contained in an array or dictionary and the default separator is contained in the string (i.e. c:\temp in an array) use an alternate separator.
 boolean | bool | T/True/1, F/False/0 | True or False values, may be specified by existence or absence of a boolean parameter with no ‘=’ or value after the parameter name
 array | ConfigArray | 
 
@@ -1154,7 +1154,7 @@ The key class that is used to allow the JIT evaluation of configuration strings 
 
 Configuration files are mainly made up of a hierarchy of Configuration Sets (*ConfigParameters*), which are dictionaries of *ConfigValue*. This class provides access to the configuration values and automatically searches up the hierarchy of ConfigParameter classes if a value is not found on the current level. The hierarchy is maintained by the order of class instantiations on the stack. ConfigParameters should only be created on the stack.
 
-In configuration files the ‘name=value’ named pair are usually separated by newlines. However, they also can be separated by other characters and placed on the same line. The default separator for ConfigParmeters is a ‘;’ (semicolon). This can be overridden by placing the alternate separator character immediately following the opening brace. For example ‘\[|’ causes ‘|’ to be the separator for that ConfigParameter instance:
+In configuration files, the ‘name=value’ named pair are usually separated by newlines. However, they also can be separated by other characters and placed on the same line. The default separator for ConfigParmeters is a ‘;’ (semicolon). This can be overridden by placing the alternate separator character immediately following the opening brace. For example ‘\[|’ causes ‘|’ to be the separator for that ConfigParameter instance:
 
 ```
 name=[|parameter1=value1|parameter2=value2|parameter3=value3]
@@ -1186,7 +1186,7 @@ array={|c:\temp\new.txt|12*3|1e-12}
 
 A value may be repeated multiple times with the ‘\*’ character followed by an integer. In the above example, there are 5 elements in the array, with three ‘12’ values occupying the center 3 positions.
 
-The values in a ConfigArray can be accessed just like values in a normal std::vector type, but the automatic type conversion of ConfigValue will still be in affect.
+The values in a ConfigArray can be accessed just like values in a normal std::vector type, but the automatic type conversion of ConfigValue will still be in effect.
 
 #### Other Useful Configuration Methods
 
@@ -1205,11 +1205,11 @@ ConfigArray configLearnRatesPerMB = config("learningRatesPerMB");
 argvector<float> learnRatesPerMB = configLearnRatesPerMB;
 ```
 
-ConfigParameters and ConfigArray instances are very flexible, but require parsing every time a value is accessed. argvector&lt;T&gt; ,on the other hand, parses once and then accesses values as a standard vector.
+ConfigParameters and ConfigArray instances are very flexible but require parsing every time a value is accessed. argvector&lt;T&gt; ,on the other hand, parses once and then accesses values as a standard vector.
 
 #### Configuration Program Example
 
-Some sample code that would parse the example configuration file given at the beginning of this document follows. This is a revised version of actual code in CNTK:
+Some sample code that would parse the example configuration file given at the beginning of this document follows. This is a revised version of the actual code in CNTK:
 
 ```
 #include "commandArgUtil.h"
@@ -1268,15 +1268,15 @@ void DoTrain(const ConfigParameters& config)
 }
 ```
 
-The code above is very easy to code, you simply delare a config, or basic type variable on the stack and assign something from a ConfigParameters class to that variable (i.e. int i = config(”setting”,”default”). Both parameters with defaults and those that don’t are used in the sample code above. The ConfigValue class takes care of parsing the value to be the correct type, and is returned by config() references above.
+The code above is very easy to code, you simply declare a config, or basic type variable on the stack and assign something from a ConfigParameters class to that variable (i.e. int i = config(”setting”,”default”). Both parameters with defaults and those that don’t are used in the sample code above. The ConfigValue class takes care of parsing the value to be the correct type and is returned by config() references above.
 
 The Config classes are meant to be used on the stack as shown in this example. Storing them in member variables or allocating using ‘new’ or other methods is not supported. The reason for this is an internal pointer is used to link to parent instances of config classes. This allows us to trace “up the stack” and look at all the config parameters that exist at a higher level. Since our search traverses up the stack, we need to ensure that all the parent configuration classes still exist, which is guaranteed if all config parameters are stack allocated and have lifetimes that extend past any children.
 
 ### Data Interfaces
 
-CNTK was designed with the idea that data input and output would need to transpire in many different formats. So data interfaces were designed in an attempt to cover various data needs. Currently there are two data interfaces designed, one for input and the other for output called IDataReader and IDataWriter respectively. The reader/writer code is housed in separate DLLs that which are dynamically loaded to provide data services. This allows the user to simply change a configuration setting and have a different reader provide the data.
+CNTK was designed with the idea that data input and output would need to transpire in many different formats. So data interfaces were designed in an attempt to cover various data needs. Currently, there are two data interfaces designed, one for input and the other for output called IDataReader and IDataWriter respectively. The reader/writer code is housed in separate DLLs that which are dynamically loaded to provide data services. This allows the user to simply change a configuration setting and have a different reader provide the data.
 
-Other possible scenarios are also enabled by using a common interface, for example one reader/writer can act as a cache for another slower reader. UCIFastReader is a text-based reader, and though it is very fast, there is still a significant amount of overhead to parsing, so BinaryWriter/BinaryReader can act as a cache for UCIFastReader. The caching code is currently implemented in UCIFastReader.
+Other possible scenarios are also enabled by using a common interface, for example, one reader/writer can act as a cache for another slower reader. UCIFastReader is a text-based reader, and though it is very fast, there is still a significant amount of overhead to parsing, so BinaryWriter/BinaryReader can act as a cache for UCIFastReader. The caching code is currently implemented in UCIFastReader.
 
 The five readers and one writer provided with CNTK all use these same interfaces and each is housed in its own DLL. CNTK loads the DLL and looks for exported functions that will return the interface of interest. The functions are defined as follows:
 
@@ -1287,7 +1287,7 @@ extern "C" DATAWRITER_API void GetWriterF(IDataWriter<float>** pwriter);
 extern "C" DATAWRITER_API void GetWriterD(IDataWriter<double>** pwriter);
 ```
 
-each reader or writer DLL exports the appropriate functions, and will return the interface when called. The following sections defined the interfaces:
+each reader or writer DLL exports the appropriate functions and will return the interface when called. The following sections defined the interfaces:
 
 #### Reader Interface
 
@@ -1323,7 +1323,7 @@ The methods are as follows:
 
 -   **Init** – initialize the reader from a set of ConfigurationParameters. See the reader documentation for elements of readers that should be similar across all types.
 
--   **Destroy** – the “destructor” for the reader. Since we are being called from external code we use an explicit method rather than a normal c++ destructor, but the intent is the same.
+-   **Destroy** – the “destructor” for the reader. Since we are being called from the external code we use an explicit method rather than a normal c++ destructor, but the intent is the same.
 
 -   **StartMinibatchLoop** – Starts the minibatch loop with the following parameters:
 
@@ -1337,7 +1337,7 @@ The methods are as follows:
 
     -   **matrices –** a dictionary that maps from the matrix name to the actual matrix. The names of the matrices in the dictionary should be equal to the subsections in the reader configurations.
 
-    -   returns – true if there is more data, false if end of epoch is reached.
+    -   returns – true if there is more data, false if the end of an epoch is reached.
 
 -   **GetLabelMapping –** Get the label map from the reader
 
@@ -1359,13 +1359,13 @@ The methods are as follows:
 
     -   **data –** pointer to the data buffer, must have enough room to hold the data
 
-    -   **dataBufferSize –** size of the buffer, if zero is passed in, or null is passed for the data pointer the number of bytes required in the buffer will returned in this variable
+    -   **dataBufferSize –** size of the buffer, if zero is passed in, or null is passed for the data pointer the number of bytes required in the buffer will be returned in this variable
 
     -   **recordStart –** the record to start reading from
 
 -   **DataEnd** – Are we at the end of a data section?
 
-    -   **endDataType** – type of ending we are checking (Dataset, Epoch, Sentence)
+    -   **endDataType** – the type of ending we are checking (Dataset, Epoch, Sentence)
 
     -   **returns** – true or false
 
@@ -1423,7 +1423,7 @@ The methods are as follows:
 
 -   **SaveMapping –** save the mapping table
 
-    -   **saveId –** the section name or other id where the mapping will be saved
+    -   **saveId –** the section name or another id where the mapping will be saved
 
     -   **labelMapping –** the label map from labelId (integer) to label (std::string)
 
@@ -1433,17 +1433,17 @@ The CNTK Math library is implemented in the DLL CNTKMath.dll and provides a libr
 
 The library contains a wrapper class called Matrix&lt;ElemType&gt; (where ElemType is float or double) that hides the differences between the multiple matrix implementations and takes care of data transfers between the GPU and CPU. GPUs and CPUs have different memory spaces, and copying data between them is necessary to access or modify the data from either device. The library attempts to keep data on the GPU as much as possible if a GPU is being used.
 
-When data is accessed or modified from the CPU, if the data is currently on the GPU the matrix will automatically be relocated to the CPU, and relocated back when the GPU attempts to access or modify the data. Currently the entire matrix object is transferred, so care should be taken when accessing matrix data from the CPU.
+When data is accessed or modified from the CPU, if the data is currently on the GPU the matrix will automatically be relocated to the CPU and relocated back when the GPU attempts to access or modify the data. Currently, the entire matrix object is transferred, so care should be taken when accessing matrix data from the CPU.
 
-The library uses BLAS libraries from NVidia for the GPU (CuBLAS) and AMD for the CPU (AMCL). Other third party libraries that are used include CuRand (for random number generation) and CuSparse (for sparse matrix implementations),
+The library uses BLAS libraries from NVidia for the GPU (CuBLAS) and AMD for the CPU (AMCL). Other third-party libraries that are used include CuRand (for random number generation) and CuSparse (for sparse matrix implementations),
 
 ### PTask support
 
-PTask is a library used in CNTK to enable multiple GPU computation on a single machine. PTask uses the concept of a “Tasks organized in a filter graph. It allows fully asynchronous operation of the tasks, each only depending on inputs being available to execute. PTask distributes the tasks across the available hardware and handles data transfers.
+PTask is a library used in CNTK to enable multiple GPU computation on a single machine. PTask uses the concept of “Tasks organized in a filter graph. It allows fully asynchronous operation of the tasks, each only depending on inputs being available to execute. PTask distributes the tasks across the available hardware and handles data transfers.
 
 CNTK is organized in a different fashion with Computation Nodes. However, each node has two methods that do all the computation work: EvaluateThisNode() and ComputeInputPartial(), which can be used as the “Tasks”. However, since Tasks can be executed asynchronously, they need to be stateless. To enable these methods as task a static version of each method that takes all inputs and outputs as parameters are created. The class methods simply call these “Task” functions with the class variables for their implementation.
 
-The PTaskGraphBuilder component takes a computation network and transforms it into a filter graph. In order to do this work it requires the parameter description for each of the tasks. Since C++ does not have a reflection mechanism as in available in C\# and some other languages, a class method has been introduced to ComputationNode to provide this information. The method GetPTaskDescriptor() provides this information to PTaskGraphBuilder so it can build the graph.
+The PTaskGraphBuilder component takes a computation network and transforms it into a filter graph. In order to do this work, it requires the parameter description for each of the tasks. Since C++ does not have a reflection mechanism as in available in C\# and some other languages, a class method has been introduced to ComputationNode to provide this information. The method GetPTaskDescriptor() provides this information to PTaskGraphBuilder so it can build the graph.
 
 The following is an example of a GetPTaskDescriptor() implementation. This function returns a TaskDescriptor class containing all the parameter and other information necessary to build the filter graph for a particular node. This node is the “TimesNode” and does a matrix multiply. The following implementation of the two important member functions are:
 
@@ -1524,9 +1524,9 @@ descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
 descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
 ```
 
-The second parameter is interesting because it is required to retain it value from one call to the next, this is done in a filter graph by having a parameter be input and output at the same time, meaning it updates itself. There is a clear distinction between values that need to be maintained and those that are transcient in a filter graph, and this idiom is how we instruct PTaskGraphBuilder to retain the value. The Initialize option is also necessary so on the first iteration the matrix will be cleared out (zeros).
+The second parameter is interesting because it is required to retain its value from one call to the next, this is done in a filter graph by having a parameter be input and output at the same time, meaning it updates itself. There is a clear distinction between values that need to be maintained and those that are transient in a filter graph, and this idiom is how we instruct PTaskGraphBuilder to retain the value. The Initialize option is also necessary so on the first iteration the matrix will be cleared out (zeros).
 
-The last parameter is the gradient matrix of the current node, and is an input (defaults for this function).
+The last parameter is the gradient matrix of the current node and is an input (defaults for this function).
 
 ```
 descriptor->GradientParam();
@@ -1552,7 +1552,7 @@ static void WINAPI EvaluateThisNodeS(Matrix<ElemType>& functionValues, const Mat
 
 The ability to describe a network architecture in NDL (Network Description Language) is one of the major features of CNTK. However, it is not immediately obvious to the developer looking at the code how it all works. This is meant to shed a little light on the inner workings of NDL processing in CNTK.
 
-NDL is based on the same configuration parser that is used for config files and MEL (Model Editing Language). While this is convenient to share code, it also makes things a little less clear when viewing the code. The configuration file classes, MEL class, and NDL classes all inherit from ConfigParser, which provides the basic parsing, bracket matching, and other common features (quote handling, etc.). The parsing engine implemented in ConfigParser calls back to a virtual method called ParseValue() when it has a token that needs to be interpreted. So ParseValue() in the NDLScript class is the main location where interpretation of tokens takes place.
+NDL is based on the same configuration parser that is used for config files and MEL (Model Editing Language). While this is convenient to share code, it also makes things a little less clear when viewing the code. The configuration file classes, MEL class, and NDL classes all inherit from ConfigParser, which provides the basic parsing, bracket matching, and other common features (quote handling, etc.). The parsing engine implemented in ConfigParser calls back to a virtual method called ParseValue() when it has a token that needs to be interpreted. So ParseValue() in the NDLScript class is the main location where the interpretation of tokens takes place.
 
 NDL supports Macros, which makes things much more convenient, but a bit messier for the developer to deal with. All the macros are parsed and stored in a Global script so they can be accessed by any NDL script. It also means that you don’t want to load or define a set of macros more than once, or you will get “function already exists” errors.
 
@@ -1596,7 +1596,7 @@ Now a little more detail is in order for these layers:
 
 -   Doing this in a separate pass allows nodes to be referenced before they are actually defined in the NDL Script. This is a necessary feature for Recursive Neural Networks with a DelayNode.
 
--   Having a separate pass allows inline-NDL to support DelayNodes, and “Just-in-time” execution of inline-NDL can occur, where depending on the MEL command that is being executed, we can evaluate the NDL to the appropriate level. Some MEL commands need a “final-state” network to excute safely, others may only require the initial pass to be completed. The initial pass is executed when the inline-NDL is encountered, and how much evaluation has happened for each node is tracked.
+-   Having a separate pass allows inline-NDL to support DelayNodes, and “Just-in-time” execution of inline-NDL can occur, where depending on the MEL command that is being executed, we can evaluate the NDL to the appropriate level. Some MEL commands need a “final-state” network to execute safely, others may only require the initial pass to be completed. The initial pass is executed when the inline-NDL is encountered, and how much evaluation has happened for each node is tracked.
 
 -   At the end of this pass the computational network is fully connected and complete
 
@@ -1620,9 +1620,9 @@ Validation multiple purposes:
 
 #### Evaluation Process
 
-Now that the entire has been explained, a little more detail on how each Evaluation pass occurs seems relavant.
+Now that the entire has been explained, a little more detail on how each Evaluation pass occurs seems relevant.
 
--   First the NDLScript::Evaluate() method is called. This take a few parameters the nodeEvaluator (which creates the actual Computation Nodes), and a baseName, and which pass we are on.
+-   First the NDLScript::Evaluate() method is called. This takes a few parameters the nodeEvaluator (which creates the actual Computation Nodes), and a baseName, and which pass we are on.
 
 -   NDLScript::Evaluate() loops through it’s list of NDL statements and calls NodeEvaluator::Evaluate() of NodeEvaluator::EvaluateMacro() on each of them with the current baseName
 
@@ -1632,7 +1632,7 @@ Now that the entire has been explained, a little more detail on how each Evaluat
 
 -   The parameters (if any) to the node are evaluated in the first two passes, and in the second pass are assigned as inputs to the computation nodes.
 
--   In the second pass optional parameters are also processed. The “tag” optional parameter must be processed to identify features, labels, etc.
+-   In the second pass, optional parameters are also processed. The “tag” optional parameter must be processed to identify features, labels, etc.
 
 -   “dotNames” are currently handled separately, whenever one is referenced the baseName of the parent is added as a prefix to the current scoped name and looked up directly in the computational network.
 
