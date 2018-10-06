@@ -103,6 +103,7 @@ The ‘\#’ character signifies the beginning of a comment, everything that occ
 stderr=c:\cntk\log\cntk # "_mnistTrain_mnistTest.log" would be appended
 # the parameter below is set to infinity, the ‘#’ in ‘1#INF’ is not a comment marker
 var = 1#INF
+# this parameter is to be ignored.
 ```
 
 ## Example
@@ -192,7 +193,7 @@ mnistTrain=[
     action=train
     …
 ```
-The **mnistTrain** section will execute the **train** action, and the **mnistTest** section will execute **eval**. The names of the sections is arbitrary, but the configuration parameter names must be command and action.
+The **mnistTrain** section will execute the **train** action, and the **mnistTest** section will execute **eval**. The names of the sections is arbitrary, but the configuration parameter names must be command and action. This training and testing occurs to calculate the accuracy and loss.
 
 ### Precision
 
