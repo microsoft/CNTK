@@ -99,6 +99,9 @@ class Graph : public GraphBase {
   ::onnxruntime::common::Status VerifyNodeAndOpMatch(const std::vector<NodeIndex>& nodes_in_topological_order,
                                                      const std::unordered_map<std::string, Node*>& output_args);
 
+  void ComputeGraphInputsOutputsAndResetValues(std::vector<const NodeArg*> &new_graph_inputs,
+      std::vector<const NodeArg*> &new_graph_outputs);
+
   // Set graph inputs/outputs when resolving a graph..
   ::onnxruntime::common::Status SetGraphInputsOutputs();
 

@@ -751,8 +751,11 @@ Status GraphBase::CheckIsAcyclic(std::vector<NodeIndex>& nodes_in_topological_or
 
     ancestor_nodes.insert(current);
 
-    // check children
-    for (auto iter = node->InputNodesBegin(); iter != node->InputNodesEnd(); ++iter) {
+    // check children. use reverse order as we're going to push them onto the stack
+    // and doing it this way maintains their original order as we process the stack
+    for (auto iter = std::make_reverse_iterator(node->InputNodesEnd()),
+      end = std::make_reverse_iterator(node->InputNodesBegin());
+      iter != end; ++iter) {
       const NodeIndex idx = (*iter)->Index();
       if (ancestor_nodes.end() != ancestor_nodes.find(idx)) {
         Status status(LOTUS, FAIL, "Error: the graph is not acyclic.");
@@ -1422,6 +1425,8 @@ Node* GraphBase::AddNode(const std::string& name,
                          const std::vector<NodeArg*>& output_args,
                          const NodeAttributes* attributes,
                          const std::string& domain) {
+    if (name == "Splice222")
+        std::cout << "";
   AddNodeArgs(input_args, node_args_);
   AddNodeArgs(output_args, node_args_);
 
@@ -1529,6 +1534,10 @@ void Graph::SyncGraphInputsOutputs() {
   }
 }
 
+//void Graph::SetInputs(const )
+//
+//void Graph::SetOutputs()
+
 void Graph::CleanUnusedInitializers() {
   std::vector<std::string> unused_names;
   std::set<const NodeArg*> input_args;
@@ -1559,16 +1568,97 @@ void Graph::CleanUnusedInitializers() {
   }
 }
 
+void AssignNodeArgsIfChanged(const std::vector<const NodeArg*> new_graph_inputs, std::vector<const NodeArg*> &graph_inputs)
+{
+    if (true || graph_inputs.size() != new_graph_inputs.size() ||
+        std::any_of(graph_inputs.begin(), graph_inputs.end(), [new_graph_inputs](const NodeArg *input_arg)
+    {
+        for (auto new_input_arg : new_graph_inputs)
+        {
+            if (input_arg->Name() == new_input_arg->Name())
+                return true;
+        }
+        return false;
+    }))
+    {
+        graph_inputs = new_graph_inputs;
+    }
+}
+
+void Graph::ComputeGraphInputsOutputsAndResetValues(std::vector<const NodeArg*> &new_graph_inputs, 
+    std::vector<const NodeArg*> &new_graph_outputs)
+{
+    value_info_.clear();
+    std::unordered_set<std::string> added_input_names{};
+    std::unordered_map<std::string, const NodeArg*> output_name_to_node_arg;
+    for (const auto& node : Nodes()) {
+        for (gsl::not_null<const NodeArg*> output_def : node.OutputDefs()) {
+            if (output_def->Exists())
+                output_name_to_node_arg.insert({ output_def->Name(), output_def });
+        }
+    }
+
+    // Init graph output args with all node output args.
+    auto graph_output_args = output_name_to_node_arg;
+
+    std::unordered_set<Node*> inner_nodes;
+    for (const auto& node : Nodes()) {
+        // Go thru all node's inputs.
+        for (const gsl::not_null<const NodeArg*> input_arg : node.InputDefs()) {
+            if (!input_arg->Exists()) {
+                // It's an optional input and does not exist in this case.
+                continue;
+            }
+
+            auto output_arg_iter = output_name_to_node_arg.find(input_arg->Name());
+            if (output_name_to_node_arg.end() == output_arg_iter) {
+                // This input arg should be fed when running evaluation.
+                // it should be a graph input.
+                const std::string& name = input_arg->Name();
+                if (added_input_names.end() == added_input_names.find(name)) {
+                    // This graph input has not been added into <graph_inputs_>.
+                    if (name_to_initial_tensor_.find(name) == name_to_initial_tensor_.end())
+                        new_graph_inputs.push_back(input_arg);
+                    added_input_names.insert(input_arg->Name());
+                }
+            }
+            else if (graph_output_args.erase(output_arg_iter->first) >= 1) {
+                // Remove the output arg name from graph outputs since it's
+                // the input of another node, which we call it intermediate result
+                // and store it in <m_valueinfo>.
+                value_info_.push_back(input_arg);
+            }
+        }
+    }
+
+    // Set graph outputs.
+    auto nodes = Nodes();
+    std::vector<const NodeArg*> sorted_new_graph_outputs;
+    for (GraphNodes::ConstNodeIterator it = nodes.cbegin(); it != nodes.cend(); ++it)
+    {
+        const Node &node = *it;
+        auto nodeOutputNodeArgs = node.OutputDefs();
+        for (std::unordered_map<std::string, const NodeArg*>::iterator itPair = graph_output_args.begin();
+            itPair != graph_output_args.end(); ++itPair)
+        {
+            const NodeArg* outputNodeArg = itPair->second;
+            for (int i = 0; i < nodeOutputNodeArgs.size(); i++)
+            {
+                if (nodeOutputNodeArgs[i]->Name() == outputNodeArg->Name())
+                {
+                    if (std::find_if(new_graph_outputs.begin(), new_graph_outputs.end(), [outputNodeArg](const NodeArg *nodeArg)
+                    {
+                        return outputNodeArg->Name() == nodeArg->Name();
+                    }) == new_graph_outputs.end())
+                        new_graph_outputs.push_back(outputNodeArg);
+                }
+            }
+        }
+    }
+}
+
 GSL_SUPPRESS(es .84)  // warning about ignoring return value from insert(...)
 Status Graph::SetGraphInputsOutputs() {
-  // Reset graphInputs/graphOutputs/valueInfo state.
-  auto& graph_inputs = MutableInputs();
-  auto& graph_outputs = MutableOutputs();
-
-  graph_inputs.clear();
-  graph_outputs.clear();
-  value_info_.clear();
-
   // Flag indicates that this graph is loaded from model file.
   // If it's true, then graph inputs and outputs will keep the same
   // as what are specified in the model, otherwise, graph inputs
@@ -1577,18 +1667,27 @@ Status Graph::SetGraphInputsOutputs() {
                                       graph_proto_->output_size() != 0 ||
                                       graph_proto_->value_info_size() != 0;
 
-  std::unordered_set<std::string> added_input_names{};
 
   if (loaded_from_model_file) {
+    std::unordered_set<std::string> added_input_names{};
+    auto& graph_inputs = MutableInputs();
+    auto& graph_outputs = MutableOutputs();
+    
+    // Reset graphInputs/graphOutputs/valueInfo state.
+    graph_inputs.clear();
+    graph_outputs.clear();
+    value_info_.clear();
+
     // Collect all graph inputs/outputs specified in original graph proto
-    std::unordered_set<std::string> specified_graph_inputs;
-    std::unordered_set<std::string> specified_graph_outputs;
+    std::vector<std::string> specified_graph_inputs;
+    std::vector<std::string> specified_graph_outputs, specified_graph_outputs_copy;
     std::unordered_set<std::string> specified_graph_value_info;
     std::unordered_set<std::string> specified_initializers;
 
     for (auto& graph_output : graph_proto_->output()) {
-      specified_graph_outputs.insert(graph_output.name());
+      specified_graph_outputs.push_back(graph_output.name());
     }
+    specified_graph_outputs_copy = specified_graph_outputs;
 
     for (auto& graph_value_info : graph_proto_->value_info()) {
       specified_graph_value_info.insert(graph_value_info.name());
@@ -1601,13 +1700,17 @@ Status Graph::SetGraphInputsOutputs() {
     // only add non-initializer to inputs
     for (auto& graph_input : graph_proto_->input()) {
       if (specified_initializers.find(graph_input.name()) == specified_initializers.end())
-        specified_graph_inputs.insert(graph_input.name());
+        specified_graph_inputs.push_back(graph_input.name());
     }
 
     std::unordered_map<std::string, const NodeArg*> output_name_to_node_arg;
     for (const auto& node : Nodes()) {
       for (gsl::not_null<const NodeArg*> output_def : node.OutputDefs()) {
-        if (specified_graph_outputs.erase(output_def->Name()) >= 1) {
+
+        std::vector<std::string>::iterator itErase = std::find(specified_graph_outputs.begin(), specified_graph_outputs.end(), output_def->Name());
+        if (itErase != specified_graph_outputs.end())
+        {
+          specified_graph_outputs.erase(itErase);
           graph_outputs.push_back(output_def);
         }
         output_name_to_node_arg.insert({output_def->Name(), output_def});
@@ -1616,11 +1719,14 @@ Status Graph::SetGraphInputsOutputs() {
     // for any outputs using initializer, add to graph_outputs
     if (specified_graph_outputs.size() > 0) {
       for (const auto& name : specified_initializers) {
-        if (specified_graph_outputs.erase(name) >= 1) {
-          graph_outputs.push_back(FindNodeArg(name));
+          std::vector<std::string>::iterator itErase = std::find(specified_graph_outputs.begin(), specified_graph_outputs.end(), name);
+          if (itErase != specified_graph_outputs.end())
+          {
+              specified_graph_outputs.erase(itErase);
+              graph_outputs.push_back(FindNodeArg(name));
+          }
         }
       }
-    }
 
     if (!specified_graph_outputs.empty()) {
       std::string missing_list;
@@ -1637,7 +1743,9 @@ Status Graph::SetGraphInputsOutputs() {
           continue;
         }
 
-        if (specified_graph_inputs.end() != specified_graph_inputs.find(input_arg->Name())) {
+        std::vector<std::string>::iterator it = 
+            std::find(specified_graph_inputs.begin(), specified_graph_inputs.end(), input_arg->Name());
+        if (specified_graph_inputs.end() != it) {
           if (added_input_names.insert(input_arg->Name()).second) {
             // The node input is specified as graph input.
             graph_inputs.push_back(input_arg);
@@ -1658,51 +1766,42 @@ Status Graph::SetGraphInputsOutputs() {
         }
       }
     }
+
+    // maintain input and output order if it is already set in proto file
+    if (!specified_graph_inputs.empty())
+    {
+        std::sort(graph_inputs.begin(), graph_inputs.end(),
+            [specified_graph_inputs](const NodeArg* a, const NodeArg* b)
+        {
+            return
+                std::distance(specified_graph_inputs.begin(), 
+                    std::find(specified_graph_inputs.begin(), specified_graph_inputs.end(), a->Name())) <
+                std::distance(specified_graph_inputs.begin(), 
+                    std::find(specified_graph_inputs.begin(), specified_graph_inputs.end(), b->Name()));
+        });
+    }
+
+    if (!specified_graph_outputs_copy.empty())
+    {
+        std::sort(graph_outputs.begin(), graph_outputs.end(),
+            [specified_graph_outputs_copy](const NodeArg* a, const NodeArg* b)
+        {
+            return
+                std::distance(specified_graph_outputs_copy.begin(), 
+                    std::find(specified_graph_outputs_copy.begin(), specified_graph_outputs_copy.end(), a->Name())) <
+                std::distance(specified_graph_outputs_copy.begin(), 
+                    std::find(specified_graph_outputs_copy.begin(), specified_graph_outputs_copy.end(), b->Name()));
+        });
+    }
   } else {
-    std::unordered_map<std::string, const NodeArg*> output_name_to_node_arg;
-    for (const auto& node : Nodes()) {
-      for (gsl::not_null<const NodeArg*> output_def : node.OutputDefs()) {
-        if (output_def->Exists())
-          output_name_to_node_arg.insert({output_def->Name(), output_def});
-      }
-    }
+    std::vector<const NodeArg*> new_graph_inputs, new_graph_outputs;
 
-    // Init graph output args with all node output args.
-    auto graph_output_args = output_name_to_node_arg;
+    ComputeGraphInputsOutputsAndResetValues(new_graph_inputs, new_graph_outputs);
+    auto& graph_inputs = MutableInputs();
+    auto& graph_outputs = MutableOutputs();
 
-    std::unordered_set<Node*> inner_nodes;
-    for (const auto& node : Nodes()) {
-      // Go thru all node's inputs.
-      for (const gsl::not_null<const NodeArg*> input_arg : node.InputDefs()) {
-        if (!input_arg->Exists()) {
-          // It's an optional input and does not exist in this case.
-          continue;
-        }
-
-        auto output_arg_iter = output_name_to_node_arg.find(input_arg->Name());
-        if (output_name_to_node_arg.end() == output_arg_iter) {
-          // This input arg should be fed when running evaluation.
-          // it should be a graph input.
-          const std::string& name = input_arg->Name();
-          if (added_input_names.end() == added_input_names.find(name)) {
-            // This graph input has not been added into <graph_inputs_>.
-            if (name_to_initial_tensor_.find(name) == name_to_initial_tensor_.end())
-              graph_inputs.push_back(input_arg);
-            added_input_names.insert(input_arg->Name());
-          }
-        } else if (graph_output_args.erase(output_arg_iter->first) >= 1) {
-          // Remove the output arg name from graph outputs since it's
-          // the input of another node, which we call it intermediate result
-          // and store it in <m_valueinfo>.
-          value_info_.push_back(input_arg);
-        }
-      }
-    }
-
-    // Set graph outputs.
-    for (auto& output_arg : graph_output_args) {
-      graph_outputs.push_back(output_arg.second);
-    }
+    AssignNodeArgsIfChanged(new_graph_inputs, graph_inputs);
+    AssignNodeArgsIfChanged(new_graph_outputs, graph_outputs);
   }
 
   return Status::OK();

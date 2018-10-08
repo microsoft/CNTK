@@ -8,14 +8,14 @@ namespace CNTK
     class ScanLoopState
     {
     public:
-        ScanLoopState(const std::string &initialStateName, const std::string &stateOutputName, int delay) :
-            m_initialStateName(initialStateName),
-            m_stateOutputName(stateOutputName),
+        ScanLoopState(const Variable initialState, const Variable stateOutput, int delay) :
+            m_initialState(initialState),
+            m_stateOutput(stateOutput),
             m_delay(delay)
         {}
 
-        std::string m_initialStateName;
-        std::string m_stateOutputName;
+        Variable m_initialState;
+        Variable m_stateOutput;
         onnx::TensorProto m_initialStateTensor;
         int m_delay;
     };
