@@ -175,6 +175,7 @@ The following C# code now works on both Windows and Linux:
      >>> Function modelFunc = CNTKLib.Times(weightParameter, inputVariable) + biasParameter;
 
 For example, simply adding an ItemGroup clause in the .csproj file of a .Net Core application is sufficient:
+```
      >>> <Project Sdk="Microsoft.NET.Sdk">
      >>>
      >>>   <PropertyGroup>
@@ -187,6 +188,7 @@ For example, simply adding an ItemGroup clause in the .csproj file of a .Net Cor
      >>>   </ItemGroup>
      >>>
      >>> </Project>
+```
 
 ### Bug or minor fixes:
 - Fixed C# string and char to native wstring and wchar UTF conversion issues on Linux.
