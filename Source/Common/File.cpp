@@ -727,16 +727,13 @@ File& File::operator>>(FileMarker marker)
 // This function will fail for non-seekable streams.
 bool File::IsMarker(FileMarker marker, bool skip)
 {
-    bool retval = false;
     switch (marker)
     {
     case fileMarkerBeginFile: // beginning of file marker
         // check for Unicode BOM marker
-        retval = IsUnicodeBOM(skip);
-        break;
+        return IsUnicodeBOM(skip);
     case fileMarkerEndFile: // end of file marker, should we throw if it's not the end of the file?
-        retval = IsEOF();
-        break;
+        return IsEOF();
     case fileMarkerBeginList: // Beginning of list marker
         // no marker written unless an list with a count header
         // should we try to validate BOL header (just know it's an int, not negative, etc.)
@@ -750,7 +747,7 @@ bool File::IsMarker(FileMarker marker, bool skip)
         {
             int eolSeen = false;
             eolSeen = EndOfLineOrEOF(skip);
-            retval = (eolSeen == (int) true);
+            return (eolSeen == (int) true);
         }
         break;
     case fileMarkerBeginSection: // beginning of section
@@ -758,7 +755,7 @@ bool File::IsMarker(FileMarker marker, bool skip)
         // can't destinquish from a string currently
         break;
     }
-    return retval;
+    return false;
 }
 
 // GetMarker for beginning of list support (lists with a count)
