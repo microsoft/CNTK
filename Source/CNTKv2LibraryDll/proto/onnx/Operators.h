@@ -152,6 +152,7 @@ public:
 
     static bool IsLoopOp(const std::string &opName);
     static bool IsRNNOp(const std::string &opName);
+    static bool IsSequenceBlockOp(const std::string &opName);
 
 private:
     static std::unordered_multimap<std::wstring, AttributesMapping> _cntkToONNXOpName;

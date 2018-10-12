@@ -11,12 +11,14 @@ namespace CNTK
         ScanLoopState(const Variable initialState, const Variable stateOutput, int delay) :
             m_initialState(initialState),
             m_stateOutput(stateOutput),
-            m_delay(delay)
+            m_delay(delay),
+            m_hasInitializer(false)
         {}
 
         Variable m_initialState;
         Variable m_stateOutput;
         onnx::TensorProto m_initialStateTensor;
+        bool m_hasInitializer;
         int m_delay;
     };
 

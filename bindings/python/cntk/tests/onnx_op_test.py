@@ -108,6 +108,18 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
 
     return loaded_model
 
+def run_model(model, data, device=None): 
+    feed = {}
+    if len(model.arguments) == 1:
+        feed[model.arguments[0]] = data 
+    elif len(model.arguments) > 1: 
+        assert len(model.arguments) == len(data)
+        for i in range(len(model.arguments)):
+            feed[model.arguments[i]] = data[i]
+            
+    o = model.eval(feed, device=device)
+    return o
+
 def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
@@ -117,17 +129,20 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
     if is_list_of_sparse(data):
         dataOnnx = transpose_dynamic_axis(sparse_to_dense(data))
     else:
-        dataOnnx = transpose_dynamic_axis(data)
+        if (type(data) == list):
+            dataOnnx = []
+            for i in range(0, len(data)):
+                if (model.arguments[i].has_sequence_axis()):
+                    dataOnnx.append(transpose_dynamic_axis(data[i]))
+                else:
+                    dataOnnx.append(data[i])
+        else:
+            dataOnnx = transpose_dynamic_axis(data)
 
     loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
 
-    if device:
-        o0 = model.eval({model.arguments[0]:data}, device=device)
-        o1 = loaded_model.eval({loaded_model.arguments[0]:dataOnnx}, device=device)
-    else:
-        o0 = model.eval({model.arguments[0]:data})
-        o1 = loaded_model.eval({loaded_model.arguments[0]:dataOnnx})
-
+    o0 = run_model(model, data, device=device)
+    o1 = run_model(loaded_model, dataOnnx, device=device)
 
     ## if there is a sequence axis in the output, it must be swapped with batch axis 
     ## to match the original CNTK model's output 
@@ -1061,6 +1076,99 @@ def test_MatMul_nd_2inputs_2(tmpdir, dtype):
         y = C.input_variable(np.shape(data1))
         model = C.times(x, y)
         verify_two_input(model, data0, data1, tmpdir, 'MatMul_n_3')
+
+#@pytest.mark.parametrize("dtype", DType_Config)
+#def test_CNTK_Times_To_ONNX_MatMul(tmpdir, dtype):
+def test_CNTK_Times_To_ONNX_MatMul(tmpdir):
+    def generate_matmul_data(input_variable, batch_size, sequence_size):
+        np.random.seed(0)
+        data_shape = ()
+        if input_variable.has_batch_axis():
+            data_shape = (*data_shape, batch_size)
+        if input_variable.has_sequence_axis():
+            data_shape = (*data_shape, sequence_size)
+        data_shape = (*data_shape, *input_variable.shape)
+        print(data_shape)
+        data = np.random.randn(*data_shape).astype(np.float32)
+        return data
+
+    batch_size = 1
+    sequence_length = 3
+    input1_shape = (2, 3, 4)
+    input2_shape = (3, 4, 5, 6)
+    output_rank = 2
+
+    ## data_x_data
+    x = C.input_variable(input1_shape, dynamic_axes = [])
+    y = C.input_variable(input2_shape, dynamic_axes = [])
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_two_input(model, data0, data1, tmpdir, 'times_data_x_data')
+
+    ###batch_x_data
+    x = C.input_variable(input1_shape, name = "x")
+    y = C.input_variable(input2_shape, dynamic_axes = [], name = "y")
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_two_input(model, data0, data1, tmpdir, 'batch_x_data')
+
+    ## data_x_batch
+    x = C.input_variable(input1_shape, dynamic_axes = [])
+    y = C.input_variable(input2_shape)
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_two_input(model, data0, data1, tmpdir, 'data_x_batch')
+
+    ## batch_x_batch
+    x = C.input_variable(input1_shape)
+    y = C.input_variable(input2_shape)
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_two_input(model, data0, data1, tmpdir, 'batch_x_batch')
+
+    ## sequence_x_data
+    x = C.sequence.input_variable(input1_shape)
+    y = C.input_variable(input2_shape, dynamic_axes = [])
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_sequence_model(model, [data0, data1], tmpdir, 'sequence_x_data')
+
+    ### data_x_sequence
+    x = C.input_variable(input1_shape, dynamic_axes = [])
+    y = C.sequence.input_variable(input2_shape)
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_sequence_model(model, [data0, data1], tmpdir, 'data_x_sequence')
+
+    ## sequence_x_sequence
+    x = C.sequence.input_variable(input1_shape)
+    y = C.sequence.input_variable(input2_shape)
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_sequence_model(model, [data0, data1], tmpdir, 'sequence_x_sequence')
+
+    ## sequence_x_batch
+    x = C.sequence.input_variable(input1_shape)
+    y = C.input_variable(input2_shape)
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_sequence_model(model, [data0, data1], tmpdir, 'sequence_x_batch')
+
+    ## batch_x_sequence
+    x = C.input_variable(input1_shape)
+    y = C.sequence.input_variable(input2_shape)
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_sequence_model(model, [data0, data1], tmpdir, 'batch_x_sequence')
 
 #Max
 @pytest.mark.parametrize("dtype", DType_Config)

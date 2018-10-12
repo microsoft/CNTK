@@ -365,6 +365,11 @@ namespace ONNX
             { L"axis", "axes" },
             { L"keepdims", "keepdims" },
         } } },
+        { L"Sequence::ReduceElements",{ {
+            { L"Sequence::ReduceElements", "ReduceSum" },
+            { L"axisVec", "axes" },
+            { L"reductionKeepDimensions", "keepdims" },
+        } } },
 
         // From tensor
         { L"Cast", { {
@@ -510,7 +515,13 @@ namespace ONNX
     {
         return opName == "LSTM" || opName == "GRU" || opName == "RNN" || opName == "RNNStep";
     }
-        std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
+    
+    bool Operators::IsSequenceBlockOp(const std::string &opName)
+    {
+        return opName == "Sequence::ReduceElements" || opName == "Sequence::BroadcastAs";
+    }
+
+    std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
             { L"Clip",{ 1, 2 } },
             { L"ELU",{ 0, 1 } },
             { L"LeakyReLU",{ 0, 1 } },
