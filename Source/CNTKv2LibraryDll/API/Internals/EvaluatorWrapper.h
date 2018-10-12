@@ -10,6 +10,8 @@
 #include <memory>
 #include <vector>
 #include <functional>
+#include <codecvt>
+#include <locale>
 
 #include "CNTKLibrary.h"
 #include "CNTKLibraryC.h"
@@ -76,6 +78,22 @@ namespace CNTK
         delete[] array;
     }
 
+    template<class T1, class T2, class T3>
+    struct local_codecvt : std::codecvt<T1, T2, T3> {
+        ~local_codecvt() { }
+    };
+    typedef local_codecvt<wchar_t, char, std::mbstate_t> cntk_codecvt;
+
+    inline std::wstring StringToWString(const std::string &s)
+    {
+       return std::wstring_convert<cntk_codecvt>().from_bytes(s);
+    }
+
+    inline std::string WStringToString(const std::wstring &ws)
+    {
+       return std::wstring_convert<cntk_codecvt>().to_bytes(ws);
+    }
+
     // Evaluator interface
     class EvaluatorWrapper : boost::noncopyable
     {
@@ -111,9 +129,10 @@ namespace CNTK
                 std::unique_ptr<CNTK_Variable, decltype(&CNTK_CleanVariable)> varCleaner(&resultVar, CNTK_CleanVariable);
 
                 const auto& var = vars[i];
-                resultVar.name = new wchar_t[var.Name().size() + 1];
-                std::copy(var.Name().c_str(), var.Name().c_str() + var.Name().size(), resultVar.name);
-                resultVar.name[var.Name().size()] = 0;
+                resultVar.name = new char[var.Name().size() + 1];
+                std::string name = WStringToString(var.Name());
+                std::copy(name.c_str(), name.c_str() + name.size(), resultVar.name);
+                resultVar.name[name.size()] = 0;
                 resultVar.shape = FromNDShape(var.Shape());
                 result.get()[i] = resultVar;
 
@@ -131,8 +150,8 @@ namespace CNTK
     class CNTKEvaluatorWrapper : public EvaluatorWrapper
     {
     public:
-        CNTKEvaluatorWrapper(const wchar_t* modelFilePath, const CNTK_DeviceDescriptor* device);
-        CNTKEvaluatorWrapper(const wchar_t* modelFilePath, DeviceDescriptor device);
+        CNTKEvaluatorWrapper(const char* modelFilePath, const CNTK_DeviceDescriptor* device);
+        CNTKEvaluatorWrapper(const char* modelFilePath, DeviceDescriptor device);
         CNTKEvaluatorWrapper(FunctionPtr model, DeviceDescriptor device);
 
         void GetModelArgumentsInfo(CNTK_Variable** inputs, uint32_t* numInputs) override;
@@ -152,8 +171,8 @@ namespace CNTK
     private:
         FunctionPtr m_func;
         DeviceDescriptor m_device;
-        std::unordered_map<std::wstring, Variable> m_arguments;
-        std::unordered_map<std::wstring, Variable> m_outputs;
+        std::unordered_map<std::string, Variable> m_arguments;
+        std::unordered_map<std::string, Variable> m_outputs;
     };
 }
 
