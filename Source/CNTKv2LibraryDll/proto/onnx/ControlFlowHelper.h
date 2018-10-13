@@ -31,13 +31,15 @@ namespace CNTK
             m_outputs(outputs),
             m_scanInputs(scanInputs),
             m_scanOutputs(scanOutputs),
-            m_body(body)
+            m_body(body),
+            m_scanOpCreated(false)
         {}
 
         std::vector<Variable> m_inputs, m_outputs, m_scanInputs, m_scanOutputs;
         std::vector<FunctionPtr> m_body;
         std::vector<ScanLoopState> scanLoopStates;
         std::vector<FunctionPtr> m_visited;
+        bool m_scanOpCreated;
     };
 
     // Implementation of a graph based on ComputationNodes.

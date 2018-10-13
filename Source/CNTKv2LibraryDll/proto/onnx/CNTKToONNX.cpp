@@ -298,9 +298,10 @@ private:
     //      Supported in onnxruntime. CNTK Needs to add a fake axis 0 to scan op.
     const static bool ScanWithoutBatchAxis = true;
 
-    // this is a state indicating whether we are constructing main graph of Scan subgraph.
-    // it is mainly used to tell whether a tensor shall have a sequence (depending on above options, and batch)
-    // axis. It also tells how axis is converted from CNTK to ONNX.
+    // this is a state indicating whether we are constructing the main graph or a Scan subgraph.
+    // it is mainly used to tell whether a tensor shall have a sequence axis
+    // (and, depending on above options, a batch axis).
+    // It also tells how axis shall be converted from CNTK to ONNX.
     static bool isProcessingScan;
     //
     // Convert NDShape and various std::vector types to TensorShape
@@ -530,17 +531,21 @@ private:
     }
 
     //
-    // Helper function to reduce the rank of a shape.
+    // Helper function to reduce the rank of a shape for CNTK times op.
     // This is how CNTK Times works with output_rank=3 (3rd axis to the right of the second tensor):
     // (d1, d2, d3, d4) times (d3, d4, d5, d6, d7) => (d1, d2, d5, d6, d7)
-    // to use MatMul for CNTK times we need:
-    // reshape T1 to (d1, d2, d3 * d4), T2 to (d3 * d4, d5, d6, d7)
+    // to convert times op to ONNX MatMul we need:
+    // 1. reshape T1 to (d1, d2, d3 * d4), T2 to (d3 * d4, d5, d6, d7)
+    // 2. MatMul
+    // 3. Reshape MatMul output to (d1, d2, d5, d6, d7)
+    // For input with batch and sequence axes, computation can be think as if 
+    // it happens only with static axes and then broadcast to dynamic axes.
     static std::tuple<onnx::TypeProto, onnx::TypeProto, onnx::TypeProto> ReduceRank(
         const onnx::TensorShapeProto* input1Shape, const onnx::TensorShapeProto* input2Shape,
         int reductionRank, int numDynamicAxes1, int numDynamicAxes2)
     {
-        assert(inputShape1 != nullptr);
-        assert(inputShape2 != nullptr);
+        assert(input1Shape != nullptr);
+        assert(input2Shape != nullptr);
         
         int inputRank1 = input1Shape->dim_size();
         assert(inputRank1 > reductionRank);
@@ -674,7 +679,9 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, onnxruntime::Graph* dst)
     //
     // Iterate through each node in CNTK graph and create an equivalent node
     // in ONNX graph.
-    //
+    // 
+    // we start with main graph
+    int createLoopIndex = -1;
     CreateNode(srcSkipped, dst, functionNodes, variableNodes, compositeOutputsMap, scanLoops, -1);
 
 
@@ -2979,9 +2986,9 @@ onnxruntime::Node *CNTKToONNXHelper::AddCastNode(onnxruntime::NodeArg &nodeArg, 
     return castNode;
 }
 
-// ONNX Scan spec has inputs/outputs dimensions order in batch, sequence, features, etc. 
-// this is different from CNTK exporter convention and ONNX RNN ops where sequence is the first dimension.
-// to conpensate this difference, call this method before and after a Scan op to switch batch and sequence axes.
+// ONNX Scan spec has inputs/outputs dimension order in batch, sequence, features. 
+// This is different from the convention of CNTK exporter and ONNX RNN ops where sequence is the first dimension.
+// to conpensate this difference, call this method before and after a Scan op to swap batch and sequence axes.
 NodeArg& CNTKToONNXHelper::AddTransposeBatchSequenceAxesNode(onnxruntime::NodeArg &nodeArg, 
     bool isInput, onnxruntime::Graph* graph)
 {
@@ -3470,6 +3477,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& 
         return sequenceSliceNode;
 }
 
+// Check whether a CNTK FunctionPtr is an output of a loop body.
 bool OutputOfLoop(std::vector<ScanLoop> &scanLoops, const FunctionPtr& src, int &loopIndex)
 {
     for (int l = 0; l < scanLoops.size(); l++)
@@ -3487,7 +3495,7 @@ bool OutputOfLoop(std::vector<ScanLoop> &scanLoops, const FunctionPtr& src, int 
     return false;
 }
 
-void ResolveGraphAndSaveModel(onnxruntime::Model *model)
+void ResolveGraphAndDebugSaveModel(onnxruntime::Model *model)
 {
     auto &dstGraph = model->MainGraph();
     onnxruntime::common::Status status = dstGraph.Resolve();
@@ -3499,13 +3507,14 @@ void ResolveGraphAndSaveModel(onnxruntime::Model *model)
     model->SetProducerVersion(CNTK_ONNX_PRODUCER_VERSION);
     model->SetProducerName(CNTK_ONNX_PRODUCER_NAME);
 
-    onnxruntime::Model::Save(*model, "E:/LiqunWA/CNTK/ONNX/TestOps/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
+    // Uncomment below code for debugging and trouble shooting.
+    //onnxruntime::Model::Save(*model, "C:/Temp/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
 
-    std::shared_ptr<onnxruntime::Model> model2;
-    onnxruntime::common::Status loadStatus = onnxruntime::Model::Load(
-        "E:/LiqunWA/CNTK/ONNX/TestOps/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx", model2);
-    Graph* graph2 = &model->MainGraph();
-    graph2->Resolve();
+    //std::shared_ptr<onnxruntime::Model> model2;
+    //onnxruntime::common::Status loadStatus = onnxruntime::Model::Load(
+    //    "C:/Temp/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx", model2);
+    //Graph* graph2 = &model->MainGraph();
+    //graph2->Resolve();
 }
 
 // use this method to attach an identity op so that state inputs/outputs of the subgraph are in the same order as the scan op
@@ -3584,8 +3593,10 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
         {
             // we are creating the global graph, need to skip loop bodies 
             int loopIndex = -1; 
-            if (OutputOfLoop(scanLoops, src, loopIndex)) 
+            if (OutputOfLoop(scanLoops, src, loopIndex) && !scanLoops[loopIndex].m_scanOpCreated)
             {
+                scanLoops[loopIndex].m_scanOpCreated = true;
+
                 // create scan ops
                 std::unique_ptr<onnxruntime::Model> scanSubModel(new onnxruntime::Model("CNTKGraph", true));
                 Graph &scanGraph = scanSubModel->MainGraph();
@@ -3682,7 +3693,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                 // 
                 
                 //scanGraph.Resolve();
-                ResolveGraphAndSaveModel(scanSubModel.get());
+                ResolveGraphAndDebugSaveModel(scanSubModel.get());
 
                 GraphProto graphProto(scanGraph.ToGraphProto());
                 scanNode->AddAttribute("body", graphProto);
