@@ -1434,8 +1434,6 @@ Node* GraphBase::AddNode(const std::string& name,
                          const std::vector<NodeArg*>& output_args,
                          const NodeAttributes* attributes,
                          const std::string& domain) {
-    if (name == "Splice222")
-        std::cout << "";
   AddNodeArgs(input_args, node_args_);
   AddNodeArgs(output_args, node_args_);
 
@@ -1542,10 +1540,6 @@ void Graph::SyncGraphInputsOutputs() {
     *(graph_proto_->mutable_value_info()->Add()) = value_info->ToProto();
   }
 }
-
-//void Graph::SetInputs(const )
-//
-//void Graph::SetOutputs()
 
 void Graph::CleanUnusedInitializers() {
   std::vector<std::string> unused_names;

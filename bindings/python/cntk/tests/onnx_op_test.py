@@ -108,11 +108,11 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
 
     return loaded_model
 
-def run_model(model, data, device=None): 
+def run_model(model, data, device=None):
     feed = {}
     if len(model.arguments) == 1:
-        feed[model.arguments[0]] = data 
-    elif len(model.arguments) > 1: 
+        feed[model.arguments[0]] = data
+    elif len(model.arguments) > 1:
         assert len(model.arguments) == len(data)
         for i in range(len(model.arguments)):
             feed[model.arguments[i]] = data[i]
@@ -1077,9 +1077,8 @@ def test_MatMul_nd_2inputs_2(tmpdir, dtype):
         model = C.times(x, y)
         verify_two_input(model, data0, data1, tmpdir, 'MatMul_n_3')
 
-#@pytest.mark.parametrize("dtype", DType_Config)
-#def test_CNTK_Times_To_ONNX_MatMul(tmpdir, dtype):
-def test_CNTK_Times_To_ONNX_MatMul(tmpdir):
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_CNTK_Times_To_ONNX_MatMul(tmpdir, dtype):
     def generate_matmul_data(input_variable, batch_size, sequence_size):
         np.random.seed(0)
         data_shape = ()

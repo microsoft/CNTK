@@ -269,7 +269,6 @@
     <ClCompile Include="PrimitiveFunctionAttribute.cpp" />
     <ClCompile Include="proto\CNTK.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="proto\onnx\CNTKToONNX.cpp" />
-    <ClCompile Include="proto\onnx\ControlFlowHelper.cpp" />
     <ClCompile Include="proto\onnx\core\common\logging\capture.cc" />
     <ClCompile Include="proto\onnx\core\common\logging\logging.cc" />
     <ClCompile Include="proto\onnx\core\common\profiler.cc" />
