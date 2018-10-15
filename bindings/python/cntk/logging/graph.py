@@ -206,10 +206,17 @@ def plot(root, filename=None):
         suffix = None
 
     if filename:
-        try:
-            import pydot_ng as pydot
-        except ImportError:
-            raise ImportError("Unable to import pydot_ng, which is required to output SVG, PDF, PNG, and DOT format.")
+        if sys.version_info < (3, 5):
+            try:
+                import pydot_ng as pydot
+            except ImportError:
+                raise ImportError("Unable to import pydot_ng, which is required to output SVG, PDF, PNG, and DOT format.")
+        else:
+            try:
+                import pydotplus as pydot
+            except ImportError:
+                raise ImportError("Unable to import pydotplus, which is required to output SVG, PDF, PNG, and DOT format.")
+
 
         # initialize a dot object to store vertices and edges
         dot_object = pydot.Dot(graph_name="network_graph", rankdir='TB')
