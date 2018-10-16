@@ -1,20 +1,10 @@
-# Tag: nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
-# Created: 2017-11-21T06:34:14.675603521Z
-# Label: com.nvidia.build.id: 41212533
-# Label: com.nvidia.build.ref: e0edb5359ecb7bd3d86f0c9bfa18c2260b741ebb
-# Label: com.nvidia.cuda.version: 9.0.176
-# Label: com.nvidia.cudnn.version: 7.0.4.31
-# Label: com.nvidia.nccl.version: 2.1.2
-#
-# To build, run from the parent with the command line:
-# 	docker build -t <image name> -f CNTK-GPU-Image/Dockerfile .
+FROM nvidia/cuda:8.0-cudnn6-devel-ubuntu16.04
 
-# Ubuntu 16.04.5
-FROM nvidia/cuda@sha256:33add9c50ab76b8f3a92187c0418ed600d5bea27690fda40711122fdc28ce2f4
-
+# install base system
 RUN apt-get update && apt-get install -y --no-install-recommends \
         autotools-dev \
         build-essential \
+        cmake \
         git \
         gfortran-multilib \
         libavcodec-dev \
@@ -28,94 +18,77 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         pkg-config \
         wget \
         zlib1g-dev \
-        # OPENSSL support
-        libssl-dev \
-        openssl \
         # Protobuf
         ca-certificates \
         curl \
-		libcurl4-openssl-dev \
         unzip \
         # For Kaldi
         python-dev \
         automake \
-        libtool-bin \
+        libtool \
         autoconf \
         subversion \
         # For Kaldi's dependencies
         libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 \
         # For Java Bindings
-        openjdk-8-jdk \
+        openjdk-9-jdk-headless \
         # For SWIG
         libpcre3-dev \
-        # For graphics managed lib
-        libgdiplus \
-        # .NET Core SDK
-        apt-transport-https && \
-        # Cleanup
-        rm -rf /var/lib/apt/lists/*
+        libpcre++-dev && \
+    apt-get install -y --no-install-recommends \
+        # Infiniband/RDMA
+        cpio \
+        libmlx4-1 \
+        libmlx5-1 \
+        librdmacm1 \
+        libibverbs1 \
+        libmthca1 \
+        libdapl2 \
+        dapl2-utils
 
-ARG CMAKE_DOWNLOAD_VERSION=3.11
-ARG CMAKE_BUILD_VERSION=4
-RUN DEBIAN_FRONTEND=noninteractive && \
-    wget --no-verbose https://cmake.org/files/v$CMAKE_DOWNLOAD_VERSION/cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION.tar.gz && \
-	tar -xzvf cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION.tar.gz && \
-    cd cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION && \
-    ./bootstrap --system-curl -- -DCMAKE_USE_OPENSSL=ON && \
-    make -j $(nproc) install && \
-	cd .. && \
-    rm -rf cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION	
-
-RUN OPENMPI_VERSION=1.10.3 && \
-    wget -q -O - https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-${OPENMPI_VERSION}.tar.gz | tar -xzf - && \
-    cd openmpi-${OPENMPI_VERSION} && \
-    ./configure --prefix=/usr/local/mpi && \
-    make -j"$(nproc)" install && \
-    rm -rf /openmpi-${OPENMPI_VERSION}
-
-ENV PATH /usr/local/mpi/bin:$PATH
-ENV LD_LIBRARY_PATH /usr/local/mpi/lib:$LD_LIBRARY_PATH
-
-RUN LIBZIP_VERSION=1.1.2 && \
-    wget -q -O - https://libzip.org/download/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
+# build and install libzip, cub, boost, openblas, opencv, protobuf
+RUN LIBZIP_VERSION=1.1.3 && \
+    wget -q -O - http://nih.at/libzip/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
     cd libzip-${LIBZIP_VERSION} && \
-    ./configure && \
+    ./configure --prefix=/usr/local && \
     make -j"$(nproc)" install && \
-    rm -rf /libzip-${LIBZIP_VERSION}
-
-ENV LD_LIBRARY_PATH /usr/local/lib:$LD_LIBRARY_PATH
-
-RUN wget -q -O - https://github.com/NVlabs/cub/archive/1.7.4.tar.gz | tar -C /usr/local -xzf -
-
-RUN OPENCV_VERSION=3.1.0 && \
-    wget -q -O - https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.tar.gz | tar -xzf - && \
-    cd opencv-${OPENCV_VERSION} && \
-    cmake -DWITH_CUDA=OFF -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-${OPENCV_VERSION} . && \
-    make -j"$(nproc)" install && \
-    rm -rf /opencv-${OPENCV_VERSION}
-
-RUN OPENBLAS_VERSION=0.2.18 && \
+    ldconfig /usr/local/lib && \
+    cd .. && \
+    rm -rf /libzip-${LIBZIP_VERSION} && \
+    # boost
+    BOOST_VERSION=1_60_0 && \
+    BOOST_DOTTED_VERSION=$(echo $BOOST_VERSION | tr _ .) && \
+    wget -q -O - https://sourceforge.net/projects/boost/files/boost/${BOOST_DOTTED_VERSION}/boost_${BOOST_VERSION}.tar.gz/download | tar -xzf - && \
+    cd boost_${BOOST_VERSION} && \
+    ./bootstrap.sh --prefix=/usr/local --with-libraries=filesystem,system,test  && \
+    ./b2 -d0 -j"$(nproc)" install && \
+    ldconfig /usr/local/lib && \
+    cd .. && \
+    rm -rf /boost_${BOOST_VERSION} && \
+    # cub
+    wget -q -O - https://github.com/NVlabs/cub/archive/1.4.1.tar.gz | tar -C /usr/local -xzf - && \
+    # openblas
+    OPENBLAS_VERSION=0.2.19 && \
     wget -q -O - https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.tar.gz | tar -xzf - && \
     cd OpenBLAS-${OPENBLAS_VERSION} && \
     make -j"$(nproc)" USE_OPENMP=1 | tee make.log && \
     grep -qF 'OpenBLAS build complete. (BLAS CBLAS LAPACK LAPACKE)' make.log && \
     grep -qF 'Use OpenMP in the multithreading.' make.log && \
     make PREFIX=/usr/local/openblas install && \
-    rm -rf /OpenBLAS-${OPENBLAS_VERSION}
-
-ENV LD_LIBRARY_PATH /usr/local/openblas/lib:$LD_LIBRARY_PATH
-
-# Install Boost
-RUN BOOST_VERSION=1_60_0 && \
-    BOOST_DOTTED_VERSION=$(echo $BOOST_VERSION | tr _ .) && \
-    wget -q -O - https://sourceforge.net/projects/boost/files/boost/${BOOST_DOTTED_VERSION}/boost_${BOOST_VERSION}.tar.gz/download | tar -xzf - && \
-    cd boost_${BOOST_VERSION} && \
-    ./bootstrap.sh --prefix=/usr/local/boost-${BOOST_DOTTED_VERSION} --with-libraries=filesystem,system,test  && \
-    ./b2 -d0 -j"$(nproc)" install  && \
-    rm -rf /boost_${BOOST_VERSION}
-
-# Install Protobuf
-RUN PROTOBUF_VERSION=3.1.0 \
+    ldconfig /usr/local/openblas && \
+    cd .. && \
+    rm -rf /OpenBLAS-${OPENBLAS_VERSION} && \
+    # opencv
+    OPENCV_VERSION=3.1.0 && \
+    wget -q -O - https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.tar.gz | tar -xzf - && \
+    cd opencv-${OPENCV_VERSION} && \
+    cmake -DWITH_CUDA=OFF -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-${OPENCV_VERSION} . && \
+    make -j"$(nproc)" install && \
+    ldconfig /usr/local/lib && \
+    cd .. && \
+    rm -rf /opencv-${OPENCV_VERSION} && \
+    # protocol buffers
+    PROTOBUF_VERSION=3.1.0 \
     PROTOBUF_STRING=protobuf-$PROTOBUF_VERSION && \
     wget -O - --no-verbose https://github.com/google/protobuf/archive/v${PROTOBUF_VERSION}.tar.gz | tar -xzf - && \
     cd $PROTOBUF_STRING && \
@@ -125,132 +98,116 @@ RUN PROTOBUF_VERSION=3.1.0 \
     cd .. && \
     rm -rf $PROTOBUF_STRING
 
-# Install MKLDNN and MKLML
-ARG MKLDNN_VERSION=0.14
-ARG MKLDNN_LONG_VERSION=mklml_lnx_2018.0.3.20180406
-RUN mkdir /usr/local/mklml && \
-    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/v${MKLDNN_VERSION}/${MKLDNN_LONG_VERSION}.tgz | \
-    tar -xzf - -C /usr/local/mklml && \
-    MKLDNN_STRING=mkl-dnn-${MKLDNN_VERSION} && \
-    wget --no-verbose -O - https://github.com/01org/mkl-dnn/archive/v${MKLDNN_VERSION}.tar.gz | tar -xzf - && \
-    cd ${MKLDNN_STRING} && \
-    ln -s /usr/local external && \
-    mkdir -p build && \
-    cd build && \
-    cmake .. -DCMAKE_INSTALL_PREFIX=/ && \
-    make && \
-    make install DESTDIR=/usr/local && \
-    make install DESTDIR=/usr/local/mklml/${MKLDNN_LONG_VERSION} && \
-    cd ../.. && \
-    rm -rf ${MKLDNN_STRING}
-
-# Install Kaldi
+# set env vars
 ENV KALDI_VERSION=c024e8aa
-ENV KALDI_PATH /usr/local/kaldi-$KALDI_VERSION
+ENV MKLML_VERSION=mklml_lnx_2018.0.1.20171007
+ENV PATH=/root/anaconda3/envs/cntk-py36/bin:/usr/local/bin:/cntk/build-mkl/gpu/release/bin:${PATH} \
+    KALDI_PATH=/usr/local/kaldi-$KALDI_VERSION \
+    BLAS=/usr/local/openblas/lib/libopenblas.so \
+    LAPACK=/usr/local/openblas/lib/libopenblas.so \
+    MKL_PATH=/usr/local/CNTKCustomMKL \
+    PYTHONPATH=/cntk/bindings/python:$PYTHONPATH \
+    LD_LIBRARY_PATH=/usr/local/openblas/lib:/cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
 
-RUN mv /bin/sh /bin/sh.orig && \
-   ln -s -f /bin/bash /bin/sh && \
-   mkdir $KALDI_PATH && \
-   wget --no-verbose -O - https://github.com/kaldi-asr/kaldi/archive/$KALDI_VERSION.tar.gz | tar -xzf - --strip-components=1 -C $KALDI_PATH && \
-   cd $KALDI_PATH && \
-   cd tools && \
-   perl -pi -e 's/^# (OPENFST_VERSION = 1.4.1)$/\1/' Makefile && \
-   ./extras/check_dependencies.sh && \
-   make -j $(nproc) all && \
-   cd ../src && \
-   # remove Fermi support as CUDA 9 no longer works on it
-   perl -pi -e 's/-gencode arch=compute_20,code=sm_20//' cudamatrix/Makefile && \
-   ./configure --openblas-root=/usr/local/openblas --shared && \
-   make -j $(nproc) depend && \
-   make -j $(nproc) all && \
-# Remove some unneeded stuff in $KALDI_PATH to reduce size
-   find $KALDI_PATH -name '*.o' -print0 | xargs -0 rm && \
-   for dir in $KALDI_PATH/src/*bin; do make -C $dir clean; done && \
-   mv -f /bin/sh.orig /bin/sh
-
-## PYTHON
-
-# Commit that will be used for Python environment creation (and later, compilation)
-ARG COMMIT=master
-
-# Swig
-RUN cd /root && \
-    wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
-    cd swig-3.0.10 && \
-    # Note: we specify --without-alllang to suppress building tests and examples for specific languages.
+# install cntk custom mkl, kaldi, swig and anaconda
+RUN mkdir ${MKL_PATH} && \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/v0.11/${MKLML_VERSION}.tgz | \
+    tar -xzf - -C ${MKL_PATH} && \
+    # kaldi
+    mkdir $KALDI_PATH && \
+    wget --no-verbose -O - https://github.com/kaldi-asr/kaldi/archive/$KALDI_VERSION.tar.gz | tar -xzf - --strip-components=1 -C $KALDI_PATH && \
+    cd $KALDI_PATH/tools && \
+    perl -pi -e 's/^# (OPENFST_VERSION = 1.4.1)$/\1/' Makefile && \
+    #/bin/bash extras/check_dependencies.sh && \
+    #make -j $(nproc) all && \
+    make -j $(nproc) sph2pipe atlas sclite openfst && \
+    cd ../src && \
+    ./configure --openblas-root=/usr/local/openblas --shared && \
+    make -j $(nproc) depend && \
+    make -j $(nproc) all && \
+    find $KALDI_PATH -name '*.o' -print0 | xargs -0 rm && \
+    for dir in $KALDI_PATH/src/*bin; do make -C $dir clean; done && \
+    # SWIG
+    SWIG_VERSION=3.0.10 && \
+    cd /root && \
+    wget -q http://prdownloads.sourceforge.net/swig/swig-${SWIG_VERSION}.tar.gz -O - | tar xvfz - && \
+    cd swig-${SWIG_VERSION} && \
     ./configure --without-alllang && \
-    make -j $(nproc) && \
-    make install
+    make -j$(nproc) && \
+    make install && \
+    cd .. && \
+    rm -rf swig-${SWIG_VERSION} && \
+    # Anaconda
+    wget -q https://repo.continuum.io/archive/Anaconda3-4.4.0-Linux-x86_64.sh && \
+    bash Anaconda3-4.4.0-Linux-x86_64.sh -b && \
+    rm -f Anaconda3-4.4.0-Linux-x86_64.sh && \
+    # set paths for CNTK
+    mkdir -p /usr/local/cudnn/cuda/include && \
+    ln -s /usr/include/cudnn.h /usr/local/cudnn/cuda/include/cudnn.h && \
+    mkdir -p /usr/local/cudnn/cuda/lib64 && \
+    ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn/cuda/lib64/libcudnn.so && \
+    ln -s /usr/local/cuda/lib64/stubs/libnvidia-ml.so /usr/local/cuda/lib64/stubs/libnvidia-ml.so.1 && \
+    # update ldconfig
+    ldconfig /usr/local/lib
 
-COPY ./Patches /tmp/patches
-RUN /tmp/patches/patch_swig.sh /usr/local/share/swig/3.0.10 && \
-	rm -rfd /tmp/patches
-
-# .NET Core SDK
-RUN cd /tmp && \
-    (wget -q packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb || true) && \
-    dpkg -i packages-microsoft-prod.deb && \
-    apt-get update && \
-    apt-get --yes install dotnet-sdk-2.1.200 && \
-    rm /tmp/packages-microsoft-prod.deb && \
-    apt-get --yes autoremove && \
-    rm -rf /var/lib/apt/lists/*
-	
-# Anaconda
-RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh && \
-    bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
-    rm Anaconda3-4.2.0-Linux-x86_64.sh
-
-RUN CONDA_ENV_PATH=/tmp/conda-linux-cntk-py35-environment.yml; \
-    wget -q https://raw.githubusercontent.com/Microsoft/CNTK/$COMMIT/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O "$CONDA_ENV_PATH" && \
-    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py35 --file "$CONDA_ENV_PATH" && \
-    rm -f "$CONDA_ENV_PATH"
-
-ENV PATH /root/anaconda3/envs/cntk-py35/bin:$PATH
-
+# set cntk dir
 WORKDIR /cntk
 
-# Allow CNTK's configure to pick up GDK and CuDNN where it expects it.
-# (Note: $CUDNN_VERSION is defined by NVidia's base image)
-# TODO hack, CNTK configure should be improved.
-RUN _CUDNN_VERSION=$(echo $CUDNN_VERSION | cut -d. -f1-2) && \
-    mkdir -p /usr/local/cudnn-$_CUDNN_VERSION/cuda/include && \
-    ln -s /usr/include/cudnn.h /usr/local/cudnn-$_CUDNN_VERSION/cuda/include/cudnn.h && \
-    mkdir -p /usr/local/cudnn-$_CUDNN_VERSION/cuda/lib64 && \
-    ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn-$_CUDNN_VERSION/cuda/lib64/libcudnn.so && \
-    ln -s /usr/local/cudnn-$_CUDNN_VERSION && \
-    mkdir -p /usr/src/gdk/nvml/lib && \
-    cp -av /usr/local/cuda/lib64/stubs/libnvidia-ml* /usr/src/gdk/nvml/lib && \
-    cp -av /usr/local/cuda/lib64/stubs/libnvidia-ml.so /usr/src/gdk/nvml/lib/libnvidia-ml.so.1 && \
-    mkdir -p /usr/include/nvidia/gdk && \
-    cp -av /usr/local/cuda/include/nvml.h /usr/include/nvidia/gdk/nvml.h
+# add intel mpi library and build cntk
+ENV MANPATH=/usr/share/man:/usr/local/man \
+    COMPILERVARS_ARCHITECTURE=intel64 \
+    COMPILERVARS_PLATFORM=linux \
+    INTEL_MPI_PATH=/opt/intel/compilers_and_libraries/linux/mpi
+RUN cd /tmp && \
+  wget -q 'http://registrationcenter-download.intel.com/akdlm/irc_nas/tec/11595/l_mpi_2017.3.196.tgz'  && \
+  tar zxvf l_mpi_2017.3.196.tgz && \
+  sed -i -e 's/^ACCEPT_EULA=decline/ACCEPT_EULA=accept/g' /tmp/l_mpi_2017.3.196/silent.cfg && \
+  sed -i -e 's|^#ACTIVATION_LICENSE_FILE=|ACTIVATION_LICENSE_FILE=/tmp/l_mpi_2017.3.196/USE_SERVER.lic|g' /tmp/l_mpi_2017.3.196/silent.cfg && \
+  sed -i -e 's/^ACTIVATION_TYPE=exist_lic/ACTIVATION_TYPE=license_server/g' /tmp/l_mpi_2017.3.196/silent.cfg  && \
+  cd /tmp/l_mpi_2017.3.196  && \
+  ./install.sh -s silent.cfg && \
+  cd ..
 
-# Build CNTK
-RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK.git cntksrc && \
-    cd cntksrc && \
-    MKLML_VERSION_DETAIL=${MKLDNN_LONG_VERSION} && \
+# cntk makefiles use non-standard mpic++, symlink to mpicxx
+RUN ln -s ${INTEL_MPI_PATH}/${COMPILERVARS_ARCHITECTURE}/bin/mpicxx ${INTEL_MPI_PATH}/${COMPILERVARS_ARCHITECTURE}/bin/mpic++ && \
+    # build cntk
+    CNTK_VERSION=v2.6 && \
+    cd /cntk && \
+    git clone --depth=1 --recursive -b ${CNTK_VERSION} --single-branch https://github.com/Microsoft/CNTK.git .
+
+# add cast in /cntk/Source/CNTKv2LibraryDll/Trainer.cpp to prevent build issue 
+RUN sed -i 's|, unit)|, (int)unit)|g' /cntk/Source/CNTKv2LibraryDll/Trainer.cpp
+
+# set Anaconda environment
+RUN /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py36/ \
+        --file /cntk/Scripts/install/linux/conda-linux-cntk-py36-environment.yml && \
+    # source intel mpi vars
+    . /opt/intel/bin/compilervars.sh && \
+    . /opt/intel/compilers_and_libraries/linux/mpi/bin64/mpivars.sh && \
+    # build gpu-mkl only
     CONFIGURE_OPTS="\
+      --1bitsgd=yes \
+      --with-mpi=${INTEL_MPI_PATH}/${COMPILERVARS_ARCHITECTURE} \
+      --with-cuda=/usr/local/cuda \
+      --with-gdk-include=/usr/local/cuda/include \
+      --with-gdk-nvml-lib=/usr/local/cuda/lib64/stubs \
       --with-kaldi=${KALDI_PATH} \
-      --with-py35-path=/root/anaconda3/envs/cntk-py35" && \
-    mkdir -p build/gpu/release && \
-    cd build/gpu/release && \
-    ../../../configure $CONFIGURE_OPTS --with-openblas=/usr/local/openblas && \
-    make -j"$(nproc)" all && \
-    cd ../../.. && \
+      --with-py36-path=/root/anaconda3/envs/cntk-py36 \
+      --with-cudnn=/usr/local/cudnn" && \
     mkdir -p build-mkl/gpu/release && \
     cd build-mkl/gpu/release && \
-    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/mklml/$MKLML_VERSION_DETAIL && \
-    make -j"$(nproc)" all
+    ../../../configure $CONFIGURE_OPTS --with-mkl=${MKL_PATH}/${MKLML_VERSION} && \
+    make -j"$(nproc)"
 
-RUN cd cntksrc/Examples/Image/DataSets/CIFAR-10 && \
-    python install_cifar10.py && \
-    cd ../../../..
-
-RUN cd cntksrc/Examples/Image/DataSets/MNIST && \
-    python install_mnist.py && \
-    cd ../../../..
-
-ENV PATH=/cntk/cntksrc/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/cntksrc/bindings/python LD_LIBRARY_PATH=/cntk/cntksrc/bindings/python/cntk/libs:$LD_LIBRARY_PATH
-
-# Install CNTK as the default backend for Keras
-ENV KERAS_BACKEND=cntk
+# clean up
+RUN rm -rf /cntk/build-mkl/gpu/release/.build && \
+    rm -rf /cntk/.git && \
+    /root/anaconda3/bin/conda clean --all --yes && \
+    # create activate script
+    echo "source /root/anaconda3/bin/activate /root/anaconda3/envs/cntk-py36" > /cntk/activate-cntk && \
+    # add cntk activate to root bashrc
+    echo "source /cntk/activate-cntk" >> /root/.bashrc && \
+    # add LD_LIBRARY_PATH to root bashrc
+    echo LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:'$LD_LIBRARY_PATH' >> /root/.bashrc && \
+    # remove intel components
+    rm -rf /opt/intel
