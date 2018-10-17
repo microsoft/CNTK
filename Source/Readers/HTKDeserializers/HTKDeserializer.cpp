@@ -51,10 +51,13 @@ HTKDeserializer::HTKDeserializer(
     m_dimension = config.GetFeatureDimension();
     m_dimension = m_dimension * (1 + context.first + context.second);
 
-    m_maxSequenceSize = input(L"maxSequenceSize", SIZE_MAX);
+    m_maxSequenceSize = config.GetMaxSequenceSize(); 
 
     InitializeChunkInfos(config);
-    InitializeStreams(inputName, input(L"definesMBSize", false));
+    
+    bool defineMBSize = config.GetDefinesMBSize(); 
+    InitializeStreams(inputName, defineMBSize);
+
     InitializeFeatureInformation();
     InitializeAugmentationWindow(config.GetContextWindow());
 }

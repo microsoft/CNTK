@@ -414,6 +414,26 @@ intargvector ConfigHelper::GetNumberOfUtterancesPerMinibatchForAllEppochs()
     return numberOfUtterances;
 }
 
+size_t ConfigHelper::GetMaxSequenceSize()
+{
+    if (m_config.Exists(L"maxSequenceSize"))
+    {
+        return m_config(L"maxSequenceSize");
+    }
+
+    return SIZE_MAX;
+}
+
+bool ConfigHelper::GetDefinesMBSize()
+{
+    if (m_config.Exists(L"definesMBSize"))
+    {
+        return m_config(L"definesMBSize");
+    }
+
+    return false;
+}
+
 void ConfigHelper::ExpandDotDotDot(string& featPath, const string& scpPath, string& scpDirCached)
 {
     string delim = "/\\";

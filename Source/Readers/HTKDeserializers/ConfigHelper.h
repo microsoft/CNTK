@@ -79,6 +79,13 @@ public:
     // Gets number of utterances per minibatch for epochs as an array.
     Microsoft::MSR::CNTK::intargvector GetNumberOfUtterancesPerMinibatchForAllEppochs();
 
+    // Gets the max sequence length. This is used in sequence training to limit max sequence length and avoid memory issues
+    size_t GetMaxSequenceSize();
+
+    // Gets whether minibatch size is controlled by frames returned by this deserializer.
+    // In speech multiple deserializers are possible eg feature, label and lattice. We want feature deserializer to control the minibatch size.
+    bool GetDefinesMBSize();
+
 private:
     DISABLE_COPY_AND_MOVE(ConfigHelper);
 
