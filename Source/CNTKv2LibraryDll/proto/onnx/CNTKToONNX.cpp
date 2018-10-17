@@ -311,6 +311,15 @@ private:
         const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides, const NDShape& dilation, bool ceilOutDim = false, bool transpose = false);
 
     //
+    // Takes CNTK's OneHotOp node and converts it into OneHotEncoder op on the ONNX side.
+    //
+    static onnxruntime::Node* CreateONNXNodesForOneHotOp(const FunctionPtr &src,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+
+    //
     // Takes CNTK's StraightThrough estimator node and converts it into a series of Greater+Cast+Mul+Sub
     // nodes on the ONNX side.
     //
@@ -497,7 +506,7 @@ private:
 
 std::unique_ptr<onnxruntime::Model> CNTKToONNX::CreateModel(const FunctionPtr& src)
 {
-    std::unique_ptr<onnxruntime::Model> model(new onnxruntime::Model("CNTKGraph", true));
+    std::unique_ptr<onnxruntime::Model> model(new onnxruntime::Model("CNTKGraph", false));
     auto &dstGraph = model->MainGraph();
     CNTKToONNXHelper::Copy(src, &dstGraph);
     onnxruntime::common::Status status = dstGraph.Resolve();
@@ -3039,6 +3048,10 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     {
         return CreateONNXNodesForStraightThrough(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     }
+    else if (cntkOpName == "OneHotOp")
+    {
+        return CreateONNXNodesForOneHotOp(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+    }
     else if (cntkOpName == "Select")
     {
         return CreateONNXNodesForSelect(src, graph, functionNodes, variableNodes, compositeOutputsMap);
@@ -4537,6 +4550,67 @@ onnxruntime::NodeArg& CNTKToONNXHelper::CreateScalarNode(Graph *graph, const str
     return inputNodeArg;
 }
 
+onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOneHotOp(const FunctionPtr &src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+{
+    if (!src->Attributes().Contains(L"numClass"))
+        LogicError("OneHotOp: Number of classes (numClass) attribute not found in the CNTK op.");
+    size_t numClass = (size_t)src->Attributes()[L"numClass"].Value<size_t>();
+
+    if (src->Attributes().Contains(L"oneHotOutputSparse") && 
+        (bool)src->Attributes()[L"oneHotOutputSparse"].Value<bool>())
+        fprintf(stderr, "Warning: OneHotOp - 'oneHotOutputSparse' is set to true, but it will be exported as false in ONNX because ONNX does have sparse support.");
+    
+    auto inputRank = src->Inputs()[0].Shape().Rank();
+    int64_t onehotAxis = src->Attributes().Contains(L"onehotAxis") ?
+        inputRank - ((Axis)(src->Attributes()[L"onehotAxis"].Value<Axis>())).StaticAxisIndex(): -1;
+
+    std::vector<onnxruntime::NodeArg*> inputs;
+    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
+
+    std::vector<onnxruntime::NodeArg*> outputs;
+    ProcessOutputs(src, outputs, graph);
+
+    const std::string& outputName = outputs[0]->Name();
+
+    bool needsTransposeNode = !(onehotAxis == -1 || onehotAxis == static_cast<int64_t>(inputRank));
+    onnxruntime::NodeArg* oneHotOutputArg = needsTransposeNode ? &graph->GetOrCreateNodeArg(outputName + "_onehot_out", nullptr) : outputs[0];
+    onnxruntime::Node* oneHotNode = graph->AddNode(outputName, ToOPName(src), "", { inputs[0] }, { oneHotOutputArg }, nullptr, "ai.onnx.ml");
+
+    std::vector<int64_t> catsVector(numClass);
+    std::iota(catsVector.begin(), catsVector.end(), 0);
+    oneHotNode->AddAttribute("cats_int64s", catsVector);
+    oneHotNode->AddAttribute("zeros", static_cast<int64_t>(1)); // CNTK produces zeros for labels that are outside the range of numClass.
+
+    // If the deafult value for 'axis` attribute is not used,
+    // then insert a transpose node to achieve the effect, because
+    // ai.onnx.ml.OneHotEncoder does not support 'axis' yet.
+    onnxruntime::Node* outputNode;
+    if (needsTransposeNode)
+    {
+        auto onnxInputRank = inputRank + src->Inputs()[0].DynamicAxes().size(); // Total rank including the dynamic axes
+        // CNTK op's 'axis' canot be used for dynamic axes and does not take them into account.
+        // So, we need to offset the 'axis' value by the number of dynamic axes.
+        auto onnxAxis = onehotAxis + src->Inputs()[0].DynamicAxes().size();
+        auto onnxOutputRank = onnxInputRank + 1;
+        //Create the 'perm' vector for transpose node.
+        std::vector<int64_t> permVector(onnxOutputRank-1);
+        std::iota(permVector.begin(), permVector.end(), 0);
+        permVector.insert(permVector.begin() + onnxAxis, onnxOutputRank - 1);
+        onnxruntime::NodeArg &transposeOutputArg = graph->GetOrCreateNodeArg(outputName + "_transpose_out", nullptr);
+        outputNode = graph->AddNode(outputName + "_Transpose", "Transpose", "", { oneHotOutputArg }, { outputs[0] });
+        outputNode->AddAttribute("perm", permVector);
+    }
+    else
+        outputNode = oneHotNode;
+
+    functionNodes.emplace(src, outputNode);
+    return outputNode;
+}
+
 onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForStraightThrough(const FunctionPtr &src,
                                                                     onnxruntime::Graph* graph,
                                                                     std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
@@ -4544,7 +4618,8 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForStraightThrough(const Fun
                                                                     const std::unordered_map<Variable, Variable>& compositeOutputsMap)
 {
     // This method exports CNTK's StraighThrough estimator op through an ONNX sub-graph. 
-    // ONNX subgraph consists of Greater + Cast + Mul + Sub ops. 
+    // ONNX subgraph consists of Greater + Cast + Mul + Sub ops. Specifically, 
+    // StraightThrough(input) = Cast(Greater(input, 0)) * 2 - 1
     std::vector<onnxruntime::NodeArg*> inputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
 
