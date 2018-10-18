@@ -247,8 +247,10 @@ def save_test_data(model, onnx_model, test_data_path, input_data, output_data, n
                             model.outputs[i], output_data_i, onnx_value_info_proto)
 
     # print out command line for onnx test runner
-    verify_filename = os.path.join(str(tmpdir), '../verify.bat')
+    verify_filename = os.path.join('onnx_op_test_verify.bat')
     append_write = 'a' if os.path.exists(verify_filename) else 'w'
     with open(verify_filename, append_write) as file:
-        file.write(R'onnx_test_runner.exe -n ' + name + ' ' + str(tmpdir) + '\n')
+        path_prefix = os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'] if 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ else ''
+        onnx_test_runner_path_str = str(os.path.join(path_prefix, 'onnx_test_runner'))
+        file.write(onnx_test_runner_path_str + ' -n ' + name + ' ' + str(tmpdir) + '\n')
     print(R'onnx_test_runner.exe -n ' + name + ' ' + str(tmpdir))
