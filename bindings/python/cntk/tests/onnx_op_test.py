@@ -27,6 +27,10 @@ set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMax
 # when the input has batch axis.
 set_of_batch_irrelevant_ops = {'Flatten'}
 
+verify_filename = os.path.join('onnx_op_test_verify.bat')
+if os.path.exists(verify_filename):
+    os.remove(verify_filename)
+
 ##########################################
 ## helper verification functions
 ##########################################
