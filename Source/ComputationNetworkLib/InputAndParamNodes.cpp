@@ -74,7 +74,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     else if (configp->Exists(L"needsGradient") || configp->Exists(L"needGradient") || configp->Exists(L"computeGradient"))
         InvalidArgument("Deprecated parameter names needsGradient|needGradient|computeGradient are not supported in BrainScript. Use learningRateMultiplier instead.");
     
-	/* guoye: start */
+    /* guoye: start */
     if (configp->Exists(L"orthonormalConstraint"))
         SetOrthonormalConstraint(configp->Get(L"orthonormalConstraint"));
     /* guoye: end */

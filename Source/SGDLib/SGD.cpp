@@ -2485,14 +2485,14 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     float nu, ratio, scale;
     num_rows = M.GetNumRows();
     num_cols = M.GetNumCols();
-	devId = M.GetDeviceId();
+    devId = M.GetDeviceId();
 
-	Matrix<ElemType> P(num_rows, num_rows, devId);
+    Matrix<ElemType> P(num_rows, num_rows, devId);
     Matrix<ElemType> PP(num_rows, num_rows, devId);
     Matrix<ElemType> delta_M(num_rows, num_cols, devId);
 
 
-	// Matrix<ElemType> tmp = functionValues;
+    // Matrix<ElemType> tmp = functionValues;
     if (alpha <= 1e-9 && alpha >= -1e-9)
         return; 
     // We'd like to enforce the rows of M to be orthonormal.
@@ -2529,7 +2529,7 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
         // best to view it as an established fact).
         // So X (the change in M) is -4 * nu/scale^2 * (P - alpha^2 I) * M,
 
-		// We want tr(M X^T) == 0.  First, forget the -4*nu/scale^2, because
+        // We want tr(M X^T) == 0.  First, forget the -4*nu/scale^2, because
         // we don't care about constant factors.  So we want:
         //  tr(M * M^T * (P - alpha^2 I)) == 0.
         // Since M M^T == P, that means:
@@ -2570,10 +2570,10 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     // 'update_speed' corresponds to 'nu' in the paper.
     scale = float(-4.0) * nu / (alpha * alpha);
 
-	Matrix<ElemType> I = Matrix<ElemType>::Eye(num_rows, M.GetDeviceId());
+    Matrix<ElemType> I = Matrix<ElemType>::Eye(num_rows, M.GetDeviceId());
     Matrix<ElemType>::ScaleAndAdd((ElemType) (-1.0 * alpha * alpha), I, P);
 
-	
+    
     // At this point, the matrix P contains what, in the math, would be Q =
     // P-alpha^2*I.  
     // The derivative of the objective w.r.t M equals: scale*(P-alpha^2*I)*M.
@@ -2873,7 +2873,7 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
             // int irow = (int) fmod(rand(), node->Value().GetNumRows() - 1);
             // int icol = (int) fmod(rand(), node->Value().GetNumCols() - 1);
 
-			int irow = (int) fmod(::rand(), node->Value().GetNumRows() - 1);
+            int irow = (int) fmod(::rand(), node->Value().GetNumRows() - 1);
             int icol = (int) fmod(::rand(), node->Value().GetNumCols() - 1);
             /* guoye: end */
             irow = max(0, irow);

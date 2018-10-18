@@ -66,7 +66,7 @@ LinearLayerOrthonormalConstraint {outDim, bias = true, init='glorotUniform', ini
         else if !BS.Constants.IsNone (mapRank)   then Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
         else Repeat (inputRank, Inferred)
     # W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale, learningRateMultiplier = learningRateMultiplier}
-	W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale, learningRateMultiplier = learningRateMultiplier, orthonormalConstraint = orthonormalConstraint}
+    W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale, learningRateMultiplier = learningRateMultiplier, orthonormalConstraint = orthonormalConstraint}
     b = ParameterTensor {outDim, initValue=initBias}
     outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
     inferInputRankToMap =
@@ -598,7 +598,7 @@ LearnableParameter = Parameter  // deprecated
 # TODO: make Parameter take tensor dims?
 # ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ParameterTensor {dims, learningRateMultiplier = 1.0, orthonormalConstraint = 0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
-	
+    
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
 # TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]

@@ -526,7 +526,7 @@ public:
                        const bool useNesterovMomentum) const;
     /* guoye: start */
     void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& functionValues, float alpha) const;
-	/* guoye: end */
+    /* guoye: end */
     // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode);
 

@@ -128,7 +128,7 @@ public:
     static Matrix<ElemType> Zeros(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId);
     static Matrix<ElemType> Eye(const size_t rows, DEVICEID_TYPE deviceId);
     /* guoye: start */
-	// get the trace of the matrix
+    // get the trace of the matrix
     ElemType MatTrace();
     /* guoye: end */
 #define USE_TIME_BASED_SEED ULONG_MAX

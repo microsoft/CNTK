@@ -586,16 +586,16 @@ template <class ElemType>
 ElemType Matrix<ElemType>::MatTrace()
 {
     Matrix<ElemType>& M = *this;
-	int devId;	
+    int devId;    
     size_t num_rows, num_cols;
 
-	num_rows = M.GetNumRows();
+    num_rows = M.GetNumRows();
     num_cols = M.GetNumCols();
     assert(num_rows == num_cols);
-	
-	devId = M.GetDeviceId();
+    
+    devId = M.GetDeviceId();
 
-	Matrix<ElemType> MI(num_rows, num_rows, devId);
+    Matrix<ElemType> MI(num_rows, num_rows, devId);
 
     ElemType trace;
 
