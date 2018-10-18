@@ -4435,8 +4435,8 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                     input = Utils::ConvertVariableType<float, float16>(input, true);
 
                 //// This is a workaround allowing CNTK V1 pretrained models to continue running after removal of sequence axis from input
-                //if (input.Shape().Rank() > 1)
-                //    inputArgType = ToTypeProto(input.Shape().SubShape(0, 1), input.HasBatchAxis(), input.HasSequenceAxis());
+                if ((src->Attributes()[L"spatial"].Value<bool>() ? 1 : 0) && input.Shape().Rank() > 1)
+                    inputArgType = ToTypeProto(input.Shape().SubShape(0, 1), input.HasBatchAxis(), input.HasSequenceAxis());
             }
         }
 
