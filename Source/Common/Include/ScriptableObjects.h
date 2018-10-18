@@ -10,7 +10,12 @@
 #include <map>
 #include <set>
 
-namespace Microsoft { namespace MSR { namespace ScriptableObjects {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace ScriptableObjects
+{
 
 using namespace std;
 using namespace msra::strfun;         // for wstrprintf()
@@ -25,12 +30,12 @@ class ScriptingException : public runtime_error
 {
 public:
     template <typename M>
-    ScriptingException(const M &msg) :
-        runtime_error(msg)
+    ScriptingException(const M &msg)
+        : runtime_error(msg)
     {
     }
-    virtual std::wstring GetError(const std::wstring& /*linePrefix*/) const = 0;
-    virtual void PrintError(const std::wstring& /*linePrefix*/) const = 0;
+    virtual std::wstring GetError(const std::wstring & /*linePrefix*/) const = 0;
+    virtual void PrintError(const std::wstring & /*linePrefix*/) const = 0;
 };
 
 // -----------------------------------------------------------------------
@@ -201,7 +206,7 @@ public:
     {
         return find(tag) != end();
     }
-    const std::set<std::wstring>& GetTags() const
+    const std::set<std::wstring> &GetTags() const
     {
         return *this;
     }
@@ -622,7 +627,7 @@ public:
     // ConfigArray(ConfigValuePtr && val) : firstIndex(0), values(std::vector<ConfigValuePtr>{ move(val) }) { }
     pair<int, int> GetIndexBeginEnd() const
     {
-        return make_pair(firstIndex, firstIndex + (int)values.size());
+        return make_pair(firstIndex, firstIndex + (int) values.size());
     }
     // for use as a plain array: get size and verify that index range starts with 0
     template <typename FAILFN>
@@ -664,7 +669,7 @@ public:
     {
         std::vector<C> res;
         res.reserve(GetSize(Fail));
-        for (const auto& valp : values)
+        for (const auto &valp : values)
         {
             valp.ResolveValue(); // resolve upon access
             if (!flatten || !valp.Is<ConfigArray>())
@@ -683,14 +688,14 @@ public:
 
     // helper function: get a vector from config that may be a scalar, a ConfigArray, or nested ConfigArrays meant to be flattened
     template <typename E>
-    static vector<E> FlattenedVectorFrom(const ConfigValuePtr& valp)
+    static vector<E> FlattenedVectorFrom(const ConfigValuePtr &valp)
     {
         if (valp.Is<vector<E>>())
             return valp.AsRef<vector<E>>(); // UNTESTED
         else if (valp.Is<ConfigArray>())
-            return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring& msg) { valp.Fail(msg); }, /*flatten=*/true);
+            return valp.AsRef<ConfigArray>().AsVector<E>([&](const wstring &msg) { valp.Fail(msg); }, /*flatten=*/true);
         else
-            return std::vector<E>(1, (const E&)valp); // single element
+            return std::vector<E>(1, (const E &) valp); // single element
     }
 };
 typedef shared_ptr<ConfigArray> ConfigArrayPtr;
@@ -716,9 +721,18 @@ public:
         : paramNames(move(paramNames)), namedParams(move(namedParams)), f(f)
     {
     }
-    size_t GetNumParams() const { return paramNames.size(); }
-    const std::vector<std::wstring>& GetParamNames() const { return paramNames; } // used for expression naming and function composition
-    const NamedParams& GetNamedParams() const { return namedParams; } // used for function composition
+    size_t GetNumParams() const
+    {
+        return paramNames.size();
+    }
+    const std::vector<std::wstring> &GetParamNames() const
+    {
+        return paramNames;
+    } // used for expression naming and function composition
+    const NamedParams &GetNamedParams() const
+    {
+        return namedParams;
+    } // used for function composition
     // what this function does is call f() held in this object with the given arguments except optional arguments are verified and fall back to their defaults if not given
     // The arguments are rvalue references, which allows us to pass Thunks, which is important to allow stuff with circular references like CNTK's DelayedNode.
     ConfigValuePtr Apply(std::vector<ConfigValuePtr> &&args, NamedParams &&namedArgs, const std::wstring &exprName) const
@@ -733,7 +747,7 @@ public:
             const auto valuei = namedArgs.find(id); // was such parameter passed?
             if (valuei == namedArgs.end())          // named parameter not passed
             {                                       // if not given then fall back to default
-                auto f2 = [&namedParam]()            // we pass a lambda that resolves it upon first use, in our original location
+                auto f2 = [&namedParam]()           // we pass a lambda that resolves it upon first use, in our original location
                 {
                     return namedParam.second.ResolveValue();
                 };
@@ -760,32 +774,32 @@ typedef shared_ptr<ConfigLambda> ConfigLambdaPtr;
 
 struct CustomConfigRecord : public IConfigRecord // any class that exposes config can derive from this
 {
-    const ConfigValuePtr& /*IConfigRecord::*/ operator[](const std::wstring& id) const override // e.g. confRec[L"message"]
+    const ConfigValuePtr & /*IConfigRecord::*/ operator[](const std::wstring &id) const override // e.g. confRec[L"message"]
     {
-        const auto* valuep = Find(id);
+        const auto *valuep = Find(id);
         if (!valuep)
             RuntimeError("Unknown configuration-record member '%ls'", id.c_str());
         return *valuep;
     }
 
-    const ConfigValuePtr* /*IConfigRecord::*/ Find(const std::wstring& id) const // returns nullptr if not found
+    const ConfigValuePtr * /*IConfigRecord::*/ Find(const std::wstring &id) const // returns nullptr if not found
     {
-        const auto& mapIter = members.find(id);
+        const auto &mapIter = members.find(id);
         if (mapIter != members.end())
             return &mapIter->second;
         LazyCreateConfigMember(id);
-        const auto& mapIter2 = members.find(id);
+        const auto &mapIter2 = members.find(id);
         if (mapIter2 != members.end())
             return &mapIter2->second;
         else
             return nullptr;
     }
 
-    void InsertConfigMember(const std::wstring& id, ConfigValuePtr&& valuep) const/*because it is called from Find() which is const*/
+    void InsertConfigMember(const std::wstring &id, ConfigValuePtr &&valuep) const /*because it is called from Find() which is const*/
     {
         const auto res = members.insert(make_pair(id, move(valuep)));
         assert(&res.first->second == &members.find(id)->second);
-        assert(res.second);        // this says whether it has been inserted. It better be.
+        assert(res.second); // this says whether it has been inserted. It better be.
     }
 
     // call this whenever anything changes about this node
@@ -975,4 +989,6 @@ template <class V>
     return static_cast<const std::vector<typename V::value_type> &>(vec);
 } // use this specifically for XXXargvector
 
-}}} // end namespaces
+} // namespace ScriptableObjects
+} // namespace MSR
+} // namespace Microsoft

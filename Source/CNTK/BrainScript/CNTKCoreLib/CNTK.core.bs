@@ -52,6 +52,35 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
         else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
 }.apply
 
+
+# guoye: start #
+# LinearLayer -- create a fully-connected linear projection layer
+# Note: outDim may describe a tensor as well.
+LinearLayerOrthonormalConstraint {outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0, learningRateMultiplier = 1.0, orthonormalConstraint=0.0} =
+{
+    # inputRank given: number of zeroes to add to W (mapRank must not be given)
+    # mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
+    # none      given: expand W to all (same as mapRank=0)
+    inputShape =
+        if       BS.Constants.IsNone (inputRank) then Inferred  # not given: one Inferred, which will get expanded
+        else if !BS.Constants.IsNone (mapRank)   then Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
+        else Repeat (inputRank, Inferred)
+    # W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale, learningRateMultiplier = learningRateMultiplier}
+	W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale, learningRateMultiplier = learningRateMultiplier, orthonormalConstraint = orthonormalConstraint}
+    b = ParameterTensor {outDim, initValue=initBias}
+    outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
+    inferInputRankToMap =
+        if      !BS.Constants.IsNone (inputRank) then -1  # means not specified
+        else if  BS.Constants.IsNone (mapRank)   then 0   # default to 'use all input dims'
+        else mapRank
+    apply (x) =
+        if bias
+        then Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap) + b
+        else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
+}.apply
+# guoye: end #
+
+
 # DenseLayer -- create a fully-connected layer with optional non-linearity
 DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank, initBias=initBias} : activation )
 
@@ -561,12 +590,15 @@ CNTK2 = [
 #  - initFromLiteral="..." (deprecated) --> parse a string literal (obsolete with value=array form)
 #  - init="fixedValue", value from 'value'
 # Warning: Current config will behave unexpected if user mistypes 'initValue' as 'value' (which will be ignored, defaulting to "uniform" init)
-Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; initFilterRank = 0 ; initOutputRank = 1 ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
+#Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; initFilterRank = 0 ; initOutputRank = 1 ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
+Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, orthonormalConstraint = 0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0/*deprecated*/, initValue = '', initFromFilePath = '', initFromLiteral = ''/*deprecated*/, initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; initFilterRank = 0 ; initOutputRank = 1 ; shape = new TensorShape [ dims = (outputDim : inputDim) ] /*plus the function args*/ ]
 
 LearnableParameter = Parameter  // deprecated
 
 # TODO: make Parameter take tensor dims?
-ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+# ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ParameterTensor {dims, learningRateMultiplier = 1.0, orthonormalConstraint = 0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+	
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
 # TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
