@@ -1428,7 +1428,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             {
                                 Matrix<ElemType> trans_weight_mat = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().Transpose();
                                 ApplySemiOrthogonalConstraint(trans_weight_mat, alpha);
-                                dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().SetValue(trans_weight_mat);
+                                dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().SetValue(trans_weight_mat.Transpose());
                                 trans_weight_mat.ReleaseMemory();
                             }
                         }
