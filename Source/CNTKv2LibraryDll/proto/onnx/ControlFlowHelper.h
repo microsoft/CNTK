@@ -121,7 +121,7 @@ namespace CNTK
         std::vector<FunctionPtr> visited;
         for (auto &root : roots)
         {
-            root->PreorderTraverse([&loops, &loopinputs, &loopoutputs, &scaninputs, &scanoutputs, &visited](const FunctionPtr& function) {
+            root->PreorderTraverse([&root, &loops, &loopinputs, &loopoutputs, &scaninputs, &scanoutputs, &visited](const FunctionPtr& function) {
                 if (std::find(visited.begin(), visited.end(), function) != visited.end())
                     return;
 
@@ -132,6 +132,7 @@ namespace CNTK
                     std::vector<Variable> &outputs = loopoutputs[l];
                     const std::vector<FunctionPtr> &nodes = loop.Nodes();
                     if (std::find(nodes.begin(), nodes.end(), function) != nodes.end())
+                    {
                         // if a function is part of a loop, any its inputs that are not from the loop body 
                         // is an input.
                         for (auto &input : function->Inputs())
@@ -146,7 +147,9 @@ namespace CNTK
                                 }
                             }
                         }
+                    }
                     else 
+                    {
                         // if a function is not part of the loop and any of its inputs is from the loop
                         // that input variable is an output from the loop
                         for (auto &input : function->Inputs())
@@ -161,8 +164,19 @@ namespace CNTK
                                 }
                             }
                         }
+                    }
                 }
             }, nestedSearchInsideBlockFunction);
+
+            // a corner case: if root src is in the loop body, it shall be an output as well. 
+            for (int l = 0; l < loops.size(); l++)
+            {
+                const StrongComponent<FunctionPtr> &loop = loops[l];
+                if (std::find(loop.Nodes().begin(), loop.Nodes().end(), root) != loop.Nodes().end())
+                    for (auto output : root->Outputs())
+                        if (std::find(scanoutputs[l].begin(), scanoutputs[l].end(), output) == scanoutputs[l].end())
+                            scanoutputs[l].push_back(output);
+            }
         }
 
         std::vector<std::vector<FunctionPtr>> loopstepfunctions;
@@ -191,16 +205,4 @@ namespace CNTK
             }
         }
     }
-
-    //onnxruntime::Graph SliceSequenceAxisFromGraph(onnxruntime::Graph *srcGraph)
-    //{
-    //    std::unique_ptr<onnxruntime::Model> scanSubModel(new onnxruntime::Model("CNTKGraph", true));
-    //    onnxruntime::Graph &graph = scanSubModel->MainGraph();
-
-    //    for (auto &node : srcGraph->Nodes())
-    //    {
-    //    }
-
-    //    return nullptr;
-    //}
 }

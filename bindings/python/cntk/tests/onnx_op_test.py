@@ -368,16 +368,23 @@ def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dty
             epsilon=epsilon)
 
         loaded_model = None
+        test_base_name = 'Spatial' if spatial else ''
+        test_base_name = test_base_name + ('BatchNormalization_float16' if dtype==np.float16 else 'BatchNormalization_float32')
+
         for i in range(len(x)):
             if dtype==np.float16:
-                loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization_float16' + str(i), loaded_model=loaded_model, rtol = 1e-03, atol = 1e-03)
+                loaded_model = verify_one_input(op_node, x[i], tmpdir, test_base_name + str(i), loaded_model=loaded_model, rtol = 1e-03, atol = 1e-03)
             else:
-                loaded_model = verify_one_input(op_node, x[i], tmpdir, 'BatchNormalization_float32' + str(i), loaded_model=loaded_model)
+                loaded_model = verify_one_input(op_node, x[i], tmpdir, test_base_name + str(i), loaded_model=loaded_model)
 
-
+non_spatial_float16_skip_message = str('Test is skipped with float16 data because CNTK ONNX importer in float16 case assumes mean/var inputs being constant.'
+    'this is not always true because in CNTK non-spatial case mean/var may need to be reshaped before pass to the BN function.'
+    'In general import of BatchNormalization(float16) need to be fixed to take any input as mean/var, etc.')
 # Case 1 - Non-Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_BatchNormalization(tmpdir, dtype):
+    if dtype == np.float16:
+        pytest.skip(non_spatial_float16_skip_message)
     sample = [  # 5 samples having 4 classes
             [1, 1, 2, 3],
             [0, 0, 0, 0],
@@ -398,6 +405,7 @@ def test_BatchNormalization(tmpdir, dtype):
 # Case 2 - Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SpatialBatchNormalization(tmpdir, dtype):
+    np.random.seed(0)
     x = np.random.randn(2, 3, 4, 5).astype(dtype)
     scale = np.random.randn(3).astype(np.float32)
     bias = np.random.randn(3).astype(np.float32)
