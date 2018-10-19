@@ -15,11 +15,6 @@ known_issues = [
     # 'DepthToSpace',
     # 'Flatten_1',
     # 'Gather_1',
-    # 'LayerNorm_0',
-    # 'MVN_0',
-    # 'MVN_1',
-    # 'MVN_2',
-    # 'MVN_3',
     # 'RNN',
     # 'test_sequence_slice_',
     # 'test_sequence_slice_0',
@@ -27,6 +22,13 @@ known_issues = [
     # 'SequenceSoftmax',
     # 'SpaceToDepth',
     # 'top_k',
+    #
+    # Not in onnxruntime
+    # 'LayerNorm_0',
+    # 'MVN_0',
+    # 'MVN_1',
+    # 'MVN_2',
+    # 'MVN_3',
 ]
 
 def parse_single_result_case(case_str):
@@ -54,4 +56,5 @@ def parse_verify_out_file(filepath):
 
         return total_failed_cases
 
-parse_verify_out_file(onnxruntime_verify_out_path)
+if __name__ == '__main__':
+    parse_verify_out_file(onnxruntime_verify_out_path)
