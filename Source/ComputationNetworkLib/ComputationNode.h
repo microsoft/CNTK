@@ -2703,6 +2703,9 @@ protected:                                                                      
     using Base::SetDims;                                                                                                                                 \
     using Base::SetInput;                                                                                                                                \
     using Base::SetLearningRateMultiplier;                                                                                                               \
+    /* guoye: start */
+    using Base::SetOrthonormalConstraint;                                                                                                               \
+    /* guoye: end*/
     using Base::UpdateFunctionMBSize;                                                                                                                    \
     using Base::UpdateFunctionValuesSize;                                                                                                                \
     using Base::Validate;                                                                                                                                \
