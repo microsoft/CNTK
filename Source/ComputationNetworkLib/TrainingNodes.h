@@ -2796,11 +2796,14 @@ public:
 
         const auto& inputLayout = Input(DATA)->GetSampleLayout();
 
-        // running statistics inputs must be learnable parameters, since we update them directly here
-        for (size_t i = RUN_MEAN; i < GetNumInputs(); i++)
-            //if (!Input(i)->Is<LearnableParameter<ElemType>>()) // somehow this does not compile on gcc (works on VS)
-            if (!dynamic_cast<LearnableParameter<StatType>*>(this->template TypedInput<StatType>(i).get()))
-                InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), (int)RUN_MEAN, (int)GetNumInputs());
+        if (Environment().IsTraining())
+        {
+            // running statistics inputs must be learnable parameters, since we update them directly here
+            for (size_t i = RUN_MEAN; i < GetNumInputs(); i++)
+                //if (!Input(i)->Is<LearnableParameter<ElemType>>()) // somehow this does not compile on gcc (works on VS)
+                if (!dynamic_cast<LearnableParameter<StatType>*>(this->template TypedInput<StatType>(i).get()))
+                    InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), (int)RUN_MEAN, (int)GetNumInputs());
+        }
 
         // infer dimensions of learnable parameters
         // BUGBUG: Parameter dimensions are totally wrong. E.g. a valid spatial bias for [15 x 15 x 32] is currently [32 x 1].

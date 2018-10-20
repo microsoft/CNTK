@@ -178,6 +178,7 @@
     <ClInclude Include="Logger.h" />
     <ClInclude Include="MinibatchSource.h" />
     <ClInclude Include="proto\onnx\CNTKToONNX.h" />
+    <ClInclude Include="proto\onnx\ControlFlowHelper.h" />
     <ClInclude Include="proto\onnx\core\common\profiler.h" />
     <ClInclude Include="proto\onnx\core\common\task_thread_pool.h" />
     <ClInclude Include="proto\onnx\core\framework\tensorutils.h" />

@@ -391,6 +391,9 @@
     <ClInclude Include="proto\onnx\core\platform\windows\debug_alloc.h">
       <Filter>proto\onnx\core\platform\windows</Filter>
     </ClInclude>
+    <ClInclude Include="proto\onnx\ControlFlowHelper.h">
+      <Filter>proto\onnx</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">
@@ -508,12 +511,6 @@
     </Proto>
     <Proto Include="tensorboard\tensorboard.proto">
       <Filter>tensorboard</Filter>
-    </Proto>
-    <Proto Include="proto\onnx\onnx_repo\onnx\onnx-ml.proto">
-      <Filter>proto\onnx\onnx_repo\onnx</Filter>
-    </Proto>
-    <Proto Include="proto\onnx\onnx_repo\onnx\onnx-operators-ml.proto">
-      <Filter>proto\onnx\onnx_repo\onnx</Filter>
     </Proto>
   </ItemGroup>
 </Project>
