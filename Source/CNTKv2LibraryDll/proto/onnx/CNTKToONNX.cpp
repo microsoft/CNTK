@@ -302,7 +302,7 @@ private:
 
     // process loops to produce Scan ops.
     // return true to continue process the src, otherwise the node has been process.
-    static bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const FunctionPtr& src,
+    static bool ProcessLoopsAndCheckCNTKNodeContinueCreate(const FunctionPtr& src,
         onnxruntime::Graph* graph,
         std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
         std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
