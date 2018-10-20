@@ -6,6 +6,8 @@
 from __future__ import print_function
 import os, re, sys, subprocess
 
+windows = os.getenv("OS")=="Windows_NT"
+
 known_issues = [
     'BatchNormalization_float160',
     'cast_float16_to_float16',
@@ -51,7 +53,8 @@ def parse_verify_out_str(content):
 def verify_model(model_name, model_dir):
     path_prefix = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'], 'ONNXRuntime') if 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ else ''
     onnx_test_runner_path_str = str(os.path.join(path_prefix, 'onnx_test_runner.exe'))
-    if not os.path.exists(onnx_test_runner_path_str):
+    # run only on windows. 
+    if not os.path.exists(onnx_test_runner_path_str) or not windows:
         return 0
     callargs = [onnx_test_runner_path_str, '-n', model_name, str(model_dir)]
     process = subprocess.run(callargs, stdout=subprocess.PIPE)
