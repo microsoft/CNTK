@@ -1993,14 +1993,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Sum")
     {
-        // TODO: this is experimental code to load Facebook Caffe models.
-        // Need to investigate cases here operands' dimensions do not match.
-        FunctionPtr cntkFunction = inputs[0];
-        for (int i = 1; i < inputs.size(); i++)
-        {
-            cntkFunction = Plus(cntkFunction, inputs[i]);
-        }
-        cntkFunction->SetName(ToFixedWStringFromMultiByte(node->Name()));
+        FunctionPtr cntkFunction = Sum(inputs, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else if (onnxOpName == "HardSigmoid")
@@ -2397,7 +2390,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
                 input0 = ToBatchAndSequence(inputs[0], sequenceWrapperInputToFunctionPtr);
             if (input1HasBatchAndSequenceAxes)
                 input1 = ToBatchAndSequence(inputs[1], sequenceWrapperInputToFunctionPtr);
-            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1, ToFixedWStringFromMultiByte(node->Name()));
             cntkFunction = UnpackBatchAndSequence(cntkFunction);
             return cntkFunction;
         }
@@ -2407,13 +2400,13 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
                 input0 = ToBatch(inputs[0], L"");
             if (input1HasFreeDimensionAt0Axes)
                 input1 = ToBatch(inputs[1], L"");
-            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1, ToFixedWStringFromMultiByte(node->Name()));
             cntkFunction = UnpackBatch(cntkFunction, L"");
             return cntkFunction;
         }
         else
         {
-            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1);
+            FunctionPtr cntkFunction = ::CNTK::Internal::MatMul(input0, input1, ToFixedWStringFromMultiByte(node->Name()));
             return cntkFunction;
         }
     }
@@ -2929,6 +2922,44 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         Axis axis = ConvertONNXAxisToCNTKCppApi(axisIndex, inputs[0]);
         auto k = GetNamedAttributeAsInt64(node, "k", 1);
         FunctionPtr cntkFunction = TopK(inputs[0], k, axis, ToFixedWStringFromMultiByte(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "Crop")
+    {
+        // inputShape: [W, H, C] x [N]
+        const NDShape& inputShape = inputOperand0.Shape();
+        if (inputShape.Rank() != 3)
+            RuntimeError("Crop input tensor must have shape [N,C,H,W]. ");
+        std::vector<int64_t> border = GetNamedAttributeAsInt64Vec(node, "border");
+        if (border.size() != 4)
+            RuntimeError("Crop attribute border must be a 1-D values of (leftBorder, topBorder, rightBorder, bottomBorder).");
+        const size_t leftBorder = border[0];
+        const size_t topBorder = border[1];
+        const size_t rightBorder = border[2];
+        const size_t bottomBorder = border[3];
+        NDShape targetShape = [&](){
+            const size_t channelSize = inputShape[inputShape.Rank() - 1];
+            if (HasNamedAttribute(node, "scale"))
+            {
+                // targetShape: [W, H]
+                NDShape targetShape = GetNamedAttributeAsShape(node, "scale", false);
+                if (targetShape.Rank() != 2)
+                    RuntimeError("Crop attribute scale must be a 1-D values of (height, width).");
+                // targetShape: [W, H, C]
+                targetShape.AppendShape(NDShape(channelSize));
+                return targetShape;
+            }
+            else
+            {
+                assert((inputShape[0] > (leftBorder + rightBorder)) && (inputShape[1] > (topBorder + bottomBorder)));
+                size_t targetWidth = inputShape[0] - leftBorder - rightBorder;
+                size_t targetHeight = inputShape[1] - topBorder - bottomBorder;
+
+                return NDShape({ targetWidth, targetHeight, channelSize });
+            }
+        }();
+        auto referent = Constant(targetShape, inputOperand0.GetDataType(), 0.0);
+        FunctionPtr cntkFunction = Crop(inputOperand0, referent, leftBorder, topBorder, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
     else

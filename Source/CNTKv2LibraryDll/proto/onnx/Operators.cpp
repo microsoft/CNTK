@@ -451,6 +451,16 @@ namespace ONNX
         { L"StraightThrough",{ {
             { L"StraightThrough", "StraightThrough" },
         } } },
+        { L"LogPlus",{ {
+            { L"LogPlus", "LogPlus" },
+        } } },
+        { L"Crop", { {
+            { L"Crop", "Crop"},
+            { L"offset", "border"},
+        } } },
+        { L"OneHotOp", { {
+            { L"OneHotOp", "OneHotEncoder"},
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
@@ -597,6 +607,7 @@ namespace ONNX
             { "LRN" },
             { "MeanVarianceNormalization" },
             { "ImageScaler" },
+            { "Crop" },
         };
 
     }

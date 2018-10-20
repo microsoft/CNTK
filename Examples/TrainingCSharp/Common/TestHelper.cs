@@ -18,6 +18,10 @@ namespace CNTK.CSTrainingExamples
         Sigmoid,
         Tanh
     }
+    public static class TestCommon
+    {
+        public static string TestDataDirPrefix;
+    }
     public class TestHelper
     {
         public static Function Dense(Variable input, int outputDim, DeviceDescriptor device,

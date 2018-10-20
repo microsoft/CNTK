@@ -19,7 +19,7 @@ from .onnx_test_helper import CNTK_FREEDIM_AXIS_DENOTATION, DIM_SIZE_FOR_NON_BAT
 # When adding a test for a new op, please check to see if 
 # that op needs to be added to this list (i.e. does that op 
 # get exported to an ONNX op with defined batch axis).
-set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization', 'ImageScaler'}
+set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMaxPooling', 'DepthToSpace', 'SpaceToDepth', 'LocalResponseNormalization', 'MeanVarianceNormalization', 'LayerNormalization', 'BatchNormalization', 'ImageScaler', 'Crop'}
 
 # List of CNTK ops for which output shape doesn't change regardless
 # of whether the input has batch axis or not.
@@ -30,7 +30,38 @@ set_of_batch_irrelevant_ops = {'Flatten'}
 ##########################################
 ## helper verification functions
 ##########################################
+
+def init_empty_node_names(model):
+    # Most of the unit tests here don't specify names for nodes.
+    # Try to replace empty node names, and check if names are preserved after export/import
+    # in later tests.
+    class UpdateNodeName(object):
+        i = 0
+        @classmethod
+        def step(cls, node):
+            if node.name == "":
+                try:
+                    node.name = "test_node_name_" + str(cls.i)
+                    cls.i += 1
+                except:
+                    return True
+            return True
+    C.logging.graph.depth_first_search(model, UpdateNodeName.step)
+
+def verify_node_names(model1, model2):
+    # Verify if all the node names in original model appears at least as prefix of some node names
+    # in reloaded model. Because alternations of nodes are occasionally necessary in exporting and importing,
+    # in these cases node names might be appended with different postfixes.
+    model1_names = [node.name for node in C.logging.graph.depth_first_search(model1, lambda x : True)]
+    model2_names = [node.name for node in C.logging.graph.depth_first_search(model2, lambda x : True)]
+
+    names_preserved = [name == '' or any([new_name.startswith(name) for new_name in model2_names])
+                       for name in model1_names]
+    assert all(names_preserved) == True
+
 def verify_no_input(model, tmpdir, name):
+    init_empty_node_names(model)
+
     opname = model.owner.op_name
 
     loaded_model = None
@@ -56,6 +87,7 @@ def verify_no_input(model, tmpdir, name):
         o1 = o1[0]
 
     assert np.allclose(o0, o1)
+    verify_node_names(model, loaded_model)
     return loaded_model
 
 def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08):
@@ -63,7 +95,9 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
     # models with multiple inputs instead of just one input.
     assert len(model.arguments) == 1
     assert not model.arguments[0].has_sequence_axis()
-    
+
+    init_empty_node_names(model)
+
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
 
@@ -106,6 +140,7 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
 
     save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
 
+    verify_node_names(model, loaded_model)
     return loaded_model
 
 def run_model(model, data, device=None):
@@ -173,6 +208,8 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
     save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
 
 def verify_two_input(model, data1, data2, tmpdir, name):
+    init_empty_node_names(model)
+
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data1 = deepcopy(data1)
     data2 = deepcopy(data2)
@@ -204,6 +241,7 @@ def verify_two_input(model, data1, data2, tmpdir, name):
         o1 = o1[0]
 
     assert np.allclose(o0, o1)
+    verify_node_names(model, loaded_model)
 
 #Shared Test Configs
 DType_Config = (np.float32, np.float16)
@@ -733,7 +771,7 @@ def test_Gather_With_Axis(tmpdir, dtype):
         x = C.input_variable(np.shape(data))
         y = C.input_variable(np.shape(indices))
         axis = 1
-        model = C.gather(data, y, axis)
+        model = C.gather(data, y, axis, 'gather_with_axis')
         verify_one_input(model, indices, tmpdir, 'Gather_With_Axis_1')
 
 #GlobalAveragePool
@@ -926,6 +964,37 @@ def test_LogSoftmax(tmpdir, dtype):
     x = C.input_variable(data.shape, dtype=dtype)
     model = C.log_softmax(x)
     verify_one_input(model, data, tmpdir, 'LogSoftmax_1')
+
+#LogAddExp
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LogAddExp(tmpdir, dtype):
+    shape = (2,3,4)
+
+    data_x = np.random.rand(*shape).astype(np.float32)
+    data_y = np.random.rand(*shape).astype(np.float32)
+
+    x = C.input_variable(shape)
+    y = C.input_variable(shape)
+
+    model = C.log_add_exp(x, y)
+
+    verify_two_input(model, data_x, data_y, tmpdir, 'LogAddExp_0')
+
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_LogAddExp_Broadcast(tmpdir, dtype):
+    shape_x_arr = [(2,1,4), (2,1,4), (2,2,3,4)]
+    shape_y_arr = [(1,3,1), (3,1),   (1,1)]
+
+    for i, (shape_x, shape_y) in enumerate(list(zip(shape_x_arr, shape_y_arr))):
+        data_x = np.random.rand(*shape_x).astype(np.float32)
+        data_y = np.random.rand(*shape_y).astype(np.float32)
+
+        x = C.input_variable(shape_x)
+        y = C.input_variable(shape_y)
+
+        model = C.log_add_exp(x, y)
+
+        verify_two_input(model, data_x, data_y, tmpdir, 'LogAddExp_Broadcast_' + str(i))
 
 #LRN
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1765,6 +1834,12 @@ def test_Sum(tmpdir, dtype):
 
         verify_two_input(model, in1_data, in2_data, tmpdir, 'Sum_2')
 
+        model = C.sum([in1])
+        verify_one_input(model, in1_data, tmpdir, 'Sum_1')
+
+        model = C.sum([in1, in2, in1])
+        verify_two_input(model, in1_data, in2_data, tmpdir, 'Sum_3')
+
 # SpaceToDepth
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SpaceToDepth(tmpdir, dtype):
@@ -1933,3 +2008,12 @@ def test_Atan(tmpdir, dtype):
     data = np.asarray([0.0, -0.5, 0.5, 1, -1], dtype)
     model = C.atan(data)
     verify_no_input(model, tmpdir, 'Atan_0')
+
+# Crop
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Crop_Manual(tmpdir, dtype):
+    x = C.input_variable((1,4,4), dtype=np.float32, name='feature')
+    y = C.constant(np.ones((1,2,1), dtype=np.float32))
+    model = C.crop_manual(x, y, 1, 2, name='crop_manual')
+    data = np.asarray(range(4*4), dtype=np.float32).reshape((1,4,4))
+    verify_one_input(model, data, tmpdir, "Crop_Manual_0")
