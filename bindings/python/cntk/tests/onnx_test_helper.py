@@ -81,6 +81,8 @@ def save_cntk_data_as_onnx_tensor(file_path, variable, data, onnx_value_info_pro
     # swith to onnx shape: (sequence, batch, ...)
     if is_list_of_sparse(data):
         data = sparse_to_dense(data)
+    elif type(data)==scipy.sparse.csr.csr_matrix:
+        data = data.todense()
 
     # compare free_dim indices between variable with onnx_value_info_proto
     # they are at index 0 and 1. 

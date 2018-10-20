@@ -231,6 +231,9 @@ namespace ONNX
         { L"StableSigmoid", { {
             { L"StableSigmoid", "Sigmoid" },
         } } },
+        { L"Sigmoid", { {
+            { L"Sigmoid", "Sigmoid" },
+        } } },
         { L"ElementMax", { {
             { L"ElementMax", "Max" },
         } } },
@@ -361,6 +364,11 @@ namespace ONNX
             { L"ReduceSumSquare", "ReduceSumSquare" },
             { L"axis", "axes" },
             { L"keepdims", "keepdims" },
+        } } },
+        { L"Sequence::ReduceElements",{ {
+            { L"Sequence::ReduceElements", "ReduceSum" },
+            { L"axisVec", "axes" },
+            { L"reductionKeepDimensions", "keepdims" },
         } } },
 
         // From tensor
@@ -517,7 +525,13 @@ namespace ONNX
     {
         return opName == "LSTM" || opName == "GRU" || opName == "RNN" || opName == "RNNStep";
     }
-        std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
+    
+    bool Operators::IsSequenceBlockOp(const std::string &opName)
+    {
+        return opName == "Sequence::ReduceElements" || opName == "Sequence::BroadcastAs";
+    }
+
+    std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
             { L"Clip",{ 1, 2 } },
             { L"ELU",{ 0, 1 } },
             { L"LeakyReLU",{ 0, 1 } },
