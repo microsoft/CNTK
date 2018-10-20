@@ -10,6 +10,7 @@ import scipy
 import cntk as C
 import pytest
 onnx = pytest.importorskip("onnx")
+from .onnx_verify_helper import verify_model, get_onnx_test_runner_callscript
 
 CNTK_FREEDIM_AXIS_DENOTATION = -3
 DIM_SIZE_FOR_NON_BATCH_OPS = 1
@@ -247,10 +248,7 @@ def save_test_data(model, onnx_model, test_data_path, input_data, output_data, n
                             model.outputs[i], output_data_i, onnx_value_info_proto)
 
     # print out command line for onnx test runner
-    verify_filename = os.path.join('onnx_op_test_verify.bat')
-    append_write = 'a' if os.path.exists(verify_filename) else 'w'
-    with open(verify_filename, append_write) as file:
-        path_prefix = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'], 'ONNXRuntime') if 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ else ''
-        onnx_test_runner_path_str = str(os.path.join(path_prefix, 'onnx_test_runner'))
-        file.write(onnx_test_runner_path_str + ' -n ' + name + ' ' + str(tmpdir) + '\n')
-    print(R'onnx_test_runner.exe -n ' + name + ' ' + str(tmpdir))
+    print(get_onnx_test_runner_callscript(name, tmpdir))
+
+    failed_cases_count = verify_model(name, tmpdir)
+    assert failed_cases_count == 0

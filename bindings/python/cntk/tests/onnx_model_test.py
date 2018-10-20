@@ -13,6 +13,8 @@ import shutil
 onnx = pytest.importorskip("onnx")
 from onnx import numpy_helper
 
+from .onnx_verify_helper import verify_model
+
 # To test models locally, create folder 'onnx_models' and put in model folders. 
 # For example.
 #   .
@@ -266,11 +268,9 @@ tmpdir = 'tmp_exported_models'
 if os.path.isdir(tmpdir):
     shutil.rmtree(tmpdir)
 os.mkdir(tmpdir)
-verify_filename = os.path.join(tmpdir, 'onnxruntime_verify.bat')
 
 # test_cntk_model will create exported onnx model with test data in the following tmp folder:
 #   .
-#   +-- onnxruntime_verify.bat  # bash script to invoke onnx_test_runner on all exported models.
 #   +-- tmp_exported_models  # models exported in 'model.onnx' onnx format.
 #   |   +-- test_model1
 #   |   |   +-- model.onnx
@@ -315,8 +315,4 @@ def test_cntk_model(model_name):
             rtol=1e-3,
             atol=1e-4)
 
-    append_write = 'a' if os.path.exists(verify_filename) else 'w'
-    with open(verify_filename, append_write) as file:
-        path_prefix = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'], 'ONNXRuntime') if 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ else ''
-        onnx_test_runner_path_str = str(os.path.join(path_prefix, 'onnx_test_runner'))
-        file.write(onnx_test_runner_path_str + ' -n ' + model_name + ' ' + str(os.path.abspath(tmpdir)) + '\n')
+    verify_model(model_name, str(os.path.abspath(tmpdir)))
