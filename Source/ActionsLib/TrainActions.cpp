@@ -109,21 +109,31 @@ void DoTrain(const ConfigRecordType& config)
 
     // determine the network-creation function
     // We have several ways to create that network.
+    LOGPRINTF(stderr, "\nguoye: DoTrain: debug 1.\n");
+
     function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
+    LOGPRINTF(stderr, "\nguoye: DoTrain: debug 2.\n");
 
     createNetworkFn = GetNetworkFactory<ConfigRecordType, ElemType>(config);
+    LOGPRINTF(stderr, "\nguoye: DoTrain: debug 3.\n");
 
     // create or load from checkpoint
     shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+    LOGPRINTF(stderr, "\nguoye: DoTrain: debug 4.\n");
 
     auto dataReader = CreateObject<DataReader>(config, L"reader");
+    LOGPRINTF(stderr, "\nguoye: DoTrain: debug 5.\n");
 
     shared_ptr<DataReader> cvDataReader;
     if (config.Exists(L"cvReader"))
         cvDataReader = CreateObject<DataReader>(config, L"cvReader");
+    LOGPRINTF(stderr, "\nguoye: DoTrain: debug 6.\n");
 
     optimizer->InitMPI(MPIWrapper::GetInstance());
+    LOGPRINTF(stderr, "\nguoye: DoTrain: debug 7.\n");
+
     optimizer->Train(net, deviceId, dataReader.get(), cvDataReader.get(), startEpoch, loadNetworkFromCheckpoint);
+    LOGPRINTF(stderr, "\nguoye: DoTrain: debug 8.\n");
 }
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
