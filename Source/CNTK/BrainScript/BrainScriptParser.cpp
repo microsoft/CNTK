@@ -1027,7 +1027,7 @@ static ExpressionPtr Parse(SourceFile&& sourceFile, vector<wstring>&& includePat
     // return Parser(move(sourceFile), move(includePaths)).ParseRecordMembersToDict();
     ExpressionPtr rt_parser = Parser(move(sourceFile), move(includePaths)).ParseRecordMembersToDict();
     fprintf(stderr, "\nguoye: Parse: debug 2.\n");
-	return rt_parser;
+    return rt_parser;
     /* guoye: end */
 }
 ExpressionPtr ParseConfigDictFromString(wstring text, wstring location, vector<wstring>&& includePaths)
