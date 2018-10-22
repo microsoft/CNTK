@@ -673,6 +673,8 @@ public:
     Parser(SourceFile&& sourceFile, vector<wstring>&& includePaths)
         : Lexer(move(includePaths))
     {
+        fprintf(stderr, "\nguoye: Parser: debug 1.\n");
+
         infixPrecedence = map<wstring, int>{
             {L".", 99}, {L"[", 99}, {L"(",   99}, {L"{",   99}, // (with LHS) these are also sort-of infix operands...
             {L"*", 10}, {L"/", 10}, {L".*",  10}, {L"**", 10}, {L"%", 10},
@@ -684,8 +686,14 @@ public:
             {L":",  4},
             {L"=>", 0},
         };
+        fprintf(stderr, "\nguoye: Parser: debug 2.\n");
+
         SetSourceFile(move(sourceFile));
+        fprintf(stderr, "\nguoye: Parser: debug 3.\n");
+
         ConsumeToken(); // get the very first token
+        fprintf(stderr, "\nguoye: Parser: debug 4.\n");
+
     }
     ExpressionPtr OperandFromTokenSymbol(const Token& tok) // helper to make an Operand expression with op==tok.symbol and then consume it
     {
@@ -990,10 +998,12 @@ public:
 // globally exported functions to execute the parser
 static ExpressionPtr Parse(SourceFile&& sourceFile, vector<wstring>&& includePaths)
 {
+    fprintf(stderr, "\nguoye: Parse: debug 1.\n");
     return Parser(move(sourceFile), move(includePaths)).ParseRecordMembersToDict();
 }
 ExpressionPtr ParseConfigDictFromString(wstring text, wstring location, vector<wstring>&& includePaths)
 {
+    fprintf(stderr, "\nguoye: ParseConfigDictFromString: debug 1, text = %ls, loc = %ls \n", text.c_str(), location.c_str());
     return Parse(SourceFile(location, text), move(includePaths));
 }
 //ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring> includePaths)
