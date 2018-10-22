@@ -1922,7 +1922,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     )
 {
     string onnxOpName = node->OpType();
-    Variable inputOperand0 = (inputPlaceholder.IsInitialized()) ? inputPlaceholder : inputs[0];
+    Variable inputOperand0 = (inputPlaceholder.IsInitialized() || inputs.empty()) ? inputPlaceholder : inputs[0];
 
     if (onnxOpName == "LSTM")
     {
@@ -2200,8 +2200,9 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         const NDShape &shape = GetNamedAttributeAsShape(node, "shape", false);
 
-        // ONNX only has float type for random generators
-        CNTK::DataType dataType = CNTK::DataType::Float;
+        TensorProto_DataType onnxDataType = static_cast<TensorProto_DataType>(GetNamedAttributeAsInt64(
+            node, "dtype", TensorProto_DataType::TensorProto_DataType_FLOAT));
+        CNTK::DataType dataType = ConvertDataTypeTensorProtoToCNTK(onnxDataType);
 
         double low = GetNamedAttributeAsFloat(node, "low");
         double high = GetNamedAttributeAsFloat(node, "high");
@@ -2212,7 +2213,11 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "RandomNormal")
     {
         const NDShape &shape = GetNamedAttributeAsShape(node, "shape", false);
-        CNTK::DataType dataType = CNTK::DataType::Float;
+
+        TensorProto_DataType onnxDataType = static_cast<TensorProto_DataType>(GetNamedAttributeAsInt64(
+            node, "dtype", TensorProto_DataType::TensorProto_DataType_FLOAT));
+        CNTK::DataType dataType = ConvertDataTypeTensorProtoToCNTK(onnxDataType);
+
         double mean = GetNamedAttributeAsFloat(node, "mean");
         double scale = GetNamedAttributeAsFloat(node, "scale");
         unsigned long seed = GetNamedAttributeAsInt64(node, "seed");
@@ -2902,6 +2907,11 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             // ONNX but it can input to an CNTK node.
             return Alias(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
         }
+        //else if (ConvertDataTypeTensorProtoToCNTK(newDataType) == inputs[0].GetDataType())
+        //{
+        //    // cast to the same type, just pass through.
+        //    return inputs[0].Owner() ? inputs[0].Owner() : Alias(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+        //}
         DataType cntkNewDataType = ConvertDataTypeTensorProtoToCNTK(newDataType);
         FunctionPtr cntkFunction = Cast(inputs[0], cntkNewDataType, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
@@ -2960,6 +2970,15 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         }();
         auto referent = Constant(targetShape, inputOperand0.GetDataType(), 0.0);
         FunctionPtr cntkFunction = Crop(inputOperand0, referent, leftBorder, topBorder, ToFixedWStringFromMultiByte(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "OneHotEncoder")
+    {
+        // TODO: this only works in this specific case.
+        std::vector<int64_t> cats = GetNamedAttributeAsInt64Vec(node, "cats_int64s");
+        int numClass = cats.size();
+        Axis axis = ConvertONNXAxisToCNTKCppApi(2, inputs[0]);
+        FunctionPtr cntkFunction = OneHotOp(inputs[0], numClass, false, axis);
         return cntkFunction;
     }
     else
@@ -3509,6 +3528,16 @@ FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescrip
                 sequenceWrapperInputToFunctionPtr, computeDevice);
         }
     }
+
+    //const std::vector<const NodeArg*>& graphOutputs = src->GetOutputs();
+    //std::set<Node*> outputNodes;
+    //for (int i = 0; i < graphOutputs.size(); i++)
+    //{
+    //    const NodeArg* nodeArg = graphOutputs[i];
+    //    src->
+    //    outputNodes.insert(nodeArg->)
+    //}
+
 
     // ONNX puts all outputs in an graph as input to the "_Graph_Sink" node.
     ONNXToCNTKMap::iterator itNodeFn = std::find_if(constructedFunctions.begin(), constructedFunctions.end(),

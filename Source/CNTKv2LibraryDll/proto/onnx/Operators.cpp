@@ -115,14 +115,14 @@ namespace ONNX
         } } },
         // From Generator
         { L"RandomDistribution", { {
-            { L"UniformRandom", "RandomUniform" },
+            { L"uniform", "RandomUniform" },
             // { L"", "low" },
             // { L"", "high" },
             { L"rngSeed", "seed" },
             { L"newShape", "shape" },
         } } },
         { L"RandomDistribution", { {
-            { L"NormalRandom", "RandomNormal" },
+            { L"normal", "RandomNormal" },
             // { L"", "mean" },
             // { L"", "scale" },
             { L"rngSeed", "seed" },

@@ -1926,6 +1926,14 @@ std::string CNTKToONNXHelper::ToOPName(const FunctionPtr& src)
 
             opName = attributeMap.map.at(cntkAttributeOpName);
         }
+        else if (src->OpName() == L"RandomDistribution")
+        {
+            wstring cntkAttributeOpName = (wstring)src->Attributes()[PrimitiveFunctionAttribute::AttributeNameRandomDistributionType].Value<wstring>();
+
+            const AttributesMapping& attributeMap = Operators::FindAttributeMap(src->OpName(), cntkAttributeOpName);
+
+            opName = attributeMap.map.at(cntkAttributeOpName);
+        }
     }
 
     return opName;
@@ -3948,6 +3956,9 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     
     onnxruntime::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
+    
+    std::cout << cntkOpName << endl;
+
     std::string onnxOpName = ToOPName(src);
 
     // TODO: uncomment this code once bidirectional LSTM is supprted.
@@ -4591,6 +4602,40 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
         }
         else if (OpNeedONNXTypeMap(onnxOpName))
         {
+            if (onnxOpName == "TopK" && outputIndex == 1)
+                std::cout << "";
+            TensorProto_DataType onnx_type = MapAndUpdateONNXType(onnxOpName, false, outputIndex, output.GetDataType(), nullptr);
+            TensorProto_DataType cntk_type = ConvertDataTypeCNTKToTensorProto(output.GetDataType());
+            if (((onnxOpName == "TopK" && outputIndex == 1) || onnxOpName == "ArgMax") &&
+                cntk_type != onnx_type)
+            {
+                // output NodeArg has not been created yet. 
+                // a Cast op needs to be inserted to get the desired type in ONNX.
+
+                // cast ONNX op output type (onnx_type) to CNTK output type (output.GetDataType()).
+                // element type of the input to the Cast op is onnx_type.
+                // element type of the output (outputArgType) of the Cast op is CNTK output.GetDataType()
+                // input and output of the cast op have the same shape. 
+                UpdateONNXType(output.GetDataType(), outputArgType);
+
+                auto castInputArgType = ToTypeProto(output.Shape(), output.HasBatchAxis(), output.HasSequenceAxis());
+                castInputArgType.mutable_tensor_type()->set_elem_type(onnx_type);
+
+                std::string outputArgNodeName = UniqueNodeNameStorage::GetUniqueOutputNodeName(output);
+                // std::string outputArgNodeName = ToLegacyString(ToUTF8(output.Uid()));
+                onnxruntime::NodeArg &castInputArg = graph->GetOrCreateNodeArg(
+                    outputArgNodeName + "_post_cast_input", &castInputArgType);
+                onnxruntime::NodeArg &castOutputArg = graph->GetOrCreateNodeArg(outputArgNodeName, &outputArgType);
+
+                onnxruntime::Node* castNode = graph->AddNode(castInputArg.Name() + string("_cast_") + outputArgNodeName,
+                    "Cast", "", { &castInputArg }, { &castOutputArg });
+                castNode->AddAttribute("to", (int64_t)cntk_type);
+
+                outputs.push_back(&castInputArg);
+
+                // we already completed preparation of this input and can proceed to the next input.
+                continue;
+            }                
             MapAndUpdateONNXType(onnxOpName, false, outputIndex, output.GetDataType(), &outputArgType);
         }
         else
@@ -4739,32 +4784,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             auto dropoutRate = (float)src->Attributes()[L"dropoutRate"].Value<double>();
             node->AddAttribute(attributesMap[L"dropoutRate"], dropoutRate);
         }
-        else if ((src->OpName() == L"RandomDistribution") ||
-                 (src->OpName() == L"UniformRandom") || (src->OpName() == L"NormalRandom") ||
-                 (src->OpName() == L"UniformRandomLike") || (src->OpName() == L"NormalRandomLike"))
-        {
-            auto randomArgs = AsVector<double>(src->Attributes()[L"randomDistributionArgs"].Value<std::vector<DictionaryValue>>());
-            auto seed = (int64_t)src->Attributes()[L"rngSeed"].Value<int>();
-
-            if ((src->OpName() == L"UniformRandom") || (src->OpName() == L"UniformRandomLike"))
-            {
-                node->AddAttribute("low", (float)randomArgs[0]);
-                node->AddAttribute("high", (float)randomArgs[1]);
-            }
-            else
-            {
-                node->AddAttribute("mean", (float)randomArgs[0]);
-                node->AddAttribute("scale", (float)randomArgs[1]);
-            }
-
-            node->AddAttribute(attributesMap[L"rngSeed"], seed);
-            if ((src->OpName() == L"UniformRandom") || (src->OpName() == L"NormalRandom"))
-            {
-                auto shape = (NDShape)src->Attributes()[L"newShape"].Value<NDShape>();
-                node->AddAttribute(attributesMap[L"newShape"], ToINTS(shape));
-            }
-        }
-        if (src->OpName() == L"ReduceL1" || src->OpName() == L"ReduceL2" || src->OpName() == L"ReduceSumSquare")
+        else if (src->OpName() == L"ReduceL1" || src->OpName() == L"ReduceL2" || src->OpName() == L"ReduceSumSquare")
         {
             SetReduceElementsAttributes(src, node);
         }
@@ -5117,6 +5137,35 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
         else if (src->OpName() == L"ReduceElements")
         {
             SetReduceElementsAttributes(src, node);
+        }
+        else if ((src->OpName() == L"RandomDistribution") ||
+            (src->OpName() == L"UniformRandom") || (src->OpName() == L"NormalRandom") ||
+            (src->OpName() == L"UniformRandomLike") || (src->OpName() == L"NormalRandomLike"))
+        {
+            std::string onnxOp = node->OpType();
+            auto randomArgs = AsVector<double>(src->Attributes()[L"randomDistributionArgs"].Value<std::vector<DictionaryValue>>());
+            auto seed = (int64_t)src->Attributes()[L"rngSeed"].Value<size_t>();
+
+            if ((onnxOp == "RandomNormal") || (onnxOp == "RandomNormalLike"))
+            {
+                node->AddAttribute("mean", (float)randomArgs[0]);
+                node->AddAttribute("scale", (float)randomArgs[1]);
+            }
+            else
+            {
+                node->AddAttribute("low", (float)randomArgs[0]);
+                node->AddAttribute("high", (float)randomArgs[1]);
+            }
+
+            node->AddAttribute("seed", (float)seed);
+            if ((onnxOp == "RandomUniform") || (onnxOp == "RandomNormal"))
+            {
+                auto shape = (NDShape)src->Attributes()[L"newShape"].Value<NDShape>();
+                node->AddAttribute("shape", ToINTS(shape));
+
+                DataType dataType = (DataType)src->Attributes()[L"newDataType"].Value<int>();
+                node->AddAttribute("dtype", (int64_t)ConvertDataTypeCNTKToTensorProto(dataType));
+            }
         }
     }
 }
