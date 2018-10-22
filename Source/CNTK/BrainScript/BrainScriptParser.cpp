@@ -19,7 +19,12 @@
 #define let const auto
 #endif
 
-namespace Microsoft { namespace MSR { namespace BS {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace BS
+{
 
 using namespace std;
 using namespace msra::strfun;
@@ -144,7 +149,7 @@ struct Issue
             const auto line = (where.lineNo == lines.size()) ? L"(end)" : lines[where.lineNo].c_str();
             message += wstrprintf(L"  %ls\n  %ls\n", line, issue.markup.c_str());
         }
-        message += wstrprintf(L"%ls while %ls: %ls(%d)", errorKind, kind, firstLoc.GetSourceFile().path.c_str(), (int)firstLoc.lineNo + 1 /*report 1-based*/);
+        message += wstrprintf(L"%ls while %ls: %ls(%d)", errorKind, kind, firstLoc.GetSourceFile().path.c_str(), (int) firstLoc.lineNo + 1 /*report 1-based*/);
     }
     else
     {
@@ -293,8 +298,13 @@ public:
     {
         keywords = set<wstring>{
             L"include",
-            L"new", L"with", L"true", L"false",
-            L"if", L"then", L"else",
+            L"new",
+            L"with",
+            L"true",
+            L"false",
+            L"if",
+            L"then",
+            L"else",
             L"array",
         };
         punctuations = set<wstring>{
@@ -570,7 +580,7 @@ public:
 // ---------------------------------------------------------------------------
 
 // diagnostics helper: print the content
-void Expression::DumpToStream(wstringstream & treeStream, int indent)
+void Expression::DumpToStream(wstringstream& treeStream, int indent)
 {
     treeStream << std::setfill(L' ') << std::setw(indent) << L" ";
     treeStream << std::setw(0);
@@ -666,8 +676,8 @@ class Parser : public Lexer
         return id;
     }
 
-    map<wstring, int> infixPrecedence;    // precedence level of infix operators
-    static const int unaryPrecedence = 90;  // for unary "-" and "!". 90 is below x., x[, x(, and x{, but above all others
+    map<wstring, int> infixPrecedence;     // precedence level of infix operators
+    static const int unaryPrecedence = 90; // for unary "-" and "!". 90 is below x., x[, x(, and x{, but above all others
     // TODO: Would be more direct to fold this into the table below as well.
 public:
     Parser(SourceFile&& sourceFile, vector<wstring>&& includePaths)
@@ -676,14 +686,29 @@ public:
         fprintf(stderr, "\nguoye: Parser: debug 1.\n");
 
         infixPrecedence = map<wstring, int>{
-            {L".", 99}, {L"[", 99}, {L"(",   99}, {L"{",   99}, // (with LHS) these are also sort-of infix operands...
-            {L"*", 10}, {L"/", 10}, {L".*",  10}, {L"**", 10}, {L"%", 10},
-            {L"+",  9}, {L"-",  9}, {L"with", 9}, {L"==",  8},
-            {L"!=", 8}, {L"<",  8}, {L"<=",   8}, {L">",   8}, {L">=", 8},
+            {L".", 99},
+            {L"[", 99},
+            {L"(", 99},
+            {L"{", 99}, // (with LHS) these are also sort-of infix operands...
+            {L"*", 10},
+            {L"/", 10},
+            {L".*", 10},
+            {L"**", 10},
+            {L"%", 10},
+            {L"+", 9},
+            {L"-", 9},
+            {L"with", 9},
+            {L"==", 8},
+            {L"!=", 8},
+            {L"<", 8},
+            {L"<=", 8},
+            {L">", 8},
+            {L">=", 8},
             {L"&&", 7},
             {L"||", 6},
-            {L">>", 5}, {L"<<", 5}, // TODO: do it as other languages
-            {L":",  4},
+            {L">>", 5},
+            {L"<<", 5}, // TODO: do it as other languages
+            {L":", 4},
             {L"=>", 0},
         };
         fprintf(stderr, "\nguoye: Parser: debug 2.\n");
@@ -693,7 +718,6 @@ public:
 
         ConsumeToken(); // get the very first token
         fprintf(stderr, "\nguoye: Parser: debug 4.\n");
-
     }
     ExpressionPtr OperandFromTokenSymbol(const Token& tok) // helper to make an Operand expression with op==tok.symbol and then consume it
     {
@@ -753,7 +777,7 @@ public:
             operand = ParseExpression(0, false /*go across newlines*/); // just return the content of the parens (they do not become part of the expression tree)
             ConsumePunctuation(L")");
         }
-        else if (tok.symbol == L"{" || tok.symbol == L"["/*soon to be deprecated*/) // === record constructor
+        else if (tok.symbol == L"{" || tok.symbol == L"[" /*soon to be deprecated*/) // === record constructor
         {
             let* closeSymbol = tok.symbol == L"{" ? L"}" : L"]";
             operand = make_shared<Expression>(tok.beginLocation, L"[]");
@@ -761,9 +785,9 @@ public:
             operand->namedArgs = ParseRecordMembers();
             ConsumePunctuation(closeSymbol);
         }
-#if 1   // the F# syntax is a stop-gap and meant for experimentation, and we will not recommend to use it
-        // Rather, we must find a way to parse both Python-like array literals and BS dictionaries jointly,
-        // and eventually deprecate [] for records.
+#if 1 // the F# syntax is a stop-gap and meant for experimentation, and we will not recommend to use it \
+    // Rather, we must find a way to parse both Python-like array literals and BS dictionaries jointly, \
+    // and eventually deprecate [] for records.
         else if (tok.symbol == L"[|") // === array literal using F# syntax [| a; b; c |] (same as a:b:c, but also allows for 0- and 1-element arrays)
         {
             operand = make_shared<Expression>(tok.beginLocation, L":");
@@ -999,12 +1023,22 @@ public:
 static ExpressionPtr Parse(SourceFile&& sourceFile, vector<wstring>&& includePaths)
 {
     fprintf(stderr, "\nguoye: Parse: debug 1.\n");
-    return Parser(move(sourceFile), move(includePaths)).ParseRecordMembersToDict();
+    /* guoye: start */
+    // return Parser(move(sourceFile), move(includePaths)).ParseRecordMembersToDict();
+    ExpressionPtr rt_parser = Parser(move(sourceFile), move(includePaths)).ParseRecordMembersToDict();
+    fprintf(stderr, "\nguoye: Parse: debug 2.\n");
+	return rt_parser;
+    /* guoye: end */
 }
 ExpressionPtr ParseConfigDictFromString(wstring text, wstring location, vector<wstring>&& includePaths)
 {
     fprintf(stderr, "\nguoye: ParseConfigDictFromString: debug 1, text = %ls, loc = %ls \n", text.c_str(), location.c_str());
-    return Parse(SourceFile(location, text), move(includePaths));
+    /* guoye: start */
+    // return Parse(SourceFile(location, text), move(includePaths));
+    ExpressionPtr rt_parser = Parse(SourceFile(location, text), move(includePaths));
+    fprintf(stderr, "\nguoye: ParseConfigDictFromString: debug 2\n");
+    return rt_parser;
+    /* guoye: end */
 }
 //ExpressionPtr ParseConfigDictFromFile(wstring path, vector<wstring> includePaths)
 //{
@@ -1020,4 +1054,6 @@ ExpressionPtr ParseConfigExpression(const wstring& sourceText, vector<wstring>&&
     return expr;
 }
 
-}}}
+} // namespace BS
+} // namespace MSR
+} // namespace Microsoft
