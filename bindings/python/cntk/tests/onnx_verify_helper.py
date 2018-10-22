@@ -19,6 +19,10 @@ known_issues = [
     'SequenceSoftmax',
     'SpaceToDepth',
     'top_k',
+
+    'ConvTranspose_with_OutputShape_0',
+    'Flatten_1',
+    'Gather_1',
     
     # Not in onnxruntime
     'LayerNorm_0',
