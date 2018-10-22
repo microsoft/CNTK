@@ -1160,12 +1160,11 @@ def test_CNTK_Times_To_ONNX_MatMul(tmpdir, dtype):
         np.random.seed(0)
         data_shape = ()
         if input_variable.has_batch_axis():
-            data_shape = (*data_shape, batch_size)
+            data_shape = data_shape + (batch_size,)
         if input_variable.has_sequence_axis():
-            data_shape = (*data_shape, sequence_size)
-        data_shape = (*data_shape, *input_variable.shape)
-        print(data_shape)
-        data = np.random.randn(*data_shape).astype(np.float32)
+            data_shape = data_shape + (sequence_size,)
+        data_shape = data_shape + input_variable.shape
+        data = np.random.standard_normal(data_shape).astype(np.float32)
         return data
 
     batch_size = 1
