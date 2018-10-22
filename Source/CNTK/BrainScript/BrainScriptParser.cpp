@@ -951,56 +951,84 @@ public:
         //  V[i:from..to] = expression of i
         // gets mapped to the explicit array operator
         //  V = array[from..to] (i => expression of i)
+        fprintf(stderr, "\nguoye: ParseRecordMembers: debug 1.\n");
+
         map<wstring, pair<TextLocation, ExpressionPtr>> members;
+        fprintf(stderr, "\nguoye: ParseRecordMembers: debug 2.\n");
         auto idTok = GotToken();
+        fprintf(stderr, "\nguoye: ParseRecordMembers: debug 3.\n");
         while (idTok.kind == identifier)
         {
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 4.\n");
             let location = idTok.beginLocation; // for error message
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 5.\n");
             let id = ConsumeIdentifier();       // the member's name
             // optional array constructor
             ExpressionPtr arrayIndexExpr, fromExpr, toExpr;
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 6.\n");
             if (GotToken().symbol == L"[")
             {
+                fprintf(stderr, "\nguoye: ParseRecordMembers: debug 7.\n");
                 // X[i:from..to]
                 ConsumeToken();
+                fprintf(stderr, "\nguoye: ParseRecordMembers: debug 8.\n");
                 arrayIndexExpr = ParseOperand(false); // 'i' name of index variable
+                fprintf(stderr, "\nguoye: ParseRecordMembers: debug 9.\n");
                 if (arrayIndexExpr->op != L"id")
                     Expected(L"identifier");
+                fprintf(stderr, "\nguoye: ParseRecordMembers: debug 10.\n");
                 ConsumePunctuation(L":");
                 fromExpr = ParseExpression(0, false); // 'from' start index
                 ConsumePunctuation(L"..");
+                fprintf(stderr, "\nguoye: ParseRecordMembers: debug 11.\n");
                 toExpr = ParseExpression(0, false); // 'to' end index
                 ConsumePunctuation(L"]");
+                fprintf(stderr, "\nguoye: ParseRecordMembers: debug 12.\n");
             }
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 13.\n");
             // optional macro args
             let& openParen = GotToken().symbol;
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 14.\n");
             let parameters = (openParen == L"(" || openParen == L"{") ? ParseMacroArgs(true /*defining*/, openParen) : ExpressionPtr(); // optionally, macro arguments
             ConsumePunctuation(L"=");
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 15.\n");
             auto rhs = ParseExpression(0, true /*can end at newline*/); // and the right-hand side
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 16.\n");
             // if macro then rewrite it as an assignment of a lambda expression
             if (parameters)
                 rhs = make_shared<Expression>(parameters->location, L"=>", parameters, rhs);
+
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 17.\n");
             // if array then rewrite it as an assignment of a array-constructor expression
             if (arrayIndexExpr)
             {
+                fprintf(stderr, "\nguoye: ParseRecordMembers: debug 18.\n");
                 // create a lambda expression over the index variable
                 // BUGBUG: For {} constructor functions--we cannot declare constructor lambdas for now.
                 let macroArgs = make_shared<Expression>(arrayIndexExpr->location, L"()", arrayIndexExpr);      // wrap identifier in a "()" macro-args expression
+                fprintf(stderr, "\nguoye: ParseRecordMembers: debug 19.\n");
                 let initLambdaExpr = make_shared<Expression>(arrayIndexExpr->location, L"=>", macroArgs, rhs); // [0] is id, [1] is body
                 rhs = make_shared<Expression>(location, L"array");
                 rhs->args.push_back(fromExpr);       // [0] first index
                 rhs->args.push_back(toExpr);         // [1] last index
                 rhs->args.push_back(initLambdaExpr); // [2] one-argument lambda to initialize
+                fprintf(stderr, "\nguoye: ParseRecordMembers: debug 20.\n");
             }
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 21.\n");
             // insert
             let res = members.insert(make_pair(id, make_pair(location, rhs)));
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 22.\n");
             if (!res.second)
                 Fail(L"duplicate member definition '" + id + L"'", location);
             // advance
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 23.\n");
             idTok = GotToken();
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 24.\n");
             if (idTok.symbol == L";")
                 idTok = GetToken();
+            fprintf(stderr, "\nguoye: ParseRecordMembers: debug 25.\n");
         }
+        fprintf(stderr, "\nguoye: ParseRecordMembers: debug 26.\n");
         return members;
     }
     void VerifyAtEnd()
@@ -1011,11 +1039,22 @@ public:
     // top-level parse function parses dictionary members without enclosing [ ... ] and returns it as a dictionary
     ExpressionPtr ParseRecordMembersToDict()
     {
+        fprintf(stderr, "\nguoye: ParseRecordMembersToDict: debug 1.\n");
+
         let topMembers = ParseRecordMembers();
+        fprintf(stderr, "\nguoye: ParseRecordMembersToDict: debug 2.\n");
+
         VerifyAtEnd();
+        fprintf(stderr, "\nguoye: ParseRecordMembersToDict: debug 3.\n");
+
         ExpressionPtr topDict = make_shared<Expression>(GetCursor(), L"[]");
+        fprintf(stderr, "\nguoye: ParseRecordMembersToDict: debug 4.\n");
+
         topDict->namedArgs = topMembers;
+        fprintf(stderr, "\nguoye: ParseRecordMembersToDict: debug 5.\n");
+
         return topDict;
+
     }
 };
 
