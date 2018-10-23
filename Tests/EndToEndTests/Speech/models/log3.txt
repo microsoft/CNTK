@@ -1,0 +1,696 @@
+CNTK CNTK_VERSION_BANNER (vadimma/binaryMLF 86c691, Aug  3 2018 18:17:43) at 2018/08/04 19:42:51
+
+D:\users\vadimma\CNTK_MLF\CNTK\x64\Release\CNTK.exe  mpiexec  -n  4  D:\users\vadimma\CNTK_MLF\CNTK\x64\Release\CNTK.exe  configFile=D:\users\vadimma\CNTK_MLF\CNTK\Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance\cntk_bin.cntk
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Aug  3 2018 18:01:33
+		Last modified date: Fri Jun 22 13:14:42 2018
+		Build type: Release
+		Build target: GPU
+		With ASGD: yes
+		Math lib: mkl
+		CUDA version: 9.0.0
+		CUDNN version: 7.0.4
+		Build Branch: vadimma/binaryMLF
+		Build SHA1: 86c6913cbe5731081b4308faf578e36b6553de27 (modified)
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+		Device[0]: cores = 2688; computeCapability = 3.5; type = "Tesla K20Xm"; total memory = 5681 MB; free memory = 5292 MB
+		Device[1]: cores = 2688; computeCapability = 3.5; type = "Tesla K20Xm"; total memory = 5681 MB; free memory = 5416 MB
+		Device[2]: cores = 2688; computeCapability = 3.5; type = "Tesla K20Xm"; total memory = 5681 MB; free memory = 5416 MB
+		Device[3]: cores = 2688; computeCapability = 3.5; type = "Tesla K20Xm"; total memory = 5681 MB; free memory = 2218 MB
+-------------------------------------------------------------------
+
+##############################################################################
+#                                                                            #
+# speechTrain command (train action)                                         #
+#                                                                            #
+##############################################################################
+
+WARNING: option syncPeroid in BlockMomentumSGD is going to be deprecated. Please use blockSizePerWorker instead in the future.
+
+Starting from checkpoint. Loading network from 'D:/users/vadimma/CNTK_MLF/CNTK/Tests/EndToEndTests/Speech//models/cntkSpeech.dnn.0'.
+Reading script file D:/users/vadimma/CNTK_MLF/CNTK/Tests/EndToEndTests/Speech/Data/glob_0000.scp ... 948 entries
+HTKDeserializer: selected '948' utterances grouped into '3' chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
+HTKDeserializer: determined feature kind as '33'-dimensional 'USER' with frame shift 10.0 ms
+MLFBinaryDeserializer: '948' utterances with '252734' frames
+
+Model has 286 nodes. Using GPU 0.
+
+Training criterion:   ce = SumElements
+Evaluation criterion: err = SumElements
+
+Training 6219945 parameters in 87 out of 87 parameter tensors and 269 nodes with gradient:
+
+	Node 'B' (LearnableParameter operation) : [132]
+	Node 'LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+	Node 'LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[1].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[1].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[1].lstmState.h.Wmr' (LearnableParameter operation) : [256 x 1024]
+	Node 'LSTMoutput[1].lstmState.h.htp.TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[2].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[2].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[2].lstmState.h.Wmr' (LearnableParameter operation) : [256 x 1024]
+	Node 'LSTMoutput[2].lstmState.h.htp.TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ft._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[3].lstmState._privateInnards.it._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[0]' (LearnableParameter operation) : [1024]
+	Node 'LSTMoutput[3].lstmState._privateInnards.ot._.PlusArgs[1].ElementTimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'LSTMoutput[3].lstmState.h.Wmr' (LearnableParameter operation) : [256 x 1024]
+	Node 'LSTMoutput[3].lstmState.h.htp.TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+	Node 'W' (LearnableParameter operation) : [132 x 256]
+	Node 'z.PlusArgs[0].TimesArgs[1].beta._' (LearnableParameter operation) : [1]
+
+No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+Parallel training (1 workers) using BlockMomentumSGD with block momentum = 0.0000, block momentum time constant (per worker) = 0.0000, block learning rate = 1.0000, block size per worker = 200 samples, using Nesterov-style block momentum, resetting SGD momentum after sync.
+
+Starting minibatch loop, distributed reading is ENABLED.
+		(model aggregation stats): 1-th sync point was hit, introducing a 17.86-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 17.86 seconds
+		(model aggregation stats) 1-th sync:    25.69 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 1-th sync: totalThroughput = 0.01k samplesPerSecond , throughputPerWorker = 0.01k samplesPerSecond
+		(model aggregation stats): 2-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 8.93 seconds
+		(model aggregation stats) 2-th sync:     1.60 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 2-th sync: totalThroughput = 0.16k samplesPerSecond , throughputPerWorker = 0.16k samplesPerSecond
+		(model aggregation stats): 3-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 5.95 seconds
+		(model aggregation stats) 3-th sync:     1.69 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 3-th sync: totalThroughput = 0.15k samplesPerSecond , throughputPerWorker = 0.15k samplesPerSecond
+		(model aggregation stats): 4-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 4.47 seconds
+		(model aggregation stats) 4-th sync:     1.47 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 4-th sync: totalThroughput = 0.17k samplesPerSecond , throughputPerWorker = 0.17k samplesPerSecond
+		(model aggregation stats): 5-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 3.57 seconds
+		(model aggregation stats) 5-th sync:     1.39 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 5-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+		(model aggregation stats): 6-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 2.98 seconds
+		(model aggregation stats): 7-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 2.55 seconds
+		(model aggregation stats): 8-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 2.23 seconds
+		(model aggregation stats): 9-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 1.98 seconds
+		(model aggregation stats): 10-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 1.79 seconds
+		(model aggregation stats) 10-th sync:     6.79 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 10-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 1 of 4]-Minibatch[   1-  10, 0.98%]: ce = 4.78227578 * 2500; err = 0.87720000 * 2500; time = 38.5854s; samplesPerSecond = 64.8
+		(model aggregation stats): 11-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 1.62 seconds
+		(model aggregation stats): 12-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 1.49 seconds
+		(model aggregation stats): 13-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 1.37 seconds
+		(model aggregation stats): 14-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 1.28 seconds
+		(model aggregation stats): 15-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 1.19 seconds
+		(model aggregation stats) 15-th sync:     6.86 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 15-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+		(model aggregation stats): 16-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 1.12 seconds
+		(model aggregation stats): 17-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 1.05 seconds
+		(model aggregation stats): 18-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.99 seconds
+		(model aggregation stats): 19-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.94 seconds
+		(model aggregation stats): 20-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.89 seconds
+		(model aggregation stats) 20-th sync:     6.99 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 20-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 1 of 4]-Minibatch[  11-  20, 1.95%]: ce = 40.73002109 * 2500; err = 0.89520000 * 2500; time = 13.8493s; samplesPerSecond = 180.5
+		(model aggregation stats): 21-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.85 seconds
+		(model aggregation stats): 22-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.81 seconds
+		(model aggregation stats): 23-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.78 seconds
+		(model aggregation stats): 24-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.74 seconds
+		(model aggregation stats): 25-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.71 seconds
+		(model aggregation stats) 25-th sync:     6.37 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 25-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+		(model aggregation stats): 26-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.69 seconds
+		(model aggregation stats): 27-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.66 seconds
+		(model aggregation stats): 28-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.64 seconds
+		(model aggregation stats): 29-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.62 seconds
+		(model aggregation stats): 30-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.60 seconds
+		(model aggregation stats) 30-th sync:     6.18 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 30-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+ Epoch[ 1 of 4]-Minibatch[  21-  30, 2.93%]: ce = 96.83059062 * 2500; err = 0.94920000 * 2500; time = 12.5434s; samplesPerSecond = 199.3
+		(model aggregation stats): 31-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.58 seconds
+		(model aggregation stats): 32-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.56 seconds
+		(model aggregation stats): 33-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.54 seconds
+		(model aggregation stats): 34-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.53 seconds
+		(model aggregation stats): 35-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.51 seconds
+		(model aggregation stats) 35-th sync:    21.46 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 35-th sync: totalThroughput = 0.06k samplesPerSecond , throughputPerWorker = 0.06k samplesPerSecond
+		(model aggregation stats): 36-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.50 seconds
+		(model aggregation stats): 37-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.48 seconds
+		(model aggregation stats): 38-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.47 seconds
+		(model aggregation stats): 39-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.46 seconds
+		(model aggregation stats): 40-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.45 seconds
+		(model aggregation stats) 40-th sync:    44.67 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 40-th sync: totalThroughput = 0.03k samplesPerSecond , throughputPerWorker = 0.03k samplesPerSecond
+ Epoch[ 1 of 4]-Minibatch[  31-  40, 3.91%]: ce = 21.01771250 * 2500; err = 0.91120000 * 2500; time = 66.1234s; samplesPerSecond = 37.8
+		(model aggregation stats): 41-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.44 seconds
+		(model aggregation stats): 42-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.43 seconds
+		(model aggregation stats): 43-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.42 seconds
+		(model aggregation stats): 44-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.41 seconds
+		(model aggregation stats): 45-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.40 seconds
+		(model aggregation stats) 45-th sync:     5.41 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 45-th sync: totalThroughput = 0.23k samplesPerSecond , throughputPerWorker = 0.23k samplesPerSecond
+		(model aggregation stats): 46-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.39 seconds
+		(model aggregation stats): 47-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.38 seconds
+		(model aggregation stats): 48-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.37 seconds
+		(model aggregation stats): 49-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.36 seconds
+		(model aggregation stats): 50-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.36 seconds
+		(model aggregation stats) 50-th sync:     6.14 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 50-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+ Epoch[ 1 of 4]-Minibatch[  41-  50, 4.88%]: ce = 4.04627500 * 2500; err = 0.88840000 * 2500; time = 11.5514s; samplesPerSecond = 216.4
+		(model aggregation stats): 51-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.35 seconds
+		(model aggregation stats): 52-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.34 seconds
+		(model aggregation stats): 53-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.34 seconds
+		(model aggregation stats): 54-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.33 seconds
+		(model aggregation stats): 55-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.32 seconds
+		(model aggregation stats) 55-th sync:     6.39 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 55-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+		(model aggregation stats): 56-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.32 seconds
+		(model aggregation stats): 57-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.31 seconds
+		(model aggregation stats): 58-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.31 seconds
+		(model aggregation stats): 59-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.30 seconds
+		(model aggregation stats): 60-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.30 seconds
+		(model aggregation stats) 60-th sync:     6.95 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 60-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 1 of 4]-Minibatch[  51-  60, 5.86%]: ce = 3.90608750 * 2500; err = 0.89800000 * 2500; time = 13.3323s; samplesPerSecond = 187.5
+		(model aggregation stats): 61-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.29 seconds
+		(model aggregation stats): 62-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.29 seconds
+		(model aggregation stats): 63-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.28 seconds
+		(model aggregation stats): 64-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.28 seconds
+		(model aggregation stats): 65-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.27 seconds
+		(model aggregation stats) 65-th sync:     7.08 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 65-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+		(model aggregation stats): 66-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.27 seconds
+		(model aggregation stats): 67-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.27 seconds
+		(model aggregation stats): 68-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.26 seconds
+		(model aggregation stats): 69-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.26 seconds
+		(model aggregation stats): 70-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.26 seconds
+		(model aggregation stats) 70-th sync:     7.01 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 70-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 1 of 4]-Minibatch[  61-  70, 6.84%]: ce = 3.82836250 * 2500; err = 0.90360000 * 2500; time = 14.0879s; samplesPerSecond = 177.5
+		(model aggregation stats): 71-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.25 seconds
+		(model aggregation stats): 72-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.25 seconds
+		(model aggregation stats): 73-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.24 seconds
+		(model aggregation stats): 74-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.24 seconds
+		(model aggregation stats): 75-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.24 seconds
+		(model aggregation stats) 75-th sync:     5.96 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 75-th sync: totalThroughput = 0.21k samplesPerSecond , throughputPerWorker = 0.21k samplesPerSecond
+		(model aggregation stats): 76-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.24 seconds
+		(model aggregation stats): 77-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.23 seconds
+		(model aggregation stats): 78-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.23 seconds
+		(model aggregation stats): 79-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.23 seconds
+		(model aggregation stats): 80-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.22 seconds
+		(model aggregation stats) 80-th sync:     6.29 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 80-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+ Epoch[ 1 of 4]-Minibatch[  71-  80, 7.81%]: ce = 4.27115000 * 2500; err = 0.90760000 * 2500; time = 12.2495s; samplesPerSecond = 204.1
+		(model aggregation stats): 81-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.22 seconds
+		(model aggregation stats): 82-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.22 seconds
+		(model aggregation stats): 83-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 17.86 seconds , average latency = 0.22 seconds
+Finished Epoch[ 1 of 4]: [Training] ce = 21.97901929 * 20498; err = 0.90228315 * 20498; totalSamplesSeen = 20498; learningRatePerSample = 0.003125; epochTime=185.202s
+SGD: Saving checkpoint model 'D:/users/vadimma/CNTK_MLF/CNTK/Tests/EndToEndTests/Speech//models/cntkSpeech.dnn.1'
+
+Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+Parallel training (1 workers) using BlockMomentumSGD with block momentum = 0.0000, block momentum time constant (per worker) = 0.0000, block learning rate = 1.0000, block size per worker = 200 samples, using Nesterov-style block momentum, resetting SGD momentum after sync.
+
+Starting minibatch loop, distributed reading is ENABLED.
+		(model aggregation stats): 1-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 1-th sync:     1.52 seconds since last report (0.00 seconds on comm.); 750 samples processed by 1 workers (750 by me);
+		(model aggregation stats) 1-th sync: totalThroughput = 0.49k samplesPerSecond , throughputPerWorker = 0.49k samplesPerSecond
+		(model aggregation stats): 2-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 2-th sync:     1.26 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 2-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+		(model aggregation stats): 3-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 3-th sync:     1.58 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 3-th sync: totalThroughput = 0.16k samplesPerSecond , throughputPerWorker = 0.16k samplesPerSecond
+		(model aggregation stats): 4-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 4-th sync:     1.41 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 4-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+		(model aggregation stats): 5-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 5-th sync:     1.53 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 5-th sync: totalThroughput = 0.16k samplesPerSecond , throughputPerWorker = 0.16k samplesPerSecond
+		(model aggregation stats): 6-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 7-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 8-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 9-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 10-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 10-th sync:     6.09 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 10-th sync: totalThroughput = 0.21k samplesPerSecond , throughputPerWorker = 0.21k samplesPerSecond
+ Epoch[ 2 of 4]-Minibatch[   1-  10, 0.98%]: ce = 3.96979219 * 2500; err = 0.89800000 * 2500; time = 13.3876s; samplesPerSecond = 186.7
+		(model aggregation stats): 11-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 12-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 13-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 14-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 15-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 15-th sync:     7.06 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 15-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+		(model aggregation stats): 16-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 17-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 18-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 19-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 20-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 20-th sync:     7.05 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 20-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 2 of 4]-Minibatch[  11-  20, 1.95%]: ce = 3.78619141 * 2500; err = 0.86960000 * 2500; time = 14.1093s; samplesPerSecond = 177.2
+		(model aggregation stats): 21-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 22-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 23-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 24-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 25-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 25-th sync:    47.10 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 25-th sync: totalThroughput = 0.03k samplesPerSecond , throughputPerWorker = 0.03k samplesPerSecond
+		(model aggregation stats): 26-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 27-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 28-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 29-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 30-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 30-th sync:     6.93 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 30-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 2 of 4]-Minibatch[  21-  30, 2.93%]: ce = 3.97381953 * 2500; err = 0.88040000 * 2500; time = 54.0233s; samplesPerSecond = 46.3
+		(model aggregation stats): 31-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 32-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 33-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 34-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 35-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 35-th sync:     7.25 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 35-th sync: totalThroughput = 0.17k samplesPerSecond , throughputPerWorker = 0.17k samplesPerSecond
+		(model aggregation stats): 36-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 37-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 38-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 39-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 40-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 40-th sync:     6.44 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 40-th sync: totalThroughput = 0.19k samplesPerSecond , throughputPerWorker = 0.19k samplesPerSecond
+ Epoch[ 2 of 4]-Minibatch[  31-  40, 3.91%]: ce = 4.02008750 * 2500; err = 0.85720000 * 2500; time = 13.6811s; samplesPerSecond = 182.7
+		(model aggregation stats): 41-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 42-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 43-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 44-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 45-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 45-th sync:     6.44 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 45-th sync: totalThroughput = 0.19k samplesPerSecond , throughputPerWorker = 0.19k samplesPerSecond
+		(model aggregation stats): 46-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 47-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 48-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 49-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 50-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 50-th sync:    20.42 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 50-th sync: totalThroughput = 0.06k samplesPerSecond , throughputPerWorker = 0.06k samplesPerSecond
+ Epoch[ 2 of 4]-Minibatch[  41-  50, 4.88%]: ce = 4.01591094 * 2500; err = 0.86600000 * 2500; time = 26.8621s; samplesPerSecond = 93.1
+		(model aggregation stats): 51-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 52-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 53-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 54-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 55-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 55-th sync:     5.78 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 55-th sync: totalThroughput = 0.22k samplesPerSecond , throughputPerWorker = 0.22k samplesPerSecond
+		(model aggregation stats): 56-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 57-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 58-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 59-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 60-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 60-th sync:     6.86 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 60-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 2 of 4]-Minibatch[  51-  60, 5.86%]: ce = 4.03309375 * 2500; err = 0.90080000 * 2500; time = 12.6408s; samplesPerSecond = 197.8
+		(model aggregation stats): 61-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 62-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 63-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 64-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 65-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 65-th sync:     6.11 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 65-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+		(model aggregation stats): 66-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 67-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 68-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 69-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 70-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 70-th sync:     6.13 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 70-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+ Epoch[ 2 of 4]-Minibatch[  61-  70, 6.84%]: ce = 3.96216406 * 2500; err = 0.89040000 * 2500; time = 12.2408s; samplesPerSecond = 204.2
+		(model aggregation stats): 71-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 72-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 73-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 74-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 75-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 75-th sync:     6.25 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 75-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+		(model aggregation stats): 76-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 77-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 78-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 79-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 80-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 80-th sync:     6.84 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 80-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 2 of 4]-Minibatch[  71-  80, 7.81%]: ce = 3.95079687 * 2500; err = 0.85520000 * 2500; time = 13.0940s; samplesPerSecond = 190.9
+		(model aggregation stats): 81-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 82-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 83-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 84-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+Finished Epoch[ 2 of 4]: [Training] ce = 3.97198902 * 20514; err = 0.87891196 * 20514; totalSamplesSeen = 41012; learningRatePerSample = 0.003125; epochTime=163.951s
+SGD: Saving checkpoint model 'D:/users/vadimma/CNTK_MLF/CNTK/Tests/EndToEndTests/Speech//models/cntkSpeech.dnn.2'
+
+Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+Parallel training (1 workers) using BlockMomentumSGD with block momentum = 0.0000, block momentum time constant (per worker) = 0.0000, block learning rate = 1.0000, block size per worker = 200 samples, using Nesterov-style block momentum, resetting SGD momentum after sync.
+
+Starting minibatch loop, distributed reading is ENABLED.
+		(model aggregation stats): 1-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 1-th sync:     1.59 seconds since last report (0.00 seconds on comm.); 1000 samples processed by 1 workers (1000 by me);
+		(model aggregation stats) 1-th sync: totalThroughput = 0.63k samplesPerSecond , throughputPerWorker = 0.63k samplesPerSecond
+		(model aggregation stats): 2-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 2-th sync:     1.49 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 2-th sync: totalThroughput = 0.17k samplesPerSecond , throughputPerWorker = 0.17k samplesPerSecond
+		(model aggregation stats): 3-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 3-th sync:     1.72 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 3-th sync: totalThroughput = 0.15k samplesPerSecond , throughputPerWorker = 0.15k samplesPerSecond
+		(model aggregation stats): 4-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 4-th sync:     1.54 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 4-th sync: totalThroughput = 0.16k samplesPerSecond , throughputPerWorker = 0.16k samplesPerSecond
+		(model aggregation stats): 5-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 5-th sync:     1.65 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 5-th sync: totalThroughput = 0.15k samplesPerSecond , throughputPerWorker = 0.15k samplesPerSecond
+		(model aggregation stats): 6-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 7-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 8-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 9-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 10-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 10-th sync:    53.33 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 10-th sync: totalThroughput = 0.02k samplesPerSecond , throughputPerWorker = 0.02k samplesPerSecond
+ Epoch[ 3 of 4]-Minibatch[   1-  10, 0.98%]: ce = 4.04763008 * 2500; err = 0.88120000 * 2500; time = 61.3173s; samplesPerSecond = 40.8
+		(model aggregation stats): 11-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 12-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 13-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 14-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 15-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 15-th sync:     7.46 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 15-th sync: totalThroughput = 0.17k samplesPerSecond , throughputPerWorker = 0.17k samplesPerSecond
+		(model aggregation stats): 16-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 17-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 18-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 19-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 20-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 20-th sync:     7.22 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 20-th sync: totalThroughput = 0.17k samplesPerSecond , throughputPerWorker = 0.17k samplesPerSecond
+ Epoch[ 3 of 4]-Minibatch[  11-  20, 1.95%]: ce = 3.79756680 * 2500; err = 0.88360000 * 2500; time = 14.6775s; samplesPerSecond = 170.3
+		(model aggregation stats): 21-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 22-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 23-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 24-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 25-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 25-th sync:     7.34 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 25-th sync: totalThroughput = 0.17k samplesPerSecond , throughputPerWorker = 0.17k samplesPerSecond
+		(model aggregation stats): 26-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 27-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 28-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 29-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 30-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 30-th sync:     6.99 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 30-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 3 of 4]-Minibatch[  21-  30, 2.93%]: ce = 3.99185938 * 2500; err = 0.87360000 * 2500; time = 14.3303s; samplesPerSecond = 174.5
+		(model aggregation stats): 31-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 32-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 33-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 34-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 35-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 35-th sync:     6.96 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 35-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+		(model aggregation stats): 36-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 37-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 38-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 39-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 40-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 40-th sync:     6.96 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 40-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 3 of 4]-Minibatch[  31-  40, 3.91%]: ce = 4.02356719 * 2500; err = 0.86320000 * 2500; time = 13.9173s; samplesPerSecond = 179.6
+		(model aggregation stats): 41-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 42-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 43-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 44-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 45-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 45-th sync:     6.36 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 45-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+		(model aggregation stats): 46-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 47-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 48-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 49-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 50-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 50-th sync:     6.54 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 50-th sync: totalThroughput = 0.19k samplesPerSecond , throughputPerWorker = 0.19k samplesPerSecond
+ Epoch[ 3 of 4]-Minibatch[  41-  50, 4.88%]: ce = 4.00072187 * 2500; err = 0.87720000 * 2500; time = 12.9021s; samplesPerSecond = 193.8
+		(model aggregation stats): 51-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 52-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 53-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 54-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 55-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 55-th sync:     7.14 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 55-th sync: totalThroughput = 0.17k samplesPerSecond , throughputPerWorker = 0.17k samplesPerSecond
+		(model aggregation stats): 56-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 57-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 58-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 59-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 60-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 60-th sync:     6.91 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 60-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 3 of 4]-Minibatch[  51-  60, 5.86%]: ce = 4.07761406 * 2500; err = 0.86280000 * 2500; time = 14.0538s; samplesPerSecond = 177.9
+		(model aggregation stats): 61-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 62-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 63-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 64-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 65-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 65-th sync:     7.02 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 65-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+		(model aggregation stats): 66-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 67-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 68-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 69-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 70-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 70-th sync:     7.36 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 70-th sync: totalThroughput = 0.17k samplesPerSecond , throughputPerWorker = 0.17k samplesPerSecond
+ Epoch[ 3 of 4]-Minibatch[  61-  70, 6.84%]: ce = 3.72854062 * 2500; err = 0.85960000 * 2500; time = 14.3867s; samplesPerSecond = 173.8
+		(model aggregation stats): 71-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 72-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 73-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 74-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 75-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 75-th sync:    35.86 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 75-th sync: totalThroughput = 0.03k samplesPerSecond , throughputPerWorker = 0.03k samplesPerSecond
+		(model aggregation stats): 76-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 77-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 78-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 79-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 80-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 80-th sync:     6.89 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 80-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 3 of 4]-Minibatch[  71-  80, 7.81%]: ce = 3.92567187 * 2500; err = 0.88760000 * 2500; time = 42.7582s; samplesPerSecond = 58.5
+		(model aggregation stats): 81-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 82-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 83-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 84-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+Finished Epoch[ 3 of 4]: [Training] ce = 3.95478702 * 20598; err = 0.87571609 * 20598; totalSamplesSeen = 61610; learningRatePerSample = 0.003125; epochTime=192.498s
+SGD: Saving checkpoint model 'D:/users/vadimma/CNTK_MLF/CNTK/Tests/EndToEndTests/Speech//models/cntkSpeech.dnn.3'
+
+Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+Parallel training (1 workers) using BlockMomentumSGD with block momentum = 0.0000, block momentum time constant (per worker) = 0.0000, block learning rate = 1.0000, block size per worker = 200 samples, using Nesterov-style block momentum, resetting SGD momentum after sync.
+
+Starting minibatch loop, distributed reading is ENABLED.
+		(model aggregation stats): 1-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 1-th sync:     1.36 seconds since last report (0.00 seconds on comm.); 1000 samples processed by 1 workers (1000 by me);
+		(model aggregation stats) 1-th sync: totalThroughput = 0.73k samplesPerSecond , throughputPerWorker = 0.73k samplesPerSecond
+		(model aggregation stats): 2-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 2-th sync:     1.26 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 2-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+		(model aggregation stats): 3-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 3-th sync:     1.28 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 3-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+		(model aggregation stats): 4-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 4-th sync:     1.66 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 4-th sync: totalThroughput = 0.15k samplesPerSecond , throughputPerWorker = 0.15k samplesPerSecond
+		(model aggregation stats): 5-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 5-th sync:     1.66 seconds since last report (0.00 seconds on comm.); 250 samples processed by 1 workers (250 by me);
+		(model aggregation stats) 5-th sync: totalThroughput = 0.15k samplesPerSecond , throughputPerWorker = 0.15k samplesPerSecond
+		(model aggregation stats): 6-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 7-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 8-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 9-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 10-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 10-th sync:     6.94 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 10-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 4 of 4]-Minibatch[   1-  10, 0.98%]: ce = 3.88117695 * 2500; err = 0.85560000 * 2500; time = 14.1524s; samplesPerSecond = 176.6
+		(model aggregation stats): 11-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 12-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 13-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 14-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 15-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 15-th sync:     7.43 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 15-th sync: totalThroughput = 0.17k samplesPerSecond , throughputPerWorker = 0.17k samplesPerSecond
+		(model aggregation stats): 16-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 17-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 18-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 19-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 20-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 20-th sync:     5.98 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 20-th sync: totalThroughput = 0.21k samplesPerSecond , throughputPerWorker = 0.21k samplesPerSecond
+ Epoch[ 4 of 4]-Minibatch[  11-  20, 1.95%]: ce = 4.03980586 * 2500; err = 0.88200000 * 2500; time = 13.4153s; samplesPerSecond = 186.4
+		(model aggregation stats): 21-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 22-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 23-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 24-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 25-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 25-th sync:     6.87 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 25-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+		(model aggregation stats): 26-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 27-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 28-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 29-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 30-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 30-th sync:     6.78 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 30-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 4 of 4]-Minibatch[  21-  30, 2.93%]: ce = 3.86008984 * 2500; err = 0.85840000 * 2500; time = 13.6558s; samplesPerSecond = 183.1
+		(model aggregation stats): 31-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 32-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 33-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 34-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 35-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 35-th sync:     6.80 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 35-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+		(model aggregation stats): 36-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 37-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 38-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 39-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 40-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 40-th sync:     6.83 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 40-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 4 of 4]-Minibatch[  31-  40, 3.91%]: ce = 3.77309922 * 2500; err = 0.80760000 * 2500; time = 13.6286s; samplesPerSecond = 183.4
+		(model aggregation stats): 41-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 42-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 43-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 44-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 45-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 45-th sync:     6.92 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 45-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+		(model aggregation stats): 46-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 47-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 48-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 49-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 50-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 50-th sync:     6.53 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 50-th sync: totalThroughput = 0.19k samplesPerSecond , throughputPerWorker = 0.19k samplesPerSecond
+ Epoch[ 4 of 4]-Minibatch[  41-  50, 4.88%]: ce = 3.90937188 * 2500; err = 0.89080000 * 2500; time = 13.4458s; samplesPerSecond = 185.9
+		(model aggregation stats): 51-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 52-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 53-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 54-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 55-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 55-th sync:     7.64 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 55-th sync: totalThroughput = 0.16k samplesPerSecond , throughputPerWorker = 0.16k samplesPerSecond
+		(model aggregation stats): 56-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 57-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 58-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 59-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 60-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 60-th sync:     6.94 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 60-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 4 of 4]-Minibatch[  51-  60, 5.86%]: ce = 3.99282812 * 2500; err = 0.90960000 * 2500; time = 14.5826s; samplesPerSecond = 171.4
+		(model aggregation stats): 61-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 62-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 63-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 64-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 65-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 65-th sync:    23.07 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 65-th sync: totalThroughput = 0.05k samplesPerSecond , throughputPerWorker = 0.05k samplesPerSecond
+		(model aggregation stats): 66-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 67-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 68-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 69-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 70-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 70-th sync:     6.36 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 70-th sync: totalThroughput = 0.20k samplesPerSecond , throughputPerWorker = 0.20k samplesPerSecond
+ Epoch[ 4 of 4]-Minibatch[  61-  70, 6.84%]: ce = 4.06337187 * 2500; err = 0.89040000 * 2500; time = 29.4277s; samplesPerSecond = 85.0
+		(model aggregation stats): 71-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 72-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 73-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 74-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 75-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 75-th sync:     6.07 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 75-th sync: totalThroughput = 0.21k samplesPerSecond , throughputPerWorker = 0.21k samplesPerSecond
+		(model aggregation stats): 76-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 77-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 78-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 79-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 80-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats) 80-th sync:     6.79 seconds since last report (0.00 seconds on comm.); 1250 samples processed by 1 workers (1250 by me);
+		(model aggregation stats) 80-th sync: totalThroughput = 0.18k samplesPerSecond , throughputPerWorker = 0.18k samplesPerSecond
+ Epoch[ 4 of 4]-Minibatch[  71-  80, 7.81%]: ce = 4.07604063 * 2500; err = 0.90920000 * 2500; time = 12.8651s; samplesPerSecond = 194.3
+		(model aggregation stats): 81-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 82-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+		(model aggregation stats): 83-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+Finished Epoch[ 4 of 4]: [Training] ce = 3.95575409 * 20376; err = 0.87607970 * 20376; totalSamplesSeen = 81986; learningRatePerSample = 0.003125; epochTime=128.029s
+SGD: Saving checkpoint model 'D:/users/vadimma/CNTK_MLF/CNTK/Tests/EndToEndTests/Speech//models/cntkSpeech.dnn'
+
+Action "train" complete.
+
+COMPLETED.

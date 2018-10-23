@@ -1,0 +1,41 @@
+CNTK CNTK_VERSION_BANNER (vadimma/binaryMLF 86c691, Aug  3 2018 18:17:43) at 2018/08/07 10:16:50
+
+D:\users\vadimma\CNTK_MLF\CNTK\x64\Release\CNTK.exe  configFile=D:\users\vadimma\CNTK_MLF\CNTK\Tests\EndToEndTests\Speech\HTKDeserializers\LSTM\FullUtterance_test\cntk_bin.cntk
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Aug  3 2018 18:01:33
+		Last modified date: Fri Jun 22 13:14:42 2018
+		Build type: Release
+		Build target: GPU
+		With ASGD: yes
+		Math lib: mkl
+		CUDA version: 9.0.0
+		CUDNN version: 7.0.4
+		Build Branch: vadimma/binaryMLF
+		Build SHA1: 86c6913cbe5731081b4308faf578e36b6553de27 (modified)
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+		Device[0]: cores = 2688; computeCapability = 3.5; type = "Tesla K20Xm"; total memory = 5681 MB; free memory = 5292 MB
+		Device[1]: cores = 2688; computeCapability = 3.5; type = "Tesla K20Xm"; total memory = 5681 MB; free memory = 5416 MB
+		Device[2]: cores = 2688; computeCapability = 3.5; type = "Tesla K20Xm"; total memory = 5681 MB; free memory = 5416 MB
+		Device[3]: cores = 2688; computeCapability = 3.5; type = "Tesla K20Xm"; total memory = 5681 MB; free memory = 2218 MB
+-------------------------------------------------------------------
+
+##############################################################################
+#                                                                            #
+# speechTrain command (train action)                                         #
+#                                                                            #
+##############################################################################
+
+WARNING: option syncPeroid in BlockMomentumSGD is going to be deprecated. Please use blockSizePerWorker instead in the future.
+Final model exists: D:/users/vadimma/CNTK_MLF/CNTK/Tests/EndToEndTests/Speech//models/cntkSpeech.dnn
+No further training is necessary.
+
+Action "train" complete.
+
+COMPLETED.

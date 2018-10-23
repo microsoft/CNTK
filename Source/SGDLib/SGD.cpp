@@ -1406,10 +1406,22 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 ComputationNodeBasePtr node = *nodeIter;
                 if (node->IsParameterUpdateRequired())
                 {
-#ifdef _DEBUG
+
                     if (smoothedGradientIter->HasNan("TrainOneEpoch/UpdateWeights(): "))
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
-#endif
+
+                    if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().HasNan("Gradient/UpdateWeights(): ")) {
+                        epochCriterion = localEpochCriterion.GetCriterion(0);
+                        wstring w = msra::strfun::wstrprintf(L"%ls.model_pr_loss", m_modelPath.c_str());//, (int)m_mpi->CurrentNodeRank());
+                        // m_modelPath = m_modelPath + L "debug"
+                        fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
+                        net->Save(w);
+                        dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().Print("Gradient Input");
+
+                        LogicError("%ls %ls operation has NaNs in Gradient.", node->NodeName().c_str(), node->OperationName().c_str());
+
+                    }
+
                     double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
                     double nodeDependentRegMultiplier = dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->GetRegMultiplier();
                     double momentumPerSample = GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences());
@@ -1423,10 +1435,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
                                   m_needAveMultiplier, m_useNesterovMomentum);
                     node->BumpEvalTimeStamp();
-#ifdef _DEBUG
-                    if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
-                        LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
-#endif
+
+                    if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): ")) {
+                        wstring w = msra::strfun::wstrprintf(L"%ls.model_prior", m_modelPath.c_str());//, (int)m_mpi->CurrentNodeRank());
+                        // m_modelPath = m_modelPath + L "debug"
+                        fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
+                        net->Save(w);
+
+                        //LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
+
+                    }
+
                 }
             }
         }
@@ -1574,7 +1593,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fflush(stderr);
 
             if (epochCriterion.IsNan()) {
-                wstring w = msra::strfun::wstrprintf(L"%ls.model.%d", m_modelPath.c_str(), (int)m_mpi->CurrentNodeRank());
+                wstring w = msra::strfun::wstrprintf(L"%ls.model", m_modelPath.c_str());//, (int)m_mpi->CurrentNodeRank());
                 // m_modelPath = m_modelPath + L "debug"
                 fprintf(stderr, "Saving2 model for debugging to:%ls", w.c_str());
                 net->Save(w);

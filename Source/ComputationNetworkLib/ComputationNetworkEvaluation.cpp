@@ -18,6 +18,8 @@
 #include <set>
 #include <algorithm>
 #include <map>
+#include <stdio.h>
+#include <chrono>
 
 using namespace std;
 
@@ -192,7 +194,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         node->EndBackprop();
 
         // Extreme Tracing, part 2/4
-        if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode() && node->NeedsGradient())
+        if (node->IsParameterUpdateRequired() && node->NeedsGradient() && dynamic_pointer_cast<ComputationNode<float>>(node)->Gradient().HasNan("Gradient/UpdateWeights(): "))
             DumpNode(node, /*dumpGradient=*/true);
     }
 }
@@ -221,12 +223,23 @@ bool TypedDumpNode(shared_ptr<ComputationNode<ElemType>> node, bool dumpGradient
     if (!dataPtr)
         return true; // e.g. SEQ sentinel node
 
-    bool concise = !(node->Environment().IsLogLevelNodeTrace());
+    bool concise = false;
+
+  /*  chrono::milliseconds ms = chrono::duration_cast<chrono::milliseconds>(
+        chrono::system_clock::now().time_since_epoch()
+        );
+
+    string file_path = "D:\\users\\vadimma\\CNTK_MLF\\CNTK\\Tests\\EndToEndTests\\Speech\\Data\\" + to_string(ms.count()) + ".txt";
+
+    FILE * pFile;
+    pFile = fopen(file_path.c_str(), "r");*/
 
     fprintf(stderr, "Dump --> %s%s\n", node->FormatOperationPrototype("").c_str(), dumpGradient ? " Grad" : "");
     node->WriteMinibatchWithFormatting(stderr, FrameRange(), SIZE_MAX, SIZE_MAX, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
         ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
         "%13.10f"/*valueFormatString*/, dumpGradient, concise);
+
+    /*fclose(pFile);*/
     return true;
 }
 

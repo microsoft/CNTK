@@ -1,0 +1,41 @@
+commit 98a387bb0185a82e8d472806f797db7b20353e6c
+Author: binbzha <binbzha@microsoft.com>
+Date:   Fri Jun 15 16:07:02 2018 +0800
+
+    refine access future error
+
+commit 112a01f02cd96f298caaec975579041345b6d287
+Author: binbzha <binbzha@microsoft.com>
+Date:   Thu Jun 14 15:45:23 2018 +0800
+
+    refine bugs in recurrent node
+
+commit c146cb9f90142751737a4360e3399e32214689cc
+Author: binbzha <binbzha@microsoft.com>
+Date:   Wed Jun 13 11:41:40 2018 +0800
+
+    add simple eval for lc-blstm
+
+commit 3f5584e0c7c21cdcc1fbb6507581f82dffd21d39
+Author: binbzha <binbzha@microsoft.com>
+Date:   Tue Jun 12 20:41:34 2018 +0800
+
+    add recurrent node for lc-blstm
+
+commit 6ada1e094c7b3b35fd54598b0e199e1a85161e6e
+Author: binbzha <binbzha@microsoft.com>
+Date:   Tue Jun 12 20:33:17 2018 +0800
+
+    refine mblayout init
+
+commit 402867ed39bc2911396e367390951308fa7229fa
+Author: binbzha <binbzha@microsoft.com>
+Date:   Tue Jun 12 20:30:29 2018 +0800
+
+    add lc-blstm reader
+
+commit bc6452c6fff2b38133f13b9874281592e8420fea
+Author: Binbin Zhang <binbzha@microsoft.com>
+Date:   Tue Jun 12 19:47:37 2018 +0800
+
+    add rightSplice for sequence
