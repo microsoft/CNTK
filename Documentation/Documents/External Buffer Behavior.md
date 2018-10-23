@@ -1,4 +1,4 @@
-# ExternalBuffer in Matrix class
+# External Buffer in Matrix class
 
 There are at least 4 different implementations of the Matrix class that have over time diverged in their implementation in respect to how the external buffer case is handled. The external buffer case is when the matrix class does not actually own it's own memory and is pointing to an external buffer that is managed separately. A deviceID of MANAGEDEXTERN used to be the way this was done, however we have now moved to setting a flag m_externalBuffer in the common header to signify an eternal buffer. We have two instances of this in our code today:
 
