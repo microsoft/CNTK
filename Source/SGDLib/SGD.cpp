@@ -2469,6 +2469,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 #if DUMPOUTPUT
     functionValues.Print("Parameter Update");
 #endif
+}
 template <class ElemType>
 void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alpha) const
 {
