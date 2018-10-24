@@ -574,7 +574,32 @@ Matrix<ElemType> Matrix<ElemType>::Eye(const size_t rows, DEVICEID_TYPE deviceId
     c.SetDiagonalValue(1);
     return c;
 }
+/* guoye: start */
+template <class ElemType>
+ElemType Matrix<ElemType>::MatTrace()
+{
+    Matrix<ElemType>& M = *this;
+    int devId;    
+    size_t num_rows, num_cols;
 
+    num_rows = M.GetNumRows();
+    num_cols = M.GetNumCols();
+    assert(num_rows == num_cols);
+    
+    devId = M.GetDeviceId();
+
+    Matrix<ElemType> MI(num_rows, num_rows, devId);
+
+    ElemType trace;
+
+    Matrix<ElemType> I = Eye(num_rows, M.GetDeviceId());
+
+    MI.AssignElementProductOf(M, I);
+    trace = MI.SumOfElements();
+
+    return trace;
+}
+/* guoye: end */
 template <class ElemType>
 Matrix<ElemType> Matrix<ElemType>::RandomUniform(const size_t rows, const size_t cols, DEVICEID_TYPE deviceId, const ElemType low, const ElemType high, unsigned long seed)
 {

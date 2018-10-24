@@ -699,6 +699,16 @@ public:
     }
     float GetLearningRateMultiplier() const { return m_learningRateMultiplier; }
     bool IsParameterUpdateRequired() const { return m_learningRateMultiplier > 0; }
+    /* guoye: start */
+    void SetOrthonormalConstraint(float f)
+    {
+        m_orthonormalConstraint = f;
+    }
+    float GetOrthonormalConstraint() const
+    {
+        return m_orthonormalConstraint;
+    }
+    /* guoye:end */
 
     // return true if the node's value should be computed before the normal training. e.g., mean and invStd of input features.
     virtual bool /*IComputationNode::*/ RequiresPreCompute() const { return false; }
@@ -976,6 +986,9 @@ protected:
 
     // flags related to gradient propagation
     float m_learningRateMultiplier;    // update parameters? Only used for LearnableParameters.    --TODO: Should we make this a member of LearnableParameters actually? And require a type cast? Currently it is read out for all leaves.
+    /* guoye: start */
+    float m_orthonormalConstraint; //  Does an update to move a matrix closer to an orthonormal matrix (with orthonormal rows) time 'm_orthonormalConstraint';
+    /* guoye: end */
     const ComputationNodeBase* m_gradientInitializedBy; // indicates which node initialized the gradient matrix
     bool m_outputNeededDuringBackprop; // indicates whether the output value of the node is needed during backprop
 };
@@ -2447,6 +2460,7 @@ protected:                                                                      
     using Base::SetDims;                                                                                                                                 \
     using Base::SetInput;                                                                                                                                \
     using Base::SetLearningRateMultiplier;                                                                                                               \
+    using Base::SetOrthonormalConstraint;                                                                                                               \
     using Base::UpdateFunctionMBSize;                                                                                                                    \
     using Base::UpdateFunctionValuesSize;                                                                                                                \
     using Base::Validate;                                                                                                                                \

@@ -73,6 +73,10 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         SetLearningRateMultiplier(configp->Get(L"learningRateMultiplier"));
     else if (configp->Exists(L"needsGradient") || configp->Exists(L"needGradient") || configp->Exists(L"computeGradient"))
         InvalidArgument("Deprecated parameter names needsGradient|needGradient|computeGradient are not supported in BrainScript. Use learningRateMultiplier instead.");
+    /* guoye: start */
+    if (configp->Exists(L"orthonormalConstraint"))
+        SetOrthonormalConstraint(configp->Get(L"orthonormalConstraint"));
+    /* guoye: end */
 
     // initialization
     wstring initString = configp->Get(L"init");
