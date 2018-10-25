@@ -382,6 +382,202 @@ public:
         CTCPosterior.RowElementDivideBy(rowSum);
     }
 
+
+    // Calculate CTC score
+    // totalScore (output): total CTC score at element (0,0)
+    // prob (input): the posterior output from the network (log softmax of right)
+    // maxIndexes (input): indexes of max elements in label input vectors
+    // maxValues (input): values of max elements in label input vectors
+    // labels (input): 1-hot vector with frame-level phone labels
+    // CTCPosterior (output): CTC posterior
+    // blankTokenId (input): id of the blank token. If specified as SIZE_MAX, will be replaced with (numberOfLabels - 1)
+    // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
+    //      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
+    //      delayConstraint=-1 means no constraint
+    void twodimForwardBackward(Microsoft::MSR::CNTK::Matrix<ElemType>& totalScore,
+        Microsoft::MSR::CNTK::Matrix<ElemType>& F,
+        Microsoft::MSR::CNTK::Matrix<ElemType>& G,
+        const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
+        Microsoft::MSR::CNTK::Matrix<ElemType>& m_derivativeForF,
+        Microsoft::MSR::CNTK::Matrix<ElemType>& m_derivativeForG,
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout,
+        size_t blankTokenId)
+
+    {
+        const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
+        const auto numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
+        const auto numSequences = pMBLayout->GetNumSequences();
+        //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
+        assert(numSequences==phoneMBLayout->GetNumSequences());
+        const size_t numRows = F.GetNumRows();
+        const size_t numCols = F.GetNumCols();
+        const size_t numPhoneCols = G.GetNumCols();
+
+        size_t maxFrameNum = numCols / numParallelSequences;
+        size_t maxPhoneNum = numPhoneCols / numPhoneParallelSequences;
+
+        // Prepare data structures from the reader
+        // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttFrameBeginIdx, uttPhoneBeginIdx;
+        // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttFrameNum;
+        // the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttPhoneNum;
+        // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttFrameToChanInd, uttPhoneToChanInd;
+        std::vector<size_t> phoneSeq;
+        std::vector<std::vector<size_t>> allUttPhoneSeqs;
+
+        uttFrameNum.reserve(numSequences);
+        uttPhoneNum.reserve(numSequences);
+        uttFrameToChanInd.reserve(numSequences);
+        uttPhoneToChanInd.reserve(numSequences);
+        uttFrameBeginIdx.reserve(numSequences);
+        uttPhoneBeginIdx.reserve(numSequences);
+
+
+        //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
+        size_t seqId = 0;   //frame
+        for (const auto& seq : pMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttFrameToChanInd.push_back(seq.s);            
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttFrameBeginIdx.push_back(seq.tBegin);
+            uttFrameNum.push_back(numFrames);
+        }
+        seqId = 0;  //phone
+        for (const auto& seq : phoneMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttPhoneToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttPhoneBeginIdx.push_back(seq.tBegin);
+            uttPhoneNum.push_back(numFrames);
+
+            size_t startFrameInd = seq.tBegin * numPhoneParallelSequences + seq.s;
+            size_t endFrameInd = seq.tEnd   * numPhoneParallelSequences + seq.s;
+            size_t frameCounter = 0;
+            phoneSeq.clear();
+            for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numPhoneParallelSequences, frameCounter++)
+            {
+                phoneSeq.push_back((size_t)maxIndexes(0, frameInd));                
+            }
+            allUttPhoneSeqs.push_back(phoneSeq);
+        }
+        // for cpu 
+        m_deviceid_gpu = maxIndexes.GetDeviceId();
+        m_deviceid = CPUDEVICE;
+        Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneSeqs(CPUDEVICE);
+        Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneBounds(CPUDEVICE);
+        // copy phone seq to matrix
+        matrixPhoneSeqs.Resize(maxPhoneNum, numSequences);
+        //matrixPhoneBounds.Resize(maxPhoneNum, numSequences);
+        for (size_t i = 0; i < numSequences; i++)
+        {
+            for (size_t j = 0; j < allUttPhoneSeqs[i].size(); j++)
+            {
+                matrixPhoneSeqs(j, i) = (ElemType)allUttPhoneSeqs[i][j];
+          //      matrixPhoneBounds(j, i) = (ElemType)allUttPhoneBounds[i][j];
+            }
+        }
+
+        // Once these matrices populated, move them to the active device
+        matrixPhoneSeqs.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
+        //matrixPhoneBounds.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
+
+        //calculate the memory need for f*g
+        std::vector<size_t> uttBeginForOutputditribution;
+        uttBeginForOutputditribution.reserve(numSequences);
+        
+        size_t totalcol = 0;
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttBeginForOutputditribution.push_back(totalcol);
+            totalcol += uttFrameNum[s] * uttPhoneNum[s];            
+        }
+
+        //compute f+g
+        Microsoft::MSR::CNTK::Matrix<ElemType> matrixOutputDistribution(m_deviceid_gpu);
+        /*G.TransferFromDeviceToDevice(m_deviceid_gpu, CPUDEVICE);
+        for (size_t uttId = 0; uttId < numSequences; uttId++)
+        {
+            for (size_t u = 0; u < uttPhoneNum[uttId]; u++)
+            {
+                size_t phonePosInMB = (u + uttPhoneBeginIdx[uttId])*numPhoneParallelSequences + uttPhoneToChanInd[uttId];
+                size_t phoneId = allUttPhoneSeqs[uttId][u];
+                for (size_t k = 0; k < G.GetNumRows(); k++)
+                {
+                    if (k == phoneId)
+                        G.SetValue(k, phonePosInMB, 0.0);
+                    else
+                        G.SetValue(k, phonePosInMB, (float)LZERO);
+                }
+            }
+            
+        }
+        G.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);*/
+        //G.SetValue(0.0);
+        //F.Print("H");
+        //G.Print("G");
+        
+        //matrixOutputDistribution.Resize(numRows, totalcol);
+        matrixOutputDistribution.AssignUserOp1(F, G, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, 
+           totalcol, numParallelSequences, numPhoneParallelSequences);
+        //matrixOutputDistribution.Print("h");
+        //log softmax of f+g
+        matrixOutputDistribution.InplaceLogSoftmax(true);
+        //matrixOutputDistribution.Print("prob");
+        // forward backward to compute alpha, beta derivaitves
+        Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> RNNTPosterior(CPUDEVICE);
+        RNNTPosterior.AssignRNNTScore(matrixOutputDistribution, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd,  uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
+            uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, m_derivativeForF , m_derivativeForG ,-1,true);
+        ElemType finalscore = 0;
+        finalscore =  totalScore.Get00Element();
+        //fprintf(stderr, "finalscore:%f\n", finalscore);
+        if (finalscore > 50 || finalscore < 0)
+        {
+            for (size_t i = 0; i < uttFrameNum.size(); i++)
+            {
+                fprintf(stderr, "framenum:%d\n", (int)(uttFrameNum[i]));                
+            }
+            matrixPhoneSeqs.Print("phone seq");
+            matrixPhoneBounds.Print("phone bound");
+        }
+        /*alpha.Print("alpha");
+        beta.Print("beta");
+        prob.Print("prob");*/
+       
+        RNNTPosterior.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        matrixOutputDistribution.ReleaseMemory();
+
+        //compute derivatives for F and G
+        //m_derivativeForF.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+         //   numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 0);
+        //m_derivativeForG.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+           // numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);
+
+        m_derivativeForF.Print("derivative for F");
+        m_derivativeForG.Print("derivative for G");
+
+        m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        m_derivativeForG.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+
+    }
+
 private:
     // Helper methods for copying between ssematrix objects and CNTK matrices
     void CopyFromCNTKMatrixToSSEMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& src, size_t numCols, msra::math::ssematrixbase& dest)
@@ -500,6 +696,7 @@ protected:
     msra::dbn::matrix dengammas;
     msra::dbn::matrix pred;
     int m_deviceid; // -1: cpu
+    int m_deviceid_gpu;
     size_t m_maxframenum;
     float lmf; // Note that 9 was best for Fisher  --these should best be configurable
     float wp;
