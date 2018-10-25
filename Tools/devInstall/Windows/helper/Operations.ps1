@@ -308,13 +308,13 @@ function OpCheckVS2017
                         } )
 }
 
-function OpCheckCuda9
+function OpCheckCuda10
 {
-    $programPath = join-path $env:ProgramFiles "NVIDIA GPU Computing Toolkit\CUDA\v9.0"
-    @( @{Name = "Verify Installation of NVidia Cuda 9.0"; ShortName = "PRECUDA90"; VerifyInfo = "Checking for NVidia Cuda 9.0"; 
+    $programPath = join-path $env:ProgramFiles "NVIDIA GPU Computing Toolkit\CUDA\v10.0"
+    @( @{Name = "Verify Installation of NVidia Cuda 10.0"; ShortName = "PRECUDA100"; VerifyInfo = "Checking for NVidia Cuda 10.0";
          Verification = @( @{Function = "VerifyDirectory"; Path = $programPath },
-                           @{Function = "VerifyEnvironmentAndData"; EnvVar = "CUDA_PATH_V9_0"; Content = $programPath } ); 
-         PreReq = @( @{Function = "PrereqInfoCuda9" } );
+                           @{Function = "VerifyEnvironmentAndData"; EnvVar = "CUDA_PATH_V10_0"; Content = $programPath } );
+         PreReq = @( @{Function = "PrereqInfoCuda10" } );
          Action = @( @{Function = "StopInstallation" } )
         } )
 }

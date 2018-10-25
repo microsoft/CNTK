@@ -44,14 +44,14 @@ for more details.
 "
 }
 
-function PrereqInfoCuda9(
+function PrereqInfoCuda10(
     [Parameter(Mandatory = $true)][hashtable] $table
 )
 {
     FunctionIntro $table
     Write-Warning "
 
-Installation of NVidia CUDA 9.0 is a pre-requisite before installation can continue.
+Installation of NVidia CUDA 10.0 is a pre-requisite before installation can continue.
 Please check 
   https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows
 for more details.

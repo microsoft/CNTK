@@ -127,7 +127,7 @@ default_openblas=""
 
 default_boost="boost-1.60.0"
 
-default_cudas="cuda-9.0"
+default_cudas="cuda-10.0"
 default_nccls="nccl"
 default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdk_includes="include/nvidia/gdk cuda/include"
