@@ -22,7 +22,7 @@
 #   CUDA_PATH= Path to CUDA
 #     If not specified, GPU will not be enabled
 #   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
-#     defaults to /usr/local/cub-1.4.1
+#     defaults to /usr/local/cub-1.8.0
 #   CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
 #     CuDNN version needs to be 5.0 or higher.
 #   KALDI_PATH= Path to Kaldi
@@ -144,8 +144,8 @@ ifdef CUDA_PATH
   endif
 
   ifndef CUB_PATH
-    $(info defaulting CUB_PATH to /usr/local/cub-1.4.1)
-    CUB_PATH=/usr/local/cub-1.4.1
+    $(info defaulting CUB_PATH to /usr/local/cub-1.8.0)
+    CUB_PATH=/usr/local/cub-1.8.0
   endif
 
   DEVICE = gpu

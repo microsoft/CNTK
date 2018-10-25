@@ -149,19 +149,19 @@ function OpMSMPI70SDK(
         } )
 }
 
-function OpNvidiaCub174(
+function OpNvidiaCub180(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "NVidia CUB 1.7.4"
-    $prodFile = "cub-1.7.4.zip"
-    $prodSubDir = "cub-1.7.4"
+    $prodName = "NVidia CUB 1.8.0"
+    $prodFile = "cub-1.8.0.zip"
+    $prodSubDir = "cub-1.8.0"
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "CUB_PATH";
     $envValue = $targetPath
-    $downloadSource = "https://github.com/NVlabs/cub/archive/1.7.4.zip"
+    $downloadSource = "https://github.com/NVlabs/cub/archive/1.8.0.zip"
 
-    @( @{ShortName = "CUB174"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
+    @( @{ShortName = "CUB180"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = "$targetPath" },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
          Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile" } );
@@ -170,20 +170,20 @@ function OpNvidiaCub174(
          } )
 }
 
-function OpNVidiaCudnn7090(
+function OpNVidiaCudnn73100(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "NVidia CUDNN 7.0.5 for CUDA 9.0"
-    $cudnnWin = "cudnn-9.0-windows10-x64-v7.zip"
+    $prodName = "NVidia CUDNN 7.3.1 for CUDA 10.0"
+    $cudnnWin = "cudnn-10.0-windows10-x64-v7.3.1.20.zip"
 
-    $prodSubDir =  "cudnn-9.0-v7.0.5"
+    $prodSubDir =  "cudnn-10.0-v7.3.1"
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "CUDNN_PATH"
     $envValue = join-path $targetPath "cuda"
-    $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v7.0.5"
+    $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v7.3.1"
 
-    @( @{ShortName = "CUDNN7090"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
+    @( @{ShortName = "CUDNN73100"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyDirectory"; Path = $envValue },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
@@ -308,13 +308,13 @@ function OpCheckVS2017
                         } )
 }
 
-function OpCheckCuda9
+function OpCheckCuda10
 {
-    $programPath = join-path $env:ProgramFiles "NVIDIA GPU Computing Toolkit\CUDA\v9.0"
-    @( @{Name = "Verify Installation of NVidia Cuda 9.0"; ShortName = "PRECUDA90"; VerifyInfo = "Checking for NVidia Cuda 9.0"; 
+    $programPath = join-path $env:ProgramFiles "NVIDIA GPU Computing Toolkit\CUDA\v10.0"
+    @( @{Name = "Verify Installation of NVidia Cuda 10.0"; ShortName = "PRECUDA100"; VerifyInfo = "Checking for NVidia Cuda 10.0";
          Verification = @( @{Function = "VerifyDirectory"; Path = $programPath },
-                           @{Function = "VerifyEnvironmentAndData"; EnvVar = "CUDA_PATH_V9_0"; Content = $programPath } ); 
-         PreReq = @( @{Function = "PrereqInfoCuda9" } );
+                           @{Function = "VerifyEnvironmentAndData"; EnvVar = "CUDA_PATH_V10_0"; Content = $programPath } );
+         PreReq = @( @{Function = "PrereqInfoCuda10" } );
          Action = @( @{Function = "StopInstallation" } )
         } )
 }

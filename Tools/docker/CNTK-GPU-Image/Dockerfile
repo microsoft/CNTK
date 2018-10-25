@@ -1,16 +1,14 @@
-# Tag: nvidia/cuda:9.0-cudnn7-devel-ubuntu16.04
-# Created: 2017-11-21T06:34:14.675603521Z
-# Label: com.nvidia.build.id: 41212533
-# Label: com.nvidia.build.ref: e0edb5359ecb7bd3d86f0c9bfa18c2260b741ebb
-# Label: com.nvidia.cuda.version: 9.0.176
-# Label: com.nvidia.cudnn.version: 7.0.4.31
-# Label: com.nvidia.nccl.version: 2.1.2
+# Tag: nvidia/cuda:10.0-cudnn7-devel-ubuntu16.04
+# Created: 2018-10-22T21:14:30.605789926Z
+# Label: com.nvidia.cuda.version: 10.0.
+# Label: com.nvidia.cudnn.version: 7.3.1.20
+# Label: com.nvidia.nccl.version: 2.3.5
 #
 # To build, run from the parent with the command line:
 # 	docker build -t <image name> -f CNTK-GPU-Image/Dockerfile .
 
 # Ubuntu 16.04.5
-FROM nvidia/cuda@sha256:33add9c50ab76b8f3a92187c0418ed600d5bea27690fda40711122fdc28ce2f4
+FROM nvidia/cuda@sha256:362e4e25aa46a18dfa834360140e91b61cdb0a3a2796c8e09dadb268b9de3f6b
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         autotools-dev \
@@ -85,7 +83,7 @@ RUN LIBZIP_VERSION=1.1.2 && \
 
 ENV LD_LIBRARY_PATH /usr/local/lib:$LD_LIBRARY_PATH
 
-RUN wget -q -O - https://github.com/NVlabs/cub/archive/1.7.4.tar.gz | tar -C /usr/local -xzf -
+RUN wget -q -O - https://github.com/NVlabs/cub/archive/1.8.0.tar.gz | tar -C /usr/local -xzf -
 
 RUN OPENCV_VERSION=3.1.0 && \
     wget -q -O - https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.tar.gz | tar -xzf - && \
