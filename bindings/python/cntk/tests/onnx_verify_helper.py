@@ -13,11 +13,18 @@ known_issues = [
     'SpatialBatchNormalization_float160',
     'DepthToSpace',
     'RNN',
-    'test_sequence_slice_',
-    'test_sequence_slice_0',
-    'test_sequence_slice_1',
+    # 'DepthToSpace',
+    'RNN.reverse.one_layer.relu',
+    'test_sequence_slice_-1.0',
+    'test_sequence_slice_0.-1',
+    'test_sequence_slice_0.1',
+    'test_sequence_slice_1.-1',
+    'test_sequence_slice_1.0',
+    'test_sequence_slice_1.2',
+    'test_sequence_slice_-2.-1',
+    'test_sequence_slice_-4.2',
     'SequenceSoftmax',
-    'SpaceToDepth',
+    # 'SpaceToDepth',
     'top_k',
 
     'ConvTranspose_with_OutputShape_0',
@@ -33,7 +40,7 @@ known_issues = [
 ]
 
 def parse_single_result_case(case_str):
-    fails = re.search(r'Failed Test Cases:\w+', case_str)
+    fails = re.search(r'Failed Test Cases:[\w\.\-]+', case_str)
     if fails:
         failed_case = fails.group().split(':')[1]
         if not failed_case in known_issues:
