@@ -25,7 +25,7 @@ set_of_batch_ops = {'Pooling', 'Convolution', 'GlobalAveragePooling', 'GlobalMax
 # of whether the input has batch axis or not.
 # Basically, for these ops we don't prepend 1 to the output shape
 # when the input has batch axis.
-set_of_batch_irrelevant_ops = {'Flatten'}
+set_of_batch_irrelevant_ops = {}
 
 verify_filename = os.path.join('onnx_op_test_verify.bat')
 if os.path.exists(verify_filename):
@@ -613,7 +613,6 @@ def test_DepthToSpace(tmpdir, dtype):
         image_shape = (4, 5)
         input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=dtype)
         input_val = np.tile(input_val, (1,) + image_shape)
-        input_val.shape = (1,) + input_val.shape
         img = C.input_variable((num_channels,) + image_shape, dtype=dtype)
         model = C.depth_to_space(img, block_size)
 
@@ -733,11 +732,14 @@ def test_Gather(tmpdir, dtype):
     if (dtype == np.float16):
         pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
-        c = np.asarray([[[0],[1]]]).astype(dtype) 
-        #c = np.asarray([[[0],[1]],[[4],[5]]]).astype(dtype) # batch size = 2 not supported yet. 
+        c = np.asarray([[0],[1]]).astype(dtype) 
         x = C.input_variable((2,1))
         d = np.arange(12).reshape(6,2).astype(dtype)
         y = C.constant(d)
+        x_constant = C.constant(c)
+        model = C.gather(y, x_constant)
+        verify_no_input(model, tmpdir, 'Gather_0')
+
         model = C.gather(y, x)
         verify_one_input(model, c, tmpdir, 'Gather_1')
 
@@ -752,6 +754,7 @@ def test_Gather_With_Axis(tmpdir, dtype):
         x = C.input_variable(np.shape(data))
         y = C.input_variable(np.shape(indices))
         axis = 1
+
         model = C.gather(data, y, axis, 'gather_with_axis')
         verify_one_input(model, indices, tmpdir, 'Gather_With_Axis_1')
 
@@ -1733,7 +1736,6 @@ def test_SpaceToDepth(tmpdir, dtype):
         image_shape = (12, 15)
         input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=dtype)
         input_val = np.tile(input_val, (1,) + image_shape)
-        input_val.shape = (1,) + input_val.shape
         img = C.input_variable((num_channels,) + image_shape, dtype=dtype)
         model = C.space_to_depth(img, block_size)
 

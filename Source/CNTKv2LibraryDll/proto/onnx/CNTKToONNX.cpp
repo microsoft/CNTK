@@ -474,12 +474,18 @@ private:
     static std::pair<std::vector<int>, std::vector<int> > GetONNXPadsAttributeFromCNTKNode(
         const std::vector<bool>& cntkAutoPadding, const NDShape& kernelShape, const NDShape& inputShape, 
         const NDShape& strides, const NDShape& dilation, bool ceilOutDim, bool transpose);
-
+    static std::pair<std::vector<int>, std::vector<int> > GetONNXPadsAttributeFromCNTKNode(
+        const std::vector<bool>& cntkAutoPadding, const NDShape& kernelShape, const NDShape& inputShape,
+        const NDShape& strides, const NDShape& dilation, const NDShape& outputShape, bool ceilOutDim, bool transpose);
     //
     // Adds attributes 'pads' to saved node (typically convolution or pooling).
     //
     static void PutPadAttrInNode(onnxruntime::Node* node, const std::vector<bool>& autoPadding,
-        const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides, const NDShape& dilation, bool ceilOutDim = false, bool transpose = false);
+        const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides, const NDShape& dilation,
+        bool ceilOutDim = false, bool transpose = false);
+    static void PutPadAttrInNode(onnxruntime::Node* node, const std::vector<bool>& autoPadding,
+        const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides, const NDShape& dilation, const NDShape& outputShape,
+        bool ceilOutDim = false, bool transpose = false);
 
     //
     // Takes CNTK's OneHotOp node and converts it into OneHotEncoder op on the ONNX side.
@@ -571,6 +577,13 @@ private:
 
     // Takes CNTK's TimesTranspose node and converts it into a series of ONNX nodes.
     static onnxruntime::Node * CreateONNXNodesForTimesTranspose(const FunctionPtr & src,
+        onnxruntime::Graph * graph, std::unordered_map<FunctionPtr,
+        onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+
+    // Takes CNTK's Flatten node and converts it into a series of ONNX nodes.
+    static onnxruntime::Node * CreateONNXNodesForFlatten(const FunctionPtr & src,
         onnxruntime::Graph * graph, std::unordered_map<FunctionPtr,
         onnxruntime::Node*>& functionNodes,
         std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
@@ -3262,6 +3275,10 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                     compositeOutputsMap);
         }
     }
+    else if (cntkOpName == "Flatten")
+    {
+        return CreateONNXNodesForFlatten(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+    }
 
     //
     // If this block node equivalent to a primitive ONNX OP, then treated as such.
@@ -4010,7 +4027,12 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
                 axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
             }
             // Flatten op takes single axis. It is safe here to assume that the axis is a static axis.
-            int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]) + 1 /* TODO: Figure out how to remove this hardcoded 1 */;
+            int64_t ax = ConvertAxisToOnnx(axis, src->Inputs()[0]);
+            // ax needs the additional 1 here.
+            // Flatten op in ONNX doesn't count batch axis in, so if CNTK input has batch axis, the additional 1 is already fulfilled.
+            // Add 1 if CNTK input does not have batch axis.
+            if (!src->Inputs()[0].HasBatchAxis())
+                ax++;
             node->AddAttribute(attributesMap[L"axis"], ax);
         }
         else if (src->OpName() == L"Squeeze")
@@ -4141,17 +4163,47 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             node->AddAttribute("dilations", ToINTS(dilations));
             node->AddAttribute("group", (int64_t)groups);
 
-            if (transpose)
-            {
-                auto outputShape = (NDShape)src->Attributes()[L"outputShape"].Value<NDShape>();
-                if(outputShape != NDShape({ 0 }))
-                    node->AddAttribute("output_shape", ToINTS(outputShape, src->Inputs()[1].HasBatchAxis()));
-                // Notes on outputShape vs pads for convolution and convTranspose.
-                // In onnx spec for convTranspose, quoted here "If output_shape is specified pads values are ignored". 
-                // If outputShape is exported for convTranspose, autopad/pads can be skipped. 
-            }
             const NDShape& inputShape = src->Inputs()[1].Shape();
-            PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, dilations, ceilOutDim, transpose);
+
+            auto lowerPadShape = (NDShape)src->Attributes()[L"lowerPad"].Value<NDShape>();
+            auto upperPadShape = (NDShape)src->Attributes()[L"upperPad"].Value<NDShape>();
+
+            if (lowerPadShape.Rank() > kernelShape.Rank())
+                lowerPadShape = lowerPadShape.SubShape(0, lowerPadShape.Rank() - 1);
+            if (upperPadShape.Rank() > kernelShape.Rank())
+                upperPadShape = upperPadShape.SubShape(0, upperPadShape.Rank() - 1);
+
+            auto lowerPad = ToINTS(lowerPadShape);
+            auto upperPad = ToINTS(upperPadShape);
+            // lowerPad/upperPad is set to NDShape({0}) by default. 
+            // If this node has explicitly set the lowerPad and upperPad values(i.e. nodes that are constructed with lowerPad/upperPad values and autoPadding=False),
+            // export these values directly. Otherwise, check autoPadding and export accordingly. 
+            bool isAllPadsZero = std::all_of(lowerPad.begin(), lowerPad.end(), [](int64_t i) { return i == 0; });
+            isAllPadsZero = isAllPadsZero & std::all_of(upperPad.begin(), upperPad.end(), [](int64_t i) { return i == 0; });
+            bool isAnyAutoPadTrue = std::any_of(autoPadding.begin(), autoPadding.end(), [](bool i) { return i; });
+            if (lowerPad.size() > 0 && upperPad.size() > 0
+                && !(lowerPad.size() == 1 && upperPad.size() == 1 && lowerPad[0] == 0 && upperPad[0] == 0)
+                && !(isAllPadsZero && ceilOutDim)
+                && !isAnyAutoPadTrue)
+            {
+                if (ceilOutDim)
+                    ValidatePadValueForCeilOutDim(lowerPad, upperPad, autoPadding, kernelShape, inputShape, strides,
+                        /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1), /*transpose=*/false);
+                lowerPad.insert(lowerPad.end(), upperPad.cbegin(), upperPad.cend());
+                node->AddAttribute("pads", lowerPad);
+            }
+            else
+            {
+                if (transpose && src->Attributes().Contains(L"outputShape"))
+                {
+                    auto outputShape = (NDShape)src->Attributes()[L"outputShape"].Value<NDShape>();
+                    PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, dilations, outputShape, ceilOutDim, transpose);
+                }
+                else
+                {
+                    PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, dilations, ceilOutDim, transpose);
+                }
+            }
         }
         else if (src->OpName() == L"Pooling")
         {
@@ -4269,10 +4321,16 @@ void CNTKToONNXHelper::ValidatePadValueForCeilOutDim(const std::vector<int64_t> 
     }
 }
 
-
 void CNTKToONNXHelper::PutPadAttrInNode(onnxruntime::Node* node,
     const std::vector<bool>& autoPadding, const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides,
     const NDShape& dilations, bool ceilOutDim, bool transpose)
+{
+    PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, dilations, /*outputShape=*/{0}, ceilOutDim, transpose);
+}
+
+void CNTKToONNXHelper::PutPadAttrInNode(onnxruntime::Node* node,
+    const std::vector<bool>& autoPadding, const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides,
+    const NDShape& dilations, const NDShape& outputShape, bool ceilOutDim, bool transpose)
 {
     // To fully support CNTK exporting of convolution & pooling ops for all input settings,
     // The padding attributes must be exported in 'pads' instead of 'autoPad'.
@@ -4281,7 +4339,7 @@ void CNTKToONNXHelper::PutPadAttrInNode(onnxruntime::Node* node,
     // E.g.
     //   operand shape: [7, 8], kernel shape: [2, 3], strides: [2, 2].
     // The pad values CNTK generates is [0, 1, 1, 0]. This cannot be expressed in one single "SAME_UPPER" nor "SAME_LOWER". 
-    auto padsValueVectorsForONNX = GetONNXPadsAttributeFromCNTKNode(autoPadding, kernelShape, inputShape, strides, dilations, ceilOutDim, transpose);
+    auto padsValueVectorsForONNX = GetONNXPadsAttributeFromCNTKNode(autoPadding, kernelShape, inputShape, strides, dilations, outputShape, ceilOutDim, transpose);
     auto lowerPads = ToINTS(padsValueVectorsForONNX.first);
     auto upperPads = ToINTS(padsValueVectorsForONNX.second);
     lowerPads.insert(lowerPads.end(), upperPads.cbegin(), upperPads.cend());
@@ -4558,15 +4616,22 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
 }
 
 std::pair<std::vector<int>, std::vector<int>> CNTKToONNXHelper::GetONNXPadsAttributeFromCNTKNode(
-    const std::vector<bool>& cntkAutoPadding, const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides, 
+    const std::vector<bool>& cntkAutoPadding, const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides,
     const NDShape& dilations, bool ceilOutDim, bool transpose)
+{
+    return GetONNXPadsAttributeFromCNTKNode(cntkAutoPadding, kernelShape, inputShape, strides, dilations, /*outputShape=*/{0}, ceilOutDim, transpose);
+}
+
+std::pair<std::vector<int>, std::vector<int>> CNTKToONNXHelper::GetONNXPadsAttributeFromCNTKNode(
+    const std::vector<bool>& cntkAutoPadding, const NDShape& kernelShape, const NDShape& inputShape, const NDShape& strides,
+    const NDShape& dilations, const NDShape& outputShape, bool ceilOutDim, bool transpose)
 {
     // Reuse ConvolveGeometry to compute outputShape and pad values. 
     // The difference here is that ConvolveGeometry expects parameters to be non-spatial shapes, which includes the channel info that 
     // we have just excluded. Thus emulated channel axis is inserted.
     assert(inputShape.Rank() > 0);
     const size_t channelSize = inputShape[inputShape.Rank() - 1];
-    const NDShape& kernelShapeWithChannel = kernelShape.AppendShape({ channelSize });
+    NDShape kernelShapeWithChannel = kernelShape.AppendShape({ channelSize });
     const NDShape& stridesWithChannel = strides.Rank() == 1 ? strides : strides.AppendShape({ channelSize });
     const NDShape& dilationsWithChannel = dilations.Rank() == 1 ? dilations : dilations.AppendShape({ 1 });
     std::vector<bool> cntkAutoPaddingWithChannel = cntkAutoPadding.size() > 0 ? cntkAutoPadding : std::vector<bool>({ false });
@@ -4580,13 +4645,22 @@ std::pair<std::vector<int>, std::vector<int>> CNTKToONNXHelper::GetONNXPadsAttri
     NDShape convOperandShape = inputShape;
     if (transpose)
     {
-        // For convolution transpose. Reuse logic in ConvolveGeometry to compute the actual pads value. 
-        // First, get CNTK convTranspose outputShape by ConvolveGeometry::ComputeInputShape.
-        // Next, treat this as normal convolution, and use the achieved outputShape as inputShape, to compute the pads values. 
-        convOperandShape = AsNDShape(ConvolveGeometry::ComputeInputShape(AsTensorShape(inputShape), AsTensorShape(kernelShapeWithChannel),
-            /*mapCount=*/AsTensorShape({ 1 }), AsTensorShape(stridesWithChannel), /*sharing=*/std::vector<bool>({ true }), cntkAutoPaddingWithChannel, 
-            /*lowerPad=*/AsTensorShape({ 0 }), /*upperPad=*/AsTensorShape({ 0 }), AsTensorShape(dilationsWithChannel), /*groups=*/1, 
-            ceilOutDim, /*(UNUSED)needsDynamicValidation=*/false, /*(UNUSED)isFinalValidationPass=*/false));
+        if (outputShape.Rank() == 1 && outputShape[0] == 0)
+        {
+            // For convolution transpose. Reuse logic in ConvolveGeometry to compute the actual pads value.
+            // First, get CNTK convTranspose outputShape by ConvolveGeometry::ComputeInputShape.
+            // Next, treat this as normal convolution, and use the achieved outputShape as inputShape, to compute the pads values.
+            convOperandShape = AsNDShape(ConvolveGeometry::ComputeInputShape(AsTensorShape(inputShape), AsTensorShape(kernelShapeWithChannel),
+                /*mapCount=*/AsTensorShape({ 1 }), AsTensorShape(stridesWithChannel), /*sharing=*/std::vector<bool>({ true }), cntkAutoPaddingWithChannel,
+                /*lowerPad=*/AsTensorShape({ 0 }), /*upperPad=*/AsTensorShape({ 0 }), AsTensorShape(dilationsWithChannel), /*groups=*/1,
+                ceilOutDim, /*(UNUSED)needsDynamicValidation=*/false, /*(UNUSED)isFinalValidationPass=*/false));
+        }
+        else
+        {
+            convOperandShape = outputShape;
+            // Use the correct channel size.
+            kernelShapeWithChannel[kernelShapeWithChannel.Rank() - 1] = convOperandShape[convOperandShape.Rank() - 1];
+        }
     }
 
     auto geometry = std::make_shared<ConvolveGeometry>(AsTensorShape(convOperandShape), AsTensorShape(kernelShapeWithChannel),
@@ -4603,7 +4677,7 @@ std::pair<std::vector<int>, std::vector<int>> CNTKToONNXHelper::GetONNXPadsAttri
         if ((i >= cntkAutoPadding.size() && !cntkAutoPadding[cntkAutoPadding.size() - 1]) || (i < cntkAutoPadding.size() && !cntkAutoPadding[i]))
         {
             // When autoPadding is False
-            if (ceilOutDim)
+            if (ceilOutDim || transpose)
             {
                 // This is a special case handling for Pooling, where ceilOutDim = True and cntkAutoPadding = False.
                 // In CNTK, no paddings should be generated since autoPadding is False. 
@@ -5288,6 +5362,58 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForTimesTranspose(const Func
     
     functionNodes.emplace(src, matmulNode);
     return matmulNode;
+}
+
+onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForFlatten(const FunctionPtr &src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+{
+    std::vector<onnxruntime::NodeArg *> inputs;
+    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
+
+    std::vector<onnxruntime::NodeArg *> outputs;
+    ProcessOutputs(src, outputs, graph);
+
+    auto flattenInput = src->Inputs()[0];
+    auto flattenOutput = src->Outputs()[0];
+    const std::string& nodeName = UniqueNodeNameStorage::GetUniqueNodeName(src);
+    const std::string& inputNodeName = UniqueNodeNameStorage::GetUniqueInputNodeName(flattenInput);
+
+    auto functionNode = [&]() -> onnxruntime::Node* {
+        if (flattenInput.HasBatchAxis())
+        {
+            onnx::TypeProto inputReshapeOut = ToTypeProto(flattenInput.Shape());
+            onnx::TypeProto outputReshapeIn = ToTypeProto(flattenOutput.Shape());
+            onnx::TypeProto outputReshapeOut = ToTypeProto(flattenOutput.Shape(), /*hasBatchAxis=*/true);
+            UpdateONNXType(flattenInput.GetDataType(), inputReshapeOut);
+            UpdateONNXType(flattenOutput.GetDataType(), outputReshapeIn);
+            UpdateONNXType(flattenOutput.GetDataType(), outputReshapeOut);
+            onnxruntime::NodeArg &preReshapeOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(inputNodeName + "_reshape"),
+                &inputReshapeOut);
+            onnxruntime::Node* preReshapeNode = AddReshapeNodeImpl(graph, UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_pre_reshape"),
+                inputs[0], &preReshapeOutputArg, ToINTS(inputReshapeOut));
+
+            onnxruntime::NodeArg &postReshapeInputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_out_reshape"),
+                &outputReshapeIn);
+            onnxruntime::Node* postReshapeNode = AddReshapeNodeImpl(graph, UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_post_reshape"),
+                &postReshapeInputArg, outputs[0], ToINTS(outputReshapeOut));
+
+            onnxruntime::Node* flattenNode = graph->AddNode(nodeName, ToOPName(src), "", { &preReshapeOutputArg }, { &postReshapeInputArg });
+
+            CopyAttributes(src, flattenNode);
+
+            return postReshapeNode;
+        }
+        else
+        {
+            return AddNode(src, graph, inputs, outputs);
+        }
+    }();
+
+    functionNodes.emplace(src, functionNode);
+    return functionNode;
 }
 
 onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr &src,
