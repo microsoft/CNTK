@@ -10,14 +10,15 @@
 
 #include "Basics.h"
 #include "SGD.h"
-#include "NonlinearityNodes.h"          // for DropoutNode
-#include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
+#include "NonlinearityNodes.h"   // for DropoutNode
+#include "SpecialPurposeNodes.h" // for SequenceWithSoftmaxNode
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
 #include "InputAndParamNodes.h"
 #include "AccumulatorAggregation.h"
-
-#include "RandomOrdering.h"
+/* guoye: start */
+// #include "RandomOrdering.h"
+/* guoye: end */
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
 // ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
@@ -40,7 +41,12 @@
 #include <map>
 #include <set>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 using namespace std;
 
@@ -63,7 +69,7 @@ void SGD<ElemType>::Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE devi
                           IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint)
 {
     // log the device we are computing on
-    LOGPRINTF(stderr, "\nModel has %d nodes. Using ", (int)net->GetTotalNumberOfNodes());
+    LOGPRINTF(stderr, "\nModel has %d nodes. Using ", (int) net->GetTotalNumberOfNodes());
     if (net->GetDeviceId() < 0)
         fprintf(stderr, "CPU.\n");
     else
@@ -225,12 +231,12 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
 
     // This code is only relevant for the new (V2) readers. It exist because of
-    // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs 
+    // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs
     // in the same minibatch have different layouts, which is something only V2 readers can
-    // produce. 
+    // produce.
     if (m_enableDistributedMBReadingNotSpecified && m_mpi != nullptr && !trainSetDataReader->IsLegacyReader())
     {
-        // we're running a parallel training with a v2 reader, 
+        // we're running a parallel training with a v2 reader,
         // auto-enable distributed reading
         if (m_traceLevel > 0)
             LOGPRINTF(stderr, "\"distributedMBReading\" is not explicitly specified, defaulting to 'true'.\n");
@@ -291,7 +297,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     for (size_t pass = 0; pass < 2; pass++)
     {
         auto& nodes = (pass == 0) ? featureNodes : labelNodes;
-        for (const auto & node : nodes)
+        for (const auto& node : nodes)
             inputMatrices->AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
     }
 
@@ -363,13 +369,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
     fprintf(stderr, "\n");
     LOGPRINTF(stderr, "Training %.0f parameters in %d ",
-              (double)numParameters, (int)nodesToUpdateDescriptions.size());
+              (double) numParameters, (int) nodesToUpdateDescriptions.size());
     if (m_traceLevel == 0)
         fprintf(stderr, "parameter tensors.\n");
     else
     {
         fprintf(stderr, "out of %d parameter tensors and %d nodes with gradient:\n\n",
-            (int)learnableNodes.size(), (int)numNeedsGradient);
+                (int) learnableNodes.size(), (int) numNeedsGradient);
         for (let nodeDescription : nodesToUpdateDescriptions)
         {
             LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
@@ -403,14 +409,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         currentNumGradientBits = m_numGradientBits[startEpoch]; // remember so that we can detect a change
         InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel);
     }
-    else if (GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD || 
+    else if (GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
              GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD)
     {
         InitModelAggregationHandler(m_syncStatsTrace, net->GetDeviceId());
     }
 
     // precompute mean and invStdDev nodes and save initial model
-    // When no precompute, only save if we did not load the model from a 
+    // When no precompute, only save if we did not load the model from a
     // checkpoint but instead built it from a network description
     if (PreCompute(net, trainSetDataReader, featureNodes, labelNodes, inputMatrices) || !networkLoadedFromCheckpoint)
     {
@@ -491,14 +497,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
     {
         m_pASGDHelper.reset(NewASGDHelper<ElemType>(learnableNodes,
-                                         m_mpi->NumNodesInUse(),
-                                         m_isAsyncBufferEnabled,
-                                         m_isSimulateMA,
-                                         m_adjustLearningRateAtBeginning,
-                                         m_adjustCoefficient,
-                                         m_adjustPerMinibatches,
-                                         m_traceLevel,
-                                         m_syncStatsTrace));
+                                                    m_mpi->NumNodesInUse(),
+                                                    m_isAsyncBufferEnabled,
+                                                    m_isSimulateMA,
+                                                    m_adjustLearningRateAtBeginning,
+                                                    m_adjustCoefficient,
+                                                    m_adjustPerMinibatches,
+                                                    m_traceLevel,
+                                                    m_syncStatsTrace));
         m_pASGDHelper->InitModel(learnableNodes);
     }
 
@@ -540,10 +546,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         size_t randSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
         ComputationNetwork::SetDropoutRate(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate);
         ComputationNetwork::SetIRngUserSeed(net, criterionNodes[0], randSeedBase);
-        ComputationNetwork::SetBatchNormalizationTimeConstants<ElemType>(net, criterionNodes[0], 
+        ComputationNetwork::SetBatchNormalizationTimeConstants<ElemType>(net, criterionNodes[0],
                                                                          m_batchNormalizationTimeConstant[i], prevNormalizationTimeConstant,
                                                                          m_batchNormalizationBlendTimeConstant[i], prevNormalizationBlendTimeConstant);
-        
+
         // learning rate adjustment
         if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::None || i < m_learningRatesParam.size())
         {
@@ -612,7 +618,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                           inputMatrices, learnableNodes,
                                                           smoothedGradients, smoothedCounts, learningRateAdjustmentFactor);
             if (m_traceLevel < 1 && chosenMinibatchSize != m_prevChosenMinibatchSize)
-                LOGPRINTF(stderr, "Minibatch size adapted to %d.\n", (int)chosenMinibatchSize);
+                LOGPRINTF(stderr, "Minibatch size adapted to %d.\n", (int) chosenMinibatchSize);
             m_prevChosenMinibatchSize = chosenMinibatchSize;
         }
         else
@@ -632,10 +638,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         double momentumPerSample = GetMomentumPerSample(i /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
         // time constant = number of samples after which a contribution has been reduced to e^-1
         double momentumAsTimeConstant = momentumPerSample == 0.0
-                                        ? 0.0
-                                        : momentumPerSample >= 1.0
                                             ? 0.0
-                                            : -1.0 / log(momentumPerSample);
+                                            : momentumPerSample >= 1.0
+                                                  ? 0.0
+                                                  : -1.0 / log(momentumPerSample);
         if (m_traceLevel > 0)
         {
             fprintf(stderr, "\n");
@@ -671,7 +677,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         else
             lrControlCriterion = epochCriterion.Average();
 
-        LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int)m_maxEpochs);
+        LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int) m_maxEpochs);
         epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
 
         m_lastFinishedEpochTrainLoss = epochCriterion.Average();
@@ -692,10 +698,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         if (tensorBoardWriter)
         {
-            tensorBoardWriter->WriteValue(L"summary/" + criterionNodes[0]->NodeName(), (float)epochCriterion.Average(), i + 1);
+            tensorBoardWriter->WriteValue(L"summary/" + criterionNodes[0]->NodeName(), (float) epochCriterion.Average(), i + 1);
             for (size_t j = 0; j < epochEvalErrors.size(); j++)
             {
-                tensorBoardWriter->WriteValue(L"summary/" + evaluationNodes[0]->NodeName(), (float)epochEvalErrors[j].Average(), i + 1);
+                tensorBoardWriter->WriteValue(L"summary/" + evaluationNodes[0]->NodeName(), (float) epochEvalErrors[j].Average(), i + 1);
             }
 
             tensorBoardWriter->Flush();
@@ -705,7 +711,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             // TODO(dataASGD) making evaluator becoming nondistributed one when using ASGD, since Multiverso has another background thread using MPI.
             //                Making the evaluation serial (non-distributed) will slowdown training especially when validation set is large.
-            SimpleEvaluator<ElemType> evalforvalidation(net, UsingAsyncGradientAggregation(i + 1) ?nullptr : m_mpi, m_enableDistributedMBReading);
+            SimpleEvaluator<ElemType> evalforvalidation(net, UsingAsyncGradientAggregation(i + 1) ? nullptr : m_mpi, m_enableDistributedMBReading);
             vector<wstring> cvSetTrainAndEvalNodes;
             if (criterionNodes.size() > 0)
             {
@@ -718,17 +724,17 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
             // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
             let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, UsingAsyncGradientAggregation(i + 1) ? m_mbSize[i] / m_mpi->NumNodesInUse() : m_mbSize[i]);
-            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate] ", i + 1, (int)m_maxEpochs);
+            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate] ", i + 1, (int) m_maxEpochs);
             for (size_t k = 0; k < vScore.size() /*&& k < 2*/; k++)
                 vScore[k].LogCriterion(cvSetTrainAndEvalNodes[k], /*addSemicolon=*/k + 1 < vScore.size());
-                //fprintf(stderr, "%s %ls = %.8f * %d", k ? ";" : "", cvSetTrainAndEvalNodes[k].c_str(), vScore[k].Average(), (int)vScore[k].second);
+            //fprintf(stderr, "%s %ls = %.8f * %d", k ? ";" : "", cvSetTrainAndEvalNodes[k].c_str(), vScore[k].Average(), (int)vScore[k].second);
             fprintf(stderr, "\n");
 
             if (tensorBoardWriter)
             {
                 for (size_t k = 0; k < vScore.size(); k++)
                 {
-                    tensorBoardWriter->WriteValue(L"summary/test_" + cvSetTrainAndEvalNodes[k], (float)vScore[k].Average(), i + 1);
+                    tensorBoardWriter->WriteValue(L"summary/test_" + cvSetTrainAndEvalNodes[k], (float) vScore[k].Average(), i + 1);
                 }
 
                 tensorBoardWriter->Flush();
@@ -750,14 +756,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
 
         // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
-        if ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD 
-            ||
-            GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) 
-            && (m_mpi->NumNodesInUse() > 1))
+        if ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
+             GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
+            (m_mpi->NumNodesInUse() > 1))
         {
-            m_mpi->Bcast(&epochCriterion.first,  1, m_mpi->MainNodeRank());
+            m_mpi->Bcast(&epochCriterion.first, 1, m_mpi->MainNodeRank());
             m_mpi->Bcast(&epochCriterion.second, 1, m_mpi->MainNodeRank());
-            m_mpi->Bcast(&lrControlCriterion,    1, m_mpi->MainNodeRank());
+            m_mpi->Bcast(&lrControlCriterion, 1, m_mpi->MainNodeRank());
         }
 
         bool loadedPrevModel = false;
@@ -869,14 +874,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 for (int j = 1; j < m_learnRateAdjustInterval; j++)
                 {
                     int epochToDelete = i - j;
-                    LOGPRINTF(stderr, "SGD: removing model and checkpoint files for epoch %d after rollback to epoch %lu\n", epochToDelete + 1, (unsigned long)(i - m_learnRateAdjustInterval) + 1);  // report 1 based epoch number
+                    LOGPRINTF(stderr, "SGD: removing model and checkpoint files for epoch %d after rollback to epoch %lu\n", epochToDelete + 1, (unsigned long) (i - m_learnRateAdjustInterval) + 1); // report 1 based epoch number
                     _wunlink(GetModelNameForEpoch(epochToDelete).c_str());
                     _wunlink(GetCheckPointFileNameForEpoch(epochToDelete).c_str());
                 }
 
                 // Set i back to the loaded model
                 i -= m_learnRateAdjustInterval;
-                LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
+                LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i + 1); // report 1 based epoch number
                 SaveCheckPointInfo(
                     i,
                     totalTrainingSamplesSeen,
@@ -1046,7 +1051,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     if (useDistributedMBReading)
     {
         trainSetDataReader->StartDistributedMinibatchLoop(tunedMBSize, epochNumber, m_mpi->CurrentNodeRank(),
-            m_mpi->NumNodesInUse(), inputMatrices->GetStreamDescriptions(), epochSize);
+                                                          m_mpi->NumNodesInUse(), inputMatrices->GetStreamDescriptions(), epochSize);
     }
     else
     {
@@ -1093,7 +1098,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (useAsyncGradientAggregation)
         {
             fprintf(stderr, ", DataParallelASGD training (myRank = %d, numNodes = %d, SamplesSyncToServer = %d)",
-                (int)m_mpi->CurrentNodeRank(), (int)m_mpi->NumNodesInUse(), (int) m_nSyncSamplesPerWorker[epochNumber]);
+                    (int) m_mpi->CurrentNodeRank(), (int) m_mpi->NumNodesInUse(), (int) m_nSyncSamplesPerWorker[epochNumber]);
 
             fprintf(stderr, ", Distributed Evaluation is DISABLED");
 
@@ -1107,9 +1112,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (numSubminibatchesNeeded > 1)
         {
             if (m_maxSamplesInRAM < SIZE_MAX)
-                fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+                fprintf(stderr, ", with maximum %d samples in RAM", (int) m_maxSamplesInRAM);
             else
-                fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
+                fprintf(stderr, ", with %d subminibatch", (int) numSubminibatchesNeeded);
         }
         fprintf(stderr, ".\n");
     }
@@ -1128,16 +1133,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // --- MAIN MINIBATCH LOOP
 
     // for differential logging, we keep the previous criterion values around
-    EpochCriterion         epochCriterionLastLogged  = epochCriterion;
+    EpochCriterion epochCriterionLastLogged = epochCriterion;
     vector<EpochCriterion> epochEvalErrorsLastLogged = epochEvalErrors;
 
-    EpochCriterion         tensorBoardEpochCriterionLastLogged = epochCriterion;
+    EpochCriterion tensorBoardEpochCriterionLastLogged = epochCriterion;
     vector<EpochCriterion> tensorBoardEpochEvalErrorsLastLogged = epochEvalErrors;
 
     // NOTE: For ResNet, the regularization in BatchNormalization should be disabled.
-    if (m_disableRegInBatchNormalization) {
+    if (m_disableRegInBatchNormalization)
+    {
         let bnNodes = net->GetNodesWithType(L"BatchNormalization");
-        for (auto &node : bnNodes)
+        for (auto& node : bnNodes)
         {
             let bnNode = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
             bnNode->DisableRegInBatchNormalization();
@@ -1151,7 +1157,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     if (shouldCheckEarlyExit)
     {
         // SparsePC, LibSCV and DSS readers do not implement GetCurrentSamplePosition()
-        // for those adaptive minibatch size is not supported, thus specifying adaptive 
+        // for those adaptive minibatch size is not supported, thus specifying adaptive
         // minibatch for them will cause an error message.
         epochStartSample = trainSetDataReader->GetCurrentSamplePosition();
     }
@@ -1184,7 +1190,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         if (!wasDataRead)
         {
-            actualMBSize = 0; // (undefined if !wasDataRead)
+            actualMBSize = 0;      // (undefined if !wasDataRead)
             ProfilerEnable(false); // Profiler will be enabled at the beginning of the next epoch.
         }
 
@@ -1287,7 +1293,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         // Sum of actualMBSize across all nodes when using parallel training
         // 'aggregate' here means across-worker aggregate for this one minibatch.
-        size_t aggregateNumSamples = actualMBSize; // (0 for empty MB)
+        size_t aggregateNumSamples = actualMBSize;                                                                                            // (0 for empty MB)
         size_t aggregateNumSamplesWithLabel = CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], numSamplesWithLabelOfNetwork); // (0 for empty MB)
 
         if (!useGradientAggregation)
@@ -1333,7 +1339,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             // copy all values to be aggregated into the header
             m_gradHeader->numSamples = aggregateNumSamples;
-            m_gradHeader->criterion           = localEpochCriterion.GetCriterion(0).first;
+            m_gradHeader->criterion = localEpochCriterion.GetCriterion(0).first;
             m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second; // same as aggregateNumSamplesWithLabel
             assert(m_gradHeader->numSamplesWithLabel == aggregateNumSamplesWithLabel);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
@@ -1345,7 +1351,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             noMoreSamplesToProcess = !samplesProcessed;
 
             // read out the header--now everything is aggregated
-            aggregateNumSamples          = m_gradHeader->numSamples;
+            aggregateNumSamples = m_gradHeader->numSamples;
             aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
             epochCriterion += EpochCriterion(m_gradHeader->criterion, m_gradHeader->numSamplesWithLabel);
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
@@ -1372,12 +1378,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
-#if 1       // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria.
-            // This will break test cases. So for now, we will only enable this for per-sample criteria.
+#if 1 // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria. \
+    // This will break test cases. So for now, we will only enable this for per-sample criteria.
             size_t numSamplesInMinibatch = aggregateNumSamples;
             if (criterionNodes[0]->HasMBLayout())
 #endif
-            numSamplesInMinibatch = aggregateNumSamplesWithLabel;
+                numSamplesInMinibatch = aggregateNumSamplesWithLabel;
 #if 0
             if (numSamplesInMinibatch != aggregateNumSamples)
                 fprintf(stderr, "SGD: using true #samples %d instead of MB size %d\n", (int)numSamplesInMinibatch, (int)aggregateNumSamples);
@@ -1406,6 +1412,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
                                   m_needAveMultiplier, m_useNesterovMomentum);
                     /* guoye: start */
+                    /*
                     float alpha = node->GetOrthonormalConstraint();
                     if (alpha > 1e-9 || alpha < -1e-9)
                     {
@@ -1427,6 +1434,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             }
                         }
                     }
+                    */
                     /* guoye: end */
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
@@ -1437,8 +1445,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 
-
-        // aggregation by model averaging or block momentum 
+        // aggregation by model averaging or block momentum
         if (useModelAggregation)
         {
             if (nSamplesSinceLastModelSync >= blockSizePerWorker)
@@ -1469,9 +1476,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 m_pASGDHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
                 nSamplesSinceLastModelSync = 0;
-            } 
+            }
         }
-
 
         ProfilerTimeEnd(profWeights, profilerEvtMainWeights);
         auto profPost = ProfilerTimeBegin();
@@ -1482,8 +1488,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         totalTimeInMBs += timer.ElapsedSeconds();
 
         bool progressPrintNeeded = numMBsRun <= m_firstMBsToShowResult || (m_numMBsToShowResult && (numMBsRun % m_numMBsToShowResult == 0));
-        bool tensorBoardWriteNeeded = tensorBoardWriter && m_tensorBoardNumMBsToLogResult && 
-            ((totalMBsSeenBefore + numMBsRun) % m_tensorBoardNumMBsToLogResult == 0);
+        bool tensorBoardWriteNeeded = tensorBoardWriter && m_tensorBoardNumMBsToLogResult &&
+                                      ((totalMBsSeenBefore + numMBsRun) % m_tensorBoardNumMBsToLogResult == 0);
 
         // Get the epoch Values updated. Take care to fetch values from GPU only when this is really needed.
         if ((progressPrintNeeded || tensorBoardWriteNeeded) && !useGradientAggregation)
@@ -1505,8 +1511,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         {
             // epochCriterion aggregates over entire epoch, but we only show difference to last time we logged
             EpochCriterion epochCriterionSinceLastLogged = epochCriterion - epochCriterionLastLogged;
-            let trainLossSinceLastLogged    =      epochCriterionSinceLastLogged.Average(); // TODO: Check whether old trainSamplesSinceLastLogged matches this ^^ difference
-            let trainSamplesSinceLastLogged = (int)epochCriterionSinceLastLogged.second;
+            let trainLossSinceLastLogged = epochCriterionSinceLastLogged.Average(); // TODO: Check whether old trainSamplesSinceLastLogged matches this ^^ difference
+            let trainSamplesSinceLastLogged = (int) epochCriterionSinceLastLogged.second;
 
             // determine progress in percent
             int mbProgNumPrecision = 2;
@@ -1519,9 +1525,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 if (m_maxComputedEpochSize != 0)
                 {
-                    double numMBPerEpoch = (double)m_maxComputedEpochSize / (double)tunedMBSize;
-                    mbProg = (double)numMBsRun / numMBPerEpoch;
-                    mbProgNumPrecision = (int)ceil(log10(numMBPerEpoch / (double)(numMBsRun - numMBsRunSinceLastLogged)));
+                    double numMBPerEpoch = (double) m_maxComputedEpochSize / (double) tunedMBSize;
+                    mbProg = (double) numMBsRun / numMBPerEpoch;
+                    mbProgNumPrecision = (int) ceil(log10(numMBPerEpoch / (double) (numMBsRun - numMBsRunSinceLastLogged)));
                     mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
                 }
             }
@@ -1536,8 +1542,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 PREPENDTS(stderr);
                 fprintf(stderr, "%s Epoch[%2d of %d]-Minibatch[%4d-%4d",
-                        prefixMsg.c_str(), epochNumber + 1, (int)m_maxEpochs,
-                        (int)(numMBsRunSinceLastLogged + 1), numMBsRun);
+                        prefixMsg.c_str(), epochNumber + 1, (int) m_maxEpochs,
+                        (int) (numMBsRunSinceLastLogged + 1), numMBsRun);
                 if (skipComputeEpochSize)
                     fprintf(stderr, (", %2." + to_string(mbProgNumPrecision) + "f%%").c_str(), mbProg * 100); // --TODO: use a * format?
                 fprintf(stderr, "]: ");
@@ -1574,7 +1580,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 RuntimeError("The training criterion is not a number (NAN).");
 
             // reset statistics for differential logging
-            epochCriterionLastLogged  = epochCriterion;
+            epochCriterionLastLogged = epochCriterion;
             epochEvalErrorsLastLogged = epochEvalErrors;
             numMBsRunSinceLastLogged = numMBsRun;
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
@@ -1600,10 +1606,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             double trainLossSinceLastLogged = epochCriterionSinceLastLogged.Average();
 
             // numMBsRun is specific to the current epoch and is reset for each epoch.
-            // We cannot use it if we want to view progress of loss/eval since the start of training. 
+            // We cannot use it if we want to view progress of loss/eval since the start of training.
             // Instead, we use a total number of minibatches run from the start of training as a step.
-            const size_t step = totalMBsSeenBefore + (size_t)numMBsRun;
-            tensorBoardWriter->WriteValue(L"minibatch/" + criterionNodes[0]->NodeName(), (float)trainLossSinceLastLogged, step);
+            const size_t step = totalMBsSeenBefore + (size_t) numMBsRun;
+            tensorBoardWriter->WriteValue(L"minibatch/" + criterionNodes[0]->NodeName(), (float) trainLossSinceLastLogged, step);
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
             {
                 const std::wstring& nodeName = evaluationNodes[i]->NodeName();
@@ -1611,9 +1617,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // aggregated error for all samples that passed through network, instead of calculating per
                 // sample error. Aggregated error for all samples will be reported for these nodes.
                 const EpochCriterion& evalErrorSinceLastLogged = ContainsAccumulatedResult(evaluationNodes[i])
-                    ? epochEvalErrors[i]
-                    : epochEvalErrors[i] - tensorBoardEpochEvalErrorsLastLogged[i];
-                tensorBoardWriter->WriteValue(L"minibatch/" + nodeName, (float)evalErrorSinceLastLogged.Average(), step);
+                                                                     ? epochEvalErrors[i]
+                                                                     : epochEvalErrors[i] - tensorBoardEpochEvalErrorsLastLogged[i];
+                tensorBoardWriter->WriteValue(L"minibatch/" + nodeName, (float) evalErrorSinceLastLogged.Average(), step);
             }
 
             tensorBoardWriter->Flush();
@@ -1656,7 +1662,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     // --- END MAIN MINIBATCH LOOP
 
-    if (useModelAggregation )
+    if (useModelAggregation)
     {
         m_pMASGDHelper->OnEpochEnd(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
         nSamplesSinceLastModelSync = 0;
@@ -1691,7 +1697,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             epochEvalErrors[i] = localEpochEvalErrors.GetCriterion(i);
 
         // all-reduce epochCriterion and epochEvalErrors over nodes
-        m_mpi->AllReduce(&epochCriterion.first,  1);
+        m_mpi->AllReduce(&epochCriterion.first, 1);
         m_mpi->AllReduce(&epochCriterion.second, 1);
         // to transfer the eval vectors, we must pull them apart into STL objects and exchange them separately
         // TODO: merge with training criteria
@@ -1767,15 +1773,15 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     if (nodes.size() == 0)
     {
         if (m_traceLevel > 0)
-        LOGPRINTF(stderr, "No PreCompute nodes found, or all already computed. Skipping pre-computation step.\n");
+            LOGPRINTF(stderr, "No PreCompute nodes found, or all already computed. Skipping pre-computation step.\n");
         return false;
     }
 
     fprintf(stderr, "\n");
-    LOGPRINTF(stderr, "Precomputing --> %lu PreCompute nodes found.\n\n", (unsigned long)nodes.size());
+    LOGPRINTF(stderr, "Precomputing --> %lu PreCompute nodes found.\n\n", (unsigned long) nodes.size());
     if (m_traceLevel > 0)
     {
-        for (const auto & node : nodes)
+        for (const auto& node : nodes)
         {
             LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
         }
@@ -1795,7 +1801,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     net->StartEvaluateMinibatchLoop(nodes);
 
     // initialize
-    for (auto & node : nodes)
+    for (auto& node : nodes)
         dynamic_pointer_cast<IPreComputeNode>(node)->MarkComputed(false /*begin accumulating*/);
 
     const size_t numIterationsBeforePrintingProgress = 100;
@@ -1813,7 +1819,7 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     }
 
     // finalize
-    for (auto & node : nodes)
+    for (auto& node : nodes)
         dynamic_pointer_cast<IPreComputeNode>(node)->MarkComputed(true /*done accumulating*/);
 
     fprintf(stderr, "\n");
@@ -1942,7 +1948,7 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
                 rightLearnRatePerSample *= 0.618;
 
                 TrainOneMiniEpochAndReloadModel(net, refNet, refNode,
-                                                epochNumber, 
+                                                epochNumber,
                                                 m_epochSize,
                                                 trainSetDataReader,
                                                 rightLearnRatePerSample, m_mbSize[epochNumber],
@@ -2035,7 +2041,7 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
     {
         // newly started training: any previous MB size stored in the model is to be ignored
         LOGPRINTF(stderr, " Before Epoch[2], previous minibatchSize %d is considered invalid -> resetting.\n",
-                  (int)m_prevChosenMinibatchSize);
+                  (int) m_prevChosenMinibatchSize);
         m_prevChosenMinibatchSize = 0;
     }
 
@@ -2045,7 +2051,7 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
         (epochNumber + 1) % m_minibatchSizeTuningFrequency != 0)
     {
         LOGPRINTF(stderr, " AdaptiveMinibatchSearch: Search for a better minibatchSize in epoch %d skipped, keeping minibatchSize of %d\n",
-            (int)epochNumber + 1, (int)m_prevChosenMinibatchSize);
+                  (int) epochNumber + 1, (int) m_prevChosenMinibatchSize);
         chosenMinibatchSize = m_prevChosenMinibatchSize;
     }
     else
@@ -2127,7 +2133,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
     const float minibatchSizeTuningFactor = sqrtf(2.0f);
 
     LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Evaluating minibatchSizes %d..%d\n",
-        (int)epochNumber + 1, (int)RoundToMultipleOf64(minMinibatchSize), (int)RoundToMultipleOf64(maxMinibatchSize));
+              (int) epochNumber + 1, (int) RoundToMultipleOf64(minMinibatchSize), (int) RoundToMultipleOf64(maxMinibatchSize));
 
     size_t lastGoodMinibatchSize = 0;
     EpochCriterion lastGoodEpochCriterion(0);
@@ -2140,7 +2146,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
         if (m_traceLevel > 0)
         {
             LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Evaluating trial minibatchSize=%d (search range: %d..%d)...\n",
-                      (int)epochNumber+1, (int)trialMinibatchSize, (int)RoundToMultipleOf64(minMinibatchSize), (int)RoundToMultipleOf64(maxMinibatchSize));
+                      (int) epochNumber + 1, (int) trialMinibatchSize, (int) RoundToMultipleOf64(minMinibatchSize), (int) RoundToMultipleOf64(maxMinibatchSize));
         }
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size(), EpochCriterion::Infinity());
         EpochCriterion epochCriterion(EpochCriterion::Infinity());
@@ -2169,7 +2175,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
             if (m_traceLevel > 0)
             {
                 LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Computed baseCriterion %.8f for minibatchSize=%d\n",
-                          (int)epochNumber + 1, baseCriterion.Average(), (int)trialMinibatchSize);
+                          (int) epochNumber + 1, baseCriterion.Average(), (int) trialMinibatchSize);
             }
         }
         else if (!epochCriterion.IsNan() &&
@@ -2188,14 +2194,14 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
             if (m_traceLevel > 0 && trialMinibatchSizeFloat * minibatchSizeTuningFactor <= maxMinibatchSize)
             {
                 LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Keep searching... epochCriterion = %.8f vs. baseCriterion = %.8f\n",
-                          (int)epochNumber+1, epochCriterion.Average(), baseCriterion.Average());
+                          (int) epochNumber + 1, epochCriterion.Average(), baseCriterion.Average());
             }
         }
     }
     if (m_traceLevel > 0)
     {
         LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Search successful. New minibatchSize is %d. epochCriterion = %.8f vs baseCriterion = %.8f\n",
-                  (int)epochNumber + 1, (int)lastGoodMinibatchSize, lastGoodEpochCriterion.Average(), baseCriterion.Average());
+                  (int) epochNumber + 1, (int) lastGoodMinibatchSize, lastGoodEpochCriterion.Average(), baseCriterion.Average());
     }
     return lastGoodMinibatchSize;
 }
@@ -2227,11 +2233,11 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                   /*out*/ epochCriterion, /*out*/ epochEvalErrors,
                   "  " + prefixMsg, maxNumOfSamples); // indent log msg by 2 (that is 1 more than the Finished message below)
 
-    LOGPRINTF(stderr, " Finished Mini-Epoch[%d]: ", (int)epochNumber+1);
+    LOGPRINTF(stderr, " Finished Mini-Epoch[%d]: ", (int) epochNumber + 1);
     epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
     for (size_t j = 0; j < epochEvalErrors.size(); j++)
         epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
-    fprintf(stderr, "learningRatePerSample = %.8g; minibatchSize = %d\n", learnRatePerSample, (int)minibatchSize);
+    fprintf(stderr, "learningRatePerSample = %.8g; minibatchSize = %d\n", learnRatePerSample, (int) minibatchSize);
 
     // go back to where we came from
     int baseModelEpoch = epochNumber - 1;
@@ -2327,7 +2333,7 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
 {
     if (m_pMASGDHelper)
     {
-        return; // no need to do anything if already initialized. TODO: make it singleton 
+        return; // no need to do anything if already initialized. TODO: make it singleton
     }
     if (GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD)
     {
@@ -2353,11 +2359,11 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
                 m_modelAggregationBlockSize);
         }
         else
-            m_pMASGDHelper = make_shared<BlockMomentumSGD<ElemType>>(m_mpi, traceLevel, devID, 
-                                                                 m_useNesterovBlockMomentum, m_resetSGDMomentum, 
-                                                                 m_blockLearningRate, m_blockMomentumAsTimeConstant, 
-                                                                 m_modelAggregationBlockSize);
-#endif 
+            m_pMASGDHelper = make_shared<BlockMomentumSGD<ElemType>>(m_mpi, traceLevel, devID,
+                                                                     m_useNesterovBlockMomentum, m_resetSGDMomentum,
+                                                                     m_blockLearningRate, m_blockMomentumAsTimeConstant,
+                                                                     m_modelAggregationBlockSize);
+#endif
     }
 }
 
@@ -2367,9 +2373,9 @@ template <class ElemType>
 void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
                                   Matrix<ElemType>& smoothedGradientValues, double& smoothedCount,
                                   const double learnRatePerSample, const double momentumPerSample,
-                                              size_t actualMBSize,
+                                  size_t actualMBSize,
                                   const double L2RegWeight, const double L1RegWeight,
-                                              const bool needAveMultiplier,
+                                  const bool needAveMultiplier,
                                   const bool useNesterovMomentum) const
 {
     // we use simple linear (instead of log linear) exponentiation here
@@ -2410,21 +2416,21 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
     if (adpType == GradientsUpdateType::None)
     {
-        // even if momentum is 0.0, still need to call a momentum-based update to store 
+        // even if momentum is 0.0, still need to call a momentum-based update to store
         // [learning rate * current gradient values] in the smoothed gradients, in case
-        // the momentum value for the next epoch is non-zero. Note that the unit gain factor 
-        // can not be computed from the momentum scaled for per sample update; it should be 
+        // the momentum value for the next epoch is non-zero. Note that the unit gain factor
+        // can not be computed from the momentum scaled for per sample update; it should be
         // based on the original momentum rate.
         if (!useNesterovMomentum)
         {
-            functionValues.MomentumSGDUpdate(gradientValues, smoothedGradientValues, 
-                                             ElemType(learnRatePerSample), 
+            functionValues.MomentumSGDUpdate(gradientValues, smoothedGradientValues,
+                                             ElemType(learnRatePerSample),
                                              //By defualt, V1 uses UnitGain momentum. TODO: Do we need to enable V1 with non unit gain update?
                                              ElemType(momentum), ElemType(1.0) - ElemType(momentum));
         }
         else
         {
-            functionValues.NesterovAcceleratedMomentumSGDUpdate(gradientValues, smoothedGradientValues, 
+            functionValues.NesterovAcceleratedMomentumSGDUpdate(gradientValues, smoothedGradientValues,
                                                                 ElemType(learnRatePerSample), ElemType(momentum), ElemType(1.0) - ElemType(momentum));
         }
     }
@@ -2436,21 +2442,21 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     else if (adpType == GradientsUpdateType::FSAdaGrad)
     {
         const double varMomentum = (exp(-1.0 * actualMBSize / m_gradType.varianceTimeConstant));
-#if 0   // BUGBUG!!! This replicates a bug carried over from Alexey's original implementation.
+#if 0 // BUGBUG!!! This replicates a bug carried over from Alexey's original implementation.
         static double smoothedCount = 0;
 #endif
         smoothedCount = varMomentum * smoothedCount + (1.0 - varMomentum) * actualMBSize;
         double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = m_gradType.targetAdagradAvDenom * sqrt(smoothedCount);
 
         smoothedGradientValues.FSAdagradUpdate(
-                                         gradientValues, functionValues, targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
-                                         learnRatePerSample, momentum, varMomentum, ElemType(1.0) - ElemType(momentum));
+            gradientValues, functionValues, targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
+            learnRatePerSample, momentum, varMomentum, ElemType(1.0) - ElemType(momentum));
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
         double aveMultiplier = smoothedGradientValues.RmsProp(gradientValues, (ElemType) m_rpi.gamma,
-                                                        (ElemType) m_rpi.inc, (ElemType) m_rpi.max,
-                                                        (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier, true);
+                                                              (ElemType) m_rpi.inc, (ElemType) m_rpi.max,
+                                                              (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier, true);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
     }
 
@@ -2474,7 +2480,7 @@ template <class ElemType>
 void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alpha) const
 {
     int devId;
-    
+
     size_t num_rows, num_cols;
     ElemType trace_P, trace_PP;
     float nu, ratio, scale;
@@ -2486,10 +2492,9 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     Matrix<ElemType> PP(num_rows, num_rows, devId);
     Matrix<ElemType> delta_M(num_rows, num_cols, devId);
 
-
     // Matrix<ElemType> tmp = functionValues;
     if (alpha <= 1e-9 && alpha >= -1e-9)
-        return; 
+        return;
     // We'd like to enforce the rows of M to be orthonormal.
     // define P = M M^T.  If P is unit then M has orthonormal rows.
     // We actually want P to equal scale^2 * I, so that M's rows are
@@ -2520,13 +2525,12 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
         // or alpha^2 = tr(P^2) / tr(P).
         // Note: P is symmetric so it doesn't matter whether we use tr(P P) or
         // tr(P^T P); we use tr(P^T P) because I believe it's faster to compute.
-        
 
         Matrix<ElemType>::Multiply(P, true, P, false, PP);
 
         trace_P = P.MatTrace();
         trace_PP = PP.MatTrace();
-        
+
         alpha = std::sqrt(float(trace_PP / trace_P));
 
         // The following is a tweak to avoid divergence when the eigenvalues aren't
@@ -2554,11 +2558,10 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     scale = float(-4.0) * nu / (alpha * alpha);
 
     Matrix<ElemType> I = Matrix<ElemType>::Eye(num_rows, M.GetDeviceId());
-    Matrix<ElemType>::ScaleAndAdd((ElemType) (-1.0 * alpha * alpha), I, P);
+    Matrix<ElemType>::ScaleAndAdd((ElemType)(-1.0 * alpha * alpha), I, P);
 
-    
     // At this point, the matrix P contains what, in the math, would be Q =
-    // P-alpha^2*I.  
+    // P-alpha^2*I.
     // The derivative of the objective w.r.t M equals: scale*(P-alpha^2*I)*M.
     // (Currently the matrix P contains what, in the math, is P-alpha^2*I).
     Matrix<ElemType>::MultiplyAndWeightedAdd(scale, P, false, M, false, 1.0, M, nullptr);
@@ -2608,8 +2611,8 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
             File fstream(tempFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
             // Buffer writes in memory then flush to filesystem, which reduces number of small writes
             fstream.Setvbuf();
-            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BVersion"); 
-            fstream << (size_t)CURRENT_CNTK_CHECKPOINT_VERSION; 
+            fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BVersion");
+            fstream << (size_t) CURRENT_CNTK_CHECKPOINT_VERSION;
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EVersion");
 
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
@@ -2705,11 +2708,11 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
     File fstream(checkPointFileName,
                  FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
 
-    // version info 
+    // version info
     size_t ckpVersion = CNTK_CHECKPOINT_VERSION_1; // if no version info is found -> version 1
     if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BVersion"))
     {
-        fstream >> ckpVersion; 
+        fstream >> ckpVersion;
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
     }
 
@@ -2852,8 +2855,12 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
         for (size_t itry = 0; itry < min((size_t) 50, node->Value().GetNumElements()); itry++)
         {
             // no support to sparse matrix yet
-            int irow = (int) fmod(::rand(), node->Value().GetNumRows() - 1);
-            int icol = (int) fmod(::rand(), node->Value().GetNumCols() - 1);
+            /* guoye: start */
+            int irow = (int) fmod(rand(), node->Value().GetNumRows() - 1);
+            int icol = (int) fmod(rand(), node->Value().GetNumCols() - 1);
+            // int irow = (int) fmod(::rand(), node->Value().GetNumRows() - 1);
+            // int icol = (int) fmod(::rand(), node->Value().GetNumCols() - 1);
+            /* guoye: end */
             irow = max(0, irow);
             icol = max(0, icol);
 
@@ -2946,55 +2953,79 @@ template class SGD<double>;
 
 static AdaptationRegType ParseAdaptationRegType(const wstring& s)
 {
-    if      (EqualCI(s, L"") || EqualCI(s, L"none"))    return AdaptationRegType::None;
-    else if (EqualCI(s, L"kl") || EqualCI(s, L"klReg")) return AdaptationRegType::KL;
+    if (EqualCI(s, L"") || EqualCI(s, L"none"))
+        return AdaptationRegType::None;
+    else if (EqualCI(s, L"kl") || EqualCI(s, L"klReg"))
+        return AdaptationRegType::KL;
     else
         InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (none | kl)");
 }
 
 static GradientsUpdateType ParseGradUpdateType(const wstring& s)
 {
-    if      (EqualCI(s, L"") || EqualCI(s, L"none")) return GradientsUpdateType::None;
-    else if (EqualCI(s, L"adagrad"))                 return GradientsUpdateType::AdaGrad;
-    else if (EqualCI(s, L"rmsProp"))                 return GradientsUpdateType::RmsProp;
-    else if (EqualCI(s, L"fsAdagrad"))               return GradientsUpdateType::FSAdaGrad;
+    if (EqualCI(s, L"") || EqualCI(s, L"none"))
+        return GradientsUpdateType::None;
+    else if (EqualCI(s, L"adagrad"))
+        return GradientsUpdateType::AdaGrad;
+    else if (EqualCI(s, L"rmsProp"))
+        return GradientsUpdateType::RmsProp;
+    else if (EqualCI(s, L"fsAdagrad"))
+        return GradientsUpdateType::FSAdaGrad;
     // legacy, deprecated
-    else if (EqualCI(s, L"normal") || EqualCI(s, L"simple")) return GradientsUpdateType::None;
-    else InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
+    else if (EqualCI(s, L"normal") || EqualCI(s, L"simple"))
+        return GradientsUpdateType::None;
+    else
+        InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
 }
 
 static ParallelizationMethod ParseParallelizationMethod(const wstring& s)
 {
-    if      (EqualCI(s, L"") || EqualCI(s, L"none")) return ParallelizationMethod::none;
-    else if (EqualCI(s, L"DataParallelSGD"))         return ParallelizationMethod::dataParallelSGD;
-    else if (EqualCI(s, L"ModelAveragingSGD"))       return ParallelizationMethod::modelAveragingSGD;
-    else if (EqualCI(s, L"BlockMomentumSGD"))        return ParallelizationMethod::blockMomentumSGD;
-    else if (EqualCI(s, L"dataParallelASGD"))        return ParallelizationMethod::dataParallelASGD;
-    else InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | DataParallelSGD | ModelAveragingSGD | BlockMomentumSGD | dataParallelASGD)");
+    if (EqualCI(s, L"") || EqualCI(s, L"none"))
+        return ParallelizationMethod::none;
+    else if (EqualCI(s, L"DataParallelSGD"))
+        return ParallelizationMethod::dataParallelSGD;
+    else if (EqualCI(s, L"ModelAveragingSGD"))
+        return ParallelizationMethod::modelAveragingSGD;
+    else if (EqualCI(s, L"BlockMomentumSGD"))
+        return ParallelizationMethod::blockMomentumSGD;
+    else if (EqualCI(s, L"dataParallelASGD"))
+        return ParallelizationMethod::dataParallelASGD;
+    else
+        InvalidArgument("ParseParallelizationMethod: Invalid Parallelization Method. Valid values are (none | DataParallelSGD | ModelAveragingSGD | BlockMomentumSGD | dataParallelASGD)");
 }
 
 static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring& s)
 {
-    if      (EqualCI(s, L"false") || EqualCI(s, L"none")) return LearningRateSearchAlgorithm::None;
-    else if (EqualCI(s, L"searchBeforeEpoch"))            return LearningRateSearchAlgorithm::SearchBeforeEpoch;
-    else if (EqualCI(s, L"adjustAfterEpoch"))             return LearningRateSearchAlgorithm::AdjustAfterEpoch;
+    if (EqualCI(s, L"false") || EqualCI(s, L"none"))
+        return LearningRateSearchAlgorithm::None;
+    else if (EqualCI(s, L"searchBeforeEpoch"))
+        return LearningRateSearchAlgorithm::SearchBeforeEpoch;
+    else if (EqualCI(s, L"adjustAfterEpoch"))
+        return LearningRateSearchAlgorithm::AdjustAfterEpoch;
     // legacy, deprecated
-    else if (EqualCI(s, L"beforeEpoch") || EqualCI(s, L"before")) return LearningRateSearchAlgorithm::SearchBeforeEpoch;
-    else if (EqualCI(s, L"afterEpoch")  || EqualCI(s, L"after"))  return LearningRateSearchAlgorithm::AdjustAfterEpoch;
-    else InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
+    else if (EqualCI(s, L"beforeEpoch") || EqualCI(s, L"before"))
+        return LearningRateSearchAlgorithm::SearchBeforeEpoch;
+    else if (EqualCI(s, L"afterEpoch") || EqualCI(s, L"after"))
+        return LearningRateSearchAlgorithm::AdjustAfterEpoch;
+    else
+        InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
 }
-  
+
 #ifdef ASGD_PARALLEL_SUPPORT
 static AdjustLearningRateAtBeginning AdjustLearningRateAtBeginningType(const wstring& s)
 {
-    if      (EqualCI(s.c_str(), L"") || EqualCI(s.c_str(), L"none")) return AdjustLearningRateAtBeginning::None;
-    else if (EqualCI(s.c_str(), L"linearly"))                        return AdjustLearningRateAtBeginning::Linearly;
-    else if (EqualCI(s.c_str(), L"staircase"))                       return AdjustLearningRateAtBeginning::Staircase;
-    else InvalidArgument("AdjustLearningRateatBeginningType: Invalid Type. Valid values are (None | Linearly | Staircase)");
+    if (EqualCI(s.c_str(), L"") || EqualCI(s.c_str(), L"none"))
+        return AdjustLearningRateAtBeginning::None;
+    else if (EqualCI(s.c_str(), L"linearly"))
+        return AdjustLearningRateAtBeginning::Linearly;
+    else if (EqualCI(s.c_str(), L"staircase"))
+        return AdjustLearningRateAtBeginning::Staircase;
+    else
+        InvalidArgument("AdjustLearningRateatBeginningType: Invalid Type. Valid values are (None | Linearly | Staircase)");
 }
 #endif
-  
-template<class ConfigRecordType>
+
+template <class ConfigRecordType>
 SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 {
     floatargvector learningRatesPerMB = configSGD(L"learningRatesPerMB", ConfigRecordType::Array(floatargvector()));
@@ -3079,9 +3110,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t) 0);
 
     m_traceLevel = configSGD(L"traceLevel", 0);
-    m_numMBsToShowResult = configSGD(L"numMBsToShowResult", (size_t)10);
-    m_firstMBsToShowResult = configSGD(L"firstMBsToShowResult", (size_t)0);
-    m_numMBsToCUDAProfile = configSGD(L"numMBsToCUDAProfile", (size_t)0);
+    m_numMBsToShowResult = configSGD(L"numMBsToShowResult", (size_t) 10);
+    m_firstMBsToShowResult = configSGD(L"firstMBsToShowResult", (size_t) 0);
+    m_numMBsToCUDAProfile = configSGD(L"numMBsToCUDAProfile", (size_t) 0);
 
     // Parameters that control logging of training progress in TensorBoard.
     // Directory to create TensorBoard event files in. If empty (default), the progress is not logged as event files.
@@ -3111,11 +3142,11 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     GradientsUpdateType gradUpdateType = ParseGradUpdateType(configSGD(L"gradUpdateType", L"None"));
     m_gradType.type = gradUpdateType;
-    m_gradType.gaussianNoiseInjectStd = (float)configSGD(L"gaussianNoiseInjectStd", 0.0);
+    m_gradType.gaussianNoiseInjectStd = (float) configSGD(L"gaussianNoiseInjectStd", 0.0);
 
     // parameters for FSAdaGrad
     m_gradType.varianceTimeConstant = configSGD(L"varianceTimeConstant", 2 * 3600 * 100); // default originates from 2h of speech
-    m_gradType.targetAdagradAvDenom = configSGD(L"fsAdagradTargetAvDenom", 1.0); // TODO: deprecated parameter kept for back compat (set to 0.0025 inconjunction with reenabling the static bug)
+    m_gradType.targetAdagradAvDenom = configSGD(L"fsAdagradTargetAvDenom", 1.0);          // TODO: deprecated parameter kept for back compat (set to 0.0025 inconjunction with reenabling the static bug)
 
     // extract RMSProp parameters from config, if they exist. Default to reasonable values.
     m_rpi.dec = configSGD(L"rms_wgt_dec", 0.75);
@@ -3244,164 +3275,164 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     // parallel training
     m_parallelizationMethod = ParallelizationMethod::none;
-    m_numGradientBits = vector<int>{8 * (int)sizeofElemType}; // means no quantization
+    m_numGradientBits = vector<int>{8 * (int) sizeofElemType}; // means no quantization
     m_zeroThresholdFor1Bit = true;
     m_bufferedAsyncGradientAggregation = false;
     m_enableDistributedMBReading = false;
     m_parallelizationStartEpochNum = 0;
-    m_modelAggregationBlockSize = 0; 
+    m_modelAggregationBlockSize = 0;
 
     if (configSGD.Exists(L"ParallelTrain"))
     {
-        MPIWrapperPtr pMPI = MPIWrapper::GetInstance(); 
-        if (!pMPI) 
+        MPIWrapperPtr pMPI = MPIWrapper::GetInstance();
+        if (!pMPI)
         {
-            // some users may forget to specify parallelTrain option 
+            // some users may forget to specify parallelTrain option
             // in this case, falling back to normal SGD
             fprintf(stderr, "parallelTrain option is not enabled. ParallelTrain config will be ignored.\n");
         }
         else
         {
-            size_t numMPIWorkers = pMPI->NumNodesInUse();            
+            size_t numMPIWorkers = pMPI->NumNodesInUse();
             const ConfigRecordType& configParallelTrain(configSGD(L"ParallelTrain", ConfigRecordType::Record()));
             m_parallelizationMethod = ParseParallelizationMethod(configParallelTrain(L"parallelizationMethod", L"none"));
-            m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int)1) - 1; // Internally, epoch numbers are 0-based
+            m_parallelizationStartEpochNum = configParallelTrain(L"parallelizationStartEpoch", (int) 1) - 1; // Internally, epoch numbers are 0-based
             if (m_parallelizationStartEpochNum < 0 /* sic */)
-            // Be explicit that user-facing epoch numbers are 1-based
-            InvalidArgument("parallelizationStartEpoch must be greater or equal to 1");
+                // Be explicit that user-facing epoch numbers are 1-based
+                InvalidArgument("parallelizationStartEpoch must be greater or equal to 1");
             m_enableDistributedMBReadingNotSpecified = !configParallelTrain.Exists(L"distributedMBReading");
             m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
-            m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int)0);
+            m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int) 0);
 
-        if (configParallelTrain.Exists(L"DataParallelSGD"))
-        {
-            const ConfigRecordType& configDataParallelSGD(configParallelTrain(L"DataParallelSGD", ConfigRecordType::Record()));
-            let defaultGradientBits = 8 * (int)sizeofElemType;
-            m_numGradientBits = configDataParallelSGD(L"gradientBits", ConfigRecordType::Array(intargvector(vector<int>{defaultGradientBits})));
-            m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
-            m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
-            for (size_t i = 0; i < m_numGradientBits.size(); i++)
+            if (configParallelTrain.Exists(L"DataParallelSGD"))
             {
-                if (m_numGradientBits[i] < 1 || m_numGradientBits[i] > defaultGradientBits)
-                    InvalidArgument("gradientBits values must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double.");
+                const ConfigRecordType& configDataParallelSGD(configParallelTrain(L"DataParallelSGD", ConfigRecordType::Record()));
+                let defaultGradientBits = 8 * (int) sizeofElemType;
+                m_numGradientBits = configDataParallelSGD(L"gradientBits", ConfigRecordType::Array(intargvector(vector<int>{defaultGradientBits})));
+                m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
+                m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
+                for (size_t i = 0; i < m_numGradientBits.size(); i++)
+                {
+                    if (m_numGradientBits[i] < 1 || m_numGradientBits[i] > defaultGradientBits)
+                        InvalidArgument("gradientBits values must be in the range [1, 32] when using precision=float and in range [1, 64] when using precision=double.");
+                }
             }
-        }
-        if (configParallelTrain.Exists(L"ModelAveragingSGD"))
-        {
-            const ConfigRecordType& configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
-            if (configMASGD.Exists(L"blockSizePerWorker") && configMASGD.Exists(L"blockSize"))
-                InvalidArgument("It is only allowed to set blockSizePerWorker or blockSize, not both of them");
-            else if (configMASGD.Exists(L"blockSize"))
-                m_modelAggregationBlockSize = configMASGD(L"blockSize");
-            else if (configMASGD.Exists(L"blockSizePerWorker"))
+            if (configParallelTrain.Exists(L"ModelAveragingSGD"))
             {
-                m_modelAggregationBlockSize = configMASGD(L"blockSizePerWorker");
-                m_modelAggregationBlockSize *= numMPIWorkers;
-            }
-            else
-                m_modelAggregationBlockSize = 40000 * numMPIWorkers;    // default value 
-#if 1           // legacy option 
-            if (configMASGD.Exists(L"syncFrequencyInFrames"))
-            {
-                if (configMASGD.Exists(L"blockSizePerWorker") || configMASGD.Exists(L"blockSize"))
-                    InvalidArgument("syncFrequencyInFrames is a deprecated alias of blockSizePerWorker. It is not allowed to specify both of them");
-                m_modelAggregationBlockSize = configMASGD(L"syncFrequencyInFrames");
-                m_modelAggregationBlockSize *= numMPIWorkers;
-                fprintf(stderr, "WARNING: option syncFrequencyInFrames in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead\n");
-            }
-            if (configMASGD.Exists(L"syncPeroid"))
-            {
-                if (configMASGD.Exists(L"blockSizePerWorker") || configMASGD.Exists(L"blockSize"))
-                    InvalidArgument("syncPeriod is a deprecated alias of blockSizePerWorker. It is not allowed to specify both of them");
-                m_modelAggregationBlockSize = configMASGD(L"syncPeriod");
-                m_modelAggregationBlockSize *= numMPIWorkers;
-                fprintf(stderr, "WARNING: option syncPeroid in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead in the future.\n");
-            }
+                const ConfigRecordType& configMASGD(configParallelTrain(L"ModelAveragingSGD", ConfigRecordType::Record()));
+                if (configMASGD.Exists(L"blockSizePerWorker") && configMASGD.Exists(L"blockSize"))
+                    InvalidArgument("It is only allowed to set blockSizePerWorker or blockSize, not both of them");
+                else if (configMASGD.Exists(L"blockSize"))
+                    m_modelAggregationBlockSize = configMASGD(L"blockSize");
+                else if (configMASGD.Exists(L"blockSizePerWorker"))
+                {
+                    m_modelAggregationBlockSize = configMASGD(L"blockSizePerWorker");
+                    m_modelAggregationBlockSize *= numMPIWorkers;
+                }
+                else
+                    m_modelAggregationBlockSize = 40000 * numMPIWorkers; // default value
+#if 1                                                                    // legacy option
+                if (configMASGD.Exists(L"syncFrequencyInFrames"))
+                {
+                    if (configMASGD.Exists(L"blockSizePerWorker") || configMASGD.Exists(L"blockSize"))
+                        InvalidArgument("syncFrequencyInFrames is a deprecated alias of blockSizePerWorker. It is not allowed to specify both of them");
+                    m_modelAggregationBlockSize = configMASGD(L"syncFrequencyInFrames");
+                    m_modelAggregationBlockSize *= numMPIWorkers;
+                    fprintf(stderr, "WARNING: option syncFrequencyInFrames in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead\n");
+                }
+                if (configMASGD.Exists(L"syncPeroid"))
+                {
+                    if (configMASGD.Exists(L"blockSizePerWorker") || configMASGD.Exists(L"blockSize"))
+                        InvalidArgument("syncPeriod is a deprecated alias of blockSizePerWorker. It is not allowed to specify both of them");
+                    m_modelAggregationBlockSize = configMASGD(L"syncPeriod");
+                    m_modelAggregationBlockSize *= numMPIWorkers;
+                    fprintf(stderr, "WARNING: option syncPeroid in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead in the future.\n");
+                }
 #endif
-        }
-        if (configParallelTrain.Exists(L"BlockMomentumSGD"))
-        {
+            }
+            if (configParallelTrain.Exists(L"BlockMomentumSGD"))
+            {
 #ifndef CNTK_PARALLEL_TRAINING_SUPPORT
-            InvalidArgument("BlockMomentumSGD is not enabled in this version.\n");
+                InvalidArgument("BlockMomentumSGD is not enabled in this version.\n");
 #else
-            const ConfigRecordType& configBMSGD(configParallelTrain(L"BlockMomentumSGD", ConfigRecordType::Record()));
-            if (configBMSGD.Exists(L"blockSize") && configBMSGD.Exists(L"blockSizePerWorker"))
-                InvalidArgument("It is only allowed to set blockSizePerWorker or blockSize, not both of them");
-            else if (configBMSGD.Exists(L"blockSizePerWorker"))
-            {
-                m_modelAggregationBlockSize = configBMSGD(L"blockSizePerWorker");
-                m_modelAggregationBlockSize *= numMPIWorkers;
-            }
-            else if (configBMSGD.Exists(L"blockSize"))
-                m_modelAggregationBlockSize = configBMSGD(L"blockSize");
-            else
-                m_modelAggregationBlockSize = 120000 * numMPIWorkers; // default value 
-#if 1           // legacy option
-            if (configBMSGD.Exists(L"syncPeriod"))
-            {
-                if (configBMSGD.Exists(L"blockSizePerWorker") || configBMSGD.Exists(L"blockSize"))
-                    InvalidArgument("syncPeriod is a deprecated alias of blockSizePerWorker. It is not allowed to specify both of them");
-                m_modelAggregationBlockSize = configBMSGD(L"syncPeriod");
-                m_modelAggregationBlockSize *= numMPIWorkers;
-                fprintf(stderr, "WARNING: option syncPeroid in BlockMomentumSGD is going to be deprecated. Please use blockSizePerWorker instead in the future.\n");
-            }
-#endif 
-            m_resetSGDMomentum = configBMSGD(L"resetSGDMomentum", true);
-            m_useNesterovBlockMomentum = configBMSGD(L"useNesterovMomentum", true);
-            m_blockLearningRate = configBMSGD(L"blockLearningRate", 1.0); 
+                const ConfigRecordType& configBMSGD(configParallelTrain(L"BlockMomentumSGD", ConfigRecordType::Record()));
+                if (configBMSGD.Exists(L"blockSize") && configBMSGD.Exists(L"blockSizePerWorker"))
+                    InvalidArgument("It is only allowed to set blockSizePerWorker or blockSize, not both of them");
+                else if (configBMSGD.Exists(L"blockSizePerWorker"))
+                {
+                    m_modelAggregationBlockSize = configBMSGD(L"blockSizePerWorker");
+                    m_modelAggregationBlockSize *= numMPIWorkers;
+                }
+                else if (configBMSGD.Exists(L"blockSize"))
+                    m_modelAggregationBlockSize = configBMSGD(L"blockSize");
+                else
+                    m_modelAggregationBlockSize = 120000 * numMPIWorkers; // default value
+#if 1 // legacy option
+                if (configBMSGD.Exists(L"syncPeriod"))
+                {
+                    if (configBMSGD.Exists(L"blockSizePerWorker") || configBMSGD.Exists(L"blockSize"))
+                        InvalidArgument("syncPeriod is a deprecated alias of blockSizePerWorker. It is not allowed to specify both of them");
+                    m_modelAggregationBlockSize = configBMSGD(L"syncPeriod");
+                    m_modelAggregationBlockSize *= numMPIWorkers;
+                    fprintf(stderr, "WARNING: option syncPeroid in BlockMomentumSGD is going to be deprecated. Please use blockSizePerWorker instead in the future.\n");
+                }
+#endif
+                m_resetSGDMomentum = configBMSGD(L"resetSGDMomentum", true);
+                m_useNesterovBlockMomentum = configBMSGD(L"useNesterovMomentum", true);
+                m_blockLearningRate = configBMSGD(L"blockLearningRate", 1.0);
 
-            if (configBMSGD.Exists(L"blockMomentumPerSync") && configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
-            {
-                InvalidArgument("It is only allowed to set either blockMomentumPerSync or blockMomentumAsTimeConstant, not both of them");
+                if (configBMSGD.Exists(L"blockMomentumPerSync") && configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
+                {
+                    InvalidArgument("It is only allowed to set either blockMomentumPerSync or blockMomentumAsTimeConstant, not both of them");
+                }
+                else if (configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
+                {
+                    m_blockMomentumAsTimeConstant = configBMSGD(L"blockMomentumAsTimeConstant");
+                }
+#if 1 // This option "blockMomentumPerSync" is going to be deprecated in the future
+                else if (configBMSGD.Exists(L"blockMomentumPerSync"))
+                {
+                    double blockMomentum = configBMSGD(L"blockMomentumPerSync");
+                    m_blockMomentumAsTimeConstant = BlockMomentumSGD<double>::Momentum2TimeConstant(blockMomentum, m_modelAggregationBlockSize);
+                }
+#endif
+                else /*if (!configBMSGD.Exists(L"blockMomentumPerSync") && !configBMSGD.Exists(L"blockMomentumAsTimeConstant"))*/
+                {
+                    double blockMomentum = 1.0 - 1.0 / (double) numMPIWorkers; // this is a default value which ensures each block update contributes equally
+                    m_blockMomentumAsTimeConstant = BlockMomentumSGD<double>::Momentum2TimeConstant(blockMomentum, m_modelAggregationBlockSize);
+                }
+#endif
             }
-            else if (configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
-            {
-                m_blockMomentumAsTimeConstant = configBMSGD(L"blockMomentumAsTimeConstant"); 
-            }
-#if 1           // This option "blockMomentumPerSync" is going to be deprecated in the future 
-            else if (configBMSGD.Exists(L"blockMomentumPerSync"))
-            {
-                double blockMomentum = configBMSGD(L"blockMomentumPerSync");
-                m_blockMomentumAsTimeConstant = BlockMomentumSGD<double>::Momentum2TimeConstant(blockMomentum, m_modelAggregationBlockSize);
-            }
-#endif 
-            else /*if (!configBMSGD.Exists(L"blockMomentumPerSync") && !configBMSGD.Exists(L"blockMomentumAsTimeConstant"))*/
-            {
-                double blockMomentum = 1.0 - 1.0 / (double)numMPIWorkers;   // this is a default value which ensures each block update contributes equally
-                m_blockMomentumAsTimeConstant = BlockMomentumSGD<double>::Momentum2TimeConstant(blockMomentum, m_modelAggregationBlockSize);
-            }
-#endif 
-        }
 
-        if (configParallelTrain.Exists(L"DataParallelASGD"))
-        {
+            if (configParallelTrain.Exists(L"DataParallelASGD"))
+            {
 #ifndef ASGD_PARALLEL_SUPPORT
-            InvalidArgument("DataParallelASGD is not enabled in this version.\n");
+                InvalidArgument("DataParallelASGD is not enabled in this version.\n");
 #else
-            const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
-            m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriodPerWorker", ConfigRecordType::Array(intargvector(vector<int>{256})));
-#if 1       // legacy option
-            if (configDataParallelASGD.Exists(L"syncPeriod"))
-            {
-                if (configDataParallelASGD.Exists(L"syncPeriodPerWorker"))
-                    InvalidArgument("syncPeriod is a deprecated alias of syncPeriodPerWorker. It is not allowed to specify both of them");
-                m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
-            }
+                const ConfigRecordType& configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
+                m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriodPerWorker", ConfigRecordType::Array(intargvector(vector<int>{256})));
+#if 1 // legacy option
+                if (configDataParallelASGD.Exists(L"syncPeriod"))
+                {
+                    if (configDataParallelASGD.Exists(L"syncPeriodPerWorker"))
+                        InvalidArgument("syncPeriod is a deprecated alias of syncPeriodPerWorker. It is not allowed to specify both of them");
+                    m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
+                }
 #endif
-            m_isAsyncBufferEnabled = configDataParallelASGD(L"UsePipeline", false);
-            m_isSimulateMA = configDataParallelASGD(L"SimModelAverage", false); // using parameter server-based version of ModelAveragingSGD
-            if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning")) // adjust learning rate per m_adjustNumInBatch minibatches until to original one,
-                                                                                 // this option could be used to takcle the unstableness of DataParallelASGD if you get a chance
-            {
-                const ConfigRecordType & configAdjustLearningRateAtBeginning(configDataParallelASGD(L"AdjustLearningRateAtBeginning", ConfigRecordType::Record()));
-                m_adjustLearningRateAtBeginning = AdjustLearningRateAtBeginningType(configAdjustLearningRateAtBeginning(L"adjustType", L"staircase"));
-                m_adjustCoefficient = configAdjustLearningRateAtBeginning(L"adjustCoefficient", (double)0.1);
-                m_adjustPerMinibatches = configAdjustLearningRateAtBeginning(L"adjustPerMinibatches", (size_t)256);
-            }
+                m_isAsyncBufferEnabled = configDataParallelASGD(L"UsePipeline", false);
+                m_isSimulateMA = configDataParallelASGD(L"SimModelAverage", false);  // using parameter server-based version of ModelAveragingSGD
+                if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning")) // adjust learning rate per m_adjustNumInBatch minibatches until to original one,
+                                                                                     // this option could be used to takcle the unstableness of DataParallelASGD if you get a chance
+                {
+                    const ConfigRecordType& configAdjustLearningRateAtBeginning(configDataParallelASGD(L"AdjustLearningRateAtBeginning", ConfigRecordType::Record()));
+                    m_adjustLearningRateAtBeginning = AdjustLearningRateAtBeginningType(configAdjustLearningRateAtBeginning(L"adjustType", L"staircase"));
+                    m_adjustCoefficient = configAdjustLearningRateAtBeginning(L"adjustCoefficient", (double) 0.1);
+                    m_adjustPerMinibatches = configAdjustLearningRateAtBeginning(L"adjustPerMinibatches", (size_t) 256);
+                }
 #endif
-        }
+            }
         } // if (!pMPI)
-    } // if (configSGD.Exists(L"ParallelTrain"))
+    }     // if (configSGD.Exists(L"ParallelTrain"))
 }
 
 static size_t GetSizeOfPrecision(const ScriptableObjects::IConfigRecordPtr configp)
@@ -3422,11 +3453,11 @@ SGDParams::SGDParams(const ScriptableObjects::IConfigRecordPtr configp)
 
 void SGDParams::InitializeAndCheckBlockMomentumSGDParameters()
 {
-#ifdef CNTK_PARALLEL_TRAINING_SUPPORT 
+#ifdef CNTK_PARALLEL_TRAINING_SUPPORT
     // final argument checking in case of user specifying a bad parameter
     size_t numMPIWorker = MPIWrapper::GetInstance()->NumNodesInUse();
     double blockMomentum = BlockMomentumSGD<double>::TimeConstant2Momentum(m_blockMomentumAsTimeConstant, m_modelAggregationBlockSize);
-    if ((1 - blockMomentum)*m_blockLearningRate*numMPIWorker >= 2.0)
+    if ((1 - blockMomentum) * m_blockLearningRate * numMPIWorker >= 2.0)
     {
         fprintf(stderr, "WARNING: (1-blockMomentumPerSync)*blockLearningRate is larger than 2*numWorkers; it is possible to overshoot.");
     }
@@ -3435,13 +3466,15 @@ void SGDParams::InitializeAndCheckBlockMomentumSGDParameters()
         fprintf(stderr, "WARNING: blockMomentum equals to zero. \n");
     }
 #else
-    // don't need do anything here 
+    // don't need do anything here
     m_blockMomentumAsTimeConstant = 0.0;
     m_blockLearningRate = 1.0;
-#endif 
+#endif
 }
 
 // register SGD<> with the ScriptableObject system
 ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<SGD<float>, SGD<double>> registerSGDOptimizer(L"SGDOptimizer");
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft
