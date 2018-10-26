@@ -16,8 +16,9 @@
 #include "MatrixQuantizerImpl.h"
 #include "InputAndParamNodes.h"
 #include "AccumulatorAggregation.h"
-
-#include "RandomOrdering.h"
+/* guoye: start */
+// #include "RandomOrdering.h"
+/* guoye: end */
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
 // ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
@@ -1406,6 +1407,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
                                   m_needAveMultiplier, m_useNesterovMomentum);
                     /* guoye: start */
+                    /*
                     float alpha = node->GetOrthonormalConstraint();
                     if (alpha > 1e-9 || alpha < -1e-9)
                     {
@@ -1427,6 +1429,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             }
                         }
                     }
+                    */
                     /* guoye: end */
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
@@ -2852,8 +2855,12 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
         for (size_t itry = 0; itry < min((size_t) 50, node->Value().GetNumElements()); itry++)
         {
             // no support to sparse matrix yet
-            int irow = (int) fmod(::rand(), node->Value().GetNumRows() - 1);
-            int icol = (int) fmod(::rand(), node->Value().GetNumCols() - 1);
+            /* guoye: start */
+            int irow = (int) fmod(rand(), node->Value().GetNumRows() - 1);
+            int icol = (int) fmod(rand(), node->Value().GetNumCols() - 1);
+            // int irow = (int) fmod(::rand(), node->Value().GetNumRows() - 1);
+            // int icol = (int) fmod(::rand(), node->Value().GetNumCols() - 1);
+            /* guoye: end */
             irow = max(0, irow);
             icol = max(0, icol);
 
