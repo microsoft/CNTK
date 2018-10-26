@@ -223,7 +223,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
     }
 
-    // This code is only relevant for the new (V2) readers. It exist because of
+    // This code is only relevant for the new (V2) readers. It exists because of
     // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs 
     // in the same minibatch have different layouts, which is something only V2 readers can
     // produce. 
@@ -420,7 +420,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             m_mpi->WaitAll();
         }
 
-        // In case of parallel training only the main node should we saving the model to prevent
+        // In case of parallel training only the main node should be saving the model to prevent
         // the parallel training nodes from colliding to write the same file
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
             net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
@@ -578,7 +578,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                       i + 1, learnRatePerSample, m_minLearnRate);
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
-                // In case of parallel training only the main node should we saving the model to prevent
+                // In case of parallel training only the main node should be saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
                     net->Save(m_modelPath);
@@ -622,7 +622,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         // For legacy readers, in BPTT mode the minibatch size was not the real minibatch size but truncation.
         // Because of that we have to fix up the real minibatch size multiplying the number of parallel sequences by the truncation length.
-        // This is not require any more for the new readers.
+        // This is not required any more for the new readers.
         if (trainSetDataReader->IsLegacyReader())
             actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
         else
@@ -807,7 +807,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     }
                     else
                     {
-                        // In case of parallel training only the main node should we saving the model to prevent
+                        // In case of parallel training only the main node should be saving the model to prevent
                         // the parallel training nodes from colliding to write the same file
                         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
                             net->Save(GetModelNameForEpoch(i, true));
@@ -1193,7 +1193,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         nSamplesSinceLastModelSync += actualMBSize;
 
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
-        // This mask is regerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
+        // This mask is regenerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
         // w.r.t. inputs to force evaluation in each minibatch
         MarkDropoutNodesEvalTimeStampAsOutdated(net, criterionNodes[0]);
 
@@ -2477,7 +2477,7 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
                                        const double prevCriterion,
                                        const size_t minibatchSize)
 {
-    // In case of parallel training only the main node should we saving the checkpoint to prevent
+    // In case of parallel training only the main node should be saving the checkpoint to prevent
     // the parallel training nodes from colliding to write the same file
     if ((m_mpi == nullptr) || m_mpi->IsMainNode())
     {
