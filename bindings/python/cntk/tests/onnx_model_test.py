@@ -143,6 +143,11 @@ skip_round_trip_model_names = [
     'test_top_k',
     'test_transpose_default',
     'test_upsample_nearest',
+    # Lack proper support for ONNX ConvTranspose output_padding attribute.
+    'test_convtranspose_kernel_shape',
+    'test_convtranspose_output_shape',
+    'test_convtranspose_pad',
+    'test_convtranspose_with_kernel',
 ]
 
 skip_cntk_model_names = []

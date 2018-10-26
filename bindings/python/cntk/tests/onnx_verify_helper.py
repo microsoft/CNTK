@@ -11,18 +11,18 @@ windows = os.getenv("OS")=="Windows_NT"
 known_issues = [
     'BatchNormalization_float160',
     'SpatialBatchNormalization_float160',
-    'DepthToSpace',
-    'RNN',
-    'test_sequence_slice_',
-    'test_sequence_slice_0',
-    'test_sequence_slice_1',
+    'RNN.reverse.one_layer.relu',
+    'RNN.bidirectional.two_layer.tanh',
+    'test_sequence_slice_-1.0',
+    'test_sequence_slice_0.-1',
+    'test_sequence_slice_0.1',
+    'test_sequence_slice_1.-1',
+    'test_sequence_slice_1.0',
+    'test_sequence_slice_1.2',
+    'test_sequence_slice_-2.-1',
+    'test_sequence_slice_-4.2',
     'SequenceSoftmax',
-    'SpaceToDepth',
     'top_k',
-
-    'ConvTranspose_with_OutputShape_0',
-    'Flatten_1',
-    'Gather_1',
 
     # Not in onnxruntime
     'LayerNorm_0',
@@ -33,7 +33,7 @@ known_issues = [
 ]
 
 def parse_single_result_case(case_str):
-    fails = re.search(r'Failed Test Cases:\w+', case_str)
+    fails = re.search(r'Failed Test Cases:[\w\.\-]+', case_str)
     if fails:
         failed_case = fails.group().split(':')[1]
         if not failed_case in known_issues:
