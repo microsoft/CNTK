@@ -17,7 +17,7 @@
 #include "InputAndParamNodes.h"
 #include "AccumulatorAggregation.h"
 /* guoye: start */
-// #include "RandomOrdering.h"
+#include "RandomOrdering.h"
 /* guoye: end */
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
@@ -2856,10 +2856,10 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
         {
             // no support to sparse matrix yet
             /* guoye: start */
-            int irow = (int) fmod(rand(), node->Value().GetNumRows() - 1);
-            int icol = (int) fmod(rand(), node->Value().GetNumCols() - 1);
-            // int irow = (int) fmod(::rand(), node->Value().GetNumRows() - 1);
-            // int icol = (int) fmod(::rand(), node->Value().GetNumCols() - 1);
+            //int irow = (int) fmod(rand(), node->Value().GetNumRows() - 1);
+            //int icol = (int) fmod(rand(), node->Value().GetNumCols() - 1);
+            int irow = (int) fmod(::rand(), node->Value().GetNumRows() - 1);
+            int icol = (int) fmod(::rand(), node->Value().GetNumCols() - 1);
             /* guoye: end */
             irow = max(0, irow);
             icol = max(0, icol);
