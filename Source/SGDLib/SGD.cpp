@@ -1409,6 +1409,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     /* guoye: start */
                     
                     float alpha = node->GetOrthonormalConstraint();
+                    /*
                     if (alpha > 1e-9 || alpha < -1e-9)
                     {
                         fprintf(stderr, "After GetOrthonormalConstraint alpha = %f .\n", alpha);
@@ -1431,7 +1432,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             }
                         }
                     }
-                    
+                    */
                     /* guoye: end */
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
