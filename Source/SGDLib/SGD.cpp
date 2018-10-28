@@ -1409,13 +1409,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     /* guoye: start */
                     
                     float alpha = node->GetOrthonormalConstraint();
-                    /*
-                    if (alpha > 1e-9 || alpha < -1e-9)
+                    
+                    if (alpha > 0.1 || alpha < -0.1)
                     {
-                        fprintf(stderr, "After GetOrthonormalConstraint alpha = %f .\n", alpha);
+                        fprintf(stderr, "SGD: alpha = %f .\n", alpha);
 
                         if (Microsoft::MSR::CNTK::rand(0, 4) == 0)
                         {
+                            fprintf(stderr, "SGD starting apply semi.\n");
+
                             size_t num_rows, num_cols;
                             num_rows = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().GetNumRows();
                             num_cols = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().GetNumCols();
@@ -1432,7 +1434,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             }
                         }
                     }
-                    */
+                    
                     /* guoye: end */
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
