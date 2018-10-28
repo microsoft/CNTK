@@ -17,7 +17,7 @@
 #include "InputAndParamNodes.h"
 #include "AccumulatorAggregation.h"
 /* guoye: start */
-// #include "RandomOrdering.h"
+#include "RandomOrdering.h"
 /* guoye: end */
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
@@ -1407,10 +1407,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
                                   m_needAveMultiplier, m_useNesterovMomentum);
                     /* guoye: start */
-                    /*
+                    
                     float alpha = node->GetOrthonormalConstraint();
                     if (alpha > 1e-9 || alpha < -1e-9)
                     {
+                        fprintf(stderr, "After GetOrthonormalConstraint alpha = %f .\n", alpha);
+
                         if (Microsoft::MSR::CNTK::rand(0, 4) == 0)
                         {
                             size_t num_rows, num_cols;
@@ -1429,7 +1431,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             }
                         }
                     }
-                    */
+                    
                     /* guoye: end */
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
