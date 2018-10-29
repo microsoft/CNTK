@@ -13,7 +13,12 @@
 #include "Basics.h"
 #include "Matrix.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 // Forward declarations
 class FrameRange;
@@ -97,18 +102,21 @@ struct MBLayout
         size_t s;               // index of parallel sequence
         ptrdiff_t tBegin;       // first time index in this minibatch. Note that this may be negative of the sequence started before this MB.
         size_t tEnd;            // end = first frame index after final frame. May be beyond the minibatch if reql sequence is longer than the MB.
-        bool operator==(const SequenceInfo &other) const
+        bool operator==(const SequenceInfo& other) const
         {
             return seqId == other.seqId && s == other.s && tBegin == other.tBegin && tEnd == other.tEnd;
         }
-        size_t GetNumTimeSteps() const { return (size_t)(tEnd - tBegin); }
+        size_t GetNumTimeSteps() const
+        {
+            return (size_t)(tEnd - tBegin);
+        }
     };
 
     // -------------------------------------------------------------------
     // construction
     // -------------------------------------------------------------------
 
-    MBLayout(size_t numParallelSequences, size_t numTimeSteps, const std::wstring &name)
+    MBLayout(size_t numParallelSequences, size_t numTimeSteps, const std::wstring& name)
         : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsSeqIdx(CPUDEVICE), m_columnsValidityMask(CPUDEVICE), m_rightSplice(0)
     {
         Init(numParallelSequences, numTimeSteps);
@@ -121,9 +129,9 @@ struct MBLayout
 
     // copy the content of another MBLayoutPtr over
     // Use this instead of actual assignment to make it super-obvious that this is not copying the pointer but actual content. The pointer is kept fixed.
-    // Use "keepName" if the "identity" of the target is to be preserved, e.g. 
+    // Use "keepName" if the "identity" of the target is to be preserved, e.g.
     // while copying from reader space to network space.
-    void CopyFrom(const MBLayoutPtr& other, bool keepName=false)
+    void CopyFrom(const MBLayoutPtr& other, bool keepName = false)
     {
         m_numTimeSteps = other->m_numTimeSteps;
         m_numParallelSequences = other->m_numParallelSequences;
@@ -150,7 +158,7 @@ struct MBLayout
     }
 
     // Destructive copy that steals ownership if the content, like std::move()
-    // Note: For some reason the VC++ compiler does not generate the 
+    // Note: For some reason the VC++ compiler does not generate the
     // move assignment and we have to do this ourselves
     void MoveFrom(MBLayoutPtr other)
     {
@@ -187,7 +195,7 @@ public:
         // remember the dimensions
         m_numParallelSequences = numParallelSequences;
         m_numTimeSteps = numTimeSteps;
-        if (deepInit) 
+        if (deepInit)
         {
             m_distanceToStart.Resize(m_numParallelSequences, m_numTimeSteps);
             m_distanceToEnd.Resize(m_numParallelSequences, m_numTimeSteps);
@@ -216,10 +224,10 @@ public:
     //  - width: maximum width of structure; set to maximum over sequence lengths
     //  - inputSequences: vector of input SequenceInfo records (only seqId and GetNumTimeSteps() are used)
     //  - placement, rowAllocations: temp buffers (passed in to be able to optimize memory allocations)
-    template<typename SequenceInfoVector>
+    template <typename SequenceInfoVector>
     void InitAsPackedSequences(const SequenceInfoVector& inputSequences,
-        /*temp buffer*/std::vector<std::pair<size_t, size_t>>& placement,
-        /*temp buffer*/std::vector<size_t> rowAllocations)
+                               /*temp buffer*/ std::vector<std::pair<size_t, size_t>>& placement,
+                               /*temp buffer*/ std::vector<size_t> rowAllocations)
     {
         placement.resize(inputSequences.size()); // [sequence index] result goes here (entries are invalid for gaps)
         // determine width of MBLayout
@@ -232,7 +240,7 @@ public:
                 width = inputSequences[i].GetNumTimeSteps();
         }
         // allocate
-        rowAllocations.clear();             // [row] we build rows one by one
+        rowAllocations.clear(); // [row] we build rows one by one
         for (size_t i = 0; i < inputSequences.size(); i++)
         {
             if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
@@ -258,21 +266,27 @@ public:
         {
             if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
-            size_t s, tBegin; tie
-            (s, tBegin) = placement[i];
-            AddSequence(inputSequences[i].seqId, s, (ptrdiff_t)tBegin, tBegin + inputSequences[i].GetNumTimeSteps());
+            size_t s, tBegin;
+            tie(s, tBegin) = placement[i];
+            AddSequence(inputSequences[i].seqId, s, (ptrdiff_t) tBegin, tBegin + inputSequences[i].GetNumTimeSteps());
         }
         // need to fill the gaps as well
         for (size_t s = 0; s < rowAllocations.size(); s++)
-            AddGap(s, (size_t)rowAllocations[s], width);
+            AddGap(s, (size_t) rowAllocations[s], width);
     }
 
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
 
-    size_t GetNumTimeSteps() const { return m_numTimeSteps; }
-    size_t GetNumParallelSequences() const { return m_numParallelSequences; }
+    size_t GetNumTimeSteps() const
+    {
+        return m_numTimeSteps;
+    }
+    size_t GetNumParallelSequences() const
+    {
+        return m_numParallelSequences;
+    }
     size_t GetNumSequences() const
     {
         return std::count_if(m_sequences.begin(), m_sequences.end(), [](const SequenceInfo& sequence) {
@@ -282,12 +296,18 @@ public:
 
     // axis names are for now only a debugging aid
     // In the future, there will be a mechanism to denote that axes are meant to be the same.
-    const wchar_t* GetAxisName() const { return m_axisName.c_str(); }
-    void SetAxisName(const std::wstring& name) { m_axisName = name; }
+    const wchar_t* GetAxisName() const
+    {
+        return m_axisName.c_str();
+    }
+    void SetAxisName(const std::wstring& name)
+    {
+        m_axisName = name;
+    }
     void SetUniqueAxisName(std::wstring name) // helper for constructing
     {
         // Unfortunatelly, initialization of local static variables is not thread-safe in VS2013.
-        // As workaround, it is moved to the struct level. 
+        // As workaround, it is moved to the struct level.
         // Todo: when upgraded to VS2013, change back to use the local static mutex, and remove also Sequences.cpp.
         // The mutex is need to make access to nameIndices be thread-safe.
         // static std::mutex nameIndiciesMutex;
@@ -302,7 +322,7 @@ public:
         }
 
         if (index > 0)
-            name += msra::strfun::wstrprintf(L"%d", (int)index);
+            name += msra::strfun::wstrprintf(L"%d", (int) index);
         SetAxisName(name);
     }
 
@@ -316,7 +336,7 @@ public:
     // Input sequence is expected to belong to this MBLayout
     size_t GetNumSequenceFramesInCurrentMB(const SequenceInfo& sequenceInfo) const
     {
-        return min(sequenceInfo.tEnd, GetNumTimeSteps()) - max(sequenceInfo.tBegin, (ptrdiff_t)0);
+        return min(sequenceInfo.tEnd, GetNumTimeSteps()) - max(sequenceInfo.tBegin, (ptrdiff_t) 0);
     }
 
     // return all sequences stored in this minibatch
@@ -343,7 +363,7 @@ public:
             m_sequences == other.m_sequences;
         return res;
     }
-    bool operator!=(const MBLayout &other) const
+    bool operator!=(const MBLayout& other) const
     {
         return !(*this == other);
     } // duh
@@ -354,11 +374,11 @@ public:
         s << "{numTimeSteps:" << m_numTimeSteps << ", numParallelSequences:" << m_numParallelSequences << ", sequences:[";
 
         bool first = true;
-        for (const auto &seq : m_sequences)
+        for (const auto& seq : m_sequences)
         {
             if (!first)
                 s << ", ";
-            s << "{seqId:" << seq.seqId << ", s:" << seq.s <<", begin:" << seq.tBegin << ", end:" << seq.tEnd << "}";
+            s << "{seqId:" << seq.seqId << ", s:" << seq.s << ", begin:" << seq.tBegin << ", end:" << seq.tEnd << "}";
             first = false;
         }
         s << "]}";
@@ -386,7 +406,7 @@ public:
     }
 
     // version that passes a SequenceInfo record directly
-    void AddSequence(const SequenceInfo &seqDesc, bool initDistances = true)
+    void AddSequence(const SequenceInfo& seqDesc, bool initDistances = true)
     {
         const auto beginTime = seqDesc.tBegin;
         const auto endTime = seqDesc.tEnd;
@@ -409,7 +429,7 @@ public:
         if (seqId == GAP_SEQUENCE_ID)
         {
             m_numGapFrames += (e - b);
-            if (initDistances) 
+            if (initDistances)
             {
                 for (size_t t = b; t < e; t++)
                 {
@@ -418,24 +438,23 @@ public:
                 }
             }
         }
-        else
-            if (initDistances) 
+        else if (initDistances)
+        {
+            for (size_t t = b; t < e; t++)
             {
-                for (size_t t = b; t < e; t++)
-                {
-                    // update the nearest sentence boundaries, minimum over all parallel sequences
-                    // If 0, then we are on a boundary. If not 0, we can still test in presence of FrameRange.m_timeOffset.
-                    ptrdiff_t distanceToStart = (ptrdiff_t)t - beginTime;
-                    ptrdiff_t distanceToEnd = (ptrdiff_t)(endTime - 1 - t);
-                    m_distanceToStart(s, t) = (float)distanceToStart;
-                    m_distanceToEnd(s, t) = (float)distanceToEnd;
-                    // and the aggregate
-                    if (m_distanceToNearestStart[t] > distanceToStart)
-                        m_distanceToNearestStart[t] = distanceToStart;
-                    if (m_distanceToNearestEnd[t] > distanceToEnd)
-                        m_distanceToNearestEnd[t] = distanceToEnd;
-                }
+                // update the nearest sentence boundaries, minimum over all parallel sequences
+                // If 0, then we are on a boundary. If not 0, we can still test in presence of FrameRange.m_timeOffset.
+                ptrdiff_t distanceToStart = (ptrdiff_t) t - beginTime;
+                ptrdiff_t distanceToEnd = (ptrdiff_t)(endTime - 1 - t);
+                m_distanceToStart(s, t) = (float) distanceToStart;
+                m_distanceToEnd(s, t) = (float) distanceToEnd;
+                // and the aggregate
+                if (m_distanceToNearestStart[t] > distanceToStart)
+                    m_distanceToNearestStart[t] = distanceToStart;
+                if (m_distanceToNearestEnd[t] > distanceToEnd)
+                    m_distanceToNearestEnd[t] = distanceToEnd;
             }
+        }
     }
 
     // short-hand to initialize an MBLayout for the common case of frame mode
@@ -453,7 +472,7 @@ public:
         for (size_t s = 0; s < numSamples; s++)
         {
             // remember it
-            auto &seqDesc = m_sequences[s];
+            auto& seqDesc = m_sequences[s];
             seqDesc.seqId = s;
             seqDesc.s = s;
         }
@@ -479,7 +498,7 @@ public:
     // find a sequence by its id
     const SequenceInfo& FindSequence(UniqueSequenceId seqId) const
     {
-        for (const auto &seqInfo : m_sequences)
+        for (const auto& seqInfo : m_sequences)
             if (seqInfo.seqId == seqId)
                 return seqInfo;
         LogicError("FindSequence: Requested sequence (id %u) not found.", (unsigned int) seqId);
@@ -493,7 +512,7 @@ public:
         let seqId = querySequences[i].seqId; // the seq id we are looking for
         if (seqId == GAP_SEQUENCE_ID)
             LogicError("FindMatchingSequence: Cannot be applied go gaps.");
-        if (seqId == m_sequences[i].seqId)   // if both sequence arrays match 1:1 then we found it
+        if (seqId == m_sequences[i].seqId) // if both sequence arrays match 1:1 then we found it
             return m_sequences[i];
         else
             return FindSequence(seqId);
@@ -504,7 +523,7 @@ public:
     // -------------------------------------------------------------------
 
     bool HasGaps() const;
-    bool HasGaps(const FrameRange &fr) const;
+    bool HasGaps(const FrameRange& fr) const;
     bool HasRightSplice() const
     {
         return m_rightSplice > 0;
@@ -522,7 +541,7 @@ public:
     // test whether at least one sequence crosses the bounds of this minibatch
     bool HasSequenceBeyondBegin() const
     {
-        for (const auto &seq : m_sequences)
+        for (const auto& seq : m_sequences)
             if (seq.tBegin < 0)
                 return true;
         return false;
@@ -530,7 +549,7 @@ public:
 
     bool HasSequenceBeyondEnd() const
     {
-        for (const auto &seq : m_sequences)
+        for (const auto& seq : m_sequences)
             if (seq.tEnd > m_numTimeSteps)
                 return true;
         return false;
@@ -552,10 +571,10 @@ public:
             LogicError("GetColumnIndex: t out of sequence bounds.");
         if (seq.s > GetNumParallelSequences())
             LogicError("GetColumnIndex: seq.s out of sequence bounds."); // can only happen if 'seq' does not come out of our own m_sequences array, which is verboten
-        ptrdiff_t tIn = (ptrdiff_t)t + seq.tBegin;       // shifted time index
-        if (tIn < 0 || (size_t)tIn >= GetNumTimeSteps())
+        ptrdiff_t tIn = (ptrdiff_t) t + seq.tBegin;                      // shifted time index
+        if (tIn < 0 || (size_t) tIn >= GetNumTimeSteps())
             LogicError("GetColumnIndex: Attempted to access a time step that is accessing a portion of a sequence that is not included in current minibatch."); // we may encounter this for truncated BPTT
-        size_t col = (size_t)tIn * GetNumParallelSequences() + seq.s;
+        size_t col = (size_t) tIn * GetNumParallelSequences() + seq.s;
         assert(col < GetNumCols());
         return col;
     }
@@ -567,8 +586,8 @@ public:
         size_t numFrames = GetNumSequenceFramesInCurrentMB(seq);
         vector<size_t> res;
         res.reserve(numFrames);
-        for (size_t i = 0; i < numFrames;++i)
-            res.push_back(GetColumnIndex(seq,i));
+        for (size_t i = 0; i < numFrames; ++i)
+            res.push_back(GetColumnIndex(seq, i));
         return res;
     }
 
@@ -660,7 +679,6 @@ private:
     static std::map<std::wstring, size_t> s_nameIndices;
 
 public:
-
     // special accessor for sequence training  --TODO: must be replaced by a different mechanism
     bool IsEnd(size_t s, size_t t) const
     {
@@ -706,7 +724,7 @@ public:                       // TODO: make private (currently used from masking
     size_t seqIndex;          // parallel-sequence index; SIZE_MAX = all sequences in MB (most common case)  --TODO: Bad name, 'sequence' and 'parallel sequence' are two different things
     MBLayoutPtr m_pMBLayout;  // layout associated with this
     bool m_broadcastAllowed;  // frame range may be broadcast from outer layout (e.g. a matrix with NULL layout and 1 column is acceptable to this frame range). Only applies when iterating over time; otherwise broadcasting is always OK.
-    const FrameRange *parent; // or NULL: parent range, relative to which this FrameRange is interpreted  --TODO: not used yet
+    const FrameRange* parent; // or NULL: parent range, relative to which this FrameRange is interpreted  --TODO: not used yet
 
 public:
     // can construct from a single size_t -> a single-frame range
@@ -788,42 +806,42 @@ public:
         return ret;
     }
 
-    std::pair<size_t,size_t> GetSequenceRange() const
+    std::pair<size_t, size_t> GetSequenceRange() const
     {
-        if (!m_pMBLayout) return
-            make_pair(0, 1);
-        else if (seqIndex == SIZE_MAX) return
-            make_pair(0, m_pMBLayout->GetNumParallelSequences());
-        else return
-            make_pair(seqIndex, seqIndex + 1);
+        if (!m_pMBLayout)
+            return make_pair(0, 1);
+        else if (seqIndex == SIZE_MAX)
+            return make_pair(0, m_pMBLayout->GetNumParallelSequences());
+        else
+            return make_pair(seqIndex, seqIndex + 1);
     }
 
     std::pair<size_t, size_t> GetTimeRange() const
     {
-        if (!m_pMBLayout) return
-            make_pair(0, 1);
-        else if (IsAllFrames()) return
-            make_pair(0, m_pMBLayout->GetNumTimeSteps());
-        else return
-            make_pair(timeIdxInSeq + m_timeOffset, timeIdxInSeq + m_timeOffset + m_timeRange);
+        if (!m_pMBLayout)
+            return make_pair(0, 1);
+        else if (IsAllFrames())
+            return make_pair(0, m_pMBLayout->GetNumTimeSteps());
+        else
+            return make_pair(timeIdxInSeq + m_timeOffset, timeIdxInSeq + m_timeOffset + m_timeRange);
     }
 
-    bool IsOneColumnWrt(const shared_ptr<MBLayout> &pMBLayout) const
+    bool IsOneColumnWrt(const shared_ptr<MBLayout>& pMBLayout) const
     {
-        if (!pMBLayout) return
-            true; // target has no layout: This would broadcast.
-        else return
-            (pMBLayout->GetNumTimeSteps()         == 1 || (!IsAllFrames() && m_timeRange == 1)) &&
-            (pMBLayout->GetNumParallelSequences() == 1 || seqIndex != SIZE_MAX);
+        if (!pMBLayout)
+            return true; // target has no layout: This would broadcast.
+        else
+            return (pMBLayout->GetNumTimeSteps() == 1 || (!IsAllFrames() && m_timeRange == 1)) &&
+                   (pMBLayout->GetNumParallelSequences() == 1 || seqIndex != SIZE_MAX);
     }
 
-    bool IsBatchMatmul(const shared_ptr<MBLayout> &pMBLayout) const
+    bool IsBatchMatmul(const shared_ptr<MBLayout>& pMBLayout) const
     {
         if (!pMBLayout)
             return false;
         else
             return (pMBLayout->GetNumTimeSteps() > 1 && (IsAllFrames() || m_timeRange > 1)) ||
-            (pMBLayout->GetNumParallelSequences() > 1);
+                   (pMBLayout->GetNumParallelSequences() > 1);
     }
 
     // code that can only handle single-frame ranges will call t() to get the time index, which will throw if numFrames != 1
@@ -860,7 +878,7 @@ inline bool MBLayout::HasGaps() const
     return m_numGapFrames > 0; /*HasGaps(FrameRange());*/
 }
 
-inline bool MBLayout::HasGaps(const FrameRange &fr) const
+inline bool MBLayout::HasGaps(const FrameRange& fr) const
 {
     CheckIsValid();
     if (fr.IsAllFrames())
@@ -872,7 +890,7 @@ inline bool MBLayout::HasGaps(const FrameRange &fr) const
 }
 
 // test whether a given frame is or contains a gap
-inline bool MBLayout::IsGap(const FrameRange &fr) const
+inline bool MBLayout::IsGap(const FrameRange& fr) const
 {
     CheckIsValid();
 
@@ -896,14 +914,14 @@ inline bool MBLayout::IsBeyondMinibatch(const FrameRange& fr) const
     if (fr.IsAllFrames())
         LogicError("MBLayout::IsBeyondStartOrEnd() cannot be applied to FrameRange that specifies more than a single time step.");
 
-    const auto beginTime = (ptrdiff_t)fr.timeIdxInSeq + fr.m_timeOffset; // we test off the frame with offset
-    const auto endTime = beginTime + (ptrdiff_t)fr.m_timeRange;
-    return beginTime < 0 || endTime > (ptrdiff_t)GetNumTimeSteps();
+    const auto beginTime = (ptrdiff_t) fr.timeIdxInSeq + fr.m_timeOffset; // we test off the frame with offset
+    const auto endTime = beginTime + (ptrdiff_t) fr.m_timeRange;
+    return beginTime < 0 || endTime > (ptrdiff_t) GetNumTimeSteps();
 }
 
 // test whether frame is exceeding the sentence boundaries
 // In case of a gap, this returns false.
-inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange &fr) const
+inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange& fr) const
 {
     CheckIsValid();
 
@@ -945,11 +963,14 @@ inline bool MBLayout::IsBeyondStartOrEnd(const FrameRange &fr) const
 }
 
 // TODO: Remove this version (with sanity checks) after this has been tested. Then the function can be inlined above.
-inline size_t MBLayout::GetActualNumSamples() const { return m_numFramesDeclared - m_numGapFrames; }
+inline size_t MBLayout::GetActualNumSamples() const
+{
+    return m_numFramesDeclared - m_numGapFrames;
+}
 
 // return m_columnsValidityMask(,), which is lazily created here upon first call
 // only called from MaskMissingColumnsTo()
-// Update: also called from GatherNode::BackpropToNonLooping(). 
+// Update: also called from GatherNode::BackpropToNonLooping().
 // TODO: Can probably be faster by using the sequence array directly.
 // TODO: Or should we just blast m_distanceToStart to GPU, and maks based on that? It is small compared to features.
 inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE deviceId) const
@@ -1006,8 +1027,8 @@ inline const Matrix<char>& MBLayout::GetColumnsSeqIndex(DEVICEID_TYPE deviceId) 
         int seqIdxInMB = 1;
         for (size_t i = 0; i < m_sequences.size(); ++i)
         {
-            let &seq = m_sequences[i];
-            char seqIdx = seq.seqId == GAP_SEQUENCE_ID ? (char)-1 : (char)seqIdxInMB++;
+            let& seq = m_sequences[i];
+            char seqIdx = seq.seqId == GAP_SEQUENCE_ID ? (char) -1 : (char) seqIdxInMB++;
 
             size_t b = (size_t)(max(seq.tBegin, (ptrdiff_t) 0));
             size_t e = (size_t)(min(seq.tEnd, nT));
@@ -1021,8 +1042,8 @@ inline const Matrix<char>& MBLayout::GetColumnsSeqIndex(DEVICEID_TYPE deviceId) 
         if (deviceId != m_columnsSeqIdx.GetDeviceId())
             m_columnsSeqIdx = Matrix<char>(deviceId);
         m_columnsSeqIdx.SetValue(1, nS * nT, deviceId, columnsSeqIdx.data());
-	}
-	return m_columnsSeqIdx;
+    }
+    return m_columnsSeqIdx;
 }
 // class for defining an iteration over a sequence, forward and backward
 // One day, we may also have nested structures. For those, FrameRangeIterations will be able to be instantiated from FrameRange objects to loop over their nested dimension.
@@ -1047,11 +1068,11 @@ public:
         ptrdiff_t m_step;
 
     public:
-        FrameRangeIterator(const FrameRange &begin, ptrdiff_t step)
+        FrameRangeIterator(const FrameRange& begin, ptrdiff_t step)
             : FrameRange(begin), m_step(step)
         {
         }
-        bool operator!=(const FrameRangeIterator &other) const
+        bool operator!=(const FrameRangeIterator& other) const
         {
             return timeIdxInSeq != other.timeIdxInSeq;
         }
@@ -1097,8 +1118,8 @@ public:
 // -----------------------------------------------------------------------
 
 static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCols /*of data matrix to slice*/,
-                                                                   const FrameRange &fr /*select frame or entire batch*/,
-                                                                   const MBLayoutPtr &pMBLayout /*the MB layout of 'data'*/)
+                                                                   const FrameRange& fr /*select frame or entire batch*/,
+                                                                   const MBLayoutPtr& pMBLayout /*the MB layout of 'data'*/)
 {
     if (!fr.m_pMBLayout && !fr.IsAllFrames())
         LogicError("ColumnRangeWithMBLayoutFor: FrameRange refers to a time slice while being outside of a loop.");
@@ -1160,9 +1181,9 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-static inline Matrix<ElemType> DataWithMBLayoutFor(const Matrix<ElemType> &data,
-                                                   const FrameRange &fr /*select frame or entire batch*/,
-                                                   const MBLayoutPtr &pMBLayout /*the MB layout of 'data'*/)
+static inline Matrix<ElemType> DataWithMBLayoutFor(const Matrix<ElemType>& data,
+                                                   const FrameRange& fr /*select frame or entire batch*/,
+                                                   const MBLayoutPtr& pMBLayout /*the MB layout of 'data'*/)
 {
     auto columnRange = ColumnRangeWithMBLayoutFor(data.GetNumCols(), fr, pMBLayout);
     return data.ColumnSlice(columnRange.first, columnRange.second);
@@ -1175,9 +1196,9 @@ static inline Matrix<ElemType> DataWithMBLayoutFor(const Matrix<ElemType> &data,
 // -----------------------------------------------------------------------
 
 template <class DimensionVector> // e.g. std::vector<size_t> or SmallVector<size_t>
-static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayoutFor(const DimensionVector &shape /*actual tensor shape of 'data'*/,
-                                                                                     const FrameRange &fr /*select frame or entire batch from 'data'*/,
-                                                                                     const MBLayoutPtr &pMBLayout /*the MB layout of 'data'*/)
+static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayoutFor(const DimensionVector& shape /*actual tensor shape of 'data'*/,
+                                                                                     const FrameRange& fr /*select frame or entire batch from 'data'*/,
+                                                                                     const MBLayoutPtr& pMBLayout /*the MB layout of 'data'*/)
 {
     if (!fr.m_pMBLayout && !fr.IsAllFrames())
         LogicError("TensorSliceWithMBLayoutFor: FrameRange refers to a time slice while being outside of a loop.");
@@ -1190,7 +1211,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
     result.second = shape;
 
     // get position of time and sequence index
-    const size_t iterDim = shape.size() -1; // valid if data has MBLayout
+    const size_t iterDim = shape.size() - 1; // valid if data has MBLayout
 
     // MBLayout of data and of FrameRange must be identical pointers,
     // or in case of broadcasting, respective parent pointers.
@@ -1209,7 +1230,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
             LogicError("TensorSliceWithMBLayoutFor: FrameRange has no layout, incompatible with data's layout: %s",
                        static_cast<string>(*(pMBLayout)).c_str());
         else
-            LogicError("TensorSliceWithMBLayoutFor: FrameRange's dynamic axis is inconsistent with data: %s vs. %s", 
+            LogicError("TensorSliceWithMBLayoutFor: FrameRange's dynamic axis is inconsistent with data: %s vs. %s",
                        static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
     }
     // if FrameRange refers to whole minibatch (map mode)
@@ -1239,7 +1260,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
     }
 
     // sequence index
-    if (fr.seqIndex != SIZE_MAX)  // sequence requested?
+    if (fr.seqIndex != SIZE_MAX) // sequence requested?
     {
         if (pMBLayout) // (if no layout then broadcast to all sequences)
         {
@@ -1249,8 +1270,8 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
                 size_t s = fr.seqIndex;
                 if (s >= result.second[sequenceDim])
                     LogicError("TensorSliceWithMBLayoutFor: FrameRange specifies a parallel-sequence index that is out of range.");
-                result.first[sequenceDim] = (ElemType)s;
-                result.second[sequenceDim] = (ElemType)s + 1;
+                result.first[sequenceDim] = (ElemType) s;
+                result.second[sequenceDim] = (ElemType) s + 1;
             }
         }
     }
@@ -1277,7 +1298,7 @@ static inline void MaskMissingColumnsTo(Matrix<ElemType>& matrixToMask, const MB
     {
         const auto& maskMatrix = pMBLayout->GetColumnsValidityMask(matrixToMask.GetDeviceId());
 
-        maskMatrix.TransferToDeviceIfNotThere(matrixToMask.GetDeviceId(), /*ismoved=*/ false, /*emptyTransfer=*/ false, /*updatePreferredDevice=*/ false);
+        maskMatrix.TransferToDeviceIfNotThere(matrixToMask.GetDeviceId(), /*ismoved=*/false, /*emptyTransfer=*/false, /*updatePreferredDevice=*/false);
         auto maskSlice = DataWithMBLayoutFor(maskMatrix, fr, pMBLayout);
 
         auto matrixSliceToMask = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
@@ -1288,4 +1309,6 @@ static inline void MaskMissingColumnsTo(Matrix<ElemType>& matrixToMask, const MB
     }
 }
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft
