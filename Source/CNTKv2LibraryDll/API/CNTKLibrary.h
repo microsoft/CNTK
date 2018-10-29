@@ -5080,6 +5080,10 @@ namespace CNTK
         TrainingParameterSchedule<double> gaussianNoiseInjectionStdDev = 0.0;
         double gradientClippingThresholdPerSample = std::numeric_limits<double>::infinity();
         bool gradientClippingWithTruncation = true;
+        
+        // This option results in the mean value of the gradients across the samples in the minibatch to be used by the learner.
+        // The mean gradient is computed by dividing the gradient values accumulated across all samples by the actual number of samples (labels) in the minibatch. 
+        bool useMeanGradient = false;
 
         Dictionary dictOptions;
     };
@@ -5319,6 +5323,8 @@ namespace CNTK
     ///
     CNTK_API LearnerPtr RMSPropLearner(const std::vector<Parameter>& parameters,
                                        const LearningRateSchedule& learningRateSchedule,
+                                       const MomentumSchedule& momentumSchedule,
+                                       bool unitGain,
                                        double gamma,
                                        double inc,
                                        double dec,
