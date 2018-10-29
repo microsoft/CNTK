@@ -65,11 +65,7 @@ public:
     {
     }
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride)
-        : Base(deviceId, name),
-          m_lOrder(lOrder),
-          m_rOrder(rOrder),
-          m_lStride(lStride),
-          m_rStride(rStride)
+        : Base(deviceId, name), m_lOrder(lOrder), m_rOrder(rOrder), m_lStride(lStride), m_rStride(rStride)
     {
     }
     BiVfsmnNode(const ScriptableObjects::IConfigRecordPtr configp)
