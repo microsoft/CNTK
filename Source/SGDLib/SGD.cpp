@@ -1413,11 +1413,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     if (alpha > 1e-7 || alpha < -1e-7)
                     {
-                        fprintf(stderr, "SGD: alpha = %f, LR = %f.\n", alpha, LR);
+                        //fprintf(stderr, "SGD: alpha = %f, LR = %f.\n", alpha, LR);
 
                         if (Microsoft::MSR::CNTK::rand(0, 4) == 0)
                         {
-                            fprintf(stderr, "SGD starting apply semi.\n");
+                            // fprintf(stderr, "SGD starting apply semi.\n");
 
                             size_t num_rows, num_cols;
                             num_rows = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().GetNumRows();
