@@ -25,12 +25,17 @@
 // Forward declarations
 namespace CNTK
 {
-    class NDArrayView;
-    class Value;
-}
+class NDArrayView;
+class Value;
+} // namespace CNTK
 
 // This class is exported from the Math.dll
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 enum CurrentDataLocation
 {
@@ -48,11 +53,16 @@ enum MatrixType
 };
 
 // avoid pulling in these header files for consumers of this class
-template <class ElemType> class GPUMatrix;
-template <class ElemType> class CPUMatrix;
-template <class ElemType> class GPUSparseMatrix;
-template <class ElemType> class CPUSparseMatrix;
-template <class ElemType> class DeviceBoundNumber;
+template <class ElemType>
+class GPUMatrix;
+template <class ElemType>
+class CPUMatrix;
+template <class ElemType>
+class GPUSparseMatrix;
+template <class ElemType>
+class CPUSparseMatrix;
+template <class ElemType>
+class DeviceBoundNumber;
 
 // <ElemType>-agnostic base class
 struct /*interface*/ MATH_API MatrixBase : public std::enable_shared_from_this<MatrixBase>
@@ -75,10 +85,11 @@ class MATH_API Matrix : public MatrixBase
     friend class ::CNTK::Value;
 
     typedef MatrixBase Base;
+
 private:
-    mutable BaseMatrix<ElemType>*                 m_baseMatrix;
-    mutable shared_ptr<GPUMatrix      <ElemType>> m_GPUMatrix;
-    mutable shared_ptr<CPUMatrix      <ElemType>> m_CPUMatrix;
+    mutable BaseMatrix<ElemType>* m_baseMatrix;
+    mutable shared_ptr<GPUMatrix<ElemType>> m_GPUMatrix;
+    mutable shared_ptr<CPUMatrix<ElemType>> m_CPUMatrix;
     mutable shared_ptr<GPUSparseMatrix<ElemType>> m_GPUSparseMatrix;
     mutable shared_ptr<CPUSparseMatrix<ElemType>> m_CPUSparseMatrix;
 
@@ -114,8 +125,8 @@ public:
     // TODO: Rewrite this constructor to eliminate the external buffers flag. Make a separate construction mechanism for Matrix objects that don't own their storage.
     Matrix(const size_t numRows, const size_t numCols, ElemType* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags = matrixFlagNormal, const size_t nnz = 0);
     Matrix(const Matrix<ElemType>& deepCopyFrom, DEVICEID_TYPE deviceId);
-    Matrix(Matrix<ElemType>&& moveFrom);                                                    // move constructor, shallow copy
-    Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom);                               // move assignment operator, shallow copy
+    Matrix(Matrix<ElemType>&& moveFrom);                      // move constructor, shallow copy
+    Matrix<ElemType>& operator=(Matrix<ElemType>&& moveFrom); // move assignment operator, shallow copy
 
     Matrix<ElemType> DeepClone() const;
 
@@ -164,22 +175,37 @@ public:
 
     MatrixType GetMatrixType() const override;
     MatrixFormat GetFormat() const override;
-    bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
+    bool OwnBuffer() const
+    {
+        return m_baseMatrix->OwnBuffer();
+    }
     int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
-    DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; // -1 if CPU, otherwise GPU CUDA device id
-    void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId) { m_preferredDeviceId = preferredDeviceId; }
+    DEVICEID_TYPE GetPreferredDeviceId() const
+    {
+        return m_preferredDeviceId;
+    }; // -1 if CPU, otherwise GPU CUDA device id
+    void SetPreferredDeviceId(DEVICEID_TYPE preferredDeviceId)
+    {
+        m_preferredDeviceId = preferredDeviceId;
+    }
     // Moves matrix from device id_from to device with id_to.
     // If emptyTransfer=true, then no data is ever moved, just corresponding GPU/CPU matrices are deleted and then created using empty constructor
     void TransferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = false, /*if false then keep source and set location to BOTH*/ bool emptyTransfer = false, bool updatePreferredDevice = true) const;
     // Same as TransferFromDeviceToDevice() but moves only if it is currently not on the target device
     void TransferToDeviceIfNotThere(int id_to, bool isBeingMoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
-    CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
+    CurrentDataLocation GetCurrentMatrixLocation() const
+    {
+        return m_currentDataLocation;
+    };
     void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); // sets matrix type between dense and sparse
     size_t GetNumRows() const;
     size_t GetNumCols() const;
     size_t GetDiagSize() const;
     size_t GetNumElements() const;
-    bool HasNoElements() const { return GetNumElements() == 0; }
+    bool HasNoElements() const
+    {
+        return GetNumElements() == 0;
+    }
     bool IsEmpty() const;
     size_t BufferSize() const;
     ElemType* Data() const;
@@ -216,17 +242,17 @@ public:
                          const double learnRatePerSample, const double meanMomentum, const double varMomentum, ElemType unitGainFactor);
 
     void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
-        const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax = false);
+                    const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax = false);
 
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier, const bool initialized);
 
-    template<typename GradType>
+    template <typename GradType>
     void AdaDeltaUpdate(Matrix<GradType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp);
 
     void AdaDeltaFlushState(size_t stride, ElemType rho, int* timestamps, int currentTimestamp);
 
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true, bool keepValue = false); // by default we only reallocate if need to grow
-    void Resize(const Matrix<ElemType>& other) // TODO: Should this carry over numNZElemToReserve for sparse matrices?
+    void Resize(const Matrix<ElemType>& other)                                                                                                      // TODO: Should this carry over numNZElemToReserve for sparse matrices?
     {
         Resize(other.GetNumRows(), other.GetNumCols());
     }
@@ -267,18 +293,21 @@ public:
 
     const ElemType operator()(const size_t row, const size_t col) const;
     ElemType& operator()(const size_t row, const size_t col);
-    ElemType GetValue(const size_t row, const size_t col) const { return operator()(row, col); } // use this for reading on non-const objects to avoid inefficiency
+    ElemType GetValue(const size_t row, const size_t col) const
+    {
+        return operator()(row, col);
+    } // use this for reading on non-const objects to avoid inefficiency
     ElemType Get00Element() const;
 
     void SetValue(const ElemType v);
     void SetValue(const DeviceBoundNumber<ElemType>& db_number);
     //void SetValue       (const Matrix<ElemType>& deepCopyFrom, const MatrixFormat format = matrixFormatSparseCSR); // BUGBUG: default for 'format' is unexpected
     // SetValue respects the source matrix's information. It moves the target's location (if necessary), and then copies the sources values.
-    void SetValue      (const Matrix<ElemType>& deepCopyFrom);
+    void SetValue(const Matrix<ElemType>& deepCopyFrom);
     // AssignValuesOf respects the target matrix's information. It copies the values from the target into the memory of the source.
     void AssignValuesOf(const Matrix<ElemType>& deepCopyFrom);
     void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
-    void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); // set matrix sparsely
+    void SetValue(const size_t rIdx, const size_t cIdx, ElemType val);                           // set matrix sparsely
     void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l) // SetValue(2,3, {1,2,3,  4,5,6});
     {
         std::vector<ElemType> vals(l);
@@ -292,7 +321,7 @@ public:
         SetValue(MakeNan(__LINE__));
     }
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-        const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer = nullptr);
+                                const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer = nullptr);
 
     void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 
@@ -325,39 +354,39 @@ public:
     Matrix<ElemType> Transpose(); // This method doesn't change state of Matrix. It should be a const function
     Matrix<ElemType>& AssignTransposeOf(const Matrix<ElemType>& a);
 
-    Matrix<ElemType>& DoGatherColumnsOf (ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha);
+    Matrix<ElemType>& DoGatherColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha);
     Matrix<ElemType>& DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha, bool idxHaveDups);
 
     Matrix<ElemType>& operator+=(const ElemType alpha);
-    Matrix<ElemType>  operator+(const ElemType alpha) const;
+    Matrix<ElemType> operator+(const ElemType alpha) const;
     Matrix<ElemType>& AssignSumOf(const ElemType alpha, const Matrix<ElemType>& a);
 
     Matrix<ElemType>& operator+=(const Matrix<ElemType>& a);
-    Matrix<ElemType>  operator+(const Matrix<ElemType>& a) const;
+    Matrix<ElemType> operator+(const Matrix<ElemType>& a) const;
     Matrix<ElemType>& AssignSumOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
 
     Matrix<ElemType>& operator-=(const ElemType alpha);
-    Matrix<ElemType>  operator-(const ElemType alpha) const;
+    Matrix<ElemType> operator-(const ElemType alpha) const;
     Matrix<ElemType>& AssignDifferenceOf(const ElemType alpha, const Matrix<ElemType>& a);
     Matrix<ElemType>& AssignDifferenceOf(const Matrix<ElemType>& a, const ElemType alpha);
 
     Matrix<ElemType>& operator-=(const Matrix<ElemType>& a);
-    Matrix<ElemType>  operator-(const Matrix<ElemType>& a) const;
+    Matrix<ElemType> operator-(const Matrix<ElemType>& a) const;
     Matrix<ElemType>& AssignDifferenceOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
 
     Matrix<ElemType>& operator*=(const ElemType alpha);
-    Matrix<ElemType>  operator*(const ElemType alpha) const;
+    Matrix<ElemType> operator*(const ElemType alpha) const;
     Matrix<ElemType>& AssignProductOf(const ElemType alpha, const Matrix<ElemType>& a);
 
-    Matrix<ElemType>  operator*(const Matrix<ElemType>& a) const;
+    Matrix<ElemType> operator*(const Matrix<ElemType>& a) const;
     Matrix<ElemType>& AssignProductOf(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB); // this = a * b
     Matrix<ElemType>& Assign1x1ProductOf(const Matrix<ElemType>& a1x1, const Matrix<ElemType>& b);                                         // this = a * b, where a is 1x1
 
     Matrix<ElemType>& operator/=(ElemType alpha);
-    Matrix<ElemType>  operator/(ElemType alpha) const;
+    Matrix<ElemType> operator/(ElemType alpha) const;
 
     Matrix<ElemType>& operator^=(ElemType alpha);     // element-wise power
-    Matrix<ElemType>  operator^(ElemType alpha) const; // element-wise power
+    Matrix<ElemType> operator^(ElemType alpha) const; // element-wise power
     Matrix<ElemType>& AssignElementPowerOf(const Matrix<ElemType>& a, const ElemType power);
 
     // TODO: There are several functions below that perform an in-place operation
@@ -405,8 +434,8 @@ public:
     Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
 
     Matrix<ElemType>& AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, Matrix<ElemType>& totalScore,
-        const vector<size_t> & extraUttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep,
-        const size_t mbSize, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+                                     const vector<size_t>& extraUttMap, const vector<size_t>& uttBeginFrame, const vector<size_t>& uttFrameNum, const vector<size_t>& uttPhoneNum, const size_t samplesInRecurrentStep,
+                                     const size_t mbSize, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
 
     Matrix<ElemType>& InplaceSqrt();
     Matrix<ElemType>& AssignSqrtOf(const Matrix<ElemType>& a);
@@ -582,12 +611,12 @@ public:
     void AveragePoolingForward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& output, const bool poolIncludePad) const;
     void AveragePoolingBackward(const Matrix<int>& mpRowCol, const Matrix<int>& mpRowIndices, const Matrix<int>& indices, Matrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const;
 
-    template<class StatType>
+    template <class StatType>
     void BatchNormalizationForward(const Matrix<StatType>& scale, const Matrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
                                    Matrix<StatType>& runMean, Matrix<StatType>& runVariance, Matrix<ElemType>& out, double epsilon,
                                    Matrix<StatType>& saveMean, Matrix<StatType>& saveInvStdDev) const;
 
-    template<class StatType>
+    template <class StatType>
     void BatchNormalizationBackward(const Matrix<ElemType>& in, Matrix<ElemType>& grad, const Matrix<StatType>& scale, double blendFactor, const Matrix<StatType>& saveMean, const Matrix<StatType>& saveInvStdDev,
                                     Matrix<StatType>& scaleGrad, Matrix<StatType>& biasGrad) const;
 
@@ -607,7 +636,7 @@ public:
     // singular value decomposition of A as A = U*SIGMA*VT
     static void SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, Matrix<ElemType>& U, Matrix<ElemType>& VT, Matrix<ElemType>& W);
 
-    static void MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier=nullptr); // SGEMM
+    static void MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, ElemType beta, Matrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier = nullptr); // SGEMM
     static void MultiplyAndAdd(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, Matrix<ElemType>& c);
     static void Multiply(const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB, Matrix<ElemType>& c);
     static void Multiply(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c);
@@ -685,6 +714,37 @@ public:
                                     const int startLbl, // the time 0 start symbol in the output layer
                                     const int shift);
 
+public:
+    static void ComputeBiVfsmnMemory(const Matrix<ElemType>& in,       // DxT
+                                     const Matrix<ElemType>& l_filter, // DxN1 TODO: +1
+                                     const Matrix<ElemType>& r_filter, // DxN2
+                                     const Matrix<char>& flags,        // 1xT
+                                     int flag_stride,
+                                     int l_order, int r_order,
+                                     int l_stride, int r_stride,
+                                     Matrix<ElemType>& out);
+
+    static void ComputeBiVfsmnMemoryGradient(const Matrix<ElemType>& gradientValues,
+                                             const Matrix<ElemType>& l_filter,
+                                             const Matrix<ElemType>& r_filter,
+                                             const Matrix<char>& flags,
+                                             int flag_stride,
+                                             int l_order, int r_order,
+                                             int l_stride, int r_stride,
+                                             Matrix<ElemType>& inputGradientValues);
+    static void ComputeBiVfsmnLeftFilterGradient(const Matrix<ElemType>& gradientValues,
+                                                 const Matrix<ElemType>& inputValues,
+                                                 const Matrix<char>& flags,
+                                                 int flag_stride,
+                                                 int l_order, int l_stride,
+                                                 Matrix<ElemType>& leftFilterGradientValues);
+    static void ComputeBiVfsmnRightFilterGradient(const Matrix<ElemType>& gradientValues,
+                                                  const Matrix<ElemType>& inputValues,
+                                                  const Matrix<char>& flags,
+                                                  int flag_stride,
+                                                  int r_order, int r_stride,
+                                                  Matrix<ElemType>& rightFilterGradientValues);
+
     template <typename T>
     friend class MatrixQuantizer;
 
@@ -713,4 +773,6 @@ typedef Matrix<float> SingleMatrix;
 typedef Matrix<double> DoubleMatrix;
 typedef Matrix<half> HalfMatrix;
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft

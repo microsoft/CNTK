@@ -25,7 +25,12 @@
 ///////////////////////////////////////////////
 
 // This class is exported from the Math.dll
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 double logadd(double x, double y);
 
@@ -35,37 +40,37 @@ template <class ElemType>
 class MATH_API CPUMatrix : public BaseMatrix<ElemType>
 {
     typedef BaseMatrix<ElemType> Base;
-    using Base::m_numRows;
-    using Base::m_numCols;
-    using Base::m_sliceViewOffset;
+    using Base::GetSizeAllocated;
     using Base::HasExternalBuffer;
+    using Base::m_numCols;
+    using Base::m_numRows;
+    using Base::m_sliceViewOffset;
+    using Base::m_sob;
     using Base::SetBuffer;
     using Base::SetComputeDeviceId;
     using Base::SetSizeAllocated;
-    using Base::GetSizeAllocated;
-    using Base::ZeroInit;
-    using Base::ZeroValues;
-    using Base::m_sob;
     using Base::ShallowCopyFrom;
     using Base::VerifyResizable;
+    using Base::ZeroInit;
+    using Base::ZeroValues;
 
 public:
-    using Base::VerifyWritable;
-    using Base::GetComputeDeviceId;
     using Base::Buffer;
-    using Base::GetNumRows;
-    using Base::GetNumCols;
+    using Base::GetComputeDeviceId;
     using Base::GetDiagSize;
-    using Base::GetNumElements;
-    using Base::OwnBuffer;
     using Base::GetFormat;
-    using Base::SetFormat;
+    using Base::GetNumCols;
+    using Base::GetNumElements;
+    using Base::GetNumRows;
     using Base::IsEmpty;
+    using Base::OwnBuffer;
+    using Base::SetFormat;
     using Base::VerifySize;
+    using Base::VerifyWritable;
 
 public:
     CPUMatrix();
-    CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow);     // copy constructor, shallow
+    CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow); // copy constructor, shallow
     CPUMatrix(const size_t numRows, const size_t numCols);
     CPUMatrix(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
     CPUMatrix(const CPUMatrix<ElemType>& deepCopyFrom);                      // copy constructor, deep copy
@@ -94,12 +99,12 @@ public:
     CPUMatrix<ElemType> Diagonal() const;
 
     ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
-    
-    void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, 
+
+    void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
                    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType unitGainFactor);
 
     void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax=false);
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax = false);
 
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
@@ -110,13 +115,12 @@ public:
                      const bool needAveMultiplier,
                      const bool initialized);
 
-    template<typename GradType>
+    template <typename GradType>
     void AdaDelta(CPUMatrix<GradType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 
     void AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp);
 
     void Reshape(const size_t numRows, const size_t numCols);
-
 
     // RequireSize is now the new preferred method of ensuring the correct size inside of the Matrix class. Since Resize will fail if the storage object has
     // multiple views, RequireSize will first check to see if Resize is required. If it is not, then it short-circuits and is a noop. Otherwise, RequireSize
@@ -126,9 +130,8 @@ public:
     // actually resizes the underlying matrix, doing any allocation as required.
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
 
-
-    ElemType* CopyToArray() const;                                                 // allocated by the callee but need to be deleted by the caller
-    size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const;    // allocated by the callee but need to be deleted by the caller
+    ElemType* CopyToArray() const;                                              // allocated by the callee but need to be deleted by the caller
+    size_t CopyToArray(ElemType*& arrayCopyTo, size_t& currentArraySize) const; // allocated by the callee but need to be deleted by the caller
     void CopySection(size_t numRows, size_t numCols, ElemType* dst, size_t colStride) const;
 
     inline ElemType& operator()(const size_t row, const size_t col)
@@ -171,38 +174,38 @@ public:
     CPUMatrix<ElemType> Transpose();
     CPUMatrix<ElemType>& AssignTransposeOf(const CPUMatrix<ElemType>& a);
 
-    CPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
+    CPUMatrix<ElemType>& DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
     CPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
 
     CPUMatrix<ElemType>& operator+=(const ElemType alpha);
-    CPUMatrix<ElemType>  operator+(const ElemType alpha) const;
+    CPUMatrix<ElemType> operator+(const ElemType alpha) const;
     CPUMatrix<ElemType>& AssignSumOf(const ElemType alpha, const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& operator+=(const CPUMatrix<ElemType>& a);
-    CPUMatrix<ElemType>  operator+(const CPUMatrix<ElemType>& a) const;
+    CPUMatrix<ElemType> operator+(const CPUMatrix<ElemType>& a) const;
     CPUMatrix<ElemType>& AssignSumOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
 
     CPUMatrix<ElemType>& operator-=(const ElemType alpha);
-    CPUMatrix<ElemType>  operator-(const ElemType alpha) const;
+    CPUMatrix<ElemType> operator-(const ElemType alpha) const;
     CPUMatrix<ElemType>& AssignDifferenceOf(const ElemType alpha, const CPUMatrix<ElemType>& a);
     CPUMatrix<ElemType>& AssignDifferenceOf(const CPUMatrix<ElemType>& a, const ElemType alpha);
 
     CPUMatrix<ElemType>& operator-=(const CPUMatrix<ElemType>& a);
-    CPUMatrix<ElemType>  operator-(const CPUMatrix<ElemType>& a) const;
+    CPUMatrix<ElemType> operator-(const CPUMatrix<ElemType>& a) const;
     CPUMatrix<ElemType>& AssignDifferenceOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
 
     CPUMatrix<ElemType>& operator*=(const ElemType alpha);
-    CPUMatrix<ElemType>  operator*(const ElemType alpha) const;
+    CPUMatrix<ElemType> operator*(const ElemType alpha) const;
     CPUMatrix<ElemType>& AssignProductOf(const ElemType alpha, const CPUMatrix<ElemType>& a);
 
-    CPUMatrix<ElemType>  operator*(const CPUMatrix<ElemType>& a) const;
+    CPUMatrix<ElemType> operator*(const CPUMatrix<ElemType>& a) const;
     CPUMatrix<ElemType>& AssignProductOf(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB);
 
     CPUMatrix<ElemType>& operator/=(ElemType alpha);
-    CPUMatrix<ElemType>  operator/(ElemType alpha) const;
+    CPUMatrix<ElemType> operator/(ElemType alpha) const;
 
     CPUMatrix<ElemType>& operator^=(ElemType alpha);     // element-wise power
-    CPUMatrix<ElemType>  operator^(ElemType alpha) const; // element-wise power
+    CPUMatrix<ElemType> operator^(ElemType alpha) const; // element-wise power
     CPUMatrix<ElemType>& AssignElementPowerOf(const CPUMatrix<ElemType>& a, const ElemType power);
 
     CPUMatrix<ElemType>& ElementMultiplyWith(const CPUMatrix<ElemType>& a);
@@ -245,7 +248,7 @@ public:
     // sequence training
     CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType& threshhold);
     CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
-    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType>& totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType>& totalScore, const vector<size_t>& uttMap, const vector<size_t>& uttBeginFrame, const vector<size_t>& uttFrameNum, const vector<size_t>& uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
     CPUMatrix<ElemType>& InplaceSqrt();
     CPUMatrix<ElemType>& AssignSqrtOf(const CPUMatrix<ElemType>& a);
 
@@ -427,11 +430,11 @@ public:
     void AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
                                 CPUMatrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const;
 
-    template<class StatType>
+    template <class StatType>
     void BatchNormalizationForward(const CPUMatrix<StatType>& scale, const CPUMatrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, CPUMatrix<StatType>& runMean, CPUMatrix<StatType>& runVariance,
                                    CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<StatType>& saveMean, CPUMatrix<StatType>& saveInvStdDev) const;
 
-    template<class StatType>
+    template <class StatType>
     void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<StatType>& scale, double blendFactor, const CPUMatrix<StatType>& saveMean, const CPUMatrix<StatType>& saveInvStdDev,
                                     CPUMatrix<StatType>& scaleGrad, CPUMatrix<StatType>& biasGrad) const;
 
@@ -445,14 +448,14 @@ public:
         OPT_EVAL_WITH_MKL = 1, // using Intel MKL functions for evaluation performance
     };
     static void SetOptimizationFlags(int flags);
-    static int  GetOptimizationFlags();
+    static int GetOptimizationFlags();
 
     static void SetCompatibleMode();
 
     // static BLAS functions
     static void SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>& SIGMA, CPUMatrix<ElemType>& U, CPUMatrix<ElemType>& VT, CPUMatrix<ElemType>& W);
 
-    static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier=nullptr);
+    static void MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier = nullptr);
     static void MultiplyAndAdd(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, CPUMatrix<ElemType>& c);
     static void Multiply(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, CPUMatrix<ElemType>& c);
     static void Multiply(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
@@ -583,7 +586,17 @@ public:
                                      const CPUMatrix<ElemType>& pair_scores,
                                      CPUMatrix<ElemType>& grd,
                                      const size_t tPos // position
-                                     );
+    );
+
+public:
+    static void ComputeBiVfsmnMemory(const CPUMatrix<ElemType>& in,       // DxT
+                                     const CPUMatrix<ElemType>& l_filter, // DxN1 TODO: +1
+                                     const CPUMatrix<ElemType>& r_filter, // DxN2
+                                     const CPUMatrix<char>& flags,        // 1xT
+                                     int flag_stride,
+                                     int l_order, int r_order,
+                                     int l_stride, int r_stride,
+                                     CPUMatrix<ElemType>& out);
 
 protected:
     size_t LocateElement(const size_t i, const size_t j) const;
@@ -603,28 +616,30 @@ typedef CPUMatrix<float> CPUSingleMatrix;
 typedef CPUMatrix<double> CPUDoubleMatrix;
 typedef CPUMatrix<half> CPUHalfMatrix;
 
-template<typename ElemType>
+template <typename ElemType>
 void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-    const array<size_t, 2>& offsets,
-    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
-    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+                           const array<size_t, 2>& offsets,
+                           const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                           const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
-template<typename ElemType>
+template <typename ElemType>
 void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-    const array<size_t, 3>& offsets,
-    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
-    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides);
+                           const array<size_t, 3>& offsets,
+                           const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
+                           const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides);
 
-template<typename ElemType>
+template <typename ElemType>
 void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
-    const array<size_t, 4>& offsets,
-    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
-    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+                           const array<size_t, 4>& offsets,
+                           const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
+                           const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
 
-template<typename ElemType>
+template <typename ElemType>
 void CPUMatrixTensorArgOpImpl(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& o, ElementWiseOperator reductionOp,
-    const array<size_t, 2>& offsets,
-    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
-    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+                              const array<size_t, 2>& offsets,
+                              const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                              const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft

@@ -19,7 +19,12 @@
 #pragma warning(disable : 4100) // unreferenced formal parameter, which is OK since all functions in here are dummies; disabling this allows to copy-paste prototypes here when we add new functions
 #pragma warning(disable : 4702) // unreachable code, which we get from the NOT_IMPLEMENTED macro which is OK
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 // the reset below are dummy implementations
 
@@ -289,25 +294,25 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
     return 1;
 }
 
-template<class ElemType>
+template <class ElemType>
 void GPUSparseMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>&, GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType, ElemType)
 {
 }
 
-template<class ElemType>
+template <class ElemType>
 void GPUSparseMatrix<ElemType>::Adam(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
 {
 }
 
-template<class ElemType>
+template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType, ElemType, const bool, const bool)
 {
     return 1;
 }
 
-template<class ElemType>
-template<class AccumType>
-void GPUSparseMatrix<ElemType>::AdaDelta(GPUMatrix<AccumType>&c, GPUMatrix<AccumType>&functionValues, AccumType learningRate, AccumType rho, AccumType epsilon, int* timestamps, int currentTimestamp)
+template <class ElemType>
+template <class AccumType>
+void GPUSparseMatrix<ElemType>::AdaDelta(GPUMatrix<AccumType>& c, GPUMatrix<AccumType>& functionValues, AccumType learningRate, AccumType rho, AccumType epsilon, int* timestamps, int currentTimestamp)
 {
 }
 
@@ -1057,7 +1062,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GatherFromTarget(const GPUMatrix<ElemT
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements, const GPUMatrix<char>* mask/* = nullptr*/)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::ScatterToIndices(const GPUMatrix<ElemType>& values, const GPUMatrix<ElemType>& indices, size_t row_elements, const GPUMatrix<char>* mask /* = nullptr*/)
 {
     return *this;
 }
@@ -1176,9 +1181,8 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<El
 
 template <class ElemType>
 void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
+                               ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
 {
-
 }
 
 template <class ElemType>
@@ -1497,8 +1501,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
 
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-    const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBound, GPUMatrix<ElemType> & totalScore, const std::vector<size_t>& uttMap, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
-    const std::vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+                                                         const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBound, GPUMatrix<ElemType>& totalScore, const std::vector<size_t>& uttMap, const std::vector<size_t>& uttBeginFrame, const std::vector<size_t>& uttFrameNum,
+                                                         const std::vector<size_t>& uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
 {
     return *this;
 }
@@ -2011,31 +2015,31 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddAveragePoolingGradient(const GPUMat
 
 template <class ElemType>
 void GPUMatrix<ElemType>::ConvolutionForward(const GPUMatrix<ElemType>& kernel, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
-                                               const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& output) const
+                                             const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& output) const
 {
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::ConvolutionBackwardData(const GPUMatrix<ElemType>& kernel, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
-                                                    const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& grad) const
+                                                  const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& grad) const
 {
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::ConvolutionBackwardKernel(const GPUMatrix<ElemType>& in, const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIwht,
-                                                      const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& kernelGrad) const
+                                                    const GPUMatrix<int>& mpRowRun, const GPUMatrix<int>& runs, GPUMatrix<ElemType>& kernelGrad) const
 {
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height, 
-    const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, GPUMatrix<ElemType>& argmax, double spatialScale) const
+void GPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                               const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, GPUMatrix<ElemType>& argmax, double spatialScale) const
 {
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-    const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, GPUMatrix<ElemType>& argmax, double spatialScale) const
+                                                const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, GPUMatrix<ElemType>& argmax, double spatialScale) const
 {
 }
 
@@ -2046,8 +2050,8 @@ void GPUMatrix<ElemType>::MaxPoolingForward(const GPUMatrix<int>& mpRowCol, cons
 
 template <class ElemType>
 void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, const GPUMatrix<ElemType>& in,
-                                               const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices,
-                                               GPUMatrix<ElemType>& grad, bool accumulateGradient) const
+                                             const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices,
+                                             GPUMatrix<ElemType>& grad, bool accumulateGradient) const
 {
 }
 
@@ -2083,7 +2087,7 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const GPUMatrix<ElemType> &paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
 {
 }
 
@@ -2375,6 +2379,57 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
 {
 }
 
+// BiVfsmnNode BEGIN
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ComputeBiVfsmnMemory(const GPUMatrix<ElemType>& in,       // DxT
+                                               const GPUMatrix<ElemType>& l_filter, // DxN1 TODO: +1
+                                               const GPUMatrix<ElemType>& r_filter, // DxN2
+                                               const GPUMatrix<char>& flags,        // 1xT
+                                               int flag_stride,
+                                               int l_order, int r_order,
+                                               int l_stride, int r_stride,
+                                               GPUMatrix<ElemType>& out)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ComputeBiVfsmnMemoryGradient(
+    const GPUMatrix<ElemType>& gradientValues,
+    const GPUMatrix<ElemType>& l_filter,
+    const GPUMatrix<ElemType>& r_filter,
+    const GPUMatrix<char>& flags,
+    int flag_stride,
+    int l_order, int r_order,
+    int l_stride, int r_stride,
+    GPUMatrix<ElemType>& inputGradientValues)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
+    const GPUMatrix<ElemType>& gradientValues,
+    const GPUMatrix<ElemType>& inputValues,
+    const GPUMatrix<char>& flags,
+    int flag_stride,
+    int l_order, int l_stride,
+    GPUMatrix<ElemType>& leftFilterGradientValues)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
+    const GPUMatrix<ElemType>& gradientValues,
+    const GPUMatrix<ElemType>& inputValues,
+    const GPUMatrix<char>& flags,
+    int flag_stride,
+    int r_order, int r_stride,
+    GPUMatrix<ElemType>& rightFilterGradientValues)
+{
+}
+
+// BiVfsmnNode END
+
 template <class ElemType>
 void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemType>& a,
                                                            const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& bias, size_t sampleCount, GPUMatrix<ElemType>& tmp, GPUMatrix<ElemType>& c)
@@ -2453,7 +2508,9 @@ void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<do
 
 #pragma region GPUDataTransferer functions
 
-GranularGPUDataTransferer::~GranularGPUDataTransferer() {}
+GranularGPUDataTransferer::~GranularGPUDataTransferer()
+{
+}
 
 void GranularGPUDataTransferer::CopyGPUToCPUAsync(const void* /*gpuBuffer*/, size_t /*numElements*/, size_t /*elementSize*/, void* /*cpuBuffer*/) {}
 
@@ -2473,16 +2530,17 @@ void GranularGPUDataTransferer::WaitForSyncPointOnFetchStreamAsync() {}
 
 void GranularGPUDataTransferer::WaitForSyncPointOnAssignStreamAsync() {}
 
-PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int /*deviceId*/) : GranularGPUDataTransferer() {}
+PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int /*deviceId*/)
+    : GranularGPUDataTransferer() {}
 
 PrefetchGPUDataTransferer::~PrefetchGPUDataTransferer() {}
 
-GPUDataTransferer::GPUDataTransferer(int, bool){}
-GPUDataTransferer::~GPUDataTransferer(){}
-void GPUDataTransferer::CopyGPUToCPUAsync(void*, size_t, void*){}
-void GPUDataTransferer::WaitForCopyGPUToCPUAsync(){}
-void GPUDataTransferer::CopyCPUToGPUAsync(void*, size_t, void*){}
-void GPUDataTransferer::WaitForCopyCPUToGPUAsync(){}
+GPUDataTransferer::GPUDataTransferer(int, bool) {}
+GPUDataTransferer::~GPUDataTransferer() {}
+void GPUDataTransferer::CopyGPUToCPUAsync(void*, size_t, void*) {}
+void GPUDataTransferer::WaitForCopyGPUToCPUAsync() {}
+void GPUDataTransferer::CopyCPUToGPUAsync(void*, size_t, void*) {}
+void GPUDataTransferer::WaitForCopyCPUToGPUAsync() {}
 
 #pragma endregion GPUDataTransferer functions
 
@@ -2544,7 +2602,6 @@ template void GPUMatrix<float>::BatchNormalizationBackward(const GPUMatrix<float
 template void GPUMatrix<double>::BatchNormalizationBackward(const GPUMatrix<double>& in, GPUMatrix<double>& grad, const GPUMatrix<double>& scale, double blendFactor, const GPUMatrix<double>& saveMean, const GPUMatrix<double>& saveInvStdDev, GPUMatrix<double>& scaleGrad, GPUMatrix<double>& biasGrad) const;
 template void GPUMatrix<half>::BatchNormalizationBackward(const GPUMatrix<half>& in, GPUMatrix<half>& grad, const GPUMatrix<float>& scale, double blendFactor, const GPUMatrix<float>& saveMean, const GPUMatrix<float>& saveInvStdDev, GPUMatrix<float>& scaleGrad, GPUMatrix<float>& biasGrad) const;
 
-
 template void GPUSparseMatrix<char>::DeepCast(const GPUSparseMatrix<float>& deepCopyFrom);
 template void GPUSparseMatrix<char>::DeepCast(const GPUSparseMatrix<double>& deepCopyFrom);
 template void GPUSparseMatrix<char>::DeepCast(const GPUSparseMatrix<half>& deepCopyFrom);
@@ -2564,9 +2621,9 @@ template void GPUSparseMatrix<half>::DeepCast(const GPUSparseMatrix<float>& deep
 template void GPUSparseMatrix<half>::DeepCast(const GPUSparseMatrix<double>& deepCopyFrom);
 template void GPUSparseMatrix<half>::DeepCast(const GPUSparseMatrix<half>& deepCopyFrom);
 
-template void GPUSparseMatrix<float>::AdaDelta<float>(GPUMatrix<float>&c, GPUMatrix<float>&functionValues, float learningRate, float rho, float epsilon, int* timestamps, int currentTimestamp);
-template void GPUSparseMatrix<double>::AdaDelta<double>(GPUMatrix<double>&c, GPUMatrix<double>&functionValues, double learningRate, double rho, double epsilon, int* timestamps, int currentTimestamp);
-template void GPUSparseMatrix<half>::AdaDelta<float>(GPUMatrix<float>&c, GPUMatrix<float>&functionValues, float learningRate, float rho, float epsilon, int* timestamps, int currentTimestamp);
+template void GPUSparseMatrix<float>::AdaDelta<float>(GPUMatrix<float>& c, GPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon, int* timestamps, int currentTimestamp);
+template void GPUSparseMatrix<double>::AdaDelta<double>(GPUMatrix<double>& c, GPUMatrix<double>& functionValues, double learningRate, double rho, double epsilon, int* timestamps, int currentTimestamp);
+template void GPUSparseMatrix<half>::AdaDelta<float>(GPUMatrix<float>& c, GPUMatrix<float>& functionValues, float learningRate, float rho, float epsilon, int* timestamps, int currentTimestamp);
 
 template <class ElemType>
 cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = {0};
@@ -2593,7 +2650,7 @@ template class CuDnnConvolutionEngineFactory<half>;
 
 template <class InoutType, class StatType>
 std::unique_ptr<BatchNormEngine<InoutType, StatType>> CuDnnBatchNormEngineFactory<InoutType, StatType>::Create(DEVICEID_TYPE deviceId, const TensorShape& inOutT,
-                                                                                         bool spatial, ImageLayoutKind imageLayout)
+                                                                                                               bool spatial, ImageLayoutKind imageLayout)
 {
     RuntimeError("The code is compiled with CPUONLY macro.");
 }
@@ -2620,9 +2677,14 @@ float CudaTimer::Elapsed()
 {
 }
 
-/*static*/ bool SyncGuard::IsSyncEnabled() { return false; }
+/*static*/ bool SyncGuard::IsSyncEnabled()
+{
+    return false;
+}
 
-} } }
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft
 
 // define a dummy GPUWatcher class too
 #include "GPUWatcher.h"

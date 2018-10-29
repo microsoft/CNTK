@@ -9,7 +9,7 @@
 #include "Helpers.h"
 #include "CommonMatrix.h"
 #include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
-#include "BestGpu.h" // for CPUONLY macro
+#include "BestGpu.h"     // for CPUONLY macro
 #include "ConcStack.h"
 #include "GPURNGHandle.h"
 #include <string>
@@ -59,7 +59,12 @@ typedef struct CUstream_st* cudaStream_t;
 void MATH_API SetStream(cudaStream_t stream);
 cudaStream_t MATH_API GetStream();
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 MATH_API std::size_t GetCUDNNVersion();
 
 class DataTransferer;
@@ -123,40 +128,41 @@ public:
 
 void PrepareDevice(DEVICEID_TYPE deviceId);
 
-template<class ElemType> class CuDnnRNNExecutor;
+template <class ElemType>
+class CuDnnRNNExecutor;
 
 template <class ElemType>
 class MATH_API GPUMatrix : public BaseMatrix<ElemType>
 {
     typedef BaseMatrix<ElemType> Base;
-    using Base::m_numRows;
-    using Base::m_numCols;
-    using Base::m_sliceViewOffset;
+    using Base::GetSizeAllocated;
     using Base::HasExternalBuffer;
+    using Base::m_numCols;
+    using Base::m_numRows;
+    using Base::m_sliceViewOffset;
+    using Base::m_sob;
+    using Base::ReleaseStorageMemory;
     using Base::SetBuffer;
     using Base::SetComputeDeviceId;
+    using Base::SetSizeAllocated;
+    using Base::ShallowCopyFrom;
     using Base::ZeroInit;
     using Base::ZeroValues;
-    using Base::m_sob;
-    using Base::ShallowCopyFrom;
-    using Base::ReleaseStorageMemory;
-    using Base::GetSizeAllocated;
-    using Base::SetSizeAllocated;
 
     template <typename T>
     friend class GPUMatrix;
 
 public:
-    using Base::GetComputeDeviceId;
     using Base::Buffer;
-    using Base::GetNumRows;
-    using Base::GetNumCols;
+    using Base::GetComputeDeviceId;
     using Base::GetDiagSize;
-    using Base::GetNumElements;
-    using Base::OwnBuffer;
     using Base::GetFormat;
-    using Base::SetFormat;
+    using Base::GetNumCols;
+    using Base::GetNumElements;
+    using Base::GetNumRows;
     using Base::IsEmpty;
+    using Base::OwnBuffer;
+    using Base::SetFormat;
     using Base::VerifyResizable;
     using Base::VerifySize;
 
@@ -183,7 +189,10 @@ private:
     size_t LocateColumn(const size_t j) const;
     void Clear();
     void ZeroInit(int deviceId);
-    void ZeroInit() { Base::ZeroInit(); }
+    void ZeroInit()
+    {
+        Base::ZeroInit();
+    }
 
     std::unique_ptr<GPUMatrix<ElemType>> GetOrCreateWorkspace() const;
     void ReleaseWorkspace(std::unique_ptr<GPUMatrix<ElemType>> src) const;
@@ -208,7 +217,7 @@ public:
 
     void ChangeDeviceTo(DEVICEID_TYPE to_id);
 
-    template<class ElemType2>
+    template <class ElemType2>
     void CastAssignValuesOf(const GPUMatrix<ElemType2>* other);
 
 public:
@@ -235,18 +244,18 @@ public:
                    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType unitGainFactor);
 
     void Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax=false);
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax = false);
 
-    ElemType RmsProp(GPUMatrix<ElemType>& gradients, 
-                     ElemType RMS_GAMMA, 
-                     ElemType RMS_WGT_INC, 
-                     ElemType RMS_WGT_MAX, 
-                     ElemType RMS_WGT_DEC, 
-                     ElemType RMS_WGT_MIN, 
+    ElemType RmsProp(GPUMatrix<ElemType>& gradients,
+                     ElemType RMS_GAMMA,
+                     ElemType RMS_WGT_INC,
+                     ElemType RMS_WGT_MAX,
+                     ElemType RMS_WGT_DEC,
+                     ElemType RMS_WGT_MIN,
                      const bool needAveMultiplier,
                      const bool initialized);
 
-    template<typename GradType>
+    template <typename GradType>
     void AdaDelta(GPUMatrix<GradType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
 
     void AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp);
@@ -257,14 +266,23 @@ public:
     // multiple views, RequireSize will first check to see if Resize is required. If it is not, then it short-circuits and is a noop. Otherwise, RequireSize
     // will call Resize, which may fail if the matrix has multiple views.
     void RequireSize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
-    void RequireSize(const GPUMatrix<ElemType>& like, bool growOnly = true) { RequireSize(like.GetNumRows(), like.GetNumCols(), growOnly); }
+    void RequireSize(const GPUMatrix<ElemType>& like, bool growOnly = true)
+    {
+        RequireSize(like.GetNumRows(), like.GetNumCols(), growOnly);
+    }
 
     // Resize first checks to ensure that the caller has the authority to call Resize (i.e., it checks to ensure the underlying data is owned by only this matrix), and then
     // actually resizes the underlying matrix, doing any allocation as required.
     void Resize(const size_t numRows, const size_t numCols, bool growOnly = true); // by default we only reallocate if need to grow
 
-    ElemType&       operator()(const size_t /*row*/, const size_t /*col*/)       { LogicError("GPUMatrix doesn't support operator(,) on the CPU."); }
-    const ElemType& operator()(const size_t /*row*/, const size_t /*col*/) const { LogicError("GPUMatrix doesn't support operator(,) on the CPU."); }
+    ElemType& operator()(const size_t /*row*/, const size_t /*col*/)
+    {
+        LogicError("GPUMatrix doesn't support operator(,) on the CPU.");
+    }
+    const ElemType& operator()(const size_t /*row*/, const size_t /*col*/) const
+    {
+        LogicError("GPUMatrix doesn't support operator(,) on the CPU.");
+    }
     ElemType Get00Element() const;
 
     void SetValue(const ElemType v);
@@ -287,7 +305,7 @@ public:
     void SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev);
     void SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
-    void SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED); 
+    void SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
 
     GPUMatrix<ElemType>& AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
@@ -297,7 +315,7 @@ public:
     GPUMatrix<ElemType> Transpose() const;
     GPUMatrix<ElemType>& AssignTransposeOf(const GPUMatrix<ElemType>& a);
 
-    GPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha);
+    GPUMatrix<ElemType>& DoGatherColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha);
     GPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha, bool idxHaveDups);
 
     GPUMatrix<ElemType>& operator+=(const ElemType alpha);
@@ -373,8 +391,8 @@ public:
     GPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha);
 
     GPUMatrix<ElemType>& AssignCTCScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-        const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBoundary, GPUMatrix<ElemType> & totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum,
-        const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+                                        const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBoundary, GPUMatrix<ElemType>& totalScore, const vector<size_t>& uttMap, const vector<size_t>& uttBeginFrame, const vector<size_t>& uttFrameNum,
+                                        const vector<size_t>& uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
 
     GPUMatrix<ElemType>& InplaceSqrt();
     GPUMatrix<ElemType>& AssignSqrtOf(const GPUMatrix<ElemType>& a);
@@ -530,22 +548,22 @@ public:
     void MaxUnpooling(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, const GPUMatrix<ElemType>& poolInput, GPUMatrix<ElemType>& input) const;
 
     void MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                              const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
+                              const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output,
                               GPUMatrix<ElemType>& argmax, double spatialScale) const;
 
     void MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                               const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
+                               const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad,
                                GPUMatrix<ElemType>& argmax, double spatialScale) const;
 
     void AveragePoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const;
     void AveragePoolingBackward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& grad, bool accumulateGradient) const;
 
-    template<class StatType>
+    template <class StatType>
     void BatchNormalizationForward(const GPUMatrix<StatType>& scale, const GPUMatrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
                                    GPUMatrix<StatType>& runMean, GPUMatrix<StatType>& runVariance, GPUMatrix<ElemType>& out, double epsilon,
                                    GPUMatrix<StatType>& saveMean, GPUMatrix<StatType>& saveInvStdDev) const;
 
-    template<class StatType>
+    template <class StatType>
     void BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<StatType>& scale, double blendFactor,
                                     const GPUMatrix<StatType>& saveMean, const GPUMatrix<StatType>& saveInvStdDev,
                                     GPUMatrix<StatType>& scaleGrad, GPUMatrix<StatType>& biasGrad) const;
@@ -643,6 +661,36 @@ public:
                                     const int shift);
 
 public:
+    static void ComputeBiVfsmnMemory(const GPUMatrix<ElemType>& in,       // DxT
+                                     const GPUMatrix<ElemType>& l_filter, // DxN1 TODO: +1
+                                     const GPUMatrix<ElemType>& r_filter, // DxN2
+                                     const GPUMatrix<char>& flags,        // 1xT
+                                     int flag_stride,
+                                     int l_order, int r_order,
+                                     int l_stride, int r_stride,
+                                     GPUMatrix<ElemType>& out);
+    static void ComputeBiVfsmnMemoryGradient(const GPUMatrix<ElemType>& gradientValues,
+                                             const GPUMatrix<ElemType>& l_filter,
+                                             const GPUMatrix<ElemType>& r_filter,
+                                             const GPUMatrix<char>& flags,
+                                             int flag_stride,
+                                             int l_order, int r_order,
+                                             int l_stride, int r_stride,
+                                             GPUMatrix<ElemType>& inputGradientValues);
+    static void ComputeBiVfsmnLeftFilterGradient(const GPUMatrix<ElemType>& gradientValues,
+                                                 const GPUMatrix<ElemType>& inputValues,
+                                                 const GPUMatrix<char>& flags,
+                                                 int flag_stride,
+                                                 int l_order, int l_stride,
+                                                 GPUMatrix<ElemType>& leftFilterGradientValues);
+    static void ComputeBiVfsmnRightFilterGradient(const GPUMatrix<ElemType>& gradientValues,
+                                                  const GPUMatrix<ElemType>& inputValues,
+                                                  const GPUMatrix<char>& flags,
+                                                  int flag_stride,
+                                                  int r_order, int r_stride,
+                                                  GPUMatrix<ElemType>& rightFilterGradientValues);
+
+public:
     friend File& operator>>(File& stream, GPUMatrix<ElemType>& us)
     {
         stream.GetMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
@@ -676,7 +724,7 @@ public:
         ElemType* pArray = us.CopyToArray();
         for (size_t i = 0; i < us.GetNumElements(); ++i)
             stream << pArray[i];
-        
+
         delete[] pArray;
 
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
@@ -686,7 +734,9 @@ public:
 
 typedef GPUMatrix<float> GPUSingleMatrix;
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft
 
 #ifndef CPUONLY
 
@@ -699,7 +749,7 @@ typedef GPUMatrix<float> GPUSingleMatrix;
 template <typename ERRTYPE>
 const char* CudaErrString(ERRTYPE x); // actual error function is defined inside .cu files
 template <typename ERRTYPE>
-static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libName, ERRTYPE successCode, const char* msg="")
+static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libName, ERRTYPE successCode, const char* msg = "")
 {
     if (retCode != successCode)
     {
@@ -714,7 +764,7 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 #endif
             int currentCudaDevice;
             cudaGetDevice(&currentCudaDevice);
-            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s%s", libName, (int)retCode, CudaErrString(retCode), currentCudaDevice, hostname ? hostname : "?", exprString, msg);
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s%s", libName, (int) retCode, CudaErrString(retCode), currentCudaDevice, hostname ? hostname : "?", exprString, msg);
         }
         catch (const std::exception& e) // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
         {
@@ -724,11 +774,11 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
     }
 }
 
-#define CUDA_CALL(expr)     (CudaCall((expr), #expr, "CUDA",     cudaSuccess))
-#define CUBLAS_CALL(expr)   (CudaCall((expr), #expr, "CUBLAS",   CUBLAS_STATUS_SUCCESS))
+#define CUDA_CALL(expr) (CudaCall((expr), #expr, "CUDA", cudaSuccess))
+#define CUBLAS_CALL(expr) (CudaCall((expr), #expr, "CUBLAS", CUBLAS_STATUS_SUCCESS))
 #define CUSPARSE_CALL(expr) (CudaCall((expr), #expr, "CUSPARSE", CUSPARSE_STATUS_SUCCESS))
-#define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND",   CURAND_STATUS_SUCCESS))
-#define CUDNN_CALL(expr)    (CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS))
-#define CUDNN_CALL2(expr,m) (CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS, m))
+#define CURAND_CALL(expr) (CudaCall((expr), #expr, "CURAND", CURAND_STATUS_SUCCESS))
+#define CUDNN_CALL(expr) (CudaCall((expr), #expr, "cuDNN", CUDNN_STATUS_SUCCESS))
+#define CUDNN_CALL2(expr, m) (CudaCall((expr), #expr, "cuDNN", CUDNN_STATUS_SUCCESS, m))
 
 #endif // CPUONLY
