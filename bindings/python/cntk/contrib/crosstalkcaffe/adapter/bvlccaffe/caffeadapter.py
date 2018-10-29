@@ -243,6 +243,22 @@ class SetupCaffeParameters(object):
         '''
         SetupCaffeParameters.default(caffe_parameters, inputs_info, cntk_layer_def)
 
+   @staticmethod
+    def prelu(caffe_parameters, inputs_info, cntk_layer_def):
+        '''
+         The PReLU parameter setup from Caffe to CNTK
+        Args:
+            caffe_parameters (:class:`caffe.Parameters`): the parameters of Caffe
+            inputs_info ('class':`cntk.contrib.crosstalkcaffe.unimodel.cntkmodel.CntkTensorDefinition`):
+                The input information of current layer
+            cntk_layer_def ('class':`cntk.contrib.crosstalkcaffe.unimodel.cntkmodel.CntkLayersDefinition`):
+                The converted definition of CNTK layers
+        Return:
+            None
+        '''
+        SetupCaffeParameters.default(caffe_parameters, inputs_info, cntk_layer_def)
+
+        
     @staticmethod
     def plus(caffe_parameters, inputs_info, cntk_layer_def):
         '''
