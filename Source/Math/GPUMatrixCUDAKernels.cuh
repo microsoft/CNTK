@@ -5201,7 +5201,7 @@ __global__ void _computeBiVfsmnMemory(
     const ElemType* in,        // D x T
     const ElemType* l_filter,  // D x N1 (TODO: +1)
     const ElemType* r_filter,  // D x N2
-    const ElemType* flags,     // 1 x T
+    const char* flags,      // 1 x T
     const CUDA_LONG flag_stride, // this is MBLayout's GetNumParallelSequences(), to process the Matrix's layout
     const CUDA_LONG N, const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG l_order, const CUDA_LONG r_order,
@@ -5250,7 +5250,7 @@ __global__ void _computeBiVfsmnMemoryGradient(
     const ElemType* in,        // D x T, output gradient
     const ElemType* l_filter,  // D x N1 (TODO: +1)
     const ElemType* r_filter,  // D x N2
-    const ElemType* flags,     // 1 x T
+    const char* flags,      // 1 x T
     const CUDA_LONG flag_stride, // this is MBLayout's GetNumParallelSequences(), to process the Matrix's layout
     const CUDA_LONG N, const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG l_order, const CUDA_LONG r_order,
@@ -5298,7 +5298,7 @@ template <class ElemType>
 __global__ void _computeBiVfsmnLeftFilterGradient(
     const ElemType* diff,      // D x T, output gradient
     const ElemType* in,        // D x T, input
-    const ElemType* flags,     // 1 x T
+    const char* flags,          // 1 x T
     const CUDA_LONG flag_stride, // this is MBLayout's GetNumParallelSequences(), to process the Matrix's layout
     const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG l_order,
@@ -5323,7 +5323,7 @@ __global__ void _computeBiVfsmnLeftFilterGradient(
 
     if (steps > 1)
     {
-        if (col >= 0 && fabs_(flags[threadIdx.x] - flags[col])<1e-2 && flags[col] != 0)
+        if (col >= 0 && flags[threadIdx.x] == flags[col] && flags[col] >= 0)
         {
             aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
         }
@@ -5336,14 +5336,14 @@ __global__ void _computeBiVfsmnLeftFilterGradient(
         {
             int index = threadIdx.x + i*THREADS;
 
-            if (index < cols && fabs_(flags[index] - flags[index - shift])<1e-2 && flags[index] != 0)
+            if (index < cols && flags[index] == flags[index - shift] && flags[index] >= 0)
                 aux[threadIdx.x] += in[(index - shift)*rows + row] * diff[index*rows + row];
         }
         __syncthreads();
     }
     else
     {
-        if (col >= 0 && threadIdx.x<cols && fabs_(flags[threadIdx.x] - flags[col])<1e-2 && flags[col] != 0)
+        if (col >= 0 && threadIdx.x<cols && flags[threadIdx.x] == flags[col] && flags[col] >= 0)
         {
             aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
         }
@@ -5376,7 +5376,7 @@ template <class ElemType>
 __global__ void _computeBiVfsmnRightFilterGradient(
     const ElemType* diff,      // D x T, output gradient
     const ElemType* in,        // D x T, input
-    const ElemType* flags,     // 1 x T
+    const char* flags,          // 1 x T
     const CUDA_LONG flag_stride, // this is MBLayout's GetNumParallelSequences(), to process the Matrix's layout
     const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG r_order,
@@ -5401,7 +5401,7 @@ __global__ void _computeBiVfsmnRightFilterGradient(
 
     if (steps > 1)
     {
-        if (col < cols && fabs_(flags[threadIdx.x] - flags[col])<1e-2 && flags[col] != 0)
+        if (col < cols && flags[threadIdx.x] == flags[col] && flags[col] >= 0)
         {
             aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
         }
@@ -5414,14 +5414,14 @@ __global__ void _computeBiVfsmnRightFilterGradient(
         {
             int index = threadIdx.x + i*THREADS;
 
-            if (index + shift < cols && fabs_(flags[index] - flags[index + shift])<1e-2 && flags[index] != 0)
+            if (index + shift < cols && flags[index] == flags[index + shift] && flags[index] >= 0)
                 aux[threadIdx.x] += in[(index + shift)*rows + row] * diff[index*rows + row];
         }
         __syncthreads();
     }
     else
     {
-        if (col < cols && threadIdx.x<cols && fabs_(flags[threadIdx.x] - flags[col])<1e-2 && flags[col] != 0)
+        if (col < cols && threadIdx.x<cols && flags[threadIdx.x] == flags[col] && flags[col] >= 0)
         {
             aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
         }

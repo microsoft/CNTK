@@ -52,15 +52,13 @@ class BiVfsmnNode : public ComputationNode<ElemType>, public NumInputs<3>
 
 public:
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name),
-          m_flags(make_shared<Matrix<ElemType>>(1, 65536, deviceId))  // TODO:65536 is a hard code minibatch size
+        : Base(deviceId, name)
     {
     }
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride)
         : Base(deviceId, name),
           m_lOrder(lOrder), m_rOrder(rOrder),
-          m_lStride(lStride), m_rStride(rStride),
-          m_flags(make_shared<Matrix<ElemType>>(1, 65536, deviceId))  // TODO:65536 is a hard code minibatch size
+          m_lStride(lStride), m_rStride(rStride)
     {
     }
     BiVfsmnNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -68,116 +66,21 @@ public:
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
-
-    // This MatrixPool related method doesn't work well and I still can get CUDA 77 error:
-    // https://github.com/Microsoft/CNTK/issues/3356
-
-    // virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
-    // {
-    //     Base::RequestMatricesBeforeForwardProp(matrixPool);
-    //     RequestMatrixFromPool(m_flags, matrixPool);
-    // }
-
-    // virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
-    // {
-    //     Base::ReleaseMatricesAfterBackprop(matrixPool);
-    //     ReleaseMatrixToPool(m_flags, matrixPool);
-    // }
-
-    // virtual void UpdateFunctionMBSize() override
-    // {
-    //     Base::UpdateFunctionMBSize();
-
-    //     m_flags->Resize(1, InputRef(0).Value().GetNumCols());
-    // }
-
-    virtual void BeginForwardProp() override
-    {
-        Base::BeginForwardProp();
-
-        if (InputRef(0).Value().GetNumCols() > 65536) {
-            LogicError("[BiVfsmnNode] Minibatch size is hard code as 65536 in this "
-                       "implementatation. Your minibatch size is too big and it's "
-                       "better to lower your minibatch size or modify this node's "
-                       "constructor and rebuild.");
-        }
-
-        // CPU-side m_flags
-        std::vector<ElemType> flags(InputRef(0).Value().GetNumCols());
-
-        // BEGIN construct flag
-        auto pMBLayout  = InputRef(0).GetMBLayout();
-        auto sequences = pMBLayout->GetAllSequences();
-        size_t seqMaxLen  = pMBLayout->GetNumTimeSteps();
-        size_t paraNum = pMBLayout->GetNumParallelSequences();
-        size_t nFrames    = InputRef(0).Value().GetNumCols();
-
-        size_t count = 0;
-        for (size_t i = 0; i < sequences.size(); ++i)
-        {
-            let& sequence = sequences[i];
-            ElemType id = 0;  // GAP_SEQUENCE_ID, for padding frames
-            if (sequence.seqId != GAP_SEQUENCE_ID)
-            {
-                id = (ElemType)(sequence.seqId + 1);
-            }
-            size_t slot = sequence.s;
-            size_t begin = sequence.tBegin >= 0 ? sequence.tBegin : 0;
-            size_t end = sequence.tEnd <= seqMaxLen ? sequence.tEnd : seqMaxLen;
-            for (size_t j = begin; j < end; ++j)
-            {
-                flags[j * paraNum + slot] = id;
-                ++count;
-            }
-        }
-        // double-check
-        if (count != nFrames) {
-            LogicError("[BiVfsmnNode] not construct full flag matrix.");
-        }
-        // END construct flag
-
-        // move to GPU
-        // TODO: I hard code the size of m_flags now, and it works fine in this SetValue(...).
-        // You can read GPUMatrix::SetValue(...), GPUMatrix::RequireSize(...) and 
-        // GPUMatrix::GetNumElements(...) to understand the correctness.
-        // This implementation can avoid multiple transfer.
-        m_flags->SetValue(1, flags.size(), m_deviceId, flags.data(), matrixFlagNormal);
-        // PrintMatrix(m_flags);
-    }
+	virtual void /*IComputationNode::*/ BeginForwardProp() override {
+        GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
+	}
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         if (!fr.IsAllFrames()) {
             LogicError("BiVfsmnNode node should not be in a loop now.");
         }
-
-        // BEGIN DEBUG
-        // std::cout << m_lOrder << " " << m_rOrder << " " << m_lStride << " " << m_rStride << std::endl;
-        // std::cout << Input(0)->Value().GetNumRows() << " " << Input(0)->Value().GetNumCols() << std::endl;
-        // std::cout << Input(1)->Value().GetNumRows() << " " << Input(1)->Value().GetNumCols() << std::endl;
-        // std::cout << Input(2)->Value().GetNumRows() << " " << Input(2)->Value().GetNumCols() << std::endl;
-        // std::cout << Value().GetNumRows() << " " << Value().GetNumCols() << std::endl;
-        // auto in0MBLayout = InputRef(0).GetMBLayout();
-        // auto in0Sequences = in0MBLayout->GetAllSequences();
-        // for (size_t i = 0; i < in0Sequences.size(); ++i)
-        // {
-        //     let& in0Seq = in0Sequences[i];
-        //     std::cout << in0Seq.seqId << " " << in0Seq.s << " " << in0Seq.tBegin << " " << in0Seq.tEnd << std::endl;
-        // }
-        // std::cout << in0MBLayout->GetNumTimeSteps() << " " << in0MBLayout->GetNumParallelSequences() << std::endl;
-        // END DEBUG
-
-        // Get Matrix (can not do this because copy constructor is deleted)
-        // leave them as comment
-        // auto memory  = Value();
-        // auto hidden  = Input(0)->Value();
-        // auto bfilter = Input(1)->Value();
-        // auto ffilter = Input(2)->Value();
-
+		
         // forward computation
-        m_flagStride = InputRef(0).GetMBLayout()->GetNumParallelSequences();
+        const auto& flags = GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
+        auto flagStride = GetMBLayout()->GetNumParallelSequences();
         Matrix<ElemType>::ComputeBiVfsmnMemory(Input(0)->Value(), Input(1)->Value(), Input(2)->Value(),
-                                               *m_flags, m_flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                                               flags, flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
                                                Value());
     }
 
@@ -186,28 +89,29 @@ public:
         if (!fr.IsAllFrames()) {
             LogicError("BiVfsmnNode node should not be in a loop now.");
         }
-        // std::cout << "In BiVfsmnNode BackpropTo()" << std::endl;
-        // std::cout << m_lOrder << " " << m_rOrder << " " << m_lStride << " " << m_rStride << " " << m_flagStride << std::endl;
+
+        const auto& flags = GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
+        auto flagStride = GetMBLayout()->GetNumParallelSequences();
 
         if (inputIndex == 0)
         {
             Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
                 Gradient(), Input(1)->Value(), Input(2)->Value(),
-                *m_flags, m_flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                flags, flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
                 Input(0)->Gradient());
         }
         else if (inputIndex == 1)
         {
             Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
                 Gradient(), Input(0)->Value(),
-                *m_flags, m_flagStride, m_lOrder, m_lStride,
+                flags, flagStride, m_lOrder, m_lStride,
                 Input(1)->Gradient());
         }
         else if (inputIndex == 2)
         {
             Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
                 Gradient(), Input(0)->Value(),
-                *m_flags, m_flagStride, m_rOrder, m_rStride,
+                flags, flagStride, m_rOrder, m_rStride,
                 Input(2)->Gradient());
         }
         else
@@ -249,8 +153,7 @@ public:
         {
             auto node = dynamic_pointer_cast<BiVfsmnNode<ElemType>>(nodeP);
             assert(node != nullptr);
-            node->m_flags = m_flags;
-            node->m_flagStride = m_flagStride;
+
             node->m_lOrder  = m_lOrder;
             node->m_rOrder  = m_rOrder;
             node->m_lStride = m_lStride;
@@ -269,8 +172,6 @@ public:
     size_t RStride() const { return m_rStride; }
 
 protected:
-    shared_ptr<Matrix<ElemType>> m_flags;
-    size_t m_flagStride;
     size_t m_lOrder;
     size_t m_rOrder;
     size_t m_lStride;

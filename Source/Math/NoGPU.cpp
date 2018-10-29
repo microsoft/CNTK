@@ -2381,7 +2381,7 @@ template <class ElemType>
 void GPUMatrix<ElemType>::ComputeBiVfsmnMemory(const GPUMatrix<ElemType>& in,      // DxT
                                                const GPUMatrix<ElemType>& l_filter,// DxN1 TODO: +1
                                                const GPUMatrix<ElemType>& r_filter,// DxN2
-                                               const GPUMatrix<ElemType>& flags,   // 1xT
+                                               const GPUMatrix<char>& flags,   // 1xT
                                                int flag_stride,
                                                int l_order, int r_order,
                                                int l_stride, int r_stride,
@@ -2394,7 +2394,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemoryGradient(
     const GPUMatrix<ElemType>& gradientValues,
     const GPUMatrix<ElemType>& l_filter,
     const GPUMatrix<ElemType>& r_filter,
-    const GPUMatrix<ElemType>& flags,
+    const GPUMatrix<char>& flags,
     int flag_stride,
     int l_order, int r_order,
     int l_stride, int r_stride,
@@ -2406,7 +2406,7 @@ template <class ElemType>
 void GPUMatrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
     const GPUMatrix<ElemType>& gradientValues,
     const GPUMatrix<ElemType>& inputValues,
-    const GPUMatrix<ElemType>& flags,
+    const GPUMatrix<char>& flags,
     int flag_stride,
     int l_order, int l_stride,
     GPUMatrix<ElemType>& leftFilterGradientValues)
@@ -2417,7 +2417,7 @@ template <class ElemType>
 void GPUMatrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
     const GPUMatrix<ElemType>& gradientValues,
     const GPUMatrix<ElemType>& inputValues,
-    const GPUMatrix<ElemType>& flags,
+    const GPUMatrix<char>& flags,
     int flag_stride,
     int r_order, int r_stride,
     GPUMatrix<ElemType>& rightFilterGradientValues)
