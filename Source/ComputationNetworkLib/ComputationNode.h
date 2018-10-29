@@ -312,7 +312,7 @@ public:
     // -----------------------------------------------------------------------
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
-        m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0),
+        m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0), m_orthonormalConstraint (0),
         m_gradientInitializedBy(nullptr),
         m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false)
     {
@@ -337,6 +337,9 @@ public:
         {
             node->m_deviceId = m_deviceId;
             node->m_learningRateMultiplier = m_learningRateMultiplier;
+            /* guoye: start */
+            node->m_orthonormalConstraint = m_orthonormalConstraint;
+            /* guoye: end */
             node->m_nodeName = newName;
 
             node->m_sampleLayout = m_sampleLayout;
@@ -2485,6 +2488,7 @@ protected:                                                                      
     using Base::m_nodeName;                                                                                                                              \
     using Base::m_pMBLayout;                                                                                                                             \
     using Base::m_learningRateMultiplier;                                                                                                                \
+    using Base::m_orthonormalConstraint;                                                                                                                \
     using Base::m_sampleLayout;                                                                                                                          \
     using Base::m_value;                                                                                                                                 \
     using Base::m_valueSharable;                                                                                                                         \

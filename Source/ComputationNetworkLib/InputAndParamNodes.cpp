@@ -475,6 +475,9 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
         LogicError("LearnableParameter: Cannot Save() before deferred initialization has completed.");
     Base::Save(fstream);
     fstream << m_learningRateMultiplier;
+	/* guoye: start */
+    fstream << m_orthonormalConstraint;
+	/* guoye: end */
     m_sampleLayout.Save(fstream);
     fstream << Value();
 }
@@ -489,6 +492,9 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
     if (modelVersion >= CNTK_MODEL_VERSION_3)
     {
         fstream >> m_learningRateMultiplier;
+        /* guoye: start */
+        fstream >> m_orthonormalConstraint;
+        /* guoye: end */
         sampleLayout.Load(fstream);
     }
     else // legacy format(s)
