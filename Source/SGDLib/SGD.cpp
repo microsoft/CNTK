@@ -1409,11 +1409,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     /* guoye: start */
                     
                     float alpha = node->GetOrthonormalConstraint();
-                    
+                    float LR = node->GetLearningRateMultiplier();
+                    fprintf(stderr, "SGD: alpha = %f, LR = %f.\n", alpha, LR);
+
                     if (alpha > 0.1 || alpha < -0.1)
                     {
-                        // fprintf(stderr, "SGD: alpha = %f .\n", alpha);
-
                         if (Microsoft::MSR::CNTK::rand(0, 4) == 0)
                         {
                             // fprintf(stderr, "SGD starting apply semi.\n");
