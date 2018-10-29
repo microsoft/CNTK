@@ -267,6 +267,27 @@ class ApiSetup(object):
         return ops.relu(sanitize_input, name=cntk_layer.op_name)
 
     @staticmethod
+    def prelu(cntk_layer, inputs):
+        '''
+         Setup PReLU op with given parameters
+        Args:
+            cntk_layer (:class:`~cntk.contrib.crosstalkcaffe.unimodel.cntkmodel.CntkLayersDefinition`):
+                the layer definition of PReLU op
+            inputs (list): a list contains all :class:`~cntk.ops.functions.Function` or
+                :class:`~cntk.input`
+        Return:
+            :func:`~cntk.ops.functions.Function`: instaced cntk PReLU op
+        '''
+        sanitize_input = internal.sanitize_input(inputs[0])
+        alpha_data_tensor = cntk_layer.parameter_tensor[0]
+        alpha_shape = list(sanitize_input.shape)
+        alpha_shape[1:] = np.repeat(1, len(alpha_shape)-1)
+        alpha = np.asarray(alpha_data_tensor.data, dtype=np.float32).reshape(alpha_shape)
+        alpha = ops.constant(value=alpha)
+        return ops.param_relu(alpha, sanitize_input, name=cntk_layer.op_name)
+
+    
+    @staticmethod
     def dense(cntk_layer, inputs):
         '''
          Setup dense op with given parameters
