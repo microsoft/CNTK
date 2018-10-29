@@ -1409,7 +1409,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     /* guoye: start */
                     
                     float alpha = node->GetOrthonormalConstraint();
-                    float LR = node->GetLearningRateMultiplier();
+                    // float LR = node->GetLearningRateMultiplier();
 
                     if (alpha > 1e-7 || alpha < -1e-7)
                     {
