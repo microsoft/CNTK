@@ -475,9 +475,9 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
         LogicError("LearnableParameter: Cannot Save() before deferred initialization has completed.");
     Base::Save(fstream);
     fstream << m_learningRateMultiplier;
-	/* guoye: start */
+    /* guoye: start */
     fstream << m_orthonormalConstraint;
-	/* guoye: end */
+    /* guoye: end */
     m_sampleLayout.Save(fstream);
     fstream << Value();
 }
