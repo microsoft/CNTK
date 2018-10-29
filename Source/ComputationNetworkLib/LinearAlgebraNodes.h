@@ -73,10 +73,6 @@ public:
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
-    virtual void /*IComputationNode::*/ BeginForwardProp() override
-    {
-        GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
-    }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
