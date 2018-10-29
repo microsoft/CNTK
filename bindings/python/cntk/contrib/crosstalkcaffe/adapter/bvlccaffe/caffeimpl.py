@@ -19,7 +19,8 @@ CAFFE_LAYER_WRAPPER = {
     'Accuracy': CntkLayerType.classification_error,
     'Dropout': CntkLayerType.dropout,
     'LRN': CntkLayerType.lrn,
-    'PSROIPooling': CntkLayerType.psroi_pooling
+    'PSROIPooling': CntkLayerType.psroi_pooling,
+    'PReLU': CntkLayerType.prelu
 }
 
 
