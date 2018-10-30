@@ -76,7 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_prevParameters[name]->SetValue(NodeValue);
                 }
             }
-            fprintf(stderr, "Parallel training (%d workers) using BlockMomentumSGD with "
+            fprintf(stderr, "Parallel training (%d workers) using BlockMomentumSGD MPI with "
                             "block momentum = %6.4f, "
                             "block momentum time constant (per worker) = %6.4f, "
                             "block learning rate = %6.4f, "

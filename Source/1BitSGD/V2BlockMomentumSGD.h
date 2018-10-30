@@ -89,7 +89,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 }
             }
 
-            fprintf(stderr, "Parallel training (%d workers) using BlockMomentumSGD with "
+            fprintf(stderr, "Parallel training (%d workers) using BlockMomentumSGD NCCL with "
                             "block momentum = %6.4f, "
                             "block momentum time constant (per worker) = %6.4f, "
                             "block learning rate = %6.4f, "
