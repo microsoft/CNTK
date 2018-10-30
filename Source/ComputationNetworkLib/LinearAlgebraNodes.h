@@ -50,9 +50,9 @@ namespace CNTK
 // }
 
 template <class ElemType>
-class BiVfsmnNode : public ComputationNode<ElemType>, public NumInputs<3>
+class BiVfsmnNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
 {
-    typedef ComputationNode<ElemType> Base;
+    typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
@@ -73,18 +73,13 @@ public:
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
-    virtual void /*ComputationNode::*/ BeginForwardProp() override
+    virtual void /*ComputationNodeNonLooping::*/ BeginForwardProp() override
     {
         Base::BeginForwardProp();
         GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
     }
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping()
     {
-        if (!fr.IsAllFrames())
-        {
-            LogicError("BiVfsmnNode node should not be in a loop now.");
-        }
-
         // forward computation
         const auto& flags = GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
         auto flagStride = GetMBLayout()->GetNumParallelSequences();
@@ -93,13 +88,8 @@ public:
                                                Value());
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) 
     {
-        if (!fr.IsAllFrames())
-        {
-            LogicError("BiVfsmnNode node should not be in a loop now.");
-        }
-
         const auto& flags = GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
         auto flagStride = GetMBLayout()->GetNumParallelSequences();
 
@@ -170,12 +160,6 @@ public:
             node->m_rStride = m_rStride;
         }
     }
-
-    // TODO: should return true?
-    // virtual bool ImplementsGradientOverwriteOptimization() const override { return false; }
-    // virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    // virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
-
     size_t LOrder() const
     {
         return m_lOrder;
