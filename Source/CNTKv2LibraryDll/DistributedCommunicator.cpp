@@ -363,19 +363,13 @@ namespace CNTK
             m_nccl.reset(new NcclComm(DeviceDescriptor::UseDefaultDevice().Id(), m_mpi));
         }
 
-        // For all values residing on GPU initiate async transfer to CPU buffers if needed
-        CopyDataFromGPUToCPU(valuesToAggregate);
-
         std::vector<MPI_Request> allReduceRequests;
+
+        m_nccl->NcclGroupStart();
+
         for (auto i = 0; i < numValues; ++i)
         {
             auto inputValue = valuesToAggregate[i];
-
-            if (ShouldCopyDataToCPU(inputValue))
-            {
-                // TODO: actually, we can start reducing all cpu values first, and then wait for the gpu->cpu transfer to finish.
-                m_gpuDataTransferers[i]->WaitForCopyGPUToCPUAsync();
-            }
 
             auto numElements = inputValue->Shape().TotalSize();
             auto dataType = inputValue->GetDataType();
@@ -386,8 +380,8 @@ namespace CNTK
             assert(dataType == outputValue->GetDataType());
             assert(inputValue->Device() == outputValue->Device());
 
-            void* inputData = (ShouldCopyDataToCPU(inputValue)) ? m_intermediateCPUBuffers[i].data.get() : GetDataBuffer(inputValue);
-            void* outputData = (ShouldCopyDataToCPU(inputValue)) ? m_intermediateCPUBuffers[i].data.get() : GetDataBuffer(outputValue);
+            void* inputData = GetDataBuffer(inputValue);
+            void* outputData = GetDataBuffer(outputValue);
 
             if (dataType == DataType::Float)
             {
@@ -407,6 +401,8 @@ namespace CNTK
             else
                 LogicError("MPICommunicator: Unknown DataType.");
         }
+
+        m_nccl->NcclGroupEnd();
 
         if (m_nccl->IsSupported())
         {

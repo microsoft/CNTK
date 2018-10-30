@@ -135,6 +135,16 @@ bool NcclComm::IsSupported()
     return m_ncclComm != nullptr;
 }
 
+void NcclComm::NcclGroupStart()
+{
+    ncclGroupStart();
+}
+
+void NcclComm::NcclGroupEnd()
+{
+    ncclGroupEnd();
+}
+
 void NcclComm::AllReduceImpl(void* inputbuffer, void *outputbuffer, size_t count, DataType dtype, MPI_Op op)
 {
     ncclResult_t res;
@@ -193,6 +203,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 NcclComm::NcclComm(int /*deviceId*/, const MPIWrapperPtr& /*mpi*/) { }
 
 NcclComm::~NcclComm() { }
+
+void NcclComm::NcclGroupStart(){}
+
+void NcclComm::NcclGroupEnd(){}
 
 bool NcclComm::IsSupported()
 {

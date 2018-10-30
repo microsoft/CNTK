@@ -44,6 +44,9 @@ public:
     bool IsSupported();
     void Sync(); // waits for outstanding reductions to complete
     
+    void NcclGroupStart();
+    void NcclGroupEnd();
+
     template <typename ElemType>
     void AllReduce(ElemType* inputBuffer, ElemType* outputBuffer, size_t count, MPI_Op op = MPI_SUM)
     {
