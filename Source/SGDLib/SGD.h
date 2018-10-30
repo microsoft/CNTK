@@ -163,6 +163,7 @@ protected:
     floatargvector m_momentumParam;
     intargvector m_momentumSpecifiedForMBSize;
     bool m_useNesterovMomentum;
+    bool m_disableMomentumUnitGain;
 
     // Determine the MB size used for mapping a given learning-rate or momentum parameter to a per-sample value.
     // MB size is the number of samples across all time steps and parallel sequences.
@@ -557,7 +558,8 @@ public:
                        size_t actualMBSize,
                        const double L2RegWeight, const double L1RegWeight,
                        const bool needAveMultiplier,
-                       const bool useNesterovMomentum) const;
+                       const bool useNesterovMomentum,
+                       const bool disableMomentumUnitGain) const;
     // return -1 if nothing exists
     int DetermineStartEpoch(const bool makeMode);
 
