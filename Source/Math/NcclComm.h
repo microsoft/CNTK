@@ -41,6 +41,8 @@ private:
 public:
     NcclComm(int deviceId, const MPIWrapperPtr& mpiComm);
     ~NcclComm();
+    void NcclGroupStart();
+    void NcclGroupEnd();
     bool IsSupported();
     void Sync(); // waits for outstanding reductions to complete
     
