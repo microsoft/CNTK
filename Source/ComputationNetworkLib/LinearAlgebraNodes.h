@@ -73,10 +73,11 @@ public:
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
-	virtual void /*ComputationNode::*/ BeginForwardProp() override {
+    virtual void /*ComputationNode::*/ BeginForwardProp() override
+    {
         Base::BeginForwardProp();
         GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
-	}
+    }
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         if (!fr.IsAllFrames())
@@ -1141,9 +1142,9 @@ public:
                 InvalidArgument("%ls %ls operation: right argument shape [%s] has too few dimensions for outputRank %d.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str(), (int) m_outputRank);
 
 #if 1 // support for legacy models when only the matrix dimensions had to match                                                        \
-    // Note: This is non-ambiguous w.r.t. valid new configurations because this condition would otherwise just be considered an error. \
-    //       But it will fail to discover trailing reduction dimensions that are 1. We assume that no such legacy models exist.        \
-    // Note: This is very ugly [Wayne Xiong]. I agree [fseide].
+	// Note: This is non-ambiguous w.r.t. valid new configurations because this condition would otherwise just be considered an error. \
+	//       But it will fail to discover trailing reduction dimensions that are 1. We assume that no such legacy models exist.        \
+	// Note: This is very ugly [Wayne Xiong]. I agree [fseide].
             if (dimsA.size() == 2 && !transpose && m_outputRank == 1 && dimsA[1] != dimsB[0] && dimsB[0] != 0)
             {
                 // search whether we can interpret dimsA[1] as the flattening of the first dimensions
