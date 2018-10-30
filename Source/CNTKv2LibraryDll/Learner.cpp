@@ -1003,27 +1003,14 @@ namespace CNTK
 
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
                                    const LearningRateSchedule& learningRateSchedule,
+                                   const MomentumSchedule& momentumSchedule,
+                                   bool unitGain,
                                    double gamma, double inc, double dec, double max, double min,
                                    bool needAveMultiplier,
                                    AdditionalLearningOptions additionalOptions)
-                                   : LearnerBase(parameters, learningRateSchedule, additionalOptions),
+                                   : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions, false),
                                    m_gamma(gamma), m_inc(inc), m_dec(dec), m_max(max), m_min(min), m_needAveMultiplier(needAveMultiplier)
     {
-        // validation of learner settings
-        if (gamma <= 0 || gamma >= 1)
-            LogicError("RMSProp gamma must be in range (0.0, 1.0)");
-
-        if (inc <= 1.0)
-            LogicError("RMSProp inc must be greater than 1");
-
-        if (dec <= 0 || dec >= 1)
-            LogicError("RMSProp dec must be in range (0.0, 1.0)");
-
-        if (max <= 0 || max <= min)
-            LogicError("RMSProp max must be greater than zero and greater than min");
-
-        if (min <= 0)
-            LogicError("RMSProp min must be greater than zero");
 
         for (const auto& parameter : parameters)
         {
@@ -1039,7 +1026,7 @@ namespace CNTK
 
             m_smoothedGradientValues.emplace(parameter, view);
         }
-        m_smoothedCount = 0.0;
+        //m_smoothedCount = 0.0;
     }
 
     /*virtual*/ void LearnerRMSProp::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
@@ -1048,28 +1035,28 @@ namespace CNTK
         DISPATCH_TO_TYPED_UPDATE_FUNCTION;
     }
 
-    /*virtual*/ Dictionary LearnerRMSProp::CreateCheckpoint() /*override*/
+	    /*virtual*/ Dictionary LearnerRMSProp::CreateCheckpoint() /*override*/
     {
         auto dict = LearnerBase::CreateCheckpoint();
-        dict[smoothedCountKey] = m_smoothedCount;
+        //dict[smoothedCountKey] = m_smoothedCount;
         return dict;
     }
 
     /*virtual*/ void LearnerRMSProp::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
         LearnerBase::RestoreFromCheckpoint(checkpoint);
-        m_smoothedCount = checkpoint[smoothedCountKey].Value<double>();
+        //m_smoothedCount = checkpoint[smoothedCountKey].Value<double>();
     }
 
     /*virtual*/ void LearnerRMSProp::ResetSmoothedGradients() /*override*/
     {
         LearnerBase::ResetSmoothedGradients();
-        m_smoothedCount = 0.0;
+        //m_smoothedCount = 0.0;
     }
 
     /*virtual*/ void LearnerRMSProp::UpdateOnMinibatch(size_t trainingSampleCount)
     {
-        m_smoothedCount += 1.0;
+        //m_smoothedCount += 1.0;
     }
 
     template <typename ElementType>
@@ -1078,18 +1065,15 @@ namespace CNTK
     {
         GET_WRITABLE_MATRICES;
 
-        const auto learningRate = LearningRate(trainingSampleCount);
+        const auto learningRate = LearningRate(trainingSampleCount) * trainingSampleCount;
+        const auto momentum = MomentumValueForMB(trainingSampleCount);
 
-        const auto aveMultiplier = smoothedGradientMatrix->RmsProp(*gradientMatrix,
-                                                                   ElementType(m_gamma),
-                                                                   ElementType(m_inc),
-                                                                   ElementType(m_max),
-                                                                   ElementType(m_dec),
-                                                                   ElementType(m_min),
-                                                                   m_needAveMultiplier,
-                                                                   m_smoothedCount > 1);
-
-        Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
+        smoothedGradientMatrix->RmsPropUpdate(*gradientMatrix,
+                                              *parameterMatrix,
+                                              learningRate, 
+                                              momentum,
+                                              ElementType(m_gamma),
+                                              UseUnitGainMomentum());
     }
 
     // Explicit template instantiations
@@ -1153,11 +1137,13 @@ namespace CNTK
 
     LearnerPtr RMSPropLearner(const vector<Parameter>& parameters,
                               const LearningRateSchedule& learningRateSchedule,
+                              const MomentumSchedule& momentumSchedule,
+                              bool unitGain,
                               double gamma, double inc, double dec, double max, double min,
                               bool needAveMultiplier /*= true*/,
                               AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerRMSProp>(parameters, learningRateSchedule, gamma, inc, dec, max, min, needAveMultiplier, additionalOptions);
+        return MakeSharedObject<LearnerRMSProp>(parameters, learningRateSchedule, momentumSchedule, unitGain, gamma, inc, dec, max, min, needAveMultiplier, additionalOptions);
     }
 
     LearnerPtr AdaDeltaLearner(const vector<Parameter>& parameters,

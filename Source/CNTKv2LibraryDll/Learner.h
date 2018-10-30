@@ -112,7 +112,7 @@ namespace CNTK
 
         // Returns an NDArrayView with the required shape, with the same data type as parameter value
         // and allocated on the same device.
-        static NDArrayViewPtr AllocateSmoothedGradientFor(const Parameter& parameter, size_t factor, size_t fp16Factor = 1);
+		static NDArrayViewPtr AllocateSmoothedGradientFor(const Parameter& parameter, size_t factor, size_t fp16Factor = 1);
 
         // Retrieves the shape of the matrix corresponding to the parameter value.
         static NDShape GetMatrixShape(const Parameter& parameter);
@@ -363,12 +363,14 @@ namespace CNTK
         bool m_adamax;
     };
 
-    class LearnerRMSProp : public LearnerBase
+    class LearnerRMSProp : public LearnerMomentumSGD
     {
     public:
 
         LearnerRMSProp(const std::vector<Parameter>& parameters,
                        const LearningRateSchedule& learningRateSchedule,
+                       const MomentumSchedule& momentumSchedule,
+                       bool unitGain,
                        double gamma, double inc, double dec, double max, double min,
                        bool needAveMultiplier,
                        AdditionalLearningOptions additionalOptions);
@@ -387,7 +389,7 @@ namespace CNTK
         double m_max;
         double m_min;
         bool m_needAveMultiplier;
-        double m_smoothedCount;
+        //double m_smoothedCount;
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) override;
         virtual void UpdateOnMinibatch(size_t trainingSampleCount) override;

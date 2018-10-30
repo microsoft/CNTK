@@ -237,14 +237,12 @@ public:
     void Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
               ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax=false);
 
-    ElemType RmsProp(GPUMatrix<ElemType>& gradients, 
-                     ElemType RMS_GAMMA, 
-                     ElemType RMS_WGT_INC, 
-                     ElemType RMS_WGT_MAX, 
-                     ElemType RMS_WGT_DEC, 
-                     ElemType RMS_WGT_MIN, 
-                     const bool needAveMultiplier,
-                     const bool initialized);
+    void RmsProp(GPUMatrix<ElemType>& gradients,
+                 GPUMatrix<ElemType>& functionValues,
+                 ElemType learningRate,
+                 ElemType momentum,
+                 ElemType RMS_GAMMA,
+                 bool unitGainMomentum);
 
     template<typename GradType>
     void AdaDelta(GPUMatrix<GradType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
