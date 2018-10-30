@@ -2549,6 +2549,8 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
         // the learning rate slower to reduce the risk of divergence, since the
         // update may not be stable for starting points far from equilibrium.
         ratio = float(trace_PP * num_rows / (trace_P * trace_P));
+        fprintf(stderr, "ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
+
         assert(ratio > 0.999);
         if (ratio > 1.02)
         {
