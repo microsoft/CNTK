@@ -1407,7 +1407,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
                                   m_needAveMultiplier, m_useNesterovMomentum);
                     /* guoye: start */
-                    /*
+                    
                     float alpha = node->GetOrthonormalConstraint();
                     float LR = node->GetLearningRateMultiplier();
 
@@ -1435,7 +1435,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             }
                         }
                     }
-                    */
+                    
                     /* guoye: end */
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
@@ -2549,7 +2549,7 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
         // the learning rate slower to reduce the risk of divergence, since the
         // update may not be stable for starting points far from equilibrium.
         ratio = float(trace_PP * num_rows / (trace_P * trace_P));
-        fprintf(stderr, "ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
+        fprintf(stderr, "Before ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
 
         assert(ratio > 0.999);
         if (ratio > 1.02)
@@ -2574,6 +2574,14 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     // (Currently the matrix P contains what, in the math, is P-alpha^2*I).
     Matrix<ElemType>::MultiplyAndWeightedAdd(scale, P, false, M, false, 1.0, M, nullptr);
     I.ReleaseMemory();
+    /* guoye: for debug purpose */
+    Matrix<ElemType>::Multiply(P, true, P, false, PP);
+
+    trace_P = P.MatTrace();
+    trace_PP = PP.MatTrace();
+
+    ratio = float(trace_PP * num_rows / (trace_P * trace_P));
+    fprintf(stderr, "After ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
 }
 
 // protected:
