@@ -677,20 +677,21 @@ private:
         std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap,
         std::vector<ScanLoop> &scanLoops, int createLoopIndex);
+
     static onnxruntime::Node * CreateBatchNormalization(const FunctionPtr & src,
         onnxruntime::Graph * graph, std::unordered_map<FunctionPtr,
         onnxruntime::Node*>& functionNodes,
         std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
         const std::unordered_map<Variable, Variable>& compositeOutputsMap,
         std::vector<ScanLoop> &scanLoops, int createLoopIndex);
-        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
     // Takes CNTK's Flatten node and converts it into a series of ONNX nodes.
     static onnxruntime::Node * CreateONNXNodesForFlatten(const FunctionPtr & src,
         onnxruntime::Graph * graph, std::unordered_map<FunctionPtr,
         onnxruntime::Node*>& functionNodes,
         std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
-        const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+        std::vector<ScanLoop> &scanLoops, int createLoopIndex);
 
     //
     // Method to create ONNX nodes that have an explicit batch axis from their CNTK
@@ -4139,7 +4140,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     }
     else if (cntkOpName == "Flatten")
     {
-        return CreateONNXNodesForFlatten(src, graph, functionNodes, variableNodes, compositeOutputsMap);
+        return CreateONNXNodesForFlatten(src, graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
     }
 
     //
@@ -6449,10 +6450,12 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForFlatten(const FunctionPtr
     onnxruntime::Graph* graph,
     std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
     std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
-    const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+    std::vector<ScanLoop> &scanLoops, int createLoopIndex)
 {
     std::vector<onnxruntime::NodeArg *> inputs;
-    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs);
+    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs,
+        scanLoops, createLoopIndex);
 
     std::vector<onnxruntime::NodeArg *> outputs;
     ProcessOutputs(src, outputs, graph);

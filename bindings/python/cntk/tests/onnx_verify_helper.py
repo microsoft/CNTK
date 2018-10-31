@@ -11,9 +11,6 @@ windows = os.getenv("OS")=="Windows_NT"
 known_issues = [
     'BatchNormalization_float160',
     'SpatialBatchNormalization_float160',
-    'DepthToSpace',
-    'RNN',
-    # 'DepthToSpace',
     'RNN.reverse.one_layer.relu',
     'test_sequence_slice_-1.0',
     'test_sequence_slice_0.-1',
@@ -24,13 +21,8 @@ known_issues = [
     'test_sequence_slice_-2.-1',
     'test_sequence_slice_-4.2',
     'SequenceSoftmax',
-    # 'SpaceToDepth',
     'top_k',
 
-    'ConvTranspose_with_OutputShape_0',
-    'Flatten_1',
-    'Gather_1',
-    
     # Not in onnxruntime
     'LayerNorm_0',
     'MVN_0',
