@@ -279,7 +279,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
     for each frame. The 1-hot vectors may have either value 1 or 2 at the position of the phone
     corresponding to the frame, where the value 1 means the frame is within phone boundary (i.e. not the
     first frame of the phone) and 2 means the frame is the phone boundary (i.e. is the first frame of the phone).
-    If you are using HTKFeatureDeserializer, this encoding will be automatically done.
+    If you are using HTKMLFDeserializer, this encoding will be automatically done.
 
     Example:
         labels = [[0, 2, 0, 0, 0],  # first frame of label_id = 1
@@ -327,7 +327,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
         # model = ...
 
         # Now, we can use the forward-backward algorithm
-        labels_graph =  = cntk.labels_to_graph(labels_var)
+        labels_graph = cntk.labels_to_graph(labels_var)
         network_out = model(input_var)
         fb = forward_backward(labels_graph, network_out, 5)
         fb.eval({'input': input.astype(np.float32),
