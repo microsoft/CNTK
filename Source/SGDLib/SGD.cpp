@@ -1407,7 +1407,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
                                   m_needAveMultiplier, m_useNesterovMomentum);
                     /* guoye: start */
-                    
+                    /*
                     float alpha = node->GetOrthonormalConstraint();
                     float LR = node->GetLearningRateMultiplier();
 
@@ -1435,7 +1435,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             }
                         }
                     }
-                    
+                    */
                     /* guoye: end */
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
