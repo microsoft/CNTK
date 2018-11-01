@@ -461,7 +461,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     {
         // It does not work using vector<bool> because resulted memory layout is not what we expect.
         bool *srcData = new bool[shape.TotalSize()];
-        onnxruntime::Utils::TensorUtils::UnpackTensor(valueProto, srcData, shape.TotalSize());
+        onnxruntime::utils::TensorUtils::UnpackTensor(valueProto, srcData, shape.TotalSize());
 
         // CNTK does not support bool. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -476,7 +476,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     case TensorProto_DataType_INT32:
     {
         std::vector<int32_t> srcData(shape.TotalSize());
-        onnxruntime::Utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
+        onnxruntime::utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
 
         // CNTK does not support int. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -490,7 +490,7 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     case TensorProto_DataType_INT64:
     {
         std::vector<int64_t> srcData(shape.TotalSize());
-        onnxruntime::Utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
+        onnxruntime::utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
 
         // CNTK does not support int64_t. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -1235,7 +1235,7 @@ std::vector<FunctionPtr> CreateRNNConstantOp(const Graph *graph, const Node *nod
                                              const DeviceDescriptor &computeDevice)
 {
     const onnx::TensorProto *valueProto;
-    if (!graph->GetInitializedTensor(node->Name(), &valueProto))
+    if (!graph->GetInitializedTensor(node->Name(), valueProto))
     {
         NodeAttributes::const_iterator itValue = node->GetAttributes().find("value");
         if (itValue == node->GetAttributes().cend())
@@ -1260,7 +1260,7 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
     string parentONNXOpName = parentNode->OpType();
     std::string nodeName = nodeArg->Name();
     const onnx::TensorProto *valueProto;
-    if (graph->GetInitializedTensor(nodeName, &valueProto))
+    if (graph->GetInitializedTensor(nodeName, valueProto))
     {
         int index = CalculateNodeArgInputIndex(nodeArg, parentNode);
         return CreateRNNConstant(parentNode, index, nodeName, *valueProto, computeDevice);
@@ -1379,7 +1379,7 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
 
     std::string nodeName = nodeArg->Name();
     const onnx::TensorProto *valueProto;
-    if (graph->GetInitializedTensor(nodeName, &valueProto))
+    if (graph->GetInitializedTensor(nodeName, valueProto))
     {
         return CreateConstant(*valueProto, nodeName, computeDevice); // There is no batch axis added on here.
     }
@@ -1438,14 +1438,14 @@ ConvAutoPadType ONNXToCNTKHelper::ConvertStrToConvAutoPadType(const string &str)
 std::vector<int64_t> ONNXToCNTKHelper::GetShapeFromInput(const NodeArg *shapeInput, const Graph *graph)
 {
     const onnx::TensorProto *valueProto;
-    if (!graph->GetInitializedTensor(shapeInput->Name(), &valueProto))
+    if (!graph->GetInitializedTensor(shapeInput->Name(), valueProto))
     {
         LogicError("Non-constant shape input for Reshape is not implemented.");
     };
 
     auto shapeSize = valueProto->dims(0);
     std::vector<int64_t> dimData(shapeSize);
-    onnxruntime::Utils::TensorUtils::UnpackTensor(*valueProto, &dimData[0], shapeSize);
+    onnxruntime::utils::TensorUtils::UnpackTensor(*valueProto, &dimData[0], shapeSize);
 
     return dimData;
 }
@@ -1922,7 +1922,7 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     )
 {
     string onnxOpName = node->OpType();
-    Variable inputOperand0 = (inputPlaceholder.IsInitialized()) ? inputPlaceholder : inputs[0];
+    Variable inputOperand0 = (inputPlaceholder.IsInitialized() || inputs.empty()) ? inputPlaceholder : inputs[0];
 
     if (onnxOpName == "LSTM")
     {
@@ -2201,7 +2201,9 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         const NDShape &shape = GetNamedAttributeAsShape(node, "shape", false);
 
         // ONNX only has float type for random generators
-        CNTK::DataType dataType = CNTK::DataType::Float;
+        TensorProto_DataType onnxDataType = static_cast<TensorProto_DataType>(GetNamedAttributeAsInt64(
+            node, "dtype", TensorProto_DataType::TensorProto_DataType_FLOAT));
+        CNTK::DataType dataType = ConvertDataTypeTensorProtoToCNTK(onnxDataType);
 
         double low = GetNamedAttributeAsFloat(node, "low");
         double high = GetNamedAttributeAsFloat(node, "high");
@@ -2212,7 +2214,11 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     else if (onnxOpName == "RandomNormal")
     {
         const NDShape &shape = GetNamedAttributeAsShape(node, "shape", false);
-        CNTK::DataType dataType = CNTK::DataType::Float;
+
+        TensorProto_DataType onnxDataType = static_cast<TensorProto_DataType>(GetNamedAttributeAsInt64(
+            node, "dtype", TensorProto_DataType::TensorProto_DataType_FLOAT));
+        CNTK::DataType dataType = ConvertDataTypeTensorProtoToCNTK(onnxDataType);
+
         double mean = GetNamedAttributeAsFloat(node, "mean");
         double scale = GetNamedAttributeAsFloat(node, "scale");
         unsigned long seed = GetNamedAttributeAsInt64(node, "seed");
@@ -2962,6 +2968,15 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         FunctionPtr cntkFunction = Crop(inputOperand0, referent, leftBorder, topBorder, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
+    else if (onnxOpName == "OneHotEncoder")
+    {
+        // TODO: this only works in this specific case.
+        std::vector<int64_t> cats = GetNamedAttributeAsInt64Vec(node, "cats_int64s");
+        int numClass = cats.size();
+        Axis axis = ConvertONNXAxisToCNTKCppApi(2, inputs[0]);
+        FunctionPtr cntkFunction = OneHotOp(inputs[0], numClass, false, axis);
+        return cntkFunction;
+    }
     else
     {
         LogicError("ONNX (%s) is not supported in CNTK", onnxOpName.c_str());
@@ -3488,6 +3503,39 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKFCNode(const std::wstring &nodeName, con
     return cntkFunction;
 }
 
+// onnx graph library treats output NodeArgs as outputs. 
+// when creating a CNTK model, we build a map from Nodes to FunctionPtrs.
+// To figure out the outputs of a CNTK model, we need to filter out
+// output variables of output Functions that are not in the graph outputs.
+void FilterNoOutputs(std::vector<Variable> &outputVariables)
+{
+    std::set<FunctionPtr> visited;
+    std::vector<Variable> sinkedVariables;
+    for (auto v : outputVariables)
+    {
+        if (v.Owner())
+        {
+            v.Owner()->PreorderTraverse([&visited, &sinkedVariables](const FunctionPtr& function) {
+                if (visited.find(function) != visited.end())
+                    return;
+                visited.insert(function);
+                for (auto inputVariable : function->Inputs())
+                    if (std::find(sinkedVariables.begin(), sinkedVariables.end(), inputVariable) == sinkedVariables.end())
+                        sinkedVariables.push_back(inputVariable);
+                    
+            }, false);
+        }
+    }
+
+    for (std::vector<Variable>::iterator it = outputVariables.begin(); it != outputVariables.end();)
+    {
+        if (std::find(sinkedVariables.begin(), sinkedVariables.end(), *it) != sinkedVariables.end())
+            it = outputVariables.erase(it);
+        else
+            ++it;
+    }
+}
+
 FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescriptor &computeDevice)
 {
     FunctionPtr cntkModel;
@@ -3510,20 +3558,31 @@ FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescrip
         }
     }
 
-    // ONNX puts all outputs in an graph as input to the "_Graph_Sink" node.
-    ONNXToCNTKMap::iterator itNodeFn = std::find_if(constructedFunctions.begin(), constructedFunctions.end(),
-                                                    [](ONNXToCNTKMap::value_type nodeFn) { return nodeFn.first->Name() == "_Graph_Sink"; });
-    if (itNodeFn == constructedFunctions.end())
+    std::vector<FunctionPtr> functions;
+    const std::vector<const NodeArg*>& graphOutputs = src->GetOutputs();
+    // collect output Nodes based in output NodeArgs
+    std::set<Node*> outputNodes;
+    for (int i = 0; i < graphOutputs.size(); i++)
     {
-        return nullptr;
+        const NodeArg* nodeArg = graphOutputs[i];
+        for (auto &node : src->Nodes())
+        {
+            if (std::find(outputNodes.begin(), outputNodes.end(), &node) == outputNodes.end())
+            {
+                for (auto nodeOutput : node.OutputDefs())
+                    if (nodeOutput == nodeArg)
+                    {
+                        outputNodes.insert(&node);
+                        break;
+                    }
+            }
+        }
     }
 
-    std::vector<FunctionPtr> functions;
-    for (Node::NodeConstIterator it = itNodeFn->first->InputNodesBegin(); it != itNodeFn->first->InputNodesEnd(); ++it)
+    // collect output FunctionPtrs from output Nodes
+    for (auto &node : outputNodes)
     {
-        // TODO: consulting onnxruntime to see how to do this solidly.
-        // https://msasg.visualstudio.com/DefaultCollection/Shared%20Data/AIToolkits-CNTK/_queries?id=1134732&_a=edit&triage=true
-        std::vector<FunctionPtr> &constructedFuncts = constructedFunctions[*it];
+        std::vector<FunctionPtr> &constructedFuncts = constructedFunctions[node];
         for (int index = 0; index < constructedFuncts.size(); index++)
         {
             FunctionPtr &constructedFunct = constructedFuncts[index];
@@ -3543,7 +3602,17 @@ FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescrip
     else
     {
         // in case multiple outputs are in a graph, combine them into one CNTK graph.
-        return Combine(std::vector<Variable>(functions.begin(), functions.end()));
+        std::vector<Variable> outputVariables;
+        for (auto f : functions)
+        {
+            for (auto v : f->Outputs())
+            {
+                outputVariables.push_back(v);
+            }
+        }
+        if (outputVariables.size() > graphOutputs.size())
+            FilterNoOutputs(outputVariables);
+        return Combine(outputVariables);
     }
 }
 

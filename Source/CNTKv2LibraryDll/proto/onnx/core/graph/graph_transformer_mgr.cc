@@ -8,8 +8,8 @@ using namespace ::onnxruntime::common;
 namespace onnxruntime {
 
 Status GraphTransformerManager::ApplyAll(Graph& graph) const {
-  bool changed = false;
   for (unsigned step = 0; step < steps_; ++step) {
+    bool changed = false;
     for (auto& transformer : transformers_) {
       bool t_changed = false;
       Status s = transformer->Apply(graph, t_changed);

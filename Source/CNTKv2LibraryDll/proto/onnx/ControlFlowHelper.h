@@ -2,6 +2,10 @@
 #include "CNTKLibrary.h"
 #include "Internals/ComputationGraphAlgorithms.h"
 #include "core/graph/graph.h"
+#include "Operators.h"
+#include <utility>
+
+using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
@@ -35,10 +39,62 @@ namespace CNTK
             m_scanOutputs(scanOutputs),
             m_body(body),
             m_scanOpCreated(false)
-        {}
+        {
+            // collect nodes in RNN ops as part of the body
+            for (auto &f : m_body)
+            {
+                if (ONNX::Operators::IsRNNOp(ToLegacyString(ToUTF8(f->OpName()))))
+                {
+                    std::vector<FunctionPtr> rnnInternalBody;
+                    CollectInternalNodes(f->BlockRoot(), rnnInternalBody);
+                    m_rnnInternalBodies.insert(std::make_pair(f, rnnInternalBody));
+                }
+            }
+
+            // if RNN is in the loop, we want to map scan outputs that are from LSTM 
+            // to LSTM block underlying variable
+            for (auto &rnn : this->m_rnnInternalBodies)
+            {
+                FunctionPtr rnnF = rnn.first;
+                BlockFunction* block = dynamic_cast<BlockFunction *>(rnnF.get());
+                std::unordered_map<Variable, Variable> bm = block->CompositeOutputsMap();
+                for (auto &blockOutput : rnnF->Outputs())
+                {
+                    for (int i = 0; i < m_scanOutputs.size(); i++)
+                    {
+                        if (m_scanOutputs[i] == blockOutput)
+                        {
+                            if (bm.find(blockOutput) == bm.end())
+                                LogicError("cannot map PastValue/Future's input to LSTM underlying output");
+                            m_scanOutputs[i] = bm[blockOutput];
+                        }
+                    }
+                }
+            }
+        }
+
+        bool IsInBody(const FunctionPtr src)
+        {
+            if (std::find(this->m_body.begin(), this->m_body.end(), src) != this->m_body.end())
+                return true;
+            for (auto &rnn : this->m_rnnInternalBodies)
+            {
+                if (std::find(rnn.second.begin(), rnn.second.end(), src) != rnn.second.end())
+                    return true;
+            }
+            return false;
+        }
+
+        static void CollectInternalNodes(FunctionPtr src, std::vector<FunctionPtr> &rnnInternalBody)
+        {
+            src->PreorderTraverse([&rnnInternalBody](const FunctionPtr& function) {
+                rnnInternalBody.push_back(function);
+            }, false);
+        }
 
         std::vector<Variable> m_inputs, m_outputs, m_scanInputs, m_scanOutputs;
         std::vector<FunctionPtr> m_body;
+        std::unordered_map<FunctionPtr, std::vector<FunctionPtr>> m_rnnInternalBodies;
         std::vector<ScanLoopState> scanLoopStates;
         std::vector<FunctionPtr> m_visited;
         bool m_scanOpCreated;

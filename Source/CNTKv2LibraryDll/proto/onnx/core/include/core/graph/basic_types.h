@@ -27,8 +27,8 @@ using ProviderType = const std::string&;
 // instead of std::unordered_map<std::string, foo, [std::less<foo>]>.
 
 using NodeAttributes = std::unordered_map<std::string, ONNX_NAMESPACE::AttributeProto>;
-class ILotusOpSchemaCollection;
-using ILotusOpSchemaCollectionPtr = std::shared_ptr<ILotusOpSchemaCollection>;
+class IOnnxRuntimeOpSchemaCollection;
+using IOnnxRuntimeOpSchemaCollectionPtr = std::shared_ptr<IOnnxRuntimeOpSchemaCollection>;
 }  // namespace onnxruntime
 
 namespace onnxruntime {

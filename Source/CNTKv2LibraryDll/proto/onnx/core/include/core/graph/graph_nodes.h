@@ -59,15 +59,22 @@ class GraphNodes {
     using IterType = typename std::remove_reference<typename std::iterator_traits<TIterator>::reference>::type;
     // and determine what we will return based on its constness
     using T = typename std::conditional<std::is_const<IterType>::value,
-                                        const Node&,   // return const Node& if this is a const iterator
-                                        Node&>::type;  // else return Node&
+                                        const Node,   // return const Node if this is a const iterator
+                                        Node>::type;  // else return Node
 
    public:
+    using iterator_category = std::input_iterator_tag;
+    using value_type = T;
+    using difference_type = typename TIterator::difference_type;  // ptrdiff_t;
+    using pointer = T*;
+    using reference = T&;
+    using const_reference = std::add_const_t<reference>;
+
     // Constructor. Will move to a valid node or end.
     NodeIterator<TIterator>(TIterator current, const TIterator end) noexcept : current_{current}, end_{end} {
       // skip to valid node or end - whatever comes first
-      while (current < end && *current == nullptr) {
-        ++current;
+      while (current_ < end && *current_ == nullptr) {
+        ++current_;
       }
     }
 
@@ -87,10 +94,21 @@ class GraphNodes {
       }
     }
 
-    T operator*() {
+    NodeIterator<TIterator> operator++(int) {
+      NodeIterator<TIterator> tmp{*this};
+      ++(*this);
+
+      return tmp;
+    }
+
+    reference operator*() {
       // if iterator is valid we always have a non-nullptr node
       // if this is a nullptr we're at end_ and this shouldn't be being called
       return **current_;
+    }
+
+    pointer operator->() {
+      return current_->get();
     }
 
    private:

@@ -224,8 +224,11 @@
     <ClInclude Include="proto\onnx\ONNXToCNTK.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\checker.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\common\assertions.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\common\model_helpers.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\common\status.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\common\stl_backports.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\data_type_utils.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\function.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\schema.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\shape_inference.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\onnx-operators_pb.h" />
@@ -292,10 +295,15 @@
     <ClCompile Include="proto\onnx\ONNXToCNTK.cpp" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\checker.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\common\assertions.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\common\model_helpers.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\common\status.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\controlflow\defs.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\data_type_utils.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\experiments\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\experiments\experiments_functions.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\function.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\generator\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\generator\old.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\logical\defs.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\logical\old.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\math\defs.cc" />
@@ -309,6 +317,7 @@
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\tensor\defs.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\tensor\old.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\traditionalml\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\shape_inference\implementation.cc" />
     <ClCompile Include="proto\onnx\Operators.cpp" />
     <ClCompile Include="proto\onnx\RNNHelper.cpp" />
     <ClCompile Include="Serialization.cpp" />

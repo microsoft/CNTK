@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+// Portions Copyright (c) Microsoft Corporation
 
 #include "core/platform/env_time.h"
 
@@ -32,12 +33,12 @@ class WindowsEnvTime : public EnvTime {
     // versions of Windows. For that reason, we try to look it up in
     // kernel32.dll at runtime and use an alternative option if the function
     // is not available.
-    //HMODULE module = GetModuleHandleW(L"kernel32.dll");
-    //if (module != NULL) {
-    //  auto func = (FnGetSystemTimePreciseAsFileTime)GetProcAddress(
-    //      module, "GetSystemTimePreciseAsFileTime");
-    //  GetSystemTimePreciseAsFileTime_ = func;
-    //}
+    HMODULE module = GetModuleHandleW(L"kernel32.dll");
+    if (module != NULL) {
+      auto func = (FnGetSystemTimePreciseAsFileTime)GetProcAddress(
+          module, "GetSystemTimePreciseAsFileTime");
+      GetSystemTimePreciseAsFileTime_ = func;
+    }
   }
 
   uint64_t NowMicros() override {

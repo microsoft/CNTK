@@ -12,9 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+// Portions Copyright (c) Microsoft Corporation
 
-#ifndef LOTUS_CORE_PLATFORM_NOTIFICATION_H_
-#define LOTUS_CORE_PLATFORM_NOTIFICATION_H_
+#ifndef CORE_PLATFORM_NOTIFICATION_H_
+#define CORE_PLATFORM_NOTIFICATION_H_
 
 #include <cassert>
 #include <atomic>              // NOLINT
@@ -81,4 +82,4 @@ inline bool WaitForNotificationWithTimeout(Notification* n,
 
 }  // namespace onnxruntime
 
-#endif  // LOTUS_CORE_PLATFORM_NOTIFICATION_H_
+#endif  // CORE_PLATFORM_NOTIFICATION_H_

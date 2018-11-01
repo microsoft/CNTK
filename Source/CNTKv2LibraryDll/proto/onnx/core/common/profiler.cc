@@ -4,15 +4,15 @@
 #include "profiler.h"
 
 namespace onnxruntime {
-namespace Profiling {
+namespace profiling {
 using namespace std::chrono;
 
-::onnxruntime::TimePoint Profiling::Profiler::StartTime() const {
+::onnxruntime::TimePoint profiling::Profiler::StartTime() const {
   return std::chrono::high_resolution_clock::now();
 }
 
-void Profiler::StartProfiling(const Logging::Logger* session_logger, const std::string& file_name) {
-  LOTUS_ENFORCE(session_logger != nullptr);
+void Profiler::StartProfiling(const logging::Logger* session_logger, const std::string& file_name) {
+  ONNXRUNTIME_ENFORCE(session_logger != nullptr);
   session_logger_ = session_logger;
   enabled_ = true;
   profile_stream_ = std::ofstream(file_name, std::ios::out | std::ios::trunc);
@@ -32,8 +32,8 @@ void Profiler::EndTimeAndRecordEvent(EventCategory category,
   if (events_.size() < max_num_events_) {
     long long dur = TimeDiffMicroSeconds(start_time);
     long long ts = TimeDiffMicroSeconds(profiling_start_time_, start_time);
-    events_.emplace_back(category, Logging::GetProcessId(),
-                         Logging::GetThreadId(), event_name, ts, dur, std::move(event_args));
+    events_.emplace_back(category, logging::GetProcessId(),
+                         logging::GetThreadId(), event_name, ts, dur, std::move(event_args));
   } else {
     if (session_logger_ && !max_events_reached) {
       LOGS(*session_logger_, ERROR)
@@ -80,8 +80,8 @@ std::string Profiler::WriteProfileData() {
 // Conditionally sync the GPU if the syncGPU flag is set.
 //
 void ProfilerSyncGpu() {
-  LOTUS_NOT_IMPLEMENTED("Needs to implement only for gpus");
+  ONNXRUNTIME_NOT_IMPLEMENTED("Needs to implement only for gpus");
 }
 
-}  // namespace Profiling
+}  // namespace profiling
 }  // namespace onnxruntime

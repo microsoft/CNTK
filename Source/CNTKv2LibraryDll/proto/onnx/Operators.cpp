@@ -116,6 +116,7 @@ namespace ONNX
         // From Generator
         { L"RandomDistribution", { {
             { L"UniformRandom", "RandomUniform" },
+            { L"uniform", "RandomUniform" },
             // { L"", "low" },
             // { L"", "high" },
             { L"rngSeed", "seed" },
@@ -123,6 +124,7 @@ namespace ONNX
         } } },
         { L"RandomDistribution", { {
             { L"NormalRandom", "RandomNormal" },
+            { L"normal", "RandomNormal" },
             // { L"", "mean" },
             // { L"", "scale" },
             { L"rngSeed", "seed" },
@@ -528,7 +530,8 @@ namespace ONNX
     
     bool Operators::IsSequenceBlockOp(const std::string &opName)
     {
-        return opName == "Sequence::ReduceElements" || opName == "Sequence::BroadcastAs";
+        return opName == "Sequence::ReduceElements" || opName == "Sequence::BroadcastAs" || 
+            opName == "Sequence::Gather" || opName == "Sequence::Softmax";
     }
 
     std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
@@ -550,7 +553,8 @@ namespace ONNX
             { L"Softsign",{ 0 } },
             { L"ImageScaler",{ 0, 1, 2, 3 } },
             { L"MeanVarianceNormalization",{ 0 } },
-            { L"Sequence::Slice",{ 0, 1 } },
+            { L"Sequence::Slice",{ 0, 1, 2, 3, 4 } },
+            { L"GatherPacked",{ 1 } },
         };
 
         std::unordered_map<std::wstring, std::vector<int>> Operators::_cntkToONNXInputIndices = {

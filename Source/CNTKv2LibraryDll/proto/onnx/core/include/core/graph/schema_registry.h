@@ -33,7 +33,7 @@ struct SchemaRegistryVersion {
 using Domain_To_Version_Map = std::unordered_map<std::string, int>;
 using Domain_To_Version_Range_Map = std::unordered_map<std::string, SchemaRegistryVersion>;
 
-class ILotusOpSchemaCollection : public ONNX_NAMESPACE::ISchemaRegistry {
+class IOnnxRuntimeOpSchemaCollection : public ONNX_NAMESPACE::ISchemaRegistry {
  public:
   virtual Domain_To_Version_Map GetLatestOpsetVersions(bool is_onnx_only) const = 0;
 
@@ -61,15 +61,15 @@ class ILotusOpSchemaCollection : public ONNX_NAMESPACE::ISchemaRegistry {
       int* earliest_opset_where_unchanged) const = 0;
 };
 
-// LotusOpSchemaRegistry is used to provide supplement for built-in ONNX schemas.
-// Each LotusOpSchemaRegistry must register complete opsets delta from a baseline version to max opset version.
+// OnnxRuntimeOpSchemaRegistry is used to provide supplement for built-in ONNX schemas.
+// Each OnnxRuntimeOpSchemaRegistry must register complete opsets delta from a baseline version to max opset version.
 // (Please notice that baseline opsets are not include in the delta)
 // For example, lotus is build with ONNX 1.2 which is at opset7, to use onnx opset8 and opset9,
-// user could create a LotusOpSchemaRegistry and config it as {baseline_opset_version = 7, opset_version = 9}
-// it means this LotusOpSchemaRegistry contains the complete delta from opset7 to opset9.
-class LotusOpSchemaRegistry : public ILotusOpSchemaCollection {
+// user could create a OnnxRuntimeOpSchemaRegistry and config it as {baseline_opset_version = 7, opset_version = 9}
+// it means this OnnxRuntimeOpSchemaRegistry contains the complete delta from opset7 to opset9.
+class OnnxRuntimeOpSchemaRegistry : public IOnnxRuntimeOpSchemaCollection {
  public:
-  LotusOpSchemaRegistry() = default;
+  OnnxRuntimeOpSchemaRegistry() = default;
 
   ::onnxruntime::common::Status SetBaselineAndOpsetVersionForDomain(
       const std::string& domain,
@@ -78,7 +78,7 @@ class LotusOpSchemaRegistry : public ILotusOpSchemaCollection {
 
   Domain_To_Version_Map GetLatestOpsetVersions(bool is_onnx_only) const override;
 
-  // LotusOpSchemaRegistry must register complete delta for a opset.
+  // OnnxRuntimeOpSchemaRegistry must register complete delta for a opset.
   ::onnxruntime::common::Status RegisterOpSet(
       std::vector<ONNX_NAMESPACE::OpSchema>& schemas,
       const std::string& domain,
@@ -92,7 +92,7 @@ class LotusOpSchemaRegistry : public ILotusOpSchemaCollection {
 #pragma warning(disable : 26444)
 #endif
 
-  using ILotusOpSchemaCollection::GetSchema;
+  using IOnnxRuntimeOpSchemaCollection::GetSchema;
 
   void GetSchemaAndHistory(
       const std::string& key,
@@ -120,13 +120,13 @@ class LotusOpSchemaRegistry : public ILotusOpSchemaCollection {
   Domain_To_Version_Range_Map domain_version_range_map_;
 };
 
-// SchemaRegistryManager provides a view based on built-in ONNX schema and a list of LotusOpSchemaRegistry as supplement.
+// SchemaRegistryManager provides a view based on built-in ONNX schema and a list of OnnxRuntimeOpSchemaRegistry as supplement.
 // User need to make sure the customized schema registry is valid, otherwise the behavior is undefined.
 // We may add more consistent check later.
-class SchemaRegistryManager : public onnxruntime::ILotusOpSchemaCollection {
+class SchemaRegistryManager : public onnxruntime::IOnnxRuntimeOpSchemaCollection {
  public:
   // The schema registry priority is the reverse of register order.
-  void RegisterRegistry(std::shared_ptr<ILotusOpSchemaCollection> registry);
+  void RegisterRegistry(std::shared_ptr<IOnnxRuntimeOpSchemaCollection> registry);
 
   Domain_To_Version_Map GetLatestOpsetVersions(bool is_onnx_only) const override;
 
@@ -138,7 +138,7 @@ class SchemaRegistryManager : public onnxruntime::ILotusOpSchemaCollection {
       int* earliest_opset_where_unchanged) const override;
 
  private:
-  std::deque<std::shared_ptr<ILotusOpSchemaCollection>> registries;
+  std::deque<std::shared_ptr<IOnnxRuntimeOpSchemaCollection>> registries;
 };
 
 }  // namespace onnxruntime

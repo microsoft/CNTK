@@ -12,11 +12,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+// Portions Copyright (c) Microsoft Corporation
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-//#include <dlfcn.h>
+#include <dlfcn.h>
 
 #include <thread>
 #include <vector>
@@ -93,17 +95,17 @@ class PosixEnv : public Env {
     return getpid();
   }
 
-  common::Status FileOpenRd(const std::string& path, /*out*/ gsl::not_null<int*> p_fd) const override {
-    *p_fd = open(path.c_str(), O_RDONLY);
-    if (0 > *p_fd) {
+  common::Status FileOpenRd(const std::string& path, /*out*/ int& fd) const override {
+    fd = open(path.c_str(), O_RDONLY);
+    if (0 > fd) {
       return common::Status(common::SYSTEM, errno);
     }
     return Status::OK();
   }
 
-  common::Status FileOpenWr(const std::string& path, /*out*/ gsl::not_null<int*> p_fd) const override {
-    *p_fd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    if (0 > *p_fd) {
+  common::Status FileOpenWr(const std::string& path, /*out*/ int& fd) const override {
+    fd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (0 > fd) {
       return common::Status(common::SYSTEM, errno);
     }
     return Status::OK();
@@ -118,23 +120,23 @@ class PosixEnv : public Env {
   }
 
   common::Status FileExists(const char* /*fname*/) const override {
-    return common::Status(common::LOTUS, common::NOT_IMPLEMENTED, "NOT_IMPLEMENTED");
+    return common::Status(common::ONNXRUNTIME, common::NOT_IMPLEMENTED, "NOT_IMPLEMENTED");
   }
   common::Status ReadFileAsString(const char* fname, std::string* out) const override {
     if (!out) {
-      return common::Status(common::LOTUS, common::INVALID_ARGUMENT, "'out' cannot be NULL");
+      return common::Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT, "'out' cannot be NULL");
     }
     char errbuf[512];
     int fd = open(fname, O_RDONLY);
     if (fd < 0) {
       snprintf(errbuf, sizeof(errbuf), "%s:%d open file %s fail, errcode = %d", __FILE__, __LINE__, fname, errno);
-      return common::Status(common::LOTUS, common::FAIL, errbuf);
+      return common::Status(common::ONNXRUNTIME, common::FAIL, errbuf);
     }
     struct stat stbuf;
     if ((fstat(fd, &stbuf) != 0) || (!S_ISREG(stbuf.st_mode))) {
       close(fd);
       snprintf(errbuf, sizeof(errbuf), "%s:%d read file %s fail", __FILE__, __LINE__, fname);
-      return common::Status(common::LOTUS, common::FAIL, errbuf);
+      return common::Status(common::ONNXRUNTIME, common::FAIL, errbuf);
     }
     if (stbuf.st_size == 0) {
       out->clear();
@@ -150,7 +152,7 @@ class PosixEnv : public Env {
                  __LINE__,
                  fname,
                  errno);
-        return common::Status(common::LOTUS, common::FAIL, errbuf);
+        return common::Status(common::ONNXRUNTIME, common::FAIL, errbuf);
       }
       close(fd);
     }
@@ -158,39 +160,39 @@ class PosixEnv : public Env {
   }
 
   virtual common::Status LoadLibrary(const std::string& library_filename, void** handle) const override {
-    // char* error_str = dlerror();  // clear any old error_str
-    // *handle = dlopen(library_filename.c_str(), RTLD_NOW | RTLD_LOCAL);
-    // error_str = dlerror();
-    // if (!*handle) {
-    //   return common::Status(common::LOTUS, common::FAIL,
-    //                         "Failed to load library " + library_filename + " with error: " + error_str);
-    // }
+    char* error_str = dlerror();  // clear any old error_str
+    *handle = dlopen(library_filename.c_str(), RTLD_NOW | RTLD_LOCAL);
+    error_str = dlerror();
+    if (!*handle) {
+      return common::Status(common::ONNXRUNTIME, common::FAIL,
+                            "Failed to load library " + library_filename + " with error: " + error_str);
+    }
     return common::Status::OK();
   }
 
   virtual common::Status UnloadLibrary(void* handle) const override {
-    // if (!handle) {
-    //   return common::Status(common::LOTUS, common::FAIL, "Got null library handle");
-    // }
-    // char* error_str = dlerror();  // clear any old error_str
-    // int retval = dlclose(handle);
-    // error_str = dlerror();
-    // if (retval != 0) {
-    //   return common::Status(common::LOTUS, common::FAIL,
-    //                         "Failed to unload library with error: " + std::string(error_str));
-    // }
+    if (!handle) {
+      return common::Status(common::ONNXRUNTIME, common::FAIL, "Got null library handle");
+    }
+    char* error_str = dlerror();  // clear any old error_str
+    int retval = dlclose(handle);
+    error_str = dlerror();
+    if (retval != 0) {
+      return common::Status(common::ONNXRUNTIME, common::FAIL,
+                            "Failed to unload library with error: " + std::string(error_str));
+    }
     return common::Status::OK();
   }
 
   virtual common::Status GetSymbolFromLibrary(void* handle, const std::string& symbol_name, void** symbol) const override {
-    // char* error_str = dlerror();  // clear any old error str
-    // *symbol = dlsym(handle, symbol_name.c_str());
-    // error_str = dlerror();
-    // if (error_str) {
-    //   return common::Status(common::LOTUS, common::FAIL,
-    //                         "Failed to get symbol " + symbol_name + " with error: " + error_str);
-    // }
-    // // it's possible to get a NULL symbol in our case when Schemas are not custom.
+    char* error_str = dlerror();  // clear any old error str
+    *symbol = dlsym(handle, symbol_name.c_str());
+    error_str = dlerror();
+    if (error_str) {
+      return common::Status(common::ONNXRUNTIME, common::FAIL,
+                            "Failed to get symbol " + symbol_name + " with error: " + error_str);
+    }
+    // it's possible to get a NULL symbol in our case when Schemas are not custom.
     return common::Status::OK();
   }
 
@@ -210,12 +212,12 @@ class PosixEnv : public Env {
 
 }  // namespace
 
-// #if defined(PLATFORM_POSIX) || defined(__ANDROID__)
+#if defined(PLATFORM_POSIX) || defined(__ANDROID__)
 // REGISTER_FILE_SYSTEM("", PosixFileSystem);
 // REGISTER_FILE_SYSTEM("file", LocalPosixFileSystem);
 const Env& Env::Default() {
   return PosixEnv::Instance();
 }
-// #endif
+#endif
 
 }  // namespace onnxruntime
