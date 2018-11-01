@@ -2565,7 +2565,22 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     scale = float(-4.0) * nu / (alpha * alpha);
 
     Matrix<ElemType> I = Matrix<ElemType>::Eye(num_rows, M.GetDeviceId());
-    Matrix<ElemType>::ScaleAndAdd((ElemType) (-1.0 * alpha * alpha), I, P);
+
+    // Matrix<ElemType>::ScaleAndAdd((ElemType) (-1.0 * alpha * alpha), I, P);
+    
+    Matrix<ElemType>::ScaleAndAdd((ElemType)(-1.0), I, P); // for debug, P will be P-I
+    Matrix<ElemType>::Multiply(P, false, P, true, PP);
+    trace_PP = PP.MatTrace();
+    
+    fprintf(stderr, "Before ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f \n", trace_PP);
+
+    Matrix<ElemType>::ScaleAndAdd((ElemType)(1.0 - 1.0 * alpha * alpha), I, P); // for debug, P will be P-alpha^2*I
+    Matrix<ElemType>::Multiply(P, false, P, true, PP);
+    trace_PP = PP.MatTrace();
+    fprintf(stderr, "Before ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
+
+    
+
 
     
     // At this point, the matrix P contains what, in the math, would be Q =
@@ -2573,7 +2588,6 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     // The derivative of the objective w.r.t M equals: scale*(P-alpha^2*I)*M.
     // (Currently the matrix P contains what, in the math, is P-alpha^2*I).
     Matrix<ElemType>::MultiplyAndWeightedAdd(scale, P, false, M, false, 1.0, M, nullptr);
-    I.ReleaseMemory();
     /* guoye: for debug purpose */
     Matrix<ElemType>::Multiply(M, false, M, true, P);
 
@@ -2584,6 +2598,19 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
 
     ratio = float(trace_PP * num_rows / (trace_P * trace_P));
     fprintf(stderr, "After ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
+
+    Matrix<ElemType>::ScaleAndAdd((ElemType)(-1.0), I, P); // for debug, P will be P-I
+    Matrix<ElemType>::Multiply(P, false, P, true, PP);
+    trace_PP = PP.MatTrace();
+
+    fprintf(stderr, "After ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f \n", trace_PP);
+
+    Matrix<ElemType>::ScaleAndAdd((ElemType)(1.0 - 1.0 * alpha * alpha), I, P); // for debug, P will be P-alpha^2*I
+    Matrix<ElemType>::Multiply(P, false, P, true, PP);
+    trace_PP = PP.MatTrace();
+    fprintf(stderr, "After ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
+
+    I.ReleaseMemory();
 }
 
 // protected:
