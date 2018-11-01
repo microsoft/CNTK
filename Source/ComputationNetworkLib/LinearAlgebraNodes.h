@@ -31,24 +31,6 @@ namespace MSR
 namespace CNTK
 {
 
-// template<class ElemType>
-// void PrintMatrix(const Matrix<ElemType>& in)
-// {
-//     double temp = 0.0;
-//     std::cout << std::endl;
-//     std::cout << in.GetNumRows() << "x" << in.GetNumCols() << std::endl;
-//     for (int r = 0; r < in.GetNumRows(); ++r)
-//     {
-//         for (int c = 0; c < in.GetNumCols(); ++c)
-//         {
-//             temp = in(r, c);
-//             std::cout << temp << " ";
-//         }
-//         std::cout << std::endl;
-//     }
-//     std::cout << std::endl;
-// }
-
 template <class ElemType>
 class BiVfsmnNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
 {
@@ -88,7 +70,7 @@ public:
                                                Value());
     }
 
-    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) 
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex)
     {
         const auto& flags = GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
         auto flagStride = GetMBLayout()->GetNumParallelSequences();
@@ -183,65 +165,75 @@ protected:
     size_t m_lStride;
     size_t m_rStride;
 };
-UsingBinaryElementwiseNodeBaseMembers;
+
+// -----------------------------------------------------------------------
+// PlusNode (summand1, summand2)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class PlusNode : public BinaryElementWiseNode<ElemType>
 {
-    return L"Plus";
-}
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"Plus";
+    }
 
 public:
-DeclareConstructorFromConfigWithNumInputs(PlusNode);
-PlusNode(DEVICEID_TYPE deviceId, const wstring& name)
-    : Base(deviceId, name)
-{
-}
-
-virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-{
-    size_t rank = DetermineElementwiseTensorRank();
-    auto result = ValueTensorFor(rank, fr);
-    auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-    auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
-    result.AssignSumOf(input0, input1);
-}
-
-virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-{
-    size_t rank = DetermineElementwiseTensorRank();
-    auto gradient = GradientTensorFor(rank, fr);
-    auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
-
-    // if reduction then mask the respective input(s) (zero out the gaps)
-    if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
-        MaskMissingGradientColumnsToZero(fr);
-
-    if (Input(inputIndex)->IsGradientOptimized(this))
+    DeclareConstructorFromConfigWithNumInputs(PlusNode);
+    PlusNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
     {
-        if (Input(inputIndex)->ParentGradientReused())
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
+        result.AssignSumOf(input0, input1);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto gradient = GradientTensorFor(rank, fr);
+        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+
+        // if reduction then mask the respective input(s) (zero out the gaps)
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+
+        if (Input(inputIndex)->IsGradientOptimized(this))
         {
-            if (inputGradient.GetSOBPtr() != gradient.GetSOBPtr())
-                LogicError("Gradients should be reused.");
+            if (Input(inputIndex)->ParentGradientReused())
+            {
+                if (inputGradient.GetSOBPtr() != gradient.GetSOBPtr())
+                    LogicError("Gradients should be reused.");
+            }
+            else
+                inputGradient.AssignCopyOf(gradient);
         }
         else
-            inputGradient.AssignCopyOf(gradient);
+            inputGradient.AddCopyOf(gradient);
     }
-    else
-        inputGradient.AddCopyOf(gradient);
-}
 
-virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
-{
-    size_t i;
-    for (i = 0; i < GetNumInputs(); i++)
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
     {
-        if (Input(i).get() == input)
-            break;
-    }
-    if (i == GetNumInputs())
-        LogicError("Cannot find input.");
+        size_t i;
+        for (i = 0; i < GetNumInputs(); i++)
+        {
+            if (Input(i).get() == input)
+                break;
+        }
+        if (i == GetNumInputs())
+            LogicError("Cannot find input.");
 
-    return this->InputMatchesOutput(i) ? ParentGradientOptimization::Reuse : ParentGradientOptimization::Overwrite;
-}
-}; // namespace CNTK
+        return this->InputMatchesOutput(i) ? ParentGradientOptimization::Reuse : ParentGradientOptimization::Overwrite;
+    }
+};
 
 template class PlusNode<float>;
 template class PlusNode<double>;
@@ -2287,6 +2279,6 @@ template class CastNode<float, half>;
 template class CastNode<float, double>;
 template class CastNode<double, half>;
 template class CastNode<double, float>;
+} // namespace CNTK
 } // namespace MSR
-} // namespace Microsoft
 } // namespace Microsoft
