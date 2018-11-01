@@ -2575,6 +2575,8 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     Matrix<ElemType>::MultiplyAndWeightedAdd(scale, P, false, M, false, 1.0, M, nullptr);
     I.ReleaseMemory();
     /* guoye: for debug purpose */
+    Matrix<ElemType>::Multiply(M, false, M, true, P);
+
     Matrix<ElemType>::Multiply(P, true, P, false, PP);
 
     trace_P = P.MatTrace();
