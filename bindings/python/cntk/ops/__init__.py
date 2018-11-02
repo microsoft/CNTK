@@ -269,9 +269,9 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
     operation that determines the exact forward/backward procedure.
 
     Example:
-            graph = cntk.labels_to_graph(labels)
-            networkOut = model(features)
-            fb = C.forward_backward(graph, networkOut, 132)
+        graph = cntk.labels_to_graph(labels)
+        networkOut = model(features)
+        fb = C.forward_backward(graph, networkOut, 132)
 
     This op requires that both graph and features have the same dynamic sequence axis (i.e. same sequence length).
 
@@ -330,8 +330,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
         labels_graph = cntk.labels_to_graph(labels_var)
         network_out = model(input_var)
         fb = forward_backward(labels_graph, network_out, 5)
-        fb.eval({'input': input.astype(np.float32),
-                 'label': expanded_labels.astype(np.float32)})
+        fb.eval({'input': input.astype(np.float32), 'label': expanded_labels.astype(np.float32)})
 
     Args:
         graph: labels graph
