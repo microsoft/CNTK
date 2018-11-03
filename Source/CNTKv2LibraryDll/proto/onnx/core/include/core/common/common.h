@@ -70,7 +70,7 @@ using common::Status;
 #define ONNXRUNTIME_IGNORE_RETURN_VALUE(fn) \
   static_cast<void>(fn)
 
-std::vector<std::string> GetStackTrace();
+inline static std::vector<std::string> GetStackTrace() { return {}; }
 
 // __PRETTY_FUNCTION__ isn't a macro on gcc, so use a check for _MSC_VER
 // so we only define it as one for MSVC

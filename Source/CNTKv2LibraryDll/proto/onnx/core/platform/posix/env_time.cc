@@ -36,12 +36,12 @@ class PosixEnvTime : public EnvTime {
 
 }  // namespace
 
-#if defined(PLATFORM_POSIX) || defined(__ANDROID__)
+//#if defined(PLATFORM_POSIX) || defined(__ANDROID__)
 EnvTime* EnvTime::Default() {
   static PosixEnvTime default_env_time;
   return &default_env_time;
 }
-#endif
+//#endif
 
 bool GetMonotonicTimeCounter(TIME_SPEC* value) {
   return clock_gettime(CLOCK_MONOTONIC, value) == 0;
