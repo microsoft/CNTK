@@ -1413,11 +1413,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     if (alpha > 1e-7 || alpha < -1e-7)
                     {
-                        fprintf(stderr, "SGD: alpha = %f, LR = %f.\n", alpha, LR);
+                        // fprintf(stderr, "SGD: alpha = %f, LR = %f.\n", alpha, LR);
 
                         if (Microsoft::MSR::CNTK::rand(0, 4) == 0)
                         {
-                            fprintf(stderr, "SGD starting apply semi.\n");
+                            // fprintf(stderr, "SGD starting apply semi.\n");
 
                             size_t num_rows, num_cols;
                             num_rows = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().GetNumRows();
@@ -2540,7 +2540,7 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
    // the learning rate slower to reduce the risk of divergence, since the
    // update may not be stable for starting points far from equilibrium.
    ratio = float(trace_PP * num_rows / (trace_P * trace_P));
-   fprintf(stderr, "Before ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
+   //fprintf(stderr, "Before ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
 
    assert(ratio > 0.999);
    if (ratio > 1.02)
@@ -2579,12 +2579,12 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     Matrix<ElemType>::Multiply(P, false, P, true, PP);
     trace_PP = PP.MatTrace();
     
-    fprintf(stderr, "Before ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f \n", trace_PP);
+    //fprintf(stderr, "Before ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f \n", trace_PP);
 
     Matrix<ElemType>::ScaleAndAdd((ElemType)(1.0 - 1.0 * alpha * alpha), I, P); // for debug, P will be P-alpha^2*I
     Matrix<ElemType>::Multiply(P, false, P, true, PP);
     trace_PP = PP.MatTrace();
-    fprintf(stderr, "Before ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
+    //fprintf(stderr, "Before ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
 
     old_criterion = trace_PP;
     
@@ -2610,23 +2610,23 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
         trace_PP = NPP.MatTrace();
 
         ratio = float(trace_PP * num_rows / (trace_P * trace_P));
-        fprintf(stderr, "After ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
+        //fprintf(stderr, "After ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
 
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-1.0), I, NP); // for debug, P will be P-I
         Matrix<ElemType>::Multiply(NP, false, NP, true, NPP);
         trace_PP = NPP.MatTrace();
 
-        fprintf(stderr, "After ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f \n", trace_PP);
+        //fprintf(stderr, "After ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f \n", trace_PP);
 
         Matrix<ElemType>::ScaleAndAdd((ElemType)(1.0 - 1.0 * alpha * alpha), I, NP); // for debug, P will be P-alpha^2*I
         Matrix<ElemType>::Multiply(NP, false, NP, true, NPP);
         trace_PP = NPP.MatTrace();
-        fprintf(stderr, "After ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
+        //fprintf(stderr, "After ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
 
         if (trace_PP <= old_criterion) break;
         // diverge
         nu *= 0.5;
-        fprintf(stderr, "After ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f is larger than old criterion = %f, reducing nu to be %f \n", trace_PP, old_criterion, nu);
+        //fprintf(stderr, "After ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f is larger than old criterion = %f, reducing nu to be %f \n", trace_PP, old_criterion, nu);
     }
     
     if (nu <= -1e-7) M.SetValue(NM);
