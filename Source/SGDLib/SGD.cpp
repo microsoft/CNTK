@@ -2485,7 +2485,7 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     int devId;
     
     size_t num_rows, num_cols;
-    ElemType trace_P, trace_PP;
+    ElemType trace_P, trace_PP, old_criterion;
     float nu, ratio, scale;
     num_rows = M.GetNumRows();
     num_cols = M.GetNumCols();
@@ -2495,9 +2495,13 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     Matrix<ElemType> PP(num_rows, num_rows, devId);
     Matrix<ElemType> delta_M(num_rows, num_cols, devId);
 
+    Matrix<ElemType> NP(num_rows, num_rows, devId);
+    Matrix<ElemType> NPP(num_rows, num_rows, devId);
+    Matrix<ElemType> NM(num_rows, num_cols, devId);
+
 
     // Matrix<ElemType> tmp = functionValues;
-    if (alpha <= 1e-9 && alpha >= -1e-9)
+    if (alpha <= 1e-7 && alpha >= -1e-7)
         return; 
     // We'd like to enforce the rows of M to be orthonormal.
     // define P = M M^T.  If P is unit then M has orthonormal rows.
@@ -2517,8 +2521,35 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     // See  http://www.danielpovey.com/files/2018_interspeech_tdnnf.pdf
     // for more details.
     nu = 0.125;
-    if (alpha < -1e-9)
-    {
+             
+    Matrix<ElemType>::Multiply(P, true, P, false, PP);
+
+    trace_P = P.MatTrace();
+    trace_PP = PP.MatTrace();
+        
+      
+
+    // The following is a tweak to avoid divergence when the eigenvalues aren't
+    // close to being the same.  trace_P is the sum of eigenvalues of P, and
+    // trace_P_P is the sum-square of eigenvalues of P.  Treat trace_P as a sum
+    // of positive values, and trace_P_P as their sumsq.  Then mean = trace_P /
+   // dim, and trace_P_P cannot be less than dim * (trace_P / dim)^2,
+   // i.e. trace_P_P >= trace_P^2 / dim.  If ratio = trace_P_P * dim /
+   // trace_P^2, then ratio >= 1.0, and the excess above 1.0 is a measure of
+   // how far we are from convergence.  If we're far from convergence, we make
+   // the learning rate slower to reduce the risk of divergence, since the
+   // update may not be stable for starting points far from equilibrium.
+   ratio = float(trace_PP * num_rows / (trace_P * trace_P));
+   fprintf(stderr, "Before ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
+
+   assert(ratio > 0.999);
+   if (ratio > 1.02)
+   {
+        nu *= 0.5; // Slow down the update speed to reduce the risk of divergence.
+   }
+    
+   if (alpha < -1e-7)
+   {
         // If alpha < -1e-9 then it's like letting the scale "float",
         // as in Sec. 2.3 of
         // http://www.danielpovey.com/files/2018_interspeech_tdnnf.pdf,
@@ -2529,40 +2560,16 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
         // or alpha^2 = tr(P^2) / tr(P).
         // Note: P is symmetric so it doesn't matter whether we use tr(P P) or
         // tr(P^T P); we use tr(P^T P) because I believe it's faster to compute.
-        
-
-        Matrix<ElemType>::Multiply(P, true, P, false, PP);
-
-        trace_P = P.MatTrace();
-        trace_PP = PP.MatTrace();
-        
+   
         alpha = std::sqrt(float(trace_PP / trace_P));
-
-        // The following is a tweak to avoid divergence when the eigenvalues aren't
-        // close to being the same.  trace_P is the sum of eigenvalues of P, and
-        // trace_P_P is the sum-square of eigenvalues of P.  Treat trace_P as a sum
-        // of positive values, and trace_P_P as their sumsq.  Then mean = trace_P /
-        // dim, and trace_P_P cannot be less than dim * (trace_P / dim)^2,
-        // i.e. trace_P_P >= trace_P^2 / dim.  If ratio = trace_P_P * dim /
-        // trace_P^2, then ratio >= 1.0, and the excess above 1.0 is a measure of
-        // how far we are from convergence.  If we're far from convergence, we make
-        // the learning rate slower to reduce the risk of divergence, since the
-        // update may not be stable for starting points far from equilibrium.
-        ratio = float(trace_PP * num_rows / (trace_P * trace_P));
-        fprintf(stderr, "Before ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
-
-        assert(ratio > 0.999);
-        if (ratio > 1.02)
-        {
-            nu *= 0.5; // Slow down the update speed to reduce the risk of divergence.
-        }
     }
 
     // see Sec. 2.2 of http://www.danielpovey.com/files/2018_interspeech_tdnnf.pdf
     // for explanation of the 1/(scale*scale) factor, but there is a difference in
     // notation; 'scale' here corresponds to 'alpha' in the paper, and
     // 'update_speed' corresponds to 'nu' in the paper.
-    scale = float(-4.0) * nu / (alpha * alpha);
+    nu = float(-4.0)*nu;
+    scale = nu / (alpha * alpha);
 
     Matrix<ElemType> I = Matrix<ElemType>::Eye(num_rows, M.GetDeviceId());
 
@@ -2579,36 +2586,50 @@ void SGD<ElemType>::ApplySemiOrthogonalConstraint(Matrix<ElemType>& M, float alp
     trace_PP = PP.MatTrace();
     fprintf(stderr, "Before ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
 
+    old_criterion = trace_PP;
     
-
+    
 
     
     // At this point, the matrix P contains what, in the math, would be Q =
     // P-alpha^2*I.  
     // The derivative of the objective w.r.t M equals: scale*(P-alpha^2*I)*M.
     // (Currently the matrix P contains what, in the math, is P-alpha^2*I).
-    Matrix<ElemType>::MultiplyAndWeightedAdd(scale, P, false, M, false, 1.0, M, nullptr);
-    /* guoye: for debug purpose */
-    Matrix<ElemType>::Multiply(M, false, M, true, P);
+    while(nu <= -1e-7)
+    {
+        scale = nu / (alpha * alpha);
+        NM.SetValue(M);
 
-    Matrix<ElemType>::Multiply(P, true, P, false, PP);
+        Matrix<ElemType>::MultiplyAndWeightedAdd(scale, P, false, NM, false, 1.0, NM, nullptr);
+        /* guoye: for debug purpose */
+        Matrix<ElemType>::Multiply(NM, false, NM, true, NP);
 
-    trace_P = P.MatTrace();
-    trace_PP = PP.MatTrace();
+        Matrix<ElemType>::Multiply(NP, true, NP, false, NPP);
 
-    ratio = float(trace_PP * num_rows / (trace_P * trace_P));
-    fprintf(stderr, "After ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
+        trace_P = NP.MatTrace();
+        trace_PP = NPP.MatTrace();
 
-    Matrix<ElemType>::ScaleAndAdd((ElemType)(-1.0), I, P); // for debug, P will be P-I
-    Matrix<ElemType>::Multiply(P, false, P, true, PP);
-    trace_PP = PP.MatTrace();
+        ratio = float(trace_PP * num_rows / (trace_P * trace_P));
+        fprintf(stderr, "After ApplySemiOrthogonalConstraint: ratio = %f \n", ratio);
 
-    fprintf(stderr, "After ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f \n", trace_PP);
+        Matrix<ElemType>::ScaleAndAdd((ElemType)(-1.0), I, NP); // for debug, P will be P-I
+        Matrix<ElemType>::Multiply(NP, false, NP, true, NPP);
+        trace_PP = NPP.MatTrace();
 
-    Matrix<ElemType>::ScaleAndAdd((ElemType)(1.0 - 1.0 * alpha * alpha), I, P); // for debug, P will be P-alpha^2*I
-    Matrix<ElemType>::Multiply(P, false, P, true, PP);
-    trace_PP = PP.MatTrace();
-    fprintf(stderr, "After ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
+        fprintf(stderr, "After ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f \n", trace_PP);
+
+        Matrix<ElemType>::ScaleAndAdd((ElemType)(1.0 - 1.0 * alpha * alpha), I, NP); // for debug, P will be P-alpha^2*I
+        Matrix<ElemType>::Multiply(NP, false, NP, true, NPP);
+        trace_PP = NPP.MatTrace();
+        fprintf(stderr, "After ApplySemiOrthogonalConstraint: alpha = %f, trace[(P-alpha^2*I)(P-alpha^2*I)^T] = %f \n", alpha, trace_PP);
+
+        if (trace_PP <= old_criterion) break;
+        // diverge
+        nu *= 0.5;
+        fprintf(stderr, "After ApplySemiOrthogonalConstraint: trace[(P-I)(P-I)^T] = %f is larger than old criterion = %f, reducing nu to be %f \n", trace_PP, old_criterion, nu);
+    }
+    
+    if (nu <= -1e-7) M.SetValue(NM);
 
     I.ReleaseMemory();
 }
