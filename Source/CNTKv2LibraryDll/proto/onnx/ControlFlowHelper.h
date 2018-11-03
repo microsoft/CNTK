@@ -130,6 +130,28 @@ namespace CNTK
         return L"( " + f->Name() + L": " + f->Uid() + L")";
     }
 
+    bool IsStepFunction(FunctionPtr f)
+    {
+        return f->OpName() == L"PastValue" || f->OpName() == L"FutureValue";
+    }
+
+    void AddScanOutputVariable(std::vector<Variable>& scanoutput, Variable output)
+    {
+        // in case output is 
+        if (output.Owner() && IsStepFunction(output.Owner()))
+        {
+            // if scan output is from a step function, we need to replace it with the step function's
+            // input. Otherwise it will collid with the final state output and produce wrong numbers.
+            // By doing this, onnx test cannot map CNTK's output to ONNX model's outputs. 
+            // Test case generated will fail lotus because the scan output is mappted to final state output.
+            // Before we can workout anything better, we post a warning here.
+            fprintf(stderr, "Warning: The model has a scan op with output colliding with a final state. The scan output is replaced. Generated onnxruntime test case may not pass because of this.");
+            scanoutput.push_back(output.Owner()->Inputs()[0]);
+        }
+        else
+            scanoutput.push_back(output);
+    }
+
     void BuildLoops(const std::vector<FunctionPtr>& roots,
         std::vector<ScanLoop> &scanLoops)
     {
@@ -216,7 +238,7 @@ namespace CNTK
                                 {
                                     outputs.push_back(input);
                                     if (input.DynamicAxes().size() == 2)
-                                        scanoutputs[l].push_back(input);
+                                        AddScanOutputVariable(scanoutputs[l], input);
                                 }
                             }
                         }
@@ -231,7 +253,9 @@ namespace CNTK
                 if (std::find(loop.Nodes().begin(), loop.Nodes().end(), root) != loop.Nodes().end())
                     for (auto output : root->Outputs())
                         if (std::find(scanoutputs[l].begin(), scanoutputs[l].end(), output) == scanoutputs[l].end())
-                            scanoutputs[l].push_back(output);
+                        {
+                            AddScanOutputVariable(scanoutputs[l], output);
+                        }
             }
         }
 
@@ -245,7 +269,7 @@ namespace CNTK
             const std::vector<FunctionPtr> &nodes = loop.Nodes();
             for (auto &f : nodes)
             {
-                if (f->OpName() == L"PastValue" || f->OpName() == L"FutureValue")
+                if (IsStepFunction(f))
                     loopstepfunctions[l].push_back(f);
                 else if (f->OpName() != L"LSTM" && f->OpName() != L"GRU" && f->OpName() != L"RNNStep")
                     filterOutBlockRNNs[l] = true;

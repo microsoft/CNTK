@@ -1354,8 +1354,6 @@ Node* GraphBase::AddNode(const std::string& name,
                          const std::vector<NodeArg*>& output_args,
                          const NodeAttributes* attributes,
                          const std::string& domain) {
-    if ("ElementTimes86_Output_0transposed_to_batch_sequence_output" == name)         
-        std::cout << "";
   std::vector<NodeArg*> inputs, outputs;
   inputs.resize(input_args.size());
   outputs.resize(output_args.size());

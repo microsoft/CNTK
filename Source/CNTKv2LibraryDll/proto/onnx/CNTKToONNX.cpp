@@ -347,7 +347,8 @@ private:
     static void ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
         std::vector<onnxruntime::NodeArg *>& outputs, Graph *graph);
 
-    static onnxruntime::NodeArg &CreateNodeArg(const Variable &input, onnxruntime::Graph* graph, const std::string &replace_name = "");
+    static onnxruntime::NodeArg &CreateNodeArg(const Variable &variable, onnxruntime::Graph* graph, 
+        bool isInput, const std::string &replace_name = "");
     static onnxruntime::Node *AddSliceNode(onnxruntime::NodeArg &inputArg, const std::vector<int64_t> &axes,
         const std::vector<int64_t> &sliceStarts, const std::vector<int64_t> &sliceEnds,
         const std::string &outArgName, onnxruntime::Graph* graph);
@@ -3072,13 +3073,18 @@ onnxruntime::Node *CNTKToONNXHelper::AddReshapeNodeImpl(Graph *graph, const stri
 }
 
 // create a NodeArg for an input variable.
-onnxruntime::NodeArg &CNTKToONNXHelper::CreateNodeArg(const Variable &input, onnxruntime::Graph* graph, const std::string &replace_name)
+onnxruntime::NodeArg &CNTKToONNXHelper::CreateNodeArg(const Variable &variable, onnxruntime::Graph* graph, bool isInput, const std::string &replace_name)
 {
-    onnx::TypeProto inputTypeProto = ToTypeProto(input.Shape(), input.HasBatchAxis(), input.HasSequenceAxis());
-    onnx::TensorProto_DataType elemType = ConvertDataTypeCNTKToTensorProto(input.GetDataType());
-    inputTypeProto.mutable_tensor_type()->set_elem_type(elemType);
-    onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(
-        replace_name.empty() ? UniqueNodeNameStorage::GetUniqueInputNodeName(input) : replace_name, &inputTypeProto);
+    onnx::TypeProto typeProto = ToTypeProto(variable.Shape(), variable.HasBatchAxis(), variable.HasSequenceAxis());
+    onnx::TensorProto_DataType elemType = ConvertDataTypeCNTKToTensorProto(variable.GetDataType());
+    typeProto.mutable_tensor_type()->set_elem_type(elemType);
+
+    std::string nodeArgName = replace_name;
+    if (nodeArgName.empty())
+        nodeArgName = isInput ?
+        UniqueNodeNameStorage::GetUniqueInputNodeName(variable) :
+        UniqueNodeNameStorage::GetUniqueOutputNodeName(variable);
+    onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(nodeArgName, &typeProto);
     return inputArg;
 }
 
@@ -3606,7 +3612,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceBroadcastAsNode(const Functio
     // [#][d0, d1]
     std::vector<int64_t> newShape = ToINTS(ToTypeProto(input.Shape(), (int)input.DynamicAxes().size()));
 
-    onnxruntime::NodeArg &inputNodeArg = CreateNodeArg(input, graph);
+    onnxruntime::NodeArg &inputNodeArg = CreateNodeArg(input, graph, true);
     if (input.DynamicAxes().size() == 0)
     {
         newShape.insert(newShape.begin(), (int64_t)FreeBatchSize);
@@ -3653,7 +3659,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceGatherNode(const FunctionPtr&
         squeezeAxes, castNode->Name() + "_squeezed", graph);
     inputs[1] = const_cast<NodeArg *>(castScreezeNode->OutputDefs()[0]);
 
-    NodeArg& compressOutputNodeArg = CreateNodeArg(src->Outputs()[0], graph);
+    NodeArg& compressOutputNodeArg = CreateNodeArg(src->Outputs()[0], graph, false);
     
     std::string nodeName  = UniqueNodeNameStorage::GetUniqueNodeName(src);
     std::string onnxOpName = "Compress";
@@ -3925,19 +3931,21 @@ void ResolveGraphAndSaveModel(onnxruntime::Model *model)
 // use this method to attach an identity op so that state inputs/outputs of the subgraph are in the same order as the scan op
 // extendedNodeArgOfSubgraph -> nodeArg -> Scan
 // Scan -> nodeArg -> extendedNodeArgOfSubgraph
-void AttachNodeArg(onnxruntime::Graph* scanGraph, const std::string &subgraphNodeArgName, bool isInput)
+void AttachNodeArg(onnxruntime::Graph* scanGraph, const std::string &subgraphNodeArgName, bool isInput, bool isState)
 {
     NodeArg& nodeArgOfSubgraph = scanGraph->GetOrCreateNodeArg(subgraphNodeArgName, nullptr);
-    NodeArg& extendedNodeArgOfSubgraph = scanGraph->GetOrCreateNodeArg(subgraphNodeArgName + "_extended", nodeArgOfSubgraph.TypeAsProto());
+    std::string extendedNodeAndNodeArgName = isState ? "state_" : "scan_";
+    extendedNodeAndNodeArgName += subgraphNodeArgName;
+    extendedNodeAndNodeArgName += isInput ? "_extended_to_" : "_extended_from_";
+
+    NodeArg& extendedNodeArgOfSubgraph = scanGraph->GetOrCreateNodeArg(extendedNodeAndNodeArgName, nodeArgOfSubgraph.TypeAsProto());
     if (isInput)
     {
-        scanGraph->AddNode(subgraphNodeArgName + "_extended_to_", "Identity", "",
-            { &extendedNodeArgOfSubgraph }, { &nodeArgOfSubgraph });
+        scanGraph->AddNode(extendedNodeAndNodeArgName, "Identity", "", { &extendedNodeArgOfSubgraph }, { &nodeArgOfSubgraph });
     }
     else
     {
-        scanGraph->AddNode(subgraphNodeArgName + "_extended_from_", "Identity", "",
-            { &nodeArgOfSubgraph }, { &extendedNodeArgOfSubgraph });
+        scanGraph->AddNode(extendedNodeAndNodeArgName, "Identity", "", { &nodeArgOfSubgraph }, { &extendedNodeArgOfSubgraph });
     }
 }
 
@@ -4055,7 +4063,7 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                         subGraphInitialStateNodeArg.Name(), &scanInitialStateTypeProto);
                     input_args.push_back(&scanInitialStateNodeArg);
 
-                    AttachNodeArg(&scanGraph, subGraphInitialStateNodeArg.Name(), true);
+                    AttachNodeArg(&scanGraph, subGraphInitialStateNodeArg.Name(), true, true);
 
                     {
                         // as with initial state, output state does have batch axis but not sequence axis.
@@ -4063,11 +4071,19 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                             true, false);
                         scanFinalStateTypeProto.mutable_tensor_type()->set_elem_type(
                             ConvertDataTypeCNTKToTensorProto(scanLoopState.m_stateOutput.GetDataType()));
-                        onnxruntime::NodeArg &scanFinalStateNodeArg = graph->GetOrCreateNodeArg(
-                            ToLegacyString(ToUTF8(scanLoopState.m_stateOutput.Uid())), &scanFinalStateTypeProto);
+
+                        // TODO: UniqueNodeNameStorage is causing model validation failure.
+                        std::string stateOutputName = ToLegacyString(ToUTF8(scanLoopState.m_stateOutput.Uid()));
+                        // std::string stateOutputName = UniqueNodeNameStorage::GetUniqueInputNodeName(scanLoopState.m_stateOutput);
+                            
+                        onnxruntime::NodeArg &scanFinalStateNodeArg = 
+                            graph->GetOrCreateNodeArg(stateOutputName, &scanFinalStateTypeProto);
 
                         output_args.push_back(&scanFinalStateNodeArg);
-                        AttachNodeArg(&scanGraph, scanFinalStateNodeArg.Name(), false);
+
+                        // even final state and output collide, in subgraph the final state and output names are the same.
+                        // this is because they are conduited to two different subgraph outputs via Identity in AttachNodeArg.
+                        AttachNodeArg(&scanGraph, stateOutputName, false, true);
                     }
 
                     if (scanLoopState.m_hasInitializer)
@@ -4084,9 +4100,9 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     else
                         subgraphNodeArgName = UniqueNodeNameStorage::GetUniqueInputNodeName(scanInput);
 
-                    NodeArg& scanInputNodeArg = CreateNodeArg(scanInput, graph, subgraphNodeArgName);
+                    NodeArg& scanInputNodeArg = CreateNodeArg(scanInput, graph, true, subgraphNodeArgName);
 
-                    AttachNodeArg(&scanGraph, subgraphNodeArgName, true);
+                    AttachNodeArg(&scanGraph, subgraphNodeArgName, true, false);
                     NodeArg& transposedScanInputNodeArg = AddTransposeBatchSequenceAxesNode(scanInputNodeArg, true, graph, scanNodeName);
                     input_args.push_back(&transposedScanInputNodeArg);
 
@@ -4106,8 +4122,8 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                 for (auto &scanOutput : scanLoops[loopIndex].m_scanOutputs)
                 {
                     // add the NodeArg to the main graph because it may not get a chance to get created if two scans are connected back-to-back
-                    NodeArg& scanOutputNodeArg = CreateNodeArg(scanOutput, graph);
-                    AttachNodeArg(&scanGraph, scanOutputNodeArg.Name(), false);
+                    NodeArg& scanOutputNodeArg = CreateNodeArg(scanOutput, graph, false);
+                    AttachNodeArg(&scanGraph, scanOutputNodeArg.Name(), false, false);
                     NodeArg& transposedScanOutputNodeArg = AddTransposeBatchSequenceAxesNode(scanOutputNodeArg, false, graph, scanNodeName);
                     output_args.push_back(&transposedScanOutputNodeArg);
                 }
@@ -4323,10 +4339,31 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
             return CreateBatchNormalization(src, graph, functionNodes, variableNodes, compositeOutputsMap,
                 scanLoops, createLoopIndex);
     }
-    else if (IsBatchAxisOp(src))
+    else if (cntkOpName == "UnpackBatchAxis")
     {
-        return CreateNodeForBatchAxisOp(src, graph, functionNodes, variableNodes, compositeOutputsMap,
-            scanLoops, createLoopIndex);
+        if (IsBatchAxisOp(src))
+            return CreateNodeForBatchAxisOp(src, graph, functionNodes, variableNodes, compositeOutputsMap,
+                scanLoops, createLoopIndex);
+        else
+        {
+            // this is a normal use of UnpackBatchAxis. ONNX does not treat batch axis specially so 
+            // we shall skip the op.
+            auto blockMapping = src->Inputs()[0].BlockFunctionVariableMapping();
+            if (blockMapping.IsInitialized())
+                return CreateNode(blockMapping.Owner(),
+                    graph,
+                    functionNodes,
+                    variableNodes,
+                    compositeOutputsMap,
+                    scanLoops, createLoopIndex);
+            else if (src->Inputs()[0].Owner())
+                return CreateNode(src->Inputs()[0].Owner(),
+                    graph,
+                    functionNodes,
+                    variableNodes,
+                    compositeOutputsMap,
+                    scanLoops, createLoopIndex);
+        }
     }
 
     //
@@ -4830,8 +4867,6 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
         }
         else if (OpNeedONNXTypeMap(onnxOpName))
         {
-            if (onnxOpName == "TopK" && outputIndex == 1)
-                std::cout << "";
             TensorProto_DataType onnx_type = MapAndUpdateONNXType(onnxOpName, false, outputIndex, output.GetDataType(), nullptr);
             TensorProto_DataType cntk_type = ConvertDataTypeCNTKToTensorProto(output.GetDataType());
             // TODO: handle all cases

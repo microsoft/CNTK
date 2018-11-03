@@ -2690,8 +2690,6 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Concat")
     {
-        if (node->Name() == "Splice3547")
-            std::cout << std::endl;
         // We allow the 'axis' attribute to be optional, and not required (as
         // given in Concat's ONNX spec), to be consistent with other frameworks.
         // 'axis' can be enforced as a required attribute, if needed.
@@ -3712,7 +3710,7 @@ std::pair<bool, std::vector<FunctionPtr>> ONNXToCNTKHelper::CheckNodeBelongsToOp
         if (firstParentNode != nullptr)
         {
             it = firstParentNode->OutputNodesBegin();
-            if (it != node->OutputNodesEnd())
+            if (it != firstParentNode->OutputNodesEnd())
             {
                 grandParentNode = *it;
             }
