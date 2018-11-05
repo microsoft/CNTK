@@ -97,11 +97,11 @@ BOOST_FIXTURE_TEST_CASE(FSAdagradSparse, MatrixLearnerFixture)
 BOOST_FIXTURE_TEST_CASE(RmsPropSparse, MatrixLearnerFixture)
 {
     // run learner
-    float avg = matSG.RmsProp(matG, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true, false);
-    float avgSparse = matSGsparse.RmsProp(matGsparseBSC, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true, false);
+    matSG.RmsPropUpdate(matG, matM, 0.01f, 0.9f, 0.9f, true);
+    matSGsparse.RmsPropUpdate(matGsparseBSC, matMsparse,0.01f, 0.9f, 0.9f, true);
 
     BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE3));
-    BOOST_CHECK(fabsf(avg - avgSparse) < c_epsilonFloatE5);
+    BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE5));
 }
 
 // tests AdaDelta sparse vs. dense
