@@ -1498,7 +1498,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   nodeDependentLearningRatePerSample, momentumPerSample,
                                   numSamplesInMinibatch,
                                   m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
-                                  m_needAveMultiplier, m_useNesterovMomentum);
+                                  m_needAveMultiplier, m_useNesterovMomentum, m_disableMomentumUnitGain);
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
                     if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
@@ -2454,7 +2454,8 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
                                   size_t actualMBSize,
                                   const double L2RegWeight, const double L1RegWeight,
                                   const bool needAveMultiplier,
-                                  const bool useNesterovMomentum) const
+                                  const bool useNesterovMomentum,
+                                  const bool disableMomentumUnitGain) const
 {
     // we use simple linear (instead of log linear) exponentiation here
     const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
@@ -2504,12 +2505,12 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
             functionValues.MomentumSGDUpdate(gradientValues, smoothedGradientValues,
                                              ElemType(learnRatePerSample),
                                              //By defualt, V1 uses UnitGain momentum. TODO: Do we need to enable V1 with non unit gain update?
-                                             ElemType(momentum), ElemType(1.0) - ElemType(momentum));
+                                             ElemType(momentum), disableMomentumUnitGain ? ElemType(1.0) : ElemType(1.0) - ElemType(momentum));
         }
         else
         {
             functionValues.NesterovAcceleratedMomentumSGDUpdate(gradientValues, smoothedGradientValues,
-                                                                ElemType(learnRatePerSample), ElemType(momentum), ElemType(1.0) - ElemType(momentum));
+                                                                ElemType(learnRatePerSample), ElemType(momentum), disableMomentumUnitGain ? ElemType(1.0) : ElemType(1.0) - ElemType(momentum));
         }
     }
     else if (adpType == GradientsUpdateType::AdaGrad)
@@ -2528,7 +2529,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
         smoothedGradientValues.FSAdagradUpdate(
             gradientValues, functionValues, targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
-            learnRatePerSample, momentum, varMomentum, ElemType(1.0) - ElemType(momentum));
+            learnRatePerSample, momentum, varMomentum, disableMomentumUnitGain ? ElemType(1.0) : ElemType(1.0) - ElemType(momentum));
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
@@ -2539,10 +2540,10 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
         auto learningRate = learnRatePerSample * actualMBSize;
         Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
-        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate, momentum, (ElemType) m_rpi.gamma, needAveMultiplier);
+        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain));
 #else
 
-		smoothedGradientValues.RmsPropUpdate(gradientValues,functionValues,learnRatePerSample,momentum,(ElemType) m_rpi.gamma,needAveMultiplier);
+		smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain));
 #endif    
 	}
 
@@ -3133,6 +3134,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     floatargvector momentumPerSample = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
     floatargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(floatargvector()));
     bool useNesterovMomentum = configSGD(L"useNAG", false);
+    bool disableMomentumUnitGain = configSGD(L"disableMomentumUnitGain", false);
 
     m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t) 0);
 
@@ -3268,6 +3270,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         m_momentumSpecifiedForMBSize = m_mbSize;
     }
     m_useNesterovMomentum = useNesterovMomentum;
+    m_disableMomentumUnitGain = disableMomentumUnitGain;
 
     for (int i = 0; i < m_momentumParam.size(); i++)
     {
