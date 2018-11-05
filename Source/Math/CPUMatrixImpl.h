@@ -1355,101 +1355,40 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
 }
 
 template <class ElemType>
-ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
+void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
+                                      CPUMatrix<ElemType>& functionValues,
+                                      ElemType learningRate, 
+                                      ElemType momentum,
                                       ElemType RMS_GAMMA,
-                                      ElemType RMS_WGT_INC,
-                                      ElemType RMS_WGT_MAX,
-                                      ElemType RMS_WGT_DEC,
-                                      ElemType RMS_WGT_MIN,
-                                      const bool needAveMultiplier,
-                                      const bool initialized)
+                                      bool unitGainMomentum)
 {
-    const ElemType floor = 1e-6f;
+    const ElemType floor = 1.0;
+    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0); 
 
     size_t n = gradients.GetNumElements();
-    ElemType* curr_grad = gradients.Data();
+    ElemType* mean_grad = gradients.Data();
+    ElemType* val = functionValues.Data();
 
-    if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 3 || !initialized)
+    if (IsEmpty() || GetNumCols() < gradients.GetNumCols() * 2)
     {
-        RequireSize(gradients.GetNumRows(), gradients.GetNumCols() * 3);
+        RequireSize(gradients.GetNumRows(), gradients.GetNumCols() * 2);
         SetValue(0.0);
-
-        ElemType* avars = Data();         // accumulated variances for RMS scaling
-        ElemType* steps = Data() + 2 * n; // current step size
-
-        // initialize moving average of gradient-squared
-        for (long i = 0; i < n; i++)
-            avars[i] = curr_grad[i] * curr_grad[i];
-
-        // initialize starting step size
-        for (long i = 0; i < n; i++)
-            steps[i] = ElemType(0.02);
     }
 
     ElemType* avars = Data();         // accumulated variances for RMS scaling
-    ElemType* signs = Data() + n;     // sign of previous gradient
-    ElemType* steps = Data() + 2 * n; // current step size
+    ElemType* moms = Data() + n;     // sign of previous gradient
 
-    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != gradients.GetNumCols() * 3)
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != gradients.GetNumCols() * 2)
         LogicError("The matrix gradients does not have expected dimensions.");
 
     ElemType ONE_MINUS_GAMMA = ElemType(1.0) - RMS_GAMMA;
-    // int upd[] = {
-    //    2,2,0,
-    //    2,2,0,
-    //    1,1,1,
-    //    2,2,0,
-    //    1,2,1,
-    //    0,2,2,
-    //    1,1,1,
-    //    0,2,2,
-    //    0,2,2,
-    // };
 
-    //      for (long i=0; i<n; i++)
-    //      {
-    //          avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (curr_grad[i] * curr_grad[i]);
-    //    // grad sign base 3: 0->neg, 1->zero, 2->pos
-    //    const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
-
-    //    // signs[i] contains three consecutive grad_sign
-    //    signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
-
-    //    switch(upd[int(signs[i])])
-    //    {
-    //    case 0:
-    //        steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
-    //        break;
-    //    case 2:
-    //        steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
-    //        break;
-    //    }
-    //    curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
-    //      }
-
-    ElemType aveMultiplier = 0, a;
     for (long i = 0; i < n; i++)
     {
-        avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (curr_grad[i] * curr_grad[i]);
-        const int grad_sign = (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
-
-        if (signs[i] * grad_sign > 0)
-            steps[i] = std::min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
-        else
-            steps[i] = std::max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
-
-        a = steps[i] / sqrt(avars[i] + floor);
-        curr_grad[i] *= a;
-        signs[i] = (ElemType) grad_sign;
-
-        if (needAveMultiplier)
-            aveMultiplier += a;
-    }
-
-    if (needAveMultiplier)
-        return aveMultiplier / n;
-    else
-        return 1;
+        avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (mean_grad[i] * mean_grad[i]);
+        moms[i] = moms[i] * momentum + unitGainFactor * (mean_grad[i] * learningRate) / (Sqrt(avars[i] + floor));
+        val[i] -= moms[i];
+	}
 }
 
 template <class ElemType>

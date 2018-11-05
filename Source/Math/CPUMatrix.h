@@ -101,14 +101,12 @@ public:
     void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
               ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax=false);
 
-    ElemType RmsProp(CPUMatrix<ElemType>& gradients,
-                     ElemType RMS_GAMMA,
-                     ElemType RMS_WGT_INC,
-                     ElemType RMS_WGT_MAX,
-                     ElemType RMS_WGT_DEC,
-                     ElemType RMS_WGT_MIN,
-                     const bool needAveMultiplier,
-                     const bool initialized);
+    void RmsProp(CPUMatrix<ElemType>& gradients,
+                 CPUMatrix<ElemType>& functionValues,
+                 ElemType learningRate,
+                 ElemType momentum,
+                 ElemType RMS_GAMMA,
+                 bool unitGainMomentum);
 
     template<typename GradType>
     void AdaDelta(CPUMatrix<GradType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
