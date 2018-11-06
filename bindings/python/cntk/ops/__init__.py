@@ -284,6 +284,32 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
     graph = sanitize_input(graph, dtype)
     return forward_backward(graph, features, blankTokenId, delayConstraint, name)
 
+@typemap
+def RNNT(graph, encoder, decoder, blankTokenId, delayConstraint=-1, name=''):
+    '''
+    Criterion node for training methods that rely on forward-backward Viterbi-like passes, e.g. Connectionist Temporal Classification (CTC) training
+    The node takes as the input the graph of labels, produced by the labels_to_graph operation that determines the exact forward/backward procedure.
+    Example:
+        graph = cntk.labels_to_graph(labels)
+        networkOut = model(features)
+        fb = C.forward_backward(graph, networkOut, 132)
+
+    Args:
+        graph: labels graph
+        features: network output
+        blankTokenId: id of the CTC blank label
+        delayConstraint: label output delay constraint introduced during training that allows to have shorter delay during inference. This is using the original time information to enforce that CTC tokens only get aligned within a time margin. Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy. delayConstraint=-1 means no constraint
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import r_n_n_t as RNNT
+    dtype = get_data_type(encoder, decoder, graph)
+    encoder = sanitize_input(encoder, dtype)
+    decoder = sanitize_input(decoder, dtype)
+    graph = sanitize_input(graph, dtype)
+    return RNNT(graph, encoder, decoder, blankTokenId, delayConstraint, name)
+
+
 ##########################################################################
 # convolution ops
 ##########################################################################

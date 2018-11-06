@@ -31,6 +31,8 @@
 #endif
 
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
+#define IDX3C(i, j, k, ld, numseq) ((((j) * (numseq) + (k)) * (ld)) + (i)) //index for parallel seq
+
 
 // On older GPUs, CUDA atomicAdd() only exists for 'float'. This is the 'double' version.
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600

@@ -1519,14 +1519,14 @@ public:
             FrameRange frameRange(InputRef(1).GetMBLayout());
             BackpropToF(InputRef(inputIndex).Gradient(), Gradient(), *m_derivativeForF);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
-            //InputRef(inputIndex).Gradient().Print("derivative for f");
+            InputRef(inputIndex).Gradient().Print("derivative for f");
         }
         else if (inputIndex == 2)  //backprop to transcription g
         {
             FrameRange frameRange(InputRef(2).GetMBLayout());
             BackpropToG(InputRef(inputIndex).Gradient(), Gradient(), *m_derivativeForG);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
-            //InputRef(inputIndex).Gradient().Print("derivative for g");
+            InputRef(inputIndex).Gradient().Print("derivative for g");
         }
         else
             RuntimeError("RNNTNode criterion expects only two inputs: labels and network output.");

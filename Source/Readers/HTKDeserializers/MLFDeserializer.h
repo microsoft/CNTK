@@ -173,6 +173,11 @@ public:
 
             auto s = make_shared<MLFSequenceData<ElementType>>(sequence.m_numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout);
             auto* startRange = s->m_indices;
+            if (m_deserializer.m_squashLabel && m_deserializer.m_blankInFront)
+            {
+                fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID));
+                startRange += 1;
+            }
             for (const auto& range : utterance)
             {
                 if (range.ClassId() >= m_deserializer.m_dimension)
@@ -180,8 +185,21 @@ public:
                     RuntimeError("Class id '%ud' exceeds the model output dimension '%d'.", range.ClassId(), (int) m_deserializer.m_dimension);
 
                 // Filling all range of frames with the corresponding class id.
-                fill(startRange, startRange + range.NumFrames(), static_cast<IndexType>(range.ClassId()));
-                startRange += range.NumFrames();
+                if (!m_deserializer.m_squashLabel)
+                {
+                    fill(startRange, startRange + range.NumFrames(), static_cast<IndexType>(range.ClassId()));
+                    startRange += range.NumFrames();
+                }
+                else
+                {
+                    fill(startRange, startRange + 1, static_cast<IndexType>(range.ClassId()));
+                    startRange += 1;
+                }
+            }
+            if (m_deserializer.m_squashLabel && !m_deserializer.m_blankInFront)
+            {
+                fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID));
+                startRange += 1;
             }
 
             result.push_back(s);
@@ -373,6 +391,11 @@ public:
 
     // Track phone boundaries
     bool m_withPhoneBoundaries;
+
+    //for RNNT
+    bool m_squashLabel;
+    size_t m_blankID;
+    bool m_blankInFront;
 
     StateTablePtr m_stateTable;
 

@@ -68,6 +68,10 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
     m_elementType = AreEqualIgnoreCase(precision, L"float") ? DataType::Float : DataType::Double;
 
     m_withPhoneBoundaries = labelConfig(L"phoneBoundaries", "false");
+    m_squashLabel = labelConfig(L"squashLabel", "false");
+    m_blankID = labelConfig(L"blankID", g_64MB);
+    m_blankInFront = labelConfig(L"blankInFront", true);
+
 
     wstring labelMappingFile = labelConfig(L"labelMappingFile", L"");
     InitializeStream(name);
@@ -178,6 +182,9 @@ wstring MLFDeserializer::InitializeReaderParams(const ConfigParameters& cfg, boo
                      m_dimension, numeric_limits<ClassIdType>::max());
 
     m_withPhoneBoundaries = streamConfig(L"phoneBoundaries", false);
+    m_squashLabel = streamConfig(L"squashLabel", "false");
+    m_blankID = streamConfig(L"blankID", g_64MB);
+    m_blankInFront = streamConfig(L"blankInFront", true);
     if (m_frameMode && m_withPhoneBoundaries)
         LogicError("frameMode and phoneBoundaries are mutually exclusive options.");
 

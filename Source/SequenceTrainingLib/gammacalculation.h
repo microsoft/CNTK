@@ -565,10 +565,10 @@ public:
         matrixOutputDistribution.ReleaseMemory();
 
         //compute derivatives for F and G
-        //m_derivativeForF.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-         //   numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 0);
-        //m_derivativeForG.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-           // numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);
+        m_derivativeForF.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 0);
+        m_derivativeForG.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);
 
         m_derivativeForF.Print("derivative for F");
         m_derivativeForG.Print("derivative for G");
