@@ -512,6 +512,24 @@ namespace CNTK
         return htk;
     }
 
+    Deserializer HTKMLFBinaryDeserializer(const std::wstring& streamName, const std::vector<std::wstring>& mlfFiles, size_t dimension)
+    {
+        Deserializer htk;
+        Dictionary stream;
+        Dictionary labels;
+        std::vector<DictionaryValue> actualFiles;
+        std::transform(mlfFiles.begin(), mlfFiles.end(), std::back_inserter(actualFiles), [](const std::wstring& s) {return static_cast<DictionaryValue>(s); });
+        if (actualFiles.size() > 1)
+            labels[L"mlfFileList"] = actualFiles;
+        else if (actualFiles.size() == 1)
+            labels[L"mlfFile"] = actualFiles[0];
+        else
+            LogicError("HTKMLFDeserializer: No mlf files were specified");
+        stream[streamName] = labels;
+        htk.Add(L"type", L"HTKMLFBinaryDeserializer", L"input", stream);
+        return htk;
+    }
+
     Deserializer LatticeDeserializer(const std::wstring& streamName, const std::wstring& latticeIndexFile)
     {
         Deserializer lattice;
