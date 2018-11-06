@@ -823,6 +823,26 @@ def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
             master_label_files = [master_label_files]
         return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files, phoneBoundaries)
 
+def HTKMLFBinaryDeserializer(mlf_file, dimension, streams):
+    '''
+    Configures a binary HTK label reader that reads speech MLF (Master
+    Label File)
+
+    Args:
+        mlf_file (str): path to the label mapping file
+        dimension (int): dimension of the labels
+        streams: any dictionary-like object that contains a mapping from stream
+          names to :class:`StreamDef` objects. Each StreamDef object configures
+          a label stream.
+    '''
+    if len(streams) != 1:
+        raise ValueError("HTKMLFBinaryDeserializer only accepts a single stream")
+    for stream_name, stream in streams.items():
+        if stream.stream_alias is not None:
+            raise ValueError("HTKMLFBinaryDeserializer does not support stream names")
+        return cntk_py.htk_mlf_binary_deserializer(stream_name, mlf_file, dimension)
+
+
 def LatticeDeserializer(lattice_index_file, streams):
     '''
     Configures a lattice deserializer
