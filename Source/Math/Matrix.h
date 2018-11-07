@@ -688,7 +688,7 @@ public:
     static void ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // DxT
                                      const Matrix<ElemType>& l_filter,// DxN1 TODO: +1
                                      const Matrix<ElemType>& r_filter,// DxN2
-                                     const Matrix<ElemType>& flags,   // 1xT
+                                     const Matrix<short>& flags,   // 1xT
                                      int flag_stride,
                                      int l_order, int r_order,
                                      int l_stride, int r_stride,
@@ -697,20 +697,20 @@ public:
     static void ComputeBiVfsmnMemoryGradient(const Matrix<ElemType>& gradientValues,
                                              const Matrix<ElemType>& l_filter,
                                              const Matrix<ElemType>& r_filter,
-                                             const Matrix<ElemType>& flags,
+                                             const Matrix<short>& flags,
                                              int flag_stride,
                                              int l_order, int r_order,
                                              int l_stride, int r_stride,
                                              Matrix<ElemType>& inputGradientValues);
     static void ComputeBiVfsmnLeftFilterGradient(const Matrix<ElemType>& gradientValues,
                                                  const Matrix<ElemType>& inputValues,
-                                                 const Matrix<ElemType>& flags,
+                                                 const Matrix<short>& flags,
                                                  int flag_stride,
                                                  int l_order, int l_stride,
                                                  Matrix<ElemType>& leftFilterGradientValues);
     static void ComputeBiVfsmnRightFilterGradient(const Matrix<ElemType>& gradientValues,
                                                   const Matrix<ElemType>& inputValues,
-                                                  const Matrix<ElemType>& flags,
+                                                  const Matrix<short>& flags,
                                                   int flag_stride,
                                                   int r_order, int r_stride,
                                                   Matrix<ElemType>& rightFilterGradientValues);

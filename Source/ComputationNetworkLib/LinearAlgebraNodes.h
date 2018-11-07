@@ -45,22 +45,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // }
 
 template <class ElemType>
-class BiVfsmnNode : public ComputationNode<ElemType>, public NumInputs<3>
+class BiVfsmnNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"BiVfsmn"; }
 
 public:
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name),
-          m_flags(1, 32768+8192, deviceId)
+        : Base(deviceId, name)
     {
     }
     BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride)
         : Base(deviceId, name),
           m_lOrder(lOrder), m_rOrder(rOrder),
-          m_lStride(lStride), m_rStride(rStride),
-          m_flags(1, 32768+8192, deviceId)
+          m_lStride(lStride), m_rStride(rStride)
     {
     }
     BiVfsmnNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -69,109 +67,40 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping()
     {
-        if (!fr.IsAllFrames()) {
-            LogicError("BiVfsmnNode node should not be in a loop now.");
-        }
-
-        // BEGIN DEBUG
-        // std::cout << m_lOrder << " " << m_rOrder << " " << m_lStride << " " << m_rStride << std::endl;
-        // std::cout << Input(0)->Value().GetNumRows() << " " << Input(0)->Value().GetNumCols() << std::endl;
-        // std::cout << Input(1)->Value().GetNumRows() << " " << Input(1)->Value().GetNumCols() << std::endl;
-        // std::cout << Input(2)->Value().GetNumRows() << " " << Input(2)->Value().GetNumCols() << std::endl;
-        // std::cout << Value().GetNumRows() << " " << Value().GetNumCols() << std::endl;
-        // auto in0MBLayout = InputRef(0).GetMBLayout();
-        // auto in0Sequences = in0MBLayout->GetAllSequences();
-        // for (size_t i = 0; i < in0Sequences.size(); ++i)
-        // {
-        //     let& in0Seq = in0Sequences[i];
-        //     std::cout << in0Seq.seqId << " " << in0Seq.s << " " << in0Seq.tBegin << " " << in0Seq.tEnd << std::endl;
-        // }
-        // std::cout << in0MBLayout->GetNumTimeSteps() << " " << in0MBLayout->GetNumParallelSequences() << std::endl;
-        // END DEBUG
-
-        // BEGIN construct flag matrix
-        // TODO: make this a private method? because backprop also need to use m_flags
-        auto hidMBLayout  = InputRef(0).GetMBLayout();
-        auto hidSequences = hidMBLayout->GetAllSequences();
-        size_t hidMaxLen  = hidMBLayout->GetNumTimeSteps();
-        size_t paraNum = hidMBLayout->GetNumParallelSequences();
-        size_t nFrames    = InputRef(0).Value().GetNumCols();
-        if (hidMaxLen * paraNum != nFrames) {
-            LogicError("[BiVfsmnNode] construct flag matrix related error.");
-        }
-        // m_flags.Resize(1, nFrames);
-        size_t count = 0;
-
-        int curDevId = m_flags.GetDeviceId();
-        m_flags.TransferFromDeviceToDevice(curDevId, CPUDEVICE, false, false, false);
-        for (size_t i = 0; i < hidSequences.size(); ++i)
-        {
-            let& hidSeq = hidSequences[i];
-            ElemType id = 0;  // GAP_SEQUENCE_ID, for padding frames
-            if (hidSeq.seqId != GAP_SEQUENCE_ID)
-            {
-                id = (ElemType)(hidSeq.seqId + 1);
-            }
-            size_t slot = hidSeq.s;
-            size_t begin = hidSeq.tBegin >= 0 ? hidSeq.tBegin : 0;
-            size_t end = hidSeq.tEnd <= hidMaxLen ? hidSeq.tEnd : hidMaxLen;
-            for (size_t j = begin; j < end; ++j)
-            {
-                // m_flags(0, slot * hidMaxLen + j) = id;
-                m_flags(0, j * paraNum + slot) = id;
-                ++count;
-            }
-        }
-        m_flags.TransferFromDeviceToDevice(CPUDEVICE, curDevId, false, false, false);
-        if (count != nFrames) {
-            LogicError("[BiVfsmnNode] not construct full flag matrix.");
-        }
-        // PrintMatrix(m_flags);
-        // END construct flag matrix
-
-        // Get Matrix (can not do this because copy constructor is deleted)
-        // leave them as comment
-        // auto memory  = Value();
-        // auto hidden  = Input(0)->Value();
-        // auto bfilter = Input(1)->Value();
-        // auto ffilter = Input(2)->Value();
-
         // forward computation
-        m_flagStride = paraNum;
+        const auto& flags = GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
+        auto flagStride = GetMBLayout()->GetNumParallelSequences();
         Matrix<ElemType>::ComputeBiVfsmnMemory(Input(0)->Value(), Input(1)->Value(), Input(2)->Value(),
-                                               m_flags, m_flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                                               flags, flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
                                                Value());
     }
 
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) 
     {
-        if (!fr.IsAllFrames()) {
-            LogicError("BiVfsmnNode node should not be in a loop now.");
-        }
-        // std::cout << "In BiVfsmnNode BackpropTo()" << std::endl;
-        // std::cout << m_lOrder << " " << m_rOrder << " " << m_lStride << " " << m_rStride << " " << m_flagStride << std::endl;
+        const auto& flags = GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
+        auto flagStride = GetMBLayout()->GetNumParallelSequences();
 
         if (inputIndex == 0)
         {
             Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
                 Gradient(), Input(1)->Value(), Input(2)->Value(),
-                m_flags, m_flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                flags, flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
                 Input(0)->Gradient());
         }
         else if (inputIndex == 1)
         {
             Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
                 Gradient(), Input(0)->Value(),
-                m_flags, m_flagStride, m_lOrder, m_lStride,
+                flags, flagStride, m_lOrder, m_lStride,
                 Input(1)->Gradient());
         }
         else if (inputIndex == 2)
         {
             Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
                 Gradient(), Input(0)->Value(),
-                m_flags, m_flagStride, m_rOrder, m_rStride,
+                flags, flagStride, m_rOrder, m_rStride,
                 Input(2)->Gradient());
         }
         else
@@ -213,8 +142,8 @@ public:
         {
             auto node = dynamic_pointer_cast<BiVfsmnNode<ElemType>>(nodeP);
             assert(node != nullptr);
-            node->m_lOrder  = m_lOrder;
-            node->m_rOrder  = m_rOrder;
+            node->m_lOrder = m_lOrder;
+            node->m_rOrder = m_rOrder;
             node->m_lStride = m_lStride;
             node->m_rStride = m_rStride;
         }
@@ -231,8 +160,6 @@ public:
     size_t RStride() const { return m_rStride; }
 
 protected:
-    Matrix<ElemType> m_flags;  // use Matrix<size_t>?
-    size_t m_flagStride;
     size_t m_lOrder;
     size_t m_rOrder;
     size_t m_lStride;
