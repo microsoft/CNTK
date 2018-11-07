@@ -2200,7 +2200,6 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         const NDShape &shape = GetNamedAttributeAsShape(node, "shape", false);
 
-        // ONNX only has float type for random generators
         TensorProto_DataType onnxDataType = static_cast<TensorProto_DataType>(GetNamedAttributeAsInt64(
             node, "dtype", TensorProto_DataType::TensorProto_DataType_FLOAT));
         CNTK::DataType dataType = ConvertDataTypeTensorProtoToCNTK(onnxDataType);
@@ -3505,7 +3504,7 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKFCNode(const std::wstring &nodeName, con
 // when creating a CNTK model, we build a map from Nodes to FunctionPtrs.
 // To figure out the outputs of a CNTK model, we need to filter out
 // output variables of output Functions that are not in the graph outputs.
-void FilterNoOutputs(std::vector<Variable> &outputVariables)
+void FilterGraphOutputs(std::vector<Variable> &outputVariables)
 {
     std::set<FunctionPtr> visited;
     std::vector<Variable> sinkedVariables;
@@ -3558,7 +3557,7 @@ FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescrip
 
     std::vector<FunctionPtr> functions;
     const std::vector<const NodeArg*>& graphOutputs = src->GetOutputs();
-    // collect output Nodes based in output NodeArgs
+    // collect output Nodes based on output NodeArgs
     std::set<Node*> outputNodes;
     for (int i = 0; i < graphOutputs.size(); i++)
     {
@@ -3609,7 +3608,7 @@ FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescrip
             }
         }
         if (outputVariables.size() > graphOutputs.size())
-            FilterNoOutputs(outputVariables);
+            FilterGraphOutputs(outputVariables);
         return Combine(outputVariables);
     }
 }
