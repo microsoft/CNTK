@@ -136,19 +136,8 @@ namespace CNTK
     }
 
     void AddScanOutputVariable(std::vector<Variable>& scanoutput, Variable output)
-    {
-        if (output.Owner() && IsStepFunction(output.Owner()))
-        {
-            // if scan output is from a step function, we need to replace it with the step function's
-            // input. Otherwise it will collide with the final state output and produce wrong numbers.
-            // By doing this, onnx test cannot map CNTK's output to ONNX model's outputs. 
-            // Test case generated will fail lotus because the scan output is mapped to final state output.
-            // Before we can workout anything better, we post a warning here.
-            fprintf(stderr, "Warning: The model has a scan op with output colliding with a final state. The scan output is replaced. Generated onnxruntime test case may not pass because of this.");
-            scanoutput.push_back(output.Owner()->Inputs()[0]);
-        }
-        else
-            scanoutput.push_back(output);
+    { 
+        scanoutput.push_back(output);
     }
 
     void BuildLoops(const std::vector<FunctionPtr>& roots,
