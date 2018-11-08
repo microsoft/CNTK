@@ -7,7 +7,7 @@
 #include "gsl/gsl_util"
 
 namespace onnxruntime {
-namespace Logging {
+namespace logging {
 
 void Capture::CapturePrintf(msvc_printf_check const char* format, ...) {
   va_list arglist;
@@ -47,5 +47,5 @@ Capture::~Capture() {
     logger_->Log(*this);
   }
 }
-}  // namespace Logging
+}  // namespace logging
 }  // namespace onnxruntime

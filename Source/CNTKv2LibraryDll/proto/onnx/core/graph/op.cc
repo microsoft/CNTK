@@ -36,7 +36,7 @@ bool TypeUtils::IsValidAttribute(const AttributeProto& attr) {
 
 Status TypeUtils::GetType(const AttributeProto& attr, AttrType& type) {
   if (!TypeUtils::IsValidAttribute(attr)) {
-    return Status(LOTUS, FAIL, "Invalid AttributeProto.");
+    return Status(ONNXRUNTIME, FAIL, "Invalid AttributeProto.");
   }
 
   type = attr.type();
@@ -62,7 +62,7 @@ Status TypeUtils::GetType(const AttributeProto& attr, AttrType& type) {
     } else if (attr.graphs_size()) {
       type = AttrType::AttributeProto_AttributeType_GRAPHS;
     } else {
-      return Status(LOTUS, FAIL, "Invalid AttributeProto.");
+      return Status(ONNXRUNTIME, FAIL, "Invalid AttributeProto.");
     }
   }
   return Status::OK();

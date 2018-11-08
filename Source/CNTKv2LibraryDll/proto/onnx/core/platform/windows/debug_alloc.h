@@ -2,7 +2,7 @@
 //// Licensed under the MIT License.
 //
 //#pragma once
-//#if defined(_DEBUG)
+//#ifndef NDEBUG
 //// TVM need to run with shared CRT, so won't work with debug heap alloc
 //#ifndef USE_TVM
 //void* DebugHeapAlloc(size_t size, unsigned framesToSkip = 0);

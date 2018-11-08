@@ -37,7 +37,7 @@ class Graph : public GraphBase {
   // Add/Remove/Get initial tensors for some graph inputs.
   void AddInitializedTensor(const ONNX_NAMESPACE::TensorProto& tensor_proto);
   void RemoveInitializedTensor(const std::string& tensor_name);
-  bool GetInitializedTensor(const std::string& tensor_name, gsl::not_null<const ONNX_NAMESPACE::TensorProto**> value) const;
+  bool GetInitializedTensor(const std::string& tensor_name, const ONNX_NAMESPACE::TensorProto*& value) const;
   const InitializedTensorSet& GetAllInitializedTensors() const noexcept;
   void CleanAllInitializedTensors() noexcept;
 
@@ -47,19 +47,17 @@ class Graph : public GraphBase {
   // Serialize the <Graph> into <GraphProto>.
   const ONNX_NAMESPACE::GraphProto& ToGraphProto();
 
-  ILotusOpSchemaCollectionPtr GetSchemaRegistry() const;
+  IOnnxRuntimeOpSchemaCollectionPtr GetSchemaRegistry() const;
 
   // Construct a Graph instance for a subgraph. Inherits some properties from the parent graph.
   Graph(const Graph& model_graph, ONNX_NAMESPACE::GraphProto& subgraph_proto);
 
   Node* FuseSubGraph(std::unique_ptr<::onnxruntime::IndexedSubGraph> sub_graph, const std::string& fused_node_name);
 
-  void CollectRootNodesAndRefs();
-  const std::vector<NodeIndex>& GetRootNodes() const { return root_nodes_; }
-  const std::vector<size_t>& GetNodeRefs() const { return node_refs_; }
+  ~Graph();
 
  private:
-  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Graph);
+  ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(Graph);
 
   // This friendship relationship should only be used to call Graph::Graph and
   // Graph::LoadGraph All other access should be via the public API.
@@ -70,7 +68,7 @@ class Graph : public GraphBase {
   Graph(ONNX_NAMESPACE::GraphProto* graph_proto,
         const std::unordered_map<std::string, int>& domain_to_version,
         Version ir_version,
-        ILotusOpSchemaCollectionPtr schema_registry);
+        IOnnxRuntimeOpSchemaCollectionPtr schema_registry);
 
   Graph() = delete;
 
@@ -93,14 +91,9 @@ class Graph : public GraphBase {
   ::onnxruntime::common::Status VerifyInputAndInitializerNames(
       /*OUT*/ std::unordered_set<std::string>& inputs_and_initializers);
 
-  // Given nodes in topological order, infer and set type information
-  // across <*this> graph if needed, and verify type/attribute
-  // information match between node and op.
-  ::onnxruntime::common::Status VerifyNodeAndOpMatch(const std::vector<NodeIndex>& nodes_in_topological_order,
-                                                     const std::unordered_map<std::string, Node*>& output_args);
-
-  void ComputeGraphInputsOutputsAndResetValues(std::vector<const NodeArg*> &new_graph_inputs,
-      std::vector<const NodeArg*> &new_graph_outputs);
+  // Infer and set type information across <*this> graph if needed, and verify type/attribute
+  // information matches between node and op.
+  ::onnxruntime::common::Status VerifyNodeAndOpMatch(const std::unordered_set<std::string>& inputs_and_initializers);
 
   // Set graph inputs/outputs when resolving a graph..
   ::onnxruntime::common::Status SetGraphInputsOutputs();
@@ -118,10 +111,6 @@ class Graph : public GraphBase {
   // This pointer is owned by parent model.
   ONNX_NAMESPACE::GraphProto* graph_proto_;
 
-  // The node which refers to <*this> graph (Function).
-  // Node* node_;
-
-  std::unordered_map<std::string, int> name_to_initial_tensorIndex_;
   InitializedTensorSet name_to_initial_tensor_;
   std::vector<int> removed_initializer_indexes_;
 
@@ -130,11 +119,8 @@ class Graph : public GraphBase {
   // Graph value_info.
   std::vector<const NodeArg*> value_info_;
 
-  ILotusOpSchemaCollectionPtr schema_registry_;
+  IOnnxRuntimeOpSchemaCollectionPtr schema_registry_;
 
   std::unique_ptr<FunctionContainer> function_container_;
-
-  std::vector<NodeIndex> root_nodes_;
-  std::vector<size_t> node_refs_;
 };
 }  // namespace onnxruntime

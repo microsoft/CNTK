@@ -7,6 +7,7 @@
 #pragma warning(disable : 4244)
 #endif
 #include "core/framework/tensorutils.h"
+#include "core/framework/allocator.h"
 
 #include <algorithm>
 
@@ -50,34 +51,34 @@ static void UnpackTensorWithRawData(const ONNX_NAMESPACE::TensorProto& tensor, /
 }
 
 namespace onnxruntime {
-namespace Utils {
-#define DEFINE_UNPACK_TENSOR(T, Type, field_name, field_size)                                                   \
-  template <>                                                                                                   \
+namespace utils {
+#define DEFINE_UNPACK_TENSOR(T, Type, field_name, field_size)                                                             \
+  template <>                                                                                                             \
   Status TensorUtils::UnpackTensor(const ONNX_NAMESPACE::TensorProto& tensor, /*out*/ T* p_data, int64_t expected_size) { \
-    if (nullptr == p_data) {                                                                                    \
-      const size_t size = tensor.has_raw_data() ? tensor.raw_data().size() : tensor.field_size();               \
-      if (size == 0)                                                                                            \
-        return Status::OK();                                                                                    \
-      else                                                                                                      \
-        return Status(common::LOTUS, common::INVALID_ARGUMENT);                                                 \
-    }                                                                                                           \
-    if (nullptr == p_data || Type != tensor.data_type()) {                                                      \
-      return Status(common::LOTUS, common::INVALID_ARGUMENT);                                                   \
-    }                                                                                                           \
-    if (tensor.has_raw_data()) {                                                                                \
-      if (tensor.raw_data().size() != ((expected_size) * sizeof(T)))                                            \
-        return Status(common::LOTUS, common::FAIL,                                                              \
-                      "UnpackTensor: the pre-allocated size does not match the raw data size");                 \
-      UnpackTensorWithRawData(tensor, p_data);                                                                  \
-      return Status::OK();                                                                                      \
-    }                                                                                                           \
-    if (tensor.field_size() != expected_size)                                                                   \
-      return Status(common::LOTUS, common::FAIL,                                                                \
-                    "UnpackTensor: the pre-allocated size does not match the size in proto");                   \
-    const auto span = gsl::make_span(p_data, expected_size);                                                    \
-    auto& data = tensor.field_name();                                                                           \
-    std::copy(data.cbegin(), data.cend(), span.begin());                                                        \
-    return Status::OK();                                                                                        \
+    if (nullptr == p_data) {                                                                                              \
+      const size_t size = tensor.has_raw_data() ? tensor.raw_data().size() : tensor.field_size();                         \
+      if (size == 0)                                                                                                      \
+        return Status::OK();                                                                                              \
+      else                                                                                                                \
+        return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT);                                                     \
+    }                                                                                                                     \
+    if (nullptr == p_data || Type != tensor.data_type()) {                                                                \
+      return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT);                                                       \
+    }                                                                                                                     \
+    if (tensor.has_raw_data()) {                                                                                          \
+      if (tensor.raw_data().size() != ((expected_size) * sizeof(T)))                                                      \
+        return Status(common::ONNXRUNTIME, common::FAIL,                                                                  \
+                      "UnpackTensor: the pre-allocated size does not match the raw data size");                           \
+      UnpackTensorWithRawData(tensor, p_data);                                                                            \
+      return Status::OK();                                                                                                \
+    }                                                                                                                     \
+    if (tensor.field_size() != expected_size)                                                                             \
+      return Status(common::ONNXRUNTIME, common::FAIL,                                                                    \
+                    "UnpackTensor: the pre-allocated size does not match the size in proto");                             \
+    const auto span = gsl::make_span(p_data, expected_size);                                                              \
+    auto& data = tensor.field_name();                                                                                     \
+    std::copy(data.cbegin(), data.cend(), span.begin());                                                                  \
+    return Status::OK();                                                                                                  \
   }
 
 //TODO: uint32 uint64 complex64 complex128
@@ -101,14 +102,14 @@ Status TensorUtils::UnpackTensor(const ONNX_NAMESPACE::TensorProto& tensor,
     if (tensor.string_data_size() == 0)
       return Status::OK();
     else
-      return Status(common::LOTUS, common::INVALID_ARGUMENT);
+      return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT);
   }
   if (ONNX_NAMESPACE::TensorProto_DataType_STRING != tensor.data_type()) {
-    return Status(common::LOTUS, common::INVALID_ARGUMENT);
+    return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT);
   }
 
   if (tensor.string_data_size() != expected_size)
-    return Status(common::LOTUS, common::FAIL,
+    return Status(common::ONNXRUNTIME, common::FAIL,
                   "UnpackTensor: the pre-allocate size does not match the size in proto");
 
   const auto data = gsl::make_span(p_data, expected_size);
@@ -127,15 +128,15 @@ Status TensorUtils::UnpackTensor(const ONNX_NAMESPACE::TensorProto& tensor,
     if (size == 0)
       return Status::OK();
     else
-      return Status(common::LOTUS, common::INVALID_ARGUMENT);
+      return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT);
   }
   if (ONNX_NAMESPACE::TensorProto_DataType_BOOL != tensor.data_type()) {
-    return Status(common::LOTUS, common::INVALID_ARGUMENT);
+    return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT);
   }
 
   if (tensor.has_raw_data()) {
     if (tensor.raw_data().size() != (expected_size) * sizeof(bool))
-      return Status(common::LOTUS, common::FAIL,
+      return Status(common::ONNXRUNTIME, common::FAIL,
                     "UnpackTensor: the pre-allocate size does not match the raw data size");
 
     UnpackTensorWithRawData(tensor, p_data);
@@ -143,7 +144,7 @@ Status TensorUtils::UnpackTensor(const ONNX_NAMESPACE::TensorProto& tensor,
   }
 
   if (tensor.int32_data_size() != expected_size)
-    return Status(common::LOTUS, common::FAIL,
+    return Status(common::ONNXRUNTIME, common::FAIL,
                   "UnpackTensor: the pre-allocate size does not match the size in proto");
 
   const auto data = gsl::make_span(p_data, expected_size);
@@ -160,15 +161,15 @@ Status TensorUtils::UnpackTensor(const ONNX_NAMESPACE::TensorProto& tensor,
     if (size == 0)
       return Status::OK();
     else
-      return Status(common::LOTUS, common::INVALID_ARGUMENT);
+      return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT);
   }
   if (ONNX_NAMESPACE::TensorProto_DataType_FLOAT16 != tensor.data_type()) {
-    return Status(common::LOTUS, common::INVALID_ARGUMENT);
+    return Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT);
   }
 
   if (tensor.has_raw_data()) {
     if (tensor.raw_data().size() != (expected_size) * sizeof(uint16_t))
-      return Status(common::LOTUS, common::FAIL,
+      return Status(common::ONNXRUNTIME, common::FAIL,
                     "UnpackTensor: the pre-allocate size does not match the raw data size");
 
     UnpackTensorWithRawData(tensor, p_data);
@@ -176,7 +177,7 @@ Status TensorUtils::UnpackTensor(const ONNX_NAMESPACE::TensorProto& tensor,
   }
 
   if (tensor.int32_data_size() != expected_size)
-    return Status(common::LOTUS, common::FAIL,
+    return Status(common::ONNXRUNTIME, common::FAIL,
                   "UnpackTensor: the pre-allocate size does not match the size in proto");
 
   const auto data = gsl::make_span(p_data, expected_size);
@@ -186,44 +187,45 @@ Status TensorUtils::UnpackTensor(const ONNX_NAMESPACE::TensorProto& tensor,
   return Status::OK();
 }
 
-#define LOTUS_CASE_PROTO_TRACE(X, Y)                         \
-  case ONNX_NAMESPACE::TensorProto_DataType::TensorProto_DataType_##X: \
-    size *= sizeof(Y);                                       \
+#define CASE_PROTO_TRACE(X, Y)                                                            \
+  case ONNX_NAMESPACE::TensorProto_DataType::TensorProto_DataType_##X:                    \
+    if (!IAllocator::CalcMemSizeForArrayWithAlignment<alignment>(size, sizeof(Y), out)) { \
+      return common::Status(common::ONNXRUNTIME, common::FAIL, "Invalid TensorProto");    \
+    }                                                                                     \
     break;
 
+template <size_t alignment>
 common::Status GetSizeInBytesFromTensorProto(const ONNX_NAMESPACE::TensorProto& tensor_proto, size_t* out) {
   const auto& dims = tensor_proto.dims();
-  int64_t size = 1;
+  size_t size = 1;
   for (int i = 0; i < dims.size(); ++i) {
     if (dims[i] < 0) {
-      size = -1;
-      break;
+      return common::Status(common::ONNXRUNTIME, common::FAIL, "Invalid TensorProto");
     }
-    size *= dims[i];
+    if (!IAllocator::CalcMemSizeForArray(size, static_cast<size_t>(dims[i]), &size)) {
+      return common::Status(common::ONNXRUNTIME, common::FAIL, "Invalid TensorProto");
+    }
   }
-  //If 'size' is too big, size*sizeof(T) could overflow. Then Allocator may allocate less memory than needed
-  //Here max(sizeof(T)) is 8. 63 - 8 = 55.
-  if (size < 0 || size >= (1LL << 55)) return common::Status(common::LOTUS, common::FAIL, "Invalid TensorProto");
   switch (tensor_proto.data_type()) {
-    LOTUS_CASE_PROTO_TRACE(FLOAT, float);
-    LOTUS_CASE_PROTO_TRACE(DOUBLE, double);
-    LOTUS_CASE_PROTO_TRACE(BOOL, bool);
-    LOTUS_CASE_PROTO_TRACE(INT8, int8_t);
-    LOTUS_CASE_PROTO_TRACE(INT16, int16_t);
-    LOTUS_CASE_PROTO_TRACE(INT32, int32_t);
-    LOTUS_CASE_PROTO_TRACE(INT64, int64_t);
-    LOTUS_CASE_PROTO_TRACE(UINT8, uint8_t);
-    LOTUS_CASE_PROTO_TRACE(UINT16, uint16_t);
-    LOTUS_CASE_PROTO_TRACE(UINT32, uint32_t);
-    LOTUS_CASE_PROTO_TRACE(UINT64, uint64_t);
-    LOTUS_CASE_PROTO_TRACE(FLOAT16, MLFloat16);
+    CASE_PROTO_TRACE(FLOAT, float);
+    CASE_PROTO_TRACE(DOUBLE, double);
+    CASE_PROTO_TRACE(BOOL, bool);
+    CASE_PROTO_TRACE(INT8, int8_t);
+    CASE_PROTO_TRACE(INT16, int16_t);
+    CASE_PROTO_TRACE(INT32, int32_t);
+    CASE_PROTO_TRACE(INT64, int64_t);
+    CASE_PROTO_TRACE(UINT8, uint8_t);
+    CASE_PROTO_TRACE(UINT16, uint16_t);
+    CASE_PROTO_TRACE(UINT32, uint32_t);
+    CASE_PROTO_TRACE(UINT64, uint64_t);
+    CASE_PROTO_TRACE(FLOAT16, MLFloat16);
     case ONNX_NAMESPACE::TensorProto_DataType::TensorProto_DataType_STRING:
     default:
-      return common::Status(common::LOTUS, common::NOT_IMPLEMENTED);
+      return common::Status(common::ONNXRUNTIME, common::NOT_IMPLEMENTED);
   }
-  *out = size;
   return Status::OK();
 }
 
-}  // namespace Utils
+template common::Status GetSizeInBytesFromTensorProto<256>(const ONNX_NAMESPACE::TensorProto& tensor_proto, size_t* out);
+}  // namespace utils
 }  // namespace onnxruntime

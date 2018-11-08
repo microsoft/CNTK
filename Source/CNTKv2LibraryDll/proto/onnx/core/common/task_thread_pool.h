@@ -145,7 +145,7 @@ class TaskThreadPool {
   }
 
  private:
-  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(TaskThreadPool);
+  ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(TaskThreadPool);
 
   /// @brief Entry point for pool threads.
   void MainLoop(std::size_t index) {

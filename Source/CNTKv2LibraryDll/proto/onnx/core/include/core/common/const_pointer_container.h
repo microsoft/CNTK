@@ -5,10 +5,13 @@
 
 #include <type_traits>
 
-// Container has T* entries. e.g. std::vector<T*>, and this class provides const access to those
-// via iterators and direct access, as the standard behavior only makes the pointer constant,
-// and not what is pointed too. i.e. you get a const pointer to T not a pointer to const T without this wrapper.
-// See https://stackoverflow.com/questions/8017036/understanding-const-iterator-with-pointers
+namespace onnxruntime {
+/**
+   Container has T* entries. e.g. std::vector<T*>, and this class provides const access to those
+   via iterators and direct access, as the standard behavior only makes the pointer constant,
+   and not what is pointed too. i.e. you get a const pointer to T not a pointer to const T without this wrapper.
+   See https://stackoverflow.com/questions/8017036/understanding-const-iterator-with-pointers
+*/
 template <typename Container>
 class ConstPointerContainer {
  public:
@@ -31,8 +34,8 @@ class ConstPointerContainer {
   };
 
   /**
-  Construct wrapper class that will provide const access to the pointers in a container of non-const pointers.
-  @param data Container with non-const pointers. e.g. std::vector<T*>
+     Construct wrapper class that will provide const access to the pointers in a container of non-const pointers.
+     @param data Container with non-const pointers. e.g. std::vector<T*>
   */
   explicit ConstPointerContainer(const Container& data) noexcept : data_(data) {}
 
@@ -44,10 +47,11 @@ class ConstPointerContainer {
   const T* operator[](size_t index) const { return data_[index]; }
 
   const T* at(size_t index) const {
-    LOTUS_ENFORCE(index < data_.size());
+    ONNXRUNTIME_ENFORCE(index < data_.size());
     return data_[index];
   }
 
  private:
   const Container& data_;
 };
+}  // namespace onnxruntime

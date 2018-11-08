@@ -19,43 +19,43 @@
 
 /*
 
-Logging overview and expected usage:
+  Logging overview and expected usage:
 
-At program startup:
- * Create one or more ISink instances. If multiple, combine using composite_sink.
- * Create a LoggingManager instance with the sink/s with is_default_instance set to true
-   * Only one instance should be created in this way, and it should remain valid for 
-     until the program no longer needs to produce log output.
+  At program startup:
+  * Create one or more ISink instances. If multiple, combine using composite_sink.
+  * Create a LoggingManager instance with the sink/s with is_default_instance set to true
+  * Only one instance should be created in this way, and it should remain valid for
+  until the program no longer needs to produce log output.
 
-You can either use the static default Logger which LoggingManager will create when constructed
-via LoggingManager::DefaultLogger(), or separate Logger instances each with different log ids
-via LoggingManager::CreateLogger. 
+  You can either use the static default Logger which LoggingManager will create when constructed
+  via LoggingManager::DefaultLogger(), or separate Logger instances each with different log ids
+  via LoggingManager::CreateLogger.
 
-The log id is passed to the ISink instance with the sink determining how the log id is used
-in the output.
+  The log id is passed to the ISink instance with the sink determining how the log id is used
+  in the output.
 
-LoggingManager
- * creates the Logger instances used by the application
- * provides a static default logger instance
- * owns the log sink instance
- * applies checks on severity and output of user data
+  LoggingManager
+  * creates the Logger instances used by the application
+  * provides a static default logger instance
+  * owns the log sink instance
+  * applies checks on severity and output of user data
 
-The log macros create a Capture instance to capture the information to log.
-If the severity and/or user filtering settings would prevent logging, no evaluation
-of the log arguments will occur, so no performance cost beyond the severity and user
-filtering check.
+  The log macros create a Capture instance to capture the information to log.
+  If the severity and/or user filtering settings would prevent logging, no evaluation
+  of the log arguments will occur, so no performance cost beyond the severity and user
+  filtering check.
 
-A sink can do further filter as needed.
+  A sink can do further filter as needed.
 
 */
 
 namespace onnxruntime {
-namespace Logging {
+namespace logging {
 
 using Timestamp = std::chrono::time_point<std::chrono::system_clock>;
 
-#ifdef _DEBUG
-static bool vlog_enabled = true;  // Set directly based on your needs.
+#ifndef NDEBUG
+ONNXRUNTIME_ATTRIBUTE_UNUSED static bool vlog_enabled = true;  // Set directly based on your needs.
 #else
 constexpr bool vlog_enabled = false;  // no VLOG output
 #endif
@@ -70,7 +70,7 @@ enum class DataType {
 struct Category {
   static const char* onnxruntime;  ///< General output
   static const char* System;       ///< Log output regarding interactions with the host system
-                                   // TODO: What other high level categories are meaningful? Model? Optimizer? Execution?
+  // TODO: What other high level categories are meaningful? Model? Optimizer? Execution?
 };
 
 class ISink;
@@ -90,17 +90,17 @@ class LoggingManager final {
   };
 
   /**
-  Initializes a new instance of the LoggingManager class.
-  @param sink The sink to write to. Use CompositeSink if you need to write to multiple places.
-  @param default_min_severity The default minimum severity. Messages with lower severity will be ignored unless 
-                              overridden in CreateLogger.
-  @param default_filter_user_data If set to true ignore messages with DataType::USER unless overridden in CreateLogger.
-  @param instance_type If InstanceType::Default, this is the default instance of the LoggingManager 
-                       and is expected to exist for the lifetime of the program. 
-                       It creates and owns the default logger that calls to the static DefaultLogger method return.
-  @param default_logger_id Logger Id to use for the default logger. nullptr/ignored if instance_type == Temporal.
-  @param default_max_vlog_level Default maximum level for VLOG messages to be created unless overridden in CreateLogger. 
-                                Requires a severity of kVERBOSE for VLOG messages to be logged.
+     Initializes a new instance of the LoggingManager class.
+     @param sink The sink to write to. Use CompositeSink if you need to write to multiple places.
+     @param default_min_severity The default minimum severity. Messages with lower severity will be ignored unless
+     overridden in CreateLogger.
+     @param default_filter_user_data If set to true ignore messages with DataType::USER unless overridden in CreateLogger.
+     @param instance_type If InstanceType::Default, this is the default instance of the LoggingManager
+     and is expected to exist for the lifetime of the program.
+     It creates and owns the default logger that calls to the static DefaultLogger method return.
+     @param default_logger_id Logger Id to use for the default logger. nullptr/ignored if instance_type == Temporal.
+     @param default_max_vlog_level Default maximum level for VLOG messages to be created unless overridden in CreateLogger.
+     Requires a severity of kVERBOSE for VLOG messages to be logged.
   */
   LoggingManager(std::unique_ptr<ISink> sink, Severity default_min_severity, bool default_filter_user_data,
                  InstanceType instance_type,
@@ -108,55 +108,55 @@ class LoggingManager final {
                  int default_max_vlog_level = -1);
 
   /**
-  Creates a new logger instance which will use the provided logger_id and default severity and vlog levels.
-  @param logger_id The log identifier.
-  @returns A new Logger instance that the caller owns.
+     Creates a new logger instance which will use the provided logger_id and default severity and vlog levels.
+     @param logger_id The log identifier.
+     @returns A new Logger instance that the caller owns.
   */
   std::unique_ptr<Logger> CreateLogger(std::string logger_id);
 
   /**
-  Creates a new logger instance which will use the provided logger_id, severity and vlog levels.
-  @param logger_id The log identifier.
-  @param min_severity The minimum severity. Requests to create messages with lower severity will be ignored.
-  @param filter_user_data If set to true ignore messages with DataType::USER.
-  @param max_vlog_level Maximum level for VLOG messages to be created.
-  @returns A new Logger instance that the caller owns.
+     Creates a new logger instance which will use the provided logger_id, severity and vlog levels.
+     @param logger_id The log identifier.
+     @param min_severity The minimum severity. Requests to create messages with lower severity will be ignored.
+     @param filter_user_data If set to true ignore messages with DataType::USER.
+     @param max_vlog_level Maximum level for VLOG messages to be created.
+     @returns A new Logger instance that the caller owns.
   */
   std::unique_ptr<Logger> CreateLogger(std::string logger_id,
                                        Severity min_severity, bool filter_user_data, int max_vlog_level = -1);
 
   /**
-  Gets the default logger instance if set. Throws if no default logger is currently registered.
-  @remarks
-  Creating a LoggingManager instance with is_default_instance == true registers a default logger.
-  Note that the default logger is only valid until the LoggerManager that registered it is destroyed.
-  @returns The default logger if available.
+     Gets the default logger instance if set. Throws if no default logger is currently registered.
+     @remarks
+     Creating a LoggingManager instance with is_default_instance == true registers a default logger.
+     Note that the default logger is only valid until the LoggerManager that registered it is destroyed.
+     @returns The default logger if available.
   */
   static const Logger& DefaultLogger();
 
   /**
-  Logs a FATAL level message and creates an exception that can be thrown with error information.
-  @param category The log category.
-  @param location The location the log message was generated.
-  @param format_str The printf format string.
-  @param ... The printf arguments.
-  @returns A new Logger instance that the caller owns.
+     Logs a FATAL level message and creates an exception that can be thrown with error information.
+     @param category The log category.
+     @param location The location the log message was generated.
+     @param format_str The printf format string.
+     @param ... The printf arguments.
+     @returns A new Logger instance that the caller owns.
   */
   static std::exception LogFatalAndCreateException(const char* category,
                                                    const CodeLocation& location,
                                                    const char* format_str, ...);
 
   /**
-  Logs the message using the provided logger id.
-  @param logger_id The log identifier.
-  @param message The log message.
+     Logs the message using the provided logger id.
+     @param logger_id The log identifier.
+     @param message The log message.
   */
   void Log(const std::string& logger_id, const Capture& message) const;
 
   ~LoggingManager();
 
  private:
-  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(LoggingManager);
+  ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(LoggingManager);
   static std::unique_ptr<Logger>& GetDefaultLogger() noexcept;
 
   Timestamp GetTimestamp() const noexcept;
@@ -178,18 +178,18 @@ class LoggingManager final {
 };
 
 /**
-Logger provides a per-instance log id. Everything else is passed back up to the LoggingManager
+   Logger provides a per-instance log id. Everything else is passed back up to the LoggingManager
 */
 class Logger {
  public:
   /**
-  Initializes a new instance of the Logger class.
-  @param loggingManager The logging manager.
-  @param id The identifier for messages coming from this Logger.
-  @param severity Minimum severity for messages to be created and logged.
-  @param filter_user_data Should USER data be filtered from output.
-  @param vlog_level Minimum level for VLOG messages to be created. Note that a severity of kVERBOSE must be provided
-                    for VLOG messages to be logged.
+     Initializes a new instance of the Logger class.
+     @param loggingManager The logging manager.
+     @param id The identifier for messages coming from this Logger.
+     @param severity Minimum severity for messages to be created and logged.
+     @param filter_user_data Should USER data be filtered from output.
+     @param vlog_level Minimum level for VLOG messages to be created. Note that a severity of kVERBOSE must be provided
+     for VLOG messages to be logged.
   */
   Logger(const LoggingManager& loggingManager, std::string id,
          Severity severity, bool filter_user_data, int vlog_level)
@@ -198,28 +198,28 @@ class Logger {
         min_severity_{severity},
         filter_user_data_{filter_user_data},
         max_vlog_level_{severity > Severity::kVERBOSE ? -1 : vlog_level} {  // disable unless logging VLOG messages
-  }
+        }
 
   /**
-  Check if output is enabled for the provided LogSeverity and DataType values.
-  @param severity The severity.
-  @param data_type Type of the data.
-  @returns True if a message with these values will be logged.
+     Check if output is enabled for the provided LogSeverity and DataType values.
+     @param severity The severity.
+     @param data_type Type of the data.
+     @returns True if a message with these values will be logged.
   */
   bool OutputIsEnabled(Severity severity, DataType data_type) const noexcept {
     return (severity >= min_severity_ && (data_type != DataType::USER || !filter_user_data_));
   }
 
   /**
-  Return the maximum VLOG level allowed.
+     Return the maximum VLOG level allowed.
   */
   int VLOGMaxLevel() const noexcept {
     return max_vlog_level_;
   }
 
   /**
-  Logs the captured message.
-  @param message The log message.
+     Logs the captured message.
+     @param message The log message.
   */
   void Log(const Capture& message) const {
     logging_manager_->Log(id_, message);
@@ -254,14 +254,14 @@ inline Timestamp LoggingManager::GetTimestamp() const noexcept {
 }
 
 /**
-Return the current thread id.
+   Return the current thread id.
 */
 unsigned int GetThreadId();
 
 /**
-Return the current process id.
+   Return the current process id.
 */
 unsigned int GetProcessId();
 
-}  // namespace Logging
+}  // namespace logging
 }  // namespace onnxruntime

@@ -23,28 +23,28 @@ namespace CNTK
 {
     std::once_flag ONNXFormat::op_schema_initializer_flag_;
     static std::string defaultLoggerId{"Default"};
-    static onnxruntime::Logging::LoggingManager default_logging_manager_{ 
-        std::unique_ptr<onnxruntime::Logging::ISink>{new CNTKClogSink{}},
+    static onnxruntime::logging::LoggingManager default_logging_manager_{ 
+        std::unique_ptr<onnxruntime::logging::ISink>{new CNTKClogSink{}},
         [](){
-            onnxruntime::Logging::Severity severity;
+            onnxruntime::logging::Severity severity;
             switch (GetTraceLevel())
             {
             case TraceLevel::Error:
-                severity = onnxruntime::Logging::Severity::kERROR;
+                severity = onnxruntime::logging::Severity::kERROR;
                 break;
             case TraceLevel::Warning:
-                severity = onnxruntime::Logging::Severity::kWARNING;
+                severity = onnxruntime::logging::Severity::kWARNING;
                 break;
             case TraceLevel::Info:
-                severity = onnxruntime::Logging::Severity::kINFO;
+                severity = onnxruntime::logging::Severity::kINFO;
                 break;
             default:
-                severity = onnxruntime::Logging::Severity::kFATAL;
+                severity = onnxruntime::logging::Severity::kFATAL;
             }
             return severity;
         }(),
         false,
-        onnxruntime::Logging::LoggingManager::InstanceType::Default,
+        onnxruntime::logging::LoggingManager::InstanceType::Default,
         &defaultLoggerId };
 
     static void PrintGraph(FunctionPtr function, int spaces, bool useName = false)
