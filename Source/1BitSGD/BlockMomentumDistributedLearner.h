@@ -524,6 +524,8 @@ namespace CNTK
                     ResetBuffer<double>(i, p);
                 else if (p->GetDataType() == DataType::Float)
                     ResetBuffer<float>(i, p);
+                else if (p->GetDataType() == DataType::Float16)
+                    ResetBuffer<half>(i, p);
                 else
                     RuntimeError("Unsupported type.");
             }
