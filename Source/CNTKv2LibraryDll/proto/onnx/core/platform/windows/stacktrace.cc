@@ -31,7 +31,7 @@
 //
 //// Get the stack trace. Currently only enabled for a DEBUG build as we require the DbgHelp library.
 //std::vector<std::string> GetStackTrace() {
-//#if defined(_DEBUG)
+//#ifndef NDEBUG
 //// TVM need to run with shared CRT, so won't work with debug helper now
 //#ifndef USE_TVM
 //  return detail::CaptureStackTrace().Trace();
@@ -44,7 +44,7 @@
 //}
 //
 //namespace detail {
-//#if defined(_DEBUG)
+//#ifndef NDEBUG
 //#ifndef USE_TVM
 //class SymbolHelper {
 // public:
@@ -83,7 +83,7 @@
 //  }
 //
 // private:
-//  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(SymbolHelper);
+//  ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(SymbolHelper);
 //
 //  HANDLE process_ = GetCurrentProcess();
 //  bool cleanup_ = false;

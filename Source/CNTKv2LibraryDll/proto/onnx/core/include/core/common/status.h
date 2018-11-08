@@ -13,10 +13,12 @@ namespace common {
 enum StatusCategory {
   NONE = 0,
   SYSTEM = 1,
-  LOTUS = 2,
+  ONNXRUNTIME = 2,
 };
 
-// Error code for lotus.
+/**
+   Error code for lotus.
+*/
 enum StatusCode {
   OK = static_cast<unsigned int>(MLStatus::OK),
   FAIL = static_cast<unsigned int>(MLStatus::FAIL),

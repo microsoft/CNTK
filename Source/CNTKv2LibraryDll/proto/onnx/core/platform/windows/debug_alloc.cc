@@ -10,7 +10,7 @@
 ////
 //// It creates & destroys itself in init_seg(lib) so it should scope all user code
 ////
-//#if defined(_DEBUG)
+//#ifndef NDEBUG
 //// TVM need to run with shared CRT, so won't work with debug heap alloc
 //#ifndef USE_TVM
 //constexpr int c_callstack_limit = 16;  // Maximum depth of callstack in leak trace

@@ -11,7 +11,7 @@
 #include "core/common/logging/isink.h"
 
 namespace onnxruntime {
-namespace Logging {
+namespace logging {
 /// <summary>
 /// A std::ostream based ISink
 /// </summary>
@@ -29,5 +29,5 @@ class OStreamSink : public ISink {
   std::ostream* stream_;
   const bool flush_;
 };
-}  // namespace Logging
+}  // namespace logging
 }  // namespace onnxruntime

@@ -8,7 +8,7 @@
 
 namespace onnxruntime {
 
-namespace Profiling {
+namespace profiling {
 
 enum EventCategory {
   SESSION_EVENT = 0,
@@ -60,7 +60,7 @@ class Profiler {
   /*
   Start profiler and record beginning time.
   */
-  void StartProfiling(const Logging::Logger* session_logger, const std::string& file_name);
+  void StartProfiling(const logging::Logger* session_logger, const std::string& file_name);
 
   /*
   Produce current time point for any profiling action.
@@ -84,19 +84,19 @@ class Profiler {
   std::string WriteProfileData();
 
  private:
-  LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(Profiler);
+  ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(Profiler);
 
   // Mutex controlling access to profiler data
   std::mutex mutex_;
   bool enabled_{false};
   std::ofstream profile_stream_;
   std::string profile_stream_file_;
-  const Logging::Logger* session_logger_{nullptr};
+  const logging::Logger* session_logger_{nullptr};
   TimePoint profiling_start_time_;
   std::vector<EventRecord> events_;
   bool max_events_reached{false};
   static constexpr size_t max_num_events_ = 1000000;
 };
 
-}  // namespace Profiling
+}  // namespace profiling
 }  // namespace onnxruntime
