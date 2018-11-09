@@ -534,7 +534,7 @@ namespace CNTK
         template<class ElemTypeV1, class ElemTypeV2=ElemTypeV1>
         void ResetBuffer(size_t index, const NDArrayViewPtr& p)
         {
-            auto data = p->GetMatrix<ElemTypeV2>();
+            auto data = p->GetMatrix<ElemTypeV1>();
             if (!m_blockLevelSmoothedGradient[index])
             {
                 // has not been initialized yet
@@ -552,7 +552,7 @@ namespace CNTK
             }
             else
             {
-                m_prevParameters[index]->GetWritableMatrix<ElemTypeV2>()->SetValue(*data);
+                m_prevParameters[index]->GetWritableMatrix<ElemTypeV1>()->SetValue(*data);
             }
 
             if (!m_tempBlockGradient[index])
