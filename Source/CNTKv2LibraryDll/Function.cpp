@@ -2229,7 +2229,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameBlankTokenId] = blankTokenId;
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameDelayConstraint] = delayConstraint;
 
-        std::vector<Variable> operands = { prediction, transcription,prediction };
+        std::vector<Variable> operands = {graph, transcription, prediction};
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::RNNT, operands, std::move(additionalProperties), name), name);
 
         //return BinaryOp(PrimitiveOpType::RNNT, graph,transcription, prediction, std::move(additionalProperties), name);

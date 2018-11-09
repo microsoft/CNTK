@@ -6072,7 +6072,8 @@ namespace CNTK
     ///
     /// Create an HTKMLFDeserializer with the specified options
     ///
-    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries = false);
+    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries = false,
+        bool squashLabel = false, size_t blankID = 0, bool blankInFront = false);
 
     ///
     /// Create a LatticeDeserializer with the specified options

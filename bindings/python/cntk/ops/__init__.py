@@ -302,11 +302,11 @@ def RNNT(graph, encoder, decoder, blankTokenId, delayConstraint=-1, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import r_n_n_t as RNNT
-    dtype = get_data_type(encoder, decoder, graph)
-    encoder = sanitize_input(encoder, dtype)
-    decoder = sanitize_input(decoder, dtype)
-    graph = sanitize_input(graph, dtype)
+    from cntk.cntk_py import rnnt as RNNT
+    #dtype = get_data_type(encoder, decoder, graph)
+    encoder = sanitize_input(encoder, get_data_type(encoder))
+    decoder = sanitize_input(decoder, get_data_type(decoder))
+    graph = sanitize_input(graph, get_data_type(graph))
     return RNNT(graph, encoder, decoder, blankTokenId, delayConstraint, name)
 
 

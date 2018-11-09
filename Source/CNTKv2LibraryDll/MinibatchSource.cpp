@@ -489,7 +489,8 @@ namespace CNTK
         return result;
     }
 
-    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries)
+    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries, 
+        bool squashLabel , size_t blankID , bool blankInFront )
     {
         Deserializer htk;
         Dictionary stream;
@@ -507,6 +508,16 @@ namespace CNTK
             labels[L"phoneBoundaries"] = L"true";
         else
             labels[L"phoneBoundaries"] = L"false";
+        if (squashLabel)
+            labels[L"squashLabel"] = L"true";
+        else
+            labels[L"squashLabel"] = L"false";
+        labels[L"blankID"] = blankID;
+        if (blankInFront)
+            labels[L"blankInFront"] = L"true";
+        else
+            labels[L"blankInFront"] = L"false";
+
         stream[streamName] = labels;
         htk.Add(L"type", L"HTKMLFDeserializer", L"input", stream);
         return htk;

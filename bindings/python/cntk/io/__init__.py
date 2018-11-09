@@ -797,7 +797,7 @@ def HTKFeatureDeserializer(streams):
     return cntk_py.htk_feature_deserializer(feat)
 
 
-def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
+def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False, squashLabel = False, blankID = 0, blankInFront=False):
     '''
     Configures an HTK label reader that reads speech HTK format MLF (Master
     Label File)
@@ -821,7 +821,7 @@ def HTKMLFDeserializer(label_mapping_file, streams, phoneBoundaries = False):
         master_label_files = stream['mlf']
         if not isinstance(master_label_files, list):
             master_label_files = [master_label_files]
-        return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files, phoneBoundaries)
+        return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files, phoneBoundaries, squashLabel, blankID, blankInFront)
 
 def LatticeDeserializer(lattice_index_file, streams):
     '''
