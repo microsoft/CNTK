@@ -525,39 +525,39 @@ namespace CNTK
                 else if (p->GetDataType() == DataType::Float)
                     ResetBuffer<float>(i, p);
                 else if (p->GetDataType() == DataType::Float16)
-                    ResetBuffer<float16>(i, p);
+                    ResetBuffer<half, float16>(i, p);
                 else
                     RuntimeError("Unsupported type.");
             }
         }
 
-        template<class ElemType>
+        template<class ElemTypeV1, class ElemTypeV2=ElemTypeV1>
         void ResetBuffer(size_t index, const NDArrayViewPtr& p)
         {
-            auto data = p->GetMatrix<ElemType>();
+            auto data = p->GetMatrix<ElemTypeV2>();
             if (!m_blockLevelSmoothedGradient[index])
             {
                 // has not been initialized yet
-                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<ElemType>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
-                pSmoothedGrad->SetValue(static_cast<ElemType>(0));
+                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<ElemTypeV2>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+                pSmoothedGrad->SetValue(static_cast<ElemTypeV2>(0));
                 m_blockLevelSmoothedGradient[index] = pSmoothedGrad;
             }
 
             if (!m_prevParameters[index])
             {
-                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<ElemType>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
-                std::shared_ptr<Matrix<ElemType>> newData = newValue->GetWritableMatrix<ElemType>();
+                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<ElemTypeV2>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+                std::shared_ptr<Matrix<ElemTypeV1>> newData = newValue->GetWritableMatrix<ElemTypeV1>();
                 newData->SetValue(*data);
                 m_prevParameters[index] = newValue;
             }
             else
             {
-                m_prevParameters[index]->GetWritableMatrix<ElemType>()->SetValue(*data);
+                m_prevParameters[index]->GetWritableMatrix<ElemTypeV2>()->SetValue(*data);
             }
 
             if (!m_tempBlockGradient[index])
             {
-                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<ElemType>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<ElemTypeV2>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
             }
         }
 
