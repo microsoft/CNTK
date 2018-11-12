@@ -14,6 +14,7 @@
 #include "GPUDataTransferer.h"
 #include <numeric>
 #include "Utils.h"
+#include<iostream>
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -732,6 +733,7 @@ namespace CNTK
     {
         if (m_nccl->IsSupported() && !dataOnCPU)
         {
+            std::cerr << " NCCL fp16 allreduce" << endl;
             m_nccl->AllReduce(inputData, outputData, numElements, op);
 
             return;
