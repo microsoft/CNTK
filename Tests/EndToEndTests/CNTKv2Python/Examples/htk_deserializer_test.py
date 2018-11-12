@@ -1,5 +1,5 @@
 import cntk as C
-from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, StreamDef, StreamDefs
+from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, HTKMLFBinaryDeserializer, StreamDef, StreamDefs
 from cntk.layers import Recurrence, Dense, LSTM, Sequential, For
 
 import os
