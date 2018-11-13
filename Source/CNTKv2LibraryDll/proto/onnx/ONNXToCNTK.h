@@ -22,6 +22,7 @@ namespace CNTK
             VALID = 0,
             SAME_UPPER = 1,
             SAME_LOWER = 2,
+            NOTSET = 3,
         };
     }
 

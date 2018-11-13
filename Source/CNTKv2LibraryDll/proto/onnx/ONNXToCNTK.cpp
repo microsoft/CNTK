@@ -1431,6 +1431,8 @@ ConvAutoPadType ONNXToCNTKHelper::ConvertStrToConvAutoPadType(const string &str)
         return ConvAutoPadType::SAME_UPPER;
     else if (str == "SAME_LOWER" || str == "same_lower")
         return ConvAutoPadType::SAME_LOWER;
+    else if (str == "NOTSET" || str == "notset")
+        return ConvAutoPadType::NOTSET;
     else
         LogicError("Unknown value for %s attribute: %s", "auto_pad", str.c_str());
 }
@@ -3322,7 +3324,9 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
         outputShape = GetNamedAttributeAsShape(node, "output_shape", /*hasBatchAxis=*/false);
         if ((outputShape.Rank() != numSpatialDim) && (outputShape.Rank() != numSpatialDim + 2))
             LogicError("ConvTranspose node's output shape attribute is of unexpected length. It should be either equal to input shape length, or input shape length - 2");
-        padsPair = CalcPaddingFromOutputShape(inputShape, kernelShape, strides, outputShape, outputPadding, /*isSameUpper=*/false);
+        // For convTranspose, extra pad location is flipped compared to conv/pooling. Thus the flag 'isSameUpper' is flipped to 'notSameUpper'.
+        const bool notSameUpper = ConvertStrToConvAutoPadType(GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER")) != ConvAutoPadType::SAME_UPPER;
+        padsPair = CalcPaddingFromOutputShape(inputShape, kernelShape, strides, outputShape, outputPadding, notSameUpper);
     }
     else if (USE_PADS)
     {
@@ -3345,9 +3349,10 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
         case ConvAutoPadType::SAME_UPPER:
         case ConvAutoPadType::SAME_LOWER:
         {
-            const bool isSameUpper = auto_pad == ConvAutoPadType::SAME_UPPER;
+            const bool notSameUpper = auto_pad != ConvAutoPadType::SAME_UPPER;
             auto outputPadding = (HasNamedAttribute(node, "output_padding")) ? GetNamedAttributeAsInt64Vec(node, "output_padding") : std::vector<int64_t>(numSpatialDim, 0);
-            padsPair = CalcPaddingFromOutputShape(inputShape, kernelShape, strides, outputShape, outputPadding, isSameUpper);
+            // For convTranspose, extra pad location is flipped compared to conv/pooling. Thus the flag 'isSameUpper' is flipped to 'notSameUpper'.
+            padsPair = CalcPaddingFromOutputShape(inputShape, kernelShape, strides, outputShape, outputPadding, notSameUpper);
             break;
         }
         case ConvAutoPadType::VALID:
