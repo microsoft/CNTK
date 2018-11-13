@@ -535,7 +535,6 @@ private:
     static onnx::TypeProto ToTypeProto(const NDShape& shape, bool hasBatchAxis = false, bool hasSequenceAxis = false, bool doReverseShape = true);
     static onnx::TypeProto ToTypeProto(const std::vector<bool>& shape);
     static onnx::TypeProto ToTypeProto(const std::vector<int64_t>& shape, bool doReverseVec = true);
-    static onnx::TypeProto ToTypeProto(const std::vector<Axis>& axes);
 
     //
     // Convert TypeProto, NDShape and various std::vector types to std::vector
@@ -544,7 +543,6 @@ private:
     static std::vector<int64_t> ToINTS(const NDShape& shape, bool hasBatchAxis = false);
     static std::vector<int64_t> ToINTS(const std::vector<bool>& shape);
     static std::vector<int64_t> ToINTS(const std::vector<int>& shape, bool doReverseVec = true);
-    static std::vector<int64_t> ToINTS(const std::vector<Axis>& axes);
 
     static std::vector<float> INTSToVecFloat(const std::vector<int64_t> &ints);
     static std::vector<int64_t> ConvertPermutationCNTKToONNX(const std::vector<Axis> &axes, bool hasBatchAxis);
@@ -1688,23 +1686,6 @@ onnx::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<int64_t>& shape,
     return newShape;
 }
 
-onnx::TypeProto CNTKToONNXHelper::ToTypeProto(const std::vector<Axis>& axes)
-{
-    std::vector<int> axesValue;
-    for (auto axis : axes)
-    {
-        axesValue.push_back(ToIndex(axis));
-    }
-    std::sort(axesValue.begin(), axesValue.end());
-
-    onnx::TypeProto newShape = MakeTypeProtoWithShape();
-
-    for (auto dimension : axesValue)
-        newShape.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(dimension);
-
-    return newShape;
-}
-
 // this method is to undo an idempotent convertion in sanitize_permutation:
 // Find the permutation such that when it is applied to the reverse
 // of an input gives the reverse of perm applied to the input
@@ -1766,11 +1747,6 @@ std::vector<int64_t> CNTKToONNXHelper::ToINTS(const std::vector<int>& shape,
                                               bool doReverseVec /* = true*/)
 {
     return ToINTS(ToTypeProto(Cast<int, int64_t>(shape), doReverseVec));
-}
-
-std::vector<int64_t> CNTKToONNXHelper::ToINTS(const std::vector<Axis>& axes)
-{
-    return ToINTS(ToTypeProto(axes));
 }
 
 bool IsUnSupportedLayerNormalization(const FunctionPtr src)
@@ -5542,7 +5518,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             if (src->Attributes().Contains(L"axisVec"))
             {
                 std::vector<Axis> sliceAxes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
-                node->AddAttribute(attributesMap[L"axes"], ToINTS(sliceAxes));
+                node->AddAttribute(attributesMap[L"axes"], ConvertAxesToOnnx(sliceAxes, src->Inputs()[0]));
 
                 beginIndex = AsVector<int>(src->Attributes()[L"beginIndexVec"].Value<std::vector<DictionaryValue>>());
                 endIndex = AsVector<int>(src->Attributes()[L"endIndexVec"].Value<std::vector<DictionaryValue>>());
@@ -5661,7 +5637,10 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             {
                 axes.push_back((Axis)(src->Attributes()[L"axis"].Value<Axis>()));
             }
-            node->AddAttribute("axes", ToINTS(axes));
+            if (axes.size() > 0)
+            {
+                node->AddAttribute("axes", ConvertAxesToOnnx(axes, src->Inputs()[0]));
+            }
         }
         else if (src->OpName() == L"Gather")
         {

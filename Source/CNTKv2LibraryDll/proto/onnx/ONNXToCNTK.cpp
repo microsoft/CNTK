@@ -1431,6 +1431,8 @@ ConvAutoPadType ONNXToCNTKHelper::ConvertStrToConvAutoPadType(const string &str)
         return ConvAutoPadType::SAME_UPPER;
     else if (str == "SAME_LOWER" || str == "same_lower")
         return ConvAutoPadType::SAME_LOWER;
+    else if (str == "NOTSET" || str == "notset")
+        return ConvAutoPadType::NOTSET;
     else
         LogicError("Unknown value for %s attribute: %s", "auto_pad", str.c_str());
 }
@@ -3322,7 +3324,10 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
         outputShape = GetNamedAttributeAsShape(node, "output_shape", /*hasBatchAxis=*/false);
         if ((outputShape.Rank() != numSpatialDim) && (outputShape.Rank() != numSpatialDim + 2))
             LogicError("ConvTranspose node's output shape attribute is of unexpected length. It should be either equal to input shape length, or input shape length - 2");
-        padsPair = CalcPaddingFromOutputShape(inputShape, kernelShape, strides, outputShape, outputPadding, /*isSameUpper=*/false);
+        // NOTE: The following is for ONNX V1.3 opset8. It is subject to change in future versions.
+        // For convTranspose, extra pad location is flipped compared to conv/pooling. Thus the flag 'isSameUpper' is flipped to 'notSameUpper'.
+        const bool notSameUpper = ConvertStrToConvAutoPadType(GetNamedAttributeAsString(node, "auto_pad", "SAME_UPPER")) != ConvAutoPadType::SAME_UPPER;
+        padsPair = CalcPaddingFromOutputShape(inputShape, kernelShape, strides, outputShape, outputPadding, notSameUpper);
     }
     else if (USE_PADS)
     {
@@ -3345,9 +3350,10 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
         case ConvAutoPadType::SAME_UPPER:
         case ConvAutoPadType::SAME_LOWER:
         {
-            const bool isSameUpper = auto_pad == ConvAutoPadType::SAME_UPPER;
+            const bool notSameUpper = auto_pad != ConvAutoPadType::SAME_UPPER;
             auto outputPadding = (HasNamedAttribute(node, "output_padding")) ? GetNamedAttributeAsInt64Vec(node, "output_padding") : std::vector<int64_t>(numSpatialDim, 0);
-            padsPair = CalcPaddingFromOutputShape(inputShape, kernelShape, strides, outputShape, outputPadding, isSameUpper);
+            // For convTranspose, extra pad location is flipped compared to conv/pooling. Thus the flag 'isSameUpper' is flipped to 'notSameUpper'.
+            padsPair = CalcPaddingFromOutputShape(inputShape, kernelShape, strides, outputShape, outputPadding, notSameUpper);
             break;
         }
         case ConvAutoPadType::VALID:
@@ -3366,6 +3372,8 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
 
     padsPair.first.push_back(0);
     padsPair.second.push_back(0);
+    if (padsPair.first.size() != padsPair.second.size())
+        LogicError("ConvTranspose: producing uneven lower/upper pads rank: lower(%zu), upper(%zu). ", padsPair.first.size(), padsPair.second.size());
 
     // CNTK only accepts outputShape in the format of
     //  case 1: [0]. Empty shape which tells CNTK to infer output shape from other inputs. 
@@ -3396,18 +3404,59 @@ FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Node *node, cons
         LogicError("ConvTranspose: unable to produce CNTK compatible output shape from given ONNX node. ");
     }
 
+    // cuDNN couldn't support cases of asymmetric pad values.
+    // Solution: increase the outputShape with size of extra pads, and add a slice node after convTranspose to remove the padded values.
+    std::vector<int> extraUpperPads(outputShape.Rank(), 0);
+    if (extraUpperPads.size() > 1)
+    {
+        assert(padsPair.first.size() == padsPair.second.size());
+        if (padsPair.first.size() != outputShape.Rank())
+            LogicError("ConvTranspose: producing uneven pads rank and outputShape rank: pads(%zu), outputShape(%zu). ", padsPair.first.size(), outputShape.Rank());
+        for (int idx = 0; idx < outputShape.Rank() - 1; ++idx)
+        {
+            if (padsPair.second[idx] != padsPair.first[idx])
+            {
+                extraUpperPads[idx] = padsPair.second[idx] - padsPair.first[idx];
+                if (extraUpperPads[idx] > 0)
+                    padsPair.second[idx] -= extraUpperPads[idx];
+                else
+                    padsPair.first[idx] += extraUpperPads[idx];
+                outputShape[idx] += abs(extraUpperPads[idx]);
+            }
+        }
+    }
+
     FunctionPtr cntkConvFunction = CreateCNTKConvTransposeNode(inputOperand, convolutionMap,
         strides, sharing, padsPair.first, padsPair.second, outputShape,
         dilation, reductionRank, maxTempMemSizeInSamples, node->Name());
+
+    if (std::any_of(extraUpperPads.begin(), extraUpperPads.end(), [](int i) { return i != 0; }))
+    {
+        // Add slice node to remove output values that are considered padded.
+        std::vector<Axis> axes;
+        std::vector<int> beginIndices;
+        std::vector<int> endIndices;
+        for (int idx = 0; idx < extraUpperPads.size() - 1; ++idx)
+        {
+            if (extraUpperPads[idx] != 0)
+            {
+                int extraUpperPad = extraUpperPads[idx];
+                axes.push_back(Axis(idx));
+                beginIndices.push_back(extraUpperPad > 0 ? 0 : -extraUpperPad);
+                endIndices.push_back(extraUpperPad > 0 ? outputShape[idx] - extraUpperPad : outputShape[idx]);
+            }
+        }
+        cntkConvFunction = Slice(cntkConvFunction, axes, beginIndices, endIndices);
+    }
 
     // If Bias is specified in the ONNX node.
     if (inputs.size() == 3)
     {
         NDShape shape({ 1, 1, inputs[2].Shape()[0] });
-        return Plus(cntkConvFunction, Reshape(inputs[2], shape));
+        cntkConvFunction = Plus(cntkConvFunction, Reshape(inputs[2], shape));
     }
-    else
-        return cntkConvFunction;
+
+    return cntkConvFunction;
 }
 
 FunctionPtr ONNXToCNTKHelper::CreateCNTKConvTransposeNode(const Variable& inputOperand, const Variable& convolutionMap, const NDShape& strides,

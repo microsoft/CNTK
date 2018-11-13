@@ -1739,8 +1739,13 @@ def test_Slice(tmpdir, dtype):
         model = C.slice(x1, 0, 1, 2)
         verify_one_input(model, data, tmpdir, 'Slice_1')
 
-        model = C.slice(x1, [0,1], [1,0], [2,1]);
+        model = C.slice(x1, [0,1], [1,0], [2,1])
         verify_one_input(model, data, tmpdir, 'Slice2_1')
+
+        data = np.asarray([[[1,1,1,1],[2,2,2,2],[3,3,2,2]], [[4,4,5,5], [5,5,6,6], [6,6,7,7]]],dtype=dtype)
+        x1 = C.input_variable((2,3,4))
+        model = C.slice(x1, [1,2], [1,0],[2,1])
+        verify_one_input(model, data, tmpdir, 'Slice3_1')
 
 #Sequence.Slice 
 @pytest.mark.parametrize("beginIndex, endIndex", (  
@@ -1827,11 +1832,19 @@ def test_Softsign(tmpdir, dtype):
         verify_no_input(model, tmpdir, 'Softsign_0')
 
 #Squeeze
-#def test_Squeeze(tmpdir):
-#    x0 = np.arange(12).reshape((2, 2, 1, 3)).astype('f')
-#    x = C.input_variable((2, 1, 3))
-#    model = C.squeeze(x)
-#    verify_one_input(model, x0, tmpdir, 'Squeeze_0')
+def test_Squeeze(tmpdir):
+    pytest.skip('TODO: need to bump ONNX CI version. ')
+    x0 = np.arange(6).reshape((1, 2, 1, 3)).astype('f')
+    x = C.input_variable((2, 1, 3))
+    model = C.squeeze(x, [1])
+    verify_one_input(model, x0, tmpdir, 'Squeeze_0')
+
+def test_Squeeze_without_axes(tmpdir):
+    pytest.skip('ONNX should update attribute axes to be optional.')
+    x0 = np.arange(6).reshape((1, 2, 1, 3)).astype('f')
+    x = C.input_variable((2, 1, 3))
+    model = C.squeeze(x)
+    verify_one_input(model, x0, tmpdir, 'Squeeze_without_axes_0')
 
 #Sum
 @pytest.mark.parametrize("dtype", DType_Config)
