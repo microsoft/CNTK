@@ -103,9 +103,13 @@ void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const Con
         attempt(5, [this, path, enableCaching, corpus, stateListPath]() {
             if (m_textReader)
             {
+                LOGPRINTF(stderr, "MLFDeserializer::InitializeChunkInfos: Opening %ls...\n", path.c_str());
                 MLFIndexBuilder builder(FileWrapper(path, L"rbS"), corpus);
+                LOGPRINTF(stderr, "MLFDeserializer::InitializeChunkInfos: Done opening %ls\n", path.c_str());
                 builder.SetChunkSize(m_chunkSizeBytes).SetCachingEnabled(enableCaching);
+                LOGPRINTF(stderr, "MLFDeserializer::InitializeChunkInfos: Building index...\n");
                 m_indices.emplace_back(builder.Build());
+                LOGPRINTF(stderr, "MLFDeserializer::InitializeChunkInfos: Done building index.\n");
             }
             else
             {
@@ -115,8 +119,12 @@ void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const Con
             }
         });
 
-        m_mlfFiles.push_back(path);
-
+        // Debug
+        {
+            ScopeWarningTimer t(m_timer, "m_mlfFiles.push_back(path)", 1);
+            m_mlfFiles.push_back(path);
+        }
+        
         auto& index = m_indices.back();
         // Build auxiliary for GetSequenceByKey.
         for (const auto& chunk : index->Chunks())
@@ -129,21 +137,36 @@ void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const Con
                 const auto& sequence = chunk[i];
                 auto sequenceIndex = m_frameMode ? offsetInSamples : i;
                 offsetInSamples += sequence.m_numberOfSamples;
-                m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, chunkId, sequenceIndex));
+
+                // Debug
+                {
+                    ScopeWarningTimer t(m_timer, "m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, chunkId, sequenceIndex))", 1);
+                    m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, chunkId, sequenceIndex));
+                }
             }
 
             totalNumSequences += chunk.NumberOfSequences();
             totalNumFrames += chunk.NumberOfSamples();
-            m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1));
-            m_chunks.push_back(&chunk);
+            // Debug
+            {
+                ScopeWarningTimer t(m_timer, "m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1))", 1);
+                m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1));
+            }
+            // Debug
+            {
+                ScopeWarningTimer t(m_timer, "m_chunks.push_back(&chunk)", 1);
+                m_chunks.push_back(&chunk);
+            }
             if (m_chunks.size() >= numeric_limits<ChunkIdType>::max())
                 RuntimeError("Number of chunks exceeded overflow limit.");
         }
     }
 
+    LOGPRINTF(stderr, "MLFDeserializer::InitializeChunkInfos: Sorting m_keyToChunkLocation size == %zu\n", m_keyToChunkLocation.size());
     std::sort(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(), LessByFirstItem);
+    LOGPRINTF(stderr, "MLFDeserializer::InitializeChunkInfos: Done sorting.\n");
 
-    fprintf(stderr, "MLF Deserializer: '%zu' utterances with '%zu' frames\n",
+    LOGPRINTF(stderr, "MLFDeserializer: '%zu' utterances with '%zu' frames\n",
             totalNumSequences,
             totalNumFrames);
 

@@ -43,7 +43,7 @@ namespace CNTK {
         }
 
         assert(index == m_stateTable.size());
-        fprintf(stderr, "Total (%zu) state names in state list '%ls'\n", m_stateTable.size(), stateListPath.c_str());
+        LOGPRINTF(stderr, "Total (%zu) state names in state list '%ls'\n", m_stateTable.size(), stateListPath.c_str());
 
         if (m_stateTable.empty())
             RuntimeError("State list table '%ls' is not allowed to be empty.", stateListPath.c_str());

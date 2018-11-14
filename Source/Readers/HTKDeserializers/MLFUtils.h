@@ -11,9 +11,11 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range_core.hpp>
-
+#include "ProgressTracing.h"
 
 namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
     // Representation of a state list table.
     // The table is preserved in memory, the number of states is only expected to be a couple of thousands,

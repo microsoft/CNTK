@@ -89,9 +89,11 @@
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\DataWriter.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
+    <ClInclude Include="..\..\Common\Include\ProgressTracing.h" />
     <ClInclude Include="..\..\Common\Include\ssematrix.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="..\..\Common\Include\ExceptionWithCallStack.h" />
+    <ClInclude Include="..\..\Common\Include\TimerUtility.h" />
     <ClInclude Include="HTKChunkDescription.h" />
     <ClInclude Include="ConfigHelper.h" />
     <ClInclude Include="HTKDeserializer.h" />

@@ -9,6 +9,7 @@
 #include "Basics.h"
 #include "StringUtil.h"
 #include <unordered_set>
+#include "ProgressTracing.h"
 
 namespace CNTK {
 
@@ -123,12 +124,14 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
     string rootPath = config.GetRootPath();
     string scpDir = config.GetScpDir();
 
-    fprintf(stderr, "Reading script file %s ...", scriptPath.c_str());
+    ProgressTracing::SetTimestampingFlag();
+    LOGPRINTF(stderr, "Reading script file %s ...\n", scriptPath.c_str());
 
     ifstream scp(scriptPath.c_str());
     if (!scp)
         RuntimeError("Failed to open input file: %s", scriptPath.c_str());
 
+    LOGPRINTF(stderr, "Done open script file %s, reading...\n", scriptPath.c_str());
     deque<UtteranceDescription> utterances;
     size_t totalNumberOfFrames = 0;
     std::unordered_map<size_t, std::vector<string>> duplicates;
@@ -168,7 +171,7 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
     if (scp.bad())
         RuntimeError("An error occurred while reading input file: %s", scriptPath.c_str());
 
-    fprintf(stderr, " %zu entries\n", utterances.size());
+    LOGPRINTF(stderr, " %zu entries\n", utterances.size());
 
     // TODO: We should be able to configure IO chunks based on size.
     // distribute utterances over chunks
@@ -196,9 +199,14 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
         // I.e. our chunks are a little larger than wanted (on av. half the av. utterance length).
         if (m_chunks.empty() || m_chunks.back().GetTotalFrames() > ChunkFrames)
         {
-            if (m_verbosity >= 2)
+            if (true) // (m_verbosity >= 2)
             {
-                fprintf(stderr, "HTKDeserializer::InitializeChunkInfos: Splitting utterances into chunk[%u]...\n", chunkId);
+                if (!m_chunks.empty())
+                {
+                    LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: created chunk[%u] with %u utterances\n",
+                        m_chunks.back().GetChunkId(),
+                        m_chunks.back().GetNumberOfUtterances());
+                }
             }
             m_chunks.push_back(HTKChunkInfo(chunkId++));
         }
@@ -212,6 +220,15 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
         }
 
         currentChunk.Add(move(utterances[i]));
+    }
+    if (true) // (m_verbosity >= 2)
+    {
+        if (!m_chunks.empty())
+        {
+            LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: created chunk[%u] with %u utterances\n",
+                m_chunks.back().GetChunkId(),
+                m_chunks.back().GetNumberOfUtterances());
+        }
     }
 
     std::sort(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(),
@@ -237,7 +254,7 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
     if (numberOfDuplicates)
         fprintf(stderr, "WARNING: Number of duplicates is '%zu'. All duplicates will be dropped. Consider switching to numeric sequence ids.\n", numberOfDuplicates);
 
-    fprintf(stderr,
+    LOGPRINTF(stderr,
         "HTKDeserializer: selected '%zu' utterances grouped into '%zu' chunks, "
         "average chunk size: %.1f utterances, %.1f frames "
         "(for I/O: %.1f utterances, %.1f frames)\n",
@@ -275,7 +292,7 @@ void HTKDeserializer::InitializeFeatureInformation()
     {
         htkfeatreader reader;
         reader.getinfo(m_chunks.front().GetUtterance(0)->GetPath(), m_featureKind, m_ioFeatureDimension, m_samplePeriod);
-        fprintf(stderr, "HTKDeserializer: determined feature kind as '%zu'-dimensional '%s' with frame shift %.1f ms\n",
+        LOGPRINTF(stderr, "HTKDeserializer: determined feature kind as '%zu'-dimensional '%s' with frame shift %.1f ms\n",
             m_ioFeatureDimension, m_featureKind.c_str(), m_samplePeriod / 1e4);
     });
 }

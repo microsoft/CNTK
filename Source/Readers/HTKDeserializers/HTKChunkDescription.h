@@ -11,9 +11,42 @@
 #include "HTKFeaturesIO.h"
 #include "UtteranceDescription.h"
 #include "ssematrix.h"
+#include "TimerUtility.h"
+#include "ProgressTracing.h"
 
 namespace CNTK {
 
+using namespace Microsoft::MSR::CNTK;
+
+class ScopeWarningTimer
+{
+    Timer m_Timer;
+    size_t m_verbosity;
+    std::string m_message;
+    double m_timeout;
+
+public:
+    ScopeWarningTimer(Timer& timer, const std::string& message, double timeout, size_t verbosity = 2)
+        : m_Timer(timer), m_verbosity(verbosity), m_message(message), m_timeout(timeout)
+    {
+        if (m_verbosity > 1)
+        {
+            m_Timer.Restart();
+            m_Timer.Start();
+        }
+    }
+
+    ~ScopeWarningTimer()
+    {
+        if (m_verbosity > 1)
+        {
+            m_Timer.Stop();
+            double time = m_Timer.ElapsedSeconds();
+            if (time > m_timeout)
+                LOGPRINTF(stderr, "WARNING: %s takes %lf seconds\n", m_message.c_str(), time);
+        }
+    }
+};
 // Class represents a description of an HTK chunk.
 // It is only used internally by the HTK deserializer.
 // Can exist without associated data and provides methods for requiring/releasing chunk data.
@@ -35,6 +68,9 @@ class HTKChunkInfo
 
     // Chunk id.
     ChunkIdType m_chunkId;
+
+    // Timer, debug purpose only
+    Timer m_timer;
 
 public:
 
@@ -61,9 +97,20 @@ public:
             LogicError("Frames already paged into RAM -- too late to add data.");
         }
 
-        m_firstFrames.push_back(m_totalFrames);
+        // Debug
+        {
+            ScopeWarningTimer t(m_timer, "m_firstFrames.push_back(m_totalFrames)", 1);
+            m_firstFrames.push_back(m_totalFrames);
+        }
+        
         m_totalFrames += utterance.GetNumberOfFrames();
-        m_utterances.push_back(std::move(utterance));
+
+        // Debug
+        {
+            ScopeWarningTimer t(m_timer, "m_utterances.push_back(std::move(utterance))", 1);
+            m_utterances.push_back(std::move(utterance));
+        }
+
         if (m_utterances.size() > std::numeric_limits<uint32_t>::max())
             RuntimeError("Chunk overflow happened: too many utterances.");
     }

@@ -15,6 +15,8 @@
 namespace CNTK
 {
 
+using namespace Microsoft::MSR::CNTK;
+
 static float s_oneFloat = 1.0;
 static double s_oneDouble = 1.0;
 
@@ -379,5 +381,8 @@ public:
     std::vector<std::shared_ptr<Index>> m_indices;
     std::vector<std::wstring> m_mlfFiles;
     bool m_textReader;
+
+    // Debug
+    Timer m_timer;
 };
 }
