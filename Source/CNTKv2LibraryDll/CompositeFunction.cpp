@@ -1185,9 +1185,10 @@ namespace CNTK
                     auto seqGammarBMMIFactor = functionConfig[PrimitiveFunctionAttribute::AttributeNameSeqGammarBMMIFactor].Value<float>();
                     auto seqGammarWordPen = functionConfig[PrimitiveFunctionAttribute::AttributeNameSeqGammarWordPen].Value<float>();
                     auto hSmoothingWeight = functionConfig[PrimitiveFunctionAttribute::AttributeNameHSmoothingWeight].Value<float>();
+                    auto TSLearn = functionConfig[PrimitiveFunctionAttribute::AttributeNameTSLearn].Value<bool>();
 
                     computationNodePtr = New<LatticeSequenceWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName, symListPath, phonePath, stateListPath, transProbPath, latticeConfigPath,
-                        hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen);
+                        hSmoothingWeight, frameDropThresh, doReferenceAlign, seqGammarUsesMBR, seqGammarAMF, seqGammarLMF, seqGammarBMMIFactor, seqGammarWordPen, TSLearn);
                     break;
                 }
                 case PrimitiveOpType::ForwardBackward:

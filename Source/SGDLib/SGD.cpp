@@ -2981,6 +2981,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_frameDropThresh = configSGD(L"frameDropThresh", 1e-10);
     m_doReferenceAlign = configSGD(L"doReferenceAlign", false);
     m_seqGammarCalcUsesMBR = configSGD(L"seqGammarUsesMBR", false);
+    m_TSLearn = configSGD(L"TSLearn", false);
     m_seqGammarCalcAMF = configSGD(L"seqGammarAMF", 14.0);
     m_seqGammarCalcLMF = configSGD(L"seqGammarLMF", 14.0);
     m_seqGammarCalcbMMIFactor = configSGD(L"seqGammarBMMIFactor", 0.0);

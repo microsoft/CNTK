@@ -106,6 +106,7 @@ namespace CNTK
         CNTK_API static const std::wstring AttributeNameSeqGammarLMF;
         CNTK_API static const std::wstring AttributeNameSeqGammarBMMIFactor;
         CNTK_API static const std::wstring AttributeNameSeqGammarWordPen;
+        CNTK_API static const std::wstring AttributeNameTSLearn;
         CNTK_API static const std::wstring AttributeNameNumClass;
         CNTK_API static const std::wstring AttributeNameOneHotOutputSparse;
         CNTK_API static const std::wstring AttributeNameOutputSparse;

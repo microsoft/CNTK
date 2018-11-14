@@ -4365,7 +4365,7 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symbolListPath, 
         const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transitionProbabilityPath, const std::wstring& configFilePath, float smoothingWeight, float frameDropThreshold, bool doReferenceAlign, bool gammarUsesMBR,
-        float gammarAMF, float gammarLMF, float gammarBMMIFactor, float gammarWordPenalty, const std::wstring& name = L"");
+        float gammarAMF, float gammarLMF, float gammarBMMIFactor, float gammarWordPenalty, bool TSLearn, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the forwardbackward for specified operands.

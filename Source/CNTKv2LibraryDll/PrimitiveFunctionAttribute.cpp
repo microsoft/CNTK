@@ -91,6 +91,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameSeqGammarLMF = L"SeqGammarLMF";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameSeqGammarBMMIFactor = L"SeqGammarBMMIFactor";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameSeqGammarWordPen = L"SeqGammarWordPen";
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameTSLearn = L"TSLearn";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameNumClass = L"numClass";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameOneHotOutputSparse = L"oneHotOutputSparse";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameOutputSparse = L"OutputSparse";
