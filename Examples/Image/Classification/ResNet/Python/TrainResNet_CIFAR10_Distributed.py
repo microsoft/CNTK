@@ -208,15 +208,15 @@ if __name__=='__main__':
     resnet_cifar10(train_data, test_data, mean_data,
                    network_name,
                    epoch_size,
-                   num_quantization_bits,
-                   block_size=args['block_samples'],
+                   num_quantization_bits=32,
+                   block_size=10000,
                    warm_up=args['distributed_after'],
                    max_epochs=epochs,
                    restore=not args['restart'],
                    scale_up=scale_up,
                    log_to_file=args['logdir'],
                    profiling=args['profile'],
-                   fp16=args['fp16'])
+                   fp16=True)
 
     # Must call MPI finalize when process exit without exceptions
     Communicator.finalize()
