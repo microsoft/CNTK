@@ -66,6 +66,12 @@ public:
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
+    virtual void /*ComputationNode::*/ BeginForwardProp() override
+    {
+        Base::BeginForwardProp();
+        // make sure the seqIndex matrix has been generated on target Device.
+        GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
+    }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping()
     {
