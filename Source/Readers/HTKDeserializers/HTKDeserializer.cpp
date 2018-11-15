@@ -172,6 +172,7 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
         RuntimeError("An error occurred while reading input file: %s", scriptPath.c_str());
 
     LOGPRINTF(stderr, " %zu entries\n", utterances.size());
+    LOGPRINTF(stderr, " %zu entries in duplicates\n", duplicates.size());
 
     // TODO: We should be able to configure IO chunks based on size.
     // distribute utterances over chunks
@@ -184,15 +185,21 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
     // A chunk constitutes of 15 minutes
     const size_t ChunkFrames = 15 * 60 * FramesPerSec; // number of frames to target for each chunk
 
+    LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: m_chunks.reserve(%zu) of size (%zu)\n", totalNumberOfFrames / ChunkFrames, sizeof(HTKChunkInfo));
     m_chunks.reserve(totalNumberOfFrames / ChunkFrames);
+    LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: done reserving.\n");
 
     ChunkIdType chunkId = 0;
-    foreach_index(i, utterances)
+    Timer timer;
+    foreach_index (i, utterances)
     {
-        // Skip duplicates.
-        if (duplicates.find(utterances[i].GetId()) != duplicates.end())
         {
-            continue;
+            ScopeWarningTimer t(timer, "duplicates.find", 1);
+            // Skip duplicates.
+            if (duplicates.find(utterances[i].GetId()) != duplicates.end())
+            {
+                continue;
+            }
         }
 
         // if exceeding current entry--create a new one
@@ -201,25 +208,36 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
         {
             if (true) // (m_verbosity >= 2)
             {
-                if (!m_chunks.empty())
+                if (m_chunks.empty())
+                {
+                    LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: creating chunk[0]\n");
+                }
+                else
                 {
                     LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: created chunk[%u] with %u utterances\n",
                         m_chunks.back().GetChunkId(),
                         m_chunks.back().GetNumberOfUtterances());
                 }
             }
-            m_chunks.push_back(HTKChunkInfo(chunkId++));
+            {
+                ScopeWarningTimer t(timer, "m_chunks.push_back(HTKChunkInfo(chunkId++))", 1);
+                m_chunks.push_back(HTKChunkInfo(chunkId++));
+            }
         }
 
         // append utterance to last chunk
         HTKChunkInfo& currentChunk = m_chunks.back();
         if (!m_primary)
         {
+            ScopeWarningTimer t(timer, "m_keyToChunkLocation.push_back", 1);
             // Have to store key <-> utterance mapping for non primary deserializers.
             m_keyToChunkLocation.push_back(std::make_tuple(utterances[i].GetId(), currentChunk.GetChunkId(), currentChunk.GetNumberOfUtterances()));
         }
 
-        currentChunk.Add(move(utterances[i]));
+        {
+            ScopeWarningTimer t(timer, "currentChunk.Add(move(utterances[i]))", 1);
+            currentChunk.Add(move(utterances[i]));
+        }
     }
     if (true) // (m_verbosity >= 2)
     {
