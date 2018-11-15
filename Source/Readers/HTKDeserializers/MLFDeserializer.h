@@ -170,8 +170,13 @@ public:
                 for (size_t i = 0; i < utterance.size(); ++i)
                     sequencePhoneBoundaries[i] = utterance[i].FirstFrame();
             }
+            size_t numberOfSamples = 0;
+            if (m_deserializer.m_squashLabel)
+                numberOfSamples = utterance.size() + 1;
+            else
+                numberOfSamples = sequence.m_numberOfSamples;
 
-            auto s = make_shared<MLFSequenceData<ElementType>>(sequence.m_numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout);
+            auto s = make_shared<MLFSequenceData<ElementType>>(numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout);
             auto* startRange = s->m_indices;
             if (m_deserializer.m_squashLabel && m_deserializer.m_blankInFront)
             {
