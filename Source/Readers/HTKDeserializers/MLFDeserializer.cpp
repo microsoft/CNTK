@@ -121,7 +121,7 @@ void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const Con
 
         // Debug
         {
-            ScopeWarningTimer t(m_timer, "m_mlfFiles.push_back(path)", 1);
+            ScopeWarningTimer t(m_timer, "m_mlfFiles.push_back(path)", 0.01);
             m_mlfFiles.push_back(path);
         }
         
@@ -140,7 +140,7 @@ void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const Con
 
                 // Debug
                 {
-                    ScopeWarningTimer t(m_timer, "m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, chunkId, sequenceIndex))", 1);
+                    ScopeWarningTimer t(m_timer, "m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, chunkId, sequenceIndex))", 0.01);
                     m_keyToChunkLocation.push_back(std::make_tuple(sequence.m_key, chunkId, sequenceIndex));
                 }
             }
@@ -149,12 +149,12 @@ void MLFDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, const Con
             totalNumFrames += chunk.NumberOfSamples();
             // Debug
             {
-                ScopeWarningTimer t(m_timer, "m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1))", 1);
+                ScopeWarningTimer t(m_timer, "m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1))", 0.01);
                 m_chunkToFileIndex.insert(make_pair(&chunk, m_mlfFiles.size() - 1));
             }
             // Debug
             {
-                ScopeWarningTimer t(m_timer, "m_chunks.push_back(&chunk)", 1);
+                ScopeWarningTimer t(m_timer, "m_chunks.push_back(&chunk)", 0.01);
                 m_chunks.push_back(&chunk);
             }
             if (m_chunks.size() >= numeric_limits<ChunkIdType>::max())

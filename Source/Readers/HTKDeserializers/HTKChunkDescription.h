@@ -29,22 +29,22 @@ public:
     ScopeWarningTimer(Timer& timer, const std::string& message, double timeout, size_t verbosity = 2)
         : m_Timer(timer), m_verbosity(verbosity), m_message(message), m_timeout(timeout)
     {
-        if (m_verbosity > 1)
-        {
+        //if (m_verbosity > 1)
+        //{
             m_Timer.Restart();
             m_Timer.Start();
-        }
+        //}
     }
 
     ~ScopeWarningTimer()
     {
-        if (m_verbosity > 1)
-        {
+        //if (m_verbosity > 1)
+        //{
             m_Timer.Stop();
             double time = m_Timer.ElapsedSeconds();
             if (time > m_timeout)
                 LOGPRINTF(stderr, "WARNING: %s takes %lf seconds\n", m_message.c_str(), time);
-        }
+        //}
     }
 };
 // Class represents a description of an HTK chunk.
@@ -99,7 +99,7 @@ public:
 
         // Debug
         {
-            ScopeWarningTimer t(m_timer, "m_firstFrames.push_back(m_totalFrames)", 1);
+            ScopeWarningTimer t(m_timer, "m_firstFrames.push_back(m_totalFrames)", 0.01);
             m_firstFrames.push_back(m_totalFrames);
         }
         
@@ -107,7 +107,7 @@ public:
 
         // Debug
         {
-            ScopeWarningTimer t(m_timer, "m_utterances.push_back(std::move(utterance))", 1);
+            ScopeWarningTimer t(m_timer, "m_utterances.push_back(std::move(utterance))", 0.01);
             m_utterances.push_back(std::move(utterance));
         }
 
