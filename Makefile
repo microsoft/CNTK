@@ -1286,6 +1286,7 @@ INCLUDEPATH += $(BOOST_PATH)/include
 
 BOOSTLIB_PATH = $(BOOST_PATH)/lib
 BOOSTLIBS := -lboost_unit_test_framework -lboost_filesystem -lboost_system
+BOOSTLIBS_CTF := -lboost_filesystem -lboost_system
 
 UNITTEST_EVAL_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/EvalTests/EvalExtendedTests.cpp \
@@ -1330,6 +1331,26 @@ $(UNITTEST_READER): $(UNITTEST_READER_OBJ) | $(HTKMLFREADER) $(HTKDESERIALIZERS)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBPATH) $(LIBDIR) $(GDK_NVML_LIB_PATH)) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(L_READER_LIBS) $(LIBS) -ldl -fopenmp
+
+############
+CTF_READER_PERF_SRC = \
+	$(SOURCEDIR)/../Tests/UnitTests/CTFReaderPerf/CNTKTextFormatReaderPerfTests.cpp \
+	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextParser.cpp \
+
+CTF_READER_PERF_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CTF_READER_PERF_SRC))
+
+CTF_READER_PERF := $(BINDIR)/ctf_reader_perf
+
+ALL += $(CTF_READER_PERF)
+SRC += $(CTF_READER_PERF_SRC)
+
+$(CTF_READER_PERF): $(CTF_READER_PERF_OBJ) | $(READER_LIBS)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBPATH) $(LIBDIR) $(GDK_NVML_LIB_PATH)) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS_CTF) $(L_READER_LIBS) $(LIBS) -ldl -fopenmp
+############
+
 
 UNITTEST_NETWORK_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/AccumulatorNodeTests.cpp \
@@ -1535,146 +1556,6 @@ ALL += python
 
 endif
 
-ifeq ("$(JAVA_SUPPORT)","true")
-
-BINDINGS_DIR=bindings
-JAVA_SWIG_DIR=$(BINDINGS_DIR)/java/Swig
-JAVA_TEST_DIR=Tests/EndToEndTests/EvalClientTests/JavaEvalTest
-GENERATED_JAVA_DIR=$(JAVA_SWIG_DIR)/com/microsoft/CNTK
-JDK_BIN_PATH=$(JDK_PATH)/bin
-JDK_INCLUDE_PATH:=$(JDK_PATH)/include
-JDK_INCLUDE_PATH+=$(JDK_INCLUDE_PATH)/linux
-
-JAVA_SO_NAME=$(LIBDIR)/libCntk.Core.JavaBinding-$(CNTK_COMPONENT_VERSION).so
-JAVA_LOAD_DEPS:=$(CNTKMATH_LIB) $(PERF_PROFILER_LIB) $(CNTKLIBRARY_LIB) $(JAVA_SO_NAME)
-JAVA_LOAD_DEPS:=$(JAVA_LOAD_DEPS:$(LIBDIR)/%=%)
-JAVA_DEP_SO_NAMES_GPU:=libcublas.so libcudart.so libcurand.so libcusparse.so
-
-.PHONY: java
-java: $(JAVA_LIBS)
-	@echo $(SEPARATOR)
-	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
-	rm -rf $(GENERATED_JAVA_DIR)
-	mkdir -p $(GENERATED_JAVA_DIR)
-	$(SWIG_PATH)/swig -c++ -java -package com.microsoft.CNTK $(INCLUDEPATH:%=-I%) -I$(BINDINGS_DIR)/common -outdir $(GENERATED_JAVA_DIR) $(JAVA_SWIG_DIR)/cntk_java.i
-	$(CXX) $(LDFLAGS) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -L$(LIBDIR) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -l$(CNTKMATH) -l$(CNTKLIBRARY) -o $(JAVA_SO_NAME)
-	mkdir -p $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
-	echo $(JAVA_SO_NAME:$(LIBDIR)/%=%) > $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_LOAD_MANIFEST
-	for so in libopen-pal.so.13 libopen-rte.so.12 libmpi.so.12 libmpi_cxx.so.1; do \
-	    cp -p $(MPI_PATH)/lib/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
-	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
-	done
-	for so in libiomp5.so libmklml_intel.so; do \
-	    cp -p $(MKL_LIB_PATH)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
-	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
-	done
-	for so in $(JAVA_LOAD_DEPS); do \
-	    cp -p $(LIBDIR)/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
-	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
-	done
-ifdef CUDA_PATH
-	for so in $(JAVA_DEP_SO_NAMES_GPU); do \
-	    cp -p $(CUDA_PATH)/lib64/$$so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux; \
-	    echo $$so >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST; \
-	done
-	cp -p $(CUDNN_PATH)/cuda/lib64/libcudnn.so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
-	echo 'libcudnn.so' >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST
-	cp -p $(GDK_NVML_LIB_PATH)/libnvidia-ml.so $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux
-	echo 'libnvidia-ml.so' >> $(JAVA_SWIG_DIR)/com/microsoft/CNTK/lib/linux/NATIVE_MANIFEST
-endif
-	cp -p $(JAVA_SWIG_DIR)/CNTKNativeUtils.java $(JAVA_SWIG_DIR)/com/microsoft/CNTK/CNTKNativeUtils.java
-	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk-javadoc.jar README.md
-	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk-sources.jar com
-	$(JDK_BIN_PATH)/javac $(GENERATED_JAVA_DIR)/*.java
-	rm -rf $(GENERATED_JAVA_DIR)/*.java
-	mkdir -p $(LIBDIR)/java
-	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk.jar com
-	cp $(JAVA_SWIG_DIR)/cntk.jar $(JAVA_SWIG_DIR)/cntk-sources.jar $(LIBDIR)/java
-	javac -cp $(JAVA_SWIG_DIR) $(JAVA_TEST_DIR)/src/Main.java -d $(LIBDIR)/java
-
-ALL += java
-
-endif
-
-########################################
-# C# Support
-########################################
-
-ifeq ("$(CSHARP_SUPPORT)","true")
-
-# This is a short-term hack to shoehorn cmake into our build system. In the near future, we will fully migrate
-# to a cmake-based system and this hack will no longer be necessary.
-ifeq ("$(findstring debug,$(BUILDTYPE))","debug")
-
-CSHARP_BUILDTYPE:=Debug
-
-else ifeq ("$(findstring release,$(BUILDTYPE))","release")
-
-CSHARP_BUILDTYPE:=Release
-
-else
-
-$(error '$(BUILDTYPE)' does not resemble 'debug' or 'release')
-
-endif
-
-.PHONY: csharp
-csharp: $(CSHARP_LIBS)
-	@echo $(SEPARATOR)
-	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
-	mkdir -p bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE)
-	cd bindings/csharp/Swig/build/Linux/$(CSHARP_BUILDTYPE) && \
-		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) -DCNTK_BUILD_LIB_DIR_HACK=$(LIBDIR) && \
-		make clean && \
-		make all
-
-	mkdir -p bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)
-	cd bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE) && \
-		cmake ../../.. -DCNTK_VERSION=$(BUILD_VERSION) -DCMAKE_BUILD_TYPE=$(CSHARP_BUILDTYPE) -DCNTK_BUILD_LIB_DIR_HACK=$(LIBDIR) && \
-		make
-	cp --recursive bindings/csharp/CNTKLibraryManagedDll/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/* $(LIBDIR)
-
-ALL += csharp
-	
-# Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
-# Since we are not building the .sln file as a whole using dotnet build, dotnet has no context of dependencies of each project. So dispatching the following builds in parallel
-# will create various race-conditions when they try to lock down some shared dependent files. Serializing the build here is only mitigating the race-conditions. A proper solution
-# would be either using msbuild on the whole solution(ideal but painful to change) or keeping multiple copies of CNTKLibraryManagedDll files for the dependent projects to consume.
-V2LibraryCSTests.dll: csharp
-	@echo $(SEPARATOR)
-	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
-	cd Tests/UnitTests/V2LibraryCSTests && \
-		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
-		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE)
-	cp -f Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/V2LibraryCSTests.* $(LIBDIR)
-	cp -f Tests/UnitTests/V2LibraryCSTests/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/Microsoft.VisualStudio.* $(LIBDIR)
-	
-ALL += V2LibraryCSTests.dll
-
-# Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
-CNTKLibraryCSTrainingTest.dll: csharp V2LibraryCSTests.dll
-	@echo $(SEPARATOR)
-	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
-	cd Tests/EndToEndTests/CNTKv2CSharp/CNTKLibraryCSTrainingTest && \
-		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
-		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE) CNTKLibraryCSTrainingTest.csproj
-	cp -f Tests/EndToEndTests/CNTKv2CSharp/CNTKLibraryCSTrainingTest/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/*.* $(LIBDIR)
-	
-ALL += CNTKLibraryCSTrainingTest.dll
-
-# Note that CMakeLists.txt has not been created for this project yet. The paths created here are really ugly.
-CNTKLibraryCSEvalExamplesTest.dll: csharp CNTKLibraryCSTrainingTest.dll
-	@echo $(SEPARATOR)
-	@echo creating $@ for $(ARCH) with build type $(CSHARP_BUILDTYPE)
-	cd Tests/EndToEndTests/EvalClientTests/CNTKLibraryCSEvalExamplesTest && \
-		mkdir -p build/Linux/$(CSHARP_BUILDTYPE) && \
-		dotnet build --force /p:OutDirPrefix=build/Linux/$(CSHARP_BUILDTYPE) /p:PlatformName=Linux -c $(CSHARP_BUILDTYPE) CNTKLibraryCSEvalExamplesTest.csproj
-	cp -f Tests/EndToEndTests/EvalClientTests/CNTKLibraryCSEvalExamplesTest/build/Linux/$(CSHARP_BUILDTYPE)/AnyCPU/$(CSHARP_BUILDTYPE)/*.* $(LIBDIR)
-
-ALL += CNTKLibraryCSEvalExamplesTest.dll
-
-endif
-
 ########################################
 # General compile and dependency rules
 ########################################
@@ -1740,6 +1621,8 @@ $(OBJDIR)/%.o : %.cc $(BUILD_CONFIGURATION)
 	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
 .PHONY: clean buildall all unittests
+
+ctf_reader_perf: $(CTF_READER_PERF)
 
 clean:
 	@echo $(SEPARATOR)
