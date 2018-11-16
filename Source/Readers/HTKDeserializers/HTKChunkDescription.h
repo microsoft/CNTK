@@ -74,9 +74,17 @@ class HTKChunkInfo
 
 public:
 
-    HTKChunkInfo() : m_chunkId(ChunkIdMax) { };
-
-    HTKChunkInfo(ChunkIdType chunkId) : m_chunkId(chunkId) { };
+    HTKChunkInfo(ChunkIdType chunkId = ChunkIdMax, size_t utterancesToReserve = 0) : m_chunkId(chunkId)
+    {
+        if (utterancesToReserve > 0)
+        {
+            LOGPRINTF(stderr, "HTKChunkInfo::HTKChunkInfo: m_utterances.reserve(%zu) of size(%zu)\n", utterancesToReserve, sizeof(UtteranceDescription));
+            m_utterances.reserve(utterancesToReserve);
+            LOGPRINTF(stderr, "HTKChunkInfo::HTKChunkInfo: m_firstFrames.reserve(%zu) of size(%zu)\n", utterancesToReserve, sizeof(size_t));
+            m_firstFrames.reserve(utterancesToReserve);
+            LOGPRINTF(stderr, "HTKChunkInfo::HTKChunkInfo: done reserving!\n");
+        }
+    };
 
     // Gets number of utterances in the chunk.
     uint32_t GetNumberOfUtterances() const
@@ -254,4 +262,5 @@ public:
         }
 };
 
+typedef std::shared_ptr<HTKChunkInfo> HTKChunkInfoPtr;
 }

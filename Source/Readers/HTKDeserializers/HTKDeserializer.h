@@ -57,7 +57,7 @@ private:
     DataType m_elementType;
 
     // Chunk descriptions.
-    std::vector<HTKChunkInfo> m_chunks;
+    std::vector<HTKChunkInfoPtr> m_chunks;
 
     // Augmentation window.
     std::pair<size_t, size_t> m_augmentationWindow;
