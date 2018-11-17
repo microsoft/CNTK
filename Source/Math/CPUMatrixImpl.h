@@ -7033,7 +7033,7 @@ void _assignRNNTTotalScore(ElemType *alphaScore,
                 }
                 if (n > 2)
                 {
-                    if (fabs(x - totalScore[uttId]) > 5e-3)
+                    if (fabs(x - totalScore[uttId]) > 5e-3f)
                         fprintf(stderr, "bad totalscore for RNNT %ld: %f %f\n", (long)n, (double)x, (double)totalScore[uttId]);
                 }
                 else
