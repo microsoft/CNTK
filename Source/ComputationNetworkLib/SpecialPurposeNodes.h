@@ -1519,17 +1519,19 @@ public:
             FrameRange frameRange(InputRef(1).GetMBLayout());
             BackpropToF(InputRef(inputIndex).Gradient(), Gradient(), *m_derivativeForF);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
-            InputRef(inputIndex).Gradient().Print("derivative for f");
+            //InputRef(inputIndex).Gradient().Print("derivative for f");
         }
         else if (inputIndex == 2)  //backprop to transcription g
         {
+            //printf("enter index 2\n");
             FrameRange frameRange(InputRef(2).GetMBLayout());
             BackpropToG(InputRef(inputIndex).Gradient(), Gradient(), *m_derivativeForG);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
-            InputRef(inputIndex).Gradient().Print("derivative for g");
+            //InputRef(inputIndex).Gradient().Print("derivative for g");
         }
         else
             RuntimeError("RNNTNode criterion expects only two inputs: labels and network output.");
+        //printf("finish back prop\n");
     }
 
     void BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
@@ -1561,7 +1563,9 @@ public:
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
         Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, inputGradientValues);
-
+        /*printf("back to F\n");
+        if (gradientValues.GetDeviceId() != CPUDEVICE)
+            printf("gradientValues after F is in GPU\n");*/
 #if DUMPOUTPUT
         inputGradientValues.Print("RNNTNode Partial-Right");
 #endif
@@ -1579,6 +1583,11 @@ public:
         //m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 1);
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
+        /*printf("back to G\n");
+        if (gradientValues.GetDeviceId() != CPUDEVICE)
+            printf("gradientValues before is in GPU\n");
+        if (RNNTDerivative.GetDeviceId() != CPUDEVICE)
+            printf("RNNTDerivative before is in GPU\n");*/
         Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, inputGradientValues);
 
 #if DUMPOUTPUT

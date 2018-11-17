@@ -565,17 +565,41 @@ public:
         matrixOutputDistribution.ReleaseMemory();
 
         //compute derivatives for F and G
+        /*if (m_derivativeForF.GetDeviceId() != CPUDEVICE)
+            printf("m_derivativeForF before is in GPU");
+        if (m_derivativeForG.GetDeviceId() != CPUDEVICE)
+            printf("m_derivativeForG before is in GPU");*/
+        m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        m_derivativeForG.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        m_derivativeForF.SetValue(0.0);
+        m_derivativeForG.SetValue(0.0);
         m_derivativeForF.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
             numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 0);
         m_derivativeForG.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
             numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);
-
+        //do derivative norm
+        Microsoft::MSR::CNTK::Matrix<ElemType> tempMatrix1(m_deviceid_gpu), tempMatrix2(m_deviceid_gpu);
+        Microsoft::MSR::CNTK::Matrix<ElemType>::VectorSum(m_derivativeForF, tempMatrix1, false);
+        //tempMatrix1.Print("sum of F");
+        tempMatrix2.AssignVectorNorm2Of(tempMatrix1,true);
+        ElemType norm_coef = (ElemType) 10.0/ tempMatrix2.Get00Element();
+        Microsoft::MSR::CNTK::Matrix<ElemType>::Scale(norm_coef, m_derivativeForF);
+        Microsoft::MSR::CNTK::Matrix<ElemType>::Scale(norm_coef, m_derivativeForG);
+        /*//tempMatrix2.Print("norm of F");
+        Microsoft::MSR::CNTK::Matrix<ElemType>::VectorSum(m_derivativeForG, tempMatrix1, false);
+        //tempMatrix1.Print("sum of G");
+        tempMatrix2.AssignVectorNorm2Of(tempMatrix1, true);
+        tempMatrix2.Print("norm of G");
+        if (m_derivativeForF.GetDeviceId() != CPUDEVICE)
+            printf("m_derivativeForF after is in GPU");
+        if (m_derivativeForG.GetDeviceId() != CPUDEVICE)
+            printf("m_derivativeForG after is in GPU");
         m_derivativeForF.Print("derivative for F");
         m_derivativeForG.Print("derivative for G");
 
         m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         m_derivativeForG.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
-
+        printf("finish gamma");*/
     }
 
 private:

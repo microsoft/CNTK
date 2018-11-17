@@ -90,7 +90,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 
     if (fr.IsAllFrames() && IsPartOfLoop() && childrenInThisLoop)
         LogicError("%ls %ls operation: Backprop called with whole-batch FrameRange on node that participates in a loop", NodeName().c_str(), OperationName().c_str());
-
+    //fprintf(stderr, "input size %d_%ls\n", (int) m_inputs.size(), NodeName().c_str());
     for (size_t i = 0; i < m_inputs.size(); i++)
     {
         ComputationNodeBasePtr child = m_inputs[i];
@@ -104,6 +104,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
 #if DUMPOUTPUT
             fprintf(stderr, "Backprop%d_%ls\n", i, NodeName().c_str());
 #endif
+            //fprintf(stderr, "Backprop%d_%ls\n", (int)i, NodeName().c_str());
             SMART_NODE_INVOKE(ComputationNode, child, LazyZeroGradient, this); // set gradient to 0 if this is the first time
 
             // If we propagate from a loop to a node that is outside the loop, we are not efficient.
@@ -118,7 +119,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
             // before backprop, verify gradient optimization info
             SMART_NODE_INVOKE(ComputationNode, child, VerifyGradientOptimization, this);
 
-            // fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
+            //fprintf(stderr, "BackpropTo %d %d %ls %ls\n", (int)fr.timeIdxInSeq, (int)i, NodeName().c_str(), OperationName().c_str());
             BackpropTo(i, fr); // this computes partial wrt to the child and sums the gradient value in the child
 
             //child->DebugLogMinibatch(/*gradient*/true);
