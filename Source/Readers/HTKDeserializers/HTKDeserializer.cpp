@@ -78,6 +78,9 @@ HTKDeserializer::HTKDeserializer(
 
     m_verbosity = feature(L"verbosity", 0);
 
+    if (feature(L"timestamping", false))
+        ProgressTracing::SetTimestampingFlag();
+
     auto context = config.GetContextWindow();
     m_elementType = config.GetDataType();
 
@@ -172,7 +175,6 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
         RuntimeError("An error occurred while reading input file: %s", scriptPath.c_str());
 
     LOGPRINTF(stderr, " %zu entries\n", utterances.size());
-    LOGPRINTF(stderr, " %zu entries in duplicates\n", duplicates.size());
 
     // TODO: We should be able to configure IO chunks based on size.
     // distribute utterances over chunks
@@ -188,8 +190,7 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
     // approximately 385~498 utterances
     const size_t ChunkUtterances = 512;
 
-    //LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: m_chunks.reserve(%zu) of size (%zu)\n", totalNumberOfFrames / ChunkFrames, sizeof(HTKChunkInfo));
-    LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: m_chunks.reserve(%zu) of size (%zu)\n", totalNumberOfFrames / ChunkFrames, sizeof(HTKChunkInfoPtr));
+    LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: m_chunks.reserve(%zu) of size (%zu)\n", totalNumberOfFrames / ChunkFrames, sizeof(HTKChunkInfo));
     m_chunks.reserve(totalNumberOfFrames / ChunkFrames);
     LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: done reserving.\n");
 
@@ -197,21 +198,18 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
     Timer timer;
     foreach_index (i, utterances)
     {
+        // Skip duplicates.
+        if (duplicates.find(utterances[i].GetId()) != duplicates.end())
         {
-            ScopeWarningTimer t(timer, "duplicates.find", 0.01);
-            // Skip duplicates.
-            if (duplicates.find(utterances[i].GetId()) != duplicates.end())
-            {
-                continue;
-            }
+            continue;
         }
 
         // if exceeding current entry--create a new one
         // I.e. our chunks are a little larger than wanted (on av. half the av. utterance length).
-        if (m_chunks.empty() || m_chunks.back()->GetTotalFrames() > ChunkFrames)
+        if (m_chunks.empty() || m_chunks.back().GetTotalFrames() > ChunkFrames)
         {
-            //if (m_verbosity >= 2)
-            //{
+            if (m_verbosity >= 2)
+            {
                 if (m_chunks.empty())
                 {
                     LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: creating chunk[0]\n");
@@ -219,39 +217,32 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
                 else
                 {
                     LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: created chunk[%u] with %u utterances\n",
-                        m_chunks.back()->GetChunkId(),
-                        m_chunks.back()->GetNumberOfUtterances());
+                        m_chunks.back().GetChunkId(),
+                        m_chunks.back().GetNumberOfUtterances());
                 }
-            //}
-            {
-                ScopeWarningTimer t(timer, "m_chunks.push_back", 0.01);
-                m_chunks.push_back(std::make_shared<HTKChunkInfo>(chunkId++, ChunkUtterances));
             }
+            m_chunks.push_back(HTKChunkInfo(chunkId++, ChunkUtterances));
         }
 
         // append utterance to last chunk
         auto& currentChunk = m_chunks.back();
         if (!m_primary)
         {
-            ScopeWarningTimer t(timer, "m_keyToChunkLocation.push_back", 0.01);
             // Have to store key <-> utterance mapping for non primary deserializers.
-            m_keyToChunkLocation.push_back(std::make_tuple(utterances[i].GetId(), currentChunk->GetChunkId(), currentChunk->GetNumberOfUtterances()));
+            m_keyToChunkLocation.push_back(std::make_tuple(utterances[i].GetId(), currentChunk.GetChunkId(), currentChunk.GetNumberOfUtterances()));
         }
 
-        {
-            ScopeWarningTimer t(timer, "currentChunk->Add(move(utterances[i]))", 0.01);
-            currentChunk->Add(move(utterances[i]));
-        }
+        currentChunk.Add(move(utterances[i]));
     }
-    //if (m_verbosity >= 2)
-    //{
+    if (m_verbosity >= 2)
+    {
         if (!m_chunks.empty())
         {
             LOGPRINTF(stderr, "HTKDeserializer::InitializeChunkInfos: created chunk[%u] with %u utterances\n",
-                m_chunks.back()->GetChunkId(),
-                m_chunks.back()->GetNumberOfUtterances());
+                m_chunks.back().GetChunkId(),
+                m_chunks.back().GetNumberOfUtterances());
         }
-    //}
+    }
 
     std::sort(m_keyToChunkLocation.begin(), m_keyToChunkLocation.end(),
         [](const std::tuple<size_t, size_t, size_t>& a, const std::tuple<size_t, size_t, size_t>& b)
@@ -265,16 +256,16 @@ void HTKDeserializer::InitializeChunkInfos(ConfigHelper& config)
     {
         if (m_verbosity)
         {
-            fprintf(stderr, "ID '%zu':\n", u.first);
+            LOGPRINTF(stderr, "ID '%zu':\n", u.first);
             for (const auto& k : u.second)
-                fprintf(stderr, "Key '%s'\n", k.c_str());
+                LOGPRINTF(stderr, "Key '%s'\n", k.c_str());
         }
 
         numberOfDuplicates += (u.second.size() + 1);
     }
 
     if (numberOfDuplicates)
-        fprintf(stderr, "WARNING: Number of duplicates is '%zu'. All duplicates will be dropped. Consider switching to numeric sequence ids.\n", numberOfDuplicates);
+        LOGPRINTF(stderr, "WARNING: Number of duplicates is '%zu'. All duplicates will be dropped. Consider switching to numeric sequence ids.\n", numberOfDuplicates);
 
     LOGPRINTF(stderr,
         "HTKDeserializer: selected '%zu' utterances grouped into '%zu' chunks, "
@@ -313,7 +304,7 @@ void HTKDeserializer::InitializeFeatureInformation()
     msra::util::attempt(5, [&]()
     {
         htkfeatreader reader;
-        reader.getinfo(m_chunks.front()->GetUtterance(0)->GetPath(), m_featureKind, m_ioFeatureDimension, m_samplePeriod);
+        reader.getinfo(m_chunks.front().GetUtterance(0)->GetPath(), m_featureKind, m_ioFeatureDimension, m_samplePeriod);
         LOGPRINTF(stderr, "HTKDeserializer: determined feature kind as '%zu'-dimensional '%s' with frame shift %.1f ms\n",
             m_ioFeatureDimension, m_featureKind.c_str(), m_samplePeriod / 1e4);
     });
@@ -329,10 +320,10 @@ std::vector<ChunkInfo> HTKDeserializer::ChunkInfos()
     {
         ChunkInfo cd;
         cd.m_id = i;
-        cd.m_numberOfSamples = m_chunks[i]->GetTotalFrames();
+        cd.m_numberOfSamples = m_chunks[i].GetTotalFrames();
         // In frame mode, each frame is represented as sequence.
         // The augmentation is still done for frames in the same sequence only, please see GetSequenceById method.
-        cd.m_numberOfSequences = m_frameMode ? m_chunks[i]->GetTotalFrames() : m_chunks[i]->GetNumberOfUtterances();
+        cd.m_numberOfSequences = m_frameMode ? m_chunks[i].GetTotalFrames() : m_chunks[i].GetNumberOfUtterances();
         chunks.push_back(cd);
     }
     return chunks;
@@ -343,11 +334,11 @@ std::vector<ChunkInfo> HTKDeserializer::ChunkInfos()
 void HTKDeserializer::SequenceInfosForChunk(ChunkIdType chunkId, vector<SequenceInfo>& result)
 {
     const auto& chunk = m_chunks[chunkId];
-    result.reserve(m_frameMode ? chunk->GetTotalFrames() : chunk->GetNumberOfUtterances());
+    result.reserve(m_frameMode ? chunk.GetTotalFrames() : chunk.GetNumberOfUtterances());
     size_t offsetInChunk = 0;
-    for (size_t i = 0; i < chunk->GetNumberOfUtterances(); ++i)
+    for (size_t i = 0; i < chunk.GetNumberOfUtterances(); ++i)
     {
-        auto utterance = chunk->GetUtterance(i);
+        auto utterance = chunk.GetUtterance(i);
         // Currently we do not support common prefix, so simply assign the minor to the key.
         size_t sequence = utterance->GetId();
 
@@ -422,7 +413,7 @@ public:
         // making several attempts
         msra::util::attempt(5, [&]()
         {
-            chunkInfo->RequireData(m_parent->m_featureKind, m_parent->m_ioFeatureDimension, m_parent->m_samplePeriod, m_parent->m_verbosity);
+            chunkInfo.RequireData(m_parent->m_featureKind, m_parent->m_ioFeatureDimension, m_parent->m_samplePeriod, m_parent->m_verbosity);
         });
     }
 
@@ -436,7 +427,7 @@ public:
     ~HTKChunk()
     {
         auto& chunkInfo = m_parent->m_chunks[m_chunkId];
-        chunkInfo->ReleaseData(m_parent->m_verbosity);
+        chunkInfo.ReleaseData(m_parent->m_verbosity);
     }
 
 private:
@@ -586,13 +577,13 @@ static void AugmentNeighbors(const MatrixAsVectorOfVectors& utterance,
 void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<SequenceDataPtr>& r)
 {
     const auto& chunkInfo = m_chunks[chunkId];
-    size_t utteranceIndex = m_frameMode ? chunkInfo->GetUtteranceForChunkFrameIndex(id) : id;
-    const UtteranceDescription* utterance = chunkInfo->GetUtterance(utteranceIndex);
-    auto utteranceFrames = chunkInfo->GetUtteranceFrames(utteranceIndex);
+    size_t utteranceIndex = m_frameMode ? chunkInfo.GetUtteranceForChunkFrameIndex(id) : id;
+    const UtteranceDescription* utterance = chunkInfo.GetUtterance(utteranceIndex);
+    auto utteranceFrames = chunkInfo.GetUtteranceFrames(utteranceIndex);
 
     if (m_verbosity == 2) 
     {
-        fprintf(stderr, "HTKDeserializer::GetSequenceById: Reading features for utterance [%u,%u]\n", utterance->GetPath().s, utterance->GetPath().e);
+        LOGPRINTF(stderr, "HTKDeserializer::GetSequenceById: Reading features for utterance [%u,%u]\n", utterance->GetPath().s, utterance->GetPath().e);
     }
     // wrapper that allows m[j].size() and m[j][i] as required by augmentneighbors()
     MatrixAsVectorOfVectors utteranceFramesWrapper(utteranceFrames);
@@ -616,7 +607,7 @@ void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<Seq
     if (m_frameMode)
     {
         // For frame mode augment a single frame.
-        size_t frameIndex = id - chunkInfo->GetStartFrameIndexInsideChunk(utteranceIndex);
+        size_t frameIndex = id - chunkInfo.GetStartFrameIndexInsideChunk(utteranceIndex);
         auto fillIn = features.col(0);
         AugmentNeighbors(utteranceFramesWrapper, frameIndex, m_augmentationWindow.first, m_augmentationWindow.second, fillIn);
     }
@@ -660,14 +651,14 @@ bool HTKDeserializer::GetSequenceInfo(const SequenceInfo& primary, SequenceInfo&
     auto chunkId = std::get<1>(*found);
     auto utteranceIndexInsideChunk = std::get<2>(*found);
     auto& chunk = m_chunks[chunkId];
-    auto utterance = chunk->GetUtterance(utteranceIndexInsideChunk);
+    auto utterance = chunk.GetUtterance(utteranceIndexInsideChunk);
 
     d.m_chunkId = (ChunkIdType)chunkId;
     d.m_numberOfSamples = m_frameMode ? 1 : (uint32_t)utterance->GetNumberOfFrames();
 
     if (m_frameMode && !m_expandToPrimary)
     {
-        d.m_indexInChunk = chunk->GetStartFrameIndexInsideChunk(utteranceIndexInsideChunk) + primary.m_key.m_sample;
+        d.m_indexInChunk = chunk.GetStartFrameIndexInsideChunk(utteranceIndexInsideChunk) + primary.m_key.m_sample;
 
         // Check that the sequences are equal in number of frames.
         if (primary.m_key.m_sample >= utterance->GetNumberOfFrames())

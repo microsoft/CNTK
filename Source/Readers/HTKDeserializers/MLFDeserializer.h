@@ -382,7 +382,5 @@ public:
     std::vector<std::wstring> m_mlfFiles;
     bool m_textReader;
 
-    // Debug
-    Timer m_timer;
 };
 }

@@ -18,35 +18,6 @@ namespace CNTK {
 
 using namespace Microsoft::MSR::CNTK;
 
-class ScopeWarningTimer
-{
-    Timer m_Timer;
-    size_t m_verbosity;
-    std::string m_message;
-    double m_timeout;
-
-public:
-    ScopeWarningTimer(Timer& timer, const std::string& message, double timeout, size_t verbosity = 2)
-        : m_Timer(timer), m_verbosity(verbosity), m_message(message), m_timeout(timeout)
-    {
-        //if (m_verbosity > 1)
-        //{
-            m_Timer.Restart();
-            m_Timer.Start();
-        //}
-    }
-
-    ~ScopeWarningTimer()
-    {
-        //if (m_verbosity > 1)
-        //{
-            m_Timer.Stop();
-            double time = m_Timer.ElapsedSeconds();
-            if (time > m_timeout)
-                LOGPRINTF(stderr, "WARNING: %s takes %lf seconds\n", m_message.c_str(), time);
-        //}
-    }
-};
 // Class represents a description of an HTK chunk.
 // It is only used internally by the HTK deserializer.
 // Can exist without associated data and provides methods for requiring/releasing chunk data.
@@ -69,20 +40,14 @@ class HTKChunkInfo
     // Chunk id.
     ChunkIdType m_chunkId;
 
-    // Timer, debug purpose only
-    Timer m_timer;
-
 public:
 
     HTKChunkInfo(ChunkIdType chunkId = ChunkIdMax, size_t utterancesToReserve = 0) : m_chunkId(chunkId)
     {
         if (utterancesToReserve > 0)
         {
-            LOGPRINTF(stderr, "HTKChunkInfo::HTKChunkInfo: m_utterances.reserve(%zu) of size(%zu)\n", utterancesToReserve, sizeof(UtteranceDescription));
             m_utterances.reserve(utterancesToReserve);
-            LOGPRINTF(stderr, "HTKChunkInfo::HTKChunkInfo: m_firstFrames.reserve(%zu) of size(%zu)\n", utterancesToReserve, sizeof(size_t));
             m_firstFrames.reserve(utterancesToReserve);
-            LOGPRINTF(stderr, "HTKChunkInfo::HTKChunkInfo: done reserving!\n");
         }
     };
 
@@ -105,20 +70,9 @@ public:
             LogicError("Frames already paged into RAM -- too late to add data.");
         }
 
-        // Debug
-        {
-            ScopeWarningTimer t(m_timer, "m_firstFrames.push_back(m_totalFrames)", 0.01);
-            m_firstFrames.push_back(m_totalFrames);
-        }
-        
+        m_firstFrames.push_back(m_totalFrames);
         m_totalFrames += utterance.GetNumberOfFrames();
-
-        // Debug
-        {
-            ScopeWarningTimer t(m_timer, "m_utterances.push_back(std::move(utterance))", 0.01);
-            m_utterances.push_back(std::move(utterance));
-        }
-
+        m_utterances.push_back(std::move(utterance));
         if (m_utterances.size() > std::numeric_limits<uint32_t>::max())
             RuntimeError("Chunk overflow happened: too many utterances.");
     }
@@ -262,5 +216,4 @@ public:
         }
 };
 
-typedef std::shared_ptr<HTKChunkInfo> HTKChunkInfoPtr;
 }
