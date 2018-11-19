@@ -220,6 +220,8 @@ class ProgressPrinter(cntk_py.ProgressWriter):
     def ___logprint(self, logline):
         if self.log_to_file == None:
             # to stdout.  if distributed, all ranks merge output into stdout
+            t = time.localtime()
+            print(str(t.tm_year) + '-' + str(t.tm_mon) + '-' + str(t.tm_mday) + ' ' + str(t.tm_hour) + ':' + str(t.tm_min) + ':' + str(t.tm_sec), end = ' ')
             print(logline)
         else:
             # to named file.  if distributed, one file per rank
