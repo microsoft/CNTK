@@ -25,7 +25,7 @@ class FunctionImpl final : public Function {
 
   const ONNX_NAMESPACE::OpSchema& OpSchema() const override;
 
-  const onnxruntime::GraphBase& Body() const override;
+  const onnxruntime::Graph& Body() const override;
 
   const IndexedSubGraph& GetIndexedSubGraph() const override;
 

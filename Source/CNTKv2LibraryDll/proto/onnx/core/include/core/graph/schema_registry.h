@@ -64,7 +64,7 @@ class IOnnxRuntimeOpSchemaCollection : public ONNX_NAMESPACE::ISchemaRegistry {
 // OnnxRuntimeOpSchemaRegistry is used to provide supplement for built-in ONNX schemas.
 // Each OnnxRuntimeOpSchemaRegistry must register complete opsets delta from a baseline version to max opset version.
 // (Please notice that baseline opsets are not include in the delta)
-// For example, lotus is build with ONNX 1.2 which is at opset7, to use onnx opset8 and opset9,
+// For example, ONNXRuntime is build with ONNX 1.2 which is at opset7, to use onnx opset8 and opset9,
 // user could create a OnnxRuntimeOpSchemaRegistry and config it as {baseline_opset_version = 7, opset_version = 9}
 // it means this OnnxRuntimeOpSchemaRegistry contains the complete delta from opset7 to opset9.
 class OnnxRuntimeOpSchemaRegistry : public IOnnxRuntimeOpSchemaCollection {

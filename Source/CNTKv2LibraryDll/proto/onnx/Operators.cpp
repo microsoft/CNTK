@@ -8,6 +8,8 @@
 #include "Operators.h"
 #include "Utils.h"
 
+int BatchSizeProcessor::overrideBatchSize = BatchSizeProcessor::defaultFreeBatchSize;
+
 namespace CNTK
 {
 namespace ONNX
@@ -430,6 +432,18 @@ namespace ONNX
         { L"Alias",{ {
             { L"Alias", "Identity" },
         } } },
+        { L"UnpackBatchAxis",{ {
+            { L"UnpackBatchAxis", "Identity" },
+        } } },
+        { L"ToBatchAxis",{ {
+            { L"ToBatchAxis", "Identity" },
+        } } },
+        { L"UnpackSequenceOp",{ {
+            { L"UnpackSequenceOp", "Identity" },
+        } } },
+        { L"ToSequenceOp",{ {
+            { L"ToSequenceOp", "Identity" },
+        } } },
         { L"StopGradient",{ {
             { L"StopGradient", "Identity" },
             } } },
@@ -508,7 +522,8 @@ namespace ONNX
     {
         return (cntkOpName == L"Plus") || (cntkOpName == L"Minus") ||
             (cntkOpName == L"ElementTimes") || (cntkOpName == L"ElementDivide") ||
-            (cntkOpName == L"And") || (cntkOpName == L"Or") || (cntkOpName == L"Xor");
+            (cntkOpName == L"And") || (cntkOpName == L"Or") || (cntkOpName == L"Xor") ||
+            (cntkOpName == L"Splice");
     }
 
     bool Operators::SupportBroadcastONNXOp(const std::string& onnxOpName)

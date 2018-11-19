@@ -195,7 +195,7 @@ const ONNX_NAMESPACE::OpSchema& FunctionImpl::OpSchema() const {
   return *op_schema_;
 }
 
-const onnxruntime::GraphBase& FunctionImpl::Body() const {
+const onnxruntime::Graph& FunctionImpl::Body() const {
   return body_->MainGraph();
 }
 

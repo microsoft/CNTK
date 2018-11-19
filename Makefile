@@ -534,6 +534,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/function.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph_transformer_mgr.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph_viewer.cc \	
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/model.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/op.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/schema_registry.cc \

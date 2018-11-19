@@ -22,7 +22,28 @@ const int64_t ReshapeKeepInputDim = 0;
 const std::string FreeSequenceDimParam = "Sequence";
 const size_t numBiasInOnnxLstm = 2; // bias for W, and bias for R (also called H in CNTK).
                                     // TODO: support cases where batch size is not 1.
-const int FreeBatchSize = 1;
+
+class BatchSizeProcessor
+{
+public:
+    static int FreeBatchSize()
+    {
+        return overrideBatchSize;
+    }
+
+    static void OverrideBatchSize(int i_overrideBatchSize)
+    {
+        overrideBatchSize = i_overrideBatchSize;
+    }
+
+    static void ResetOverrideBatchSize()
+    {
+        overrideBatchSize = defaultFreeBatchSize;
+    }
+private:
+    static const int defaultFreeBatchSize = 1;
+    static int overrideBatchSize;
+};
 
 namespace CNTK
 {
