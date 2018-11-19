@@ -40,6 +40,24 @@ public:
     static void Copy(const FunctionPtr& src, onnxruntime::Graph* dst);
 
 private:
+
+    //
+    // Flag showing which post processing is required for the current exported model.
+    //
+    enum class PostProcessFlag : size_t
+    {
+        MaxUnPooling = 0,
+    };
+
+    struct PostProcessFlagHash
+    {
+        template <typename T>
+        size_t operator()(T t) const
+        {
+            return static_cast<size_t>(t);
+        }
+    };
+
     //
     // Helper class to manage node name generation from CNTK model to ONNX model.
     // In CNTK, duplicated node names are allowed, where as in ONNX node names must be unique.
@@ -486,6 +504,10 @@ private:
                               std::set<FunctionPtr>& visited,
                               std::unordered_map<Variable, Variable>& compositeOutputsMap);
 
+    static void PostProcessGraph(onnxruntime::Graph* graph);
+
+    static bool IsSameIntVecAttributes(const NodeAttributes& attr1, const NodeAttributes& attr2, const std::vector<std::string>& attributeNames);
+
     static void SetTensorType(onnx::TensorProto& dst, CNTK::DataType dataType);
 
     //
@@ -555,6 +577,11 @@ private:
     // It is assigned at the beginning when a CNTK model is to be converted.
     // 
     static onnxruntime::Graph* globalGraph;
+
+    //
+    // Flag showing which post processing is required for the current exported model.
+    //
+    static std::unordered_set<PostProcessFlag, PostProcessFlagHash> postProcessFlags;
 
     //
     // Convert NDShape and various std::vector types to TensorShape
@@ -1014,6 +1041,10 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, onnxruntime::Graph* dst)
     {
         HandleRootCombineOp(srcSkipped, dst);
     }
+
+    // Post process the graph and update nodeArg information.
+    //   For MaxUnpool. All original MaxPool node has been created. We should have in graph the structure: Input -> MaxPool -> [Output, Indices].
+    PostProcessGraph(dst);
 
     //
     // Save (Uid, ONNXNodeName) pair for all nodes to graph description.
@@ -2030,6 +2061,14 @@ std::string CNTKToONNXHelper::ToOPName(const FunctionPtr& src)
                 opName = "MaxPool";
             else
                 opName = "AveragePool";
+        }
+        else if (src->OpName() == L"Unpooling")
+        {
+            PoolingType poolingType = (PoolingType)src->Attributes()[L"poolingType"].Value<size_t>();
+            if (poolingType == PoolingType::Max)
+                opName = "MaxUnpool";
+            else
+                LogicError("Node '%S': Unsupported node. Only MaxUnpooling is supported.", src->AsString().c_str());
         }
         else if (src->OpName() == L"ReduceElements")
         {
@@ -5755,6 +5794,11 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
         return;
     }
 
+    if (ToOPName(src) == "MaxUnpool")
+    {
+        postProcessFlags.insert(PostProcessFlag::MaxUnPooling);
+    }
+
     if (!Operators::IsRNNOp(opName) && !Operators::IsSequenceBlockOp(opName) && opName != "Tuple" &&
         src->IsBlock() && 
         (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())) || 
@@ -5784,13 +5828,103 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
     visited.emplace(src);
 }
 
+void CNTKToONNXHelper::PostProcessGraph(onnxruntime::Graph* graph)
+{
+    std::unordered_map<std::string, vector<onnxruntime::Node*>> maxPoolInputNameToNodeMap;
+
+    for (const auto& postProcessFlag : postProcessFlags)
+    {
+        switch (postProcessFlag)
+        {
+        case PostProcessFlag::MaxUnPooling:
+        {
+            for (auto &node : graph->Nodes())
+            {
+                if (node.OpType() == "MaxPool")
+                {
+                    const std::string& inputName = node.InputDefs()[0]->Name();
+                    maxPoolInputNameToNodeMap[inputName].push_back(&node);
+                }
+            }
+
+            for (auto &node : graph->Nodes())
+            {
+                if (node.OpType() == "MaxUnpool")
+                {
+                    Node* maxPoolNode = [&]()->Node* {
+                        const std::string& inputName = node.InputDefs()[1]->Name();
+                        if (maxPoolInputNameToNodeMap.find(inputName) == maxPoolInputNameToNodeMap.end())
+                            LogicError("MaxUnpool: cannot find the original input variable to MaxPool.");
+
+                        auto unpoolAttributes = node.GetAttributes();
+                        for (auto poolNode : maxPoolInputNameToNodeMap[inputName])
+                        {
+                            auto poolAttributes = poolNode->GetAttributes();
+                            if (IsSameIntVecAttributes(unpoolAttributes, poolAttributes, { "kernel_shape", "strides", "pads" }))
+                                return poolNode;
+                        }
+
+                        LogicError("MaxUnpool: cannot find the MaxPool node of original input with the same kernel_shape, strides and pads configuration.");
+                    }();
+
+                    // need to update maxpool node with optional indices output.
+                    if (maxPoolNode->OutputDefs().size() != 2)
+                    {
+                        // Dimensions must be the same as input tensor.
+                        onnx::TypeProto indicesOutputTypeProto = *(node.InputDefs()[0]->TypeAsProto());
+                        indicesOutputTypeProto.mutable_tensor_type()->set_elem_type(TensorProto_DataType::TensorProto_DataType_INT64);
+                        auto indiciesOutputName = UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(maxPoolNode->Name() + "_indices_output");
+                        NodeArg &indicesOutputNodeArg = graph->GetOrCreateNodeArg(indiciesOutputName, &indicesOutputTypeProto);
+
+                        std::vector<NodeArg*> inputs;
+                        std::vector<NodeArg*> outputs;
+                        maxPoolNode->ForEachDef([&inputs, &outputs](const NodeArg* def, bool isInput) {
+                            if (isInput) inputs.push_back(const_cast<NodeArg*>(def));
+                            else outputs.push_back(const_cast<NodeArg*>(def));
+                        });
+                        outputs.push_back(&indicesOutputNodeArg);
+
+                        onnxruntime::Node* newMaxPoolNode = graph->AddNode(maxPoolNode->Name(), maxPoolNode->OpType(), maxPoolNode->Description(),
+                            inputs, outputs, &(maxPoolNode->GetAttributes()));
+                        graph->RemoveNode(maxPoolNode->Index());
+                        maxPoolNode = newMaxPoolNode;
+                    }
+
+                    // replace the second input of maxunpool node with indices output from maxpool.
+                    node.ReplaceDefs({ {node.InputDefs()[1], const_cast<NodeArg*>(maxPoolNode->OutputDefs()[1])} });
+                }
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+}
+
+bool CNTKToONNXHelper::IsSameIntVecAttributes(const NodeAttributes& attributes1, const NodeAttributes& attributes2, const std::vector<std::string>& attributeNames)
+{
+    for (auto attributeName : attributeNames)
+    {
+        auto attribute1 = attributes1.find(attributeName);
+        auto attribute2 = attributes2.find(attributeName);
+        if (attribute1 == attributes1.end() || attribute2 == attributes2.end())
+            return false;
+        std::vector<int64_t> intVector1(attribute1->second.ints().begin(), attribute1->second.ints().end());
+        std::vector<int64_t> intVector2(attribute2->second.ints().begin(), attribute2->second.ints().end());
+        if (intVector1 != intVector2)
+            return false;
+    }
+    return true;
+}
+
 void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node* node)
 {
     auto lookup = Operators::CntkToONNXLookup();
     assert(lookup.count(src->OpName()) != 0);
 
     std::string opName = ToLegacyString(ToUTF8(src->OpName()));
-    if (lookup.count(src->OpName()) == 1)
+    if (lookup.count(src->OpName()) == 1 && src->OpName() != L"Unpooling")
     {
         auto attributesMap = lookup.find(src->OpName())->second.map;
         opName = attributesMap[src->OpName()];
@@ -6274,9 +6408,10 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
                 }
             }
         }
-        else if (src->OpName() == L"Pooling")
+        else if (src->OpName() == L"Pooling" || src->OpName() == L"Unpooling")
         {
-            auto kernelShape = (NDShape)src->Attributes()[L"poolingWindowShape"].Value<NDShape>();
+            bool isPooling = src->OpName() == L"Pooling";
+            auto kernelShape = (NDShape)src->Attributes()[isPooling ? L"poolingWindowShape" : L"unpoolingWindowShape"].Value<NDShape>();
             auto strides = (NDShape)src->Attributes()[L"strides"].Value<NDShape>();
             bool ceilOutDim = src->Attributes().Contains(L"ceilOutDim") ? (bool)src->Attributes()[L"ceilOutDim"].Value<bool>() : false;
             auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
@@ -6315,13 +6450,18 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             {
                 if (ceilOutDim)
                     ValidatePadValueForCeilOutDim(lowerPad, upperPad, autoPadding, kernelShape, inputShape, strides,
-                        /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1), /*transpose=*/false);
+                        /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1), /*transpose=*/!isPooling);
                 lowerPad.insert(lowerPad.end(), upperPad.cbegin(), upperPad.cend());
                 node->AddAttribute("pads", lowerPad);
             }
             else
             {
-                PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1), ceilOutDim, /*transpose=*/false);
+                if (isPooling)
+                    PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1),
+                        ceilOutDim, /*transpose=*/!isPooling);
+                else
+                    PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1),
+                        /*outputShape=*/src->Inputs()[1].Shape(), ceilOutDim, /*transpose=*/!isPooling);
             }
         }
         else if (src->OpName() == L"ReduceElements")
@@ -6734,6 +6874,14 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
             // reduce over the first axis.
             node->AddAttribute("axes", std::vector<int64_t>(1, 0));
             node->AddAttribute("keepdims", static_cast<int64_t>(0));
+        }
+        else if (src->OpName() == L"Unpooling")
+        {
+            // Create output_shape input.
+            std::vector<int64_t> outputShape = ToINTS(*orderedInputs[1]->TypeAsProto());
+            onnxruntime::NodeArg &shapeInputArg = CreateAddShapeNodeArg(graph, outputShape, orderedInputs[1]->Name() + "_shape");
+            orderedInputs.push_back(&shapeInputArg);
+            node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
         }
         else
         {
@@ -7979,3 +8127,4 @@ std::unordered_map<std::string, size_t> CNTKToONNXHelper::UniqueNodeNameStorage:
 std::unordered_map<std::string, std::string> CNTKToONNXHelper::UniqueNodeNameStorage::uidNodeNameMap;
 std::unordered_set<std::string> CNTKToONNXHelper::UniqueNodeNameStorage::nodeNameSet;
 std::unordered_map<Variable, Variable> CNTKToONNXHelper::UniqueNodeNameStorage::compositeOutputsMap;
+std::unordered_set<CNTKToONNXHelper::PostProcessFlag, CNTKToONNXHelper::PostProcessFlagHash> CNTKToONNXHelper::postProcessFlags;
