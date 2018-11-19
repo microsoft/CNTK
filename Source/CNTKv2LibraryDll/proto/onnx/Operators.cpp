@@ -36,6 +36,12 @@ namespace ONNX
             { L"strides", "strides" },
             { L"autoPadding", "pads" },
         } } },
+        { L"Unpooling", { {
+            { L"Unpooling", "MaxUnpool" },
+            { L"unpoolingWindowShape", "kernel_shape" },
+            { L"strides", "strides" },
+            { L"autoPadding", "pads" },
+        } } },
         { L"ROIPooling",{ {
             { L"ROIPooling",  "MaxRoiPool" },
             // { L"poolingType",  "" }, // always Max
