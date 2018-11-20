@@ -3885,7 +3885,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateUnpackSequenceNode(const FunctionPtr&
     functionNodes.emplace(src, identityNode);
 
     // this is a special output from CNTK UnpackSequence op.
-    assert(FreeBatchSize == 1);
+    assert(BatchSizeProcessor::FreeBatchSize() == 1);
     std::string unpackMaskNodeName = identityNodeName + "_mask";
     // 1. slice from [#,*][d1, d2...] to [#,*][1, 1...]
     // 2. squeeze to [#,*][1]
