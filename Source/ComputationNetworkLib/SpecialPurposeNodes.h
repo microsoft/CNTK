@@ -471,7 +471,7 @@ template class GMMLogLikelihoodNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
+class SequenceWithSoftmaxNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<4>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -524,7 +524,7 @@ public:
             Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
 #endif
         }
-        else if (inputIndex == 2)
+        else if (inputIndex == 2 || inputIndex == 3)
         {
 #if 1         // no gradient flows to log LLs (but otherwise we leave it to user if, e.g., another node propagates a gradient into there)
             ; // gradient does not flow here
@@ -578,8 +578,8 @@ public:
         gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
 #endif
-        gammaFromLatticeTeacher.Print("teacher gamma");
-        gammaFromLattice.Print("student gamma");
+        //gammaFromLatticeTeacher.Print("teacher gamma");
+        //gammaFromLattice.Print("student gamma");
         inputGradientValues.AssignScaledDifference(gradientValues.Get00Element(), gammaFromLatticeTeacher, gammaFromLattice, inputGradientValues);
         
         //inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
@@ -619,7 +619,7 @@ public:
         {
             m_gammaFromLatticeTeacher->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
             m_gammaFromLatticeTeacher->Resize(*m_softmaxOfRight);
-            m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(1)->Value() /*log LLs*/,
+            m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(3)->Value() /*log LLs*/,
                                             Input(0)->Value() /*labels*/, *m_gammaFromLatticeTeacher,
                                             m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
                                             Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
@@ -673,6 +673,7 @@ public:
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
             node->m_gammaFromLattice->SetValue(*m_gammaFromLattice);
             node->m_gammaFromLatticeTeacher->SetValue(*m_gammaFromLatticeTeacher);
+            //node->m_teacherLL->SetValue(*m_teacherLL);
             node->m_fsSmoothingWeight = m_fsSmoothingWeight;
             node->m_frameDropThreshold = m_frameDropThreshold;
             node->m_doReferenceAlignment = m_doReferenceAlignment;
@@ -687,6 +688,7 @@ public:
         RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
         RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
         RequestMatrixFromPool(m_gammaFromLatticeTeacher, matrixPool);
+        //RequestMatrixFromPool(m_teacherLL, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -697,6 +699,7 @@ public:
         ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
         ReleaseMatrixToPool(m_gammaFromLattice, matrixPool);
         ReleaseMatrixToPool(m_gammaFromLatticeTeacher, matrixPool);
+        //ReleaseMatrixToPool(m_teacherLL, matrixPool);
     }
 
     // TODO: method names should be CamelCase
@@ -766,6 +769,7 @@ protected:
     bool m_seqGammarUsesMBR;
     bool m_doReferenceAlignment;
     bool m_TSLearn;
+    //shared_ptr<Matrix<ElemType>> m_teacherLL;
     std::vector<shared_ptr<const msra::dbn::latticepair>> m_lattices;
     msra::asr::simplesenonehmm m_hmm;
     msra::lattices::GammaCalculation<ElemType> m_gammaCalculator;
@@ -788,7 +792,7 @@ template class SequenceWithSoftmaxNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class LatticeSequenceWithSoftmaxNode : public SequenceWithSoftmaxNode<ElemType>, public NumInputs<4>
+class LatticeSequenceWithSoftmaxNode : public SequenceWithSoftmaxNode<ElemType>, public NumInputs<5>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -799,7 +803,7 @@ class LatticeSequenceWithSoftmaxNode : public SequenceWithSoftmaxNode<ElemType>,
 
 public:
     LatticeSequenceWithSoftmaxNode(DEVICEID_TYPE deviceId, const std::wstring& name, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& latticeConfigPath,
-                                   float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, bool TSLearn)
+                                   float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, bool TSLearn )
         : SequenceWithSoftmaxNode<ElemType>(deviceId, name), m_symListPath(symListPath), m_phonePath(phonePath), m_stateListPath(stateListPath), m_transProbPath(transProbPath), m_latticeConfigPath(latticeConfigPath)
     {
         if (sizeof(ElemType) != sizeof(float))
@@ -823,6 +827,8 @@ public:
         this->m_seqGammarbMMIFactor = seqGammarBMMIFactor;
         this->m_seqGammarWP = seqGammarWordPen;
         this->m_TSLearn = TSLearn;
+        fprintf(stderr, "TSlearn: %d\n", TSLearn);
+        //this->m_teacherLL->SetValue(Input(2)->Value());
 
         this->SetGammarCalculationParam(seqGammarAMF, seqGammarLMF, seqGammarWordPen, seqGammarBMMIFactor, seqGammarUsesMBR);
     }
@@ -836,7 +842,7 @@ public:
         : LatticeSequenceWithSoftmaxNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"symListPath"), configp->Get(L"phonePath"), configp->Get(L"stateListPath"), configp->Get(L"transProbPath"), configp->Get(L"latticeConfigPath"),
                                          configp->Get(L"hSmoothingWeight"), configp->Get(L"frameDropThresh"), configp->Get(L"doReferenceAlign"), configp->Get(L"seqGammarUsesMBR"), configp->Get(L"seqGammarAMF"), configp->Get(L"seqGammarLMF"), configp->Get(L"seqGammarBMMIFactor"), configp->Get(L"seqGammarWordPen"), configp->Get(L"TSLearn"))
     {
-        AttachInputsFromConfig(configp, 4);
+        AttachInputsFromConfig(configp, 5);
     }
 
     // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
@@ -854,15 +860,15 @@ public:
         this->m_extraUttMap.clear();
         this->m_invalidMinibatch = false;
 
-        if (InputRef(3).ValuePtrRef()->GetDeviceId() != CPUDEVICE)
+        if (InputRef(4).ValuePtrRef()->GetDeviceId() != CPUDEVICE)
             LogicError("Due to their size, lattices should be allocated on CPU memory");
 
-        const char* bufferStart = reinterpret_cast<char*>(InputRef(3).ValuePtrRef()->Data());
+        const char* bufferStart = reinterpret_cast<char*>(InputRef(4).ValuePtrRef()->Data());
 
         let& labelMBLayout = InputRef(0).GetMBLayout();
         const auto& labelSequences = labelMBLayout->GetAllSequences();
 
-        let& latticeMBLayout = InputRef(3).GetMBLayout();
+        let& latticeMBLayout = InputRef(4).GetMBLayout();
         size_t latticeMBNumTimeSteps = latticeMBLayout->GetNumTimeSteps();
 
         InputRef(0).ValuePtrRef()->VectorMax(*m_maxIndexes, *m_maxValues, true);
@@ -1002,7 +1008,7 @@ public:
         if (isFinalValidationPass)
         {
             // Make sure lattices are pre allocated on CPU, due to their size.
-            Input(3)->ValuePtrRef()->TransferToDeviceIfNotThere(CPUDEVICE, true /*moving completely*/, true /*preserving no data*/);
+            Input(4)->ValuePtrRef()->TransferToDeviceIfNotThere(CPUDEVICE, true /*moving completely*/, true /*preserving no data*/);
         }
     }
 
