@@ -81,6 +81,8 @@ namespace CNTK
 
         static Buffer AllocateIntermediateBuffer(int deviceID, size_t totalSize);
         std::vector<Buffer> m_intermediateCPUBuffers;
+        std::vector<Buffer> m_intermediateCPUBuffersFP16;
+        bool m_useFP16;
 
         DistributedWorkerDescriptor m_currentWorker;
         std::unordered_set<DistributedWorkerDescriptor> m_workers;
@@ -103,6 +105,11 @@ namespace CNTK
         {
             auto device = std::find_if(values.begin(), values.end(), [](const NDArrayViewPtr v) { return v->Device().Type() != DeviceKind::CPU; });
             return values.end() == device ? DeviceDescriptor::CPUDevice() : (*device)->Device();
+        }
+
+        bool ShouldUseFP16(const NDArrayViewPtr& viewPtr)
+        {
+            return m_useFP16 && (DataType::Float == viewPtr->GetDataType());
         }
 
         size_t GetBufferSize(const NDArrayViewPtr& viewPtr)

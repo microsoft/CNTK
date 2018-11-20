@@ -90,6 +90,7 @@ namespace CNTK
                 m_workers.insert({ i,  L"" });
         }
         m_packThresholdSizeInBytes = packThresholdSizeInBytes;
+        m_useFP16 = true; // TODO - plumb with config
     }
 
     void MPICommunicatorImpl::Initialize(const std::vector<NDArrayViewPtr>& values)
@@ -98,6 +99,9 @@ namespace CNTK
         DeviceDescriptor lastGpuDevice = DeviceDescriptor::CPUDevice();
         m_gpuDataTransferers.resize(values.size());
         m_intermediateCPUBuffers.resize(values.size());
+        if (m_useFP16)
+            m_intermediateCPUBuffersFP16.resize(values.size());
+
         for (auto i = 0; i < values.size(); ++i)
         {
             auto view = values[i];
@@ -112,6 +116,12 @@ namespace CNTK
             {
                 m_intermediateCPUBuffers[i] = Buffer();
                 m_gpuDataTransferers[i] = nullptr;
+                if (ShouldUseFP16(view))
+                {
+                    auto requiredSize = GetBufferSize(view);
+                    if (m_intermediateCPUBuffersFP16[i].totalSize < requiredSize / 2)
+                        m_intermediateCPUBuffersFP16[i] = AllocateIntermediateBuffer(device.Id(), requiredSize / 2);
+                }
             }
             else if (device.Type() == DeviceKind::GPU)
             {
@@ -124,7 +134,10 @@ namespace CNTK
                 m_gpuDataTransferers[i] = std::make_shared<GPUDataTransferer>(device.Id(), true);
                 if (m_intermediateCPUBuffers[i].totalSize < requiredSize)
                     m_intermediateCPUBuffers[i] = AllocateIntermediateBuffer(device.Id(), requiredSize);
-            } 
+                if (ShouldUseFP16(view))
+                    if (m_intermediateCPUBuffersFP16[i].totalSize < requiredSize / 2)
+                        m_intermediateCPUBuffersFP16[i] = AllocateIntermediateBuffer(device.Id(), requiredSize / 2);
+            }
             else
             {
                 LogicError("Invalid device type (%u).", (unsigned int)device.Type());
@@ -392,8 +405,34 @@ namespace CNTK
 
             if (dataType == DataType::Float)
             {
-                AllReduceData(static_cast<float*>(inputData), static_cast<float*>(outputData), numElements,
-                    &allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
+                if (ShouldUseFP16(inputValue))
+                {
+                    float* inputDataAsFloat = static_cast<float*>(inputData);
+                    float* outputDataAsFloat = static_cast<float*>(outputData);
+                    half* inputDataFP16 = static_cast<half*> (m_intermediateCPUBuffersFP16[i].data.get());
+                    half* outputDataFP16 = static_cast<half*> (m_intermediateCPUBuffersFP16[i].data.get());
+
+                    // copy fp32 to fp16
+                    for (int idxx = 0; idxx < numElements; idxx++)
+                    {
+                        inputDataFP16[idxx] = (half) inputDataAsFloat[idxx];
+                    }
+
+                    // allreducehalf
+                    AllReduceDataHalf(inputDataFP16, outputDataFP16, numElements,
+                        &allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
+
+                    // cp fp16 to fp32
+                    for (int idxx = 0; idxx < numElements; idxx++)
+                    {
+                        outputDataAsFloat[idxx] = (float)inputDataFP16[idxx];
+                    }
+                }
+                else
+                {
+                    AllReduceData(static_cast<float*>(inputData), static_cast<float*>(outputData), numElements,
+                        &allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
+                }
             }
             else if (dataType == DataType::Double)
             {
