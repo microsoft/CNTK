@@ -4320,7 +4320,7 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     std::string subgraphNodeArgNameInSubgraph = MakeScanInputOutputNodeArgName(subgraphNodeArgName);
                     NodeArg* subGraphScanInput = scanGraph.GetNodeArg(subgraphNodeArgNameInSubgraph);
                     if (subGraphScanInput == nullptr)
-                        LogicError(std::string("Scan subgraph does not has " + subgraphNodeArgNameInSubgraph + " as input.").c_str());
+                        CNTK::LogicError("Scan subgraph does not has %s as input.", subgraphNodeArgNameInSubgraph.c_str());
                     scanSubgraphOrderedInputs.push_back(subGraphScanInput);
 
                     // IMPORTANT: can only support single direction for now. 
@@ -4355,8 +4355,8 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     output_args.push_back(&transposedScanOutputNodeArg);
 
                     NodeArg *subgraphScanOutput = scanGraph.GetNodeArg(extendedNodeArgOfSubgraph.Name());
-                    if (subgraphScanOutput == nullptr)
-                        LogicError(std::string("Scan subgraph does not has " + extendedNodeArgOfSubgraph.Name() + " as output.").c_str());
+                    if (subgraphScanOutput == nullptr) 
+                        CNTK::LogicError("Scan subgraph does not has %s as output.", extendedNodeArgOfSubgraph.Name().c_str());
 
                     scanSubgraphOrderedOutputs.push_back(subgraphScanOutput);
                 }
