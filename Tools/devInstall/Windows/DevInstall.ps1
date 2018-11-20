@@ -137,7 +137,7 @@ Function main
         $operation += OpCheckVS2017
 
         $operation += OpCheckCuda10
-        $operation += OpNVidiaCudnn7090 -cache $localCache -targetFolder $localDir
+        $operation += OpNVidiaCudnn73100 -cache $localCache -targetFolder $localDir
         $operation += OpNvidiaCub174 -cache $localCache -targetFolder $localDir
 
         $operation += OpCMake362 -cache $localCache

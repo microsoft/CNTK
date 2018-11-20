@@ -170,20 +170,20 @@ function OpNvidiaCub174(
          } )
 }
 
-function OpNVidiaCudnn7090(
+function OpNVidiaCudnn73100(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "NVidia CUDNN 7.0.5 for CUDA 9.0"
-    $cudnnWin = "cudnn-9.0-windows10-x64-v7.zip"
+    $prodName = "NVidia CUDNN 7.3.1 for CUDA 10.0"
+    $cudnnWin = "cudnn-10.0-windows10-x64-v7.3.1.20.zip"
 
-    $prodSubDir =  "cudnn-9.0-v7.0.5"
+    $prodSubDir =  "cudnn-10.0-v7.3.1"
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "CUDNN_PATH"
     $envValue = join-path $targetPath "cuda"
-    $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v7.0.5"
+    $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v7.3.1"
 
-    @( @{ShortName = "CUDNN7090"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
+    @( @{ShortName = "CUDNN73100"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyDirectory"; Path = $envValue },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
