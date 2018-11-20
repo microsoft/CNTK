@@ -4318,10 +4318,10 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     input_args.push_back(&transposedScanInputNodeArg);
 
                     std::string subgraphNodeArgNameInSubgraph = MakeScanInputOutputNodeArgName(subgraphNodeArgName);
-                    NodeArg* scanInput = scanGraph.GetNodeArg(subgraphNodeArgNameInSubgraph);
-                    if (scanInput == nullptr)
+                    NodeArg* subGraphScanInput = scanGraph.GetNodeArg(subgraphNodeArgNameInSubgraph);
+                    if (subGraphScanInput == nullptr)
                         LogicError(std::string("Scan subgraph does not has " + subgraphNodeArgNameInSubgraph + " as input.").c_str());
-                    scanSubgraphOrderedInputs.push_back(scanInput);
+                    scanSubgraphOrderedInputs.push_back(subGraphScanInput);
 
                     // IMPORTANT: can only support single direction for now. 
                     // TODO: trace from state to input to get direction
@@ -4354,11 +4354,11 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 
                     output_args.push_back(&transposedScanOutputNodeArg);
 
-                    NodeArg *scanOutput = scanGraph.GetNodeArg(extendedNodeArgOfSubgraph.Name());
-                    if (scanOutput == nullptr)
+                    NodeArg *subgraphScanOutput = scanGraph.GetNodeArg(extendedNodeArgOfSubgraph.Name());
+                    if (subgraphScanOutput == nullptr)
                         LogicError(std::string("Scan subgraph does not has " + extendedNodeArgOfSubgraph.Name() + " as output.").c_str());
 
-                    scanSubgraphOrderedOutputs.push_back(scanOutput);
+                    scanSubgraphOrderedOutputs.push_back(subgraphScanOutput);
                 }
 
                 scanGraph.SetInputOrder(scanSubgraphOrderedInputs);
