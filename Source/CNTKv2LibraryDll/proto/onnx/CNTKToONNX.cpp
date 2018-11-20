@@ -524,7 +524,9 @@ private:
     static bool isProcessingScan;
 
     //
-    //
+    // ONNX requires all initializers in the main graph. This global graph is the main graph.
+    // It is assigned at the beginning when a CNTK model is to be converted.
+    // 
     static onnxruntime::Graph* globalGraph;
 
     //
@@ -2091,7 +2093,9 @@ int64_t CNTKToONNXHelper::ConvertAxisToOnnxForSpliceWithWithBroadcast(const Axis
             maxDynamicDims : src->Inputs()[i].DynamicAxes().size();
     }
 
-    int64_t onnx_axis = ConvertAxisToOnnxImpl(axis, std::vector<size_t>(maxStaticDims, 1), maxDynamicDims);
+    // use this dummy shape (assumed NDShape of the operand) to compute axis for ONNX op.
+    std::vector<size_t> dummyOperandShape(maxStaticDims, 1);
+    int64_t onnx_axis = ConvertAxisToOnnxImpl(axis, dummyOperandShape, maxDynamicDims);
     return onnx_axis;
 }
 
@@ -3875,9 +3879,12 @@ onnxruntime::Node* CNTKToONNXHelper::CreateUnpackSequenceNode(const FunctionPtr&
 
     ProcessOutputs(src, inputs, outputs, graph, scanLoops, createLoopIndex);
     std::string identityNodeName = UniqueNodeNameStorage::GetUniqueNodeName(src);
+
+    // this is the original output of CNTK UnpackSequence op which is just an identity in ONNX.
     Node *identityNode = graph->AddNode(identityNodeName, "Identity", "", inputs, { outputs[0] });
     functionNodes.emplace(src, identityNode);
 
+    // this is a special output from CNTK UnpackSequence op.
     assert(FreeBatchSize == 1);
     std::string unpackMaskNodeName = identityNodeName + "_mask";
     // 1. slice from [#,*][d1, d2...] to [#,*][1, 1...]
@@ -4023,7 +4030,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& 
     auto outputArgType = ToTypeProto(src->Output().Shape(), src->Output().HasBatchAxis(), src->Output().HasSequenceAxis());
     if (seq_dim_is_1)
     {
-        // Sequence::Slice output does not have sequence dimension is its dimension is 1
+        // Sequence::Slice output does not have sequence dimension because its dimension is 1
         // to make outputArgType correct for onnx slice output, we need to insert 
         // sequence dimension 1 
         std::vector<int64_t> dims = ToINTS(outputArgType);
@@ -4087,8 +4094,8 @@ void ResolveGraphAndSaveModel(onnxruntime::Model *model)
     model->SetProducerName(CNTK_ONNX_PRODUCER_NAME);
 
     // Uncomment below code for debugging and trouble shooting.
-    std::string savePath = "E:/LiqunWA/CNTK/ONNX/TestOps";
-    onnxruntime::Model::Save(*model, savePath + "/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
+    //std::string savePath = "C:/Temp";
+    //onnxruntime::Model::Save(*model, savePath + "/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
 
     //std::shared_ptr<onnxruntime::Model> model2;
     //onnxruntime::common::Status loadStatus = onnxruntime::Model::Load(
@@ -4129,6 +4136,15 @@ NodeArg& AttachNodeArg(onnxruntime::Graph* scanGraph, const std::string &subgrap
 std::string MakeInitialStateNodeArgName(Variable input)
 {
     return ToLegacyString(ToUTF8(input.Owner()->Inputs()[1].Uid())) + ToLegacyString(ToUTF8(input.Owner()->Uid()));
+}
+
+// Scan input/output has to pre/post transposed. We need to keep the pre/post processed NodeArg to have 
+// the orignal name so that the model graph is connected. For subgraph, we cannot use the same name for 
+// subgraph's scan input/output because they are not semantically the same has the pre/post processed NodeArg.
+// To avoid conflict, we attached "_subgraph" to scan input/output nodeArgs of the subgraph.
+std::string MakeScanInputOutputNodeArgName(const std::string &subgraphNodeArgName)
+{
+    return subgraphNodeArgName + "_subgraph";
 }
 
 // process scan loops. also check if the caller (CreateNode) shall continue node creating process with the input src.
@@ -4206,6 +4222,25 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                 }
 
                 // now we have subgraph, inputs and outputs created for this scan.
+                //      Scan_input(s)           initial_state(s)
+                //          |                      |
+                //          V                      |
+                //  TransposeSequenceBatch         |
+                //          |                      |
+                //           \                   /
+                //            \               /
+                //                  ScanOp
+                //              /             \
+                //             /                 \
+                // TransposeSequenceBatch       Final_state(s)
+                //          |
+                //          V
+                //     Scan_output(s)
+                // 
+                // all ends need to have matching names to the model graph. 
+                // therefore subgraph scan_input NodeArg cannot match the main graph scan input 
+                // because they are not the same. That is why "_subgraph" is attached to the name.
+
                 std::vector<NodeArg*> input_args;
                 std::vector<NodeArg*> output_args;
 
@@ -4282,7 +4317,7 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     NodeArg& transposedScanInputNodeArg = AddTransposeBatchSequenceAxesNode(scanInputNodeArg, true, graph, scanNodeName);
                     input_args.push_back(&transposedScanInputNodeArg);
 
-                    std::string subgraphNodeArgNameInSubgraph = subgraphNodeArgName + "_subgraph";
+                    std::string subgraphNodeArgNameInSubgraph = MakeScanInputOutputNodeArgName(subgraphNodeArgName);
                     NodeArg* scanInput = scanGraph.GetNodeArg(subgraphNodeArgNameInSubgraph);
                     if (scanInput == nullptr)
                         LogicError(std::string("Scan subgraph does not has " + subgraphNodeArgNameInSubgraph + " as input.").c_str());
@@ -4326,15 +4361,6 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     scanSubgraphOrderedOutputs.push_back(scanOutput);
                 }
 
-                //// add all inputs for initializers
-                //for (auto initializerInputName : scanLoops[loopIndex].initializerAsInput)
-                //{
-                //    NodeArg &initializerInput = scanGraph.GetOrCreateNodeArg(initializerInputName, nullptr);
-                //    NodeArg &initializerInputForScanOp = graph->GetOrCreateNodeArg(initializerInputName, initializerInput.TypeAsProto());
-                //    input_args.push_back(&initializerInputForScanOp);
-                //    scanSubgraphOrderedInputs.push_back(&scanGraph.GetOrCreateNodeArg(initializerInputForScanOp.Name(), nullptr));
-                //}
-
                 scanGraph.SetInputOrder(scanSubgraphOrderedInputs);
                 scanGraph.SetOutputOrder(scanSubgraphOrderedOutputs);
                 Node *scanNode = graph->AddNode(scanNodeName, "Scan", "", input_args, output_args);
@@ -4367,13 +4393,6 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     auto iter = functionNodes.find(src);
     if (iter != functionNodes.end())
         return iter->second;
-
-    if (//src->Uid() == L"Times4771" || 
-        // src->Uid() == L"ElementTimes5923" ||
-        // src->Uid() == L"l1_score" || src->Name() == L"l1_score"
-        // src->Uid() == L"z_in_Output_flatten" || src->Name() == L"z_in_Output_flatten" ||
-        src->Uid() == L"W0*H0" || src->Name() == L"W0*H0")
-        std::cout << "";
 
     if (!ProcessLoopsAndCheckCNTKNodeContinueCreate(src, graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex))
         return nullptr;
@@ -4742,6 +4761,32 @@ NodeArg* CNTKToONNXHelper::GetInputAdjustmentForBroadcast(onnxruntime::Graph* gr
     }
 }
 
+// for broadcast ops with one input having batch dimension of 1 (defaultFreeBatchSize).
+// if the batch dimension is being broadcastedby any other input to a dimension not 1
+// we need to keep this override dimension use it later when the dimension is unpacked.
+//      [#][d1] + ToBatch([d0,d1]) ==> [#][d1]
+// Here the output shall have a dimension [d0][d1]
+// later a subsequent UnpackBatch shall produce [d0,d1], not [defaultFreeBatchSize,d1]
+//
+// BatchSizeOverride returns d0.
+//
+// Constant [#][600]    Constant [1987, 600]
+//          |                   |
+//          |               ToBatch
+//          V                   V   [#][[600]
+//                 Add
+//                  |
+//                  V
+//              [#][600]
+//                  |
+//              Reduce with axis = 1
+//                  |           [#]
+//             UnpackBatchAxis  
+//                  |           [#]
+//               Reshape (0,)
+//                  |        (1987,)
+//
+// Note in the above that dimension (1987) shall be maintained and restored once needed.
 int BatchSizeOverride(const FunctionPtr src, const std::vector<onnxruntime::NodeArg *>& inputs,
     onnx::TypeProto& outputArgType)
 {
@@ -5081,7 +5126,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                 [inputName](Variable v) {return inputName == UniqueNodeNameStorage::GetUniqueInputNodeName(v); })
                 != scanLoops[createLoopIndex].m_scanInputs.end())
         {
-            inputName += "_subgraph";
+            inputName = MakeScanInputOutputNodeArgName(inputName);
         }
 
         onnxruntime::NodeArg &inputArg = adjusted == nullptr ? graph->GetOrCreateNodeArg(inputName, &inputArgType) : *adjusted;
@@ -5223,6 +5268,7 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
         int batchSizeOverride = BatchSizeOverride(src, inputs, outputArgType);
 
         std::string outputNodeArgName = UniqueNodeNameStorage::GetUniqueOutputNodeName(output);
+        // TODO: investigate whether this is really needed. 
         // for scan subgraph scan outputs, do not want to use the original name because the original name
         // is for post transposed (to seq, batch) nodearg to be consumed by downstream graph.
         //if (createLoopIndex != -1 &&
@@ -5230,11 +5276,9 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
         //        [outputNodeArgName](Variable v) {return outputNodeArgName == UniqueNodeNameStorage::GetUniqueInputNodeName(v); })
         //    != scanLoops[createLoopIndex].m_scanInputs.end())
         //{
-        //    outputNodeArgName += "_subgraph";
+        //    outputNodeArgName = MakeScanInputOutputNodeArgName(outputNodeArgName);
         //}
 
-        if (outputNodeArgName == "ReLU39_Output_0")
-            std::cout << "";
         onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(outputNodeArgName, &outputArgType);
         outputs.emplace_back(&outputNodeArg);
         outputIndex++;
@@ -5481,15 +5525,6 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
                 node->AddAttribute(attributesMap[L"axisVec"], perm);
             }
         }
-        else if (src->OpName() == L"Reshape")
-        {
-        }
-        //else if (src->OpName() == L"Splice")
-        //{
-        //    Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
-        //    int64_t axisIndex = ConvertAxisToOnnxForSpliceWithWithBroadcast(axis, src);
-        //    node->AddAttribute(attributesMap[L"axis"], axisIndex);
-        //}
         else if (src->OpName() == L"Slice")
         {
             std::vector<int> beginIndex;
@@ -6181,12 +6216,6 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
             node = graph->AddNode(nodeName + string("_add"), "Add",
                                   "", { &mulTensorOutputArg, input2 }, { &addTensorOutputArg });
         }
-        //else if (src->OpName() == L"Splice")
-        //{
-        //    Axis axis = (Axis)(src->Attributes()[L"axis"].Value<Axis>());
-        //    BroadcastInputs(orderedInputs, { ConvertAxisToOnnxForSpliceWithWithBroadcast(axis, src) }, src, graph);
-        //    node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
-        //}
         else if (src->OpName() == L"LogPlus")
         {
             // CNTK LogPlus is the equivalent to numpy.logaddexp

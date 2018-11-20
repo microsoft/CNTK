@@ -23,6 +23,9 @@ const std::string FreeSequenceDimParam = "Sequence";
 const size_t numBiasInOnnxLstm = 2; // bias for W, and bias for R (also called H in CNTK).
                                     // TODO: support cases where batch size is not 1.
 
+// See comment for BatchSizeOverride
+// we need to object to keep OverridedBatch dimension in case defaultFreeBatchSize is overrided 
+// by broadcast (and possible other ops TO BE FIGURED OUT) ops. 
 class BatchSizeProcessor
 {
 public:
