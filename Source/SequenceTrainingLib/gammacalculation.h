@@ -439,6 +439,7 @@ public:
 
         //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
         size_t seqId = 0;   //frame
+        size_t totalframenum = 0, totalphonenum=0;
         for (const auto& seq : pMBLayout->GetAllSequences())
         {
             if (seq.seqId == GAP_SEQUENCE_ID)
@@ -451,6 +452,7 @@ public:
             size_t numFrames = seq.GetNumTimeSteps();
             uttFrameBeginIdx.push_back(seq.tBegin);
             uttFrameNum.push_back(numFrames);
+            totalframenum += numFrames;
         }
         seqId = 0;  //phone
         for (const auto& seq : phoneMBLayout->GetAllSequences())
@@ -465,7 +467,7 @@ public:
             size_t numFrames = seq.GetNumTimeSteps();
             uttPhoneBeginIdx.push_back(seq.tBegin);
             uttPhoneNum.push_back(numFrames);
-
+            totalphonenum += numFrames;
             size_t startFrameInd = seq.tBegin * numPhoneParallelSequences + seq.s;
             size_t endFrameInd = seq.tEnd   * numPhoneParallelSequences + seq.s;
             size_t frameCounter = 0;
@@ -580,11 +582,13 @@ public:
         //do derivative norm
         Microsoft::MSR::CNTK::Matrix<ElemType> tempMatrix1(m_deviceid_gpu), tempMatrix2(m_deviceid_gpu);
         Microsoft::MSR::CNTK::Matrix<ElemType>::VectorSum(m_derivativeForF, tempMatrix1, false);
-        //tempMatrix1.Print("sum of F");
         tempMatrix2.AssignVectorNorm2Of(tempMatrix1,true);
+        //tempMatrix1.Print("sum of F");
+        //tempMatrix2.Print("norm of F");
+        //fprintf(stderr, "framenum %d phonenum %d\n", (int) totalframenum, (int) totalphonenum);
         ElemType norm_coef = (ElemType) 10.0/ tempMatrix2.Get00Element();
         Microsoft::MSR::CNTK::Matrix<ElemType>::Scale(norm_coef, m_derivativeForF);
-        Microsoft::MSR::CNTK::Matrix<ElemType>::Scale(norm_coef, m_derivativeForG);
+        Microsoft::MSR::CNTK::Matrix<ElemType>::Scale(norm_coef * (ElemType) totalphonenum / (ElemType)totalframenum, m_derivativeForG);
         /*//tempMatrix2.Print("norm of F");
         Microsoft::MSR::CNTK::Matrix<ElemType>::VectorSum(m_derivativeForG, tempMatrix1, false);
         //tempMatrix1.Print("sum of G");

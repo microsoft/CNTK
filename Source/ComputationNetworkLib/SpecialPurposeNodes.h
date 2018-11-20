@@ -1090,6 +1090,7 @@ public:
             FrameRange frameRange(InputRef(0).GetMBLayout());
             BackpropToRight(*m_softmaxOfRight, InputRef(inputIndex).Gradient(), Gradient(), *m_CTCposterior);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
+            //InputRef(inputIndex).Gradient().Print("gradient for 2");
         }
         else
            RuntimeError("ForwardBackwardNode criterion expects only two inputs: labels and network output.");

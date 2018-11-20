@@ -1371,12 +1371,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
-#if 1       // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria.
+#if 0       // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria.
             // This will break test cases. So for now, we will only enable this for per-sample criteria.
             size_t numSamplesInMinibatch = aggregateNumSamples;
             if (criterionNodes[0]->HasMBLayout())
 #endif
-            numSamplesInMinibatch = aggregateNumSamplesWithLabel;
+            size_t  numSamplesInMinibatch = aggregateNumSamplesWithLabel;
 #if 0
             if (numSamplesInMinibatch != aggregateNumSamples)
                 fprintf(stderr, "SGD: using true #samples %d instead of MB size %d\n", (int)numSamplesInMinibatch, (int)aggregateNumSamples);
