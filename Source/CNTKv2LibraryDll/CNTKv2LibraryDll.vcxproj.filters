@@ -187,6 +187,9 @@
     <ClCompile Include="proto\onnx\onnx_repo\onnx\shape_inference\implementation.cc">
       <Filter>proto\onnx\onnx_repo\onnx\shape_inference</Filter>
     </ClCompile>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\controlflow\old.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs\controlflow</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

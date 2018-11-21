@@ -800,7 +800,11 @@ class InferenceContextImpl : public ONNX_NAMESPACE::InferenceContext {
   InferenceContextImpl(Node& node, std::vector<TypeProto>& inferred_shapes) noexcept
       : node_(node),
         allOutputTypes_(inferred_shapes) {}
-
+  GraphInferencer* getGraphAttributeInferencer(
+      const std::string& attr_name) override {
+    assert(false);
+    return nullptr;
+  }
   const AttributeProto* getAttribute(const std::string& name) const override {
     auto& attribute_value_map = node_.GetAttributes();
     auto iter = attribute_value_map.find(name);
@@ -885,10 +889,10 @@ Status Graph::InferAndVerifyTypeMatch(Node& node,
       if (input_def->Type() == nullptr) {
         // Logic error: This should not happen if we properly checked that every use has
         // a corresponding def, for which type-inference already produced a valid type
-        Status status(ONNXRUNTIME, FAIL,
-                      "Node (" + nodeName + ") input arg (" +
-                          input_def->Name() + ") does not have type information set by parent node.");
-        return status;
+        //Status status(ONNXRUNTIME, FAIL,
+        //              "Node (" + nodeName + ") input arg (" +
+        //                  input_def->Name() + ") does not have type information set by parent node.");
+        //return status;
       }
 
       // Verify that the actual parameter's type is one of permitted types of the formal parameter
@@ -1005,8 +1009,8 @@ Status Graph::InferAndVerifyTypeMatch(Node& node,
   // Check that the type of every input is specified:
   for (auto* graph_input : GetInputs()) {
     if (nullptr == graph_input->Type()) {
-      Status status(ONNXRUNTIME, FAIL, "Model input (" + graph_input->Name() + ") does not have type information.");
-      return status;
+      //Status status(ONNXRUNTIME, FAIL, "Model input (" + graph_input->Name() + ") does not have type information.");
+      //return status;
     }
   }
 
@@ -1128,7 +1132,7 @@ Status Graph::VerifyNodeAndOpMatch(const std::unordered_set<std::string>& inputs
       }
     }
 
-    NO_CHANGE_ON_SYNC_FLAG(ONNXRUNTIME_RETURN_IF_ERROR(InferAndVerifyTypeMatch(node, *p_op)));
+    // NO_CHANGE_ON_SYNC_FLAG(ONNXRUNTIME_RETURN_IF_ERROR(InferAndVerifyTypeMatch(node, *p_op)));
   }
 
   return Status::OK();
@@ -1354,6 +1358,8 @@ Node* GraphBase::AddNode(const std::string& name,
                          const std::vector<NodeArg*>& output_args,
                          const NodeAttributes* attributes,
                          const std::string& domain) {
+    if ("Block3326990" == name)
+        std::cout << "";
   std::vector<NodeArg*> inputs, outputs;
   inputs.resize(input_args.size());
   outputs.resize(output_args.size());

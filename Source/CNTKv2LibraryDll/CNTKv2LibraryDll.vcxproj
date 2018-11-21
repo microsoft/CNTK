@@ -298,6 +298,7 @@
     <ClCompile Include="proto\onnx\onnx_repo\onnx\common\model_helpers.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\common\status.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\controlflow\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\controlflow\old.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\data_type_utils.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\experiments\defs.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\experiments\experiments_functions.cc" />

@@ -474,6 +474,8 @@ class GraphBase {
 
   // Get NodeArg by name, or create NodeArg owned by the graph if not found
   NodeArg& GetOrCreateNodeArg(const std::string& name, const ONNX_NAMESPACE::TypeProto* p_arg_type) {
+      if ("Block333674_Output_0" == name)
+          std::cout << "";
     auto iter = node_args_.find(name);
     if (iter != node_args_.end()) {
       return *(iter->second);
