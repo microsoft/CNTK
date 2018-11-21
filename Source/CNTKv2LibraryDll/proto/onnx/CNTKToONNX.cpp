@@ -3741,7 +3741,12 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNodeWithGatherPacked(const FunctionPt
     assert(src->OpName() == L"GatherPacked");
 
     auto packedIndex = src->Inputs()[1].Owner();
+    if (packedIndex->OpName() != L"PackedIndex")
+        LogicError("GatherPacked not from Sequence.Gather cannot be handled."); 
+    
     auto whereFunc = packedIndex->Inputs()[1].Owner();
+    if (whereFunc->OpName() != L"Where")
+        LogicError("GatherPacked not from Sequence.Gather cannot be handled.");
 
     // _cntkBlockOPInvalidIndices is set for "GatherPacked" to only have second input processed
     std::vector<onnxruntime::NodeArg *> gatherPackedInputs;
@@ -4165,8 +4170,6 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 
                         output_args.push_back(&scanFinalStateNodeArg);
 
-                        // even final state and output collide, in subgraph the final state and output names are the same.
-                        // this is because they are conduited to two different subgraph outputs via Identity in AttachNodeArg.
                         AttachNodeArg(&scanGraph, stateOutputName, false, true);
                     }
 
@@ -4206,9 +4209,17 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                 for (auto &scanOutput : scanLoops[loopIndex].m_scanOutputs)
                 {
                     // add the NodeArg to the main graph because it may not get a chance to get created if two scans are connected back-to-back
-                    NodeArg& scanOutputNodeArg = CreateNodeArg(scanOutput, graph, false);
-                    AttachNodeArg(&scanGraph, scanOutputNodeArg.Name(), false, false);
-                    NodeArg& transposedScanOutputNodeArg = AddTransposeBatchSequenceAxesNode(scanOutputNodeArg, false, graph, scanNodeName);
+                    // if scan output is alos the final state, rename the scan output to avoid output name collision.
+                    
+                    NodeArg* scanOutputNodeArg;
+                    if (IsStepFunction(scanOutput.Owner()))
+                        scanOutputNodeArg = &CreateNodeArg(scanOutput, graph, false,
+                            UniqueNodeNameStorage::GetUniqueOutputNodeName(scanOutput) + "_finalstate_as_scanoutput");
+                    else
+                        scanOutputNodeArg = &CreateNodeArg(scanOutput, graph, false);
+
+                    AttachNodeArg(&scanGraph, UniqueNodeNameStorage::GetUniqueOutputNodeName(scanOutput), false, false);
+                    NodeArg& transposedScanOutputNodeArg = AddTransposeBatchSequenceAxesNode(*scanOutputNodeArg, false, graph, scanNodeName);
                     output_args.push_back(&transposedScanOutputNodeArg);
                 }
                 Node *scanNode = graph->AddNode(scanNodeName, "Scan", "", input_args, output_args);
@@ -4353,6 +4364,10 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     }
     else if (cntkOpName == "PastValue" || cntkOpName == "FutureValue")
     {
+        if (createLoopIndex != -1)
+            // ProcessLoopsAndCheckCNTKNodeContinueCreate shall have already handled 
+            // PastValue or FutureValue ops in a loop.
+            LogicError("PastValue or FutureValue ops inside a loop shall not reach here.");
         return CreatePastFutureValueNode(src, graph, functionNodes, variableNodes, compositeOutputsMap,
             scanLoops, createLoopIndex);
     }
