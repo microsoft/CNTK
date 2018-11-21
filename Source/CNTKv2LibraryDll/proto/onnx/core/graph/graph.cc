@@ -1284,17 +1284,6 @@ Status Graph::InferAndVerifySubgraphTypes(const Node& node, Graph& subgraph,
   // the subgraph with the details from the outer scope NodeArg.
   auto implicit_input_defs = node.GetDefinitions().implicit_input_defs;
   for (const auto* implicit_node_arg : implicit_input_defs) {
-      bool isInput = false;
-      for (auto a : node.InputDefs())
-      {
-          if (a->Name() == implicit_node_arg->Name())
-          {
-              isInput = true;
-              break;
-          }
-      }
-      if (isInput)
-          continue;
     auto subgraph_nodearg = subgraph.GetNodeArg(implicit_node_arg->Name());
 
     // the implicit input defs may be for a nested subgraph, so it won't necessarily match here.

@@ -32,12 +32,14 @@ namespace CNTK
     {
     public:
         ScanLoop(const std::vector<Variable> &inputs, const std::vector<Variable> &outputs,
-            const std::vector<Variable> &scanInputs, const std::vector<Variable> &scanOutputs, const std::vector<FunctionPtr> &body) :
+            const std::vector<Variable> &scanInputs, const std::vector<Variable> &scanOutputs, const std::vector<FunctionPtr> &body,
+            const std::vector<FunctionPtr> &loopstepfunctions) :
             m_inputs(inputs),
             m_outputs(outputs),
             m_scanInputs(scanInputs),
             m_scanOutputs(scanOutputs),
             m_body(body),
+            m_loopstepfunctions(loopstepfunctions),
             m_scanOpCreated(false)
         {
             // collect 
@@ -119,6 +121,7 @@ namespace CNTK
         }
 
         std::vector<Variable> m_inputs, m_outputs, m_scanInputs, m_scanOutputs;
+        std::vector<FunctionPtr> m_loopstepfunctions;
         std::vector<FunctionPtr> m_body;
         std::vector<std::string> initializerAsInput;
         std::unordered_map<FunctionPtr, std::vector<FunctionPtr>> m_rnnInternalBodies;
@@ -308,7 +311,8 @@ namespace CNTK
         {
             if (filterOutBlockRNNs[l])
             {
-                ScanLoop scanLoop(loopinputs[l], loopoutputs[l], scaninputs[l], scanoutputs[l], loops[l].Nodes());
+                ScanLoop scanLoop(loopinputs[l], loopoutputs[l], scaninputs[l], scanoutputs[l], loops[l].Nodes(),
+                    loopstepfunctions[l]);
                 scanLoops.push_back(scanLoop);
             }
         }

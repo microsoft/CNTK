@@ -31,7 +31,7 @@ using namespace onnx;
 
 namespace CNTK
 {
-class CNTKToONNXHelper
+    class CNTKToONNXHelper
 {
 public:
     //
@@ -233,12 +233,12 @@ private:
     //
     static onnxruntime::Node* CreateNode(const FunctionPtr& src,
         onnxruntime::Graph* graph,
-                                    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
-                                    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
-                                    const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap,
         std::vector<ScanLoop> &scanLoops, int createLoopIndex);
 
-    
+
     static bool CheckCorrectTransposeAxisToSkipForSequenceAxisOpWrapper(FunctionPtr currentOp);
     static bool MatchOpSequence(const FunctionPtr src, std::vector<wstring> opSequence, FunctionPtr &op);
     static bool MatchInputSequence(const Variable &input, std::vector<wstring> opSequence, Variable &inputSkipTo);
@@ -4094,8 +4094,8 @@ void ResolveGraphAndSaveModel(onnxruntime::Model *model)
     model->SetProducerName(CNTK_ONNX_PRODUCER_NAME);
 
     // Uncomment below code for debugging and trouble shooting.
-    //std::string savePath = "C:/Temp";
-    //onnxruntime::Model::Save(*model, savePath + "/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
+    // std::string savePath = "E:/LiqunWA/CNTK/ONNX/TestOps";
+    // onnxruntime::Model::Save(*model, savePath + "/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
 
     //std::shared_ptr<onnxruntime::Model> model2;
     //onnxruntime::common::Status loadStatus = onnxruntime::Model::Load(
@@ -4384,10 +4384,10 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 // and create the corresponding ONNX graph.
 //
 onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
-                                           onnxruntime::Graph* graph,
-                                           std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
-                                           std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
-                                           const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap,
     std::vector<ScanLoop> &scanLoops, int createLoopIndex)
 {
     auto iter = functionNodes.find(src);
@@ -4400,6 +4400,8 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     onnxruntime::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
     std::string onnxOpName = ToOPName(src);
+
+    std::cout << ToLegacyString(ToUTF8(src->Uid())) << std::endl;
 
     // TODO: uncomment this code once bidirectional LSTM is supprted.
     //if (cntkOpName == "Splice")
@@ -4912,20 +4914,42 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         bool isConstant = (input.IsParameter() || input.IsConstant()) &&
             !Operators::IgnoreConstantAndParameter(src->OpName(), inputIndex);
 
-        bool isInitialStateOfSubGraph = (cntkOpName == "PastValue" || cntkOpName == "FutureValue") &&
-            (createLoopIndex >= 0 && createLoopIndex < scanLoops.size()) &&
-            inputIndex == 1;
+        //bool isInitialStateOfSubGraph = (cntkOpName == "PastValue" || cntkOpName == "FutureValue") &&
+        //    (createLoopIndex >= 0 && createLoopIndex < scanLoops.size()) &&
+        //    inputIndex == 1;
+
+        bool isInSubGraph = createLoopIndex >= 0 && createLoopIndex < scanLoops.size();
+
+        bool isInitialStateOfSubGraph = false;
+        if ((createLoopIndex >= 0 && createLoopIndex < scanLoops.size()) && inputIndex == 1)
+        {
+            for (auto &f : scanLoops[createLoopIndex].m_loopstepfunctions)
+            {
+                if (f->Inputs().size() == 2 && f->Inputs()[inputIndex].Uid() == input.Uid())
+                {
+                    isInitialStateOfSubGraph = true;
+                    break;
+                }
+            }
+        }
+
+        bool isScanInputInSubgraph = createLoopIndex != -1 &&
+            std::find_if(scanLoops[createLoopIndex].m_scanInputs.begin(), scanLoops[createLoopIndex].m_scanInputs.end(),
+                [inputName](Variable v) {return inputName == UniqueNodeNameStorage::GetUniqueInputNodeName(v); })
+            != scanLoops[createLoopIndex].m_scanInputs.end();
+
+        bool isOutputOfStepFunction = input.Owner() &&
+            (input.Owner()->OpName() == L"PastValue" || input.Owner()->OpName() == L"FutureValue");
 
         onnx::TypeProto inputArgType;
 
-        if (input.Owner() &&
-            (input.Owner()->OpName() == L"PastValue" || input.Owner()->OpName() == L"FutureValue"))
+        if (isOutputOfStepFunction)
         {
-            if (createLoopIndex >= 0 && createLoopIndex < scanLoops.size())
+            if (isInSubGraph)
             {
                 // need to take input from step function's initial state (second input to the step function)
                 // if initial state is a scalar, it will be created with correct shape later in this method. 
-                
+
                 ScanLoop &scanLoop = scanLoops[createLoopIndex];
                 // to match "else if (isInitialStateOfSubGraph)" case
                 // one intial state may map to multiple final states. 
@@ -4995,7 +5019,6 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             // for initial state, we need to make sure each of scanLoopStates has a uniques NodeArg.
             // This NodeArg is for scan iteration to loop back at each scan iteration. 
             // It cannot be shared between too state.
-            ScanLoop &scanLoop = scanLoops[createLoopIndex];
             inputName = inputName + ToLegacyString(ToUTF8(src->Uid()));
             inputArgType = ToTypeProto(src->Inputs()[0].Shape(), src->Inputs()[0].HasBatchAxis(), src->Inputs()[0].HasSequenceAxis());
         }
@@ -5121,10 +5144,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         onnxruntime::NodeArg *adjusted = GetInputAdjustmentForBroadcast(graph, src, input, inputIndex, inputArgType,
             compositeOutputsMap);
 
-        if (createLoopIndex != -1 && 
-            std::find_if(scanLoops[createLoopIndex].m_scanInputs.begin(), scanLoops[createLoopIndex].m_scanInputs.end(), 
-                [inputName](Variable v) {return inputName == UniqueNodeNameStorage::GetUniqueInputNodeName(v); })
-                != scanLoops[createLoopIndex].m_scanInputs.end())
+        if (isInitialStateOfSubGraph || (isOutputOfStepFunction && isInSubGraph) || isScanInputInSubgraph)
         {
             inputName = MakeScanInputOutputNodeArgName(inputName);
         }
