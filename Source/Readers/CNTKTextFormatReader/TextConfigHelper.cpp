@@ -124,8 +124,8 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     m_skipSequenceIds = config(L"skipSequenceIds", false);
     m_maxErrors = config(L"maxErrors", 0);
     m_traceLevel = config(L"traceLevel", 1);
-    m_chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default
-    m_keepDataInMemory = config(L"keepDataInMemory", false);
+    m_chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default // TODO: thiagofc: change it to g_4GB
+    m_keepDataInMemory = config(L"keepDataInMemory", false);	// TODO: thiagofc: set it to true
     m_frameMode = config(L"frameMode", false);
     m_cacheIndex = config(L"cacheIndex", false);
 

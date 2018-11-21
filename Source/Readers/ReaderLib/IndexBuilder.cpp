@@ -21,7 +21,7 @@ IndexBuilder::IndexBuilder(const FileWrapper& input)
     : m_input(input),
     m_corpus(nullptr),
     m_isCacheEnabled(false),
-    m_chunkSize(g_32MB),
+    m_chunkSize(g_32MB),	// TODO: thiagofc: tweak cache
     m_bufferSize(g_2MB),
     m_primary(true)
 {}

@@ -34,7 +34,7 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
         else
             m_deserializer = make_shared<TextParser<double>>(corpus, configHelper, true);
 
-        if (configHelper.ShouldKeepDataInMemory())
+        if (configHelper.ShouldKeepDataInMemory())	// TODO: thiagofc: Comment it out
             m_deserializer = make_shared<ChunkCache>(m_deserializer);
 
         size_t window = configHelper.GetRandomizationWindow();
@@ -43,7 +43,7 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
             // TODO: drop "verbosity", use config.traceLevel() instead. 
             int verbosity = config(L"verbosity", 0); 
             m_sequenceEnumerator = make_shared<BlockRandomizer>(verbosity, window, m_deserializer,
-                                                                /*shouldPrefetch =*/ true,
+                                                                /*shouldPrefetch =*/ true,		/* TODO: thiagofc: set it to true */
                                                                 /*multithreadedGetNextSequences =*/ false,
                                                                 /*maxNumberOfInvalidSequences =*/ 0,
                                                                 /*sampleBasedRandomizationWindow =*/ configHelper.UseSampleBasedRandomizationWindow(),
