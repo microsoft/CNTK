@@ -417,7 +417,7 @@ namespace CNTK
 
                     // cast float to half
                     auto inputMatrix = inputValue->GetWritableMatrix<float>();
-                    inputMatrix->CastAssignValuesOf(*m_intermediateGPUBuffers[i]);
+                    m_intermediateGPUBuffers[i]->CastAssignValuesOf(*inputMatrix);
 
                     half* dataBufferHalf = m_intermediateGPUBuffers[i]->Data();
 
@@ -426,8 +426,7 @@ namespace CNTK
                         &allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
 
                     // cast half to float
-                    m_intermediateGPUBuffers[i]->CastAssignValuesOf(*inputMatrix);
-
+                    inputMatrix->CastAssignValuesOf(*m_intermediateGPUBuffers[i]);
                 }
                 else
                 {
