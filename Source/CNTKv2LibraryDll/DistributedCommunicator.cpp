@@ -100,7 +100,7 @@ namespace CNTK
         m_gpuDataTransferers.resize(values.size());
         m_intermediateCPUBuffers.resize(values.size());
         if (m_useFP16)
-            m_intermediateCPUBuffersFP16.resize(values.size());
+            m_intermediateGPUBuffers.resize(values.size());
 
         for (auto i = 0; i < values.size(); ++i)
         {
@@ -116,12 +116,6 @@ namespace CNTK
             {
                 m_intermediateCPUBuffers[i] = Buffer();
                 m_gpuDataTransferers[i] = nullptr;
-                if (ShouldUseFP16(view))
-                {
-                    auto requiredSize = GetBufferSize(view);
-                    if (m_intermediateCPUBuffersFP16[i].totalSize < requiredSize / 2)
-                        m_intermediateCPUBuffersFP16[i] = AllocateIntermediateBuffer(device.Id(), requiredSize / 2);
-                }
             }
             else if (device.Type() == DeviceKind::GPU)
             {
@@ -134,9 +128,21 @@ namespace CNTK
                 m_gpuDataTransferers[i] = std::make_shared<GPUDataTransferer>(device.Id(), true);
                 if (m_intermediateCPUBuffers[i].totalSize < requiredSize)
                     m_intermediateCPUBuffers[i] = AllocateIntermediateBuffer(device.Id(), requiredSize);
+
                 if (ShouldUseFP16(view))
-                    if (m_intermediateCPUBuffersFP16[i].totalSize < requiredSize / 2)
-                        m_intermediateCPUBuffersFP16[i] = AllocateIntermediateBuffer(device.Id(), requiredSize / 2);
+                {
+                    // For sure we're float
+                    size_t rows = view->GetMatrix<float>()->GetNumRows();
+                    size_t cols = view->GetMatrix<float>()->GetNumCols();
+                    if (m_intermediateGPUBuffers[i] == nullptr)
+                    {
+                        m_intermediateGPUBuffers[i] = std::make_shared<Matrix<half>>(rows, cols, AsCNTKImplDeviceId(device));
+                    }
+                    else
+                    {
+                        m_intermediateGPUBuffers[i]->Resize(rows, cols);
+                    }
+                }
             }
             else
             {
@@ -407,26 +413,21 @@ namespace CNTK
             {
                 if (ShouldUseFP16(inputValue))
                 {
-                    float* inputDataAsFloat = static_cast<float*>(inputData);
-                    float* outputDataAsFloat = static_cast<float*>(outputData);
-                    half* inputDataFP16 = static_cast<half*> (m_intermediateCPUBuffersFP16[i].data.get());
-                    half* outputDataFP16 = static_cast<half*> (m_intermediateCPUBuffersFP16[i].data.get());
+                    // We know we're On GPU
 
-                    // copy fp32 to fp16
-                    for (int idxx = 0; idxx < numElements; idxx++)
-                    {
-                        inputDataFP16[idxx] = (half) inputDataAsFloat[idxx];
-                    }
+                    // cast float to half
+                    auto inputMatrix = inputValue->GetWritableMatrix<float>();
+                    inputMatrix->CastAssignValuesOf(*m_intermediateGPUBuffers[i]);
+
+                    half* dataBufferHalf = m_intermediateGPUBuffers[i]->Data();
 
                     // allreducehalf
-                    AllReduceDataHalf(inputDataFP16, outputDataFP16, numElements,
+                    AllReduceDataHalf(dataBufferHalf, dataBufferHalf, numElements,
                         &allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
 
-                    // cp fp16 to fp32
-                    for (int idxx = 0; idxx < numElements; idxx++)
-                    {
-                        outputDataAsFloat[idxx] = (float)inputDataFP16[idxx];
-                    }
+                    // cast half to float
+                    m_intermediateGPUBuffers[i]->CastAssignValuesOf(*inputMatrix);
+
                 }
                 else
                 {
@@ -656,6 +657,14 @@ namespace CNTK
             return false;
 
         return true;
+    }
+    bool MPICommunicatorImpl::ShouldUseFP16(const NDArrayViewPtr& viewPtr)
+    {
+        // currenly AllReduceDataHalf only supports NCCL/ and on GPU data
+        return (m_useFP16 &&
+            m_nccl->IsSupported() &&
+            (DeviceKind::GPU == viewPtr->Device().Type()) &&
+            (DataType::Float == viewPtr->GetDataType()));
     }
 
     void MPICommunicatorImpl::CopyDataFromGPUToCPU(std::vector<NDArrayViewPtr>& inputValues)

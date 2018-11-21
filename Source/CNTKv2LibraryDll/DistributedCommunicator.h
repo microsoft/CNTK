@@ -81,8 +81,6 @@ namespace CNTK
 
         static Buffer AllocateIntermediateBuffer(int deviceID, size_t totalSize);
         std::vector<Buffer> m_intermediateCPUBuffers;
-        std::vector<Buffer> m_intermediateCPUBuffersFP16;
-        bool m_useFP16;
 
         DistributedWorkerDescriptor m_currentWorker;
         std::unordered_set<DistributedWorkerDescriptor> m_workers;
@@ -94,6 +92,8 @@ namespace CNTK
         size_t m_packThresholdSizeInBytes;
         std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> m_aggregationBufferFloat;
         std::unique_ptr<Microsoft::MSR::CNTK::Matrix<double>> m_aggregationBufferDouble;
+        std::vector<std::shared_ptr<Microsoft::MSR::CNTK::Matrix<half>>> m_intermediateGPUBuffers;
+        bool m_useFP16;
 
         // NcclComm
         std::unique_ptr<Microsoft::MSR::CNTK::NcclComm> m_nccl;
@@ -107,10 +107,7 @@ namespace CNTK
             return values.end() == device ? DeviceDescriptor::CPUDevice() : (*device)->Device();
         }
 
-        bool ShouldUseFP16(const NDArrayViewPtr& viewPtr)
-        {
-            return m_useFP16 && (DataType::Float == viewPtr->GetDataType());
-        }
+        bool ShouldUseFP16(const NDArrayViewPtr& viewPtr);
 
         size_t GetBufferSize(const NDArrayViewPtr& viewPtr)
         {
