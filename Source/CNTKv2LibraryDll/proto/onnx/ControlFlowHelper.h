@@ -40,6 +40,7 @@ namespace CNTK
             m_body(body),
             m_scanOpCreated(false)
         {
+            // collect 
             // collect nodes in RNN ops as part of the body
             for (auto &f : m_body)
             {
@@ -49,6 +50,14 @@ namespace CNTK
                     CollectInternalNodes(f->BlockRoot(), rnnInternalBody);
                     m_rnnInternalBodies.insert(std::make_pair(f, rnnInternalBody));
                 }
+                else if (f->IsBlock())
+                {
+                    // RNNs and other block functions that would be traversed into by CreateNode
+                    // shall be treated the same at here and below of mapping block outputs to underlying variables.
+                    std::vector<FunctionPtr> blockInternalBody;
+                    CollectInternalNodes(f->BlockRoot(), blockInternalBody);
+                    m_blockInternalBodies.insert(std::make_pair(f, blockInternalBody));
+                }
             }
 
             // if RNN is in the loop, we want to map scan outputs that are from LSTM 
@@ -56,20 +65,13 @@ namespace CNTK
             for (auto &rnn : this->m_rnnInternalBodies)
             {
                 FunctionPtr rnnF = rnn.first;
-                BlockFunction* block = dynamic_cast<BlockFunction *>(rnnF.get());
-                std::unordered_map<Variable, Variable> bm = block->CompositeOutputsMap();
-                for (auto &blockOutput : rnnF->Outputs())
-                {
-                    for (int i = 0; i < m_scanOutputs.size(); i++)
-                    {
-                        if (m_scanOutputs[i] == blockOutput)
-                        {
-                            if (bm.find(blockOutput) == bm.end())
-                                LogicError("cannot map PastValue/Future's input to LSTM underlying output");
-                            m_scanOutputs[i] = bm[blockOutput];
-                        }
-                    }
-                }
+                MapScanOutputFromBlockOutoutsToUnderlyingVariable(rnnF);
+            }
+
+            for (auto &block : this->m_blockInternalBodies)
+            {
+                FunctionPtr blockF = block.first;
+                MapScanOutputFromBlockOutoutsToUnderlyingVariable(blockF);
             }
         }
 
@@ -82,7 +84,31 @@ namespace CNTK
                 if (std::find(rnn.second.begin(), rnn.second.end(), src) != rnn.second.end())
                     return true;
             }
+
+            for (auto &block : this->m_blockInternalBodies)
+            {
+                if (std::find(block.second.begin(), block.second.end(), src) != block.second.end())
+                    return true;
+            }
             return false;
+        }
+
+        void MapScanOutputFromBlockOutoutsToUnderlyingVariable(const FunctionPtr rnnF)
+        {
+            BlockFunction* block = dynamic_cast<BlockFunction *>(rnnF.get());
+            std::unordered_map<Variable, Variable> bm = block->CompositeOutputsMap();
+            for (auto &blockOutput : rnnF->Outputs())
+            {
+                for (int i = 0; i < m_scanOutputs.size(); i++)
+                {
+                    if (m_scanOutputs[i] == blockOutput)
+                    {
+                        if (bm.find(blockOutput) == bm.end())
+                            LogicError("cannot map PastValue/Future's input to LSTM underlying output");
+                        m_scanOutputs[i] = bm[blockOutput];
+                    }
+                }
+            }
         }
 
         static void CollectInternalNodes(FunctionPtr src, std::vector<FunctionPtr> &rnnInternalBody)
@@ -95,6 +121,7 @@ namespace CNTK
         std::vector<Variable> m_inputs, m_outputs, m_scanInputs, m_scanOutputs;
         std::vector<FunctionPtr> m_body;
         std::unordered_map<FunctionPtr, std::vector<FunctionPtr>> m_rnnInternalBodies;
+        std::unordered_map<FunctionPtr, std::vector<FunctionPtr>> m_blockInternalBodies;
         std::vector<ScanLoopState> scanLoopStates;
         std::vector<FunctionPtr> m_visited;
         bool m_scanOpCreated;

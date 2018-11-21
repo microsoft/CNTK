@@ -52,11 +52,12 @@ private:
         //
         // Initialize node name storage.
         //
-        static void InitializeUidNodeNameMap()
+        static void InitializeUidNodeNameMap(const std::unordered_map<Variable, Variable> &outputsMap)
         {
             uidNodeNameMap.clear();
             nodeNameSet.clear();
             nodeNameCountMap.clear();
+            UniqueNodeNameStorage::compositeOutputsMap = outputsMap;
         }
 
         //
@@ -66,7 +67,11 @@ private:
         {
             // Input variable often inherit the name of its owner when it is an output of a another node.
             // To avoid it taking up the name of its owner, we treat it as an output node and generate name accordingly.
-            return GetUniqueNodeName(input.Name(), input.Owner() == nullptr ? L"Input" : L"Output", input.Uid());
+            std::unordered_map<Variable, Variable>::iterator it = UniqueNodeNameStorage::compositeOutputsMap.find(input);
+            if (it != UniqueNodeNameStorage::compositeOutputsMap.end())
+                return GetUniqueNodeName(it->second.Name(), it->second.Owner() == nullptr ? L"Input" : L"Output", it->second.Uid());
+            else
+                return GetUniqueNodeName(input.Name(), input.Owner() == nullptr ? L"Input" : L"Output", input.Uid());
         }
 
         //
@@ -206,6 +211,11 @@ private:
         // Set of node name, basically the set of values in uidNodeNameMap.
         //
         static std::unordered_set<std::string> nodeNameSet;
+
+        // 
+        // map block outputs to its underlying variables
+        //
+        static std::unordered_map<Variable, Variable> compositeOutputsMap;
     };
 
     //
@@ -263,6 +273,18 @@ private:
         const std::unordered_map<Variable, Variable>& compositeOutputsMap,
         std::vector<ScanLoop> &scanLoops, int createLoopIndex);
 
+    static onnxruntime::Node* CreateUnpackSequenceNode(const FunctionPtr& src,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+        std::vector<ScanLoop> &scanLoops, int createLoopIndex);
+    static onnxruntime::Node* CreateSequenceWhereNode(const FunctionPtr& src,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+        std::vector<ScanLoop> &scanLoops, int createLoopIndex);
     static onnxruntime::Node* CreateSequenceSliceNode(const FunctionPtr& src,
         onnxruntime::Graph* graph,
         std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
@@ -871,8 +893,6 @@ std::unique_ptr<onnxruntime::Model> CNTKToONNX::CreateModel(const FunctionPtr& s
 
 void CNTKToONNXHelper::Copy(const FunctionPtr& src, onnxruntime::Graph* dst)
 {
-    UniqueNodeNameStorage::InitializeUidNodeNameMap();
-
     std::set<FunctionPtr> visited;
     std::unordered_map<Variable, Variable> compositeOutputsMap;
     std::unordered_map<FunctionPtr, onnxruntime::Node*> functionNodes;
@@ -888,6 +908,8 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, onnxruntime::Graph* dst)
     // Traverse the graph and collect some information.
     //
     TraverseGraph(src, visited, compositeOutputsMap);
+    
+    UniqueNodeNameStorage::InitializeUidNodeNameMap(compositeOutputsMap);
 
     // this is in case the last node is wrapped with batch and sequence pack/unpack plus transpose axis ops (via importing).
     // in this case, the (un)packing op sequence will not get skipped in ProcessInputs.
@@ -3081,9 +3103,14 @@ onnxruntime::NodeArg &CNTKToONNXHelper::CreateNodeArg(const Variable &variable, 
 
     std::string nodeArgName = replace_name;
     if (nodeArgName.empty())
-        nodeArgName = isInput ?
-        UniqueNodeNameStorage::GetUniqueInputNodeName(variable) :
-        UniqueNodeNameStorage::GetUniqueOutputNodeName(variable);
+        if (isInput)
+        {
+            nodeArgName = UniqueNodeNameStorage::GetUniqueInputNodeName(variable);
+        }
+        else
+        {
+            nodeArgName = UniqueNodeNameStorage::GetUniqueOutputNodeName(variable);
+        }
     onnxruntime::NodeArg &inputArg = graph->GetOrCreateNodeArg(nodeArgName, &typeProto);
     return inputArg;
 }
@@ -3570,7 +3597,13 @@ onnxruntime::Node* CNTKToONNXHelper::CreateTupleNode(const FunctionPtr& src,
 
     assert(inputs.size() == outputs.size());
     for (int i = 0; i < inputs.size(); i++)
+    {
         graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src) + std::to_string(i), "Identity", "", { inputs[i] }, { outputs[i] });
+
+        // recorded this Tuple FunctionPtr so that its associated Nodes will not be recreated.
+        if (i == 0)
+            functionNodes.emplace(src, nullptr);
+    }
 
     return nullptr;
 }
@@ -3741,6 +3774,68 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNodeWithGatherPacked(const FunctionPt
     compressNode->AddAttribute("axis", sequenceAxis);
     functionNodes.emplace(src, compressNode);
     return compressNode;
+}
+
+onnxruntime::Node* CNTKToONNXHelper::CreateUnpackSequenceNode(const FunctionPtr& src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+    std::vector<ScanLoop> &scanLoops, int createLoopIndex)
+{
+    if (src->Outputs().size() != 2)
+        LogicError("only mask_output cases of sequence unpack op are handled in CreateUnpackSequenceNode.");
+    std::vector<onnxruntime::NodeArg *> inputs, outputs;
+    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap,
+        inputs, scanLoops, createLoopIndex);
+
+    ProcessOutputs(src, outputs, graph); 
+    std::string identityNodeName = UniqueNodeNameStorage::GetUniqueNodeName(src);
+    Node *identityNode = graph->AddNode(identityNodeName, "Identity", "", inputs, { outputs[0] });
+    functionNodes.emplace(src, identityNode);
+
+    assert(FreeBatchSize == 1);
+    std::string unpackMaskNodeName = identityNodeName + "_mask";
+    // 1. slice from [#,*][d1, d2...] to [#,*][1, 1...]
+    // 2. squeeze to [#,*][1]
+    // 3. ConstantLike with value = 1
+    std::vector<int64_t> sliceAxes, sliceStarts, sliceEnds;
+    for (int i = 0; i < src->Inputs()[0].Shape().Rank(); i++)
+    {
+        sliceAxes.push_back(src->Inputs()[0].DynamicAxes().size() + i);
+        sliceStarts.push_back(0);
+        sliceEnds.push_back(1);
+    }
+
+    std::string sliceOutputArgName = identityNodeName + "_slice";
+    Node *sliceNode = AddSliceNode(*inputs[0], sliceAxes, sliceStarts, sliceEnds, sliceOutputArgName, graph);
+
+    Node *squeezeNode = AddSqueezeNode(const_cast<NodeArg &>(*sliceNode->OutputDefs().at(0)), sliceAxes,
+        identityNodeName + "_squeeze", graph);
+
+    Node *constantNode = graph->AddNode(identityNodeName + "_constant_like", "ConstantLike", "",
+        { const_cast<NodeArg *>(squeezeNode->OutputDefs().at(0)) }, {outputs[1]});
+    constantNode->AddAttribute("value", (float)1);
+    return identityNode;
+}
+
+onnxruntime::Node* CNTKToONNXHelper::CreateSequenceWhereNode(const FunctionPtr& src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+    std::vector<ScanLoop> &scanLoops, int createLoopIndex)
+{
+    std::vector<onnxruntime::NodeArg *> inputs, outputs;
+    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap,
+        inputs, scanLoops, createLoopIndex);
+
+    ProcessOutputs(src, outputs, graph);
+
+    Node* whereNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Where", "",
+        inputs, outputs);
+    functionNodes.emplace(src, whereNode);
+    return whereNode;
 }
 
 // To parse Sequence.Slice node graph to collect axis/begin index/end index
@@ -3918,14 +4013,14 @@ void ResolveGraphAndSaveModel(onnxruntime::Model *model)
     model->SetProducerName(CNTK_ONNX_PRODUCER_NAME);
 
     // Uncomment below code for debugging and trouble shooting.
-    //std::string savePath = "C:/Temp";
-    //onnxruntime::Model::Save(*model, savePath + "/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
+    std::string savePath = "E:/LiqunWA/CNTK/ONNX/TestOps";
+    onnxruntime::Model::Save(*model, savePath + "/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
 
-    //std::shared_ptr<onnxruntime::Model> model2;
-    //onnxruntime::common::Status loadStatus = onnxruntime::Model::Load(
-    //    savePath + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx", model2);
-    //Graph* graph2 = &model->MainGraph();
-    //graph2->Resolve();
+    std::shared_ptr<onnxruntime::Model> model2;
+    onnxruntime::common::Status loadStatus = onnxruntime::Model::Load(
+        savePath + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx", model2);
+    Graph* graph2 = &model->MainGraph();
+    graph2->Resolve();
 }
 
 // use this method to attach an identity op so that state inputs/outputs of the subgraph are in the same order as the scan op
@@ -3985,20 +4080,9 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 
                 if (src->OpName() == L"PastValue" || src->OpName() == L"FutureValue")
                 {
-                    Variable initialState = src->Inputs()[1];
-                    Variable stateInput = src->Inputs()[0];
-                    Variable stateOutput = src->Outputs()[0];
-                    currentLoop.scanLoopStates.push_back(ScanLoopState(initialState, nullptr, stateOutput,
-                        src->OpName() == L"PastValue" ? 1 : -1));
-
-                    // create initial state constant and final state nodeArg
-                    // define a state output so executors know this is the place 
-                    // to run body function in loops to get the next t + 1 state.
                     std::vector<onnxruntime::NodeArg *> inputs, outputs;
                     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap,
                         inputs, scanLoops, createLoopIndex);
-
-                    currentLoop.scanLoopStates.rbegin()->m_initialStateNodeArg = inputs[1];
 
                     // ProcessOutputs(src, outputs, graph);
                     AddIdentityOp(*inputs[0], graph, ToLegacyString(ToUTF8(src->Outputs()[0].Uid())));
@@ -4133,8 +4217,12 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 
                 GraphProto graphProto(scanGraph.ToGraphProto());
                 scanNode->AddAttribute("body", graphProto);
-                scanNode->AddAttribute("directions", directions);
+                scanNode->AddAttribute("scan_input_directions", directions);
+                // CNTK input/output direction match
+                scanNode->AddAttribute("scan_output_directions", directions);
                 scanNode->AddAttribute("num_scan_inputs", (int64_t)(scanLoops[loopIndex].m_scanInputs.size()));
+
+                scanNode->AddAttribute("handle_batch", (int64_t)(ScanWithoutBatchAxis ? 1 : 0));
 
                 return false;
             }
@@ -4154,6 +4242,12 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                                            const std::unordered_map<Variable, Variable>& compositeOutputsMap,
     std::vector<ScanLoop> &scanLoops, int createLoopIndex)
 {
+    std::cout << ToLegacyString(ToUTF8(src->Name())) << " : " << ToLegacyString(ToUTF8(src->Uid()))
+        << ": " << ToLegacyString(ToUTF8(src->OpName())) << std::endl;
+    if (src->Uid() == L"Block332712")
+        std::cout << "";
+
+
     auto iter = functionNodes.find(src);
     if (iter != functionNodes.end())
         return iter->second;
@@ -4175,7 +4269,17 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //        return CreateLSTMNode(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     //}
     //else
-    if (cntkOpName == "GatherPacked")
+    if (cntkOpName == "Where")
+    {
+
+        return CreateSequenceWhereNode(src,
+            graph,
+            functionNodes,
+            variableNodes,
+            compositeOutputsMap,
+            scanLoops, createLoopIndex);
+    }
+    else if (cntkOpName == "GatherPacked")
     {
         return CreateNodeWithGatherPacked(src,
             graph,
@@ -4339,31 +4443,18 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
             return CreateBatchNormalization(src, graph, functionNodes, variableNodes, compositeOutputsMap,
                 scanLoops, createLoopIndex);
     }
-    else if (cntkOpName == "UnpackBatchAxis")
+    else if (IsBatchAxisOp(src)) 
     {
-        if (IsBatchAxisOp(src))
-            return CreateNodeForBatchAxisOp(src, graph, functionNodes, variableNodes, compositeOutputsMap,
+        return CreateNodeForBatchAxisOp(src, graph, functionNodes, variableNodes, compositeOutputsMap,
                 scanLoops, createLoopIndex);
-        else
-        {
-            // this is a normal use of UnpackBatchAxis. ONNX does not treat batch axis specially so 
-            // we shall skip the op.
-            auto blockMapping = src->Inputs()[0].BlockFunctionVariableMapping();
-            if (blockMapping.IsInitialized())
-                return CreateNode(blockMapping.Owner(),
-                    graph,
-                    functionNodes,
-                    variableNodes,
-                    compositeOutputsMap,
-                    scanLoops, createLoopIndex);
-            else if (src->Inputs()[0].Owner())
-                return CreateNode(src->Inputs()[0].Owner(),
-                    graph,
-                    functionNodes,
-                    variableNodes,
-                    compositeOutputsMap,
-                    scanLoops, createLoopIndex);
-        }
+    }
+    else if (cntkOpName == "UnpackSequenceOp" && src->Outputs().size() == 2)
+    {
+        // UnpackSequenceOp is different than other sequence/batch pack/unpack ops.
+        // it may output 2 variables.
+        // here we only handle this special case of 2 outputs. One output case is still treated as Identity op.  
+        return CreateUnpackSequenceNode(src, graph, functionNodes, variableNodes, compositeOutputsMap,
+            scanLoops, createLoopIndex);
     }
 
     //
@@ -4752,6 +4843,19 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             UpdateONNXType(input.GetDataType(), inputArgType);
         }
 
+        if (isInitialStateOfSubGraph)
+        {
+            Variable initialState = src->Inputs()[1];
+            Variable stateInput = src->Inputs()[0];
+            Variable stateOutput = src->Outputs()[0];
+
+            // create initial state constant and final state nodeArg
+            // define a state output so executors know this is the place 
+            // to run body function in loops to get the next t + 1 state.
+            scanLoops[createLoopIndex].scanLoopStates.push_back(ScanLoopState(initialState, nullptr, stateOutput,
+                src->OpName() == L"PastValue" ? 1 : -1));
+        }
+
         //
         // Leaf nodes are data entry to the graph and need their own node with only output arg.
         //
@@ -4797,6 +4901,9 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         onnxruntime::NodeArg &inputArg = adjusted == nullptr ? graph->GetOrCreateNodeArg(inputName, &inputArgType) : *adjusted;
 
         inputs.push_back(&inputArg);
+
+        if (isInitialStateOfSubGraph)
+            scanLoops[createLoopIndex].scanLoopStates.rbegin()->m_initialStateNodeArg = inputs[1];
 
         if (cntkOpName == "Reshape")
         {
@@ -6959,3 +7066,4 @@ void CNTKToONNXHelper::ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
 std::unordered_map<std::string, size_t> CNTKToONNXHelper::UniqueNodeNameStorage::nodeNameCountMap;
 std::unordered_map<std::string, std::string> CNTKToONNXHelper::UniqueNodeNameStorage::uidNodeNameMap;
 std::unordered_set<std::string> CNTKToONNXHelper::UniqueNodeNameStorage::nodeNameSet;
+std::unordered_map<Variable, Variable> CNTKToONNXHelper::UniqueNodeNameStorage::compositeOutputsMap;
