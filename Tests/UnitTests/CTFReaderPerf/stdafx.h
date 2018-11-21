@@ -8,6 +8,12 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
 #define _SCL_SECURE_NO_WARNINGS // current API of matrix does not allow safe invokations. TODO: change api to proper one.
 
+#ifdef _WIN32
+#include "targetver.h"
+#endif 
+
 #include <array>
+
+#ifndef _WIN32
+#endif
 #include <fstream>
-#include "V2Dependencies.h"
