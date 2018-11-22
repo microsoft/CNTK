@@ -4273,8 +4273,6 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 
                     scanSubgraphOrderedInputs.push_back(&scanGraph.GetOrCreateNodeArg(subGraphInitialStateNodeArg.Name(), nullptr));
 
-                    // AttachNodeArg(&scanGraph, subGraphInitialStateNodeArg.Name(), true, true);
-
                     {
                         // as with initial state, output state does have batch axis but not sequence axis.
                         onnx::TypeProto scanFinalStateTypeProto = ToTypeProto(scanLoopState.m_stateOutput.Shape(),
@@ -4291,8 +4289,6 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 
                         output_args.push_back(&scanFinalStateNodeArg);
                         scanSubgraphOrderedOutputs.push_back(&scanGraph.GetOrCreateNodeArg(scanFinalStateNodeArg.Name(), nullptr));
-
-                        // AttachNodeArg(&scanGraph, stateOutputName, false, true);
                     }
 
                     if (scanLoopState.m_hasInitializer)
@@ -4312,7 +4308,6 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 
                     NodeArg& scanInputNodeArg = CreateNodeArg(scanInput, graph, true, subgraphNodeArgName);
 
-                    // AttachNodeArg(&scanGraph, subgraphNodeArgName, true, false);
                     NodeArg& transposedScanInputNodeArg = AddTransposeBatchSequenceAxesNode(scanInputNodeArg, true, graph, scanNodeName);
                     input_args.push_back(&transposedScanInputNodeArg);
 
@@ -4774,7 +4769,7 @@ NodeArg* CNTKToONNXHelper::GetInputAdjustmentForBroadcast(onnxruntime::Graph* gr
 // Constant [#][600]    Constant [1987, 600]
 //          |                   |
 //          |               ToBatch
-//          V                   V   [#][[600]
+//          V                   V   [#][600]
 //                 Add
 //                  |
 //                  V

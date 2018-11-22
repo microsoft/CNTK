@@ -150,11 +150,6 @@ skip_round_trip_model_names = [
     'test_convtranspose_with_kernel',
 ]
 
-# test_onnx_model for the following VGG models failed at onnx_model = onnx.load(model_file_path)
-# it is likely caused by using an old version of ONNX.  
-# TODO: update to the newest CNTK to pass these tests.
-#skip_cntk_model_names = ['VGG16_ImageNet_Caffe.model',
-#                         'VGG19_ImageNet_Caffe.model']
 skip_cntk_model_names = []
 
 @pytest.mark.parametrize('model_name, round_trip',
