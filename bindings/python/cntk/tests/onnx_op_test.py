@@ -164,7 +164,7 @@ def run_model(model, data, device=None):
     o = model.eval(feed, device=device)
     return o
 
-def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None):
+def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None, resave = True):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
 
@@ -183,7 +183,7 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
         else:
             dataOnnx = transpose_dynamic_axis(data)
 
-    loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
+    loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model, resave)
 
     o0 = run_model(model, data, device=device)
     o1 = run_model(loaded_model, dataOnnx, device=device)

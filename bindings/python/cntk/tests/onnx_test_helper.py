@@ -145,7 +145,7 @@ def save_cntk_data_as_onnx_tensor(file_path, variable, data, onnx_value_info_pro
 #       onnx_model    
 #   resave_test_model_for_test_case1
 #       
-def create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model):
+def create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model, resave = True):
     onnx_model = None
     test_model_path = os.path.join(str(tmpdir), R'test_' + name)
     os.mkdir(test_model_path)
@@ -166,8 +166,9 @@ def create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name
         # plot loaded model
         #C.logging.graph.plot(loaded_model, filename + ".pdf")
 
-        filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
-        loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
+        if resave:
+            filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
+            loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
         
     return loaded_model, onnx_model, test_model_path, test_data_path
 

@@ -7,7 +7,6 @@
 #include "core/graph/indexed_sub_graph.h"
 
 namespace onnxruntime {
-class GraphBase;
 class Graph;
 class Node;
 }  // namespace onnxruntime
@@ -20,7 +19,7 @@ class Function {
   virtual ~Function() {}
   virtual const ONNX_NAMESPACE::OpSchema& OpSchema() const = 0;
 
-  virtual const onnxruntime::GraphBase& Body() const = 0;
+  virtual const onnxruntime::Graph& Body() const = 0;
 
   virtual const IndexedSubGraph& GetIndexedSubGraph() const = 0;
 };

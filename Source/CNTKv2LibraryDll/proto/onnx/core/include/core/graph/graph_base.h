@@ -16,89 +16,18 @@
 #include "core/graph/basic_types.h"
 #include "core/graph/constants.h"
 #include "core/graph/graph_nodes.h"
+#include "core/graph/node_arg.h"
 #include "core/graph/onnx_protobuf.h"
 #include "gsl/gsl_util"
 #include "gsl/pointers"
 
 namespace onnxruntime {
 class Function;
-}  // namespace onnxruntime
-
-namespace onnxruntime {
-
+struct FunctionContainer;
 class Graph;
-class GraphBase;
+struct IndexedSubGraph;
 class Node;
 class OpSignature;
-
-// Node argument definition, for both input and output,
-// including arg name, arg type (contains both type and shape).
-//
-// Design Question: in my (Ke's) opinion, shape should not be part of type.
-// We may align the protobuf design with our operator registry interface,
-// which has type specified for each operator, but no shape. Well, shape
-// should be inferred with a separate shape inference function given
-// input shapes, or input tensor data sometimes.
-// With shape as part of type (current protobuf design),
-// 1) we'll have to split the "TypeProto" into type and shape in this internal
-// representation interface so that it could be easily used when doing type
-// inference and matching with operator registry.
-// 2) SetType should be always called before SetShape, otherwise, SetShape()
-// will fail. Because shape is located in a TypeProto.
-// Thoughts?
-//
-class NodeArg {
- public:
-  // Constructor by specifying node arg name and type&shape which is
-  // optional. This is called when loading a <Graph> from <GraphProto>
-  // normally.
-  NodeArg(const std::string& name,
-          const ONNX_NAMESPACE::TypeProto* p_arg_type);
-
-  NodeArg(NodeArg&& other) = default;
-
-  // Get node arg name.
-  const std::string& Name() const noexcept;
-
-  // Get node arg type.
-  ONNX_NAMESPACE::DataType Type() const noexcept;
-  const ONNX_NAMESPACE::TypeProto* TypeAsProto() const noexcept;
-
-  // Get node arg shape.
-  // Return null pointer if there's no shape specified.
-  const ONNX_NAMESPACE::TensorShapeProto* Shape() const;
-
-  // Set node arg shape.
-  // Shape could only be set after setting type since shape information
-  // now is part of TypeProto.
-  void SetShape(const ONNX_NAMESPACE::TensorShapeProto& shape);
-
-  // Get node arg info proto.
-  const NodeArgInfo& ToProto() const noexcept { return node_arg_info_; }
-
-  // Indicates whether <*this> node arg exists or not.
-  // Optional inputs are allowed in ONNX. Empty arg name represents
-  // a non-existing input argument.
-  bool Exists() const noexcept;
-
- private:
-  ONNXRUNTIME_DISALLOW_COPY_AND_ASSIGNMENT(NodeArg);
-  friend class Graph;
-
-  void SetType(ONNX_NAMESPACE::DataType p_type);
-  void SetType(const ONNX_NAMESPACE::TypeProto& type_proto);
-
-  NodeArg& operator=(NodeArg&& other) = delete;
-
-  // Node arg PType.
-  ONNX_NAMESPACE::DataType type_;
-
-  // Node arg name, type and shape.
-  NodeArgInfo node_arg_info_;
-
-  // Flag indicates whether <*this> node arg exists or not.
-  bool exists_;
-};
 
 // A node representation class.
 class Node {
@@ -122,14 +51,15 @@ class Node {
    public:
     // Constructor.
     // An EdgeEnd contains a Node and NodeArg.
-    // TODO: Can these values ever be null?
     EdgeEnd(const Node& node, const NodeArg& node_arg) noexcept;
+    // A control edge, which does not have NodeArg.
+    EdgeEnd(const Node& node) noexcept;
 
     // Get the <Node*> that this edge end refers to.
     const Node& GetNode() const noexcept;
 
     // Get the <NodeArg*> that this edge end refers to.
-    const NodeArg& GetNodeArg() const noexcept;
+    const NodeArg* GetNodeArg() const noexcept;
 
    private:
     const Node* node_;
@@ -179,6 +109,11 @@ class Node {
 
   const std::vector<int>& InputArgCount() const noexcept { return definitions_.input_arg_count; }
 
+  // If this Node contains a subgraph, the NodeArg's that are implicitly consumed by Nodes within that subgraph.
+  const std::vector<const NodeArg*>& ImplicitInputDefs() const noexcept {
+    return definitions_.implicit_input_defs;
+  }
+
   // read only access. requires special wrapper to apply const to the NodeArg
   const ConstPointerContainer<std::vector<NodeArg*>> OutputDefs() const noexcept {
     return ConstPointerContainer<std::vector<NodeArg*>>(definitions_.output_defs);
@@ -188,26 +123,49 @@ class Node {
     return MutableDefinitions().input_defs;
   }
 
-  struct IndexCompare {
-    bool operator()(const Node* lhs, const Node* rhs) {
-      return lhs->Index() < rhs->Index();
+  struct EdgeEndCompare {
+    bool operator()(const EdgeEnd& lhs, const EdgeEnd& rhs) const {
+      if (lhs.GetNode().Index() == rhs.GetNode().Index()) {
+        auto lhs_arg = lhs.GetNodeArg();
+        auto rhs_arg = rhs.GetNodeArg();
+        std::string lhs_arg_name = lhs_arg == nullptr ? "" : lhs_arg->Name();
+        std::string rhs_arg_name = rhs_arg == nullptr ? "" : rhs_arg->Name();
+        return lhs_arg_name.compare(rhs_arg_name) < 0;
+      }
+      return lhs.GetNode().Index() < rhs.GetNode().Index();
     }
   };
-  typedef std::set<const Node*, IndexCompare> NodeSet;
-  using NodeConstIterator = NodeSet::const_iterator;
-  using EdgeConstIterator = std::set<EdgeEnd*>::const_iterator;
+
+  using EdgeSet = std::set<EdgeEnd, EdgeEndCompare>;
+  using EdgeConstIterator = EdgeSet::const_iterator;
+  class NodeConstIterator {
+   public:
+    NodeConstIterator(EdgeConstIterator p_iter);
+
+    bool operator==(const NodeConstIterator& p_other) const;
+
+    bool operator!=(const NodeConstIterator& p_other) const;
+
+    void operator++();
+    void operator--();
+
+    const Node* operator*();
+
+   private:
+    EdgeConstIterator m_iter;
+  };
 
   // Functions defined to traverse a Graph as below.
   // Read all input nodes of <*this>.
   // Beginning of input nodes. Iterator should have no nullptr values.
-  NodeConstIterator InputNodesBegin() const noexcept { return relationships_.input_nodes.cbegin(); };
+  NodeConstIterator InputNodesBegin() const noexcept { return NodeConstIterator(relationships_.input_edges.cbegin()); };
   // End of input nodes.
-  NodeConstIterator InputNodesEnd() const noexcept { return relationships_.input_nodes.cend(); }
+  NodeConstIterator InputNodesEnd() const noexcept { return NodeConstIterator(relationships_.input_edges.cend()); }
 
   // Beginning of output nodes. Iterator should have no nullptr values.
-  NodeConstIterator OutputNodesBegin() const noexcept { return relationships_.output_nodes.cbegin(); }
+  NodeConstIterator OutputNodesBegin() const noexcept { return NodeConstIterator(relationships_.output_edges.cbegin()); }
   // End of output nodes.
-  NodeConstIterator OutputNodesEnd() const noexcept { return relationships_.output_nodes.cend(); }
+  NodeConstIterator OutputNodesEnd() const noexcept { return NodeConstIterator(relationships_.output_edges.cend()); }
 
   // Beginning of input edge. Iterator should have no nullptr values.
   EdgeConstIterator InputEdgesBegin() const noexcept { return relationships_.input_edges.cbegin(); }
@@ -274,6 +232,7 @@ class Node {
 
     // Node inputs' definition.
     std::vector<NodeArg*> input_defs;
+
     // The number of inputs for each argument of the operator or function which
     // this node refers.
     // For example, <input_defs_> has 10 elements (inputs), and
@@ -285,9 +244,16 @@ class Node {
     // Node outputs' definition.
     std::vector<NodeArg*> output_defs;
 
+    // For a Node that contains a subgraph, NodeArg instances that are consumed by Nodes in a subgraph.
+    // e.g. the subgraph in an 'If' node gets all its input values via this mechanism
+    //      rather than explicit inputs.
+    // They are pseudo-inputs to this Node as it has an implicit dependency on them.
+    std::vector<const NodeArg*> implicit_input_defs;
+
    private:
     ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(Definitions);
   };
+
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 26439)
@@ -299,23 +265,16 @@ class Node {
     void Clear() noexcept {
       input_edges.clear();
       output_edges.clear();
-      input_nodes.clear();
-      output_nodes.clear();
       control_inputs.clear();
     }
 
     // Node input edges.
-    std::set<EdgeEnd*> input_edges;
+    EdgeSet input_edges;
     // Node output edges.
-    std::set<EdgeEnd*> output_edges;
+    EdgeSet output_edges;
 
-    // Node input nodes, besides input nodes mentioned in <inputs_> above,
-    // it also contains all control input nodes;
-    NodeSet input_nodes;
     // Control input nodes' names.
     std::set<std::string> control_inputs;
-    // Node's output nodes.
-    NodeSet output_nodes;
 
    private:
     ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(Relationships);
@@ -331,10 +290,9 @@ class Node {
   // Node::ValdiateVersion
   // All other calls should be made through the public Node interface.
   // Friend classes should NOT be directly accessing any member variables.
-  friend class GraphBase;
   friend class Graph;
 
-  Node(NodeIndex index, GraphBase& graph) : index_(index), graph_(&graph) {}
+  Node(NodeIndex index, Graph& graph) : index_(index), graph_(&graph) {}
 
   void Init(const std::string& name,
             const std::string& op_type,
@@ -354,6 +312,7 @@ class Node {
 
   const Definitions& GetDefinitions() const noexcept { return definitions_; }
   const Relationships& GetRelationships() const noexcept { return relationships_; }
+
   void SetNodeType(Node::Type node_type) noexcept;
   void SetFunctionBody(const Function& func);
 
@@ -393,19 +352,14 @@ class Node {
   // This allows attribute adding and removing.
   NodeAttributes attributes_;
 
-  GraphBase* graph_;
+  Graph* graph_;
 };
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
 
-// TODO: Graph base class.
-// It should cover the common things between function and graph.
-// Move these common things from Graph to GraphBase.
-// 1. Graph does not have attributes, while function has.
-// 2. Graph does have initializers, while function does not.
-// 3. Graph does have value_info, while function does not.
-class GraphBase {
+class Graph {
  public:
   // Resolve <*this> graph to ensure it's in a good shape with full
   // functionality.
@@ -417,14 +371,21 @@ class GraphBase {
   // 2. Check & Setup inner nodes' dependency.
   // 3. Cleanup function definition lists.
   // Returns resolving status.
-  virtual common::Status Resolve() = 0;
+  common::Status Resolve();
 
   // Getter and Setter for graph name.
-  virtual const std::string& Name() const noexcept = 0;
-  virtual void SetName(const std::string& name) = 0;
+  const std::string& Name() const noexcept;
+  void SetName(const std::string& name);
 
-  virtual const std::string& Description() const noexcept = 0;
-  virtual void SetDescription(const std::string& description) = 0;
+  const std::string& Description() const noexcept;
+  void SetDescription(const std::string& description);
+
+  // Add/Remove/Get initial tensors for some graph inputs.
+  void AddInitializedTensor(const ONNX_NAMESPACE::TensorProto& tensor_proto);
+  void RemoveInitializedTensor(const std::string& tensor_name);
+  bool GetInitializedTensor(const std::string& tensor_name, const ONNX_NAMESPACE::TensorProto*& value) const;
+  const InitializedTensorSet& GetAllInitializedTensors() const noexcept;
+  void CleanAllInitializedTensors() noexcept;
 
   // Graph inputs excluding initializers. Contains no nullptr values.
   const std::vector<const NodeArg*>& GetInputs() const noexcept { return graph_inputs_excluding_initializers_; }
@@ -437,6 +398,17 @@ class GraphBase {
 
   // Graph outputs. Should have no nullptr values.
   const std::vector<const NodeArg*>& GetOutputs() const noexcept { return graph_outputs_; }
+
+  bool IsNodeOutputsInGraphOutputs(const Node& node) {
+    for (auto output_def : node.OutputDefs()) {
+      if (std::find(GetOutputs().cbegin(), GetOutputs().cend(), output_def) != GetOutputs().cend()) {
+        return true;
+      }
+    }
+    return false;
+  }
+  // Get graph value infos.
+  const std::vector<const NodeArg*>& GetValueInfo() const noexcept;
 
   // Get const Node given specific node index. May return nullptr if node as been freed.
   const Node* GetNode(NodeIndex node_index) const { return NodeAtIndexImpl(node_index); }
@@ -506,15 +478,17 @@ class GraphBase {
   // Remove node and free it.
   bool RemoveNode(NodeIndex node_index);
 
+  // Add|Remove an edge.
+  void AddEdge(NodeIndex src_node_index, NodeIndex dst_node_index, const NodeArg& node_arg);
+  void RemoveEdge(NodeIndex src_node_index, NodeIndex dst_node_index, const NodeArg& node_arg);
+
   // Add control edge into <*this> graph.
   // The <dst_node_index> node does not consume any data output by
   // <src_node_index>, but it's designed to be executed behind.
   bool AddControlEdge(NodeIndex src_node_index, NodeIndex dst_node_index);
 
-  common::Status GetNodesInTopologicalOrder(/*out*/ const std::vector<NodeIndex>*& pp_nodes) const;
-
   // Mark Graph as needing Resolve() to be called
-  GraphBase& SetGraphResolveNeeded() noexcept {
+  Graph& SetGraphResolveNeeded() noexcept {
     graph_resolve_needed_ = true;
     return *this;
   }
@@ -523,7 +497,7 @@ class GraphBase {
     return graph_resolve_needed_;
   }
 
-  GraphBase& SetGraphProtoSyncNeeded() noexcept {
+  Graph& SetGraphProtoSyncNeeded() noexcept {
     graph_proto_sync_needed_ = true;
     return *this;
   }
@@ -551,71 +525,124 @@ class GraphBase {
     return domain_to_version_;
   }
 
-  virtual ~GraphBase() = default;
+  // Serialize the <Graph> into <GraphProto>.
+  const ONNX_NAMESPACE::GraphProto& ToGraphProto();
 
- protected:
-  GraphBase() = default;
-  GraphBase(bool graph_resolve_needed,
-            bool graph_proto_sync_needed,
-            const std::unordered_map<std::string, int>& domain_to_version,
-            Version ir_version)
-      : graph_resolve_needed_(graph_resolve_needed),
-        graph_proto_sync_needed_(graph_proto_sync_needed),
-        domain_to_version_(domain_to_version),
-        ir_version_(ir_version) {}
+  IOnnxRuntimeOpSchemaCollectionPtr GetSchemaRegistry() const;
+
+  Node* FuseSubGraph(std::unique_ptr<::onnxruntime::IndexedSubGraph> sub_graph, const std::string& fused_node_name);
+
+  // Get the Graph instance for a node that contains a GraphProto attribute in attribute_name.
+  // Non-const as the Graph instance returned for the subgraph is mutable and owned by this Graph instance.
+  Graph* GetMutableSubgraph(const NodeIndex index, const std::string& attribute_name);
+
+  // Const version for the above
+  const Graph* GetSubgraph(const NodeIndex index, const std::string& attribute_name) const;
+
+  // when creating a subgraph, record that a NodeArg will come from the outer scope.
+  // This prevents it from being added to the graph inputs.
+  void AddOuterScopeNodeArg(const std::string& name) {
+    ONNXRUNTIME_IGNORE_RETURN_VALUE(outer_scope_node_arg_names_.insert(name));
+  }
+
+  // when constructing a Graph, explicitly set the input order to be used.
+  // If the Graph is loaded from a GraphProto this has no effect.
+  void SetInputOrder(const std::vector<const NodeArg*> inputs) {
+    graph_input_order_ = inputs;
+  }
+
+  // when constructing a Graph, explicitly set the input order to be used.
+  // If the Graph is loaded from a GraphProto this has no effect.
+  void SetOutputOrder(const std::vector<const NodeArg*> outputs) {
+    graph_output_order_ = outputs;
+  }
+
+  virtual ~Graph();
+
+ private:
+  ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(Graph);
+
+  // This friendship relationship should only be used to call Graph::Graph and
+  // Graph::LoadGraph All other access should be via the public API.
+  friend class Model;
+
+  Graph() = delete;
+
+  // Constructor: Given a <GraphProto> loaded from model file, construct
+  // a <Graph> object.
+  Graph(ONNX_NAMESPACE::GraphProto* graph_proto,
+        const std::unordered_map<std::string, int>& domain_to_version,
+        Version ir_version,
+        IOnnxRuntimeOpSchemaCollectionPtr schema_registry);
+
+  // Construct a Graph instance for a subgraph. Inherits some properties from the parent graph.
+  Graph(Graph& parent_graph, ONNX_NAMESPACE::GraphProto& subgraph_proto);
+
+  // internal use only
+  Graph(ONNX_NAMESPACE::GraphProto* graph_proto,
+        const std::unordered_map<std::string, int>& domain_to_version,
+        Version ir_version,
+        IOnnxRuntimeOpSchemaCollectionPtr schema_registry,
+        Graph* parent_graph);
 
   // Add node with specified <node_proto>.
   Node* AddNode(const ONNX_NAMESPACE::NodeProto& node_proto,
                 const ArgNameToTypeMap& name_to_type);
 
-  // The topological order of node index as last set by Resolve()
-  const std::vector<NodeIndex>& NodesInTopologicalOrder() const noexcept {
-    return nodes_in_topological_order_;
-  }
-
-  std::vector<NodeIndex>& MutableNodesInTopologicalOrder() noexcept {
-    return nodes_in_topological_order_;
-  }
-
-  // Mutable list of all graph inputs. Matches number and order of inputs in the GraphProto.
-  std::vector<const NodeArg*>& MutableInputsIncludingInitializers() noexcept {
-    return graph_inputs_including_initializers_;
-  }
-
-  // Mutable graph inputs excluding initializers.
-  std::vector<const NodeArg*>& MutableInputs() noexcept {
-    return graph_inputs_excluding_initializers_;
-  }
-
-  // Mutable graph outputs.
-  std::vector<const NodeArg*>& MutableOutputs() noexcept {
-    return graph_outputs_;
-  }
-
   Version IrVersion() const noexcept {
     return ir_version_;
   }
 
-  GraphBase& GraphResolveNeeded(bool needed) noexcept {
+  Graph& GraphResolveNeeded(bool needed) noexcept {
     graph_resolve_needed_ = needed;
     return *this;
   }
 
-  GraphBase& GraphProtoSyncNeeded(bool needed) noexcept {
+  Graph& GraphProtoSyncNeeded(bool needed) noexcept {
     graph_proto_sync_needed_ = needed;
     return *this;
   }
 
+  // During the Resolve of a Graph it is necessary to recursively descend into subgraphs if present.
+  // The ResolveContext holds the collection of values for the current Graph instance, be it the main graph
+  // or a subgraph, so that the various operations that are part of the Resolve can work iteratively or
+  // recursively as needed.
+  struct ResolveContext {
+    ResolveContext() = default;
+
+    std::unordered_map<std::string, Node*> output_args;
+    std::unordered_set<std::string> inputs_and_initializers;
+    std::unordered_set<std::string> outer_scope_node_args;
+    std::unordered_map<std::string, NodeIndex> node_name_to_index;
+    std::unordered_map<NodeIndex, std::vector<Graph*>> node_to_subgraphs_map;
+
+    void Clear() {
+      output_args.clear();
+      inputs_and_initializers.clear();
+      outer_scope_node_args.clear();
+      node_name_to_index.clear();
+      node_to_subgraphs_map.clear();
+    }
+
+   private:
+    ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(ResolveContext);
+  };
+
+  // search this and up through any parent_graph_ instance for a NodeArg
+  const NodeArg* GetNodeArgIncludingParentGraphs(const std::string& node_arg_name) const;
+
+  // Initialize all the graph inputs, initializers and outputs
+  common::Status InitInputsInitializersOutputs();
+
+  // recursively accumulate and set the outer scope node args in the resolve context for all subgraphs
+  // so they can be used to resolve outer scope dependencies when running BuildConnections for the subgraphs.
+  common::Status SetOuterScopeNodeArgs(const std::unordered_set<std::string>& outer_scope_node_args);
+
   // Build and verify node connection (edges).
   // Verify NodeArg name/type/shape matching correctly.
-  common::Status BuildConnections(
-      const std::unordered_map<std::string, Node*>& output_args,
-      const std::unordered_map<std::string, NodeIndex>& node_name_to_index);
+  common::Status BuildConnections(std::vector<std::string>& outer_scope_node_args_consumed);
 
-  common::Status VerifyNoDuplicateName(
-      /*in*/ const std::unordered_set<std::string>& inputs_and_initializers,
-      /*out*/ std::unordered_map<std::string, Node*>& output_args,
-      /*out*/ std::unordered_map<std::string, NodeIndex>& node_name_to_index);
+  common::Status VerifyNoDuplicateName();
 
   // Check whether <*this> graph is acyclic while performing a topological sort.
   // Depth-first going from bottom up through the graph and checking whether there are any back edges.
@@ -623,16 +650,47 @@ class GraphBase {
   // order if <Status> returned is "OK", otherwise it's undefined.
   common::Status PerformTopologicalSortAndCheckIsAcyclic();
 
-  // Apply shape/type inference to a single node. This is a wrapper for
-  // invoking ONNX-defined shape+type inference for a single node.
-  // Returns the inferred shape+type for every output of the node in
-  // output parameter inferredShapes.
-  common::Status InferOutputTypesAndShapes(onnxruntime::Node& node,
-                                           /*out*/ std::vector<ONNX_NAMESPACE::TypeProto>& inferred_shapes);
+  common::Status PerformTypeAndShapeInferencing();
 
- private:
-  // need custom versions to handle the unique_ptr's in nodes_
-  ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(GraphBase);
+  enum class Type {
+    // A main graph.
+    Main = 1,
+    // A sub graph (function).
+    Sub = 2,
+  };
+
+  common::Status Resolve(bool no_proto_sync_required);
+
+  common::Status CreateSubgraphs();
+
+  // Iterate this Graph instance and all subgraphs, calling the provided function for each.
+  common::Status ForThisAndAllSubgraphs(std::function<Status(Graph&)> func);
+
+  common::Status InferAndVerifyTypeMatch(Node& node, const ONNX_NAMESPACE::OpSchema& op);
+
+  // perform type and shape inferencing on the subgraph and Resolve to validate
+  static common::Status InferAndVerifySubgraphTypes(const Node& node, Graph& subgraph,
+                                                    const std::vector<const ONNX_NAMESPACE::TypeProto*>& input_types,
+                                                    std::vector<const ONNX_NAMESPACE::TypeProto*>& output_types);
+
+  // Apply type-inference and type-checking to all inputs and initializers:
+  common::Status TypeCheckInputsAndInitializers();
+
+  // Compute set of input and initializer names and checking for duplicate names
+  common::Status VerifyInputAndInitializerNames();
+
+  // Infer and set type information across <*this> graph if needed, and verify type/attribute
+  // information matches between node and op.
+  common::Status VerifyNodeAndOpMatch();
+
+  // Set graph inputs/outputs when resolving a graph..
+  common::Status SetGraphInputsOutputs();
+
+  // Sync graph inputs/outputs when serializing to proto.
+  void SyncGraphInputsOutputs();
+
+  // Clear all unused initializers
+  void CleanUnusedInitializers();
 
   gsl::not_null<Node*> AllocateNode();
 
@@ -652,6 +710,24 @@ class GraphBase {
   std::vector<NodeArg*> CreateNodeArgs(const google::protobuf::RepeatedPtrField<std::string>& names,
                                        const ArgNameToTypeMap& name_to_type_map);
 
+  bool IsSubgraph() const { return parent_graph_ != nullptr; }
+
+  // GraphProto to store name, version, initializer.
+  // When serializing <*this> Graph to a GraphProto, the nodes and
+  // functions in <Graph> will also be fed into <graph_proto_> so that
+  // it's consistent with <*this> graph.
+  // This pointer is owned by parent model.
+  ONNX_NAMESPACE::GraphProto* graph_proto_;
+
+  InitializedTensorSet name_to_initial_tensor_;
+  std::vector<int> removed_initializer_indexes_;
+
+  Type graph_type_ = Type::Main;
+
+  IOnnxRuntimeOpSchemaCollectionPtr schema_registry_;
+
+  std::unique_ptr<FunctionContainer> function_container_;
+
   // Graph nodes.
   // Element in <nodes_> may be nullptr due to graph optimization.
   std::vector<std::unique_ptr<Node>> nodes_;
@@ -670,7 +746,7 @@ class GraphBase {
 
   bool graph_proto_sync_needed_ = false;
 
-  // The topological order of node index.
+  // The topological order of node index used to do node and op match verification temporarily.
   std::vector<NodeIndex> nodes_in_topological_order_;
 
   // Full list of graph inputs. Matches number and order of inputs in the GraphProto.
@@ -682,11 +758,11 @@ class GraphBase {
   // Graph outputs.
   std::vector<const NodeArg*> graph_outputs_;
 
+  // Graph value_info.
+  std::vector<const NodeArg*> value_info_;
+
   // All node args owned by <*this> graph. Key is node arg name.
   std::unordered_map<std::string, std::unique_ptr<NodeArg>> node_args_;
-
-  // Node::EdgeEnd instances that we own
-  std::vector<std::unique_ptr<Node::EdgeEnd>> owned_edges_;
 
   const std::unordered_map<std::string, int> domain_to_version_;
 
@@ -694,6 +770,29 @@ class GraphBase {
   Version ir_version_{};
 
   int name_generator_ = 0;
+
+  ResolveContext resolve_context_;
+
+  // the parent graph if this is a subgraph.
+  Graph* parent_graph_;
+
+  // entry for node containing subgraph, with value containing attribute_name:Graph pair
+  // as a node may contain multiple subgraphs (e.g. 'If' has one for both the 'then' and 'else' branches).
+  using AttributeGraphMap = std::unordered_map<std::string, Graph*>;
+  using SubgraphMap = std::unordered_map<onnxruntime::NodeIndex, AttributeGraphMap>;
+
+  SubgraphMap subgraph_map_;
+  std::vector<std::unique_ptr<Graph>> subgraphs_;
+
+  // NodeArgs that come from outer scope. Used when building a graph so that
+  // these don't get recorded as graph inputs in the GraphProto.
+  std::unordered_set<std::string> outer_scope_node_arg_names_;
+
+  // Explicit graph input order to be used when constructing a Graph manually.
+  std::vector<const NodeArg*> graph_input_order_;
+
+  // Explicit graph output order to be used when constructing a Graph manually.
+  std::vector<const NodeArg*> graph_output_order_;
 };
 
 }  // namespace onnxruntime

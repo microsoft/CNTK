@@ -504,7 +504,7 @@ FunctionPtr UnwrapRNNOps(FunctionPtr rnnFunction, int numDirections)
     int hidden = newShape[0] / numDirections;
     newShape = newShape.AppendShape({ NDShape::FreeDimension });
     newShape[2] = numDirections;
-    newShape[1] = FreeBatchSize;
+    newShape[1] = BatchSizeProcessor::FreeBatchSize();
     newShape[0] = hidden;
     // because FreeBatchSize = 1, we can skip transpose between # and dirs.
     FunctionPtr cntkFunctionWithoutDynamicAxisFixedBatch = Reshape(cntkFunctionWithoutDynamicAxis, newShape, L"");

@@ -280,6 +280,7 @@
     <ClCompile Include="proto\onnx\core\graph\function.cc" />
     <ClCompile Include="proto\onnx\core\graph\graph.cc" />
     <ClCompile Include="proto\onnx\core\graph\graph_transformer_mgr.cc" />
+    <ClCompile Include="proto\onnx\core\graph\graph_viewer.cc" />
     <ClCompile Include="proto\onnx\core\graph\model.cc" />
     <ClCompile Include="proto\onnx\core\graph\op.cc" />
     <ClCompile Include="proto\onnx\core\graph\schema_registry.cc" />
