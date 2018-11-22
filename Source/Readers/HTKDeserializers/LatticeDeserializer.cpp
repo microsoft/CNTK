@@ -203,6 +203,7 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
 
     bool enableCaching = corpus->IsHashingEnabled() && config.GetCacheIndex();
     size_t totalNumSequences = 0;
+    size_t totalNumLatticeFiles = 0;
     vector<string> tocLines;
     string tocPath;
     while (getline(latticeIndexStream, tocPath))
@@ -229,7 +230,12 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                     totalNumSequences += RecordChunk(prevLatticePath, tocLines, corpus, enableCaching, false);
                     tocLines.clear();
                 }
-
+                if (prevLatticePath != latticePath)
+                {
+                    fprintf(stderr, "[%zu]th lattice file: %s", totalNumLatticeFiles, latticePath.c_str());
+                    totalNumLatticeFiles++;
+				}
+                    
                 prevLatticePath = latticePath;
             }
                 
