@@ -633,8 +633,8 @@ struct latticefunctionskernels
     // TODO: change this later on
     static inline __device__ bool issilencestate(size_t stateid, size_t numsenones)
     {
-		// chaojun: sil[2-4]=4929-4931 and _noise_[2-4]=6-8
-       // if (numsenones == 9304 && (stateid == 7670 || stateid == 7671 || stateid == 7672))
+        // chaojun: sil[2-4]=4929-4931 and _noise_[2-4]=6-8
+        // if (numsenones == 9304 && (stateid == 7670 || stateid == 7671 || stateid == 7672))
         if (numsenones == 9404 && (stateid == 4929 || stateid == 4930 || stateid == 4931 || stateid == 6 || stateid == 7 || stateid == 8))
             return true;
         else
@@ -671,8 +671,7 @@ struct latticefunctionskernels
         const bool boostmmi = (boostingfactor != 0.0f);
         // compute the frames-correct count for this edge
         double logframescorrectedgej = LOGZERO;
-
-		// chaojun:
+        // chaojun:
         // const size_t numsenones = 9304; // WARNING: this is a hack, please fix this once smbr or bmmi is working! [v-hansu]
         const size_t numsenones = 9404;
 
