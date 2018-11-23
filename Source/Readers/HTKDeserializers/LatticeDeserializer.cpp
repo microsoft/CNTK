@@ -232,10 +232,9 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                 }
                 if (prevLatticePath != latticePath)
                 {
-                    fprintf(stderr, "[%zu]th lattice file: %s", totalNumLatticeFiles, latticePath.c_str());
                     totalNumLatticeFiles++;
                 }
-                    
+                fprintf(stderr, "[%zu]th lattice file: %s\n", totalNumLatticeFiles, latticePath.c_str());    
                 prevLatticePath = latticePath;
             }
                 
