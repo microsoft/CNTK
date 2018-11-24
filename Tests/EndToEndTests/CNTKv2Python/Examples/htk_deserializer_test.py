@@ -1,10 +1,11 @@
 import cntk as C
-from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, StreamDef, StreamDefs
+from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, HTKMLFBinaryDeserializer, StreamDef, StreamDefs
 from cntk.layers import Recurrence, Dense, LSTM, Sequential, For
 
 import os
 abs_path = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Speech", "AN4", "Data")
+e2e_data_path="../../../../Tests/EndToEndTests/Speech/Data/"
 
 def test_htk_deserializers():
     mbsize = 640
@@ -54,7 +55,6 @@ def test_htk_deserializers():
     assert True
     os.chdir(abs_path)
 
-
 def test_multiple_mlf_files():
     os.chdir(data_path)
 
@@ -62,7 +62,7 @@ def test_multiple_mlf_files():
     num_classes = 132
     context = 2
 
-    test_mlf_path = "../../../../Tests/EndToEndTests/Speech/Data/glob_00001.mlf"
+    test_mlf_path = e2e_data_path+"glob_00001.mlf"
 
     features_file = "glob_0000.scp"
     label_files = [ "glob_0000.mlf", test_mlf_path]
@@ -80,6 +80,46 @@ def test_multiple_mlf_files():
 
     os.chdir(abs_path)
 
+def test_mlf_binary_files():
+    os.chdir(data_path)
+
+    feature_dim = 33
+    num_classes = 132
+    context = 2
+
+    features_file = "glob_0000.scp"
+
+    fd = HTKFeatureDeserializer(StreamDefs(
+        amazing_features = StreamDef(shape=feature_dim, context=(context,context), scp=features_file)))
+
+    ld = HTKMLFBinaryDeserializer(StreamDefs(awesome_labels = StreamDef(shape=num_classes, mlf=e2e_data_path + "mlf2.bin")))
+
+    # Make sure we can read at least one minibatch.
+    mbsource = MinibatchSource([fd,ld])
+    mbsource.next_minibatch(1)
+
+    os.chdir(abs_path)
+
+def test_multiple_mlf_binary_files():
+    os.chdir(data_path)
+
+    feature_dim = 33
+    num_classes = 132
+    context = 2
+
+    features_file = "glob_0000.scp"
+    label_files = [ e2e_data_path+"mlf2.bin", e2e_data_path+"mlf2.bin"]
+
+    fd = HTKFeatureDeserializer(StreamDefs(
+        amazing_features = StreamDef(shape=feature_dim, context=(context,context), scp=features_file)))
+
+    ld = HTKMLFBinaryDeserializer(StreamDefs(awesome_labels = StreamDef(shape=num_classes, mlf=label_files)))
+
+    # Make sure we can read at least one minibatch.
+    mbsource = MinibatchSource([fd,ld])
+    mbsource.next_minibatch(1)
+
+    os.chdir(abs_path)
 
 def test_multiple_streams_in_htk():
     feature_dim = 33

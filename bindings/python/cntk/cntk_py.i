@@ -57,6 +57,7 @@
 %rename(cbf_deserializer) CNTK::CBFDeserializer;
 %rename(htk_feature_deserializer) CNTK::HTKFeatureDeserializer;
 %rename(htk_mlf_deserializer) CNTK::HTKMLFDeserializer;
+%rename(htk_mlf_binary_deserializer) CNTK::HTKMLFBinaryDeserializer;
 %rename(lattice_deserializer) CNTK::LatticeDeserializer;
 %rename(_stream_infos) CNTK::SwigMinibatchSource::StreamInfos(PyObject*);
 %rename(_next_minibatch) CNTK::SwigMinibatchSource::_GetNextMinibatch;
