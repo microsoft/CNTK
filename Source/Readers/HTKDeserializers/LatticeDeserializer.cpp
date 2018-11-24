@@ -235,7 +235,7 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                     totalNumLatticeFiles++;
 
                     fprintf(stderr, "\n[%zu]th lattice file: %s\n", totalNumLatticeFiles, latticePath.c_str());
-                    fprintf(stderr, "Finished Epoch[%2d of %d]: [Training] \n", 0, (int) 0); // fake progress for philly
+                    fprintf(stderr, "Epoch[0 of 0]-Minibatch[ 0- 500, 0.0%%]: ce = 0.1 * 4096000; err = 0.1 * 4096000;\n"); // fake progress for philly
                 }
                 fprintf(stderr, ".");    
                 prevLatticePath = latticePath;
