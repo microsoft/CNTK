@@ -56,11 +56,10 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 
 > You can find more news on [the official project feed](https://docs.microsoft.com/en-us/cognitive-toolkit/news)
 
-***2018-09-17.***  
+***2018-11-26.***  
 [Netron](https://github.com/lutzroeder/netron) now supports visualizing CNTK v1 and CNTK v2 `.model` files.
 
-<img src=https://cntk.ai/Images/netron/netron-cntk-dark-1.png alt="NetronCNTKDark1" width="250">
-<img src=https://cntk.ai/Images/netron/netron-cntk-light-1.png alt="NetronCNTKLight1" width="250">
+<img src=https://cntk.ai/Images/netron/netron-cntk-dark-1.png alt="NetronCNTKDark1" width="300"> <img src=https://cntk.ai/Images/netron/netron-cntk-light-1.png alt="NetronCNTKLight1" width="300">
 
 
 ### Project changelog
