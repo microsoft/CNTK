@@ -363,6 +363,11 @@ namespace CNTK
 
         numValues = valuesToAggregate.size();
 
+        if (m_nccl == nullptr)
+        {
+            m_nccl.reset(new NcclComm(DeviceDescriptor::UseDefaultDevice().Id(), m_mpi));
+        }
+
         Initialize(valuesToAggregate);
 
         // We need to make sure no compuatation happens on the main CUDA stream.
@@ -376,11 +381,6 @@ namespace CNTK
             // the gradient aggregation asynchronously on a separate stream
             std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(device.Id()));
             mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
-        }
-
-        if (m_nccl == nullptr)
-        {
-            m_nccl.reset(new NcclComm(DeviceDescriptor::UseDefaultDevice().Id(), m_mpi));
         }
 
         // For all values residing on GPU initiate async transfer to CPU buffers if needed
