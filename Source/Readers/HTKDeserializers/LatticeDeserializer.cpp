@@ -9,6 +9,7 @@
 #include "ConfigHelper.h"
 #include "Basics.h"
 #include "MLFUtils.h"
+#include "ProgressTracing.h"
 
 namespace CNTK {
 
@@ -235,7 +236,7 @@ void LatticeDeserializer::InitializeChunkInfos(CorpusDescriptorPtr corpus, Confi
                     totalNumLatticeFiles++;
 
                     fprintf(stderr, "\n[%zu]th lattice file: %s\n", totalNumLatticeFiles, latticePath.c_str());
-                    fprintf(stderr, "Epoch[0 of 0]-Minibatch[ 0- 500, 0.0%%]: ce = 0.1 * 4096000; err = 0.1 * 4096000;\n"); // fake progress for philly
+                    ProgressTracing::TraceFakeProgress(0, 0);
                 }
                 fprintf(stderr, ".");    
                 prevLatticePath = latticePath;
