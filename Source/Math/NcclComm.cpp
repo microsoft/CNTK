@@ -157,7 +157,7 @@ void NcclComm::AllReduceImpl(void* inputbuffer, void *outputbuffer, size_t count
 
     static NcclTypeLookup s_ncclTypeLookup;
 
-    fprintf(stderr, "Calling ncclAllReduce with datatype %d.\n", (int)dtype);
+    //fprintf(stderr, "Calling ncclAllReduce with datatype %d.\n", (int)dtype);
 
     res = ncclAllReduce(inputbuffer, outputbuffer, count, s_ncclTypeLookup.Lookup(dtype), ncclRedOpFromMpiOp(op), m_ncclComm, m_stream);
 
