@@ -658,7 +658,7 @@ namespace CNTK
             }
 
             // Send block gradient over MPI nodes.
-            AggregateBlockGradientsInPlace();
+            m_communicator->AggregateInPlace(m_tempBlockGradient, m_communicator->Workers());
 
             // 2. Let's update the model
             for (size_t i = 0; i < parameterValues.size(); ++i)
