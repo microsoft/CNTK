@@ -96,8 +96,10 @@ namespace CNTK
             GetParameterValues(learner->Parameters(), parameterValues);
 
             m_blockLevelSmoothedGradient.resize(parameterValues.size());
+            m_blockLevelSmoothedGradientFloat.resize(parameterValues.size());
             m_prevParameters.resize(parameterValues.size());
             m_tempBlockGradient.resize(parameterValues.size());
+            m_tempBlockGradientFloat.resize(parameterValues.size());
             Reset(parameterValues);
         }
 
@@ -526,8 +528,10 @@ namespace CNTK
                 else if (p->GetDataType() == DataType::Float)
                     ResetBuffer<float>(i, p);
                 else if (p->GetDataType() == DataType::Float16)
-                    //ResetBuffer<half, float16>(i, p);
-                    ResetBufferHalf(i, p);
+                {
+                    ResetBuffer<half, float16>(i, p);
+                    ResetBufferExtra(i, p);
+                }
                 else
                     RuntimeError("Unsupported type.");
             }
@@ -568,37 +572,21 @@ namespace CNTK
         {
             return arrayView->GetWritableMatrix<ElementType>();
         }
-        void ResetBufferHalf(size_t index, const NDArrayViewPtr& p)
+        void ResetBufferExtra(size_t index, const NDArrayViewPtr& p)
         {
+            // Extra buffer in float solving half underflow problems
             auto data = p->GetMatrix<half>();
-            size_t rows = data->GetNumRows();
-            size_t cols = data->GetNumCols();
-            if (!m_blockLevelSmoothedGradient[index])
+
+            if (!m_blockLevelSmoothedGradientFloat[index])
             {
-                // has not been initialized yet
-                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<float>(), NDShape({rows, cols * 2}), AsDeviceDescriptor(data->GetDeviceId()));
+                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
                 pSmoothedGrad->SetValue(static_cast<float>(0));
-                m_blockLevelSmoothedGradient[index] = pSmoothedGrad;
+                m_blockLevelSmoothedGradientFloat[index] = pSmoothedGrad;
             }
 
-            if (!m_prevParameters[index])
+            if (!m_tempBlockGradientFloat[index])
             {
-                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<float16>(), NDShape({ rows, cols * 2 }), AsDeviceDescriptor(data->GetDeviceId()));
-                std::shared_ptr<Matrix<half>> newData = newValue->GetWritableMatrix<half>();
-                newData->SetValue(*data);
-                m_prevParameters[index] = newValue;
-            }
-            else
-            {
-                const auto& compoundMatrix = GetWritableMatrix<half>(m_prevParameters[index]);
-                auto previousWeight = compoundMatrix->ColumnSlice(0, cols); // prev model value
-                previousWeight.SetValue(*data);
-                //m_prevParameters[index]->GetWritableMatrix<half>()->SetValue(*data);
-            }
-
-            if (!m_tempBlockGradient[index])
-            {
-                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<float16>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
             }
         }
 
@@ -671,9 +659,8 @@ namespace CNTK
             for (size_t i = 0; i < parameterValues.size(); ++i)
             {
                 // Get current model
+                Matrix<half>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<half>();                  // prev model value
                 Matrix<half>& currentWeight = *parameterValues[i]->GetWritableMatrix<half>();
-                const auto& compoundMatrix = GetWritableMatrix<half>(m_prevParameters[i]);
-                auto previousWeight = compoundMatrix->ColumnSlice(0, currentWeight.GetNumCols()); // prev model value
                 Matrix<half>& blockGrad = *m_tempBlockGradient[i]->GetWritableMatrix<half>();
 
                 // Subtract it from the previous model
@@ -688,26 +675,26 @@ namespace CNTK
             {
                 // 2 block gradient aggregation
                 // 2.1. get current model
+                Matrix<half>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<half>();                  // prev model value
                 Matrix<half>& currentWeight = *parameterValues[i]->GetWritableMatrix<half>();
-                const auto& compoundMatrix = GetWritableMatrix<half>(m_prevParameters[i]);
-                auto previousWeight = compoundMatrix->ColumnSlice(0, currentWeight.GetNumCols()); // prev model value
                 Matrix<half>& blockGrad = *m_tempBlockGradient[i]->GetWritableMatrix<half>();
+
                 // 2.2. model update 
                 {
-                    const auto& compoundMatrixFloat = GetWritableMatrix<float>(m_blockLevelSmoothedGradient[i]);
-                    auto sgFloat = compoundMatrixFloat->ColumnSlice(0, currentWeight.GetNumCols());       // smoothed gradient
+                    Matrix<half>& sg = *m_blockLevelSmoothedGradient[i]->GetWritableMatrix<half>();       // smoothed gradient
+                    Matrix<float>& sgFloat = *m_blockLevelSmoothedGradientFloat[i]->GetWritableMatrix<float>();
+                    Matrix<float>& blockGradFloat = *m_tempBlockGradientFloat[i]->GetWritableMatrix<float>();
 
                     // cast block gradients from half to float
-                    auto tmpBlockGradFloat = compoundMatrixFloat->ColumnSlice(currentWeight.GetNumCols(), currentWeight.GetNumCols());       // temp block gradients in float
-                    tmpBlockGradFloat.CastAssignValuesOf(blockGrad);
+                    blockGradFloat.CastAssignValuesOf(blockGrad);
+                    // Block level smoothed gradients - in float
 
                     // 2.2.1 update block level smoothed gradient; 
                     // This is essentially a first-order infinite impulse response (IIR) filter with the gain (1 - blockMomentum)*m_blockLearningRate:
                     // smoothedGradient(t)=blockMomentum * smoothedGradients(t-1) + (1 - blockMomentum)*m_blockLearningRate*blockGrad(t)
-                    Matrix<float>::ScaleAndAdd((float)((1 - blockMomentum)*m_blockLearningRate), tmpBlockGradFloat, (float)blockMomentum, sgFloat);
+                    Matrix<float>::ScaleAndAdd((float)((1 - blockMomentum)*m_blockLearningRate), blockGradFloat, (float)blockMomentum, sgFloat);
 
                     // cast sg back to half
-                    auto sg = compoundMatrix->ColumnSlice(currentWeight.GetNumCols(), currentWeight.GetNumCols());       // temp sg in half
                     sg.CastAssignValuesOf(sgFloat);
 
                     // 2.2.2 update parameters; 
@@ -760,7 +747,9 @@ namespace CNTK
         // parameters at the last model aggregation point
         std::vector<NDArrayViewPtr> m_prevParameters;
         std::vector<NDArrayViewPtr> m_blockLevelSmoothedGradient;
+        std::vector<NDArrayViewPtr> m_blockLevelSmoothedGradientFloat;
         std::vector<NDArrayViewPtr> m_tempBlockGradient;
+        std::vector<NDArrayViewPtr> m_tempBlockGradientFloat;
 
         // temp storage for MPI
         std::vector<NDArrayViewPtr> m_actionBuffer;
