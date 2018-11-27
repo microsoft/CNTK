@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 [CmdletBinding()]
-Param([string]$WheelBaseUrl)
+Param([Parameter(Mandatory=$true)] [string]$PyVersion, [string]$WheelBaseUrl)
 
 $image = 'cntk:installtest'
 
@@ -22,7 +22,7 @@ docker build -t $image .
 if ($LASTEXITCODE -ne 0) {
   throw "Fail"
 }
-docker run --rm $image powershell c:/local/test-install.ps1 @PSBoundParameters
+docker run --rm -e TEST_TAG=$env:TEST_TAG $image powershell c:/local/test-install.ps1 @PSBoundParameters
 if ($LASTEXITCODE -ne 0) {
   throw "Fail"
 }

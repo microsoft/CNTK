@@ -33,8 +33,8 @@ goto :eof
 :helpMsg
 @echo.
 @echo More help can be found at: 
-@echo     https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script
+@echo     https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Windows-Binary-Script
 @echo.
 @echo An overview of the available command line options can be found at:
-@echo     https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script-Options
+@echo     https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Windows-Binary-Script-Options
 @echo.

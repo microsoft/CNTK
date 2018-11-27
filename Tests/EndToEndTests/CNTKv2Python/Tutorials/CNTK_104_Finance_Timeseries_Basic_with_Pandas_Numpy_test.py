@@ -16,8 +16,8 @@ def test_cntk_104_finance_timeseries_basic_with_pandas_numpy_noErrors(nb):
     print(errors)
     assert errors == []
 
-expectedEvalErrorUpper = 0.55
-expectedEvalErrorLower = 0.45
+expectedEvalErrorUpper = 0.60
+expectedEvalErrorLower = 0.40
 
 def test_cntk_104_finance_timeseries_basic_with_pandas_numpy_trainerror(nb):
     testCell = [cell for cell in nb.cells

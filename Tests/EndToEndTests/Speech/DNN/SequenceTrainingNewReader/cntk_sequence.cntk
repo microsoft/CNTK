@@ -1,0 +1,197 @@
+precision = "float"
+deviceId = $DeviceId$
+command = dptPre1:addLayer2:dptPre2:addLayer3:speechTrain:sequenceTrain
+
+ndlMacros = "$ConfigDir$/macros.txt"
+
+globalMeanPath   = "GlobalStats/mean.363"
+globalInvStdPath = "GlobalStats/var.363"
+globalPriorPath  = "GlobalStats/prior.132"
+
+traceLevel = 1
+truncated = false
+
+# Default SGD value used for pre-training.
+SGD = [
+    epochSize = 81920
+    minibatchSize = 256
+    learningRatesPerMB = 0.8
+    numMBsToShowResult = 10
+    momentumPerMB = 0.9
+    dropoutRate = 0.0
+    maxEpochs = 2
+]
+
+dptPre1 = [
+    action = "train"
+    modelPath = "$RunDir$/models/Pre1/cntkSpeech"
+
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/dnn_1layer.txt"
+    ]
+]
+
+addLayer2 = [    
+    action = "edit"
+    currLayer = 1
+    newLayer = 2
+    currModel = "$RunDir$/models/Pre1/cntkSpeech"
+    newModel  = "$RunDir$/models/Pre2/cntkSpeech.0"
+    editPath  = "$ConfigDir$/add_layer.mel"
+]
+
+dptPre2 = [
+    action = "train"
+    modelPath = "$RunDir$/models/Pre2/cntkSpeech"
+
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/dnn_1layer.txt"
+    ]
+]
+
+AddLayer3 = [    
+    action = "edit"
+    currLayer = 2
+    newLayer = 3
+    currModel = "$RunDir$/models/Pre2/cntkSpeech"
+    newModel  = "$RunDir$/models/cntkSpeech.0"
+    editPath  = "$ConfigDir$/add_layer.mel"
+]
+
+speechTrain = [
+    action = "train"
+    modelPath = "$RunDir$/models/cntkSpeech"
+    #deviceId = $DeviceId$
+    traceLevel = 1
+
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/dnn.txt"
+    ]
+    
+    SGD = [
+        epochSize = 81920
+        minibatchSize = 256:512
+        learningRatesPerMB = 0.8:1.6
+        numMBsToShowResult = 10
+        momentumPerSample = 0.999589
+        dropoutRate = 0.0
+        maxEpochs = 4
+        
+        gradUpdateType = "none"
+        normWithAveMultiplier = true
+        clippingThresholdPerSample = 1#INF
+    ]
+]
+
+reader = [
+    readerType = "HTKMLFReader"
+    readMethod = "blockRandomize"
+    miniBatchMode = "partial"
+    randomize = "auto"
+    verbosity = 0
+
+    features = [
+        dim = 363
+        type = "real"
+        scpFile = "$DataDir$/glob_0000.scp"
+    ]
+
+    labels = [
+        mlfFile = "$DataDir$/glob_0000.mlf"
+        labelMappingFile = "$DataDir$/state.list"
+          
+        labelDim = 132
+        labelType = "category"
+    ]
+]
+
+sequenceTrain = [
+    action = "train"
+    modelPath = $RunDir$/models/cntkSpeech.sequence
+    traceLevel = 1
+    
+    SGD = [
+        epochSize = 81920
+        minibatchSize = 10
+        
+        learningRatesPerSample = 0.000002
+        momentumPerSample = 0.999589
+        dropoutRate = 0.0
+        maxEpochs = 3
+        numMBsToShowResult = 10
+	gradientClippingWithTruncation = true
+	clippingThresholdPerSample = 1.0
+    ]
+	reader = [
+			verbosity = 0
+			randomize = true
+                        maxErrors = 100
+			# A list of deserializers the reader uses.
+			deserializers = (
+				[
+					type = "HTKFeatureDeserializer"
+					module = "HTKDeserializers"
+                                        definesMbSize = true
+					input = [
+						# Description of input stream to feed the Input node named "features"
+						features = [
+							dim=363
+							scpFile = "$DataDir$/glob_0000.scp"
+						]
+					]
+				]:
+				[
+					type = "HTKMLFDeserializer"
+					module = "HTKDeserializers"
+					input = [
+						# Description of input stream to feed the Input node named "labels"
+						labels = [
+							dim = 132
+							mlfFile="$DataDir$/glob_0000.mlf"
+							labelMappingFile = "$DataDir$/state.list" 
+						]
+					]
+				]:
+				[
+					type = "LatticeDeserializer"
+					module = "HTKDeserializers"
+					input = [
+						lattice=[
+							latticeIndexFile="$DataDir$/latticeIndex.txt"
+						]
+					]
+				]
+			)
+		]
+		
+		
+		BrainScriptNetworkBuilder = {
+			baseFeatDim = 33
+			featDim = 11 * baseFeatDim
+			labelDim = 132
+			
+			latticeAxis = DynamicAxis()
+			features = Input{featDim}
+			labels = Input{labelDim, tag="label"}
+			lattice = Input{1,dynamicAxis=latticeAxis, tag="label"}
+		
+			featExtNetwork  = BS.Network.Load("$RunDir$/models/cntkSpeech")
+			featExt = BS.Network.CloneFunction (
+              (featExtNetwork.features),
+              [netEval = featExtNetwork.OL_z;scaledLogLikelihood = featExtNetwork.scaledLogLikelihood ],
+              parameters="learnable")
+			
+			clonedmodel= featExt(features)
+			
+			cr = LatticeSequenceWithSoftmax(labels, clonedmodel.netEval, clonedmodel.scaledLogLikelihood, lattice, "$DataDir$/CY2SCH010061231_1369712653.numden.lats.symlist", "$DataDir$/model.overalltying", "$DataDir$/state.list", "$DataDir$/model.transprob", tag="criterion")  
+			
+			Err = ClassificationError(labels,clonedmodel.netEval,tag="evaluation");
+		
+		}
+		
+]
+
+
+
+
+			  

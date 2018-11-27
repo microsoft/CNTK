@@ -186,7 +186,7 @@ public:
 
     // access phase
     // Returns 'true' if data was actually read from disk.
-    bool require(pair<size_t, size_t> bounds) // we require this range of frames
+    bool require(std::pair<size_t, size_t> bounds) // we require this range of frames
     {
         bool readfromdisk = false;
 

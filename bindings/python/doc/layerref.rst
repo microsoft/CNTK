@@ -197,7 +197,7 @@ layer you need is not available, you can always write it yourself or
 write the formula directly as a CNTK expression.
 
 The Python library described here is the equivalent of BrainScript's
-`Layers Library <https://github.com/Microsoft/CNTK/wiki/BrainScript-Layers-Reference>`__.
+:cntkwiki:`Layers Library <BrainScript-Layers-Reference>`.
 
 .. _dense:
 
@@ -270,7 +270,7 @@ will have the tensor dimensions ``(..., shape[1], shape[0])``.
 CNTK's matrix product will interpret these extra output or input
 dimensions as if they were flattened into a long vector. For more
 details on this, see the documentation of
-`Times() <https://github.com/Microsoft/CNTK/wiki/Times-and-TransposeTimes>`_.
+:cntkwiki:`Times() <Times-and-TransposeTimes>`.
 
 The options ``input_rank`` and ``map_rank``, which are mutually
 exclusive, can specify that not all of the input axes of a tensor should
@@ -617,10 +617,9 @@ majority of rows would be zero, CNTK implements a specific optimization
 to represent the gradient in "row-sparse" form.
 
 Known issue: The above-mentioned row-sparse gradient form is currently
-not supported by our `1-bit
-SGD <https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#21-data-parallel-training-with-1-bit-sgd>`__
+not supported by our :cntkwiki:`1-bit SGD <Multiple-GPUs-and-machines#21-data-parallel-training-with-1-bit-sgd>`
 parallelization technique. Please use the
-`block-momentum <https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#22-block-momentum-sgd>`__
+:cntkwiki:`block-momentum <Multiple-GPUs-and-machines#22-block-momentum-sgd>`
 technique instead.
 
 Example
@@ -636,7 +635,7 @@ a 300-dimensional vector:
 
 In addition to ``is_sparse=True``, one would also typically read sparse
 data from disk. Here is an example of reading sparse text input with the
-`CNTKTextFormatReader <https://github.com/Microsoft/CNTK/wiki/BrainScript-CNTKTextFormat-Reader>`_:
+:cntkwiki:`CNTKTextFormatReader <BrainScript-CNTKTextFormat-Reader>`:
 
 ::
 
@@ -669,7 +668,7 @@ Factory function to create a single-layer or multi-layer recurrence.
     Recurrence(step_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name='')
     RecurrenceFrom(step_function, go_backwards=default_override_or(False), return_full_state=False, name='')
     Fold(folder_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name='')
-    UnfoldFrom(generator_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name='')
+    UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name='')
 
 Parameters
 ~~~~~~~~~~
@@ -695,6 +694,18 @@ This implements the recurrence to be applied to an input sequence along
 a dynamic axis. This operation automatically handles batches of
 variable-length input sequences. The initial value(s) of the hidden
 state variable(s) are 0 unless specified by ``initial_state``.
+A recurrence layer's operation can be best described by pseudo-code
+(but note that the real implementation is more complicated since it
+handles automatic minibatching even if not all sequences are of the same length)::
+
+    # pseudo-code for y = Recurrence(step_function)(x)
+    #  x: input sequence of tensors along the dynamic axis
+    #  y: resulting sequence of outputs along the same dynamic axis
+    y = []              # result sequence goes here
+    s = initial_state   # s = output of previous step ("state")
+    for x_n in x:       # pseudo-code for looping over all steps of input sequence along its dynamic axis
+        s = step_function(s, x_n)  # pass previous state and new data to step_function -> new state
+        y.append(s)
 
 The ``step_function`` must be a CNTK Function that takes the previous state
 and a new input, and outputs a new state.
@@ -745,7 +756,7 @@ dimension compared to above), use this:
 
 .. _lstm:
 
-LSTM(), GRU(), RNNUnit()
+LSTM(), GRU(), RNNStep()
 ------------------------
 
 Factory functions to create a stateless LSTM/GRU/RNN ``Function``, typically for
@@ -761,7 +772,7 @@ use with ``Recurrence()``.
         init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
         enable_self_stabilization=default_override_or(False),
         name='')
-    RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
+    RNNStep(shape, cell_shape=None, activation=default_override_or(sigmoid),
             init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
             enable_self_stabilization=default_override_or(False),
             name='')
@@ -866,8 +877,8 @@ end with a zero:
 Notes
 ~~~~~
 
-This layer is a wrapper around the ``past_value()`` and
-``future_value()`` primitives.
+This layer is a wrapper around the ``sequence.past_value()`` and
+``sequence.future_value()`` primitives.
 
 Example
 ~~~~~~~
@@ -915,6 +926,8 @@ Parameters
    when computing the inverse
 -  ``use_cntk_engine``: if ``True``, use CNTK's native implementation.
    If false, use cuDNN's implementation (GPU only).
+-  ``disable_regularization``: if ``True`` then disable regularization
+   in BatchNormalization.
 
 ``LayerNormalization``:
 

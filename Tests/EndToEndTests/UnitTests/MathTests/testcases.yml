@@ -4,6 +4,7 @@ tags:
   # GPU only, at this stage.
   - bvt-i (build_sku == 'gpu') and (device == 'gpu')
   - nightly-i (build_sku == 'gpu') and (device == 'gpu')
+  - weekly-i (build_sku == 'gpu') and (device == 'gpu')
 
 testCases:
   Test cases pass:

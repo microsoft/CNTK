@@ -160,6 +160,7 @@ public:
     // accessors
     // -------------------------------------------------------------------
 
+    const shared_ptr<Matrix<ElemType>>& GetSOBPtr() const { return m_sob; }
     const Matrix<ElemType>& GetSOB() const { return *m_sob; }
     Matrix<ElemType>&       GetSOB()       { return *m_sob; }
     friend Test::TensorTest<ElemType>;

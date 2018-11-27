@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x -e -o pipefail
 
-USAGE="Usage: $0 [--py-version [27|34|35]] -- <drops-to-test>"
+USAGE="Usage: $0 [--py-version [27|35|36]] -- <drops-to-test>"
 
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
@@ -12,11 +12,11 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --py-version)
       case "$2" in
-        27 | 34 | 35)
+        27 | 35 | 36)
           PY_VERSION="$2"
           ;;
         *)
-          echo Invalid or missing value for --py-version option, please specify 27, 34, or 35.
+          echo Invalid or missing value for --py-version option, please specify 27, 35, or 36.
           exit 1
           ;;
       esac
@@ -78,9 +78,9 @@ for drop in $*; do
   ln -s "$DROP_FILE" "$DROP_RESERVED"
 
   IMAGE=cntk:installtest
-  for base in Ubuntu16 Ubuntu14; do
+  for base in Ubuntu16; do
     docker build --build-arg PY_VERSION=$PY_VERSION --build-arg WHEEL_BASE_URL=$WHEEL_BASE_URL -t $IMAGE -f Dockerfile-$base-$DOCKERFILE_SUFFIX .
-    $DOCKER_TO_RUN run --rm $IMAGE su - testuser -c "./run-test.sh $TEST_DEVICE"
+    $DOCKER_TO_RUN run --rm -e TEST_TAG=$TEST_TAG $IMAGE su - testuser -c "./run-test.sh $TEST_DEVICE"
     docker rmi $IMAGE
   done
 

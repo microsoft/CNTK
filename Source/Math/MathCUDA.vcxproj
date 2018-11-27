@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -34,7 +34,7 @@
         <CuDnnIncPath>$(CUDNN_PATH)\include</CuDnnIncPath>
         <CuDnnLibPath>$(CUDNN_PATH)\lib\x64</CuDnnLibPath>
         <CuDnnLib>cudnn.lib</CuDnnLib>
-        <CuDnnDll>$(CUDNN_PATH)\bin\cudnn64_5.dll</CuDnnDll>
+        <CuDnnDll>$(CUDNN_PATH)\bin\cudnn64_*.dll</CuDnnDll>
       </PropertyGroup>
     </When>
     <Otherwise>
@@ -48,20 +48,12 @@
     <IntDir>$(IntDir)\MathCUDA\</IntDir>
   </PropertyGroup>
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).props" />
+    <Import Project="$(CudaMsbuildPath)\CUDA $(CudaVersion).props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="$(DebugBuild)">
-    <CudaCodeGen>$(CNTK_CUDA_CODEGEN_DEBUG)</CudaCodeGen>
-    <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_30,sm_30</CudaCodeGen>
-  </PropertyGroup>
-  <PropertyGroup Condition="$(ReleaseBuild)">
-    <CudaCodeGen>$(CNTK_CUDA_CODEGEN_RELEASE)</CudaCodeGen>
-    <CudaCodeGen Condition="'$(CudaCodeGen)'==''">compute_30,sm_30;compute_35,sm_35;compute_50,sm_50;</CudaCodeGen>
-  </PropertyGroup>
   <PropertyGroup>
     <TargetName>Cntk.Math.Cuda-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
@@ -86,7 +78,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <GenerateLineInfo>true</GenerateLineInfo>
       <AdditionalCompilerOptions>/WX</AdditionalCompilerOptions>
-      <CodeGeneration>$(CudaCodeGen)</CodeGeneration>
+      <CodeGeneration>$(NvidiaCompute)</CodeGeneration>
       <FastMath>true</FastMath>
       <GPUDebugInfo>false</GPUDebugInfo>
       <GPUDebugInfo Condition="'$(CNTK_CUDA_DEVICE_DEBUGINFO)'=='1'">true</GPUDebugInfo>
@@ -94,7 +86,7 @@
     </CudaCompile>
     <PostBuildEvent>
       <Command>for %%l in ($(CudaDlls)) do if exist "$(CudaPath)\bin\%%l" xcopy /D /Y "$(CudaPath)\bin\%%l*" "$(OutputPath)"
-if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
+xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -128,9 +120,11 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <ClInclude Include="CuDnnCommon.h" />
     <ClInclude Include="CuDnnFactories.h" />
     <ClInclude Include="CuDnnRNN.h" />
+    <ClInclude Include="fpgeneric.h" />
     <ClInclude Include="GPUDataTransferer.h" />
     <ClInclude Include="GPURNGHandle.h" />
     <ClInclude Include="GPUTensor.h" />
+    <ClInclude Include="half.hpp" />
     <ClInclude Include="latticefunctionskernels.h" />
     <ClInclude Include="Convolution.cuh" />
     <ClInclude Include="TensorOps.h" />
@@ -206,10 +200,10 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA $(CudaVersion).targets" />
+    <Import Project="$(CudaMsbuildPath)\CUDA $(CudaVersion).targets" />
   </ImportGroup>
   <Target Name="CheckDependencies">
-    <Error Condition="!Exists('$(CUB_PATH)')" Text="CNTK requires the NVIDIA CUB library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cuda for installation instructions." />
-    <Error Condition="!Exists('$(CUDNN_PATH)')" Text="CNTK requires the NVIDIA cuDNN library 5.0 or higher to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cuda for installation instructions." />
+    <Error Condition="!Exists('$(CUB_PATH)')" Text="CNTK requires the NVIDIA CUB library to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#nvidia-cuda-8 for installation instructions." />
+    <Error Condition="!Exists('$(CUDNN_PATH)')" Text="CNTK requires the NVIDIA cuDNN library 5.0 or higher to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#nvidia-cuda-8 for installation instructions." />
   </Target>
 </Project>

@@ -8,7 +8,7 @@
 #include <algorithm>
 #include "MemoryProvider.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 class HeapMemoryProvider : public MemoryProvider
 {
@@ -27,4 +27,4 @@ public:
     }
 };
 
-}}}
+}

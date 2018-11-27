@@ -32,9 +32,27 @@ namespace DebugUtil
         try
         {
             string output;
-            CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output](string stack)
+            string previousLine;
+            int count = 1;
+            CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output, &previousLine, &count](const string& currentStackLine)
             {
-                output += stack;
+                if (currentStackLine.compare(previousLine))
+                {
+                    if (count > 1)
+                    {
+                        output.pop_back(); // remove new line and add it below
+                        output += " (x" + std::to_string(count) + ")\n"; // print callstack line plus number of times it appears
+                    }
+                    output += currentStackLine;
+                    previousLine = currentStackLine;
+                    count = 1;
+                    return;
+                }
+                // make sure we're not counting empty lines
+                if (!currentStackLine.empty())
+                {
+                    ++count;
+                }
             });
             return output;
         }
@@ -137,16 +155,31 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
     write("\n[CALL STACK]\n");
 
 #ifdef _WIN32
+#ifndef CNTK_UWP
+    // Callstack generation on Windows is occasionally failing; disabling this functionality for now. Additional info:
+    //
+    // <extracted from email>
+    // NetworkTests.exe is hung creating a call stack for an expected exception thrown in the test code. A bit of googling suggests that the 
+    // problem could be due to an incompatibility between `programs linked with fastlink pdbs and older versions of DbgHelp.dll <https://developercommunity.visualstudio.com/content/problem/38625/debug-help-library-hangs-up.html>`_.
+    // On this machine it looks like we are using DbgHelp.dll version 10.0.14321.1024.
+    //
+    // TODO: WE SHOULD REMOVE THIS HACK ASAP.
+    //
+    char* const flagValue(std::getenv("CNTK_CI_NO_STACKTRACE"));
+
+    if (flagValue != nullptr && _strcmpi(flagValue, "1") == 0)
+        return write("Stack trace generation has been explicitly disabled\n");
+    // End hack
 
     // RtlCaptureStackBackTrace() is a kernel API without default binding, we must manually determine its function pointer.
     typedef USHORT(WINAPI * CaptureStackBackTraceType)(__in ULONG, __in ULONG, __out PVOID*, __out_opt PULONG);
     CaptureStackBackTraceType RtlCaptureStackBackTrace = (CaptureStackBackTraceType)(GetProcAddress(LoadLibrary(L"kernel32.dll"), "RtlCaptureStackBackTrace"));
     if (RtlCaptureStackBackTrace == nullptr) // failed somehow
-        return write("Failed to generate CALL STACK. GetProcAddress(\"RtlCaptureStackBackTrace\") failed with error " + msra::strfun::utf8(FormatWin32Error(GetLastError())) + "\n");
+        return write("Failed to generate CALL STACK. GetProcAddress(\"RtlCaptureStackBackTrace\") failed with error " + Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(FormatWin32Error(GetLastError())))  + "\n");
 
     HANDLE process = GetCurrentProcess();
     if (!SymInitialize(process, nullptr, TRUE))
-        return write("Failed to generate CALL STACK. SymInitialize() failed with error " + msra::strfun::utf8(FormatWin32Error(GetLastError())) + "\n");
+        return write("Failed to generate CALL STACK. SymInitialize() failed with error " + Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(FormatWin32Error(GetLastError()))) + "\n");
 
     // get the call stack
     void* callStack[MAX_CALLERS];
@@ -162,23 +195,24 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
     size_t firstFrame = skipLevels + 1; // skip CollectCallStack()
     for (size_t i = firstFrame; i < frames; i++)
     {
+        string callStackLine;
         if (i == firstFrame)
-            write("    > ");
+            callStackLine = "    > ";
         else
-            write("    - ");
+            callStackLine = "    - ";
 
         if (SymFromAddr(process, (DWORD64)(callStack[i]), 0, symbolInfo))
         {
-            write(makeFunctionNamesStandOut ? MakeFunctionNameStandOut(symbolInfo->Name) : symbolInfo->Name);
-            write("\n");
+            callStackLine += makeFunctionNamesStandOut ? MakeFunctionNameStandOut(symbolInfo->Name) : symbolInfo->Name;
+            write(callStackLine + "\n");
         }
         else
         {
             DWORD error = GetLastError();
             char buf[17];
             sprintf_s(buf, "%p", callStack[i]);
-            write(buf);
-            write(" (SymFromAddr() error: " + msra::strfun::utf8(FormatWin32Error(error)) + ")\n");
+            callStackLine += buf;
+            write(callStackLine + " (SymFromAddr() error: " + Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(FormatWin32Error(error))) + ")\n");
         }
     }
 
@@ -187,7 +221,7 @@ static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, 
     free(symbolInfo);
 
     SymCleanup(process);
-
+#endif // CNTK_UWP
 #else // Linux
 
     unsigned int MAX_NUM_FRAMES = 1024;

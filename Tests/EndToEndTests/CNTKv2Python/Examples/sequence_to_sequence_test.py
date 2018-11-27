@@ -42,6 +42,5 @@ def test_sequence_to_sequence(device_id):
 
     print(error)
 
-    #expected_error =  0.9943119920022192 # when run separately
-    expected_error =  0.9912881900980582 # when run inside the harness--random-initialization?
+    expected_error =  0.95
     assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)

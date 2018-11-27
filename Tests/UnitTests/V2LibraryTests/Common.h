@@ -45,7 +45,7 @@ struct V2LibraryTestFixture
         Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
         // Turn on gap nan tracking
-        Internal::SetComputationNetworkTrackGapNans(true);
+        SetCheckedMode(true);
     }
 };
 
@@ -159,8 +159,8 @@ inline void SaveAndReloadModel(FunctionPtr& functionPtr, const std::vector<Varia
            BOOST_ERROR("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
 
-    functionPtr->SaveModel(tempModelPath);
-    functionPtr = Function::LoadModel(tempModelPath, device);
+    functionPtr->Save(tempModelPath);
+    functionPtr = Function::Load(tempModelPath, device);
 
     if (_wunlink(tempModelPath.c_str()) != 0)
          BOOST_ERROR("Error deleting temp model file 'feedForward.net'");
@@ -187,22 +187,22 @@ inline void SaveAndReloadModel(FunctionPtr& functionPtr, const std::vector<Varia
     }
 }
 
-inline FunctionPtr FullyConnectedLinearLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"")
+inline FunctionPtr FullyConnectedLinearLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"", unsigned long seed = 1)
 {
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
 
     auto timesParam = Parameter({ outputDim, inputDim }, DataType::Float, GlorotUniformInitializer(DefaultParamInitScale,
-                                SentinelValueForInferParamInitRank, SentinelValueForInferParamInitRank, 1), device, L"timesParam");
+                                SentinelValueForInferParamInitRank, SentinelValueForInferParamInitRank, seed), device, L"timesParam");
     auto timesFunction = Times(timesParam, input, L"times");
 
     auto plusParam = Parameter({ outputDim }, 0.0f, device, L"plusParam");
     return Plus(plusParam, timesFunction, outputName);
 }
 
-inline FunctionPtr FullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity, const std::wstring& outputName = L"")
+inline FunctionPtr FullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity, const std::wstring& outputName = L"", unsigned long seed = 1)
 {
-    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device, outputName));
+    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device, outputName, seed));
 }
 
 inline FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input,
@@ -211,14 +211,15 @@ inline FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input,
                                                    size_t numHiddenLayers,
                                                    const DeviceDescriptor& device,
                                                    const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity,
-                                                   const std::wstring& outputName)
+                                                   const std::wstring& outputName,
+                                                   unsigned long seed = 1)
 {
     assert(numHiddenLayers >= 1);
-    auto classifierRoot = FullyConnectedDNNLayer(input, hiddenLayerDim, device, nonLinearity);
+    auto classifierRoot = FullyConnectedDNNLayer(input, hiddenLayerDim, device, nonLinearity, L"", seed);
     for (size_t i = 1; i < numHiddenLayers; ++i)
-        classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
+        classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity, L"", seed);
 
-    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, 1, device));
+    auto outputTimesParam = Parameter({ numOutputClasses, hiddenLayerDim }, DataType::Float, UniformInitializer(0.5, seed), device);
     return Times(outputTimesParam, classifierRoot, 1, outputName);
 }
 
@@ -308,7 +309,7 @@ inline FunctionPtr SimpleRecurrentLayer(const  Variable& input, const NDShape& o
 
     unsigned long seed = 1;
     auto createProjectionParam = [device, &seed](size_t outputDim, size_t inputDim) {
-        return Parameter(NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.5, 0.5, seed++, device));
+        return Parameter({ outputDim, inputDim }, DataType::Float, UniformInitializer(0.5, seed), device);
     };
 
     auto hProjWeights = createProjectionParam(outputDim[0], outputDim[0]);
@@ -341,6 +342,11 @@ inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t m
     }
 
     return sequenceLengths;
+}
+
+inline size_t GenerateNumOfAxes(size_t maxNumOfAxes)
+{
+    return (rand() % maxNumOfAxes) + 1;
 }
 
 template <typename ElementType>
@@ -477,7 +483,7 @@ std::tuple<std::vector<ElementType>, std::vector<SparseIndexType>, std::vector<S
             int rowIndex = rand() % numMatrixRows;
             if (rowsWrittenTo.insert(rowIndex).second)
             {
-                ElementType value = ((ElementType)rand()) / RAND_MAX;
+                ElementType value = (ElementType)(rand() / RAND_MAX + 0.5);
                 nonZeroValues[nnzIndex] = value;
                 referenceDenseData[(j * numMatrixRows) + rowIndex] = value;
                 rowIndices[nnzIndex] = rowIndex;
@@ -578,14 +584,14 @@ inline FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const D
     return Times(embeddingParameters, input);
 }
 
-inline FunctionPtr LSTMSequenceClassifierNet(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const DeviceDescriptor& device, const std::wstring& outputName)
+inline FunctionPtr LSTMSequenceClassifierNet(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const DeviceDescriptor& device, const std::wstring& outputName, unsigned long seed = 1)
 {
     auto embeddingFunction = Embedding(input, embeddingDim, device);
     auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
     auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, { LSTMDim }, { cellDim }, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
     auto thoughtVectorFunction = Sequence::Last(LSTMFunction);
 
-    return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
+    return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName, seed);
 }
 
 inline bool AreEqual(const NDArrayViewPtr& view1, const NDArrayViewPtr& view2)
@@ -744,4 +750,60 @@ inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second
     }
 }
 
-MinibatchSourcePtr CreateHTKMinibatchSource(size_t featureDim, size_t numOutputClasses, const Dictionary& readModeConfig, size_t epochSize, bool randomize = true);
+template<class T>
+bool AreEqual(T a, T b, T maxRelError, T maxAbsError)
+{
+    T diff = std::abs(a - b);
+    if (diff <= maxAbsError)
+        return true;
+    T largest = std::max(std::abs(a), std::abs(b));
+    return diff < largest * maxRelError;
+}
+
+template <typename T>
+void RequireClose(const std::vector<T>& v1, const std::vector<T>& v2, T maxRelError, T maxAbsError)
+{
+    BOOST_REQUIRE(v1.size() == v2.size());
+    int count = 0;
+    int badIndex = -1;
+    for (int i = 0; i < v1.size(); ++i)
+    {
+        if (!AreEqual(v1[i], v2[i], maxRelError, maxAbsError) && count++ == 0)
+            badIndex = i;
+    }
+
+    if (count > 0)
+    {
+        T a = v1[badIndex];
+        T b = v2[badIndex];
+        std::stringstream ss;
+        ss << count << " mismatch" << (count > 1 ? "es" : "") << ", first mismatch at " << badIndex << ", " << a
+            << " != " << b
+            << ", rel = " << (std::abs(a - b) / std::max(std::abs(a), std::abs(b)))
+            << ", abs = " << std::abs(a - b);
+        BOOST_TEST_REQUIRE(false, ss.str());
+    }
+}
+
+template<class T>
+T GetL1Norm(const std::vector<T>& v1, const std::vector<T>& v2)
+{
+    BOOST_REQUIRE(v1.size() == v2.size());
+    T sumDiff = 0;
+    for (size_t i = 0; i < v1.size(); ++i)
+    {
+        sumDiff += abs(v1[i] - v2[i]);
+    }
+    return sumDiff;
+}
+
+template<class T>
+std::vector<T> CombineVectors(std::initializer_list<std::vector<T>> vs)
+{
+    std::vector<T> result;
+    for (const auto& v : vs)
+        result.insert(result.end(), v.begin(), v.end());
+    return result;
+}
+
+MinibatchSourceConfig GetHTKMinibatchSourceConfig(size_t featureDim, size_t numOutputClasses, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true);

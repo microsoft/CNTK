@@ -21,6 +21,7 @@ void MNISTClassifierTests();
 void TrainSequenceToSequenceTranslator();
 void TrainTruncatedLSTMAcousticModelClassifier();
 void TestFrameMode();
+void TestDistributedCheckpointing();
 
 int main(int argc, char *argv[])
 {
@@ -58,6 +59,8 @@ int main(int argc, char *argv[])
 
             TestFrameMode();
 
+            TestDistributedCheckpointing();
+
             std::string testsPassedMsg = "\nCNTKv2Library-Distribution tests: Passed\n";
 
             printf("%s", testsPassedMsg.c_str());
@@ -83,7 +86,7 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Run test on a GPU device.\n");
             TrainCifarResnet();
         }
-        
+
         if (ShouldRunOnCpu())
         {
             fprintf(stderr, "Cannot run TrainCifarResnet test on a CPU device.\n");

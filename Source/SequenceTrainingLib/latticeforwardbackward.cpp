@@ -1249,7 +1249,7 @@ void sMBRdiagnostics(const msra::math::ssematrixbase &errorsignal, const_array_r
         // for each frame, print error signal for ground truth and runner up (second largest abs value)
         size_t sneg = SIZE_MAX; // competitor
         float eneg = 0.0f;
-        size_t spos = SIZE_MAX; // best postive competitor
+        size_t spos = SIZE_MAX; // best positive competitor
         float epos = 0.0f;
         foreach_row (s, errorsignal)
         {

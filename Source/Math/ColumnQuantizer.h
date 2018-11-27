@@ -132,7 +132,9 @@ public:
                 // quantize
                 size_t ij = ColMIDX(i, colIdx, M);
                 ElemType val = inMat[ij] + inResidual[ij];
-                QWordVal qval = valQ.Quantize<ZeroThresholdFor1Bit>(val);
+
+                // 'template' keyword to compile with GCC
+                QWordVal qval = valQ.template Quantize<ZeroThresholdFor1Bit>(val);
 
                 // compute residual
                 ElemType uval = valQ.Unquantize(qval);

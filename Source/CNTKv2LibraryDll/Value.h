@@ -35,6 +35,31 @@ namespace CNTK
 
         void Unpack() const;
 
+        void Erase() override
+        {
+            if (IsPacked())
+            {
+                m_packedData = nullptr;
+                m_packedDataLayout = nullptr;
+                m_isPacked = false;
+            }
+            else
+                Value::Erase();
+        }
+
+        /* virtual */ bool IsValid() const
+        {
+            if (IsPacked())
+                return m_packedData != nullptr;
+            else
+                return Value::IsValid();
+        }
+
+        ///
+        /// Returns the dynamic axes associated with this packed value
+        ///
+        const std::vector<Axis>& DynamicAxes() const { return m_sampleDynamicAxes; }
+
         const NDShape& Shape() const override { return m_unpackedShape; }
         DeviceDescriptor Device() const override { return m_isPacked ? m_packedData->Device() : Value::Device(); }
         DataType GetDataType() const override { return m_isPacked ? m_packedData->GetDataType() : Value::GetDataType(); }

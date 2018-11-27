@@ -185,7 +185,7 @@ public:
 
         mFile.close();
 #ifdef __unix__
-        mFile.open(ws2s(fileName), wifstream::in);
+        mFile.open(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(fileName)), wifstream::in);
 #else
         mFile.open(fileName, wifstream::in);
 #endif
@@ -197,7 +197,7 @@ public:
     {
         mFile.close();
 #ifdef __unix__
-        mFile.open(ws2s(mFileName), wifstream::in);
+        mFile.open(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(mFileName)), wifstream::in);
 #else
         mFile.open(mFileName, wifstream::in);
 #endif

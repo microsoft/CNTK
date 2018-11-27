@@ -1,15 +1,26 @@
-import numpy as np
-from cntk import cntk_py, NDArrayView
-from cntk.device import DeviceDescriptor, use_default_device
-from .tensor import TensorOpsMixin
-from cntk.internal import typemap, sanitize_precision, sanitize_value, \
-        sanitize_shape, sanitize_dtype_cntk
+'''
+CNTK variables, parameters, constants, and records.
+'''
 
+
+import numpy as np
+
+from . import cntk_py
+from .core import NDArrayView
+from .device import DeviceDescriptor, use_default_device
+from .tensor import TensorOpsMixin
+from .default_options import get_default_override, default_override_or
+from .internal import typemap, sanitize_precision, sanitize_value, \
+        sanitize_shape, sanitize_dtype_cntk, sanitize_dynamic_axes
 
 class Record(dict):
     '''
     Easy construction of a record (=immutable singleton class) from keyword arguments.
-    e.g. r = Record(x = 13, y = 42) ; x = r.x
+
+    Example:
+        >>> r = Record(x = 13, y = 42)
+        >>> r.x
+            13
 
     Args:
         kwargs: keyword arguments to turn into the record members
@@ -27,14 +38,22 @@ class Record(dict):
 
     def __setattr__(self, key, value):
         raise AttributeError('record is immutable')
+
     def updated_with(self, **kwargs):
         '''
         Create a new Record from an existing one with members modified or added.
-        e.g. r = Record(x = 13) ; print(r.x) ; r2 = r.updated_with(x = 42) ; print(r2.x)
-    
+
+        Example:
+            >>> r = Record(x = 13)
+            >>> r.x
+                13
+            >>> r2 = r.updated_with(x = 42)
+            >>> r2.x
+                42
+
         Args:
             kwargs: keyword arguments to turn into the record members
-    
+
         Returns:
             A singleton class instance that has all passed kw args as immutable class members.
         '''
@@ -143,7 +162,7 @@ class VariableMixin(object):
         '''
         return super(VariableMixin, self).uid()
 
-    class Type(Record):
+    class _Type(Record):
         '''
         Describes a Variable's type; that is, all arguments to instantiate a Placeholder or Input.
         These are meant to be passed to update_signature.
@@ -161,26 +180,52 @@ class VariableMixin(object):
                 r['is_sparse'] = is_sparse
             if dynamic_axes is not None:
                 r['dynamic_axes'] = dynamic_axes
-            super(Variable.Type, self).__init__(**r)
+            super(Variable._Type, self).__init__(**r)
+
+        def __call__(self):
+            '''
+            Dummy call operator, in case a user attempts to instantiates the type directly.
+            That is not possible because these are abstract types that cannot be instantiated directly.
+
+            Example:
+            >>> from cntk.layers.typing import Tensor
+            >>> try:
+            ...     inp = Tensor[32]()
+            ... except TypeError as e:
+            ...     print('ERROR: ' + str(e))
+            ERROR: abstract type Tensor[32] cannot be instantiated; use 'input_variable(**Tensor[32])' instead
+            '''
+            raise TypeError("abstract type " + str(self) + " cannot be instantiated; use 'input_variable(**" + str(self) + ")' instead")
+
+        _unknown_shape = (-2,) # TODO: take this from the catacombs of cntk_py
 
         def __str__(self):
             '''
             Stringifies the Type record back to Python 3 syntax per layers.typing.
             '''
             # base type
-            unknown_shape = (-2,)
-            shape     = getattr(self, 'shape', unknown_shape)
+            shape     = getattr(self, 'shape', Variable._Type._unknown_shape)
             is_sparse = getattr(self, 'is_sparse', False)
             axes      = getattr(self, 'dynamic_axes', ())
+            dtype     = getattr(self, 'dtype', None)
             has_axes = len(axes) > 0 # it's a tuple of Axis
             if is_sparse and not has_axes:
                 raise TypeError('Type: cannot be sparse and not have an axis')
-            if shape == unknown_shape:  #.is_unknown():  # TODO: how to do this right?
+            if shape == Variable._Type._unknown_shape:
                 s = 'tensor'
             elif shape == ():
-                s = 'float'
+                s = 'np.float64' if dtype == np.float64 else 'np.float32' if dtype == np.float32 else 'np.float16' if dtype == np.float16 else 'float'
             else:
-                s = 'Tensor[' + ','.join(str(dim) for dim in shape) + ']'
+                s = 'Tensor['
+                if dtype == np.float64:
+                    s += 'np.float64,'
+                if dtype == np.float16:
+                    s += 'np.float16,'
+                if shape == ():
+                    s += '()'
+                else:
+                    s += ','.join(str(dim) for dim in shape)
+                s += ']'
                 if is_sparse:
                     s = "Sparse" + s
                 elif not has_axes:
@@ -190,7 +235,7 @@ class VariableMixin(object):
                 for axis in reversed(axes):
                     if axis.name == 'defaultBatchAxis':  # axis == Axis.default_batch_axis():  --TODO: how to do this right?
                         continue
-                    if axis.name == 'defaultDynamicAxis' or axis.name == 'staticAxis_2147483645': # TODO: how to do this right?
+                    if axis.name == 'defaultDynamicAxis' or axis.name == 'UnknownAxes': # TODO: how to do this right?
                         t = 'Sequence'
                     else:
                         t = 'SequenceOver[' + axis.name + ']'
@@ -198,12 +243,42 @@ class VariableMixin(object):
             # We do not return dtype or needs_gradient. dtype is mostly redundant, and needs_gradient is not really part of the type.
             return s
 
+        @property
+        def shape_is_known(self):
+            shape = getattr(self, 'shape', None)
+            return shape is not None and shape != Variable._Type._unknown_shape
+
+        @staticmethod
+        def _sanitize(the_type):
+            '''
+            Converts type into Variable._Type if given a float, float32, float64 or float16.
+            '''
+            # TODO: it would be great if in a future version we could recognize and support Python 3.5 typing.Sequence
+            import sys
+            if sys.version_info >= (3,5):
+                from typing import GenericMeta
+                if isinstance(the_type, GenericMeta):
+                    raise TypeError("Python's typing.Sequence is not a valid CNTK type; use cntk.layers.typing.Sequence instead")
+            if the_type == float:
+                return Variable._Type(shape=(), is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
+            elif the_type == np.float32 or the_type == np.float64 or the_type == np.float16:
+                return Variable._Type(shape=(), dtype=the_type, is_sparse=False, dynamic_axes=[cntk_py.Axis.default_batch_axis()])
+            else:
+                return the_type
+
     @property
-    def type(self):
+    def _type(self):
         '''
-        The complete type of the data represented by this Variable as a single Variable.Type instance.
+        The complete type of the data represented by this Variable as a single object that has data members of the same name.
+
+        Example:
+        >>> x = C.input_variable(13, name='my_input')
+        >>> x
+        Input('my_input', [#], [13])
+        >>> x._type.shape, x._type.dynamic_axes, x._type.is_sparse, x._type.needs_gradient
+        ((13,), (Axis('defaultBatchAxis'),), False, False)
         '''
-        return Variable.Type(shape=self.shape, dtype=self.dtype, needs_gradient=self.needs_gradient, is_sparse=self.is_sparse, dynamic_axes=self.dynamic_axes)
+        return Variable._Type(shape=self.shape, dtype=self.dtype, needs_gradient=self.needs_gradient, is_sparse=self.is_sparse, dynamic_axes=self.dynamic_axes)
 
 
 
@@ -214,7 +289,7 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
 
     Args:
        shape (`tuple`): the shape of this variable.
-       dtype (`np.float32 or np.float64`): data type of the values that will be bound to this variable.
+       dtype (`np.float32 or np.float64 or np.float16`): data type of the values that will be bound to this variable.
         Default is np.float32
        needs_gradient (`bool`): if set to True any expression that contains this variable
         will also be differentiated with respect to this variable.
@@ -255,12 +330,26 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
 
         return cntk_py.Constant(self)
 
-
 class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
-    '''
+    '''__init__(self, shape=None, init=None, dtype=np.float32, device=None, name='')
+
     A trainable parameter. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that can be modified by a training
     procedure.
+
+    Example:
+         >>> p = C.Parameter((13,42,7), init=C.glorot_uniform())
+         >>> p.shape
+             (13, 42, 7)
+
+         >>> # example with inferred dimensions
+         >>> W = C.Parameter((C.InferredDimension, 42), init=C.glorot_uniform())
+         >>> W.shape   # -1 indicates dimension yet to be inferred
+             (-1, 42)
+         >>> x = C.input_variable(13)
+         >>> y = C.times(x, W)  # times operation now knows that the input dimension of W must be 13
+         >>> W.shape          # hence, the shape has been updated
+             (13, 42)
 
     Args:
        shape (`tuple`): the shape of the tensor holding the parameters
@@ -269,30 +358,39 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
         If a numpy array is specified the shape argument is ignored and
         the tensor gets the shape of this argument. Alternatively, an
         initializer from :class:`~cntk.initializer` can be specified.
-       dtype (`np.float32` or `np.float64`): data type of the values stored.
+       dtype (`np.float32` or `np.float64` or `np.float16`): data type of the values stored.
        device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this parameter
 
     Parameters are Variables and therefore they inherit all their methods.
     '''
-    def __init__(self, shape=None, init=None, dtype=None,
+    def __init__(self, shape=None, init=None, dtype=default_override_or(np.float32),
                  device=None, name=''):
         if not device:
             device = use_default_device()
 
+        if init is None:
+            init = 0
+
+        pure = get_default_override(None, pure=default_override_or(False))
+        if pure:
+            raise TypeError('parameters cannot be created inside a @Function def')
+
+        from _cntk_py import constant_initializer
+        if np.isscalar(init):
+            init = constant_initializer(init)
+            if not shape:
+                shape = ()
+
+        dtype = get_default_override(Parameter, dtype=dtype)
         if dtype is not None:
             if isinstance(init, np.ndarray) and dtype != init.dtype:
                 init = np.array(init, dtype=dtype)
         else:
-            if np.isscalar(init) and not shape:
-                shape = ()
             if isinstance(init, np.ndarray):
                 dtype = init.dtype
             else:
                 dtype = np.float32
-
-        if init is None:
-            init = 0
 
         if isinstance(init, (np.ndarray, list, float, int)):
             ndav = sanitize_value(shape, init, dtype, device)
@@ -306,7 +404,11 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     @property
     def value(self):
         '''
-        NumPy array of the value
+        Value of the Parameter
+
+        Args:
+          getter: gets the Parameter's value as a NumPy array
+          setter: sets the Parameter's value to the provided NumPy array
         '''
         return super(Parameter, self).value().to_ndarray()
 
@@ -322,20 +424,28 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
 
 
 class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
-    '''
+    '''__init__(self, value=None, shape=None, dtype=np.float32, device=None, name='')
+
     A constant value. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that cannot be modified.
 
-    A Constant is a :class:`~cntk.ops.variables.Variable` and therefore inherits all its methods.
+    A Constant is a :class:`~cntk.variables.Variable` and therefore inherits all its methods.
+
+    Example:
+         >>> c = C.Constant(1, (2,3))
+         >>> c.value
+             array([[1., 1., 1.],
+                    [1., 1., 1.]], dtype=float32)
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
-        BUGBUG: Document initializers
-       dtype (`np.float32` or `np.float64`): data type to store the values as.
+       dtype (`np.float32` or `np.float64` or `np.float16`): data type to store the values as.
        device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
+    Todo:
+       Document initializers for `value` parameter.
     '''
-    def __init__(self, value=None, shape=None, dtype=None, device=None, name=''):
+    def __init__(self, value=None, shape=None, dtype=default_override_or(np.float32), device=None, name=''):
 
         if not device:
             device = use_default_device()
@@ -343,6 +453,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
             shape = ()
 
+        dtype = get_default_override(Constant, dtype=dtype)
         if dtype is not None:
             if isinstance(value, np.ndarray) and dtype != value.dtype:
                 value = np.array(value, dtype=dtype)
@@ -365,4 +476,15 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         NumPy array of the value
         '''
         return super(Constant, self).value().to_ndarray()
+
+
+    @value.setter
+    def value(self, val):
+        if isinstance(val, np.ndarray):
+            ndarray = NDArrayView.from_dense(val.astype(self.dtype))
+            super(Constant, self).set_value(ndarray)
+        elif isinstance(val, cntk_py.NDArrayView):
+            super(Constant, self).set_value(val)
+        else:
+            raise TypeError("Unsupported value type: %s", type(val))
 

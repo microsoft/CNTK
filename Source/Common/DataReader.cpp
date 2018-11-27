@@ -240,7 +240,7 @@ size_t DataReader::GetCurrentSamplePosition()
 // GetMinibatch - Get the next minibatch (features and labels)
 // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
 //             [out] each matrix resized if necessary containing data.
-// returns - true if there are more minibatches, false if no more minibatchs remain
+// returns - true if there are more minibatches, false if no more minibatches remain
 bool DataReader::GetMinibatch(StreamMinibatchInputs& matrices)
 {
     /**
@@ -273,7 +273,7 @@ bool DataReader::GetMinibatch(StreamMinibatchInputs& matrices)
 // latticeinput - lattice for each utterances in this minibatch
 // uids - lables stored in size_t vector instead of ElemType matrix
 // boundary - phone boundaries
-// returns - true if there are more minibatches, false if no more minibatchs remain
+// returns - true if there are more minibatches, false if no more minibatches remain
 bool DataReader::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap)
 {
     bool bRet = true;

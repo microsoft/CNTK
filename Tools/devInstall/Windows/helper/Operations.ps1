@@ -37,7 +37,7 @@ function OpAnacondaEnv(
         $envName = $environmentName
     }
     else {
-        $envName = "cntkdev-py$pyVersion"
+        $envName = "cntk-py$pyVersion"
     }
     $envDir = Join-Path envs $envName
     $envVar = "CNTK_PY$($pyVersion)_PATH";
@@ -96,27 +96,27 @@ function OpCMake362(
         } )
 }
 
-function OpCNTKMKL3
-    ([parameter(Mandatory=$true)][string] $cache,
+function OpMKLDNN012(
+    [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "CNTK Custom MKL Version 3"
-    $prodFile = "CNTKCustomMKL-Windows-3.zip"
-    $prodSubDir = "CNTKCustomMKL"
-    $targetPath = join-path $targetFolder $prodSubDir
-    $targetPathCurrenVersion = join-path $targetPath "3"
-    $envVar = "CNTK_MKL_PATH";
-    $envValue = $targetPath
-    $downloadSource = "https://www.cntk.ai/mkl/$prodFile";
-    $expectedHash = "BFE38CC72F669AD9468AD18B681718C3F02125DCF24DCC87C4696DD89D0E3CDE"
+    $prodName = "MKLML and MKL-DNN 0.12 CNTK Prebuild"
+    $prodFile = "mklml-mkldnn-0.12.zip"
+    $prodSubDir =  "mklml-mkldnn-0.12"
 
-    @(  @{ShortName = "CNTKMKL3"; Name = $prodName; VerifyInfo = "Checking for $prodName in $targetPathCurrenVersion"; ActionInfo = "Installing $prodName"; 
-          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPathCurrenVersion },
-                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
-          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; destinationFolder = $prodSubDir },
-                      @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } );
-         } )
+    $targetPath = join-path $targetFolder $prodSubDir
+    $envVar = "MKL_PATH"
+    $envValue = $targetPath
+    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/mkldnn/mklml-mkldnn-0.12.zip"
+    $expectedHash = "13C3D485CF96C216B6460188CE6E120847F1BB16B9F66A4134E56EB5D3A37857"
+
+    @( @{ShortName = "MKLDNN012"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
+         Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
+                           @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
+         Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash} );
+         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; zipSubTree = $prodSubDir; destinationFolder = $prodSubDir },
+                     @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue }  );
+        } )
 }
 
 function OpMSMPI70([parameter(
@@ -149,52 +149,46 @@ function OpMSMPI70SDK(
         } )
 }
 
-function OpNvidiaCub141(
+function OpNvidiaCub174(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "NVidia CUB 1.4.1"
-    $prodFile = "cub-1.4.1.zip"
-    $prodSubDir = "cub-1.4.1"
+    $prodName = "NVidia CUB 1.7.4"
+    $prodFile = "cub-1.7.4.zip"
+    $prodSubDir = "cub-1.7.4"
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "CUB_PATH";
     $envValue = $targetPath
-    $downloadSource = "https://github.com/NVlabs/cub/archive/1.4.1.zip";
-    $expectedHash = "F464EDA366E4DFE0C1D9AE2A6BBC22C5804CF131F8A67974C01FAE4AE8213E8B"
+    $downloadSource = "https://github.com/NVlabs/cub/archive/1.7.4.zip"
 
-    @( @{ShortName = "CUB141"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
+    @( @{ShortName = "CUB174"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = "$targetPath" },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
+         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile" } );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = "$targetFolder"; destinationFolder = $prodSubDir; zipSubTree= $prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } );
          } )
 }
 
-function OpNVidiaCudnn5180(
+function OpNVidiaCudnn7090(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "NVidia CUDNN 5.1 for CUDA 8.0"
-    $cudnnWin7 = "cudnn-8.0-windows7-x64-v5.1.zip"
-    $cudnnWin10 = "cudnn-8.0-windows10-x64-v5.1.zip"
+    $prodName = "NVidia CUDNN 7.0.5 for CUDA 9.0"
+    $cudnnWin = "cudnn-9.0-windows10-x64-v7.zip"
 
-    $prodSubDir =  "cudnn-8.0-v5.1"
+    $prodSubDir =  "cudnn-9.0-v7.0.5"
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "CUDNN_PATH"
     $envValue = join-path $targetPath "cuda"
-    $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v5.1"
-    $expectedHashWin7 = ""
-    $expectedHashWin10 = "BE75CA61365BACE03873B47C77930025FFEE7676FBEF0DC03D3E180700AF014B"
+    $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v7.0.5"
 
-    @( @{ShortName = "CUDNN5180"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
+    @( @{ShortName = "CUDNN7090"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyDirectory"; Path = $envValue },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{Function = "DownloadForPlatform"; Method = "WebRequest"; Platform = "^Microsoft Windows 7"; Source = "$downloadSource/$cudnnWin7"; Destination = "$cache\$cudnnWin7"; ExpectedHash = $expectedHashWin7 },
-                       @{Function = "DownloadForPlatform"; Method = "WebRequest"; Platform = "^Microsoft Windows (8|10|Server 2008 R2|Server 2012 R2)"; Source = "$downloadSource/$cudnnWin10"; Destination = "$cache\$cudnnWin10"; ExpectedHash = $expectedHashWin10 } );
-         Action = @( @{Function = "ExtractAllFromZipForPlatform"; Platform = "^Microsoft Windows 7"; zipFileName = "$cache\$cudnnWin10"; destination = $targetFolder; destinationFolder = $prodSubDir },
-                     @{Function = "ExtractAllFromZipForPlatform"; Platform = "^Microsoft Windows (8|10|Server 2008 R2|Server 2012 R2)"; zipFileName = "$cache\$cudnnWin10"; destination = $targetFolder; destinationFolder = $prodSubDir },
+         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = "$downloadSource/$cudnnWin"; Destination = "$cache\$cudnnWin" } );
+         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$cudnnWin"; destination = $targetFolder; destinationFolder = $prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue } );
          })
 }
@@ -222,7 +216,7 @@ function OpOpenCV31(
          } )
 }
 
-function OpProtoBuf310VS15(
+function OpProtoBuf310VS17(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder,
     [parameter(Mandatory=$true)][string] $repoDirectory)
@@ -234,8 +228,8 @@ function OpProtoBuf310VS15(
     $prodName = "ProtoBuf 3.1.0 Source"
     $prodSrcSubdir = "protobuf-3.1.0"
     $prodFile = "protobuf310.zip"
-    $prodSubDir =  "protobuf-3.1.0-vs15"
-    $batchFile = "buildProtoVS15.cmd"
+    $prodSubDir =  "protobuf-3.1.0-vs17"
+    $batchFile = "buildProtoVS17.cmd"
 
     $protoSourceDir = join-path $targetFolder "src"
     $targetPath = Join-Path $protoSourceDir $prodSrcSubdir
@@ -244,30 +238,30 @@ function OpProtoBuf310VS15(
     $downloadSource = "https://github.com/google/protobuf/archive/v3.1.0.zip"
     $expectedHash = "C07629F666312E43A4C2415AF77F6442178605A8658D975299C793CB89999212"
 
-    @( @{ShortName = "PROTO310VS15"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
+    @( @{ShortName = "PROTO310"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath } );
          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash} );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $protoSourceDir; zipSubTree = $prodSrcSubdir; destinationFolder = $prodSrcSubdir },
                      @{Function = "MakeDirectory"; Path = $scriptDirectory },
-                     @{Function = "CreateBuildProtobufBatch"; FileName = "$scriptDirectory\$batchFile"; SourceDir = $targetPath; TargetDir = $buildDir; RepoDirectory = $repoDirectory } );
+                     @{Function = "CreateBuildSimpleBatch"; FileName = "$scriptDirectory\$batchFile"; SourceDir = $targetPath; TargetDir = $buildDir; RepoDirectory = $repoDirectory } );
         } )
 }
 
-function OpProtoBuf310VS15Prebuild(
+function OpProtoBuf310VS17Prebuild(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "ProtoBuf 3.1.0 VS15 CNTK Prebuild"
-    $prodFile = "protobuf-3.1.0-vs15.zip"
-    $prodSubDir =  "protobuf-3.1.0-vs15"
+    $prodName = "ProtoBuf 3.1.0 VS17 CNTK Prebuild"
+    $prodFile = "protobuf-3.1.0-vs17.zip"
+    $prodSubDir =  "protobuf-3.1.0-vs17"
 
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "PROTOBUF_PATH"
     $envValue = $targetPath
-    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/protobuf/protobuf-3.1.0-vs15.zip"
-    $expectedHash = "1CB09AA38354BA781F43A4152534BC45C55B65A61F38E09A50CD19F503445F25"   
+    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/protobuf/protobuf-3.1.0-vs17.zip"
+    $expectedHash = "ED0F3215AC60E6AE29B21CBFF53F8876E4CF8B4767FEC525CEF0DA6FDF6A4A73"   
 
-    @( @{ShortName = "PROTO310VS15PRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
+    @( @{ShortName = "PROTO310PRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash} );
@@ -305,27 +299,27 @@ function OpSwig3010(
         } )
 }
 
-function OpCheckVS15Update3
+function OpCheckVS2017
 {
-    @( @{Name = "Verify Installation of VS2015, Update 3"; ShortName = "PREVS15U3"; VerifyInfo = "Checking for Visual Studio 2015, Update 3"; 
-                        Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Microsoft Build Tools 14.0 \(amd64\)$"; Version = "14.0.25420"; MatchExact = $true} ); 
-                        PreReq = @( @{Function = "PrereqInfoVS15" } );
+    @( @{Name = "Verify Installation of VS2017"; ShortName = "PREVS17"; VerifyInfo = "Checking for Visual Studio 2017"; 
+                        Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Visual Studio (Community|Professional|Enterprise) 2017$"; Version = "15.5"; MatchExact = $false} ); 
+                        PreReq = @( @{Function = "PrereqInfoVS17" } );
                         Action = @( @{Function = "StopInstallation" } )
                         } )
 }
 
-function OpCheckCuda8
+function OpCheckCuda9
 {
-    $programPath = join-path $env:ProgramFiles "NVIDIA GPU Computing Toolkit\CUDA\v8.0"
-    @( @{Name = "Verify Installation of NVidia Cuda 8"; ShortName = "PRECUDA8"; VerifyInfo = "Checking for NVidia Cuda 8"; 
+    $programPath = join-path $env:ProgramFiles "NVIDIA GPU Computing Toolkit\CUDA\v9.0"
+    @( @{Name = "Verify Installation of NVidia Cuda 9.0"; ShortName = "PRECUDA90"; VerifyInfo = "Checking for NVidia Cuda 9.0"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $programPath },
-                           @{Function = "VerifyEnvironmentAndData"; EnvVar = "CUDA_PATH_V8_0"; Content = $programPath } ); 
-         PreReq = @( @{Function = "PrereqInfoCuda8" } );
+                           @{Function = "VerifyEnvironmentAndData"; EnvVar = "CUDA_PATH_V9_0"; Content = $programPath } ); 
+         PreReq = @( @{Function = "PrereqInfoCuda9" } );
          Action = @( @{Function = "StopInstallation" } )
         } )
 }
 
-function OpZlibVS15(
+function OpZlibVS17(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder,
     [parameter(Mandatory=$true)][string] $repoDirectory)
@@ -346,8 +340,8 @@ function OpZlibVS15(
     $libzipDownloadSource = "https://nih.at/libzip/libzip-1.1.3.tar.gz"
     $downloadeSizeLibzip = "1FAA5A524DD4A12C43B6344E618EDCE1BF8050DFDB9D0F73F3CC826929A002B0"
     
-    $prodSubDir =  "zlib-vs15"
-    $batchFile = "buildZlibVS15.cmd"
+    $prodSubDir =  "zlib-vs17"
+    $batchFile = "buildZlibVS17.cmd"
 
     $sourceCodeDir = join-path $targetFolder "src"
     $scriptDirectory = join-path $targetFolder "script"
@@ -355,7 +349,7 @@ function OpZlibVS15(
     $envVar = "ZLIB_PATH"
     $envValue = $targetPath
     
-    @( @{ShortName = "ZLIBVS15"; VerifyInfo = "Checking for $prodName in $sourceCodeDir"; ActionInfo = "Installing $prodName"; 
+    @( @{ShortName = "ZLIBVS17"; VerifyInfo = "Checking for $prodName in $sourceCodeDir"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = "$sourceCodeDir\$zlibProdName" },
                            @{Function = "VerifyDirectory"; Path = "$sourceCodeDir\$libzipProdName" },
                            @{Function = "VerifyFile"; Path = "$scriptDirectory\$batchFile" } );
@@ -368,22 +362,22 @@ function OpZlibVS15(
         } )
 }
 
-function OpZlibVS15Prebuild(
+function OpZlibVS17Prebuild(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "ZLib VS15 CNTK Prebuild"
-    $prodFile = "zlib-vs15.zip"
-    $prodSubDir =  "zlib-vs15"
+    $prodName = "ZLib VS17 CNTK Prebuild"
+    $prodFile = "zlib-vs17.zip"
+    $prodSubDir =  "zlib-vs17"
 
 
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "ZLIB_PATH"
     $envValue = $targetPath
-    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/zip/zlib-vs15.zip"
-    $expectedHash = "7C6B7D874D970B24D41CC59A332DAA8CD65497D46BB8D0DF05493DC8F6462832"
+    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/zip/zlib-vs17.zip"
+    $expectedHash = "40A79007EC792756370C35E6C8585C0C5E8750A44BD2F60DB1EA542AAF398A7B"
 
-    @( @{ShortName = "ZLIBVS15PRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
+    @( @{ShortName = "ZLIBPRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash} );

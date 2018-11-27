@@ -87,7 +87,7 @@ public:
         size_t nodeNumRanks,                                                            // Number of working nodes
         bool useAsyncBuffer = true,                                                   // Using asynchonous buffer to hide communication cost
         bool isSimulatedModelAveragingSGD = false,                                      // Using parameter server-based MA rather than ASGD
-        AdjustLearningRateAtBeginning adjusttype = AdjustLearningRateAtBeginning::None, // Adjust learning per minibatches at very begining of training process
+        AdjustLearningRateAtBeginning adjusttype = AdjustLearningRateAtBeginning::None, // Adjust learning per minibatches at very beginning of training process
         // this could be used to tackle the unstableness of ASGD
         double adjustCoef = 0.2,                                                        // see in DecayCoefficient()
         size_t adjustPerMinibatches = 600,                                              //

@@ -7,6 +7,7 @@
 #include <functional>
 #include "Common.h"
 #include <numeric>
+#include "CNTKLibraryC.h"
 
 using namespace CNTK;
 
@@ -48,8 +49,8 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
     auto classifierOutput = LSTMNet<ElementType>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device, L"classifierOutput");
 
     auto labelsVar = InputVariable({ numOutputClasses }, AsDataType<ElementType>(), L"labels");
-    auto trainingLoss = ReduceSum(CrossEntropyWithSoftmax(classifierOutput, labelsVar), L"lossFunction");
-    auto prediction = ReduceSum(ClassificationError(classifierOutput, labelsVar), L"classificationError");
+    auto trainingLoss = ReduceSum(CrossEntropyWithSoftmax(classifierOutput, labelsVar), Axis::AllAxes(), L"lossFunction");
+    auto prediction = ReduceSum(ClassificationError(classifierOutput, labelsVar), Axis::AllAxes(), L"classificationError");
 
     auto LSTMClassifier = Combine({ trainingLoss, prediction, classifierOutput }, L"LSTMClassifier");
 
@@ -144,7 +145,7 @@ void TestSimpleRecurrence(size_t inputDim,
 
     plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
-    auto reducedOutput = ReduceSum(plusOutput, L"sum");
+    auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
 
     if (testSaveAndReLoad)
     {
@@ -417,6 +418,344 @@ BOOST_AUTO_TEST_CASE(RecurrentNetworkCreationInGPU)
 {
     if (ShouldRunOnGpu())
         TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
+}
+
+void ParityCandCppLSTMModel(DeviceDescriptor device, CNTK_DeviceDescriptor cdevice)
+{
+    const size_t inputDim = 937;
+    const size_t numLSTMLayers = 3;
+    const size_t cellDim = 1024;
+    const size_t hiddenDim = 512;
+    const size_t numOutputClasses = 9304;
+
+    auto features = InputVariable({ inputDim }, AsDataType<float>(), L"features");
+    auto classifier = LSTMNet<float>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device, L"classifierOutput");
+
+    auto output = classifier->Output();
+
+    // Save to use in C later.
+    const std::wstring tempModelPath = L"test.model";
+    if ((_wunlink(tempModelPath.c_str()) != 0) && (errno != ENOENT))
+        BOOST_ERROR("Error deleting temp model file 'test.model'");
+    classifier->Save(tempModelPath);
+
+    // Prepare input
+    std::mt19937_64 generator(13);
+    const size_t numberOfFrames = 3;
+    std::vector<float> inputData;
+    for (int i = 0; i < inputDim * numberOfFrames; ++i)
+        inputData.push_back((float)generator());
+
+    // Run C++ forward.
+    auto value = Value::CreateSequence(NDShape{ inputDim }, inputData, DeviceDescriptor::CPUDevice());
+    std::unordered_map<Variable, ValuePtr> outputs{ { output, nullptr } };
+    classifier->Evaluate({ { features, value } }, outputs, device);
+
+    auto outputAsVector = [&output](std::unordered_map<Variable, ValuePtr>& outputs)
+    {
+        NDArrayViewPtr o = std::make_shared<NDArrayView>(DataType::Float, outputs[output]->Shape(), DeviceDescriptor::CPUDevice());
+        o->CopyFrom(*(outputs[output]->Data()));
+        const float* buf = o->DataBuffer<float>();
+        return std::vector<float>(buf, buf + outputs[output]->Shape().TotalSize());
+    };
+
+    auto result = outputAsVector(outputs);
+
+    // Run 3 frame segment with and without resetting.
+
+    auto threeFramesData = MakeSharedObject<NDArrayView>(DataType::Float, NDShape{ inputDim, numberOfFrames, 1 }, inputData.data(), inputData.size() * sizeof(float), DeviceDescriptor::CPUDevice());
+    auto mask = MakeSharedObject<NDMask>(NDShape{ numberOfFrames, 1 });
+    mask->Clear();
+    auto threeFramesValue = MakeSharedObject<Value>(threeFramesData, mask);
+
+    // Make sure we variate the sequence size without reset.
+    auto twoFramesShape = NDShape{ inputDim, numberOfFrames - 1, 1 };
+    auto twoFramesData = MakeSharedObject<NDArrayView>(DataType::Float, twoFramesShape, inputData.data(), twoFramesShape.TotalSize() * sizeof(float), DeviceDescriptor::CPUDevice());
+    auto twoFramesValue = MakeSharedObject<Value>(twoFramesData, MakeSharedObject<NDMask>(NDShape{ numberOfFrames - 1, 1 }));
+
+    mask = MakeSharedObject<NDMask>(NDShape{ numberOfFrames, 1 });
+    mask->MarkSequenceBegin({ 0, 0 });
+    auto threeFramesValueWithReset = MakeSharedObject<Value>(threeFramesData, mask);
+
+    // With reset.
+    outputs[output] = nullptr;
+    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, device);
+    auto result1 = outputAsVector(outputs);
+
+    // Without reset.
+    outputs[output] = nullptr;
+    classifier->Evaluate({ { features, threeFramesValue } }, outputs, device);
+    auto result2 = outputAsVector(outputs);
+
+    // With reset.
+    outputs[output] = nullptr;
+    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, device);
+    auto result3 = outputAsVector(outputs);
+
+    // With reset.
+    outputs[output] = nullptr;
+    classifier->Evaluate({ { features, threeFramesValueWithReset } }, outputs, device);
+    auto result4 = outputAsVector(outputs);
+
+    // Without reset.
+    outputs[output] = nullptr;
+    classifier->Evaluate({ { features, twoFramesValue } }, outputs, device);
+    auto result5 = outputAsVector(outputs);
+
+    RequireClose(result1, result3, 0.00001f, 0.01f);
+    RequireClose(result1, result4, 0.00001f, 0.01f);
+
+    auto norm1 = GetL1Norm(result1, result4);
+    auto norm2 = GetL1Norm(result1, result3);
+    auto norm3 = GetL1Norm(result1, result2);
+
+    BOOST_REQUIRE_CLOSE(norm1, 0.0, 0.1);
+    BOOST_REQUIRE_LT(std::abs(norm1 - norm2), 0.0001);
+    BOOST_REQUIRE_GT(std::abs(norm1 - norm3), 0.0001);
+
+    // Create the C model from the saved file.
+    CNTK_ModelHandle model;
+    auto rc = CNTK_LoadModel("test.model", &cdevice, &model);
+    BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+    if (_wunlink(tempModelPath.c_str()) != 0)
+        BOOST_ERROR("Error deleting temp model file 'tempModelPath'");
+
+    // Create a copy
+    CNTK_ModelHandle cloned;
+    rc = CNTK_CloneModel(model, CNTK_ModelParameterShare, false, &cloned);
+    BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+
+    // Run C original forward.
+    CNTK_Variable* outputInfos;
+    uint32_t numOutputs = 0;
+    rc = CNTK_GetModelOutputsInfo(model, &outputInfos, &numOutputs);
+    BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+    BOOST_REQUIRE_EQUAL(numOutputs, classifier->Outputs().size());
+    BOOST_REQUIRE_EQUAL(numOutputs, 1u);
+
+    CNTK_Variable* argumentInfos;
+    uint32_t numArguments = 0;
+    rc = CNTK_GetModelArgumentsInfo(model, &argumentInfos, &numArguments);
+    BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+
+    // Sequence mode.
+    {
+        auto three = std::vector<uint32_t>{ (uint32_t)inputDim, (uint32_t)numberOfFrames };
+        CNTK_Shape threeFramesShape;
+        threeFramesShape.size = 2;
+        threeFramesShape.value = three.data();
+
+        CNTK_Value threeFrames;
+        threeFrames.data = inputData.data();
+        threeFrames.shape = threeFramesShape;
+
+        auto two = std::vector<uint32_t>{ (uint32_t)inputDim, (uint32_t)numberOfFrames - 1 };
+        CNTK_Shape twoFramesShapeC;
+        twoFramesShapeC.size = 2;
+        twoFramesShapeC.value = two.data();
+
+        CNTK_Value twoFrames;
+        twoFrames.data = inputData.data();
+        twoFrames.shape = twoFramesShapeC;
+
+        bool sequenceFlags[]{ true };
+
+        // With reset.
+        NDShape outputShape;
+        CNTK_Value* outputValues = nullptr;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &threeFrames, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> cresult1(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        // Without reset.
+        sequenceFlags[0] = false;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &threeFrames, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> cresult2(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        // With reset.
+        sequenceFlags[0] = true;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &threeFrames, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> cresult3(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        // With reset.
+        sequenceFlags[0] = true;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &threeFrames, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> cresult4(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        sequenceFlags[0] = false;
+        outputValues[0].shape.value[1] = numberOfFrames - 1;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &twoFrames, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> cresult5(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        for (uint32_t i = 0; i < numOutputs; i++)
+            CNTK_CleanValue(&outputValues[i]);
+        CNTK_ReleaseArray(outputValues);
+
+        // Run C cloned forward.
+        CNTK_Value* clonedOutputValues = nullptr;
+        sequenceFlags[0] = true;
+        rc = CNTK_EvaluateSequence(cloned, argumentInfos, &threeFrames, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &clonedOutputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+
+        // Check that C and C++ results match.
+        outputShape = NDShape(std::vector<size_t>(clonedOutputValues[0].shape.value, clonedOutputValues[0].shape.value + clonedOutputValues[0].shape.size));
+        std::vector<float> c2(clonedOutputValues[0].data, clonedOutputValues[0].data + outputShape.TotalSize());
+
+        for (uint32_t i = 0; i < numOutputs; i++)
+            CNTK_CleanValue(&clonedOutputValues[i]);
+        CNTK_ReleaseArray(clonedOutputValues);
+
+        RequireClose(result, cresult1, 0.00001f, 0.01f);
+        RequireClose(result1, cresult1, 0.00001f, 0.01f);
+        RequireClose(result2, cresult2, 0.00001f, 0.01f);
+        RequireClose(result3, cresult3, 0.00001f, 0.01f);
+        RequireClose(result4, cresult4, 0.00001f, 0.01f);
+        RequireClose(result5, cresult5, 0.00001f, 0.01f);
+
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(c2.begin(), c2.end(),
+            cresult1.begin(), cresult1.end());
+    }
+
+    // Frame mode.
+    {
+        uint32_t s = (uint32_t)inputDim;
+        CNTK_Shape shape;
+        shape.size = 1;
+        shape.value = &s;
+
+        CNTK_Value frame1;
+        frame1.data = inputData.data();
+        frame1.shape = shape;
+
+        bool sequenceFlags[]{ true };
+        NDShape outputShape;
+
+        // First frame with reset.
+        CNTK_Value* outputValues = nullptr;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame1, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> resultFrame1(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        // Second frame without reset.
+        auto frame2 = frame1;
+        frame2.data += inputDim;
+        sequenceFlags[0] = false;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame2, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> resultFrame2(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        // Third frame without reset.
+        auto frame3 = frame2;
+        frame3.data += inputDim;
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame3, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        std::vector<float> resultFrame3(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        auto cresult1 = CombineVectors({ resultFrame1, resultFrame2, resultFrame3 });
+
+        // Without reset.
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame1, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        resultFrame1.assign(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame2, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        resultFrame2.assign(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        rc = CNTK_EvaluateSequence(model, argumentInfos, &frame3, sequenceFlags, numArguments,
+            outputInfos, numOutputs, &outputValues);
+        BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
+        outputShape = NDShape(std::vector<size_t>(outputValues[0].shape.value, outputValues[0].shape.value + outputValues[0].shape.size));
+        resultFrame3.assign(outputValues[0].data, outputValues[0].data + outputShape.TotalSize());
+
+        for (uint32_t i = 0; i < numOutputs; i++)
+            CNTK_CleanValue(&outputValues[i]);
+        CNTK_ReleaseArray(outputValues);
+
+        auto cresult2 = CombineVectors({ resultFrame1, resultFrame2, resultFrame3 });
+
+        RequireClose(result1, cresult1, 0.00001f, 0.01f);
+        RequireClose(result2, cresult2, 0.00001f, 0.01f);
+    }
+
+    // Cleanup C code.
+    CNTK_ReleaseModel(model);
+    CNTK_ReleaseModel(cloned);
+
+    for (uint32_t i = 0; i < numOutputs; i++)
+        CNTK_CleanVariable(&outputInfos[i]);
+    CNTK_ReleaseArray(outputInfos);
+
+    for (uint32_t i = 0; i < numArguments; i++)
+        CNTK_CleanVariable(&argumentInfos[i]);
+    CNTK_ReleaseArray(argumentInfos);
+}
+
+BOOST_AUTO_TEST_CASE(TestParityCandCppLSTMModel)
+{
+    CNTK_DeviceDescriptor* devices = nullptr;
+    uint32_t size = 0;
+    CNTK_AllDevices(&devices, &size);
+    BOOST_REQUIRE(size == DeviceDescriptor::AllDevices().size());
+
+    if (ShouldRunOnCpu())
+    {
+        CNTK_DeviceDescriptor cpu { CNTK_DeviceKind_CPU, 0 };
+        size_t count = 0;
+        for (size_t i = 0; i < size; ++i)
+            if (devices[i].kind == CNTK_DeviceKind_CPU)
+            {
+                cpu = devices[i];
+                count++;
+            }
+
+        BOOST_REQUIRE(count == 1);
+        ParityCandCppLSTMModel(DeviceDescriptor::CPUDevice(), cpu);
+    }
+
+    if (ShouldRunOnGpu())
+    {
+        size_t count = 0;
+        CNTK_DeviceDescriptor gpu{ CNTK_DeviceKind_GPU, 0 };
+        for (size_t i = 0; i < size; ++i)
+            if (devices[i].kind == CNTK_DeviceKind_GPU && devices[i].id == 0)
+            {
+                gpu = devices[i];
+                count++;
+            }
+        BOOST_REQUIRE(count == 1);
+        CNTK_DeviceDescriptor deflt{};
+        CNTK_DefaultDevice(&deflt);
+        BOOST_REQUIRE(deflt.kind == CNTK_DeviceKind_GPU);
+        ParityCandCppLSTMModel(DeviceDescriptor::GPUDevice(0), gpu);
+    }
+
+    CNTK_ReleaseArray(devices);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -1,0 +1,11 @@
+isPythonTest: True
+
+dataDir: .
+
+tags:
+    - weekly-e (build_sku == 'gpu') and (device == 'cpu') and (flavor == 'release')
+
+testCases:
+  PyTest run must finish with error code 0 (outputs __COMPLETED__ in that case):
+    patterns:
+      - __COMPLETED__

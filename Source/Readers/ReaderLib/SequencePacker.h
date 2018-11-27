@@ -7,7 +7,7 @@
 
 #include "PackerBase.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // This packer generates minibatches containing full sequences packed for 
 // efficient (concurrent) consumption on a GPU.
@@ -16,7 +16,7 @@ class SequencePacker : public PackerBase
 public:
     SequencePacker(
         SequenceEnumeratorPtr sequenceEnumerator,
-        const std::vector<StreamDescriptionPtr>& streams,
+        const std::vector<StreamInformation>& streams,
         size_t numberOfBuffers = 2,
         bool useLocalTimeline = false,
         CorpusDescriptorPtr corpus = nullptr) :
@@ -32,15 +32,18 @@ public:
 
 protected:
     virtual MBLayoutPtr PackDenseStream(const StreamBatch& batch, size_t streamIndex);
-
     virtual MBLayoutPtr PackSparseStream(const StreamBatch& batch, size_t streamIndex);
+    virtual MBLayoutPtr PackBinaryStream(const StreamBatch& batch, size_t streamIndex);
 
     // Given a number of sequences, creates an MB layout that is used to guide
     // the actual packing.
     virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch);
+    virtual MBLayoutPtr CreateBinaryMBLayout(const StreamBatch& batch);
 
-    // Helper function to check the sample shape of input samples.
-    void CheckSampleShape(const std::vector<SequenceDataPtr>& minibatch, StreamDescriptionPtr outputStream);
+    // Helper function to check and refresh the sample shape of input samples.
+    void RefreshSampleShape(const std::vector<SequenceDataPtr>& minibatch, StreamInformation& outputStream);
+
+    std::pair<vector<MBLayout::SequenceInfo>,size_t> CreateSequenceInfos(const StreamBatch& batch);
 
     // A flag indicating whether to use local timeline for data.
     bool m_useLocalTimeline;
@@ -55,4 +58,4 @@ protected:
 
 typedef std::shared_ptr<SequencePacker> SequencePackerPtr;
 
-}}}
+}

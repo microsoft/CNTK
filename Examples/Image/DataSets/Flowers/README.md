@@ -9,4 +9,4 @@ downloaded by cd to this directory, Examples/Image/DataSets/Flowers and running 
 
 After running the script, you will see a 'jpg' folder that contains the images and three map files that split the roughly 8000 images into three sets of once 6000 and twice 1000 images.
 
-The Flowers dataset is for example used in the Transfer Learning example, see [here](https://github.com/Microsoft/CNTK/wiki/Build-your-own-image-classifier-using-Transfer-Learning).
+The Flowers dataset is for example used in the Transfer Learning example, see [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Build-your-own-image-classifier-using-Transfer-Learning).

@@ -461,14 +461,14 @@ template class NDCG1EvalNode<double>;
 // Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
 // Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
 // 
-// The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and tokensToIgnore contains label '-' then
+// The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and tokensToIgnore contains index of label '-' then
 // given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
 //
 // The returned error is computed as: EditDistance(s1,s2) * length(s1') / length(s1)
 //
 // Just like ClassificationError and other evaluation nodes, when used as an evaluation criterion, the SGD process will aggregate all values over an epoch and report the average, i.e. the error rate.
 // Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
-// Sequence Data with Recurrent Neural Networks", http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 template<class ElemType>
 class EditDistanceErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
 {
@@ -480,7 +480,7 @@ public:
     // delPen - deletion penalty
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
-    // tokensToIgnore - list of samples to ignore during edit distance evaluation
+    // tokensToIgnore - list of indices of samples to ignore during edit distance evaluation
     EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 1.0f, float delPen = 1.0f, float insPen = 1.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
         : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
     {
@@ -512,6 +512,7 @@ public:
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
         Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_tokensToIgnore);
+        Value().TransferToDeviceIfNotThere(Input(0)->GetDeviceId());
     }
 
     virtual void Validate(bool isFinalValidationPass) override
@@ -575,7 +576,7 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of samples to ignore during edit distance evaluation
-    static ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
+    ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
         float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& tokensToIgnore)
     {
         std::vector<int> firstSeqVec, secondSeqVec;
@@ -615,8 +616,12 @@ public:
 
                 //calculate edit distance
                 size_t firstSize = firstSeqVec.size();
-                totalSampleNum += firstSize;
                 size_t secondSize = secondSeqVec.size();
+                if (Base::HasEnvironmentPtr() && Base::Environment().IsV2Library())
+                    totalSampleNum += secondSize;
+                else 
+                    totalSampleNum += firstSize;
+
                 grid.Resize(firstSize + 1, secondSize + 1);
                 insMatrix.Resize(firstSize + 1, secondSize + 1);
                 delMatrix.Resize(firstSize + 1, secondSize + 1);
@@ -796,7 +801,7 @@ public:
         auto& dims = GetSampleLayout().GetDims();
         vector<size_t> shape;
         shape.assign(dims.begin(), dims.end());
-        
+
         if (m_offset < 0)
         {
             CalculateAxisOffset();
@@ -814,6 +819,7 @@ public:
     virtual bool OutputUsedInComputingInputNodesGradients() const override {
         return false;
     }
+
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
         return false;
     }
@@ -821,6 +827,8 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
+
+        Base::m_isValueSparse = m_sparse;
         if (m_offset < 0)
         {
             CalculateAxisOffset();
@@ -840,13 +848,12 @@ public:
         }
 
         auto sampleLayout = TensorShape(dims);
-
         m_pMBLayout = Input(0)->GetMBLayout();
+
         SetDims(sampleLayout, HasMBLayout());
     }
 
 protected:
-
     void CalculateAxisOffset()
     {
         if (m_offset < 0)
@@ -866,6 +873,7 @@ protected:
 
 template class OneHotNode<float>;
 template class OneHotNode<double>;
+template class OneHotNode<half>;
 
 #ifdef COMING_SOON
 
@@ -895,7 +903,7 @@ private:
     Matrix<ElemType> mBacktrace;
 
     int mStartLab; // the starting output label
-    int mEndLab;   // the ending output label, if avaliable
+    int mEndLab;   // the ending output label, if available
     ElemType m_default_activity;
 
 public:

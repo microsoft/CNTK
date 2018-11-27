@@ -519,7 +519,7 @@ public:
     }
 
 private:
-    // guess how many colunmns of this matrix will fit into the cache
+    // guess how many columns of this matrix will fit into the cache
     // This is a helper function for matrix matprod and variants.
     // Result also gets aligned to 4 because matprod benefits from it.
     size_t cacheablecols() const
@@ -1635,7 +1635,7 @@ void printmatf(const char *name, const M &m, FILE *f = stderr)
     fprintf(f, "\n###### %s (%d, %d) ######\n", name, m.rows(), m.cols());
     foreach_row (i, m)
     {
-        fprintf(f, "row: %d", i);
+        fprintf(f, "row: %lld", i);
         foreach_column (j, m)
         {
             if (j % 15 == 0)

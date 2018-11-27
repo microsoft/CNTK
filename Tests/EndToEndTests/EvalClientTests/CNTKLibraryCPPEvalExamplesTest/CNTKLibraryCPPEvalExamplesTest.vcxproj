@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -23,9 +23,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalCPUOnlyExamples\EvalMultithreads.cpp" />
+    <ClCompile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalCPUOnlyExamples\CNTKLibraryCPPEvalExamples.cpp" />
     <ClCompile Include="..\..\CNTKv2Library\Common\Common.cpp" />
     <ClCompile Include="CNTKLibraryCPPEvalExamplesTest.cpp" />
+    <ClCompile Include="EvalMultithreads.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{D771A06D-CC25-4582-B5CD-D2A4782BB005}</ProjectGuid>
@@ -37,14 +38,12 @@
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseIntelMKL>No</UseIntelMKL>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -60,7 +59,7 @@
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions>WIN32;_CONSOLE;UNICODE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTKv2LibraryDll\API;%(AdditionalIncludeDirectories</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTKv2LibraryDll\API;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -78,8 +77,8 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
-       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-     </ClCompile>
+      <RuntimeLibrary>MultiThreadedDebugDll</RuntimeLibrary>
+    </ClCompile>
     <Link />
     <ProjectReference>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
@@ -93,7 +92,7 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDll</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

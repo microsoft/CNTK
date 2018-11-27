@@ -580,7 +580,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 #endif
 #ifdef __unix__
             char tempFile[PATH_MAX];
-            strcpy(tempFile, msra::strfun::utf8(pageFilePath).c_str());
+            strcpy(tempFile, Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(pageFilePath)).c_str());
             int fid = mkstemp(tempFile);
             unlink(tempFile);
             close(fid);
@@ -933,7 +933,7 @@ bool HTKMLFReader<ElemType>::GetHmmData(msra::asr::simplesenonehmm* hmm)
 // GetMinibatch - Get the next minibatch (features and labels)
 // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
 //             [out] each matrix resized if necessary containing data.
-// returns - true if there are more minibatches, false if no more minibatchs remain
+// returns - true if there are more minibatches, false if no more minibatches remain
 // TODO: Why do we have two read functions? Is one not a superset of the other?
 template <class ElemType>
 bool HTKMLFReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)

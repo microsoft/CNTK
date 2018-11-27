@@ -6,7 +6,6 @@ Build info:
 		Last modified date: Mon Apr 18 10:00:14 2016
 		Build type: Debug
 		Build target: GPU
-		With 1bit-SGD: yes
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
 		CUB_PATH: D:\work\Program\Code\src\CUB
 		CUDNN_PATH: D:\work\Program\Code\src\cuDNN\cuda
@@ -23,7 +22,6 @@ Changed current directory to D:\work\Program\Code\local-src\CNTK-public\CNTK-git
 04/18/2016 12:15:03: 		Last modified date: Mon Apr 18 10:00:14 2016
 04/18/2016 12:15:03: 		Build type: Debug
 04/18/2016 12:15:03: 		Build target: GPU
-04/18/2016 12:15:03: 		With 1bit-SGD: yes
 04/18/2016 12:15:03: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
 04/18/2016 12:15:03: 		CUB_PATH: D:\work\Program\Code\src\CUB
 04/18/2016 12:15:03: 		CUDNN_PATH: D:\work\Program\Code\src\cuDNN\cuda

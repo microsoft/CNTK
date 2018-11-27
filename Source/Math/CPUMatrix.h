@@ -14,6 +14,7 @@
 #include <ctime>
 #include <limits.h>
 #include "QuantizedOperations.h"
+#include "half.hpp"
 
 //#include "GPUMatrix.h"
 //#include "CPUSparseMatrix.h"
@@ -54,6 +55,7 @@ public:
     using Base::Buffer;
     using Base::GetNumRows;
     using Base::GetNumCols;
+    using Base::GetDiagSize;
     using Base::GetNumElements;
     using Base::OwnBuffer;
     using Base::GetFormat;
@@ -94,10 +96,10 @@ public:
     ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
     
     void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, 
-                   ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+                   ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType unitGainFactor);
 
     void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-              ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax=false);
 
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
@@ -105,9 +107,13 @@ public:
                      ElemType RMS_WGT_MAX,
                      ElemType RMS_WGT_DEC,
                      ElemType RMS_WGT_MIN,
-                     const bool needAveMultiplier);
+                     const bool needAveMultiplier,
+                     const bool initialized);
 
-    void AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon);
+    template<typename GradType>
+    void AdaDelta(CPUMatrix<GradType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);
+
+    void AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int* timestamps, int currentTimestamp);
 
     void Reshape(const size_t numRows, const size_t numCols);
 
@@ -154,7 +160,11 @@ public:
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const CPUMatrix<ElemType>& vector);
     void SetUniformRandomValue(const ElemType low, const ElemType high, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high);
+    void SetGaussianRandomValue(RNGHandle& rngHandle, const ElemType mean, const ElemType stdev);
+    void SetGumbelRandomValue(RNGHandle& rngHandle, const ElemType loc, const ElemType scale);
     void SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
+    void SetTruncatedNormalRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
     void SetUniformRandomMask(const ElemType maskRate, const ElemType scaleValue, RNGHandle& rngHandle);
     void AddGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed = USE_TIME_BASED_SEED);
 
@@ -223,6 +233,9 @@ public:
     CPUMatrix<ElemType>& InplaceTanh();
     CPUMatrix<ElemType>& AssignTanhOf(const CPUMatrix<ElemType>& a);
 
+    CPUMatrix<ElemType>& InplaceAtanh();
+    CPUMatrix<ElemType>& AssignAtanhOf(const CPUMatrix<ElemType>& a);
+
     CPUMatrix<ElemType>& InplaceLogSoftmax(const bool isColWise);
     CPUMatrix<ElemType>& AssignLogSoftmaxOf(const CPUMatrix<ElemType>& a, const bool isColWise);
 
@@ -232,7 +245,7 @@ public:
     // sequence training
     CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType& threshhold);
     CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
-    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType>& totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
     CPUMatrix<ElemType>& InplaceSqrt();
     CPUMatrix<ElemType>& AssignSqrtOf(const CPUMatrix<ElemType>& a);
 
@@ -251,6 +264,27 @@ public:
     CPUMatrix<ElemType>& InplaceNegativeSine();
     CPUMatrix<ElemType>& AssignNegativeSineOf(const CPUMatrix<ElemType>& a);
 
+    CPUMatrix<ElemType>& InplaceTan();
+    CPUMatrix<ElemType>& AssignTanOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceAcos();
+    CPUMatrix<ElemType>& AssignAcosOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceAsin();
+    CPUMatrix<ElemType>& AssignAsinOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceAtan();
+    CPUMatrix<ElemType>& AssignAtanOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceCosh();
+    CPUMatrix<ElemType>& AssignCoshOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceSinh();
+    CPUMatrix<ElemType>& AssignSinhOf(const CPUMatrix<ElemType>& a);
+
+    CPUMatrix<ElemType>& InplaceAsinh();
+    CPUMatrix<ElemType>& AssignAsinhOf(const CPUMatrix<ElemType>& a);
+
     CPUMatrix<ElemType>& InplaceAbs();
     CPUMatrix<ElemType>& AssignAbsOf(const CPUMatrix<ElemType>& a);
 
@@ -268,6 +302,8 @@ public:
     CPUMatrix<ElemType>& AssignSumOfElements(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
+    CPUMatrix<ElemType>& GatherFromTarget(const CPUMatrix<ElemType>& indices, const CPUMatrix<ElemType>& target, size_t row_elements);
+    CPUMatrix<ElemType>& ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements, const CPUMatrix<char>* mask = nullptr);
 
     bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
@@ -377,29 +413,39 @@ public:
     void MaxPoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const;
     void MaxPoolingBackward(const CPUMatrix<ElemType>& out, const CPUMatrix<ElemType>& in,
                             const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
-                            CPUMatrix<ElemType>& grad) const;
+                            CPUMatrix<ElemType>& grad, bool accumulateGradient) const;
 
-    void ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                           const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, CPUMatrix<ElemType>& argmax) const;
+    void MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                              const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, CPUMatrix<ElemType>& argmax, double spatialScale) const;
 
-    void ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                            const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, CPUMatrix<ElemType>& argmax) const;
+    void MaxROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                               const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, CPUMatrix<ElemType>& argmax, double spatialScale) const;
 
     void MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& poolInput, CPUMatrix<ElemType>& input) const;
 
-    void AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolPadMode) const;
+    void AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolIncludePad) const;
     void AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices,
-                                CPUMatrix<ElemType>& grad, const bool poolPadMode) const;
+                                CPUMatrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const;
 
-    void BatchNormalizationForward(const CPUMatrix<ElemType>& scale, const CPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance,
-                                   CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const;
-    void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<ElemType>& scale, double blendFactor, const CPUMatrix<ElemType>& saveMean, const CPUMatrix<ElemType>& saveInvStdDev,
-                                    CPUMatrix<ElemType>& scaleGrad, CPUMatrix<ElemType>& biasGrad) const;
+    template<class StatType>
+    void BatchNormalizationForward(const CPUMatrix<StatType>& scale, const CPUMatrix<StatType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, CPUMatrix<StatType>& runMean, CPUMatrix<StatType>& runVariance,
+                                   CPUMatrix<ElemType>& out, double epsilon, CPUMatrix<StatType>& saveMean, CPUMatrix<StatType>& saveInvStdDev) const;
+
+    template<class StatType>
+    void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<StatType>& scale, double blendFactor, const CPUMatrix<StatType>& saveMean, const CPUMatrix<StatType>& saveInvStdDev,
+                                    CPUMatrix<StatType>& scaleGrad, CPUMatrix<StatType>& biasGrad) const;
 
 public:
     // This functions do not depend on <ElemType>, i.e. you can call them on any <ElemType>
     static int SetNumThreads(int numThreads);
     static int GetMaxNumThreads();
+
+    enum OptimizationFlag
+    {
+        OPT_EVAL_WITH_MKL = 1, // using Intel MKL functions for evaluation performance
+    };
+    static void SetOptimizationFlags(int flags);
+    static int  GetOptimizationFlags();
 
     static void SetCompatibleMode();
 
@@ -411,6 +457,8 @@ public:
     static void Multiply(const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB, CPUMatrix<ElemType>& c);
     static void Multiply(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
     static void Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, ElemType beta, CPUMatrix<ElemType>& c);
+
+    static void ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c);
 
     static void ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
     static void AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c);
@@ -428,6 +476,7 @@ public:
     static void InnerProduct(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise);
     static ElemType InnerProductOfMatrices(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
     static void ElementWisePower(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);
+    static void BatchMatMul(ElemType beta, const CPUMatrix<ElemType>& a, const bool transposeA, const int m, const CPUMatrix<ElemType>& b, const bool transposeB, const int n, CPUMatrix<ElemType>& c, const bool isColWise);
 
     static bool AreEqual(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const ElemType threshold = 1e-8);
 
@@ -542,9 +591,40 @@ protected:
 
 private:
     void Clear();
+
+    void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step = 1);
+    void ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, char* mask, size_t numElemsPerMaskEntry, size_t indices_step = 1);
+
+private:
+    static int m_optimizationFlags;
 };
 
 typedef CPUMatrix<float> CPUSingleMatrix;
 typedef CPUMatrix<double> CPUDoubleMatrix;
+typedef CPUMatrix<half> CPUHalfMatrix;
+
+template<typename ElemType>
+void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    const array<size_t, 2>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+
+template<typename ElemType>
+void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    const array<size_t, 3>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 3>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 3>& reducingStrides);
+
+template<typename ElemType>
+void CPUMatrixTensorOpImpl(ElemType beta, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& o, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+    const array<size_t, 4>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+
+template<typename ElemType>
+void CPUMatrixTensorArgOpImpl(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& o, ElementWiseOperator reductionOp,
+    const array<size_t, 2>& offsets,
+    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
 }}}

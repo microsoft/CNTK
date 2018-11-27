@@ -5,6 +5,7 @@ tags:
     - bvt-e (build_sku == 'gpu') and (flavor == 'release')
     # In Nightly additionally run Debug GPU and CPU on Linux
     - nightly-e (build_sku == 'gpu') and ((flavor == 'release') or ((os == 'linux') and (flavor == 'debug')))
+    - weekly-e (build_sku == 'gpu') and ((flavor == 'release') or ((os == 'linux') and (flavor == 'debug')))
 
 testCases:
   CNTK Run must be completed:

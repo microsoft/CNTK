@@ -37,7 +37,7 @@ def test_alexnet_imagenet_distributed(device_id):
                "-device", str(device_id) ]
     mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.99, True)
 
-def test_alexnet_imagenet_distributed_1bitsgd(device_id):
+def test_alexnet_imagenet_distributed_gpu(device_id):
     params = [ "-n", "2",
                "-datadir", prepare_ImageNet_data(),
                "-q", "1",

@@ -6,7 +6,6 @@ Build info:
 		Last modified date: Tue Apr 26 23:35:31 2016
 		Build type: Release
 		Build target: GPU
-		With 1bit-SGD: no
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 		CUB_PATH: c:\src\cub-1.4.1
 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
@@ -23,7 +22,6 @@ Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\
 05/03/2016 13:22:28: 		Last modified date: Tue Apr 26 23:35:31 2016
 05/03/2016 13:22:28: 		Build type: Release
 05/03/2016 13:22:28: 		Build target: GPU
-05/03/2016 13:22:28: 		With 1bit-SGD: no
 05/03/2016 13:22:28: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 05/03/2016 13:22:28: 		CUB_PATH: c:\src\cub-1.4.1
 05/03/2016 13:22:28: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda

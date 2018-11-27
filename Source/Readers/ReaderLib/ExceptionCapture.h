@@ -8,7 +8,7 @@
 #include <exception>
 #include <mutex>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Class that allows to capture/rethrow exceptions happened on different threads.
 class ExceptionCapture
@@ -55,4 +55,4 @@ private:
     std::mutex m_lock;
 };
 
-}}}
+}

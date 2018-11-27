@@ -21,6 +21,7 @@ class EvalReader : public DataReaderBase
     size_t m_mbSize;
     vector<size_t> m_switchFrame;
     size_t m_oldSig;
+    size_t m_rightSplice; // for latency control blstm
 
 public:
     // Method to setup the data for the reader
@@ -72,9 +73,11 @@ public:
         }
     }
 
-    virtual void Init(const ConfigParameters& /*config*/) override
+    virtual void Init(const ConfigParameters& config) override
     {
+        m_rightSplice = config(L"rightSplice", (size_t) 0);
     }
+
     virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
     {
     }
@@ -112,7 +115,7 @@ public:
     // TryGetMinibatch - Get the next minibatch (features and labels)
     // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
     //             [out] each matrix resized if necessary containing data.
-    // returns - true if there are more minibatches, false if no more minibatchs remain
+    // returns - true if there are more minibatches, false if no more minibatches remain
     virtual bool TryGetMinibatch(StreamMinibatchInputs& matrices)
     {
         // how many records are we reading this time
@@ -169,7 +172,7 @@ public:
     void CopyMBLayoutTo(MBLayoutPtr pMBLayout)
     {
         assert(m_switchFrame.size() == 1);
-        pMBLayout->Init(1, m_mbSize);
+        pMBLayout->Init(1, m_mbSize, m_rightSplice);
 
         // BUGBUG: The following code is somewhat broken in that the structure of this module only keeps track of new sentence starts,
         //         but not of ends. But end markers are now required by the MBLayout. So we must fake the end markers.

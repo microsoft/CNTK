@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Common.h"
+#include <numeric>
 
 using namespace CNTK;
 
@@ -35,7 +36,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 
             bool reduceAll = (reductionAxis < 0);
             if (reduceAll)
-                reduceSumFunc = ReduceSum(inputVar);
+                reduceSumFunc = ReduceSum(inputVar, Axis::AllAxes());
             else
                 reduceSumFunc = ReduceSum(inputVar, Axis(useNegativeAxisIndex ? (reductionAxis - (int)sampleRank) : reductionAxis));
 
@@ -297,7 +298,7 @@ void TestRecurrentFunctionCloning()
     auto placeholderReplacement = PastValue(plusOutput);
     plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
-    auto reducedOutput = ReduceSum(plusOutput, L"sum");
+    auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
     auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
     std::unordered_set<FunctionPtr> visitedFunctions;
@@ -671,7 +672,7 @@ void TestRecurrenceShapeInference()
         auto placeholderReplacement = PastValue(plusOutput);
         plusOutput = plusOutput->ReplacePlaceholders({ { recurrenceForwardReference, placeholderReplacement } });
 
-        auto reducedOutput = ReduceSum(plusOutput, L"sum");
+        auto reducedOutput = ReduceSum(plusOutput, Axis::AllAxes(), L"sum");
         auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
 
         auto inputVar = InputVariable(inputShape, false, DataType::Float, true, L"input", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
@@ -931,7 +932,7 @@ void TestFindName(const DeviceDescriptor& device)
     CheckFindByNameResult(minusFunc3->FindByName(minusFuncName), minusFunc3);
     CheckFindByNameResult(minusFunc3->FindByName(blockFuncName), blockFunc);
 
-    // Test FindByName with block funcitons, nestedSearchInsideBlockFunction is true
+    // Test FindByName with block functions, nestedSearchInsideBlockFunction is true
     CheckFindByNameResult(minusFunc3->FindByName(anotherPlusFuncName, true), anotherPlusFunc1);
     CheckFindByNameResult(minusFunc3->FindByName(anotherMinusFuncName, true), anotherMinusFunc1);
     CheckFindByNameResult(minusFunc3->FindByName(nonExistingFuncName, true), nullptr);
@@ -953,6 +954,18 @@ void TestFindName(const DeviceDescriptor& device)
         minusFunc3->FindByName(blockFuncName, true);
     }, "The expected exception has not been caugth: multiple functions with the same name.");
 
+    // Test FindByName with multiple block functions, nestedSearchInsideBlockFunction is true
+    auto placeholder1 = PlaceholderVariable(L"inputPlaceholder1");
+    auto firstBlockPlusFuncName = L"FirstBlockPlus";
+    auto blockRoot1 = Plus(placeholder1, Constant::Scalar(1.0f), firstBlockPlusFuncName);
+    auto placeholder2 = PlaceholderVariable(L"inputPlaceholder2");
+    auto secondBlockPlusFuncName = L"SecondBlockPlus";
+    auto blockRoot2 = Plus(placeholder2, Constant::Scalar(1.0f), secondBlockPlusFuncName);
+    auto block2 = AsBlock(std::move(blockRoot2), { { placeholder2, InputVariable({}, DataType::Float)} }, L"Plus");
+    auto block1 = AsBlock(std::move(blockRoot1), { { placeholder1, block2->Output() } }, L"Plus");
+    CheckFindByNameResult(block1->FindByName(firstBlockPlusFuncName, true), blockRoot1);
+    CheckFindByNameResult(block1->FindByName(secondBlockPlusFuncName, true), blockRoot2);
+
     // Test FindAllWithName with block functions, nestedSearchInsideBlockFunction is false.
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName), anotherPlusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName), anotherMinusFuncName, 0);
@@ -965,7 +978,7 @@ void TestFindName(const DeviceDescriptor& device)
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(minusFuncName), minusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(blockFuncName), blockFuncName, 1);
 
-    // Test FindAllWithName with block funcitons, nestedSearchInsideBlockFunction is true
+    // Test FindAllWithName with block functions, nestedSearchInsideBlockFunction is true
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName, true), anotherPlusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName, true), anotherMinusFuncName, 1);
     CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nonExistingFuncName, true), nonExistingFuncName, 0);
@@ -987,6 +1000,204 @@ void TestFindName(const DeviceDescriptor& device)
     auto minusFunc4 = CNTK::Minus(aliasFunc1, minusFunc3, minusFuncName);
     CheckFindByNameResult(minusFunc4->FindByName(aliasFuncName), aliasFunc1);
     CheckFindAllWithNameResult(minusFunc4->FindAllWithName(aliasFuncName, true), aliasFuncName, 1);
+}
+
+
+std::function<std::vector<float>(FunctionPtr)> CreateForwardFunctor(const DeviceDescriptor& device, const Variable& inputVar)
+{
+    auto shape = inputVar.Shape();
+    auto size = shape.TotalSize();
+    auto inputData = std::make_shared<std::vector<float>>(size, 1.0f);
+    ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape, *inputData, false));
+     
+    auto outputData = std::make_shared<std::vector<float>>(size, 0.0f);
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape.AppendShape({ 1, 1 }), *outputData, false));
+
+    return [device, inputVar, inputValue, outputValue, inputData, outputData](FunctionPtr f) -> std::vector<float> {
+        std::unordered_map<Variable, ValuePtr> inputMap { { inputVar, inputValue } };
+        std::unordered_map<Variable, ValuePtr> outputMap { { f->Output(), outputValue } };
+        f->Forward(inputMap, outputMap, device, { f->Output() });
+        return *outputData;
+    };
+}
+
+void SetDropoutRate(const DeviceDescriptor& device) 
+{
+    auto zeroCount = [](const std::vector<float>& v) 
+    {
+        size_t count = 0;
+        for (auto e : v) if (e == 0.0) count++;
+        return count;
+    };
+
+    auto shape = NDShape({ 10, 10, 10, 10 });
+    auto input = InputVariable(shape, DataType::Float);
+    auto dropout = Dropout(input, 0.0, 5336, L"Dropout");
+    auto forwardFunc = CreateForwardFunctor(device, input);
+
+    BOOST_TEST(zeroCount(forwardFunc(dropout)) == 0); // initially dropout is disabled;
+
+    for (auto dropoutRate : { 0.9, 0.4, 0.0, 0.1 }) 
+    {
+        dropout->SetAttribute(L"dropoutRate", dropoutRate);
+        BOOST_TEST(abs(zeroCount(forwardFunc(dropout)) - dropoutRate*shape.TotalSize()) < 100);
+    }
+
+    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>(shape, -0.5, 0.5, 1, device));
+    auto combine = Combine({ Plus(plusParam, Plus(dropout, ElementTimes(plusParam, Constant::Scalar(-1.0f)))) });
+
+    auto dropout2 = combine->FindByName(L"Dropout");
+
+    for (auto dropoutRate : { 0.3, 0.7, 0.2 })
+    {
+        dropout2->SetAttribute(L"dropoutRate", dropoutRate);
+        BOOST_TEST(abs(zeroCount(forwardFunc(combine)) - dropoutRate*shape.TotalSize()) < 100);
+    }
+}
+
+void SetRandomSeed(const DeviceDescriptor& device)
+{
+    auto diff = [](const std::vector<float>& a, const std::vector<float>& b)
+    {
+        bool foundDifference = false;
+        for (int i = 0; !foundDifference && i < a.size() && i < b.size(); ++i)
+        {
+            foundDifference = (a[i] != b[i]);
+        }
+        return foundDifference;
+    };
+
+    auto shape = NDShape({ 10, 10, 10, 10 });
+    auto input = InputVariable(shape, DataType::Float);
+    auto dropout = Dropout(input, 0.5, 5336, L"Dropout");
+    auto forwardFunc = CreateForwardFunctor(device, input);
+
+    auto result1 = forwardFunc(dropout);
+
+    dropout->SetAttribute(L"rngSeed", 5337);
+
+    auto result2 = forwardFunc(dropout);
+
+    BOOST_TEST(diff(result1, result2));
+
+    dropout->SetAttribute(L"rngSeed", 5336);
+    auto result3 = forwardFunc(dropout);
+    BOOST_TEST(!diff(result1, result3));
+
+    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>(shape, -0.5, 0.5, 1, device));
+    auto combine = Combine({ Plus(plusParam, Plus(dropout, ElementTimes(plusParam, Constant::Scalar(-1.0f)))) });
+ 
+    forwardFunc(combine); // this will force the composite function to construct a new computation network.
+
+    auto dropout2 = combine->FindByName(L"Dropout");
+    dropout2->SetAttribute(L"rngSeed", 5337);
+    auto result4 = forwardFunc(combine);
+    // there could be small differences between result2 and result4 due to rounding errors.
+    FloatingPointVectorCompare(result2, result4, "SetRandomSeed: output does match the expected after resetting the dropout seed.");
+}
+
+void TestMatMul(const DeviceDescriptor& device)
+{
+    srand(1);
+    auto diff_size = [](const std::vector<size_t>& a, const std::vector<size_t>& b)
+    {
+        bool foundDifference = false;
+        if (a.size() != b.size()) return true;
+        for (int i = 0; !foundDifference && i < a.size() && i < b.size(); ++i)
+        {
+            foundDifference = (a[i] != b[i]);
+        }
+        return foundDifference;
+    };
+
+    std::vector<std::vector<size_t>> inputShapeVec0{{3, 4}, {3, 4, 2, 2}, {64, 4, 1}, {64, NDShape::InferredDimension, 1}};
+    std::vector<std::vector<size_t>> inputShapeVec1{{5, 3}, {5, 3, 2, 2}, {2, 64}, {2, 64}};
+    std::vector<std::vector<size_t>> outShapeVec{{5, 4}, {5, 4, 2, 2}, {2, 4, 1}, {2, NDShape::InferredDimension, 1}};
+    std::vector<std::vector<size_t>> inputValueShapeVec0{ { 3, 4 },{ 3, 4, 2, 2 },{ 64, 4, 1 },{ 64, 4, 1 } };
+    std::vector<std::vector<size_t>> inputValueShapeVec1{ { 5, 3 },{ 5, 3, 2, 2 },{ 2, 64 },{ 2, 64 } };
+    std::vector<std::vector<size_t>> outValueShapeVec{ { 5, 4 },{ 5, 4, 2, 2 },{ 2, 4, 1 },{ 2, 4, 1 } };
+    std::vector<size_t> inputTotalSizeVec0 = { 12, 48, 256, 256 };
+    std::vector<size_t> inputTotalSizeVec1 = { 15, 60, 128, 128 };
+    std::vector<size_t> outputTotalSizeVec = { 20, 80, 8, 8 };
+    std::vector<size_t> inputSubSizeVec0 = { 12, 12, 256, 256 };
+    std::vector<size_t> inputSubSizeVec1 = { 15, 15, 128, 128 };
+    std::vector<size_t> outputSubSizeVec = { 20, 20, 8, 8 };
+
+
+    size_t testCases = inputShapeVec0.size();
+    for (size_t test_i = 0; test_i < testCases; ++test_i)
+    {
+        auto shape0 = NDShape(inputShapeVec0[test_i]);
+        auto shape1 = NDShape(inputShapeVec1[test_i]);
+        auto valueShape0 = NDShape(inputValueShapeVec0[test_i]);
+        auto valueShape1 = NDShape(inputValueShapeVec1[test_i]);
+        auto outShape = NDShape(outShapeVec[test_i]);
+        auto outValueShape = NDShape(outValueShapeVec[test_i]);
+
+        size_t inputTotalSize0 = inputTotalSizeVec0[test_i];
+        size_t inputTotalSize1 = inputTotalSizeVec1[test_i];
+        size_t outputTotalSize = outputTotalSizeVec[test_i];
+        size_t inputSubSize0 = inputSubSizeVec0[test_i];
+        size_t inputSubSize1 = inputSubSizeVec1[test_i];
+        size_t outputSubSize = outputSubSizeVec[test_i];
+
+        auto input0 = InputVariable(shape0, DataType::Float);
+        auto input1 = InputVariable(shape1, DataType::Float);
+        auto result = ::CNTK::Internal::MatMul(input0, input1);
+
+        std::vector<float> inputData0(inputTotalSize0);
+        std::vector<float> inputData1(inputTotalSize1);
+        for (size_t i = 0; i < inputData0.size(); ++i)
+            inputData0[i] = ((float)rand()) / RAND_MAX;
+        for (size_t i = 0; i < inputData1.size(); ++i)
+            inputData1[i] = ((float)rand()) / RAND_MAX;
+
+        ValuePtr inputValue0 = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(valueShape0.AppendShape({1,1}), inputData0, true));
+        ValuePtr inputValue1 = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(valueShape1.AppendShape({ 1,1 }), inputData1, true));
+
+        NDShape outputShape = result->Output().Shape();
+        BOOST_TEST(!diff_size(outShape.Dimensions(), outputShape.Dimensions()));
+        std::vector<float> outputData(outputTotalSize);
+        ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outValueShape.AppendShape({ 1,1 }), outputData, false));
+
+        std::unordered_map<Variable, ValuePtr> outputs = {{result->Output(), outputValue}};
+        result->Forward({{input0, inputValue0}, {input1, inputValue1}}, outputs, device);
+
+        std::vector<float> expectedOutputValues(outputTotalSize);
+        {
+            for (size_t i = 0; i < outputTotalSize / outputSubSize; i++)
+            {
+                std::vector<float> inputTimesData0(inputSubSize0);
+                std::vector<float> inputTimesData1(inputSubSize1);
+                std::vector<float> outTimesData(outputSubSize);
+                auto inputTimes0 = InputVariable(shape0.SubShape(0, 2), DataType::Float);
+                auto inputTimes1 = InputVariable(shape1.SubShape(0, 2), DataType::Float);
+                auto timesResult = Times(inputTimes1, inputTimes0);
+
+                for (size_t j = 0; j < inputSubSize0; ++j)
+                {
+                    inputTimesData0[j] = inputData0[i * inputSubSize0 + j];
+                }
+                for (size_t j = 0; j < inputSubSize1; ++j)
+                {
+                    inputTimesData1[j] = inputData1[i * inputSubSize1 + j];
+                }
+
+                ValuePtr inputTimesValue0 = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(valueShape0.SubShape(0, 2).AppendShape({ 1,1 }), inputTimesData0, true));
+                ValuePtr inputTimesValue1 = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(valueShape1.SubShape(0, 2).AppendShape({ 1,1 }), inputTimesData1, true));
+                ValuePtr outputTimesValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outValueShape.SubShape(0, 2).AppendShape({ 1,1 }), outTimesData, false));
+                std::unordered_map<Variable, ValuePtr> timesOutputs = { {timesResult->Output(), outputTimesValue}};
+                timesResult->Forward({{inputTimes0, inputTimesValue0 }, {inputTimes1, inputTimesValue1 }}, timesOutputs, device);
+
+                for (size_t j = 0; j < outputSubSize; ++j)
+                {
+                    expectedOutputValues[i * outputSubSize + j] = outTimesData[j];
+                }
+            }
+        }
+
+        FloatingPointVectorCompare(outputData, expectedOutputValues, "TestMatMul: Forward prop results do not match expected results.");
+    }
 }
 
 BOOST_AUTO_TEST_SUITE(FunctionSuite)
@@ -1094,6 +1305,33 @@ BOOST_AUTO_TEST_CASE(TimesIndirectSparseGradType)
 {
     if (ShouldRunOnCpu())
         TestTimesIndirectSparseInputGradientSparse(DeviceDescriptor::CPUDevice());
+}
+
+
+BOOST_AUTO_TEST_CASE(TestSettingDropoutRate)
+{
+    if (ShouldRunOnCpu())
+        SetDropoutRate(DeviceDescriptor::CPUDevice());
+    
+    if (ShouldRunOnGpu())
+        SetDropoutRate(DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(TestSettingRandomSeed)
+{
+    if (ShouldRunOnCpu())
+        SetRandomSeed(DeviceDescriptor::CPUDevice());
+
+    if (ShouldRunOnGpu())
+        SetRandomSeed(DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(MatMul)
+{
+    if (ShouldRunOnCpu())
+        TestMatMul(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnGpu())
+        TestMatMul(DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

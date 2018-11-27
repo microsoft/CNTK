@@ -7,6 +7,7 @@
 #include "CNTKLibrary.h"
 #include "BackCompat.h"
 #include "PrimitiveFunction.h"
+#include "PrimitiveFunctionAttribute.h"
 #include "CompositeFunction.h"
 #include "ComputationNetworkBuilder.h"
 #include "Utils.h"
@@ -23,6 +24,7 @@
 #include "PreComputeNodes.h"
 #include "DeprecatedNodes.h"
 #include "SpecialPurposeNodes.h"
+#include "SequenceReshapeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -137,12 +139,26 @@ namespace CNTK
                     opType = PrimitiveOpType::Negate;
                 else if (node->OperationName() == OperationNameOf(SigmoidNode))
                     opType = PrimitiveOpType::Sigmoid;
+                else if (node->OperationName() == OperationNameOf(StableSigmoidNode))
+                    opType = PrimitiveOpType::StableSigmoid;
+                else if (node->OperationName() == OperationNameOf(AtanhNode))
+                    opType = PrimitiveOpType::Atanh;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
+                else if (node->OperationName() == OperationNameOf(AsinNode))
+                    opType = PrimitiveOpType::Asin;
+                else if (node->OperationName() == OperationNameOf(AcosNode))
+                    opType = PrimitiveOpType::Acos;
                 else if (node->OperationName() == OperationNameOf(CosineNode))
                     opType = PrimitiveOpType::Cos;
                 else if (node->OperationName() == OperationNameOf(SinNode))
                     opType = PrimitiveOpType::Sin;
+                else if (node->OperationName() == OperationNameOf(CoshNode))
+                    opType = PrimitiveOpType::Cosh;
+                else if (node->OperationName() == OperationNameOf(AsinhNode))
+                    opType = PrimitiveOpType::Asinh;
+                else if (node->OperationName() == OperationNameOf(SinhNode))
+                    opType = PrimitiveOpType::Sinh;
                 else if (node->OperationName() == OperationNameOf(PassNode))
                     opType = PrimitiveOpType::Pass;
                 else if (node->OperationName() == OperationNameOf(LabelsToGraphNode))
@@ -165,11 +181,13 @@ namespace CNTK
                     opType = PrimitiveOpType::Softmax;
                 else if (node->OperationName() == OperationNameOf(HardmaxNode))
                     opType = PrimitiveOpType::Hardmax;
+                else if (node->OperationName() == OperationNameOf(StraightThroughNode))
+                    opType = PrimitiveOpType::StraightThrough;
                 else if (node->OperationName() == OperationNameOf(TransposeDimensionsNode))
                 {
                     auto transposeDimensionsNode = node->As<TransposeDimensionsNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis1] = AsAxis(transposeDimensionsNode->Axis1());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis2] = AsAxis(transposeDimensionsNode->Axis2());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAxis1] = AsAxis(transposeDimensionsNode->Axis1());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAxis2] = AsAxis(transposeDimensionsNode->Axis2());
 
                     opType = PrimitiveOpType::TransposeAxes;
                 }
@@ -177,7 +195,7 @@ namespace CNTK
                 {
                     auto internalDynamicAxisName = node->As<WhereNode<ElementType>>()->DynamicAxisName();
                     std::vector<Axis> dynamicAxes = DynamicAxesFromInternalDynamicAxisName(internalDynamicAxisName);
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(dynamicAxes);
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(dynamicAxes);
 
                     opType = PrimitiveOpType::Where;
                 }
@@ -190,44 +208,44 @@ namespace CNTK
                     assert(axis.size() > 0 && axis.size() == beginIndex.size() && axis.size() == endIndex.size());
                     if (axis.size() == 1)
                     {
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(axis[0]);
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndex] = beginIndex[0];
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndex] = endIndex[0];
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAxis] = AsAxis(axis[0]);
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameBeginIndex] = beginIndex[0];
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameEndIndex] = endIndex[0];
                     }
                     else
                     {
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(AsAxis(axis));
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndexVec] = AsDictionaryValueVector(beginIndex);
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndexVec] = AsDictionaryValueVector(endIndex);
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAxisVec] = AsDictionaryValueVector(AsAxis(axis));
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameBeginIndexVec] = AsDictionaryValueVector(beginIndex);
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameEndIndexVec] = AsDictionaryValueVector(endIndex);
                     }
                     opType = PrimitiveOpType::Slice;
                 }
                 else if (node->OperationName() == OperationNameOf(RandomSampleNode))
                 {
                     auto randomSampleNode = node->As<RandomSampleNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAllowDuplicates] = randomSampleNode->GetAllowDuplicates();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNumSamples] = randomSampleNode->GetNumSamples();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAllowDuplicates] = randomSampleNode->GetAllowDuplicates();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameNumSamples] = randomSampleNode->GetNumSamples();
 
                     opType = PrimitiveOpType::RandomSample;
                 }
                 else if (node->OperationName() == OperationNameOf(RandomSampleInclusionFrequencyNode))
                 {
                     auto randomSampleInclusionFrequencyNode = node->As<RandomSampleInclusionFrequencyNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAllowDuplicates] = randomSampleInclusionFrequencyNode->GetAllowDuplicates();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNumSamples] = randomSampleInclusionFrequencyNode->GetNumSamples();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAllowDuplicates] = randomSampleInclusionFrequencyNode->GetAllowDuplicates();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameNumSamples] = randomSampleInclusionFrequencyNode->GetNumSamples();
 
                     opType = PrimitiveOpType::RandomSampleInclusionFrequency;
                 }
                 else if (node->OperationName() == OperationNameOf(DropoutNode))
                 {
                     auto dropoutNode = node->As<DropoutNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDropoutRate] = dropoutNode->GetDropoutRate();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameDropoutRate] = dropoutNode->GetDropoutRate();
 
                     opType = PrimitiveOpType::Dropout;
                 }
                 else if (node->OperationName() == OperationNameOf(ReshapeNode))
                 {
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNewShape] = AsNDShape(node->GetSampleLayout());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameNewShape] = AsNDShape(node->GetSampleLayout());
 
                     opType = PrimitiveOpType::Reshape;
                 }
@@ -240,7 +258,14 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(MinusNode))
                     opType = PrimitiveOpType::Minus;
                 else if (node->OperationName() == OperationNameOf(ElementTimesNode))
+                {
                     opType = PrimitiveOpType::ElementTimes;
+                }
+                // legacy support for DiagTimesNode
+                else if (node->OperationName() == OperationNameOf(DiagTimesNode))
+                {
+                    opType = PrimitiveOpType::ElementTimes;
+                }
                 else if (node->OperationName() == OperationNameOf(EqualNode))
                     opType = PrimitiveOpType::Equal;
                 else if (node->OperationName() == OperationNameOf(NotEqualNode))
@@ -267,14 +292,14 @@ namespace CNTK
                     else
                     {
                         auto timesNode = node->As<TimesNode<ElementType>>();
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = timesNode->OutputRank();
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInferInputRankToMap] = timesNode->InferInputRankToMap();
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameOutputRank] = timesNode->OutputRank();
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameInferInputRankToMap] = timesNode->InferInputRankToMap();
                         opType = PrimitiveOpType::Times;
                     }
                 }
                 else if (node->OperationName() == OperationNameOf(TransposeTimesNode))
                 {
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = node->As<TransposeTimesNode<ElementType>>()->OutputRank();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameOutputRank] = node->As<TransposeTimesNode<ElementType>>()->OutputRank();
                     opType = PrimitiveOpType::TransposeTimes;
                 }
                 else if (node->OperationName() == OperationNameOf(PastValueNode))
@@ -285,7 +310,7 @@ namespace CNTK
                         inputVars.push_back(initialStateVar);
                     }
 
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOffset] = (size_t)node->As<PastValueNode<ElementType>>()->TimeStep();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameOffset] = (size_t)node->As<PastValueNode<ElementType>>()->TimeStep();
                     opType = PrimitiveOpType::PastValue;
                 }
                 else if (node->OperationName() == OperationNameOf(FutureValueNode))
@@ -296,7 +321,7 @@ namespace CNTK
                         inputVars.push_back(initialStateVar);
                     }
 
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOffset] = (size_t)node->As<FutureValueNode<ElementType>>()->TimeStep();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameOffset] = (size_t)node->As<FutureValueNode<ElementType>>()->TimeStep();
                     opType = PrimitiveOpType::FutureValue;
                 }
                 else if (node->OperationName() == OperationNameOf(CosDistanceNode))
@@ -316,15 +341,15 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(ReduceElementsNode))
                 {
                     auto reduceElementsNode = node->As<ReduceElementsNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(reduceElementsNode->ReductionAxis());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameReductionOpName] = reduceElementsNode->ReductionOpName();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAxisVec] = AsDictionaryValueVector(AsAxis(reduceElementsNode->ReductionAxis()));
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameReductionOpName] = reduceElementsNode->ReductionOpName();
 
                     opType = PrimitiveOpType::ReduceElements;
                 }
                 else if (node->OperationName() == OperationNameOf(SumColumnElementsNode))
                 {
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = Axis(0);
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameReductionOpName] = PrimitiveFunction::InternalSumReductionOpName;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAxis] = Axis(0);
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameReductionOpName] = PrimitiveFunctionAttribute::InternalSumReductionOpName;
 
                     opType = PrimitiveOpType::ReduceElements;
                 }
@@ -357,47 +382,49 @@ namespace CNTK
                         convolutionMapVar = convolutionMapVar.IsConstant() ? Variable(Constant(newConvolutionMapValue, convolutionMapVar.Name(), convolutionMapVar.Uid())) : Variable(Parameter(newConvolutionMapValue, convolutionMapVar.Name(), convolutionMapVar.Uid()));
                     }
 
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(convolutionNode->Strides());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(convolutionNode->Sharing());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(convolutionNode->AutoPad());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(convolutionNode->LowerPad());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(convolutionNode->UpperPad());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameTranspose] = convolutionNode->Transpose();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputShape] = AsNDShape(convolutionNode->OutputShape());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = convolutionNode->MaxTempMemSizeInSamples();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameStrides] = AsNDShape(convolutionNode->Strides());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameSharing] = AsDictionaryValueVector(convolutionNode->Sharing());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(convolutionNode->AutoPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameLowerPad] = AsNDShape(convolutionNode->LowerPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameUpperPad] = AsNDShape(convolutionNode->UpperPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameTranspose] = convolutionNode->Transpose();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameOutputShape] = AsNDShape(convolutionNode->OutputShape());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameMaxTempMemSizeInSamples] = convolutionNode->MaxTempMemSizeInSamples();
 
                     opType = PrimitiveOpType::Convolution;
                 }
                 else if (node->OperationName() == OperationNameOf(ROIPoolingNode))
                 {
                     auto roiPoolingNode = node->As<ROIPoolingNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameROIOutputShape] = AsNDShape(roiPoolingNode->ROIOutputShape());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNamePoolingType] = (size_t)(AsPoolingType(roiPoolingNode->PoolingKind()));
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameROIOutputShape] = AsNDShape(roiPoolingNode->ROIOutputShape());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameSpatialScale] = roiPoolingNode->SpatialScale();
 
                     opType = PrimitiveOpType::ROIPooling;
                 }
                 else if (node->OperationName() == OperationNameOf(MaxUnpoolingNode))
                 {
                     auto unpoolingNode = node->As<MaxUnpoolingNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)PoolingType::Max;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUnpoolingWindowShape] = AsNDShape(unpoolingNode->KernelShape());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(unpoolingNode->Strides());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(unpoolingNode->AutoPad());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(unpoolingNode->LowerPad());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(unpoolingNode->UpperPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNamePoolingType] = (size_t)PoolingType::Max;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameUnpoolingWindowShape] = AsNDShape(unpoolingNode->KernelShape());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameStrides] = AsNDShape(unpoolingNode->Strides());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(unpoolingNode->AutoPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameLowerPad] = AsNDShape(unpoolingNode->LowerPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameUpperPad] = AsNDShape(unpoolingNode->UpperPad());
 
                     opType = PrimitiveOpType::Unpooling;
                 }
                 else if (node->OperationName() == OperationNameOf(PoolingNode))
                 {
                     auto poolingNode = node->As<PoolingNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)(AsPoolingType(poolingNode->PoolingKind()));
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingWindowShape] = AsNDShape(poolingNode->KernelShape());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(poolingNode->Strides());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(poolingNode->AutoPad());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameCeilOutDim] = poolingNode->CeilOutDim();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameIncludePad] = poolingNode->PoolPadMode();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNamePoolingType] = (size_t)(AsPoolingType(poolingNode->PoolingKind()));
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNamePoolingWindowShape] = AsNDShape(poolingNode->KernelShape());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameStrides] = AsNDShape(poolingNode->Strides());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(poolingNode->AutoPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameCeilOutDim] = poolingNode->CeilOutDim();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameIncludePad] = poolingNode->PoolIncludePad();
 
                     opType = PrimitiveOpType::Pooling;
                 }
@@ -408,12 +435,12 @@ namespace CNTK
                     auto poolingNode = node->As<PoolingNodeBase<ElementType>>();
                     if (poolingNode->IsImageLayoutCHW())
                     {
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)(AsPoolingType(poolingNode->PoolingKind()));
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingWindowShape] = AsNDShape(poolingNode->KernelShape());
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(poolingNode->Strides());
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(poolingNode->AutoPad());
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
-                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNamePoolingType] = (size_t)(AsPoolingType(poolingNode->PoolingKind()));
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNamePoolingWindowShape] = AsNDShape(poolingNode->KernelShape());
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameStrides] = AsNDShape(poolingNode->Strides());
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(poolingNode->AutoPad());
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
+                        primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
 
                         opType = PrimitiveOpType::Pooling;
                     }
@@ -423,11 +450,12 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
                 {
                     auto batchNormalizationNode = node->As<BatchNormalizationNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSpatial] = batchNormalizationNode->Spatial();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNormalizationTimeConstant] = batchNormalizationNode->NormalizationTimeConstant();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlendTimeConstant] = batchNormalizationNode->BlendTimeConstant();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEpsilon] = batchNormalizationNode->Epsilon();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUseCuDNNEngine] = !batchNormalizationNode->UseCNTKEngine();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameSpatial] = batchNormalizationNode->Spatial();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameNormalizationTimeConstant] = batchNormalizationNode->NormalizationTimeConstant();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameBlendTimeConstant] = batchNormalizationNode->BlendTimeConstant();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameEpsilon] = batchNormalizationNode->Epsilon();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameUseCuDNNEngine] = !batchNormalizationNode->UseCNTKEngine();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameDisableRegularization] = batchNormalizationNode->DisableRegularization();
 
                     opType = PrimitiveOpType::BatchNormalization;
                 }
@@ -439,7 +467,7 @@ namespace CNTK
                 {
                     // Internal CNTK SliceNode uses 1 based axis indices instead of 0 based
                     auto rowStackNode = node->As<RowStackNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(rowStackNode->GetSpliceDim());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameAxis] = AsAxis(rowStackNode->GetSpliceDim());
 
                     opType = PrimitiveOpType::Splice;
                 }
@@ -447,10 +475,10 @@ namespace CNTK
                 {
                     auto optimizedRNNStackNode = node->As<OptimizedRNNStackNode<ElementType>>();
                     auto attributes = optimizedRNNStackNode->Attributes();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBidirectional] = attributes.m_bidirectional;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameHiddenSize] = attributes.m_hiddenSize;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNumLayers] = attributes.m_numLayers;
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRecurrentOp] = attributes.m_recurrentOp;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameBidirectional] = attributes.m_bidirectional;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameHiddenSize] = attributes.m_hiddenSize;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameNumLayers] = attributes.m_numLayers;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameRecurrentOp] = attributes.m_recurrentOp;
 
                     opType = PrimitiveOpType::OptimizedRNNStack;
                 }
@@ -465,19 +493,27 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(EditDistanceErrorNode)) 
                 {
                     auto edNode = node->As<EditDistanceErrorNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInsertionPenalty] = edNode->InsertionPenalty();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDeletionPenalty] = edNode->DeletionPenalty();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSubstitutionPenalty] = edNode->SubstitutionPenalty();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSquashInputs] = edNode->SquashInputs();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameTokensToIgnore] = AsDictionaryValueVector(edNode->TokensToIgnore());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameInsertionPenalty] = edNode->InsertionPenalty();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameDeletionPenalty] = edNode->DeletionPenalty();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameSubstitutionPenalty] = edNode->SubstitutionPenalty();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameSquashInputs] = edNode->SquashInputs();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameTokensToIgnore] = AsDictionaryValueVector(edNode->TokensToIgnore());
 
                     opType = PrimitiveOpType::EditDistanceError;
+                }
+                else if (node->OperationName() == OperationNameOf(StopGradientNode))
+                {
+                    opType = PrimitiveOpType::StopGradient;
+                }
+                else if (node->OperationName() == OperationNameOf(LatticeSequenceWithSoftmaxNode))
+                {
+                    opType = PrimitiveOpType::LatticeSequenceWithSoftmax;
                 }
                 else if (node->OperationName() == OperationNameOf(ForwardBackwardNode))
                 {
                     auto edNode = node->As<ForwardBackwardNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDelayConstraint] = edNode->DelayConstraint();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlankTokenId] = edNode->BlankTokenId();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameDelayConstraint] = edNode->DelayConstraint();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameBlankTokenId] = edNode->BlankTokenId();
 
                     opType = PrimitiveOpType::ForwardBackward;
                 }
@@ -503,6 +539,10 @@ namespace CNTK
 
                     return PerDimMeanVarianceNormalize(inputVars[0], meanValue, invStdDevValue, name);
                 }
+                else if (node->OperationName() == OperationNameOf(CropNode))
+                {
+                    opType = PrimitiveOpType::Crop;
+                }
                 else
                     InvalidArgument("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model.\n"
                                     "This is likely a deprecated operation; loading Brainscript/NDL models that contain deprecated operations, is not supported in Python/C++ API.\n"
@@ -511,8 +551,8 @@ namespace CNTK
                 if (node->Is<RngUser>())
                 {
                     auto rngUserNode = node->As<RngUser>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRngSeed] = static_cast<size_t>(rngUserNode->GetRngSeed());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRngOffset] = static_cast<size_t>(rngUserNode->GetRngOffset());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameRngSeed] = static_cast<size_t>(rngUserNode->GetRngSeed());
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameRngOffset] = static_cast<size_t>(rngUserNode->GetRngOffset());
                 }
 
                 // Let's reorder inputVars properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
@@ -527,11 +567,31 @@ namespace CNTK
             }
         };
 
+        static const char legacyMarker[] = { 0x42, 0x00, 0x43, 0x00, 0x4e, 0x00, 0x00, 0x00 }; // L"BCN"
+
+        bool IsLegacyModel(std::fstream& stream)
+        {
+            static const auto markerSize = sizeof(legacyMarker);
+            char buffer[markerSize];
+            const auto position = stream.tellg();
+            stream.read(buffer, markerSize);
+            stream.seekg(position);
+            return IsLegacyModel(buffer, markerSize);
+        }
+
+        bool IsLegacyModel(const char *buffer, size_t bufferSize)
+        {
+            static const auto markerSize = sizeof(legacyMarker);
+            if (bufferSize < markerSize)
+                return false;
+            return (strncmp(legacyMarker, buffer, markerSize) == 0);
+        }
+
         FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
         {
             ComputationNetworkPtr net = make_shared<ComputationNetwork>(AsCNTKImplDeviceId(computeDevice));
             net->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
-            net->SetTrackGapNans(Internal::GetComputationNetworkTrackGapNans());
+            net->SetTrackGapNans(GetCheckedMode());
 
             auto dataType = DetectLegacyModelDataType(modelFile);
             switch (dataType)
@@ -590,8 +650,15 @@ namespace CNTK
             if (compositeFunction == nullptr)
                 InvalidArgument("Primitive (i.e. non-composite) Function '%S' instance cannot be saved.", rootFunction->AsString().c_str());
 
-            ComputationNetworkPtr computationNetwork;
-            DataType dataType = rootFunction->Outputs()[0].GetDataType();
+            auto networkInputs = compositeFunction->Inputs();
+            for (const auto& input : networkInputs)
+            {
+                if (input.Shape().HasUnboundDimension())
+                    InvalidArgument("Function '%S': Cannot save as legacy format, a model having inputs with free or inferred static axes.", compositeFunction->AsString().c_str());
+            }
+
+            compositeFunction->UpdateInternalState();
+
             DeviceDescriptor device = DeviceDescriptor::CPUDevice();
             if (compositeFunction->m_computationNetwork == nullptr)
             {
@@ -602,13 +669,20 @@ namespace CNTK
             else
                 device = AsDeviceDescriptor(compositeFunction->m_computationNetwork->GetDeviceId());
 
+            // We create a fresh computation network for the compositeFunction for the save since we want the underlying
+            // computation network to have mangled names for the ComputationNodes such that when the V1 model is deserialized,
+            // we get back the original Uid and Names for the variables in the V2 Function graph.
+            ComputationNetworkPtr computationNetwork;
+            std::unordered_map<Variable, ComputationNodeBasePtr> dummyVariableToNodeMap;
+            DataType dataType = rootFunction->Outputs()[0].GetDataType();
             switch (dataType)
             {
             case DataType::Float:
-                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, {}, {}, false);
+                std::tie(computationNetwork, dummyVariableToNodeMap) = CompositeFunction::CreateComputationNetwork<float>(rootFunction, device, {}, {}, {}, /*useMangledNamesForComputationNodes =*/ true);
                 break;
             case DataType::Double:
-                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, {}, {}, false);
+                std::tie(computationNetwork, dummyVariableToNodeMap) = CompositeFunction::CreateComputationNetwork<double>(rootFunction, device, {}, {}, {}, /*useMangledNamesForComputationNodes =*/ true);
+
                 break;
             default:
                 LogicError("SaveAsLegacyModel: Function '%S' has unknown DataType %s.", rootFunction->AsString().c_str(), DataTypeName(dataType));

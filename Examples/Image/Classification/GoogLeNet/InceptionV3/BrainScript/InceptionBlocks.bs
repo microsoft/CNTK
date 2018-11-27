@@ -11,7 +11,7 @@
 #
 ConvBNReLULayer {numOutputChannels, filterShape, stride, pad = true, bnTimeConst = 4096} = Sequential(
     ConvolutionalLayer {numOutputChannels, filterShape, init = "glorotUniform", stride = stride, pad = pad, bias = false} :
-    BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = bnTimeConst, useCntkEngine = false}        :
+    BatchNormalizationLayer {spatialRank = 2, normalizationTimeConstant = bnTimeConst, useCntkEngine = false} :
     ReLU
 )
 

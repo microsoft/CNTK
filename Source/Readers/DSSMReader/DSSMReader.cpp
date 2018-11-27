@@ -25,14 +25,6 @@ DWORD LODWORD(size_t size)
     return size & 0xFFFFFFFF;
 }
 
-std::string ws2s(const std::wstring& wstr)
-{
-    int size_needed = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), 0, 0, 0, 0);
-    std::string strTo(size_needed, 0);
-    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), int(wstr.length() + 1), &strTo[0], size_needed, 0, 0);
-    return strTo;
-}
-
 template <class ElemType>
 size_t DSSMReader<ElemType>::RandomizeSweep(size_t mbStartSample)
 {
@@ -48,6 +40,12 @@ template <class ElemType>
 bool DSSMReader<ElemType>::ReadRecord(size_t /*readSample*/)
 {
     return false; // not used
+}
+
+// utility function to round an integer up to a multiple of size
+size_t RoundUp(size_t value, size_t size)
+{
+    return ((value + size - 1) / size) * size;
 }
 
 // RecordsToRead - Determine number of records to read to populate record buffers
@@ -265,12 +263,6 @@ void DSSMReader<ElemType>::SetupEpoch()
 {
 }
 
-// utility function to round an integer up to a multiple of size
-size_t RoundUp(size_t value, size_t size)
-{
-    return ((value + size - 1) / size) * size;
-}
-
 //StartMinibatchLoop - Startup a minibatch loop
 // mbSize - [in] size of the minibatch (number of Samples, etc.)
 // epoch - [in] epoch number for this loop, if > 0 the requestedEpochSamples must be specified (unless epoch zero was completed this run)
@@ -318,7 +310,7 @@ void DSSMReader<ElemType>::StoreLabel(ElemType& labelStore, const LabelType& lab
 // GetMinibatch - Get the next minibatch (features and labels)
 // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
 //             [out] each matrix resized if necessary containing data.
-// returns - true if there are more minibatches, false if no more minibatchs remain
+// returns - true if there are more minibatches, false if no more minibatches remain
 template <class ElemType>
 bool DSSMReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {

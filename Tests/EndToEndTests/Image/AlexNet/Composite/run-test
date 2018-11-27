@@ -10,24 +10,18 @@ if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_T
 fi
 
 if [ "$OS" == "Windows_NT" ]; then
-    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/private/Image/ResNet/Data/v0
+    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image/ImageNet/2012/v0
 else
-    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/private/Image/ResNet/Data/v0
+    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image/ImageNet/2012/v0
 fi
 
 # Copy the test data to the test run directory
 echo 'Copying test data to local directory'
 DataDir=$TEST_RUN_DIR/TestData
 mkdir $DataDir
-cp -R $DataSourceDir/* $DataDir || exit $?
+cp $DataSourceDir/val1024.zip $DataDir || exit $? 
 
 OriginalTestDir=..
-
-(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
-if [ $? != 0 ]; then
-  echo Error: Baselines copied from $OriginalTestDir must match the baselines of the original test.
-  exit 1
-fi 
 
 ConfigDir=$TEST_DIR/..
 

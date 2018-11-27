@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -21,6 +21,14 @@
       <Configuration>Release_CpuOnly</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_UWP|x64">
+      <Configuration>Debug_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_UWP|x64">
+      <Configuration>Release_UWP</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E5606ECE-48CA-4464-BB12-09D81D02B9EF}</ProjectGuid>
@@ -32,7 +40,6 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
@@ -47,24 +54,29 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>Cntk.Core-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.Core$(OutputSuffix)-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
-    <TargetName>Cntk.Core-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.Core$(OutputSuffix)-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="$(IsUWP)">
+    <ClCompile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>.\API;.\proto;$(BOOST_INCLUDE_PATH);$(SolutionDir)\Source\CNTKv2LibraryDll;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">$(SolutionDir)Source\1BitSGD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\proto\onnx;.\proto\onnx\core\include;.\proto\onnx\onnx_repo;.\proto\onnx\onnx_repo\onnx;.\API;.\API\Internals;.\proto;$(BOOST_INCLUDE_PATH);$(SolutionDir)\Source\CNTKv2LibraryDll;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude);$(SolutionDir)Source\PerformanceProfilerDll;..\..\external\gsl\include;$(ProjectDir)Generated\Windows</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'!$(IsUWP)'">$(SolutionDir)Source\1BitSGD;$(ProjectDir)Generated\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'!$(IsUWP)'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(NvmlLibPath);$(ProtobufLibPath)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(ReaderLibs);Cntk.Common-$(CntkComponentVersion).lib;Cntk.ComputationNetwork-$(CntkComponentVersion).lib;Cntk.SequenceTrainingLib-$(CntkComponentVersion).lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ReaderLibs);Cntk.Common$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.ComputationNetwork$(OutputSuffix)-$(CntkComponentVersion).lib;Cntk.SequenceTrainingLib$(OutputSuffix)-$(CntkComponentVersion).lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>prebuild.bat "$(Configuration)" "$(CNTK_MKL_SEQUENTIAL)" "$(CNTK_ENABLE_1BitSGD)" "$(CudaPath)" "$(CUDNN_PATH)" "$(CUB_PATH)" "$(CNTK_ENABLE_ASGD)"</Command>
+      <Command>prebuild.bat "$(Configuration)" "$(CNTK_MKL_SEQUENTIAL)" "$(CudaPath)" "$(CUDNN_PATH)" "$(CUB_PATH)" "$(CNTK_ENABLE_ASGD)"</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -72,59 +84,90 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>CNTKV2LIBRARYDLL;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ONNX_NAMESPACE=onnx;ONNX_ML=1;ONNX_V1_OPSCHEMA_COMPAT;CNTKV2LIBRARYDLL;WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <DisableSpecificWarnings>4800;4610;4512;4510;4267;4127;4125;4100;4456;4189;4996;4503;4146</DisableSpecificWarnings>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll; Cntk.PerformanceProfiler-$(CntkComponentVersion).dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll;</DelayLoadDLLs>
+      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.DelayLoadedExtensions-$(CntkComponentVersion).dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>CNTKV2LIBRARYDLL;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ONNX_NAMESPACE=onnx;ONNX_ML=1;ONNX_V1_OPSCHEMA_COMPAT;CNTKV2LIBRARYDLL;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalOptions>/d2Zi+ /bigobj %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <DisableSpecificWarnings>4800;4610;4512;4510;4267;4127;4125;4100;4456;4189;4996;4503;4146</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll; Cntk.PerformanceProfiler-$(CntkComponentVersion).dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll;</DelayLoadDLLs>
+      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.DelayLoadedExtensions-$(CntkComponentVersion).dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
-      <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ONNX_NAMESPACE=onnx;ONNX_ML=1;ONNX_V1_OPSCHEMA_COMPAT;CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">$(IntDir)\$(ProjectName)\$(ConfigurationName)\%(RelativeDir)</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">$(IntDir)\$(ProjectName)\$(ConfigurationName)\%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <Link>
-      <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; msmpi.dll; Cntk.PerformanceProfiler-$(CntkComponentVersion).dll </DelayLoadDLLs>
+      <DelayLoadDLLs>Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll; msmpi.dll;</DelayLoadDLLs>
+      <DelayLoadDLLs Condition="!$(IsUWP)">%(DelayLoadDLLs); Cntk.PerformanceProfiler-$(CntkComponentVersion).dll;Cntk.DelayLoadedExtensions-$(CntkComponentVersion).dll</DelayLoadDLLs>
       <OptimizeReferences Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">false</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
     <ClCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaInclude)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaInclude);$(ProjectDir)Generated\Windows</AdditionalIncludeDirectories>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">$(IntDir)\$(ProjectName)\$(ConfigurationName)\%(RelativeDir)</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)\$(ProjectName)\$(ConfigurationName)\%(RelativeDir)</ObjectFileName>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)\$(ProjectName)\$(ConfigurationName)\%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>if exist "$(NvmlDllPath)" xcopy /I /D /Y "$(NvmlDllPath)\nvml.dll" "$(TargetDir)"</Command>
+      <Command>if exist "$(NvmlDll)" xcopy /I /D /Y "$(NvmlDll)" "$(TargetDir)"</Command>
       <Message>Copying NVidia GDK extension DLL to target folder</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="$(IsUWP)">
+    <PostBuildEvent>
+      <Command>
+        xcopy /D /I /Y "$(TargetDir)$(TargetName).lib" "$(TargetDir).."
+        xcopy /D /I /Y "$(TargetPath)" "$(TargetDir).."
+      </Command>
+    </PostBuildEvent>
+    <ClCompile>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release_UWP|x64'">$(IntDir)\$(ProjectName)\$(ConfigurationName)\%(RelativeDir)</ObjectFileName>
+    </ClCompile>
+    <ClCompile>
+      <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug_UWP|x64'">$(IntDir)\$(ProjectName)\$(ConfigurationName)\%(RelativeDir)</ObjectFileName>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="API\CNTKLibrary.h" />
+    <ClInclude Include="API\CNTKLibraryC.h" />
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
+    <ClInclude Include="API\HalfConverter.hpp" />
+    <ClInclude Include="API\Internals\ComputationGraphAlgorithms.h" />
+    <ClInclude Include="API\Internals\EvaluatorWrapper.h" />
+    <ClInclude Include="API\Internals\PrimitiveFunction.h" />
+    <ClInclude Include="API\Internals\PrimitiveFunctionAttribute.h" />
+    <ClInclude Include="API\Internals\PrimitiveOpType.h" />
     <ClInclude Include="BackCompat.h" />
     <ClInclude Include="BlockFunction.h" />
     <ClInclude Include="CompositeFunction.h" />
@@ -132,11 +175,72 @@
     <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="Learner.h" />
+    <ClInclude Include="Logger.h" />
     <ClInclude Include="MinibatchSource.h" />
-    <ClInclude Include="PrimitiveFunction.h" />
-    <ClInclude Include="PrimitiveOpType.h" />
+    <ClInclude Include="proto\onnx\CNTKToONNX.h" />
+    <ClInclude Include="proto\onnx\ControlFlowHelper.h" />
+    <ClInclude Include="proto\onnx\core\common\profiler.h" />
+    <ClInclude Include="proto\onnx\core\common\task_thread_pool.h" />
+    <ClInclude Include="proto\onnx\core\framework\tensorutils.h" />
+    <ClInclude Include="proto\onnx\core\graph\function.h" />
+    <ClInclude Include="proto\onnx\core\graph\function_container.h" />
+    <ClInclude Include="proto\onnx\core\graph\function_impl.h" />
+    <ClInclude Include="proto\onnx\core\graph\function_inliner.h" />
+    <ClInclude Include="proto\onnx\core\graph\graph_transformer_mgr.h" />
+    <ClInclude Include="proto\onnx\core\graph\model.h" />
+    <ClInclude Include="proto\onnx\core\graph\op.h" />
+    <ClInclude Include="proto\onnx\core\graph\record.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\code_location.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\common.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\const_pointer_container.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\exceptions.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\logging\capture.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\logging\isink.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\logging\logging.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\logging\macros.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\logging\severity.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\logging\sinks\clog_sink.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\logging\sinks\ostream_sink.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\ml_status.h" />
+    <ClInclude Include="proto\onnx\core\include\core\common\status.h" />
+    <ClInclude Include="proto\onnx\core\include\core\graph\basic_types.h" />
+    <ClInclude Include="proto\onnx\core\include\core\graph\constants.h" />
+    <ClInclude Include="proto\onnx\core\include\core\graph\graph.h" />
+    <ClInclude Include="proto\onnx\core\include\core\graph\graph_base.h" />
+    <ClInclude Include="proto\onnx\core\include\core\graph\graph_nodes.h" />
+    <ClInclude Include="proto\onnx\core\include\core\graph\graph_transformer.h" />
+    <ClInclude Include="proto\onnx\core\include\core\graph\indexed_sub_graph.h" />
+    <ClInclude Include="proto\onnx\core\include\core\graph\onnx_protobuf.h" />
+    <ClInclude Include="proto\onnx\core\include\core\graph\rewrite_rule.h" />
+    <ClInclude Include="proto\onnx\core\include\core\graph\schema_registry.h" />
+    <ClInclude Include="proto\onnx\core\include\core\inc\op_kernel_author.h" />
+    <ClInclude Include="proto\onnx\core\include\core\platform\env.h" />
+    <ClInclude Include="proto\onnx\core\include\core\platform\env_time.h" />
+    <ClInclude Include="proto\onnx\core\inc\op_kernel_author_helper.h" />
+    <ClInclude Include="proto\onnx\core\platform\context.h" />
+    <ClInclude Include="proto\onnx\core\platform\notification.h" />
+    <ClInclude Include="proto\onnx\core\platform\windows\debug_alloc.h" />
+    <ClInclude Include="proto\onnx\ONNX.h" />
+    <ClInclude Include="proto\onnx\ONNXToCNTK.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\checker.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\common\assertions.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\common\model_helpers.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\common\status.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\common\stl_backports.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\data_type_utils.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\function.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\schema.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\shape_inference.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\onnx-operators_pb.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\onnx_pb.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\proto_utils.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\string_utils.h" />
+    <ClInclude Include="proto\onnx\Operators.h" />
+    <ClInclude Include="proto\onnx\RNNHelper.h" />
     <ClInclude Include="Serialization.h" />
     <ClInclude Include="tensorboard\TensorBoardUtils.h" />
+    <ClInclude Include="UserDefinedFunction.h" />
+    <ClInclude Include="UserFunctionFactory.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -157,13 +261,66 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Evaluator.cpp" />
+    <ClCompile Include="CNTKLibraryC.cpp" />
+    <ClCompile Include="EvaluatorWrapper.cpp" />
     <ClCompile Include="Function.cpp" />
     <ClCompile Include="Learner.cpp" />
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="NDArrayView.cpp" />
     <ClCompile Include="NDMask.cpp" />
     <ClCompile Include="PrimitiveFunction.cpp" />
+    <ClCompile Include="PrimitiveFunctionAttribute.cpp" />
     <ClCompile Include="proto\CNTK.pb.cc.VS_wrapper.cpp" />
+    <ClCompile Include="proto\onnx\CNTKToONNX.cpp" />
+    <ClCompile Include="proto\onnx\core\common\logging\capture.cc" />
+    <ClCompile Include="proto\onnx\core\common\logging\logging.cc" />
+    <ClCompile Include="proto\onnx\core\common\profiler.cc" />
+    <ClCompile Include="proto\onnx\core\common\status.cc" />
+    <ClCompile Include="proto\onnx\core\framework\tensorutils.cc" />
+    <ClCompile Include="proto\onnx\core\graph\function.cc" />
+    <ClCompile Include="proto\onnx\core\graph\graph.cc" />
+    <ClCompile Include="proto\onnx\core\graph\graph_transformer_mgr.cc" />
+    <ClCompile Include="proto\onnx\core\graph\graph_viewer.cc" />
+    <ClCompile Include="proto\onnx\core\graph\model.cc" />
+    <ClCompile Include="proto\onnx\core\graph\op.cc" />
+    <ClCompile Include="proto\onnx\core\graph\schema_registry.cc" />
+    <ClCompile Include="proto\onnx\core\platform\env.cc" />
+    <ClCompile Include="proto\onnx\core\platform\env_time.cc" />
+    <ClCompile Include="proto\onnx\core\platform\windows\debug_alloc.cc" />
+    <ClCompile Include="proto\onnx\core\platform\windows\env.cc" />
+    <ClCompile Include="proto\onnx\core\platform\windows\env_time.cc" />
+    <ClCompile Include="proto\onnx\core\platform\windows\stacktrace.cc" />
+    <ClCompile Include="proto\onnx\onnx-ml.pb.cc.VS_wrapper.cpp" />
+    <ClCompile Include="proto\onnx\onnx-operators-ml.pb.cc.VS_wrapper.cpp" />
+    <ClCompile Include="proto\onnx\ONNX.cpp" />
+    <ClCompile Include="proto\onnx\ONNXToCNTK.cpp" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\checker.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\common\assertions.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\common\model_helpers.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\common\status.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\controlflow\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\data_type_utils.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\experiments\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\experiments\experiments_functions.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\function.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\generator\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\generator\old.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\logical\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\logical\old.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\math\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\math\old.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\nn\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\nn\old.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\reduction\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\rnn\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\rnn\old.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\schema.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\tensor\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\tensor\old.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\traditionalml\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\shape_inference\implementation.cc" />
+    <ClCompile Include="proto\onnx\Operators.cpp" />
+    <ClCompile Include="proto\onnx\RNNHelper.cpp" />
     <ClCompile Include="Serialization.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -174,6 +331,7 @@
     <ClCompile Include="tensorboard\TensorBoardUtils.cpp" />
     <ClCompile Include="Trainer.cpp" />
     <ClCompile Include="TrainingSession.cpp" />
+    <ClCompile Include="UserDefinedFunction.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Value.cpp" />
     <ClCompile Include="Variable.cpp" />
@@ -186,11 +344,19 @@
     <Message Text="Compiling %(Proto.Identity)" />
     <Exec Command="$(PROTOBUF_PATH)\bin\protoc --proto_path=$(ProjectDir)%(Proto.RelativeDir) --cpp_out=$(ProjectDir)%(Proto.RelativeDir) %(Proto.FullPath)" WorkingDirectory="$(ProjectDir)" />
   </Target>
+  <ItemGroup>
+    <ProtoONNX Include="proto\onnx\onnx_repo\onnx\onnx-ml.proto" />
+    <ProtoONNX Include="proto\onnx\onnx_repo\onnx\onnx-operators-ml.proto" />
+  </ItemGroup>
+  <Target Name="ProtoONNXGen" Inputs="@(ProtoONNX)" Outputs="@(ProtoONNX->'%(RelativeDir)%(Filename).pb.cc')">
+    <Message Text="Compiling %(ProtoONNX.Identity)" />
+    <Exec Command="$(PROTOBUF_PATH)\bin\protoc --proto_path=$(ProjectDir)proto\onnx\onnx_repo --cpp_out=$(ProjectDir)proto\onnx\onnx_repo %(ProtoONNX.FullPath)" WorkingDirectory="$(ProjectDir)" />
+  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Target Name="Build" Condition="$(HasProtobuf)" Outputs="$(TargetPath)" DependsOnTargets="ProtoGen;$(BuildDependsOn)" />
+  <Target Name="Build" Condition="$(HasProtobuf)" Outputs="$(TargetPath)" DependsOnTargets="ProtoGen;ProtoONNXGen;$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Warning Condition="!$(HasProtobuf)" Text="CNTKv2LibraryDll requires Protocol Buffers to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#protobuf for installation instructions." />
-    <Error Condition="!$(HasBoost)" Text="CNTKv2LibraryDll requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
+    <Warning Condition="!$(HasProtobuf)" Text="CNTKv2LibraryDll requires Protocol Buffers to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#protobuf for installation instructions." />
+    <Error Condition="!$(HasBoost)" Text="CNTKv2LibraryDll requires the Boost library to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#boost for installation instructions." />
   </Target>
 </Project>

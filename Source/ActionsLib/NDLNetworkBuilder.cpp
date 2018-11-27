@@ -40,13 +40,13 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     std::vector<NDLNode<ElemType>*> parameter = node->GetParameters();
 
     // get the name for the symbol to be used by CN nodes
-    std::wstring name = msra::strfun::utf16(node->GetName());
+    std::wstring name = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(node->GetName());
     if (!baseName.empty())
     {
         name = baseName + L"." + name;
     }
 
-    std::wstring cnNodeType = msra::strfun::utf16(node->GetValue());
+    std::wstring cnNodeType = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(node->GetValue());
 
     ComputationNodePtr nodePtr;
 
@@ -172,7 +172,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                     initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size() - 2);
                 if (!fexists(initFromFilePath))
                     RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
-                dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(msra::strfun::utf16(initFromFilePath));
+                dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(initFromFilePath));
             }
             else if (EqualCI(initString, L"heNormal"))
                 m_net->InitLearnableParameters(nodePtr, L"heNormal", initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
@@ -538,8 +538,9 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             else
                 InvalidArgument("Unsupported batch normalization engine, choose either \"cntk\"(default) or \"cudnn\".");
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
+            bool disableRegularization = node->GetOptionalParameter("disableRegularization", "false");
 
-            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
+            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, disableRegularization, imageLayoutKind, name);
 
             if (parameter.size() == 5) 
             {

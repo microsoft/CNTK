@@ -12,11 +12,11 @@ import cntk
 import _cntk_py
 import cntk.io.transforms as xforms
 
-from cntk.layers import Convolution2D, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense, default_options, Placeholder, identity, Sequential, For
+from cntk.layers import Convolution2D, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense, default_options, identity, Sequential, For
 from cntk.layers.typing import *
-from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk import Trainer
-from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
+from cntk import Trainer, use_default_device
+from cntk.learners import momentum_sgd, momentum_schedule, momentum_schedule_per_sample, learning_parameter_schedule, learning_parameter_schedule_per_sample
 from cntk import cross_entropy_with_softmax, classification_error, relu
 from cntk.ops import Function
 from cntk.debugging import set_computation_network_trace_level
@@ -58,9 +58,9 @@ def create_reader(map_file, mean_file, is_training):
     ]
     # deserializer
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
-        features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-        labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
-        randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+        features=StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+        labels=StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 ########################
 # define the model     #
@@ -97,35 +97,20 @@ def create_criterion_function(model, normalize=identity):
         z = model(normalize(x))
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)
-        return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
+        return (ce, errs)
     return criterion
 
 ########################
-# train & eval action  #
+# train action  #
 ########################
 
-def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=5):
-
-    # declare the model's input dimension
-    # Training does not require this, but it is needed for deployment.
-    model.update_signature((num_channels, image_height, image_width))
-
-    # criterion function. This is what is being trained trained.
-    # Model gets "sandwiched" between normalization (not part of model proper) and criterion.
-    criterion = create_criterion_function(model, normalize=lambda x: x / 256)
-    #debughelpers.dump_function(criterion, 'criterion')
-
-    #from cntk.logging.graph import plot
-    #plot(criterion, filename=os.path.join(model_path, "ConvNet_CIFAR10_DataAug.pdf"))
-
-    # iteration parameters
+def train_model(reader, model, criterion, epoch_size=50000, max_epochs=80):
     minibatch_size = 64
-    #epoch_size = 1000 ; max_epochs = 1 # for faster testing
 
     # learning parameters
     learner = momentum_sgd(model.parameters, 
-                           lr       = learning_rate_schedule([0.0015625]*20+[0.00046875]*20+[0.00015625]*20+[0.000046875]*10+[0.000015625], unit=UnitType.sample, epoch_size=epoch_size),
-                           momentum = momentum_as_time_constant_schedule([0]*20+[600]*20+[1200], epoch_size=epoch_size),
+                           lr       = learning_parameter_schedule_per_sample([0.0015625]*20+[0.00046875]*20+[0.00015625]*20+[0.000046875]*10+[0.000015625], epoch_size=epoch_size),
+                           momentum = momentum_schedule_per_sample([0]*20+[0.9983347214509387]*20+[0.9991670137924583], epoch_size=epoch_size),
                            l2_regularization_weight = 0.002)
     
     # trainer object
@@ -133,7 +118,7 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
 
     # perform model training
     log_number_of_parameters(model) ; print()
-    progress_printer = ProgressPrinter(tag='Training')
+    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
@@ -143,35 +128,9 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
             trainer.train_minibatch({criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels]})
             sample_count += mb[reader.streams.labels].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
+
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
         model.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
-        progress_printer.epoch_summary(with_metric=True)
-
-    # TODO: we should be done here
-    #return metric_numer/metric_denom
-
-
-    ### Evaluation action
-    
-    # evaluate with current Trainer instance; just to make sure we save and load the model correctly and BN works now --TODO: delete once confirmed
-    epoch_size     = 10000
-    minibatch_size = 16
-    metric_numer    = 0
-    metric_denom    = 0
-    sample_count    = 0
-    minibatch_index = 0
-
-    while sample_count < epoch_size:
-        mbsize = min(minibatch_size, epoch_size - sample_count)
-        mb = reader_test.next_minibatch(mbsize)
-        metric_numer += mbsize * trainer.test_minibatch({ criterion.arguments[0]: mb[reader_test.streams.features], criterion.arguments[1]: mb[reader_test.streams.labels] })
-        metric_denom += mbsize
-        sample_count += mb[reader_test.streams.labels].num_samples
-        minibatch_index += 1
-
-    print("")
-    print("Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
-    print("")
 
     # return evaluation error.
     return loss, metric # return values from last epoch
@@ -182,40 +141,40 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
 
 # helper function to create a dummy Trainer that one can call test_minibatch() on
 # TODO: replace by a proper such class once available
-def Evaluator(model, criterion):
-    from cntk import Trainer
-    from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+def Evaluator(criterion):
     loss, metric = Trainer._get_loss_metric(criterion)
     parameters = set(loss.parameters)
-    if model:
-        parameters |= set(model.parameters)
     if metric:
         parameters |= set(metric.parameters)
     dummy_learner = momentum_sgd(tuple(parameters), 
-                                 lr = learning_rate_schedule(1, UnitType.minibatch),
-                                 momentum = momentum_as_time_constant_schedule(0))
-    return Trainer(model, (loss, metric), dummy_learner)
+                                 lr = learning_parameter_schedule(1),
+                                 momentum = momentum_schedule(0))
+    return Trainer(None, (loss, metric), dummy_learner)
 
-def evaluate(reader, model):
-
-    # criterion function. This is what is being evaluated
-    criterion = create_criterion_function(model, normalize=lambda x: x / 256)
+def evaluate(reader, criterion, device=None, minibatch_size=16, max_samples=None):
 
     # process minibatches and perform evaluation
-    evaluator = Evaluator(None, criterion)
+    if not device:
+        device = use_default_device()
 
-    progress_printer = ProgressPrinter(tag='Evaluation')
+    evaluator = Evaluator(criterion)
+    progress_printer = ProgressPrinter(tag='Evaluation', num_epochs=1)
 
+    samples_evaluated = 0
     while True:
-        minibatch_size = 1000
-        mb = reader.next_minibatch(minibatch_size) # fetch minibatch
-        if not mb:                                                      # until we hit the end
+        if (max_samples and samples_evaluated >= max_samples):
             break
-        #metric = evaluator.test_minibatch(mb[reader.streams.features], mb[reader.streams.labels]) # evaluate minibatch
-        metric = evaluator.test_minibatch({criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels]}) # evaluate minibatch
-        progress_printer.update(0, mb[reader.streams.labels].num_samples, metric) # log progress
-    loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
+        # Fetch minibatches until we hit the end
+        mb = reader.next_minibatch(minibatch_size)
+        if not mb:
+            break
+
+        metric = evaluator.test_minibatch({criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels]}, device=device)
+        samples_evaluated += minibatch_size
+        progress_printer.update(0, mb[reader.streams.labels].num_samples, metric) # log progress
+
+    loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
     return loss, metric
 
 ############################# 
@@ -225,11 +184,17 @@ def evaluate(reader, model):
 if __name__=='__main__':
     # create model
     model = create_convnet_cifar10_model(num_classes=10)
+    # declare the model's input dimension
+    # Training does not require this, but it is needed for deployment.
+    model.update_signature((num_channels, image_height, image_width))
+
+    # criterion function. This is what is being trained trained.
+    # Model gets "sandwiched" between normalization (not part of model proper) and criterion.
+    criterion = create_criterion_function(model, normalize=lambda x: x / 256)
 
     # train
-    reader      = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
-    reader_test = create_reader(os.path.join(data_path, 'test_map.txt'),  os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
-    train_and_evaluate(reader, reader_test, model, max_epochs=5)
+    reader = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
+    train_model(reader, model, criterion, max_epochs=80)
 
     # save and load (as an illustration)
     path = data_path + "/model.cmf"
@@ -238,4 +203,5 @@ if __name__=='__main__':
     # test
     model = Function.load(path)
     reader = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
-    evaluate(reader, model)
+    criterion = create_criterion_function(model, normalize=lambda x: x / 256)
+    evaluate(reader, criterion)

@@ -8,7 +8,9 @@
 #include "stdafx.h"
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif // NOMINMAX
 #include "Windows.h"
 #endif
 
@@ -38,11 +40,13 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/,
     case DLL_PROCESS_ATTACH:
         // Disabling assertions in test environment.
         // These functions should not lock anything, no deadlock expected.
+#ifndef CNTK_UWP
         if (std::getenv("V2_LIB_TESTING"))
         {
             _set_error_mode(_OUT_TO_STDERR);
             _CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, HandleDebugAssert);
         }
+#endif // CNTK_UWP
         break;
     case DLL_PROCESS_DETACH:
         // DLL_PROCESS_DETACH may have race condition with code page unload

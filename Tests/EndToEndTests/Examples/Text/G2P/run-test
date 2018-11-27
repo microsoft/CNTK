@@ -1,0 +1,10 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR/../../../../../Examples/SequenceToSequence/CMUDict/BrainScript
+
+# cntkrun <CNTK config file name> <additional CNTK args>
+# Note: the result of writeWordAndClassInfo command is non-deterministic across compiler / platform,
+# so we're not doing it in test, and using a static wordclass file vocab.txt
+cntkrun G2P.cntk "command=train:write modelPath=G2P.dnn decodeModelPath=G2P.dnn traceLevel=0 stderr=- train=[epochSize=500] train=[SGD=[maxEpochs=1]] validFile=tiny.ctf testFile=tiny.ctf write=[outputPath=-]" || exit $?

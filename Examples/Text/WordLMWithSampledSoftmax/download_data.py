@@ -7,7 +7,12 @@
 # This program downloads training, validation and test data and creates additional files 
 # with token-ids and frequencies.
 
-import urllib.request, os, sys, tarfile, operator
+import os, sys, tarfile, operator
+try:
+    from urllib.request import urlretrieve
+except ImportError:
+    from urllib import urlretrieve
+from io import open
 
 # accumulate word counts in dictionary
 def add_to_count(word, word2Count):
@@ -39,9 +44,9 @@ def write_vocab_and_frequencies(word2count, vocab_file_path, freq_file_path, wor
     id=int(0)
     for word, freq in sorted_entries:
         vocab_file.write(word+"\n")
-        freq_file.write("%i\n" % freq)
-        word2count_file.writelines("%s\t%i\n" % (word, freq))
-        word2id_file.writelines("%s\t%i\n" % (word, id))
+        freq_file.write(u"%i\n" % freq)
+        word2count_file.writelines(u"%s\t%i\n" % (word, freq))
+        word2id_file.writelines(u"%s\t%i\n" % (word, id))
         id +=1
 
     #close the files
@@ -88,13 +93,15 @@ class Paths(object):
 
 if __name__=='__main__':
 
+    os.chdir(os.path.abspath(os.path.dirname(__file__)))
+
     # downloading the data
     url ="http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz"
 
     tmpGz = "tmp.tgz"
     if not os.path.isfile(tmpGz):
         print("downloading " + url + " to " + tmpGz)
-        urllib.request.urlretrieve(url, tmpGz)
+        urlretrieve(url, tmpGz)
 
     # extracting the files we need from the tarfile
     fileReader=tarfile.open(tmpGz, 'r') 

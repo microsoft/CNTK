@@ -37,6 +37,7 @@ public:
     const BoolVec& AutoPad() const { return m_autoPad; }
     const TensorShape& LowerPad() const { return m_lowerPad; }
     const TensorShape& UpperPad() const { return m_upperPad; }
+    size_t Groups() const { return m_groups; }
 
     // Maps from a "row" (index of output cell) to its base "col" (index of input cell). For a given row,
     // the cols that contribute to it are { MpRowCol[row] + Indices[i0 + 1 + i] | 0 <= i < Indices[i0] },
@@ -77,12 +78,11 @@ public:
     size_t KernelCount() const { return m_kernelCount; }
 
     ConvolveGeometry(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
-                     const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad, const bool ceilOutDim = false)
-                     : m_inputShape(inputShape), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(stride), m_sharing(sharing),
-                     m_autoPad(autoPad), m_lowerPad(lowerPad), m_upperPad(upperPad)
+        const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad, const TensorShape& dilation = TensorShape(1),
+        const bool ceilOutDim = false, const size_t groups = 1)
+        : m_inputShape(inputShape), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(stride), m_sharing(sharing),
+        m_autoPad(autoPad), m_lowerPad(lowerPad), m_upperPad(upperPad), m_dilation(dilation), m_groups(groups)
     {
-        // Note: this ctor is a bit long so sit back and relax.
-
         assert(m_inputShape.GetRank() == m_kernelShape.GetRank());
         assert(m_mapCount.GetRank() == 1 || m_mapCount.GetRank() == m_inputShape.GetRank());
         assert(m_stride.GetRank() == 1 || m_stride.GetRank() == m_inputShape.GetRank());
@@ -90,18 +90,21 @@ public:
         assert(m_autoPad.size() == 1 || m_autoPad.size() == m_inputShape.GetRank());
         assert(m_lowerPad.GetRank() == 1 || m_lowerPad.GetRank() == m_inputShape.GetRank());
         assert(m_upperPad.GetRank() == 1 || m_upperPad.GetRank() == m_inputShape.GetRank());
-        
-        m_outputShape = ComputeOutputShape(m_inputShape, m_kernelShape, m_mapCount, m_stride,
-                                           m_sharing, m_autoPad, m_lowerPad, m_upperPad, ceilOutDim);
-        assert(m_inputShape.GetRank() == m_outputShape.GetRank());
 
-        size_t dimCount = inputShape.GetRank();
-        size_t kernelSize = kernelShape.GetNumElements();
+        m_outputShape = ComputeOutputShape(m_inputShape, m_kernelShape, m_mapCount, m_stride,
+            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_dilation, m_groups, ceilOutDim);
+        assert(m_inputShape.GetRank() == m_outputShape.GetRank());
 
         // Compute the total number of kernels.
         m_kernelCount = 1;
-        for (size_t i = 0; i < dimCount; i++)
+        for (size_t i = 0; i < inputShape.GetRank(); i++)
             m_kernelCount *= !GetSharing(i) ? m_outputShape[i] : GetMapCount(i);
+    }
+
+    bool ComputeConvGeometryExplicit()
+    {
+        size_t dimCount = m_inputShape.GetRank();
+        size_t kernelSize = m_kernelShape.GetNumElements();
 
         // Compute the "Start" indices.
         m_start.resize(dimCount);
@@ -111,9 +114,9 @@ public:
         {
             assert((m_outputShape[i] % GetMapCount(i)) == 0);
             int outPerMap = (int)(m_outputShape[i] / GetMapCount(i));
-            // Number of cells between first and last "centers", inclusive. 
+            // Number of cells between first and last "centers", inclusive.
             int cells = (int)((outPerMap - 1) * GetStride(i) + 1); assert(m_inputShape[i] >= cells);
-            // Extra cells, to the left and right of "cells". 
+            // Extra cells, to the left and right of "cells".
             int extra = (int)m_inputShape[i] - cells;
             assert(extra >= 0);
 
@@ -130,7 +133,7 @@ public:
                 if (lo != 0 || hi != 0)
                 {
                     m_start[i] -= lo;
-                    assert(m_start[i] >= 0); 
+                    assert(m_start[i] >= 0);
                     assert(m_start[i] + cells + (int)m_kernelShape[i] - 1 == m_inputShape[i] + hi + lo);
                 }
             }
@@ -138,7 +141,7 @@ public:
             m_startIndex = m_startIndex * (int)m_inputShape[i] + m_start[i];
             m_originIndex = m_originIndex * (int)m_inputShape[i] + ((int)m_kernelShape[i] - 1) / 2;
         }
-        
+
         // Compute support, mapping from the index into the kernel to offset into source.
         // Support consists of the column deltas of the kernels, as offsets from MpRowCol[row].
         IntVec support(kernelSize);
@@ -164,7 +167,7 @@ public:
             assert(ivSrc < m_inputShape.GetNumElements());
             support[idx] = ivSrc - m_originIndex;
         }
-        
+
         size_t outputSize = m_outputShape.GetNumElements();
         // Compute the mappings (where row = output node index, col = source node index):
         // * from row to the index of the first weight to use for that row.
@@ -179,15 +182,18 @@ public:
         int keyInterior = 0;
         for (size_t i = 0; i < dimCount; i++)
         {
-            int width = (int)m_kernelShape[i];
-            keyInterior = keyInterior * width + (width - 1) / 2;
+            int width = static_cast<int>(m_kernelShape[i]);
+            bool isAutoPad = GetAutoPad(i);
+            int hi = isAutoPad ? 0 : static_cast<int>(m_upperPad[m_upperPad.size() == 1 ? 0 : i]);
+            int lo = isAutoPad ? 0 : static_cast<int>(m_lowerPad[m_lowerPad.size() == 1 ? 0 : i]);
+            keyInterior = keyInterior * (width + hi + lo) + (width - 1) / 2 + lo + 1;
         }
 
         m_runs.resize(2 * kernelSize + 2, -1);
         m_indices.resize(kernelSize + 1);
         m_runs[0] = 0; // Skip count
-        m_runs[1] = (int)kernelSize; // Count of entries
-        m_indices[0] = (int)kernelSize;
+        m_runs[1] = static_cast<int>(kernelSize); // Count of entries
+        m_indices[0] = static_cast<int>(kernelSize);
         for (size_t i = 0; i < kernelSize; i++)
         {
             m_runs[2 + i] = support[i];
@@ -212,10 +218,10 @@ public:
             int factorKern = 1;
             int factorCol = 1;
             int key = 0;
-            int cur = (int)row;
+            int cur = static_cast<int>(row);
             for (size_t i = 0; i < dimCount; i++)
             {
-                int dim = (int)(m_outputShape[i] / GetMapCount(i));
+                int dim = static_cast<int>(m_outputShape[i] / GetMapCount(i));
                 int coord = cur % dim;
                 cur /= dim;
 
@@ -235,26 +241,72 @@ public:
                 }
 
                 // Transform coord to input index space.
-                coord *= (int)GetStride(i);
+                coord *= static_cast<int>(GetStride(i));
                 coord += m_start[i];
 
                 col += factorCol * coord;
-                factorCol *= (int)m_inputShape[i];
+                factorCol *= static_cast<int>(m_inputShape[i]);
 
-                int width = (int)m_kernelShape[i];
+                // 'key' is an offset that can be computed for each output cell.
+                // It is used to map from the output cell, to the effective input kernel mask.
+                //   (Pooling ignores padded NaN values, so kernel mask is used)
+                // The most essential point about 'key' is that there must never be a collision.
+                // That is, there must not exist two cells which have a different kernel mask, but producing the same key value.
+                // E.g., consider case of input shape: [5], stride: [1], kernel: [3], pad: [1, 1].
+                //          input:             [ x1 x2 x3 x4 x5 ]
+                //          padded input:  [ NaN x1 x2 x3 x4 x5 NaN ]
+                //          output:            [ y1 y2 y3 y4 y5 ]
+                //      There are 3 kernel masks for this case.
+                //      Case 1: For output cell y1, the effective kernel mask is
+                //          kernel mask:    [ 0  1  1  ]
+                //       => padded input:   [ __ x1 x2 ]
+                //      Case 2: For output cell y2(and y3,y4), the effective kernel mask is
+                //          kernel mask:    [ 1  1  1  ]
+                //       => padded input:   [ x1 x2 x3 ]
+                //      Case 3: For output cell y5, the effective kernel mask is
+                //          kernel mask:    [ 1  1  0  ]
+                //       => padded input:   [ x4 x5 __ ]
+                //      Thus there will be a total of 3 different 'key' values. y2, y3 and y4 should produce the same 'key' values. 
+                int width = static_cast<int>(m_kernelShape[i]);
                 int half = (width - 1) / 2;
+                // 'min' stands for the first input index along this axis that is covered by the current kernel.
+                //  if negative, -min is equal to the number of padded cells that are covered.
                 int min = coord - half;
+                // 'lim' stands for the last input index + 1 along this axis that is covered by the current kernel.
+                //  if lim > inputShape, lim - inputShape is equal to the number of padded cells that are covered.
                 int lim = min + width;
                 if (min < 0)
+                    // Case 1.
+                    // When min < 0, the current kernel covers (lower)padded values, thus the offset is recorded so that
+                    // a map from 'key' to the kernel mask can be established.
                     dkey[i] = min;
                 else if (lim > m_inputShape[i])
-                    dkey[i] = lim - (int)m_inputShape[i];
+                    // Case 3.
+                    // Similarly, when lim > inputShape, the current kernel covers (upper)padded values.
+                    dkey[i] = lim - static_cast<int>(m_inputShape[i]);
                 else
+                    // Case 2.
+                    // No padded values are covered, the kernel mask is all ones and is shared.
                     dkey[i] = 0;
-                int dk = dkey[i] + half;
-                assert(0 <= dk);
-                assert(dk < width);
-                key = key * width + dk;
+                bool isAutoPad = GetAutoPad(i);
+                // Ignore hi/lo values when auto padding is true.
+                int hi = isAutoPad ? 0 : static_cast<int>(m_upperPad[m_upperPad.size() == 1 ? 0 : i]);
+                int lo = isAutoPad ? 0 : static_cast<int>(m_lowerPad[m_lowerPad.size() == 1 ? 0 : i]);
+                // dk contributes to the 'key' value for this particular axis.
+                // There are two properties for dk that must be satisfied.
+                //  1. dk \in (0, width + hi + lo].
+                //  2. there must not exist two cells which have a different kernel mask, but producing the same dk value.
+                // Both are required such that colision is avoided for 'key' when dk values for different axes are accumulated together.
+                // With careful calculations, we can show
+                // dk \in | [ half + 1, half + lo + 1)                      , min < 0
+                //        | ( half + lo + 1, width + hi + lo - half + 1)    , lim - inputShape > 0
+                //        | { half + lo + 1}                                , otherwise
+                // where half = (width - 1) / 2 and width = kernelShape.
+                // Since half \in [0, width), we can conclude dk \in [1, width + hi + lo + 1) = (0, width + hi + lo].
+                int dk = dkey[i] + half + lo + 1;
+                assert(0 < dk);
+                assert(dk <= (width + hi + lo));
+                key = key * (width + hi + lo) + dk;
             }
             assert(cur == 0);
             assert(0 <= kern);
@@ -339,12 +391,19 @@ public:
             m_mpRowCol[row] = col;
             m_mpRowIwht[row] = kern * (int)kernelSize;
         }
+        return true;
     }
 
     size_t GetStride(size_t dim) const
     {
         assert(m_stride.size() == 1 || dim < m_stride.size());
         return m_stride[m_stride.size() == 1 ? 0 : dim];
+    }
+
+    size_t GetDilation(size_t dim) const
+    {
+        assert(m_dilation.size() == 1 || dim < m_dilation.size());
+        return m_dilation[m_dilation.size() == 1 ? 0 : dim];
     }
 
     size_t GetMapCount(size_t dim) const
@@ -376,7 +435,8 @@ public:
         if (!GetAutoPad(dim))
             return (int)m_lowerPad[m_lowerPad.size() == 1 ? 0 : dim];
 
-        int kernSize = (int)m_kernelShape[dim];
+        int dilation = (int)GetDilation(dim);
+        int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
         int inpSize = (int)m_inputShape[dim];
         int outSize = (int)m_outputShape[dim];
         int stride = (int)GetStride(dim);
@@ -390,12 +450,32 @@ public:
         return -(center - (kernSize - 1) / 2);
     }
 
-    int GetUpperPad(size_t dim) const
+    // GetUpperPad
+    // 
+    // There will be four cases
+    //      kernelSize  extraSize   padSizes                cuDnn & MKL (they only support symmetric padding)
+    // 1.   odd         even        lower = upper           supported
+    // 2.   even        odd         lower = upper           supported
+    // 3.   odd         odd         lower = upper + 1       supported with extra 1 padding on upperPad
+    // 4.   even        even        lower = upper - 1       unsupported
+    //
+    // extra size = (dim - 1) % stride
+    //
+    // So for cases where lower = upper + 1. We can simply decide to pad one extra for upperPad, 
+    // as it will yield the same shape and value results.
+    // However, for cases where lower = upper - 1. We cannot pad the extra for lowerPad, 
+    // as it will change the center of the kernel, and produce different value and maybe different shape results. 
+    //
+    // Parameter: 
+    //  bool trySymmetricAutoPad : if set to true, this function will return symmetric padding for case 3 by padding 1 extra on upperPad.
+    //                             This parameter is ignored if auto padding is not enabled. 
+    int GetUpperPad(size_t dim, bool trySymmetricAutoPad = false) const
     {
         if (!GetAutoPad(dim))
             return (int)m_upperPad[m_upperPad.size() == 1 ? 0 : dim];
-
-        int kernSize = (int)m_kernelShape[dim];
+       
+        int dilation = (int)GetDilation(dim);
+        int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
         int inpSize = (int)m_inputShape[dim];
         int outSize = (int)m_outputShape[dim];
         int stride = (int)GetStride(dim);
@@ -405,13 +485,31 @@ public:
         int cells = (outSize - 1) * stride + 1;
         // Extra cells, to the left and right of "cells".
         int extra = inpSize - cells;
-        int center = extra / 2; 
-        return (kernSize - 1) - (kernSize - 1) / 2 - (extra - center); 
+        int center = extra / 2;
+        int upperPad = (kernSize - 1) - (kernSize - 1) / 2 - (extra - center);
+
+        if (trySymmetricAutoPad && (kernSize % 2 == 1) && (extra % 2 == 1))
+        {
+            // case 3: pad extra 1 for upperPad to enable symmetric padding. 
+            upperPad++;
+        }
+        return upperPad;
+    }
+
+    // Return if padding is enabled for input channel axis. 
+    bool IsPaddingOverChannelAxis() const
+    {
+        size_t channelIdx = m_inputShape.GetRank() - 1;
+        assert(m_inputShape.GetRank() >= 1);
+        // check for lowerPad value. This value is incorrect when out channel size > 1. Check if channel stride is >= channel size in that case.
+        return (GetLowerPad(channelIdx) > 0) && (GetStride(channelIdx) < m_inputShape[channelIdx]);
     }
 
     // Computes output shape given input shape and other convolution parameters.
     static TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
-                                          const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad, const bool ceilOutDim = false)
+                                          const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                          const TensorShape& dilation=TensorShape(1), const size_t groups=1, const bool ceilOutDim = false, const bool needsDynamicValidation = false,
+                                          const bool isFinalValidationPass = false)
     {
         if (inputShape.GetRank() != kernelShape.GetRank())
             InvalidArgument("Convolution input and kernel tensors must have the same rank.");
@@ -432,32 +530,53 @@ public:
         for (size_t i = 0; i < inputShape.GetRank(); i++)
         {
             assert(inputShape[i] >= 1);
-            if (kernelShape[i] > inputShape[i])
-                InvalidArgument("Convolution operation requires that kernel dim %d <= input dim %d.", (int)kernelShape[i], (int)inputShape[i]);
+            auto kernelShape_i = (i == kernelShape.GetRank() - 1) ? kernelShape[i] * groups : kernelShape[i];
+
+            // If lowerPad and upperPad are specified, include them in the minimum size check
+            // for input image that is done below. Otherwise (if autoPad is specified), just 
+            // check against kernel size only.
+            auto lowerPadValForSizeCheck = autoPad[autoPad.size() == 1 ? 0 : i] ? 0 : lowerPad[lowerPad.size() == 1 ? 0 : i];
+            auto upperPadValForSizeCheck = autoPad[autoPad.size() == 1 ? 0 : i] ? 0 : upperPad[upperPad.size() == 1 ? 0 : i];
+            if (kernelShape_i > (inputShape[i] + upperPadValForSizeCheck + lowerPadValForSizeCheck) )
+            {
+                if(isFinalValidationPass || !needsDynamicValidation)
+                    InvalidArgument("Convolution operation requires that kernel dim %d <= input dim %d.", (int)kernelShape_i, (int)inputShape[i]);
+                else
+                {
+                    dimsOutput[i] = 1; // 1 is a placeholder till all shapes are resolved.
+                    continue;
+                }
+            }
 
             size_t delta = stride[stride.GetRank() == 1 ? 0 : i];
             size_t dim = inputShape[i];
             bool autoPadCur = autoPad[autoPad.size() == 1 ? 0 : i];
             size_t lo = lowerPad[lowerPad.size() == 1 ? 0 : i];
             size_t hi = upperPad[upperPad.size() == 1 ? 0 : i];
+            size_t dil = dilation[dilation.GetRank() == 1 ? 0 : i];
+
             if (autoPadCur)
             {
-                dim += kernelShape[i] - 1;
+                dim += dil * (kernelShape_i - 1);
             }
             else
             {
                 dim += lo + hi;
             }
-            float preciseDimOut = (float)(dim - kernelShape[i]) / delta + 1;
+
+            size_t effectiveKernelShape = (kernelShape_i - 1) * dil + 1;
+            float preciseDimOut = (float)(dim - effectiveKernelShape) / delta + 1;
             size_t dimOut = static_cast<size_t>(ceilOutDim ? ceil(preciseDimOut) : floor(preciseDimOut));
             // When LowerPad and/or UpperPad are specified (i.e. > 0), we insist that the kernel applications
             // fill the entire space.
             if (!autoPadCur && (lo > 0 || hi > 0))
             {
-                size_t size = (dimOut - 1) * delta + kernelShape[i];
-                if (size != dim)
+                size_t size = (dimOut - 1) * delta + kernelShape_i;
+                // size must be >= (lo + inputShape[i]) to cover all original input space(excluding padding).
+                if (size < (dim - hi))
                     InvalidArgument("Convolution requires that kernel fills the entire space if auto-padding is disabled.");
             }
+
             if (mapCount.size() > 1)
                 dimOut *= mapCount[i];
             else if (i == inputShape.GetRank() - 1)
@@ -480,9 +599,15 @@ public:
     // Computes input shape given output shape and other convolution parameters.
     // Used in deconvolution operation.
     static TensorShape ComputeInputShape(const TensorShape& outputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
-                                         const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim = false)
+                                         const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad, 
+                                         const TensorShape& dilation=TensorShape(1), const size_t groups=1, bool ceilOutDim = false, const bool needsDynamicValidation = false,
+                                         const bool isFinalValidationPass = false)
     {
         UNUSED(ceilOutDim);
+        UNUSED(dilation);
+        UNUSED(groups);
+        UNUSED(needsDynamicValidation);
+        UNUSED(isFinalValidationPass);
         if (outputShape.GetRank() != kernelShape.GetRank())
             InvalidArgument("Convolution output and kernel tensors must have the same rank.");
         if (mapCount.GetRank() != 1 && outputShape.GetRank() != mapCount.GetRank())
@@ -519,7 +644,7 @@ public:
             size_t hi = upperPad[upperPad.size() == 1 ? 0 : i];
             size_t dimIn = (dim - 1) * delta;
             // We need to be able to restore any input size from the output, not just the one
-            // that does not require padding. For example, if output is 14, stride 2 and 
+            // that does not require padding. For example, if output is 14, stride 2 and
             // desired input is 28 then padded input will be 31. In this case if autopadding is enabled,
             // the input will 27 as (27 - 1) / 2 + 1 == 14.
             if (autoPadCur)
@@ -539,6 +664,27 @@ public:
         }
 
         return TensorShape(dimsInput);
+    }
+
+    // This is for a special case handling, where ceilOutDim = True and cntkAutoPadding = False.
+    // In CNTK, no paddings should be generated since autoPadding is False. 
+    // Yet due to ceilOutDim = True, the outputShape might end up 1 size larger, requiring
+    // an input of dimension that actually exceeds the current input. 
+    // E.g.
+    //      input dim: 112, kernel size: 3, stride: 2
+    // The output dim will end up 56. 
+    // This will require an input dim of 113. 
+    // This function returns the number of extra cells required.
+    // I.e. 1 in the above example: 113 - 112 = 1. 
+    int GetExtraCellsCount(size_t dim) const
+    {
+        int dilation = (int)GetDilation(dim);
+        int kernSize = ((int)m_kernelShape[dim] - 1) * dilation + 1;
+        int inpSize = (int)m_inputShape[dim];
+        int outSize = (int)m_outputShape[dim];
+        int stride = (int)GetStride(dim);
+
+        return (outSize - 1) * stride + kernSize - inpSize;
     }
 
     // Used in unit tests and during debugging.
@@ -561,6 +707,23 @@ public:
         return res.str();
     }
 
+    // For MKL, if auto padding is enabled, in some cases we can convert asymmetric padding to symmetric padding,
+    // with the same output shape and value. 
+    bool IsAsymmetricPadding(bool useMKL) const
+    {
+        for (size_t i = 0; i < KernelShape().size(); i++)
+        {
+            auto lowerPad = GetLowerPad(i);
+            auto upperPad = GetUpperPad(i, useMKL);
+            auto stride = GetStride(i);
+            if ((lowerPad != upperPad) && (stride < InputShape()[i]))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     DISABLE_COPY_AND_MOVE(ConvolveGeometry);
 
 private:
@@ -569,6 +732,7 @@ private:
     TensorShape m_kernelShape;
     TensorShape m_mapCount;
     TensorShape m_stride;
+    TensorShape m_dilation;
     BoolVec m_sharing;
     BoolVec m_autoPad;
     TensorShape m_lowerPad;
@@ -578,7 +742,7 @@ private:
     // 1. Many of these vectors contain offsets which can be negative.
     // 2. Most of these vectors will be copied into device memory (GPU) so the smaller the size - the better.
     //    Also, 64-bit operations are slower on GPU.
-    // 3. If you are still not convinced, we don't expect convolutions to be more than 2B in size anyway. 
+    // 3. If you are still not convinced, we don't expect convolutions to be more than 2B in size anyway.
     // See description to corresponding getter functions to understand what these are.
     IntVec m_mpRowCol;
     IntVec m_mpRowIwht;
@@ -594,6 +758,7 @@ private:
     int m_originIndex;
 
     size_t m_kernelCount;
+    size_t m_groups;
 };
 
 using ConvolveGeometryPtr = std::shared_ptr<ConvolveGeometry>;

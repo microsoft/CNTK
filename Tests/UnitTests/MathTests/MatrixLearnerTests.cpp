@@ -25,6 +25,7 @@ public:
     SingleMatrix matMsparse;
     SingleMatrix matG;
     SingleMatrix matGsparseBSC;
+    SingleMatrix timestamps;
 
     MatrixLearnerFixture() :
         matSG(c_deviceIdZero),
@@ -32,7 +33,8 @@ public:
         matM(c_deviceIdZero),
         matMsparse(c_deviceIdZero),
         matG(c_deviceIdZero),
-        matGsparseBSC(c_deviceIdZero)
+        matGsparseBSC(c_deviceIdZero),
+        timestamps(c_deviceIdZero)
     {
         // smoothed gradient
         matSG = SingleMatrix::RandomGaussian(dim1, dim2, c_deviceIdZero, -1.0f, 1.0f, IncrementCounter());
@@ -55,6 +57,22 @@ public:
 
         matGsparseBSC.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
         SingleMatrix::MultiplyAndAdd(matG2, false, matG1sparseCSC, true, matGsparseBSC);
+        timestamps = SingleMatrix::RandomGaussian(1, dim2, c_deviceIdZero, -1.0f, 1.0f, IncrementCounter());
+    }
+
+    void RunOnDevices(std::function<void()> func)
+    {
+        for (int deviceId : {-1, 0})
+        {
+            matSG.TransferToDeviceIfNotThere(deviceId, true);
+            matSGsparse.TransferToDeviceIfNotThere(deviceId, true);
+            matM.TransferToDeviceIfNotThere(deviceId, true);
+            matMsparse.TransferToDeviceIfNotThere(deviceId, true);
+            matG.TransferToDeviceIfNotThere(deviceId, true);
+            matGsparseBSC.TransferToDeviceIfNotThere(deviceId, true);
+            timestamps.TransferToDeviceIfNotThere(deviceId, true);
+            func();
+        }
     }
 };
 
@@ -66,11 +84,10 @@ BOOST_AUTO_TEST_SUITE(MatrixLearnerSuite)
 BOOST_FIXTURE_TEST_CASE(FSAdagradSparse, MatrixLearnerFixture)
 {
     // run learner
-    double smoothedCount = 1000;
-    matSG.FSAdagradUpdate(dim2, matG, matM, smoothedCount, 0.0001, 1.0, 0.9, 0.9);
+    double targetAdagradAvDenom_x_sqrtAdagradSqrFrames = 0.5;
+    matSG.FSAdagradUpdate(matG, matM, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, 0.0001, 1.0, 0.9, 1.0);
 
-    smoothedCount = 1000;
-    matSGsparse.FSAdagradUpdate(dim2, matGsparseBSC, matMsparse, smoothedCount, 0.0001, 1.0, 0.9, 0.9);
+    matSGsparse.FSAdagradUpdate(matGsparseBSC, matMsparse, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, 0.0001, 1.0, 0.9, 1.0);
 
     BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE5));
     BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE5));
@@ -80,10 +97,10 @@ BOOST_FIXTURE_TEST_CASE(FSAdagradSparse, MatrixLearnerFixture)
 BOOST_FIXTURE_TEST_CASE(RmsPropSparse, MatrixLearnerFixture)
 {
     // run learner
-    float avg = matSG.RmsProp(matG, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true);
-    float avgSparse = matSGsparse.RmsProp(matGsparseBSC, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true);
+    float avg = matSG.RmsProp(matG, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true, false);
+    float avgSparse = matSGsparse.RmsProp(matGsparseBSC, 0.99f, 1.2f, 10.0f, 0.75f, 0.1f, true, false);
 
-    BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE4));
+    BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE3));
     BOOST_CHECK(fabsf(avg - avgSparse) < c_epsilonFloatE5);
 }
 
@@ -91,11 +108,17 @@ BOOST_FIXTURE_TEST_CASE(RmsPropSparse, MatrixLearnerFixture)
 BOOST_FIXTURE_TEST_CASE(AdaDeltaSparse, MatrixLearnerFixture)
 {
     // run learner
-    matSG.AdaDeltaUpdate(matG, matM, 0.95f, 1e-8f);
-    matSGsparse.AdaDeltaUpdate(matGsparseBSC, matMsparse, 0.95f, 1e-8f);
+    RunOnDevices([this]()
+    {
+        timestamps.SetValue(0.0f);
+        auto ts = reinterpret_cast<int*>(timestamps.Data());
+        matSG.AdaDeltaUpdate(matG, matM, 0.5f, 0.95f, 1e-8f, nullptr, 0);
+        matSGsparse.AdaDeltaUpdate(matGsparseBSC, matMsparse, 0.5f, 0.95f, 1e-8f, ts, 1);
+        matSGsparse.AdaDeltaFlushState(matGsparseBSC.GetNumCols(), 0.95f, ts, 1);
 
-    BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE4));
-    BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE4));
+        BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE4));
+        BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE4));
+    });
 }
 
 BOOST_AUTO_TEST_SUITE_END()

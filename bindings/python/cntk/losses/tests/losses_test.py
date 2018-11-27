@@ -12,10 +12,9 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
+import cntk as C
 from cntk.ops.tests.ops_test_utils import _test_binary_op, AA, precision, PRECISION_TO_TYPE,\
         unittest_helper
-
-from cntk import input
 
 TARGET_OUT_PAIRS = [
     # (target_vector, output_vector)
@@ -152,12 +151,108 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
 
     from cntk.losses import lambda_rank
 
-    g = input((1,))
-    s = input((1,), needs_gradient=True)
-    n = input((1,))
+    g = C.input_variable((1,))
+    s = C.input_variable((1,), needs_gradient=True)
+    n = C.input_variable((1,))
     f = lambda_rank(s, n, g)
 
     actual_grad, actual_value = f.grad({s:score, n:gain, g:group}, [s], [f.output])
 
     assert np.allclose(actual_value, expected_value)
     assert np.allclose(actual_grad,  expected_grad)
+
+
+NCE_EXPECTED_VALUES = [
+    # (classes, xdim, batch, expected_value)
+    (100,     50,  2, [ 3.52544 ,  5.671973]),
+    (1000,   100,  4, [ 1.949046,  2.219169,  2.426618,  3.094275]),
+    (10000,  200,  6, [ 1.494069,  1.569222,  1.628346,  1.64969 ,  1.673538,  1.755621]),
+]
+
+@pytest.mark.parametrize("classes, xdim, batch, expected_value", NCE_EXPECTED_VALUES)
+def test_nce_loss(classes, xdim, batch, expected_value, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    from cntk.losses import nce_loss
+    import scipy
+
+    x = C.input_variable(xdim, needs_gradient=True)
+    y = C.input_variable(classes, is_sparse=True)
+
+    x0 = np.arange(batch * xdim, dtype=dt).reshape((batch, xdim))/(batch * xdim)
+    data = np.ones(batch, dtype=dt)
+    indices = list(range(10,10*batch+1,10))
+    indptr = list(range(batch+1))
+    y0 = scipy.sparse.csr_matrix((data, indices, indptr), shape=(batch, classes))
+
+    q = np.arange(classes, dtype=dt) + 1
+
+    b = C.parameter((classes, 1), init=-np.log(classes))
+    W = C.parameter((classes, C.InferredDimension), init=C.glorot_uniform(seed=98052))
+
+    loss = C.nce_loss(W, b, x, y, q, seed=98052)
+    v = loss.grad({x:x0, y:y0}, wrt=loss.parameters, as_numpy=False)
+    for key in v:
+        assert v[key].is_sparse, "gradient of nce_loss with respect to %s is not sparse"%key
+    losses = np.zeros((100,batch))
+    for i in range(100):
+        losses[i,:] = loss.eval({x:x0, y:y0})
+    assert np.allclose(np.mean(losses, axis=0), AA(expected_value))
+
+
+@pytest.mark.parametrize("classes, xdim, batch, expected_value", NCE_EXPECTED_VALUES)
+def test_nce_backward_indices(classes, xdim, batch, expected_value, device_id, precision):
+    """
+    Simple test that makes sure that the derivatives have the correct sparsity pattern
+    """
+
+    # ignore precision, only sparsity pattern matters for this test
+    dt = np.float32
+
+    from cntk.losses import nce_loss
+    import scipy
+    trials = 10
+
+    # Establish baseline
+    expected_count = np.zeros(classes)
+    I = C.constant(np.eye(classes, dtype=dt))
+    q = np.arange(classes, dtype=dt) + 1
+    z = C.reduce_sum(C.times(C.random_sample(q, 32, True, seed=98052), I), axis=0)
+    for i in range(trials):
+        expected_count[np.nonzero(z.eval().ravel())] += 1
+
+    # Set things up to measure the same thing with nce_loss
+
+    x = C.input_variable(xdim, needs_gradient=True)
+    y = C.input_variable(classes, is_sparse=True)
+
+    x0 = np.arange(batch * xdim, dtype=dt).reshape((batch, xdim))/(batch * xdim)
+    data = np.ones(batch, dtype=dt)
+    indices = list(range(10,10*batch+1,10))
+    indptr = list(range(batch+1))
+    y0 = scipy.sparse.csr_matrix((data, indices, indptr), shape=(batch, classes))
+
+    b = C.parameter((classes, 1))
+    W = C.parameter((classes, C.InferredDimension))
+
+    gb = np.zeros(classes)
+    vb = C.input_variable((classes, 1), dtype=dt)
+    Ib = C.constant(np.eye(1, dtype=dt))
+    zb = C.times(vb, Ib)
+
+    loss = C.nce_loss(W, b, x, y, q, seed=98052)
+    for i in range(trials):
+        v = loss.grad({x: x0, y: y0}, wrt=loss.parameters, as_numpy=False)
+        gb[np.nonzero(zb.eval({vb: v[b]}).ravel())] += 1
+    for i in range(classes):
+        assert gb[i] == expected_count[i] or (i in indices and gb[i] == trials)
+
+def test_weighted_binary_cross_entropy_with_reduced_sequences():
+    pytest.skip("Skip this test until the cudaFree crash on exit is fixed for Windows")
+
+    a = C.sequence.input_variable((), sequence_axis=C.Axis("a"))
+    b = C.sequence.input_variable((), sequence_axis=C.Axis("b"))
+    w = C.sequence.input_variable((), sequence_axis=C.Axis("w"))
+    cd = C.weighted_binary_cross_entropy(C.sequence.first(a), C.sequence.first(b), C.sequence.first(w))
+    data = np.random.random((4,)).astype(np.float32)
+    cd.eval({a:data, b:data, w:data})

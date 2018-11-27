@@ -153,7 +153,7 @@ void SparsePCReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConf
                                          LODWORD(0),
                                          0);
 #else
-    m_hndl = open(msra::strfun::utf8(m_file).c_str(), O_RDONLY);
+    m_hndl = open(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(m_file)).c_str(), O_RDONLY);
     if (m_hndl == -1)
         RuntimeError("Unable to Open/Create file %ls", m_file.c_str());
     struct stat sb;
@@ -205,7 +205,7 @@ void SparsePCReader<ElemType>::StartMinibatchLoop(size_t mbSize, size_t /*epoch*
 // GetMinibatch - Get the next minibatch (features and labels)
 // matrices - [in] a map with named matrix types (i.e. 'features', 'labels') mapped to the corresponding matrix,
 //             [out] each matrix resized if necessary containing data.
-// returns - true if there are more minibatches, false if no more minibatchs remain
+// returns - true if there are more minibatches, false if no more minibatches remain
 template <class ElemType>
 bool SparsePCReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {

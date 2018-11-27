@@ -5,8 +5,8 @@
 # ==============================================================================
 
 import os
-from cntk.ops import Variable
-
+import sys
+from cntk.variables import Variable
 
 def depth_first_search(root, visitor, depth=0):
     '''
@@ -23,18 +23,20 @@ def depth_first_search(root, visitor, depth=0):
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
+    if depth == -1:
+        depth = sys.maxsize
+
     stack = [(root.root_function, depth)] # node
     accum = []         # final result (list of all unique nodes)
     visited = set()    # [node.uid]
-
+    
     while stack:
         node, depth = stack.pop(0)
         if node.uid in visited:
             continue
         from cntk import cntk_py
-        dive_into_blocks = 0 < depth or depth == -1
-        if isinstance(node, cntk_py.Function) and node.is_block and \
-                dive_into_blocks:
+        dive_into_blocks = 0 < depth
+        if isinstance(node, cntk_py.Function) and node.is_block and dive_into_blocks:
             composite = node.block_root
             # BlockFunction node
             mapping = node.block_arguments_mapping
@@ -129,6 +131,50 @@ def find_by_name(node, node_name, depth=0):
 
     return result[0]
 
+def find_by_uid(node, node_uid, depth=0):
+    '''
+    Finds a function in the graph based on its UID starting from ``node`` and doing a depth-first
+    search. It assumes that the name occurs only once.
+
+    Args:
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the node to start the journey from
+        node_uid (`str` or `unicode` (in Python 2)): uid for which we are search nodes.
+        depth (int, default 0): how deep into the block hierarchy the DFS
+         algorithm should go into. Set to -1 for infinite depth.
+
+    Returns:
+        Primitive (or block) function having the specified name
+
+    See also:
+        :func:`~cntk.ops.functions.Function.find_by_uid` in class
+        :class:`~cntk.ops.functions.Function`.
+    '''
+    # The try-except block below is in place to allow working in Python 2, where
+    # the input argument node_uid could be of type 'unicode' instead of 'str'. But
+    # Python 3 does not have type 'unicode', hence the check.
+    try:
+        uid_is_type_unicode = isinstance(node_uid, unicode)
+    except NameError:
+        uid_is_type_unicode = False
+
+    if not (isinstance(node_uid, str) or uid_is_type_unicode):
+        raise ValueError('node_uid must be string of type str or unicode (Python 2.7). You gave '
+                         'a %s' % type(node_uid))
+
+    if uid_is_type_unicode:
+        node_uid = node_uid.encode('ascii')
+
+    result = depth_first_search(node, lambda x: x.uid == node_uid,
+                                depth)
+
+    if len(result) > 1:
+        raise ValueError('found multiple functions matching "%s". '
+                         'This should not happen as UIDs are unique.' % node_uid)
+
+    if not result:
+        return None
+
+    return result[0]
 
 def plot(root, filename=None):
     '''
@@ -138,9 +184,9 @@ def plot(root, filename=None):
 
     Requirements:
 
-     * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_
-     * for PNG, PDF, and SVG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_ 
-       and `graphviz <http://graphviz.org>`_ (GraphViz executable has to be in the system's PATH).
+     * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`__
+     * for PNG, PDF, and SVG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`__
+       and `graphviz <http://graphviz.org>`__ (GraphViz executable has to be in the system's PATH).
 
     Args:
         node (graph node): the node to start the journey from
@@ -339,20 +385,6 @@ def plot(root, filename=None):
     model = "\n".join(reversed(model))
 
     return model
-
-
-def output_function_graph(node, dot_file_path=None, png_file_path=None):
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'plot(...) instead', DeprecationWarning)
-
-    result = plot(node, dot_file_path)
-    if png_file_path:
-        result2 = plot(node, dot_file_path)
-        if not result:
-            result = result2
-
-    return result
 
 
 def get_node_outputs(node, depth=0):

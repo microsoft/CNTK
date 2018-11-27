@@ -3,6 +3,8 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
 
+Import-Module Disk -ErrorAction Stop
+
 Set-StrictMode -Version Latest
 
 function DownloadFileWebRequest (
@@ -15,18 +17,15 @@ function DownloadFileWebRequest (
     } 
     catch {
       Write-Verbose "DownloadFileWebRequest failed: $_.Exception.Response.StatusCode.Value__"
-      Remove-Item -path $OutFile -ErrorAction SilentlyContinue
+      Remove-Item -Path $OutFile -Force -ErrorAction SilentlyContinue
       return $false
     }
 }
 
 function DownloadFileWebClient(
     [Parameter(Mandatory=$True)][string] $SourceFile,
-    [Parameter(Mandatory=$True)][string] $OutFile,
-    [int] $timeout = 600)
+    [Parameter(Mandatory=$True)][string] $OutFile)
 {
-    # $timeout is ignored
-
     try {
         (New-Object System.Net.WebClient).DownloadFile($SourceFile, $OutFile) 
         return $true
@@ -40,67 +39,56 @@ function DownloadFileWebClient(
           }
       }
 
-      Remove-Item -path $OutFile -ErrorAction SilentlyContinue
+      Remove-Item -Path $OutFile -Force -ErrorAction SilentlyContinue
       return $false
     }
 }
 
-function Copy-FileWebRequest(
+function Get-FileFromLocation(
     [Parameter(Mandatory=$True)][string] $SourceFile,
     [Parameter(Mandatory=$True)][string] $OutFile,
-    [int] $maxtry = 2,
-    [int] $tryDelaySeconds = 60)
+    [switch] $WebClient,
+    [int] $Maxtry = 5,
+    [int] $TryDelaySeconds = 60)
 {
     $targetDir = Split-Path $OutFile
-    if (-not (Test-Path -path $targetDir -PathType Container)) {
+    if (-not (Test-Path -Path $targetDir -PathType Container)) {
         # if we can't create the target directory, we will stop
         New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction Stop
     }
-    for ($count=1; $count -le $maxtry; $count +=1) {
-        Write-Verbose "Copy-FileWebRequest: Iteration [$count] of [$maxtry]"
-        if ($count -gt 1) {
-            start-sleep -Seconds $tryDelaySeconds
-        }
-        if (Test-Path -Path $OutFile) {
-            Remove-Item -path $OutFile -ErrorAction Stop
-        }  
-        if (DownloadFileWebRequest -SourceFile $SourceFile -OutFile $OutFile) {
-            return $true
-        }
+    if (Test-Path -Path $OutFile) {
+        # Outfile already exists
+        Write-Verbose "Get-FileFromLocation: Success. [$OutFile] already exists."
+        return $true
     }
-    return $false
-}
-  
+    $workFile = Get-TempFileName -filePrefix FromLocation -tempDir $targetDir
 
-function Copy-FileWebClient(
-    [Parameter(Mandatory=$True)][string] $SourceFile,
-    [Parameter(Mandatory=$True)][string] $OutFile,
-    [int] $timeout = 600,
-    [int] $maxtry = 5,
-    [int] $tryDelaySeconds = 60)
-{
-    $targetDir = Split-Path $OutFile
-    if (-not (Test-Path -path $targetDir -PathType Container)) {
-        # if we can't create the target directory, we will stop
-        New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction Stop
-    }
-    for ($count=1; $count -le $maxtry; $count +=1) {
-        Write-Verbose "Copy-FileWebClient: Iteration [$count] of [$maxtry]"
-        if ($count -gt 1) {
-            start-sleep -Seconds $tryDelaySeconds
+    try {
+        for ($count = 1; $count -le $Maxtry; $count++) {
+            Write-Verbose "Copy-FileWeb: Iteration [$count] of [$maxtry]"
+            if ($count -gt 1) {
+                Start-Sleep -Seconds $TryDelaySeconds
+            }
+            if ($WebClient) {
+                $result = DownloadFileWebClient -SourceFile $SourceFile -OutFile $workFile
+            }
+            else {
+                $result = DownloadFileWebRequest -SourceFile $SourceFile -OutFile $workFile
+            }
+            if ($result) {
+                Rename-Item $workFile $OutFile -Force -ErrorAction Stop | Out-Null
+                return $true
+            }
         }
-        if (Test-Path -Path $OutFile) {
-            Remove-Item -path $OutFile -ErrorAction Stop
-        }  
-        if (DownloadFileWebClient -SourceFile $SourceFile -OutFile $OutFile -timeout $timeout) {
-            return $true
-        }
+        Write-Verbose "Get-FileFromLocation: Failed"
+        return $false
     }
-    return $false
+    finally {
+        Remove-Item $workfile -Force -ErrorAction SilentlyContinue
+    }
 }
         
 Export-ModuleMember -Function (Write-Output `
-    Copy-FileWebRequest `
-    Copy-FileWebClient )
+    Get-FileFromLocation)
 
 # vim: tabstop=4 shiftwidth=4 expandtab

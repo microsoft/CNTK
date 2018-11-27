@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -31,7 +31,6 @@
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
@@ -81,7 +80,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(OpenCvInclude);$(ZipInclude);$(SolutionDir)Source\Readers\ReaderLib;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(OpenCvInclude);$(ZipInclude);$(SolutionDir)Source\Readers\ReaderLib;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OutDir);$(OpenCvLibPath);$(ZipLibPath)</AdditionalLibraryDirectories>
@@ -142,8 +141,8 @@
   <Target Name="Build" Condition="$(HasOpenCv) And $(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
-    <Error Condition="!$(HasBoost)" Text="ImageReader requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
-    <Warning Condition="!$(HasOpenCv)" Text="ImageReader requires the OpenCV library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#opencv for installation instructions." />
-    <Warning Condition="!$(UseZip)" Text="zlib and libzip libraries were not found, ImageReader will be built without zip container support. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#libzip for installation instructions." />
+    <Error Condition="!$(HasBoost)" Text="ImageReader requires the Boost library to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#boost for installation instructions." />
+    <Warning Condition="!$(HasOpenCv)" Text="ImageReader requires the OpenCV library to build. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#optional-opencv for installation instructions." />
+    <Warning Condition="!$(UseZip)" Text="zlib and libzip libraries were not found, ImageReader will be built without zip container support. Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#optional-zlib-and-libzip for installation instructions." />
   </Target>
 </Project>

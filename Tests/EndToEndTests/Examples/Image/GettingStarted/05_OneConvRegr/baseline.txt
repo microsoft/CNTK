@@ -16,7 +16,6 @@ Changed current directory to C:\cygwin64\tmp\cntk-test-20161220114426.791596\Exa
 12/20/2016 19:44:31: 		Last modified date: Mon Dec 19 16:21:48 2016
 12/20/2016 19:44:31: 		Build type: Release
 12/20/2016 19:44:31: 		Build target: GPU
-12/20/2016 19:44:31: 		With 1bit-SGD: no
 12/20/2016 19:44:31: 		With ASGD: yes
 12/20/2016 19:44:31: 		Math lib: mkl
 12/20/2016 19:44:31: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0

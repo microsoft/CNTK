@@ -1,8 +1,8 @@
 Readers, Multi-GPU, Profiling...
 ================================
 
-For extending readers in CNTK, please follow `these instructions <https://github.com/Microsoft/CNTK/wiki/BrainScript-and-Python---Understanding-and-Extending-Readers>`__
+For extending readers in CNTK, please follow :cntkwiki:`these instructions <BrainScript-and-Python---Understanding-and-Extending-Readers>`
 
-For multi-GPU and multi-machine usage, please follow `these <https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines>`__
+For multi-GPU and multi-machine usage, please follow :cntkwiki:`these <Multiple-GPUs-and-machines>`.
 
-For profiling, please refer to `these <https://github.com/Microsoft/CNTK/wiki/BrainScript-and-Python-Performance-Profiler>`__
+For profiling, please refer to :cntkwiki:`these <BrainScript-and-Python-Performance-Profiler>`.

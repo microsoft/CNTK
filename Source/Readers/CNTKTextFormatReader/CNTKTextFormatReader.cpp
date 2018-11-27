@@ -14,9 +14,10 @@
 #include "SequencePacker.h"
 #include "FramePacker.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 using namespace std;
+using namespace Microsoft::MSR::CNTK;
 
 // TODO: This class should go away eventually.
 // TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
@@ -28,7 +29,7 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
     try
     {
         auto corpus = make_shared<CorpusDescriptor>(true);
-        if (configHelper.GetElementType() == ElementType::tfloat)
+        if (configHelper.GetDataType() == DataType::Float)
             m_deserializer = make_shared<TextParser<float>>(corpus, configHelper, true);
         else
             m_deserializer = make_shared<TextParser<double>>(corpus, configHelper, true);
@@ -45,7 +46,8 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
                                                                 /*shouldPrefetch =*/ true,
                                                                 /*multithreadedGetNextSequences =*/ false,
                                                                 /*maxNumberOfInvalidSequences =*/ 0,
-                                                                /*sampleBasedRandomizationWindow =*/ configHelper.UseSampleBasedRandomizationWindow());
+                                                                /*sampleBasedRandomizationWindow =*/ configHelper.UseSampleBasedRandomizationWindow(),
+                                                                /*seedOffset =*/ GetRandomSeed(config));
         }
         else
         {
@@ -71,4 +73,4 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
     }
 }
 
-} } }
+}

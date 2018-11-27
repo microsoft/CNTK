@@ -49,31 +49,7 @@ bool ShouldRunOnGpu()
 #endif
 }
 
-bool Is1bitSGDAvailable()
-{
-    static bool is1bitSGDAvailable;
-    static bool isInitialized = false;
-
-    if (!isInitialized)
-    {
-        const char* p = getenv("TEST_1BIT_SGD");
-
-        // Check the environment variable TEST_1BIT_SGD to decide whether to run 1-bit SGD tests.
-        if (p != nullptr && 0 == strcmp(p, "0"))
-        {
-            is1bitSGDAvailable = false;
-        }
-        else
-        {
-            is1bitSGDAvailable = true;
-        }
-        isInitialized = true;
-    }
-
-    return is1bitSGDAvailable;
-}
-
-MinibatchSourcePtr CreateHTKMinibatchSource(size_t featureDim, size_t numOutputClasses, const Dictionary& readModeConfig, size_t epochSize, bool randomize = true)
+MinibatchSourceConfig GetHTKMinibatchSourceConfig(size_t featureDim, size_t numOutputClasses, size_t epochSize, bool randomize = true)
 {
     auto featuresFilePath = L"glob_0000.scp";
     auto labelsFilePath = L"glob_0000.mlf";
@@ -82,13 +58,7 @@ MinibatchSourcePtr CreateHTKMinibatchSource(size_t featureDim, size_t numOutputC
     Deserializer featureDeserializer = HTKFeatureDeserializer({ HTKFeatureConfiguration(L"features", featuresFilePath, featureDim, 0, 0, false) });
     Deserializer labelDeserializer = HTKMLFDeserializer(L"labels", labelMappingFile, numOutputClasses, { labelsFilePath });
 
-    Dictionary minibatchSourceConfiguration;
-    if (randomize)
-        minibatchSourceConfiguration[L"randomize"] = true;
-
-    minibatchSourceConfiguration[L"epochSize"] = epochSize;
-    minibatchSourceConfiguration[L"deserializers"] = std::vector<DictionaryValue>({ featureDeserializer, labelDeserializer });
-    minibatchSourceConfiguration.Add(readModeConfig);
-
-    return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+    MinibatchSourceConfig config({ featureDeserializer, labelDeserializer }, randomize);
+    config.maxSamples = epochSize;
+    return config;
 }

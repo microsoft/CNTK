@@ -106,7 +106,6 @@
       <Filter>cntk\io</Filter>
     </None>
     <None Include="setup.py" />
-    <None Include="swig_install.sh" />
     <None Include="cntk\losses\__init__.py">
       <Filter>cntk\losses</Filter>
     </None>
@@ -245,6 +244,9 @@
     <None Include="cntk\logging\tests\graph_test.py">
       <Filter>cntk\logging\tests</Filter>
     </None>
+    <None Include="cntk\logging\tests\progress_print_test.py">
+      <Filter>cntk\logging\tests</Filter>
+    </None>
     <None Include="cntk\losses\tests\__init__.py">
       <Filter>cntk\losses\tests</Filter>
     </None>
@@ -350,5 +352,45 @@
     <None Include="cntk\losses\tests\cosine_distance_test.py">
       <Filter>cntk\losses\tests</Filter>
     </None>
+    <None Include="cntk\ops\tests\assign_test.py">
+      <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\stop_gradient_test.py">
+      <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\io\transforms.py">
+      <Filter>cntk\io</Filter>
+    </None>
+    <None Include="cntk\ops\tests\sequence_test.py">
+      <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\tests\onnx_format_test.py">
+      <Filter>cntk\tests</Filter>
+    </None>
+    <None Include="cntk\tests\onnx_op_test.py">
+      <Filter>cntk\tests</Filter>
+    </None>
+    <None Include="cntk\internal\tests\types_test.py">
+      <Filter>cntk\internal\tests</Filter>
+    </None>
+    <None Include="cntk\tests\onnx_model_test.py">
+      <Filter>cntk\tests</Filter>
+    </None>
+    <None Include="cntk\tests\onnx_test_helper.py">
+      <Filter>cntk\tests</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cntk\cntk_py_wrap.h">
+      <Filter>cntk</Filter>
+    </ClInclude>
+    <ClInclude Include="cntk\SwigDeserializer.h">
+      <Filter>cntk</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cntk\cntk_py_wrap.cpp">
+      <Filter>cntk</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -10,25 +10,27 @@ from __future__ import print_function
 from .debug import *
 from .profiler import *
 
-'''
-Helper functions for debugging graphs.
-'''
+
+def force_deterministic(seed):
+    ''' 
+    Force most of the computation nodes to run deterministically.
+    
+    Args:
+        seed (int): set the random seed for all random ops in the graph and readers.  
+    '''
+    from _cntk_py import set_fixed_random_seed, force_deterministic_algorithms
+    import warnings
+    
+    warnings.warn("RNN based nodes don't run deterministically yet.", Warning)
+
+    set_fixed_random_seed(seed)
+    force_deterministic_algorithms()
 
 def dump_signature(root, tag=None):
     '''
     Debug helper that prints the signature of a Function.
     '''
-    f_name = root.name if root.name else tag if tag else 'Function'
-    args = root.signature
-    def format_arg_spec(v):
-        s = v.name + ': ' if v.name else ''
-        return s + str(v.type)
-    outputs = root.outputs
-    if len(outputs) > 1:
-        output_signature = 'Tuple[' + ', '.join(format_arg_spec(output) for output in outputs) + ']'
-    else:
-        output_signature = format_arg_spec(outputs[0])
-    print(f_name + '(' + ", ".join([format_arg_spec(param) for param in args]) + ') -> ' + output_signature)
+    print(str(root))
 
 def dump_function(root, tag=None):
     from cntk.logging.graph import depth_first_search
@@ -57,7 +59,7 @@ def dump_function(root, tag=None):
         actual_name = axis.name
         if actual_name in axis_names:
             return axis_names[actual_name]
-        if axis.name == "staticAxis_2147483645":  # TODO: what is the correct way of testing this?
+        if axis.name == "UnknownAxes":  # TODO: what is the correct way of testing this?
             name = "?"
         elif axis.name == "defaultBatchAxis":
             name = "b*"

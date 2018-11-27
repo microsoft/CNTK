@@ -10,7 +10,9 @@
 
 #include "Basics.h"
 #ifdef __WINDOWS__
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif               // NOMINMAX
 #include "Windows.h" // for mmreg.h and FILETIME
 #include <mmreg.h>
 #endif
@@ -173,6 +175,13 @@ void renameOrDie(const std::string& from, const std::string& to);
 void renameOrDie(const std::wstring& from, const std::wstring& to);
 
 // ----------------------------------------------------------------------------
+// copyOrDie(): copy file with error handling.
+// ----------------------------------------------------------------------------
+
+void copyOrDie(const std::string& from, const std::string& to);
+void copyOrDie(const std::wstring& from, const std::wstring& to);
+
+// ----------------------------------------------------------------------------
 // fexists(): test if a file exists
 // ----------------------------------------------------------------------------
 
@@ -222,7 +231,7 @@ void fputstring(FILE* f, const std::wstring&);
 template <class CHAR>
 CHAR* fgetline(FILE* f, CHAR* buf, int size);
 template <class CHAR, size_t n>
-CHAR* fgetline(FILE* f, CHAR(&buf)[n])
+CHAR* fgetline(FILE* f, CHAR (&buf)[n])
 {
     return fgetline(f, buf, n);
 }
@@ -235,13 +244,13 @@ void fgetline(FILE* f, std::vector<wchar_t>& buf);
 
 const char* fgetstring(FILE* f, char* buf, int size);
 template <size_t n>
-const char* fgetstring(FILE* f, char(&buf)[n])
+const char* fgetstring(FILE* f, char (&buf)[n])
 {
     return fgetstring(f, buf, n);
 }
 const char* fgetstring(const HANDLE f, char* buf, int size);
 template <size_t n>
-const char* fgetstring(const HANDLE f, char(&buf)[n])
+const char* fgetstring(const HANDLE f, char (&buf)[n])
 {
     return fgetstring(f, buf, n);
 }
@@ -252,7 +261,7 @@ std::string fgetstring(FILE* f);
 
 const char* fgettoken(FILE* f, char* buf, int size);
 template <size_t n>
-const char* fgettoken(FILE* f, char(&buf)[n])
+const char* fgettoken(FILE* f, char (&buf)[n])
 {
     return fgettoken(f, buf, n);
 }
@@ -277,7 +286,7 @@ void fputstring(FILE* f, const std::wstring&);
 // ----------------------------------------------------------------------------
 // fgetTag(): read a 4-byte tag & return as a std::string
 // ----------------------------------------------------------------------------
-
+const size_t LATTICE_TAG_LENGTH = 4;
 std::string fgetTag(FILE* f);
 
 // ----------------------------------------------------------------------------
@@ -533,9 +542,9 @@ void fgetText(FILE* f, T& v)
 {
     int rc = ftrygetText(f, v);
     if (rc == 0)
-        RuntimeError("error reading value from file (invalid format)");
+        Microsoft::MSR::CNTK::RuntimeError("error reading value from file (invalid format)");
     else if (rc == EOF)
-        RuntimeError("error reading from file: %s", strerror(errno));
+        Microsoft::MSR::CNTK::RuntimeError("error reading from file: %s", strerror(errno));
     assert(rc == 1);
 }
 
@@ -566,9 +575,9 @@ void fputText(FILE* f, T v)
     const wchar_t* formatString = GetFormatString(v);
     int rc = fwprintf(f, formatString, v);
     if (rc == 0)
-        RuntimeError("error writing value to file, no values written");
+        Microsoft::MSR::CNTK::RuntimeError("error writing value to file, no values written");
     else if (rc < 0)
-        RuntimeError("error writing to file: %s", strerror(errno));
+        Microsoft::MSR::CNTK::RuntimeError("error writing to file: %s", strerror(errno));
 }
 
 // ----------------------------------------------------------------------------
@@ -591,7 +600,10 @@ void fputfile(const std::wstring& pathname, const std::string&);
 
 void fgetfile(const std::wstring& pathname, std::vector<char>& buffer);
 void fgetfile(FILE* f, std::vector<char>& buffer);
-namespace msra { namespace files {
+namespace msra
+{
+namespace files
+{
 
 void fgetfilelines(const std::wstring& pathname, std::vector<char>& readbuffer, std::vector<std::string>& lines, int numberOfTries = 1);
 
@@ -603,8 +615,8 @@ static inline std::vector<std::string> fgetfilelines(const std::wstring& pathnam
     return lines;
 }
 std::vector<char*> fgetfilelines(const std::wstring& pathname, std::vector<char>& readbuffer, int numberOfTries = 1);
-
-}}
+}
+}
 
 #ifdef _WIN32
 // ----------------------------------------------------------------------------
@@ -625,19 +637,25 @@ void expand_wildcards(const std::wstring& path, std::vector<std::wstring>& paths
 // make_intermediate_dirs() -- make all intermediate dirs on a path
 // ----------------------------------------------------------------------------
 
-namespace msra { namespace files {
+namespace msra
+{
+namespace files
+{
 
 void make_intermediate_dirs(const std::wstring& filepath);
 
 std::vector<std::wstring> get_all_files_from_directory(const std::wstring& directory);
-
-}}
+}
+}
 
 // ----------------------------------------------------------------------------
 // fuptodate() -- test whether an output file is at least as new as an input file
 // ----------------------------------------------------------------------------
 
-namespace msra { namespace files {
+namespace msra
+{
+namespace files
+{
 
 bool fuptodate(const std::wstring& target, const std::wstring& input, bool inputrequired = true);
 };
@@ -714,7 +732,7 @@ class auto_file_ptr
 #pragma warning(disable : 4996)
     void openfailed(const std::string& path)
     {
-        RuntimeError("auto_file_ptr: error opening file '%s': %s", path.c_str(), strerror(errno));
+        Microsoft::MSR::CNTK::RuntimeError("auto_file_ptr: error opening file '%s': %s", path.c_str(), strerror(errno));
     }
 #pragma warning(pop)
 protected:
@@ -746,9 +764,9 @@ public:
     }
     auto_file_ptr(const wchar_t* wpath, const char* mode)
     {
-        f = _wfopen(wpath, msra::strfun::utf16(mode).c_str());
+        f = _wfopen(wpath, Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(mode).c_str());
         if (f == NULL)
-            openfailed(msra::strfun::utf8(wpath));
+            openfailed(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(wpath)));
     }
 #pragma warning(pop)
     FILE* operator=(FILE* other)
@@ -779,7 +797,10 @@ inline int fclose(auto_file_ptr& af)
     return af.fclose();
 }
 
-namespace msra { namespace files {
+namespace msra
+{
+namespace files
+{
 
 // ----------------------------------------------------------------------------
 // textreader -- simple reader for text files --we need this all the time!
@@ -827,7 +848,7 @@ public:
     }
     std::wstring wgetline()
     {
-        return msra::strfun::utf16(getline());
+        return Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(getline());
     }
 };
 }
@@ -872,35 +893,34 @@ static inline bool relpath(const std::basic_string<Char>& s)
 }
 
 // trim from start
-template<class String>
+template <class String>
 static inline String& ltrim(String& s)
 {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](typename String::value_type c){ return !iscspace(c); }));
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](typename String::value_type c) { return !iscspace(c); }));
     return s;
 }
 
 // trim from end
-template<class String>
+template <class String>
 static inline String& rtrim(String& s)
 {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](typename String::value_type c){ return !iscspace(c); }).base(), s.end());
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](typename String::value_type c) { return !iscspace(c); }).base(), s.end());
     return s;
 }
 
 // trim from both ends
-template<class String>
+template <class String>
 static inline String& trim(String& s)
 {
     return ltrim(rtrim(s));
 }
 
-template<class String>
+template <class String>
 std::vector<String> SplitString(const String& str, const String& sep);
-template<class String, class Char>
-std::vector<String> SplitString(const String& str, const Char* sep) { return SplitString(str, String(sep)); }
-
-std::wstring s2ws(const std::string& str);
-
-std::string ws2s(const std::wstring& wstr);
+template <class String, class Char>
+std::vector<String> SplitString(const String& str, const Char* sep)
+{
+    return SplitString(str, String(sep));
+}
 
 #endif // _FILEUTIL_

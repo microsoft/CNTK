@@ -6,7 +6,6 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Utils.h"
-#include "PerformanceProfiler.h"
 
 namespace CNTK
 {
@@ -37,7 +36,7 @@ namespace CNTK
 
         if (!m_evaluationFunction->Output().DynamicAxes().empty())
         {
-            m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction);
+            m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction, Axis::AllAxes(), L"aggregateEvalMetric");
             m_testSampleCountVar = m_evaluationFunction;
         }
         else
@@ -45,7 +44,7 @@ namespace CNTK
             m_aggregatedEvaluationFunction = m_evaluationFunction;
             m_testSampleCountVar = m_evaluationFunction->RootFunction()->Inputs()[0];
         }
-
+        
         if(initializeCombined)
             m_combinedEvalFunction = Combine(GetCombinedEvalFunctionArgs());
     }
@@ -87,46 +86,80 @@ namespace CNTK
         return inputs;
     }
 
-    double Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    double Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/, bool distributed /*= false*/)
     {
         std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
-        return TestMinibatch(GetInputs(arguments), outputsToFetch, computeDevice);
+        return TestMinibatch(GetInputs(arguments), outputsToFetch, computeDevice, distributed);
     }
 
-    double Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
-    {
-        std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
-        return TestMinibatch(arguments, outputsToFetch, computeDevice);
-    }
-
-    double Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice)
-    {
-        return TestMinibatch(GetInputs(arguments), outputsToFetch, computeDevice);
-    }
-
-    double Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice)
-    {
-        auto evalMinibatchValue = TestMinibatch(arguments, outputsToFetch, computeDevice, false);
-        return evalMinibatchValue.first->AsScalar<double>() / evalMinibatchValue.second;
-    }
-
-    std::pair<ValuePtr, size_t> Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, bool distributed)
+    double Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/, bool distributed /*= false*/)
     {
         std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
         return TestMinibatch(arguments, outputsToFetch, computeDevice, distributed);
     }
 
-    std::pair<ValuePtr, size_t> Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, bool distributed)
+    double Evaluator::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, bool distributed /*= false*/)
     {
+        return TestMinibatch(GetInputs(arguments), outputsToFetch, computeDevice, distributed);
+    }
+
+    double Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, bool distributed /*= false*/)
+    {
+        std::pair<ValuePtr, size_t> evalMinibatchValue;
+        TestMinibatch(arguments, outputsToFetch, evalMinibatchValue, computeDevice, distributed);
+        return evalMinibatchValue.first->AsScalar<double>() / evalMinibatchValue.second;
+    }
+
+    bool Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::pair<ValuePtr, size_t>& result, const DeviceDescriptor& computeDevice, bool distributed)
+    {
+        std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
+        return TestMinibatch(arguments, outputsToFetch, result, computeDevice, distributed);
+    }
+
+    bool Evaluator::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, std::pair<ValuePtr, size_t>& result, const DeviceDescriptor& computeDevice, bool distributed)
+    {
+        result = TestLocalMinibatch(arguments, outputsToFetch, computeDevice);
         if (distributed)
-            RuntimeError("Currently distributed testing is not supported.");
-        return TestLocalMinibatch(arguments, outputsToFetch, computeDevice);
+        {
+            if (!outputsToFetch.empty())
+                RuntimeError("Custom outputs are not yet supported in distributed evaluation.");
+
+            double localSampleCount = static_cast<double>(result.second);
+
+            auto values = std::vector<NDArrayViewPtr>{ result.first->Data(), MakeSharedObject<NDArrayView>(NDShape{}, &localSampleCount, 1, DeviceDescriptor::CPUDevice()) };
+            if (!m_communicator)
+                m_communicator = MPICommunicator();
+
+            m_communicator->AggregateInPlace(values, m_communicator->Workers());
+
+            result.second = static_cast<size_t>(localSampleCount);
+        }
+
+        bool hasData = (result.second != 0);
+        if (hasData)
+            UpdateTestProgress(result.second, result.first, computeDevice);
+
+        return hasData;
     }
 
     std::pair<ValuePtr, size_t> Evaluator::TestLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice)
     {
         if (!m_aggregatedEvaluationFunction)
             InvalidArgument("Evaluator::TestMinibatch: Cannot test when no evaluation function was specified during construction.");
+
+        if (arguments.empty()) // Empty minibatch, return 0.
+        {
+            auto zeroValue = MakeSharedObject<Value>(
+                MakeSharedObject<NDArrayView>(
+                    m_aggregatedEvaluationFunction->Output().GetDataType(),
+                    m_aggregatedEvaluationFunction->Output().IsSparse() ? StorageFormat::SparseCSC : StorageFormat::Dense,
+                    m_aggregatedEvaluationFunction->Output().Shape(), computeDevice));
+            if(zeroValue->GetDataType() == DataType::Float)
+                zeroValue->Data()->SetValue(0.0f);
+            else
+                zeroValue->Data()->SetValue(0.0);
+            return std::make_pair(zeroValue, 0);
+        }
 
         std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, { m_testSampleCountVar, nullptr } };
         outputs.insert(outputsToFetch.begin(), outputsToFetch.end());
@@ -135,7 +168,6 @@ namespace CNTK
 
         const ValuePtr& aggregateEvalCriterionValue = outputs[m_aggregatedEvaluationFunction];
         auto sampleCount = GetSampleCount(m_testSampleCountVar, outputs[m_testSampleCountVar]);
-        UpdateTestProgress(sampleCount, aggregateEvalCriterionValue, computeDevice);
 
         // Copy back output values for requested variables only.
         for (auto& o : outputsToFetch)
@@ -163,5 +195,13 @@ namespace CNTK
 
         if (m_aggregatedTestEvalCriterionValue)
             m_aggregatedTestEvalCriterionValue->Reset();
+    }
+
+    void Evaluator::PrintNodeTiming()
+    {
+        if (m_combinedEvalFunction)
+        {
+            m_combinedEvalFunction->PrintNodeTiming();
+        }
     }
 }

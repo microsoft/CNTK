@@ -9,8 +9,9 @@
 #include <cmath>
 #include "TruncatedBpttPacker.h"
 #include "ReaderUtil.h"
+#include <algorithm>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 using namespace std;
 
@@ -26,6 +27,15 @@ public:
     bool IsEmpty() const
     {
         return m_sequences.empty();
+    }
+
+    void Reset() 
+    {
+        m_length = 0;
+        m_sampleCursor = 0;
+        m_sampleOffset = 0;
+        m_sequences.clear();
+        m_endOfSweepFlags.clear();
     }
 
     // Gets the number of available samples in the slot.
@@ -115,12 +125,12 @@ struct SequenceBuffer
 
 TruncatedBPTTPacker::TruncatedBPTTPacker(
     SequenceEnumeratorPtr sequenceEnumerator,
-    const vector<StreamDescriptionPtr>& streams,
+    const vector<StreamInformation>& streams,
     size_t numberOfBuffers,
     CorpusDescriptorPtr corpus)
     : PackerBase(corpus, sequenceEnumerator, streams, numberOfBuffers)
 {
-    auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamDescriptionPtr& s){ return s->m_storageType == StorageType::sparse_csc; });
+    auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamInformation& s){ return s.m_storageFormat == StorageFormat::SparseCSC; });
     if (sparseOutput != m_outputStreamDescriptions.end())
     {
         // TODO: add support for sparse.
@@ -134,12 +144,30 @@ TruncatedBPTTPacker::TruncatedBPTTPacker(
         pMBLayout->SetUniqueAxisName(L"TruncatedBPTTPacker");
         m_currentLayouts.push_back(pMBLayout);
     }
+
+    auto shapeUnknown = std::find_if(m_inputStreamDescriptions.begin(), m_inputStreamDescriptions.end(),
+        [](const StreamInformation& s) { return s.m_sampleLayout.IsUnknown(); });
+
+    if (shapeUnknown != m_inputStreamDescriptions.end())
+        RuntimeError("Input streams with unknown sample shape are currently not supported.");
+}
+
+void TruncatedBPTTPacker::Reset() 
+{
+    for (auto& buffer : m_sequenceBufferPerStream) 
+    {
+        for (auto& slot : buffer->m_slots) 
+        {
+            slot.Reset();
+        }
+    }
 }
 
 void TruncatedBPTTPacker::SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
 {
     auto oldMinibatchSize = m_config.m_minibatchSizeInSamples;
     auto oldTruncationSize = m_config.m_truncationSize;
+    m_config.m_rightSplice = config.m_rightSplice;
 
     PackerBase::SetConfiguration(config, memoryProviders);
 
@@ -173,8 +201,10 @@ void TruncatedBPTTPacker::SetConfiguration(const ReaderConfiguration& config, co
                 m_sequenceBufferPerStream.push_back(make_shared<SequenceBuffer>(m_numParallelSequences));
             }
     }
-
-    FillOutAvailableSlots();
+    else
+    {
+        Reset();
+    }
 }
 
 Minibatch TruncatedBPTTPacker::ReadMinibatch()
@@ -198,7 +228,7 @@ Minibatch TruncatedBPTTPacker::ReadMinibatch()
         // all mblayouts should  match anyway.
         mbSeqIdToCorpusSeqId.clear();
 
-        m_currentLayouts[streamIndex]->Init(m_numParallelSequences, m_config.m_truncationSize);
+        m_currentLayouts[streamIndex]->Init(m_numParallelSequences, m_config.m_truncationSize, m_config.m_rightSplice); 
         size_t sequenceId = 0;
         for (size_t slotIndex = 0; slotIndex < m_numParallelSequences; ++slotIndex)
         {
@@ -208,6 +238,7 @@ Minibatch TruncatedBPTTPacker::ReadMinibatch()
         StreamMinibatchPtr m = make_shared<StreamMinibatch>();
         m->m_data = m_streamBuffers[m_currentBufferIndex][streamIndex].m_data.get();
         m->m_layout = m_currentLayouts[streamIndex];
+        m->m_sampleShape = m_outputStreamDescriptions[streamIndex].m_sampleLayout;
         result.m_data.push_back(m);
     }
 
@@ -235,7 +266,7 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
     bool containsEndOfSweepSequence = false;
     auto& slot = m_sequenceBufferPerStream[streamIndex]->m_slots[slotIndex];
 
-    // Let's see how much samples we need to read.
+    // Let's see how many samples we need to read.
     size_t numberOfSamples = min(m_config.m_truncationSize, slot.AvailableNumberOfSamples());
     if (numberOfSamples == 0)
     {
@@ -248,8 +279,8 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
     }
 
     size_t sampleSize = GetSampleSize(m_inputStreamDescriptions[streamIndex]);
-    StorageType storageType = m_inputStreamDescriptions[streamIndex]->m_storageType;
-    size_t elementSize = GetSizeByType(m_inputStreamDescriptions[streamIndex]->m_elementType);
+    StorageFormat storageType = m_inputStreamDescriptions[streamIndex].m_storageFormat;
+    size_t elementSize = DataTypeSize(m_inputStreamDescriptions[streamIndex].m_elementType);
 
     // Distance between two samples of the same sequence in bytes.
     size_t strideSize = m_numParallelSequences * sampleSize;
@@ -262,6 +293,13 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
         slotIndex,
         -(int)slot.m_sampleCursor,
         slot.FrontSequence()->m_numberOfSamples - slot.m_sampleCursor);
+
+    // Latency-controlled BLSTM variables
+    size_t nc = m_config.m_truncationSize - m_config.m_rightSplice;
+    size_t padding = 0;
+    // Whether the sequence is split due to minibatch limitation
+    // Those are currently skipped during LC-BLSTM training
+    bool crossBoundary = false;
 
     // Ok, now fill in the buffer with data.
     for (size_t currentTimestep = 0; currentTimestep < numberOfSamples; ++currentTimestep)
@@ -280,6 +318,7 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
                 slotIndex,
                 currentTimestep,
                 currentTimestep + slot.FrontSequence()->m_numberOfSamples);
+            crossBoundary = true;
         }
 
         // Fill in the data from the first sequence in the slot.
@@ -291,15 +330,16 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
         char* destination = buffer.m_data.get() + offset;
 
         // Pack the sample.
-        if (storageType == StorageType::dense)
+        if (storageType == StorageFormat::Dense)
         {
             assert(slot.m_sampleOffset == slot.m_sampleCursor * sampleSize);
             PackDenseSample(destination, data, slot.m_sampleOffset, sampleSize);
             slot.m_sampleOffset += sampleSize;
+            if (currentTimestep >= nc) padding += sampleSize;
         }
         else
         {
-            assert(storageType == StorageType::sparse_csc);
+            assert(storageType == StorageFormat::SparseCSC);
             // TODO: make type casts members of the SparseSequenceData
             SparseSequenceDataPtr sparseSequence = static_pointer_cast<SparseSequenceData>(data);
             assert(slot.m_sampleCursor < sparseSequence->m_nnzCounts.size());
@@ -307,9 +347,20 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
                 slot.m_sampleOffset, sampleSize, elementSize);
             slot.m_sampleOffset += sparseSequence->m_nnzCounts[slot.m_sampleCursor];
             assert(slot.m_sampleOffset <= sparseSequence->m_totalNnzCount);
+            if (currentTimestep >= nc) padding += sparseSequence->m_nnzCounts[slot.m_sampleCursor];
         }
 
         slot.m_sampleCursor++;
+    }
+
+    // For latency control BLSTM LC-BLSTM
+    if (m_config.m_rightSplice > 0)
+    {
+        if (!crossBoundary && numberOfSamples >= m_config.m_truncationSize)
+        {
+            slot.m_sampleCursor -= m_config.m_rightSplice;
+            slot.m_sampleOffset -= padding;
+        }
     }
 
     // Cleaning up the last sequence we have just read if needed.
@@ -384,4 +435,4 @@ void TruncatedBPTTPacker::ReadSequencesToSlot(size_t slotIndex)
     }
 }
 
-}}}
+}

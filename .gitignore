@@ -8,6 +8,7 @@
 *.orig
 \#*
 .\#*
+.vscode
 
 # Local build configuration
 Config.make
@@ -23,7 +24,7 @@ build/
 .run-*
 lib/
 bin/
-
+Generated Files/
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
 !packages/*/build/
@@ -39,6 +40,7 @@ bin/
 *.obj
 *.pch
 *.pdb
+*.idb
 *.pgc
 *.pgd
 *.rsp
@@ -49,6 +51,7 @@ bin/
 *.tmp
 *.tmp_proj
 *.log
+*.tlog
 *.vspscc
 *.vssscc
 .builds
@@ -58,6 +61,8 @@ bin/
 *.dep
 *.o
 *.d
+*.intermediate
+*.resfiles
 
 # Visual C++ cache files
 ipch/
@@ -178,21 +183,26 @@ $RECYCLE.BIN/
 bin/
 LOG
 *.log
-core	
+core
 *.lyx#
 *.lyx#
 *.lyx~
 
-# prebuild file 
+# prebuild file
 Source/CNTK/buildinfo.h
-Source/CNTK/buildinfo.h$$
 Source/CNTKv2LibraryDll/buildinfo.h
+Source/CNTKv2LibraryDll/Generated
 Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.h
 Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc
 
 # test output
 Tests/UnitTests/ReaderTests/Control/**/*_Output.txt
 Tests/UnitTests/NetworkTests/Output/
+Tests/EndToEndTests/CNTKv2CSharp/ExampleTests/MNISTClassifierTest/*.model
+Tests/EndToEndTests/CNTKv2CSharp/ExampleTests/SimpleFeedForwardClassifierTest/feedForward.net*
+Tests/EndToEndTests/CNTKv2CSharp/ExampleTests/SimpleFeedForwardClassifierTest/SimpleDataTrain_cntk_text.txt
+Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
+Tests/EndToEndTests/CNTKv2Python/Keras/keras-*
 Tests/EndToEndTests/UnitTests/MathTests/M.txt
 Tests/EndToEndTests/UnitTests/MathTests/MCPU.txt
 Tests/EndToEndTests/UnitTests/MathTests/MGPU.txt
@@ -213,10 +223,12 @@ Tests/EndToEndTests/CNTKv2Python/Examples/models
 # Python bindings
 bindings/python/_cntk_py*.pyd
 bindings/python/cntk.egg-info/
+bindings/python/cntk_gpu.egg-info/
 bindings/python/cntk/cntk_py.py
 bindings/python/cntk/libs/
 bindings/python/cntk/cntk_py_wrap.cpp
 bindings/python/cntk/cntk_py_wrap.h
+bindings/python/cntk/VERSION
 bindings/python/dist/
 bindings/python/doc/cntk.*.rst
 bindings/python/doc/cntk.rst
@@ -227,6 +239,12 @@ bindings/python/doc/_build
 Source/CNTKv2LibraryDll/proto/CNTK.pb.cc
 Source/CNTKv2LibraryDll/proto/CNTK.pb.h
 
+# Auto-generated sources from ONNX proto
+Source/CNTKv2LibraryDll/proto/onnx/protobuf/graph.pb.cc
+Source/CNTKv2LibraryDll/proto/onnx/protobuf/graph.pb.h
+Source/CNTKv2LibraryDll/proto/onnx/protobuf/onnx-ml.pb.cc
+Source/CNTKv2LibraryDll/proto/onnx/protobuf/onnx-ml.pb.h
+
 bindings/python/cntk/c_plus_c.mod
 bindings/python/cntk/i_plus_c_0.mod
 bindings/python/cntk/i_plus_i_0.mod
@@ -234,12 +252,44 @@ bindings/python/cntk/i_plus_i_0.mod
 # CSharp bindings
 bindings/csharp/Swig/cntk_cs_wrap.h
 bindings/csharp/Swig/cntk_cs_wrap.cxx
-bindings/csharp/CNTKLibraryManagedDll/SwigProxyClasses/*.cs
+bindings/csharp/Swig/cntk_cs_wrap.cxx
+bindings/csharp/Swig/Generated/*
+bindings/csharp/CNTKLibraryManagedDll/build/Linux/Debug/CSharpBindings/CMakeFiles/CSharpBindings.dir/depend.make
+bindings/csharp/CNTKLibraryManagedDll/build/Linux/Release/CSharpBindings/CMakeFiles/CSharpBindings.dir/depend.make
+
+# Java bindings
+bindings/java/Swig/cntk_java_wrap.h
+bindings/java/Swig/cntk_java_wrap.cxx
+bindings/java/**/*.class
+bindings/java/Swig/com/
+bindings/java/**/target
+bindings/java/**/*.jar
+bindings/java/Swig/*.asc
+
+# Java Eval Tests
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/.idea
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/out
+Tests/EndToEndTests/EvalClientTests/JavaEvalTest/**/*.class
 
 # Examples and Tutorials
+Examples/Image/Classification/AlexNet/Python/Models/
+Examples/Image/Classification/ConvNet/Python/Models/
+Examples/Image/Classification/GoogLeNet/BN-Inception/Python/Models/
+Examples/Image/Classification/ResNet/Python/Models/
+Examples/Image/Classification/ResNet/ResNet_18.model
+Examples/Image/DataSets/Animals/Test/
+Examples/Image/DataSets/Animals/Train/
+Examples/Image/DataSets/CIFAR-10/model.cmf
+Examples/Image/DataSets/Flowers/jpg/
+Examples/Image/DataSets/Flowers/*.txt
+Examples/Image/DataSets/ImageNet/test_data/
+Examples/Image/DataSets/ImageNet/*.txt
+Examples/Image/DataSets/ImageNet/*.zip
+Examples/Image/DataSets/Pascal/mappings/*.txt
+Examples/Image/DataSets/Pascal/*.txt
 Examples/Image/DataSets/Pascal/VOC*
 Examples/Image/DataSets/Pascal/selective_search_data*
-Examples/Image/Detection/FastRCNN/proc/
 Examples/Image/DataSets/CIFAR-10/CIFAR-10_mean.xml
 Examples/Image/DataSets/CIFAR-10/Test_cntk_text.txt
 Examples/Image/DataSets/CIFAR-10/Train_cntk_text.txt
@@ -256,10 +306,18 @@ Examples/Image/DataSets/grocery/negative/
 Examples/Image/DataSets/grocery/positive/
 Examples/Image/DataSets/grocery/testImages/
 Examples/Image/DataSets/grocery/*.txt
-Examples/Image/PretrainedModels/*.model
+PretrainedModels/*.model
+Examples/Image/Detection/FastRCNN/BrainScript/Output/
+Examples/Image/Detection/FastRCNN/BrainScript/proc/
+Examples/Image/Detection/FastRCNN/Output/
+Examples/Image/Detection/FasterRCNN/Output/
 Examples/Image/FeatureExtraction/*.txt
 Examples/Image/GettingStarted/Output/
-Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
+Examples/Image/PretrainedModels/*.model
+Examples/Image/PretrainedModels/*.cntkmodel
+Examples/SequenceToSequence/CMUDict/Python/Models/
+Examples/Speech/AN4/Python/Models/
+Examples/Text/CharacterLM/data/tinyshakespeare.txt.vocab
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
 Tutorials/.ipynb_checkpoints/
@@ -274,10 +332,23 @@ Tutorials/slots.wl
 bindings/python/tutorials/.ipynb_checkpoints
 Examples/Text/ATIS/Data
 Examples/Tutorials/ImageHandsOn/cifar-10-batches-py
+Examples/Video/DataSets/UCF11/action_youtube_naudio/
+Examples/Video/DataSets/UCF11/test_map.csv
+Examples/Video/DataSets/UCF11/train_map.csv
 Tutorials/zip
+Manual/*.tmp
+Manual/*.ckp
+Manual/.ipynb_checkpoints
+Examples/Text/LightRNN/LightRNN/*.so
 
 # other
-/packages
+packages/
 /CNTK.VC.db
 /CNTK.VC.VC.opendb
 /Local
+.vs/
+cscope.out
+/Source/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-operators-ml.pb.h
+/Source/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-operators-ml.pb.cc
+/Source/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-ml.pb.h
+/Source/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-ml.pb.cc

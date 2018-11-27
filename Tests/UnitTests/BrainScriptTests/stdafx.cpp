@@ -9,3 +9,4 @@
 #define BOOST_TEST_MODULE BrainScriptTests
 
 #include "stdafx.h"
+#include "V2Dependencies.h"

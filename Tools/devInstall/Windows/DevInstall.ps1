@@ -5,7 +5,7 @@
 <#
   .SYNOPSIS
  Use this cmdlet to install a CNTK development environment on your machine.
- A detailed description can be found here: https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows
+ A detailed description can be found here: https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-with-script-on-Windows
  
  .DESCRIPTION
  The script will download and install the files necessary to create a CNTK development environment on your system. 
@@ -15,7 +15,7 @@
  Repeated operation of this script will reuse already downloaded components.
  
  Before you can run this machine you should have read the instructions at 
-     https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows
+     https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-with-script-on-Windows
  
  .PARAMETER Execute
  You can set this switch to false to prevent devInstall from performing any physical changes to the machine.
@@ -37,11 +37,11 @@
 
   .PARAMETER PyVersion
  This is an optional parameter and can be used to specify the Python version used in the CNTK Python environment.
- Supported values for this parameter are 27, 34, or 35. The default values is 35 (for a CNTK Python 35 environment).
+ Supported values for this parameter are 27, 35, or 36. The default values is 35 (for a CNTK Python 35 environment).
 
   .PARAMETER PyEnvironmentName
  This optional parameter allows to specify the name of the environment that will be created during the installation process.
- By default the environment will be named cntkdev-py<PyVersion>, where PyVersion is being replaced by the content of the <PyVersion>
+ By default the environment will be named cntk-py<PyVersion>, where PyVersion is being replaced by the content of the <PyVersion>
  parameter to this script. If this parameter is specified by you, no version substitution in the environment will be performed. 
 
   .PARAMETER NoPythonEnvironment
@@ -66,14 +66,14 @@
 
 [CmdletBinding()]
 Param(
-    [parameter(Mandatory=$false)] [switch] $Execute = $true,
-    [parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
-    [parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
-    [parameter(Mandatory=$false)] [string] $AnacondaBasePath,
-    [parameter(Mandatory=$false)] [switch] $NoConfirm,
-    [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35",
-    [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [string] $PyEnvironmentName = "",
-    [parameter(Mandatory=$true, ParameterSetName = "PythonNoEnvironment")] [switch] $NoPythonEnvironment)
+    [Parameter(Mandatory=$false)] [switch] $Execute = $true,
+    [Parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
+    [Parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
+    [Parameter(Mandatory=$false)] [string] $AnacondaBasePath,
+    [Parameter(Mandatory=$false)] [switch] $NoConfirm,
+    [Parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [ValidateSet("27", "35", "36")] [string] $PyVersion = "35",
+    [Parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [string] $PyEnvironmentName = "",
+    [Parameter(Mandatory=$true, ParameterSetName = "PythonNoEnvironment")] [switch] $NoPythonEnvironment)
     
 $roboCopyCmd = "robocopy.exe"
 
@@ -134,22 +134,22 @@ Function main
 
         $operation = @();
         $operation += OpScanProgram
-        $operation += OpCheckVS15Update3
+        $operation += OpCheckVS2017
 
-        $operation += OpCheckCuda8
-        $operation += OpNVidiaCudnn5180 -cache $localCache -targetFolder $localDir
-        $operation += OpNvidiaCub141 -cache $localCache -targetFolder $localDir
+        $operation += OpCheckCuda9
+        $operation += OpNVidiaCudnn7090 -cache $localCache -targetFolder $localDir
+        $operation += OpNvidiaCub174 -cache $localCache -targetFolder $localDir
 
         $operation += OpCMake362 -cache $localCache
         $operation += OpMSMPI70 -cache $localCache
         $operation += OpMSMPI70SDK -cache $localCache
         $operation += OpBoost160VS15 -cache $localCache -targetFolder $localDir
-        $operation += OpCNTKMKL3 -cache $localCache -targetFolder $localDir
+        $operation += OpMKLDNN012 -cache $localCache -targetFolder $localDir
         $operation += OpSwig3010 -cache $localCache -targetFolder $localDir
-        $operation += OpProtoBuf310VS15 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
-        $operation += OpProtoBuf310VS15Prebuild -cache $localCache -targetFolder $localDir
-        $operation += OpZlibVS15 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
-        $operation += OpZlibVS15Prebuild -cache $localCache -targetFolder $localDir
+        $operation += OpProtoBuf310VS17 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
+        $operation += OpProtoBuf310VS17Prebuild -cache $localCache -targetFolder $localDir
+        $operation += OpZlibVS17 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
+        $operation += OpZlibVS17Prebuild -cache $localCache -targetFolder $localDir
         $operation += OpOpenCV31 -cache $localCache -targetFolder $localDir
         $operation += OpAnaconda3411 -cache $localCache -AnacondaBasePath $AnacondaBasePath
         if (-not $NoPythonEnvironment) {

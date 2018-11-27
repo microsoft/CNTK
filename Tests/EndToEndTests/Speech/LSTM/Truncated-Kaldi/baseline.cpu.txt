@@ -869,51 +869,51 @@ requiredata: 279 utterances read
 12/20/2016 15:41:18: Precomputing --> Completed.
 
 
-12/20/2016 15:41:19: Starting Epoch 1: learning rate per sample = 0.000781  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+12/20/2016 15:29:54: Starting Epoch 1: learning rate per sample = 0.000781  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0) with 1 datapasses
 
-12/20/2016 15:41:19: Starting minibatch loop.
-12/20/2016 15:41:25:  Epoch[ 1 of 4]-Minibatch[   1-  10, 0.98%]: cr = 4.80651794 * 6400; Err = 0.90500000 * 6400; time = 6.2587s; samplesPerSecond = 1022.6
-12/20/2016 15:41:33:  Epoch[ 1 of 4]-Minibatch[  11-  20, 1.95%]: cr = 4.60334229 * 6400; Err = 0.85390625 * 6400; time = 7.6787s; samplesPerSecond = 833.5
-12/20/2016 15:41:40:  Epoch[ 1 of 4]-Minibatch[  21-  30, 2.93%]: cr = 4.85862820 * 5738; Err = 0.89020565 * 5738; time = 6.7997s; samplesPerSecond = 843.9
-12/20/2016 15:41:47:  Epoch[ 1 of 4]-Minibatch[  31-  40, 3.91%]: cr = 4.59585598 * 1840; Err = 0.94076087 * 1840; time = 7.1726s; samplesPerSecond = 256.5
-12/20/2016 15:41:49: Finished Epoch[ 1 of 4]: [Training] cr = 4.73511077 * 20546; Err = 0.88849411 * 20546; totalSamplesSeen = 20546; learningRatePerSample = 0.00078125001; epochTime=30.6731s
-12/20/2016 15:41:50: SGD: Saving checkpoint model '/tmp/cntk-test-20161220154113.750475/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn.1'
+12/20/2016 15:29:54: Starting minibatch loop.
+12/20/2016 15:29:55:  Epoch[ 1 of 4]-Minibatch[   1-  10, 0.98%]: cr = 4.80651794 * 6400; Err = 0.90500000 * 6400; time = 0.7866s; samplesPerSecond = 8136.3
+12/20/2016 15:29:56:  Epoch[ 1 of 4]-Minibatch[  11-  20, 1.95%]: cr = 4.60334045 * 6400; Err = 0.85390625 * 6400; time = 0.7570s; samplesPerSecond = 8455.0
+12/20/2016 15:29:56:  Epoch[ 1 of 4]-Minibatch[  21-  30, 2.93%]: cr = 4.82081763 * 5738; Err = 0.89055420 * 5738; time = 0.7836s; samplesPerSecond = 7322.5
+12/20/2016 15:29:57:  Epoch[ 1 of 4]-Minibatch[  31-  40, 3.91%]: cr = 4.59512993 * 1840; Err = 0.94076087 * 1840; time = 0.8025s; samplesPerSecond = 2292.9
+12/20/2016 15:29:58: Finished Epoch[ 1 of 4]: [Training] cr = 4.72447838 * 20546; Err = 0.88859145 * 20546; totalSamplesSeen = 20546; learningRatePerSample = 0.00078125001; epochTime=3.46502s
+12/20/2016 15:29:58: SGD: Saving checkpoint model '/tmp/cntk-test-20161220143826.605487/Speech/LSTM_Truncated-Kaldi@release_gpu/models/cntkSpeech.dnn.1'
 
-12/20/2016 15:41:50: Starting Epoch 2: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
+12/20/2016 15:29:58: Starting Epoch 2: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20546) with 1 datapasses
 
-12/20/2016 15:41:50: Starting minibatch loop.
-12/20/2016 15:41:56:  Epoch[ 2 of 4]-Minibatch[   1-  10, 0.98%]: cr = 4.46075592 * 6400; Err = 0.85187500 * 6400; time = 6.3330s; samplesPerSecond = 1010.6
-12/20/2016 15:42:03:  Epoch[ 2 of 4]-Minibatch[  11-  20, 1.95%]: cr = 4.38185638 * 6400; Err = 0.84484375 * 6400; time = 6.3887s; samplesPerSecond = 1001.8
-12/20/2016 15:42:09:  Epoch[ 2 of 4]-Minibatch[  21-  30, 2.93%]: cr = 4.41127862 * 4782; Err = 0.91447093 * 4782; time = 5.8661s; samplesPerSecond = 815.2
-12/20/2016 15:42:15:  Epoch[ 2 of 4]-Minibatch[  31-  40, 3.91%]: cr = 4.43281180 * 2238; Err = 0.93610366 * 2238; time = 6.4984s; samplesPerSecond = 344.4
-12/20/2016 15:42:21:  Epoch[ 2 of 4]-Minibatch[  41-  50, 4.88%]: cr = 4.47002210 * 608; Err = 0.92927632 * 608; time = 5.8068s; samplesPerSecond = 104.7
-12/20/2016 15:42:22: Finished Epoch[ 2 of 4]: [Training] cr = 4.42108473 * 20434; Err = 0.87559949 * 20434; totalSamplesSeen = 40980; learningRatePerSample = 0.00078125001; epochTime=31.4744s
-12/20/2016 15:42:22: SGD: Saving checkpoint model '/tmp/cntk-test-20161220154113.750475/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn.2'
+12/20/2016 15:29:58: Starting minibatch loop.
+12/20/2016 15:29:59:  Epoch[ 2 of 4]-Minibatch[   1-  10, 0.98%]: cr = 4.46022552 * 6400; Err = 0.85187500 * 6400; time = 0.7574s; samplesPerSecond = 8450.3
+12/20/2016 15:30:00:  Epoch[ 2 of 4]-Minibatch[  11-  20, 1.95%]: cr = 4.38149445 * 6400; Err = 0.84484375 * 6400; time = 0.7610s; samplesPerSecond = 8409.9
+12/20/2016 15:30:00:  Epoch[ 2 of 4]-Minibatch[  21-  30, 2.93%]: cr = 4.41087182 * 4782; Err = 0.91447093 * 4782; time = 0.7948s; samplesPerSecond = 6016.7
+12/20/2016 15:30:01:  Epoch[ 2 of 4]-Minibatch[  31-  40, 3.91%]: cr = 4.43258839 * 2238; Err = 0.93610366 * 2238; time = 0.8015s; samplesPerSecond = 2792.3
+12/20/2016 15:30:02:  Epoch[ 2 of 4]-Minibatch[  41-  50, 4.88%]: cr = 4.46982936 * 608; Err = 0.92927632 * 608; time = 0.8020s; samplesPerSecond = 758.1
+12/20/2016 15:30:02: Finished Epoch[ 2 of 4]: [Training] cr = 4.42067984 * 20434; Err = 0.87559949 * 20434; totalSamplesSeen = 40980; learningRatePerSample = 0.00078125001; epochTime=4.01004s
+12/20/2016 15:30:02: SGD: Saving checkpoint model '/tmp/cntk-test-20161220143826.605487/Speech/LSTM_Truncated-Kaldi@release_gpu/models/cntkSpeech.dnn.2'
 
-12/20/2016 15:42:22: Starting Epoch 3: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
+12/20/2016 15:30:03: Starting Epoch 3: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40980) with 1 datapasses
 
-12/20/2016 15:42:22: Starting minibatch loop.
-12/20/2016 15:42:28:  Epoch[ 3 of 4]-Minibatch[   1-  10, 0.98%]: cr = 4.14535187 * 6400; Err = 0.83671875 * 6400; time = 5.6663s; samplesPerSecond = 1129.5
-12/20/2016 15:42:34:  Epoch[ 3 of 4]-Minibatch[  11-  20, 1.95%]: cr = 4.18062714 * 6400; Err = 0.86468750 * 6400; time = 5.8978s; samplesPerSecond = 1085.2
-12/20/2016 15:42:39:  Epoch[ 3 of 4]-Minibatch[  21-  30, 2.93%]: cr = 4.24295996 * 5330; Err = 0.89530957 * 5330; time = 5.5850s; samplesPerSecond = 954.3
-12/20/2016 15:42:45:  Epoch[ 3 of 4]-Minibatch[  31-  40, 3.91%]: cr = 4.41483067 * 2390; Err = 0.94016736 * 2390; time = 5.7399s; samplesPerSecond = 416.4
-12/20/2016 15:42:47: Finished Epoch[ 3 of 4]: [Training] cr = 4.21080944 * 20682; Err = 0.87264288 * 20682; totalSamplesSeen = 61662; learningRatePerSample = 0.00078125001; epochTime=25.2158s
-12/20/2016 15:42:48: SGD: Saving checkpoint model '/tmp/cntk-test-20161220154113.750475/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn.3'
+12/20/2016 15:30:03: Starting minibatch loop.
+12/20/2016 15:30:03:  Epoch[ 3 of 4]-Minibatch[   1-  10, 0.98%]: cr = 4.14493378 * 6400; Err = 0.83671875 * 6400; time = 0.7589s; samplesPerSecond = 8433.4
+12/20/2016 15:30:04:  Epoch[ 3 of 4]-Minibatch[  11-  20, 1.95%]: cr = 4.18052032 * 6400; Err = 0.86468750 * 6400; time = 0.7578s; samplesPerSecond = 8445.5
+12/20/2016 15:30:05:  Epoch[ 3 of 4]-Minibatch[  21-  30, 2.93%]: cr = 4.24287934 * 5330; Err = 0.89530957 * 5330; time = 0.7859s; samplesPerSecond = 6781.7
+12/20/2016 15:30:06:  Epoch[ 3 of 4]-Minibatch[  31-  40, 3.91%]: cr = 4.41488624 * 2390; Err = 0.94016736 * 2390; time = 0.8007s; samplesPerSecond = 2984.9
+12/20/2016 15:30:06: Finished Epoch[ 3 of 4]: [Training] cr = 4.21063379 * 20682; Err = 0.87264288 * 20682; totalSamplesSeen = 61662; learningRatePerSample = 0.00078125001; epochTime=3.43834s
+12/20/2016 15:30:06: SGD: Saving checkpoint model '/tmp/cntk-test-20161220143826.605487/Speech/LSTM_Truncated-Kaldi@release_gpu/models/cntkSpeech.dnn.3'
 
-12/20/2016 15:42:48: Starting Epoch 4: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
+12/20/2016 15:30:06: Starting Epoch 4: learning rate per sample = 0.000781  effective momentum = 0.900000  momentum as time constant = 6074.4 samples
 minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61662) with 1 datapasses
 
-12/20/2016 15:42:48: Starting minibatch loop.
-12/20/2016 15:42:54:  Epoch[ 4 of 4]-Minibatch[   1-  10, 0.98%]: cr = 4.06297668 * 6400; Err = 0.85125000 * 6400; time = 6.0942s; samplesPerSecond = 1050.2
-12/20/2016 15:43:00:  Epoch[ 4 of 4]-Minibatch[  11-  20, 1.95%]: cr = 4.12653198 * 6400; Err = 0.87437500 * 6400; time = 6.2254s; samplesPerSecond = 1028.1
-12/20/2016 15:43:06:  Epoch[ 4 of 4]-Minibatch[  21-  30, 2.93%]: cr = 4.13974010 * 5796; Err = 0.87370600 * 5796; time = 5.9437s; samplesPerSecond = 975.2
-12/20/2016 15:43:12:  Epoch[ 4 of 4]-Minibatch[  31-  40, 3.91%]: cr = 4.05507573 * 1630; Err = 0.89018405 * 1630; time = 5.9399s; samplesPerSecond = 274.4
-12/20/2016 15:43:16: Finished Epoch[ 4 of 4]: [Training] cr = 4.09855312 * 20366; Err = 0.86727880 * 20366; totalSamplesSeen = 82028; learningRatePerSample = 0.00078125001; epochTime=28.4021s
-12/20/2016 15:43:17: SGD: Saving checkpoint model '/tmp/cntk-test-20161220154113.750475/Speech/LSTM_Truncated-Kaldi@release_cpu/models/cntkSpeech.dnn'
+12/20/2016 15:30:06: Starting minibatch loop.
+12/20/2016 15:30:07:  Epoch[ 4 of 4]-Minibatch[   1-  10, 0.98%]: cr = 4.06287109 * 6400; Err = 0.85125000 * 6400; time = 0.7569s; samplesPerSecond = 8455.9
+12/20/2016 15:30:08:  Epoch[ 4 of 4]-Minibatch[  11-  20, 1.95%]: cr = 4.12647705 * 6400; Err = 0.87437500 * 6400; time = 0.7584s; samplesPerSecond = 8438.7
+12/20/2016 15:30:09:  Epoch[ 4 of 4]-Minibatch[  21-  30, 2.93%]: cr = 4.13971381 * 5796; Err = 0.87370600 * 5796; time = 0.7782s; samplesPerSecond = 7448.2
+12/20/2016 15:30:10:  Epoch[ 4 of 4]-Minibatch[  31-  40, 3.91%]: cr = 4.05505176 * 1630; Err = 0.89018405 * 1630; time = 0.8021s; samplesPerSecond = 2032.2
+12/20/2016 15:30:10: Finished Epoch[ 4 of 4]: [Training] cr = 4.09849251 * 20366; Err = 0.86727880 * 20366; totalSamplesSeen = 82028; learningRatePerSample = 0.00078125001; epochTime=3.59241s
+12/20/2016 15:30:10: SGD: Saving checkpoint model '/tmp/cntk-test-20161220143826.605487/Speech/LSTM_Truncated-Kaldi@release_gpu/models/cntkSpeech.dnn'
 
-12/20/2016 15:43:17: Action "train" complete.
+12/20/2016 15:30:10: Action "train" complete.
 
 12/20/2016 15:43:17: __COMPLETED__

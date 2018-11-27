@@ -1,7 +1,8 @@
 dataDir: ../../Data
 tags:
-     - bvt-p ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
-     - nightly-p ((build_sku == 'gpu') or (build_sku == '1bitsgd'))
+     - bvt-p ((build_sku == 'gpu') or (build_sku == 'gpu')) and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+     - nightly-p ((build_sku == 'gpu') or (build_sku == 'gpu'))
+     - weekly-p ((build_sku == 'gpu') or (build_sku == 'gpu'))
 
 testCases:
   Must train epochs in exactly same order and parameters for each MPI Rank:
@@ -15,17 +16,17 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
-      - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
-      - EvalClassificationError = {{float,tolerance=0%}}
-      - learningRatePerSample = {{float,tolerance=0%}}
+      - CrossEntropyWithSoftmax = {{float,tolerance=0.1%}}
+      - EvalClassificationError = {{float,tolerance=0.1%}}
+      - learningRatePerSample = {{float,tolerance=0.01%}}
 
   Per-minibatch training results must match for each MPI Rank:
     patterns:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
-      - CrossEntropyWithSoftmax = {{float,tolerance=0%}}
-      - EvalClassificationError = {{float,tolerance=0%}}
+      - CrossEntropyWithSoftmax = {{float,tolerance=0.1%}}
+      - EvalClassificationError = {{float,tolerance=0.1%}}
 
   DataParallelSGD training parameters must match for each MPI Rank:
     patterns:

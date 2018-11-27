@@ -29,32 +29,18 @@ std::vector<std::tuple<TensorShape, size_t, bool, double, double>> GenerateBNTes
     {
         // Per activation (non-spatial)
         for (size_t n : {6, 13, 62, 512})
-        {
             for (size_t c : {1})
-            {
                 for (size_t h : {1})
-                {
                     for (size_t w : {6, 17, 126, 2048})
-                    {
                         res.push_back(std::make_tuple(TensorShape(w, h, c), n, false, expAvgFactor, blendFactor));
-                    }
-                }
-            }
-        }
+
         // Spatial
         for (size_t n : {2, 11, 64})
-        {
             for (size_t c : {2, 13, 32})
-            {
                 for (size_t h : {2, 11, 16})
-                {
                     for (size_t w : {2, 11, 16})
-                    {
                         res.push_back(std::make_tuple(TensorShape(w, h, c), n, true, expAvgFactor, blendFactor));
-                    }
-                }
-            }
-        }
+
         // For perf testing (similar to first layers of ResNet).
         res.push_back(std::make_tuple(TensorShape(56, 56, 64), 64, true, expAvgFactor, blendFactor));
         // Next test will fail in cuDNN due to bug we discovered (and reported to NVIDIA). Fixed in v4 prod.
@@ -67,8 +53,18 @@ std::vector<std::tuple<TensorShape, size_t, bool, double, double>> GenerateBNTes
     res.push_back(std::make_tuple(TensorShape(2, 2, 2), 8, false, expAvgFactor, 0));
     res.push_back(std::make_tuple(TensorShape(2, 2, 2), 8, true, expAvgFactor, 0));
 
-    // Test 1D tensor expansion (cuDNN supports 3D and 4D tensors only).
-    res.push_back(std::make_tuple(TensorShape(2), 8, false, expAvgFactor, 0));
+    // Test 1D and 2D tensor expansion (cuDNN supports 3D and 4D tensors only).
+    for (bool spatial : {false, true})
+        for (size_t n : {2, 8})
+            for (size_t w : {2, 8})
+                res.push_back(std::make_tuple(TensorShape(w), n, spatial, expAvgFactor, 0));
+
+    for (bool spatial : {false, true})
+        for (size_t n : {2, 8})
+            for (size_t h : {2, 11})
+                for (size_t w : {2, 8})
+                    res.push_back(std::make_tuple(TensorShape(w, h), n, spatial, expAvgFactor, 0));
+
     return res;
 }
 
@@ -114,7 +110,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationForward)
             SingleMatrix in(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
             SingleMatrix inB(crow, ccol, buf.data(), baseDeviceId, matrixFlagNormal);
 
-            size_t crowScaleBias = spatial ? inOutT[2] : inOutT.GetNumElements();
+            size_t crowScaleBias = spatial ? inOutT[inOutT.GetRank() - 1] : inOutT.GetNumElements();
             buf.resize(crowScaleBias);
 
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
@@ -244,7 +240,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             SingleMatrix dy(crow, ccol, buf.data(), deviceId, matrixFlagNormal);
             SingleMatrix dyB(crow, ccol, buf.data(), baseDeviceId, matrixFlagNormal);
 
-            size_t crowScaleBias = spatial ? inOutT[2] : inOutT.GetNumElements();
+            size_t crowScaleBias = spatial ? inOutT[inOutT.GetRank() - 1] : inOutT.GetNumElements();
             buf.resize(crowScaleBias);
 
             std::generate(begin(buf), end(buf), [&] { return nd(rng); });
@@ -272,12 +268,14 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
 
             CudaTimer time1;
             time1.Start();
-            engCntk->Backward(x, dy, dx, scale, 0, saveMean, saveInvStdDev, dScale, dBias);
+            engCntk->Backward(x, dy, dx, scale, 0, saveMean, saveInvStdDev, dScale, dBias, false);
+            engCntk->Backward(x, dy, dx, scale, 0, saveMean, saveInvStdDev, dScale, dBias, true);
             time1.Stop();
 
             CudaTimer time2;
             time2.Start();
-            engCudnn->Backward(xB, dyB, dxB, scaleB, 0, saveMeanB, saveInvStdDevB, dScaleB, dBiasB);
+            engCudnn->Backward(xB, dyB, dxB, scaleB, 0, saveMeanB, saveInvStdDevB, dScaleB, dBiasB, false);
+            engCudnn->Backward(xB, dyB, dxB, scaleB, 0, saveMeanB, saveInvStdDevB, dScaleB, dBiasB, true);
             time2.Stop();
 
             std::stringstream tmsg;
@@ -292,7 +290,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             std::string emsg;
 
             BOOST_REQUIRE_MESSAGE(!dx.HasNan("dx"), "dx" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(dx, dxB, emsg, relErr * 16, absErr * 16), "dx" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dx, dxB, emsg, relErr * 16, absErr * 64), "dx" << msg << ". " << emsg);
             // BUGBUG: Why does this pass for CNTK engine?
             BOOST_REQUIRE_MESSAGE(CountNans(dxBuf) == crow * 2 * ccol, "out" << msgNotNan);
             // REVIEW alexeyk: add cases for testing numerical stability.
@@ -304,7 +302,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
             BOOST_REQUIRE_MESSAGE(CountNans(dScaleBuf) == crowScaleBias * 2, "dScale" << msgNotNan);
 
             BOOST_REQUIRE_MESSAGE(!dBias.HasNan("dBias"), "dBias" << msgNan);
-            BOOST_REQUIRE_MESSAGE(CheckEqual(dBias, dBiasB, emsg, relErr * 50, absErr * 16), "dBias" << msg << ". " << emsg);
+            BOOST_REQUIRE_MESSAGE(CheckEqual(dBias, dBiasB, emsg, relErr * 88, absErr * 16), "dBias" << msg << ". " << emsg);
             BOOST_REQUIRE_MESSAGE(CountNans(dBiasBuf) == crowScaleBias * 2, "dBias" << msgNotNan);
 
 #if 0

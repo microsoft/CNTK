@@ -2,8 +2,8 @@ load=ndlMacros
 run=DNN
 
 ndlMacros = [
-    ImageW = 224
-    ImageH = 224
+    ImageW = 227
+    ImageH = 227
     ImageC = 3
     LabelDim = 1000
 

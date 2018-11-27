@@ -45,7 +45,7 @@ def test_op_as_block(input_shape, output_shape, expected_output_shape, device_id
     const_input_reshaped = constant(input_reshaped, device=dev)
     block_composite = element_times(a_reshaped, const_input_reshaped, name='element_times_inside_block')
     
-    a = C.input(shape=input_tensor.shape,
+    a = C.input_variable(shape=input_tensor.shape,
                 dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
                 needs_gradient=True,
                 name='a')
@@ -79,7 +79,7 @@ def test_op_as_block(input_shape, output_shape, expected_output_shape, device_id
 
 def test_combine_op_as_block():
     # We test using combine as the operation that is encapsulated in a block
-    from .. import combine, placeholder, as_block, input
+    from .. import combine, placeholder, as_block
 
     f = combine([placeholder()])
     f = as_block(f, [(f.placeholders[0], placeholder())], 'id')
@@ -91,7 +91,7 @@ def test_combine_op_as_block():
     z = x - y
 
     # connect to inputs
-    z.replace_placeholders({z.placeholders[0]: C.input(1), z.placeholders[1]: C.input(1)})
+    z.replace_placeholders({z.placeholders[0]: C.input_variable(1), z.placeholders[1]: C.input_variable(1)})
 
     # evaluate
     res = z.eval({z.arguments[0]: [[5.0]], z.arguments[1]: [[3.0]]})
@@ -101,8 +101,8 @@ def test_combine_op_as_block():
 
 
 def test_block_with_duplicate_inputs():
-    from .. import placeholder, as_block, input
-    x = C.input((1,), name='input')
+    from .. import placeholder, as_block
+    x = C.input_variable((1,), name='input')
     
     left_operand_placeholder = placeholder(name='left_placeholder')
     right_operand_placeholder = placeholder()
@@ -112,8 +112,8 @@ def test_block_with_duplicate_inputs():
 
 
 def test_as_block_with_function_in_arguments_map():
-    from .. import placeholder, as_block, input
-    x = C.input((1,), name='input')
+    from .. import placeholder, as_block
+    x = C.input_variable((1,), name='input')
     x_plus_2 = x + 2
     
     left_operand_placeholder = placeholder(name='left_placeholder')
@@ -128,9 +128,9 @@ def test_as_block_with_function_in_arguments_map():
 
 
 def test_block_clone():
-    from .. import placeholder, as_block, input, parameter, times
+    from .. import placeholder, as_block, parameter, times
 
-    x = C.input((1,), name='input')
+    x = C.input_variable((1,), name='input')
     
     operand_placeholder = placeholder(name='placeholder')
     w = parameter(shape=(1,1), init=1)
@@ -149,9 +149,9 @@ def test_block_clone():
 
 
 def test_root_block_clone():
-    from .. import placeholder, as_block, input, parameter, times
+    from .. import placeholder, as_block, parameter, times
 
-    x = C.input((1,), name='input')
+    x = C.input_variable((1,), name='input')
     
     operand_placeholder = placeholder(name='placeholder')
     w = parameter(shape=(1,1), init=1)

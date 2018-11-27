@@ -1,13 +1,15 @@
 # CNTK Dockerfile
 #   CPU only
 #   No 1-bit SGD
+#
+# To build, run from the parent with the command line:
+# 	docker build -t <image name> -f CNTK-CPUOnly-Image/Dockerfile .
 
-FROM ubuntu:14.04
+FROM ubuntu:16.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         autotools-dev \
         build-essential \
-        cmake \
         git \
         g++-multilib \
         gcc-multilib \
@@ -23,21 +25,43 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         pkg-config \
         wget \
         zlib1g-dev \
+        # OPENSSL support
+        libssl-dev \
+        openssl \
         # Protobuf
         ca-certificates \
         curl \
+		libcurl4-openssl-dev \
         unzip \
         # For Kaldi
         python-dev \
         automake \
-        libtool \
+        libtool-bin \
         autoconf \
         subversion \
         # For Kaldi's dependencies
         libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 \
+        # For Java Bindings
+        openjdk-8-jdk \
         # For SWIG
-        libpcre++-dev && \
-    rm -rf /var/lib/apt/lists/*
+        libpcre3-dev \
+        # For graphics managed lib
+        libgdiplus \
+        # .NET Core SDK
+        apt-transport-https && \
+        # Cleanup
+        rm -rf /var/lib/apt/lists/*
+
+ARG CMAKE_DOWNLOAD_VERSION=3.11
+ARG CMAKE_BUILD_VERSION=4
+RUN DEBIAN_FRONTEND=noninteractive && \
+    wget --no-verbose https://cmake.org/files/v$CMAKE_DOWNLOAD_VERSION/cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION.tar.gz && \
+	tar -xzvf cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION.tar.gz && \
+    cd cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION && \
+    ./bootstrap --system-curl -- -DCMAKE_USE_OPENSSL=ON && \
+    make -j $(nproc) install && \
+	cd .. && \
+    rm -rf cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION	
 
 RUN OPENMPI_VERSION=1.10.3 && \
     wget -q -O - https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-${OPENMPI_VERSION}.tar.gz | tar -xzf - && \
@@ -50,7 +74,7 @@ ENV PATH /usr/local/mpi/bin:$PATH
 ENV LD_LIBRARY_PATH /usr/local/mpi/lib:$LD_LIBRARY_PATH
 
 RUN LIBZIP_VERSION=1.1.2 && \
-    wget -q -O - http://nih.at/libzip/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
+    wget -q -O - https://libzip.org/download/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
     cd libzip-${LIBZIP_VERSION} && \
     ./configure && \
     make -j"$(nproc)" install && \
@@ -96,11 +120,24 @@ RUN PROTOBUF_VERSION=3.1.0 \
     cd .. && \
     rm -rf $PROTOBUF_STRING
 
-# Install CNTK custom MKL
-RUN CNTK_CUSTOM_MKL_VERSION=3 && \
-    mkdir /usr/local/CNTKCustomMKL && \
-    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-$CNTK_CUSTOM_MKL_VERSION.tgz | \
-    tar -xzf - -C /usr/local/CNTKCustomMKL
+# Install MKLDNN and MKLML
+ARG MKLDNN_VERSION=0.14
+ARG MKLDNN_LONG_VERSION=mklml_lnx_2018.0.3.20180406
+RUN mkdir /usr/local/mklml && \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/v${MKLDNN_VERSION}/${MKLDNN_LONG_VERSION}.tgz | \
+    tar -xzf - -C /usr/local/mklml && \
+    MKLDNN_STRING=mkl-dnn-${MKLDNN_VERSION} && \
+    wget --no-verbose -O - https://github.com/01org/mkl-dnn/archive/v${MKLDNN_VERSION}.tar.gz | tar -xzf - && \
+    cd ${MKLDNN_STRING} && \
+    ln -s /usr/local external && \
+    mkdir -p build && \
+    cd build && \
+    cmake .. -DCMAKE_INSTALL_PREFIX=/ && \
+    make && \
+    make install DESTDIR=/usr/local && \
+    make install DESTDIR=/usr/local/mklml/${MKLDNN_LONG_VERSION} && \
+    cd ../.. && \
+    rm -rf ${MKLDNN_STRING}
 
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa
@@ -116,6 +153,8 @@ RUN mv /bin/sh /bin/sh.orig && \
    ./extras/check_dependencies.sh && \
    make -j $(nproc) all && \
    cd ../src && \
+   # remove Fermi support as CUDA 9 no longer works on it
+   perl -pi -e 's/-gencode arch=compute_20,code=sm_20//' cudamatrix/Makefile && \
    ./configure --openblas-root=/usr/local/openblas --shared && \
    make -j $(nproc) depend && \
    make -j $(nproc) all && \
@@ -126,32 +165,53 @@ RUN mv /bin/sh /bin/sh.orig && \
 
 ## PYTHON
 
+# Commit that will be used for Python environment creation (and later, compilation)
+ARG COMMIT=master
+
 # Swig
 RUN cd /root && \
     wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
     cd swig-3.0.10 && \
-    ./configure --without-java --without-perl5 && \
+    # Note: we specify --without-alllang to suppress building tests and examples for specific languages.
+    ./configure --without-alllang && \
     make -j $(nproc) && \
     make install
+
+COPY ./Patches /tmp/patches
+RUN /tmp/patches/patch_swig.sh /usr/local/share/swig/3.0.10 && \
+	rm -rfd /tmp/patches
+	
+# .NET Core SDK
+RUN cd /tmp && \
+    (wget -q packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb || true) && \
+    dpkg -i packages-microsoft-prod.deb && \
+    apt-get update && \
+    apt-get --yes install dotnet-sdk-2.1.200 && \
+    rm /tmp/packages-microsoft-prod.deb && \
+    apt-get --yes autoremove && \
+    rm -rf /var/lib/apt/lists/*
 
 # Anaconda
 RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh && \
     bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
     rm Anaconda3-4.2.0-Linux-x86_64.sh
 
-RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O /tmp/conda-linux-cntk-py35-environment.yml && \
-    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py35/ --file /tmp/conda-linux-cntk-py35-environment.yml
+RUN CONDA_ENV_PATH=/tmp/conda-linux-cntk-py35-environment.yml; \
+    wget -q https://raw.githubusercontent.com/Microsoft/CNTK/$COMMIT/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O "$CONDA_ENV_PATH" && \
+    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py35 --file "$CONDA_ENV_PATH" && \
+    rm -f "$CONDA_ENV_PATH"
 
 ENV PATH /root/anaconda3/envs/cntk-py35/bin:$PATH
 
 WORKDIR /cntk
 
 # Build CNTK
-RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
+RUN git clone --depth=1 --recursive -b $COMMIT https://github.com/Microsoft/CNTK.git cntksrc && \
+    cd cntksrc && \
+    MKLML_VERSION_DETAIL=${MKLDNN_LONG_VERSION} && \
     CONFIGURE_OPTS="\
       --with-kaldi=${KALDI_PATH} \
       --with-py35-path=/root/anaconda3/envs/cntk-py35" && \
-    git submodule update --init Source/Multiverso && \
     mkdir -p build/cpu/release && \
     cd build/cpu/release && \
     ../../../configure $CONFIGURE_OPTS --with-openblas=/usr/local/openblas && \
@@ -159,15 +219,18 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     cd ../../.. && \
     mkdir -p build-mkl/cpu/release && \
     cd build-mkl/cpu/release && \
-    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
+    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/mklml/${MKLML_VERSION_DETAIL} && \
     make -j"$(nproc)" all
 
-RUN cd Examples/Image/DataSets/CIFAR-10 && \
+RUN cd cntksrc/Examples/Image/DataSets/CIFAR-10 && \
     python install_cifar10.py && \
     cd ../../../..
 
-RUN cd Examples/Image/DataSets/MNIST && \
+RUN cd cntksrc/Examples/Image/DataSets/MNIST && \
     python install_mnist.py && \
     cd ../../../..
 
-ENV PATH=/cntk/build/cpu/release/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
+ENV PATH=/cntk/cntksrc/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/cntksrc/bindings/python LD_LIBRARY_PATH=/cntk/cntksrc/bindings/python/cntk/libs:$LD_LIBRARY_PATH
+
+# Install CNTK as the default backend for Keras
+ENV KERAS_BACKEND=cntk

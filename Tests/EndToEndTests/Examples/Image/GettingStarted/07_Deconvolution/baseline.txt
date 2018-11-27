@@ -16,7 +16,6 @@ Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/E
 01/18/2017 15:46:17: 		Last modified date: Wed Jan 18 14:20:28 2017
 01/18/2017 15:46:17: 		Build type: release
 01/18/2017 15:46:17: 		Build target: GPU
-01/18/2017 15:46:17: 		With 1bit-SGD: no
 01/18/2017 15:46:17: 		With ASGD: yes
 01/18/2017 15:46:17: 		Math lib: mkl
 01/18/2017 15:46:17: 		CUDA_PATH: /usr/local/cuda-8.0

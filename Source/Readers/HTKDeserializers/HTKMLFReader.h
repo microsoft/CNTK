@@ -8,7 +8,7 @@
 #include "ReaderBase.h"
 #include "Config.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // The class represents a factory for connecting the packer,
 // transformers and HTK and MLF deserializers together.
@@ -19,7 +19,7 @@ public:
     HTKMLFReader(const ConfigParameters& parameters);
 
     // Description of streams that this reader provides.
-    std::vector<StreamDescriptionPtr> GetStreamDescriptions() override;
+    std::vector<StreamInformation> GetStreamDescriptions() override;
 
     // Starts a new epoch with the provided configuration.
     void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& requiredStreams) override;
@@ -33,7 +33,7 @@ private:
     };
 
     // All streams this reader provides.
-    std::vector<StreamDescriptionPtr> m_streams;
+    std::vector<StreamInformation> m_streams;
 
     // TODO: Should be moved outside of the reader.
     PackingMode m_packingMode;
@@ -45,7 +45,7 @@ private:
     size_t m_truncationLength;
 
     // Parallel sequences, used for legacy configs.
-    intargvector m_numParallelSequencesForAllEpochs;
+    Microsoft::MSR::CNTK::intargvector m_numParallelSequencesForAllEpochs;
 };
 
-}}}
+}

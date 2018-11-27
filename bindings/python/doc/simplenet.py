@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np
 import cntk as C
-from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.learners import sgd
 from cntk.logging import ProgressPrinter
 from cntk.layers import Dense, Sequential
 
@@ -25,8 +25,8 @@ def ffnet():
     hidden_dimension = 50
 
     # input variables denoting the features and label data
-    features = C.input((inputs), np.float32)
-    label = C.input((outputs), np.float32)
+    features = C.input_variable((inputs), np.float32)
+    label = C.input_variable((outputs), np.float32)
 
     # Instantiate the feedforward classification model
     my_model = Sequential ([
@@ -38,7 +38,7 @@ def ffnet():
     pe = C.classification_error(z, label)
 
     # Instantiate the trainer object to drive the model training
-    lr_per_minibatch = learning_rate_schedule(0.125, UnitType.minibatch)
+    lr_per_minibatch = C.learning_parameter_schedule(0.125)
     progress_printer = ProgressPrinter(0)
     trainer = C.Trainer(z, (ce, pe), [sgd(z.parameters, lr=lr_per_minibatch)], [progress_printer])
 

@@ -8,9 +8,10 @@ LogFileName="ASGDMultiGPU"
 Instances=2
 NumCPUThreads=$(threadsPerInstance $Instances)
 parallelizationMethod="DataParallelASGD"
+DeleteExistingModels=0 
 
 # cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
-cntkmpirun "-n $Instances" 03_ResNet-parallel.cntk "numCPUThreads=$NumCPUThreads precision=float parallelTrain=true minibatch=256 epochsize=10 asyncBuffer=\"false\" parallelizationMethod=$parallelizationMethod"
+cntkmpirun "-n $Instances" 03_ResNet-parallel.cntk "numCPUThreads=$NumCPUThreads precision=float parallelTrain=true minibatch=256 epochsize=12 asyncBuffer=\"false\" parallelizationMethod=$parallelizationMethod"
 ExitCode=$?
 sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank0
 sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank1
@@ -18,6 +19,6 @@ sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank1
 #sed 's/^/MPI Rank 3: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank3
 
 # Delete the test data if copied
-[[ "$Copied" -eq "1" ]] && rm -rf "$DataDir"
+[[ "$Copied" -eq "1" ]] && rm -rf "$DataDir" "$TEST_RUN_DIR/Models/"
 
 exit $ExitCode

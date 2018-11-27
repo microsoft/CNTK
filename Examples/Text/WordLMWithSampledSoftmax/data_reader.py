@@ -78,17 +78,19 @@ class DataReader(object):
 
             # From the end of the file there are probably some leftover lines
             if len(feature_sequences) > 0:
-                yield C.Value.one_hot(feature_sequences, self.vocab_dim), C.one_hot(label_sequences, self.vocab_dim), token_count
+                yield C.Value.one_hot(feature_sequences, self.vocab_dim), C.Value.one_hot(label_sequences, self.vocab_dim), token_count
 
+def get_count_data():
+    data_reader = DataReader('./ptb/token2id.txt', '<eos>')
 
-
-if __name__=='__main__':
-    data_reader = DataReader('./ptb/token2id.txt')
-    
     print('vocab_dim = ' + str(data_reader.vocab_dim))
 
     count=0
-    for a,b in data_reader.minibatch_generator('./ptb/train.txt', 1, 20):
+    for a,b,c in data_reader.minibatch_generator('./ptb/train.txt', 1, 20):
         count += 1
-        print('count:' + str(count))
+    return count
+
+if __name__=='__main__':
+    count = get_count_data()
+    print('count:' + str(count))
 

@@ -1,0 +1,11 @@
+dataDir: .
+
+tags: 
+  - bvt-l ((build_sku == 'cpu') or (build_sku == 'gpu'))
+  - nightly-l ((build_sku == 'cpu') or (build_sku == 'gpu'))
+  - weekly-l ((build_sku == 'cpu') or (build_sku == 'gpu'))
+
+testCases:
+  Test case EvaluateSingleImage:
+    patterns:
+      - Evaluation Complete

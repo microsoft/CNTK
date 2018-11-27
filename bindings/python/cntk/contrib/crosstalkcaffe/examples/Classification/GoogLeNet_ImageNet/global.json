@@ -1,0 +1,20 @@
+{
+	"SourceSolver" : {
+	    "Source": "Caffe",
+	    "ModelPath": "./Classification/GoogLeNet_ImageNet/GoogLeNet_deploy.prototxt",
+	    "WeightsPath": "./Classification/GoogLeNet_ImageNet/bvlc_googlenet.caffemodel",
+    	"PHASE": 1
+	},
+    "ModelSolver": {
+    	"CNTKModelPath": "./Classification/GoogLeNet_ImageNet/GoogLeNet_ImageNet.cntkmodel"
+    },
+	"ValidSolver": {
+		"SavePath": "./Classification/GoogLeNet_ImageNet/Valid",
+		"ValInputs": {
+			"data": [[0, 255], []]
+		},
+		"ValNodes": {
+			"prob": "prob"
+		}
+	}
+}

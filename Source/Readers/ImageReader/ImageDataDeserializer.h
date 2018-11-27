@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include "CorpusDescriptor.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Image data deserializer based on the OpenCV library.
 // The deserializer currently supports two output streams only: a feature and a label stream.
@@ -32,20 +32,20 @@ public:
     virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
     // Gets chunk descriptions.
-    virtual ChunkDescriptions GetChunkDescriptions() override;
+    virtual std::vector<ChunkInfo> ChunkInfos() override;
 
     // Gets sequence descriptions for the chunk.
-    virtual void GetSequencesForChunk(ChunkIdType, std::vector<SequenceDescription>&) override;
+    virtual void SequenceInfosForChunk(ChunkIdType, std::vector<SequenceInfo>&) override;
 
     // Gets sequence description by key.
-    bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
+    bool GetSequenceInfoByKey(const SequenceKey&, SequenceInfo&) override;
 
 private:
     // Creates a set of sequence descriptions.
     void CreateSequenceDescriptions(CorpusDescriptorPtr corpus, std::string mapPath, size_t labelDimension, bool isMultiCrop);
 
     // Image sequence descriptions. Currently, a sequence contains a single sample only.
-    struct ImageSequenceDescription : public SequenceDescription
+    struct ImageSequenceDescription : public SequenceInfo
     {
         std::string m_path;
         size_t m_classId;
@@ -70,4 +70,4 @@ private:
     std::unique_ptr<FileByteReader> m_defaultReader;
 };
 
-}}}
+}

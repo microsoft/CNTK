@@ -14,7 +14,7 @@
 #include "ReaderUtil.h"
 #include <future>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // A randomizer that firstly randomizes chunks and then sequences inside a rolling window of chunks.
 // Uses ChunkRandomizer to randomize chunk descriptions and SequenceRandomizer to randomize sequence descriptions inside a window of chunks.
@@ -39,11 +39,12 @@ public:
     BlockRandomizer(
         int verbosity,
         size_t randomizationRange,
-        IDataDeserializerPtr deserializer,
+        DataDeserializerPtr deserializer,
         bool shouldPrefetch,
         bool multithreadedGetNextSequences = false,
         size_t maxNumberOfInvalidSequences = 0, // per worker
-        bool sampleBasedRandomizationWindow = true);
+        bool sampleBasedRandomizationWindow = true,
+        size_t seedOffset = 0);
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;
@@ -54,13 +55,13 @@ public:
     virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override;
 
     // Gets stream descriptions.
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
+    virtual std::vector<StreamInformation> GetStreamDescriptions() const override
     {
-        return m_deserializer->GetStreamDescriptions();
+        return m_deserializer->StreamInfos();
     }
 
     // Returns current position in the global timeline. The returned value is in samples.
-    size_t GetCurrentSamplePosition() override;
+    std::map<std::wstring, size_t> GetState() override;
 
     ~BlockRandomizer()
     {
@@ -70,7 +71,7 @@ public:
         }
     }
 
-    void SetCurrentSamplePosition(size_t currentSamplePosition) override;
+    void SetState(const std::map<std::wstring, size_t>& state) override;
 
     void SetConfiguration(const ReaderConfiguration& config) override;
 
@@ -88,10 +89,9 @@ private:
     // returns at least one sequence description even when its length is greater than the required sample count.
     // Returns a tuple containing "end of sweep", "end of epoch" flags and
     // the total numbers of global and local samples to be processed.
-    std::tuple<bool, bool, size_t, size_t> GetNextSequenceDescriptions(size_t globalSampleCount, 
-                                                                       size_t localSampleCount, 
-                                                                       std::vector<RandomizedSequenceDescription>& result, 
-                                                                       ClosedOpenChunkInterval& windowRange, 
+    std::tuple<bool, bool, size_t, size_t> GetNextSequenceDescriptions(size_t globalSampleCount,
+                                                                       size_t localSampleCount,
+                                                                       ClosedOpenChunkInterval& windowRange,
                                                                        bool atLeastOneSequenceNeeded);
 
     // Prepares a new sweep if needed.
@@ -118,10 +118,13 @@ private:
     // Current sweep.
     size_t m_sweep;
 
+    // Offset used together with the current sweep to seed rngs.
+    size_t m_seedOffset;
+
     // Total number of samples in a sweep.
     size_t m_sweepSizeInSamples;
 
-    IDataDeserializerPtr m_deserializer;
+    DataDeserializerPtr m_deserializer;
 
     // Chunk randomizer.
     ChunkRandomizerPtr m_chunkRandomizer;
@@ -130,7 +133,7 @@ private:
     SequenceRandomizerPtr m_sequenceRandomizer;
 
     // Exposed streams.
-    std::vector<StreamDescriptionPtr> m_streams;
+    std::vector<StreamInformation> m_streams;
 
     // A map of data chunks from original chunk id into chunk.
     std::map<size_t, ChunkPtr> m_chunks;
@@ -167,4 +170,4 @@ private:
     SequenceCleaner m_cleaner;
 };
 
-}}}
+}

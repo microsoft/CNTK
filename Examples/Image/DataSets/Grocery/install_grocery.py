@@ -30,8 +30,8 @@ def download_grocery_data():
             with zipfile.ZipFile(filename) as myzip:
                 myzip.extractall(dataset_folder)
             if platform != "win32":
-                testfile  = os.path.join(dataset_folder, "grocery", "test.txt")
-                unixfile = os.path.join(dataset_folder, "grocery", "test_unix.txt")
+                testfile  = os.path.join(dataset_folder, "Grocery", "test.txt")
+                unixfile = os.path.join(dataset_folder, "Grocery", "test_unix.txt")
                 out = open(unixfile, 'w')
                 with open(testfile) as f:
                     for line in f:

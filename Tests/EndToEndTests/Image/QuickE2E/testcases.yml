@@ -2,6 +2,7 @@ dataDir: ../Data
 tags:
      - bvt-i (build_sku == 'gpu') and (device == 'gpu') and ((flavor == 'debug') ^ (os == 'windows'))
      - nightly-i (build_sku == 'gpu') and (device == 'gpu')
+     - weekly-i (build_sku == 'gpu') and (device == 'gpu')
 
 testCases:
   CNTK Run must be completed:

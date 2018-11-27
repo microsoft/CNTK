@@ -1,0 +1,27 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+ConfigDir=$TEST_DIR
+LogFileName=stderr
+Instances=2
+NumCPUThreads=$(threadsPerInstance $Instances)
+
+DeleteModelsAfterTest=0
+# cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
+cntkmpirun "-n $Instances" cntkcv.cntk "numCPUThreads=$NumCPUThreads shareNodeValueMatrices=true saveBestModelPerCriterion=true"
+ExitCode=$?
+sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank0
+sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank1
+
+echo === Deleting last epoch data
+rm $TEST_RUN_DIR/models/*.dnn
+echo ==== Re-running from checkpoint
+DeleteExistingModels=0
+DeleteModelsAfterTest=1
+# cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
+cntkmpirun "-n $Instances" cntkcv.cntk "makeMode=true numCPUThreads=$NumCPUThreads shareNodeValueMatrices=true saveBestModelPerCriterion=true"
+ExitCode=$?
+sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank0
+sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_speechTrain.logrank1
+exit $ExitCode

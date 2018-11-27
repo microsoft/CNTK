@@ -15,6 +15,7 @@
 #include "Serialization.h"
 #include <fcntl.h>
 #include "PrimitiveFunction.h"
+#include "PrimitiveFunctionAttribute.h"
 #include "RecurrentNodes.h"
 #include "Value.h"
 #include "CompositeFunction.h"
@@ -24,6 +25,12 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    // Version history:
+    // 1 -- initial version.
+    // 2 -- add support for models exceeding 2GB in size.
+    const size_t DictionaryValue::s_version = 2;
+    const size_t Dictionary::s_version = 2;
+
     template<typename T>
     T* CreateDataPtr(const T& value)
     {
@@ -47,6 +54,7 @@ namespace CNTK
                       is_same<T, wstring>::value ||
                       is_same<T, vector<DictionaryValue>>::value ||
                       is_same<T, Dictionary>::value ||
+                      is_same<T, TrainingParameterSchedule<double>>::value ||
                       is_same<T, NDArrayView>::value,
                       "AllocateDataPtr called with invalid type");
         m_data.m_ptr = CreateDataPtr<T>(value);
@@ -120,8 +128,13 @@ namespace CNTK
         {
             NDArrayView* viewPtr1 = reinterpret_cast<NDArrayView*>(m_data.m_ptr);
             NDArrayView* viewPtr2 = reinterpret_cast<NDArrayView*>(other.m_data.m_ptr);
-
             return Internal::AreEqual(*viewPtr1, *viewPtr2);
+        }
+        case DictionaryValue::Type::TrainingParameterSchedule:
+        {
+            TrainingParameterSchedule<double>* schedulePtr1 = reinterpret_cast<TrainingParameterSchedule<double>*>(m_data.m_ptr);
+            TrainingParameterSchedule<double>* schedulePtr2 = reinterpret_cast<TrainingParameterSchedule<double>*>(other.m_data.m_ptr);
+            return (*schedulePtr1) == (*schedulePtr2);
         }
         default:
             NOT_IMPLEMENTED;
@@ -225,6 +238,24 @@ namespace CNTK
         return !(*this == other);    
     }
 
+    void SetConvolutionProperties(Dictionary& additionalProperties, const NDShape& strides, const std::vector<bool>& sharing, 
+        const std::vector<bool>& autoPadding, const std::vector<size_t>& lowerPad, const std::vector<size_t>& upperPad,
+        const NDShape& dilation, bool sequential, bool transpose, const NDShape& outputShape, size_t groups, size_t maxTempMemSizeInSamples)
+    {
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameDilation] = dilation;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameSequential] = sequential;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLowerPad] = NDShape(lowerPad);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameUpperPad] = NDShape(upperPad);
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameTranspose] = transpose;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameOutputShape] = outputShape;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameKernelShape] = NDShape({0});
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameGroups] = groups;
+    }
+
     std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType)
     {
         std::wstring uid, name;
@@ -239,14 +270,14 @@ namespace CNTK
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(T value, UnitType unit) 
-        : m_schedule({ make_pair(0, value) }), m_unit(unit), m_epochSize(FullDataSweep)
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(T value, size_t minibatchSize)
+        : m_schedule({ make_pair(0, value) }), m_epochSize(FullDataSweep), m_minibatchSize(minibatchSize)
     {
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<T>& schedule, UnitType unit, size_t epochSize) 
-        : m_unit(unit), m_epochSize(epochSize)
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<T>& schedule, size_t epochSize, size_t ref_mbsize)
+        : m_epochSize(epochSize), m_minibatchSize(ref_mbsize)
     {
         std::vector<std::pair<size_t, T>> s(schedule.size());
         for (auto i = 0; i < schedule.size(); ++i)
@@ -258,8 +289,8 @@ namespace CNTK
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<std::pair<size_t, T>>& schedule, UnitType unit, size_t epochSize)
-        : m_unit(unit), m_epochSize(epochSize)
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<std::pair<size_t, T>>& schedule, size_t epochSize, size_t minibatchSize)
+        :  m_epochSize(epochSize), m_minibatchSize(minibatchSize)
     {
         ConstructSchedule(schedule);
     }
@@ -286,7 +317,16 @@ namespace CNTK
             m_schedule[unitSize * unitCount] = pair.second;
         }
     }
-
+    template <typename T>
+    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::Transform(std::function<T(const T&)> func)
+    {
+        for (auto& entry : m_schedule)
+        {
+            T newVal = func(entry.second);
+            entry.second = newVal;
+        }
+        return *this;
+    }
     template <typename T>
     /*virtual*/ TrainingParameterSchedule<T>::~TrainingParameterSchedule()
     {
@@ -307,27 +347,16 @@ namespace CNTK
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(const TrainingParameterSchedule<T>&) = default;
-
-    // cannot be defaulted due to a bug in VS2013 (https://connect.microsoft.com/VisualStudio/feedback/details/1255564)
-    template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(TrainingParameterSchedule<T>&& that)
-        :m_schedule(move(that.m_schedule)), m_unit(that.m_unit), m_epochSize(that.m_epochSize)
-    {
-    }
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(const TrainingParameterSchedule<T>& that) = default;
 
     template <typename T>
-    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::operator=(const TrainingParameterSchedule<T>&) = default;
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(TrainingParameterSchedule<T>&& that) = default;
 
-    // cannot be defaulted due to a bug in VS2013 (https://connect.microsoft.com/VisualStudio/feedback/details/1255564)
     template <typename T>
-    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::operator=(TrainingParameterSchedule<T>&& that)
-    {
-        m_schedule = move(that.m_schedule);
-        m_epochSize = that.m_epochSize;
-        m_unit = that.m_unit;
-        return *this;
-    }
+    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::operator=(const TrainingParameterSchedule<T>& that) = default;
+ 
+    template <typename T>
+    TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::operator=(TrainingParameterSchedule<T>&& that) = default;
 
     static const std::wstring s_trainingParameterScheduleTypeValue = L"TrainingParameterSchedule";
 
@@ -343,7 +372,7 @@ namespace CNTK
         dict[versionKey] = CurrentVersion();
         dict[typeKey] = s_trainingParameterScheduleTypeValue;
         dict[epochSizeKey] = m_epochSize;
-        dict[unitKey] = static_cast<size_t>(m_unit);
+        dict[refMBSizeKey] = m_minibatchSize;
         dict[scheduleKey] = schedule;
         return dict;
     }
@@ -351,18 +380,37 @@ namespace CNTK
      template <typename T>
     /*static*/ TrainingParameterSchedule<T>  TrainingParameterSchedule<T>::Deserialize(const Dictionary& dict)
     {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, unitKey, epochSizeKey, scheduleKey };
-
-        ValidateDictionary<TrainingParameterSchedule<T>>(dict, s_requiredDictionaryKeys, s_trainingParameterScheduleTypeValue, s_serializationVersion);
-
+        auto version = ValidateDictionary<TrainingParameterSchedule<T>>(dict, { typeKey, epochSizeKey, scheduleKey}, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+        //Validate additional keys and make necessary change to the dictionary:
+        if (version == 1)
+        {
+            ValidateDictionary<TrainingParameterSchedule<T>>(dict, { unitKey }, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+            /*
+            //legacy definition:
+            enum class UnitType : unsigned int
+            {
+            Sample = 0,
+            Minibatch = 1,
+            };
+            */
+            size_t unit = dict[unitKey].Value<std::size_t>();
+            Dictionary dict_v2 = dict;
+            dict_v2[refMBSizeKey] = (size_t) (unit == 0? 1: 0);
+            return TrainingParameterSchedule<T>(dict_v2);
+        }
+        else //if (version >=2)
+        {
+            ValidateDictionary<TrainingParameterSchedule<T>>(dict, { refMBSizeKey }, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+            return TrainingParameterSchedule<T>(dict);
+        }
         return TrainingParameterSchedule<T>(dict);
     }
 
     template <typename T>
     TrainingParameterSchedule<T>::TrainingParameterSchedule(const Dictionary& dictionary)
     {
-        m_unit = UnitType(dictionary[unitKey].Value<size_t>());
         m_epochSize = dictionary[epochSizeKey].Value<size_t>();
+        m_minibatchSize = dictionary[refMBSizeKey].Value<size_t>();
         Dictionary schedule = dictionary[scheduleKey].Value<Dictionary>();
         for (const auto& kv : schedule)
         {
@@ -370,14 +418,33 @@ namespace CNTK
         }
     }
 
-    void MomentumAsTimeConstantSchedule::ConvertToPerSampleValues()
+
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(double time_constant)
     {
-        for (auto& it : m_schedule)
-        {
-            double momTC = it.second;
-            double momPS = momTC == 0.0 ? 0 : exp(-1.0 / momTC);
-            it.second = momPS;
-        }
+        //momentum constant schedule's reference minibatch size is always per sample: 1
+        //TODO: Need to record the original rate and the reference mbsize so that the unit gain factor can be computed correctly.
+        return MomentumSchedule(MomentumFromTimeConstant(time_constant), 1);
+    }
+
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const MomentumSchedule& schedule)
+    {
+        MomentumSchedule res(schedule);
+        res.Transform(MomentumFromTimeConstant);
+        return res;
+    }
+
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const std::vector<double>& schedule, size_t epoch_size)
+    {
+        MomentumSchedule res(schedule, epoch_size, 1);
+        res.Transform(MomentumFromTimeConstant);
+        return res;
+    }
+
+    CNTK_API MomentumSchedule MomentumAsTimeConstantSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epoch_size)
+    {
+        MomentumSchedule res(schedule, epoch_size, 1);
+        res.Transform(MomentumFromTimeConstant);
+        return res;
     }
 
     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
@@ -414,7 +481,7 @@ namespace CNTK
         mode = mode | O_BINARY;
         fd = _wopen(filePath.c_str(), mode, 0644);
 #else
-        fd = open(ToString(filePath).c_str(), mode, 0644);
+        fd = open(ToLegacyString(ToUTF8(filePath)).c_str(), mode, 0644);
 #endif
         if (fd < 0)
             RuntimeError("Cannot open file '%S' for %s.", filePath.c_str(), (readOnly ? "reading" : "writing"));
@@ -422,41 +489,12 @@ namespace CNTK
         return fd;
     }
 
-    std::string ToString(const std::wstring& wstring)
-    {
-#ifdef _MSC_VER
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-        return converter.to_bytes(wstring);
-#else
-        const auto length = wstring.length() * sizeof(std::wstring::value_type) + 1;
-        char buf[length];
-        const auto res = std::wcstombs(buf, wstring.c_str(), sizeof(buf));
-        return (res >= 0) ? buf : "";
-#endif
-    }
-
-    std::wstring ToWString(const std::string& string)
-    {
-#ifdef _MSC_VER
-        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-        return converter.from_bytes(string);
-#else
-        const auto length = string.length() + 1;
-        wchar_t buf[length];
-        const auto res = std::mbstowcs(buf, string.c_str(),  sizeof(buf));
-        return (res >= 0) ? buf : L"";
-#endif
-    }
-
-    bool IsFirstOutputOfMultiOutputUDF(const Variable& var)
+    bool IsFirstOutputOfMultiOutputFunction(const Variable& var)
     {
         if (!var.IsOutput())
             return false;
 
         auto owner = var.Owner();
-        if (dynamic_cast<PrimitiveFunction*>(owner.get()))
-            return false;
-
         return (var == owner->Outputs()[0]) && (owner->Outputs().size() > 1);
     }
 
@@ -487,6 +525,11 @@ namespace CNTK
             return dynamicAxes[0].Name();
     }
 
+    bool IsPackedValue(const ValuePtr& value)
+    {
+        auto packedValue = dynamic_pointer_cast<PackedValue>(value);
+        return (packedValue != nullptr) && packedValue->IsPacked();
+    }
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
     {
         size_t maxNumTimeSteps = 1;
@@ -515,15 +558,17 @@ namespace CNTK
         return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
     }
 
-    /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value)
+    /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape)
     {
+        // TODO: This is a temporary debugging aid and should be removed after the functionality to late bind
+        // inferred/free dimensions is more baked and stable.
+        bool allowFreeOrInferredDimensionsInVar = true;
+
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable '%S' DataType %s does not match the corresponding Value's DataType %s", var.AsString().c_str(), DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
 
-        auto packedValue = dynamic_cast<PackedValue*>(value.get());
-        bool isPackedValue = (packedValue != nullptr) && packedValue->IsPacked();
-
         // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
+        bool isPackedValue = IsPackedValue(value);
         if (!isPackedValue)
         {
             if (IsSparseInput(var) && !value->IsSparse())
@@ -546,13 +591,30 @@ namespace CNTK
         // valueShape.Rank() - varShape.Rank() <=  var.DynamicAxes().size()
         size_t maxAddionalValueAxes = std::max<size_t>(2, numDynamicAxes);
 
-        // For packed values, we sometimes have the reader return the matrix with a flatenned sample layout
-        if (isPackedValue && ((valueShape.Rank() < varShape.Rank()) || (valueShape.SubShape(0, varShape.Rank()) != varShape)))
+        // For packed values, we sometimes have the reader return the matrix with a flattened sample layout
+        if (isPackedValue &&
+            ((valueShape.Rank() < varShape.Rank()) || (valueShape.SubShape(0, varShape.Rank()) != varShape)) &&
+            (valueShape.SubShape(1).Rank() <= maxAddionalValueAxes))
         {
-            // If the leading dim of the value shape is same as the total size of the varShape,
-            // lets expand the leading dim to varShape for the purposes of the rest of the validation
-            if ((valueShape[0] == varShape.TotalSize()) && (valueShape.SubShape(1).Rank() <= (varShape.Rank() + maxAddionalValueAxes)))
-                valueShape = varShape.AppendShape(valueShape.SubShape(1));
+            auto numberOfDynamicAxesInPackedValue = std::dynamic_pointer_cast<PackedValue>(value)->DynamicAxes().size();
+            // Further check whether the packed Value is really from the reader, which always provides sequence and batch axes in value and 1 additional axis for the flattened sample layout.
+            if ((numberOfDynamicAxesInPackedValue == 2) && (numberOfDynamicAxesInPackedValue + 1 == valueShape.Rank()))
+            {
+                // If the leading dim of the value shape is same as the total size of the varShape,
+                // lets expand the leading dim to varShape for the purposes of the rest of the validation
+                if (allowFreeOrInferredDimensionsInVar && varShape.HasUnboundDimension())
+                {
+                    auto newVarShape = varShape;
+                    for (size_t i = 0; i < newVarShape.Rank(); ++i)
+                        if (newVarShape[i] == NDShape::FreeDimension)
+                            newVarShape[i] = NDShape::InferredDimension;
+
+                    PrimitiveFunction::ReshapeOutputShape({ valueShape[0] }, newVarShape, Axis(0), Axis(1), /*inferDimensions =*/ true);
+                    valueShape = newVarShape.AppendShape(valueShape.SubShape(1));
+                }
+                else if (valueShape[0] == varShape.TotalSize())
+                    valueShape = varShape.AppendShape(valueShape.SubShape(1));
+            }
         }
 
         if (valueShape.Rank() < varShape.Rank())
@@ -563,40 +625,83 @@ namespace CNTK
             InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
                             (int)valueShape.Rank(), (int)varShape.Rank(), (int)numDynamicAxes, var.AsString().c_str(), valueShape.AsString().c_str());
 
-        if (valueShape.SubShape(0, varShape.Rank()) != varShape)
+        if (valueShape.Rank() > (varShape.Rank() + numDynamicAxes))
         {
-            InvalidArgument("The %s dimensions of the Value shape '%S' do not match the Variable '%S' shape '%S'.",
-                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
-                valueShape.AsString().c_str(),
-                var.AsString().c_str(),
-                varShape.AsString().c_str());
+            for (size_t i = 0; i < (valueShape.Rank() - (varShape.Rank() + numDynamicAxes)); ++i)
+            {
+                if (valueShape[varShape.Rank() + i] != 1)
+                    InvalidArgument("The dimension size (%d) of the axis (%d) of the Value ('%S') must be 1, because this axis is not specified as a dynamic axis of the Variable ('%S').",
+                                    (int)valueShape[varShape.Rank() + i], (int)(varShape.Rank() + i), valueShape.AsString().c_str(), var.AsString().c_str());
+            }
+        }
+
+        auto valueVarSubshape = valueShape.SubShape(0, varShape.Rank());
+        if (valueVarSubshape != varShape)
+        {
+            for (size_t i = 0; i < varShape.Rank(); ++i)
+            {
+                if (allowFreeOrInferredDimensionsInVar && ((varShape[i] == NDShape::FreeDimension) || (varShape[i] == NDShape::InferredDimension)))
+                    varShape[i] = valueVarSubshape[i];
+                else if (varShape[i] != valueVarSubshape[i])
+                {
+                    InvalidArgument("The %s dimensions of the Value shape '%S' do not match the Variable '%S' shape '%S'.",
+                                    Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
+                                    valueShape.AsString().c_str(),
+                                    var.AsString().c_str(),
+                                    varShape.AsString().c_str());
+                }
+            }
         }
 
         if (!isPackedValue)
         {
             auto mask = value->Mask();
             if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
+            {
                 InvalidArgument("Invalid Value object: sum of the rank (%d) of the mask and Variable rank (%d) does not equal "
-                    "the Value's rank (%d); Variable = '%S', Value shape = '%S'.",
-                    (int)mask->Shape().Rank(), (int)varShape.Rank(), (int)valueShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
+                                "the Value's rank (%d); Variable = '%S', Value shape = '%S'.",
+                                (int)mask->Shape().Rank(), (int)varShape.Rank(), (int)valueShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
+            }
+        }
+
+        if (inferredVarShape)
+        {
+            if (varShape.HasUnboundDimension())
+                InvalidArgument("At least one of the free dimensions of Variable '%S' could not be resolved from the supplied value.", varShape.AsString().c_str());
+
+            *inferredVarShape = varShape;
         }
     }
 
     template <typename ElementType>
-    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value)
+    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape,
+                                                                                                                          const std::shared_ptr<Matrix<ElementType>>& outputMatrixStorage,
+                                                                                                                          const std::shared_ptr<Matrix<ElementType>>& tempIndicesStorage)
     {
-        VerifyVariableValueCompatibility(var, value);
+        VerifyVariableValueCompatibility(var, value, inferredVarShape);
 
         if (AsDataType<ElementType>() != value->GetDataType())
             LogicError("The specified ElementType %s does not match the Value object's DataType %s for Variable '%S'",
                         typeid(ElementType).name(), DataTypeName(value->GetDataType()), var.AsString().c_str());
 
+        auto CreateLayoutWithUnitBatchSizeAndSequenceLength = []() {
+            auto layout = std::make_shared<MBLayout>();
+            layout->InitAsFrameMode(1);
+            return layout;
+        };
+
         auto packedValue = dynamic_cast<PackedValue*>(value.get());
         if (packedValue && packedValue->IsPacked())
-            return packedValue->PackedData<ElementType>();
+        {
+            auto packedMatrixAndLayout = packedValue->PackedData<ElementType>();
+            if (!var.DynamicAxes().empty() && (packedMatrixAndLayout.second == nullptr))
+                packedMatrixAndLayout.second = CreateLayoutWithUnitBatchSizeAndSequenceLength();
 
-        auto varShape = var.Shape();
+            return packedMatrixAndLayout;
+        }
+
         auto valueShape = value->Shape();
+        auto varShape = inferredVarShape ? *inferredVarShape : valueShape.SubShape(0, var.Shape().Rank());
         auto numDynamicAxes = var.DynamicAxes().size();
         auto mask = value->Mask();
 
@@ -642,7 +747,7 @@ namespace CNTK
             if (mask != nullptr)
                 Value::GetSequenceStartsAndLengths(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
 
-            bool hasTruncatedSequences = std::find_if(sequenceBeginIndices.begin(), sequenceBeginIndices.end(), [](const int& val) { return (val < 0); }) != sequenceBeginIndices.end();
+            bool hasTruncatedSequences = std::find_if(sequenceBeginIndices.begin(), sequenceBeginIndices.end(), [](const ptrdiff_t& val) { return (val < 0); }) != sequenceBeginIndices.end();
 
             auto layout = std::make_shared<MBLayout>();
             std::vector<std::pair<size_t, size_t>> placement;
@@ -683,11 +788,18 @@ namespace CNTK
             // The data needs to be rearranged since CNTK requires sequences to be interleaved across timesteps
             // Now generate the gather indices
             auto numColsPerSample = varShape.SubShape(VariableRowColSplitPoint(var)).TotalSize();
-            auto matrixData = std::make_shared<Matrix<ElementType>>(varShape.TotalSize() / numColsPerSample,
-                                                                    layout->GetNumCols() * numColsPerSample,
-                                                                    AsCNTKImplDeviceId(value->Device()),
-                                                                    value->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE,
-                                                                    AsCNTKImplMatrixFormat(value->GetStorageFormat()));
+            std::shared_ptr<Matrix<ElementType>> matrixData = outputMatrixStorage;
+            auto matrixDataNumRows = varShape.TotalSize() / numColsPerSample;
+            auto matrixDataNumCols = layout->GetNumCols() * numColsPerSample;
+            auto matrixType = value->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE;
+            auto matrixFormat = AsCNTKImplMatrixFormat(value->GetStorageFormat());
+            if (!matrixData)
+                matrixData = std::make_shared<Matrix<ElementType>>(matrixDataNumRows, matrixDataNumCols, AsCNTKImplDeviceId(value->Device()), matrixType, matrixFormat);
+            else
+            {
+                matrixData->SwitchToMatrixType(matrixType, matrixFormat, /*keepValues=*/false);
+                matrixData->Resize(matrixDataNumRows, matrixDataNumCols);
+            }
 
             std::vector<size_t> sequencesShorterThanLongestSequence;
             for (size_t i = 0; i < numSequences; ++i)
@@ -706,7 +818,12 @@ namespace CNTK
                         gatherIndicesVector[((((targetStartIdxInParallelStream + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx) * numColsPerSample) + k] = (ElementType)((((i * maxNumTimeSteps) + j) * numColsPerSample) + k);
             }
 
-            auto gatherIdxMatrix = std::make_shared<Matrix<ElementType>>(1, gatherIndicesVector.size(), gatherIndicesVector.data(), AsCNTKImplDeviceId(value->Device()));
+            auto gatherIdxMatrix = tempIndicesStorage;
+            if (!gatherIdxMatrix)
+                gatherIdxMatrix = std::make_shared<Matrix<ElementType>>(1, gatherIndicesVector.size(), gatherIndicesVector.data(), AsCNTKImplDeviceId(value->Device()));
+            else
+                gatherIdxMatrix->SetValue(1, gatherIndicesVector.size(), AsCNTKImplDeviceId(value->Device()), gatherIndicesVector.data());
+
             matrixData->DoGatherColumnsOf(0, *gatherIdxMatrix, *(value->Data()->GetMatrix<ElementType>(VariableRowColSplitPoint(var))), 1);
             return{ matrixData, layout };
         }
@@ -775,14 +892,14 @@ namespace CNTK
             mask = CreateMask(layout, AsDeviceDescriptor(matrix.GetDeviceId()));
 
         // Reshuffle to data to unpack and uninterleave the CNTK form packed data
-        auto unpackedTensorView = ComputationNode<ElementType>::Unpack(AsTensorShape(sampleShape), matrix, layout, /*batchMajor=*/ false, /*maskGaps=*/ false);
+        auto unpackedTensorView = ComputationNode<ElementType>::Unpack(AsTensorShape(sampleShape), matrix, layout, /*batchMajor=*/ false, /*gapPadValue=*/ nullptr);
         auto dataShape = PackedValue::GetUnpackedShape(sampleShape, sampleDynamicAxes, layout);
         auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), dataShape, readOnly, new TensorView<ElementType>(unpackedTensorView, AsTensorViewShape(dataShape)));
         return MakeSharedObject<Value>(data, mask);
     }
 
     template <typename ElementType>
-    ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
+    ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const ComputationNodeBasePtr& computationNode, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
     {
         if (var.DynamicAxes().size() > 2)
             LogicError("More than 2 dynamic axes for a variable '%S' is currently unsupported", var.AsString().c_str());
@@ -793,7 +910,162 @@ namespace CNTK
         if ((layout != nullptr) && (matrix.GetNumRows() != var.Shape().TotalSize()))
             LogicError("Unexpected matrix layout: The number (%d) of rows in the matrix does not match the sample size (%d) of the Variable '%S'", (int)matrix.GetNumRows(), (int)var.Shape().TotalSize(), var.AsString().c_str());
 
-        return GetValueObjectFromCNTKImplMatrixAndMBLayout(var.Shape(), var.DynamicAxes(), matrix, layout, readOnly);
+        auto varShape = var.Shape();
+        if (computationNode)
+            varShape = GetVariableShape(var.Shape(), computationNode->GetSampleLayout());
+
+        return GetValueObjectFromCNTKImplMatrixAndMBLayout(varShape, var.DynamicAxes(), matrix, layout, readOnly);
+    }
+
+    template <typename SrcType, typename DstType>
+    Variable Utils::ConvertVariableType(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice)
+    {
+        auto value_cpu = stat.GetValue()->DeepClone(computeDevice.CPUDevice(), true);
+        auto srcData = value_cpu->DataBuffer<SrcType>();
+
+        auto totalSize = stat.Shape().TotalSize();
+
+        //TODO: Consider using a vector/unique_ptr here to avoid potential memory leaks
+        DstType *dstData = new DstType[totalSize];
+
+        for (size_t index = 0; index < totalSize; index++)
+        {
+            dstData[index] = (DstType)(srcData[index]);
+        }
+
+        NDShape shape = stat.Shape();
+        if (reverseShape)
+        {
+            vector<size_t> shapeDims = shape.Dimensions();
+            std::reverse(shapeDims.begin(), shapeDims.end());
+            shape = shapeDims;
+        }
+
+        NDArrayViewPtr dstFinal(MakeSharedObject<NDArrayView>(AsDataType<DstType>(), shape, &dstData[0],
+            totalSize * sizeof(DstType), computeDevice.CPUDevice()));
+
+        if (computeDevice.Type() == DeviceKind::CPU)
+        {
+            Constant constantVariable(dstFinal);
+            return constantVariable;
+        }
+        else
+        {
+            NDArrayViewPtr dstFinalGPU(MakeSharedObject<NDArrayView>(AsDataType<DstType>(), StorageFormat::Dense, shape, computeDevice));
+            dstFinalGPU->CopyFrom(*dstFinal);
+            Constant constantVariable(dstFinalGPU);
+            return constantVariable;
+        }
+    }
+
+    template Variable Utils::ConvertVariableType<float, float16>(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice);
+    template Variable Utils::ConvertVariableType<float16, float>(const Variable& stat, bool reverseShape, const DeviceDescriptor& computeDevice);
+
+    std::vector<Axis> GetSqueezableAxes(const NDShape& inputShape)
+    {
+        std::vector<Axis> axes;
+        auto replacementDims = inputShape.Dimensions();
+        int staticIdx = 0;
+        for (int i = 0; i < inputShape.Rank(); i++)
+        {
+            if (inputShape[i] == 1)
+            {
+                axes.push_back(Axis(staticIdx));
+            }
+
+            if (inputShape[i] != NDShape::FreeDimension || inputShape[i] != NDShape::InferredDimension)
+            {
+                staticIdx++;
+            }
+        }
+
+        return axes;
+    }
+
+    NDShape GetSqueezedShape(const NDShape& inputShape)
+    {
+        auto replacementDims = inputShape.Dimensions();
+        replacementDims.erase(std::remove_if(std::begin(replacementDims), std::end(replacementDims),
+            [](const size_t dim) {return dim == 1; }), std::end(replacementDims));
+        return NDShape(replacementDims);
+    }
+
+    NDShape GetSqueezedShape(const NDShape& inputShape, const std::vector<Axis>& axes)
+    {
+        auto replacementDims = inputShape.Dimensions();
+        auto squeezedIdx = std::vector<size_t>({});
+        for (const Axis& ax : axes)
+        {
+            auto axis = NormalizeStaticAxis(const_cast<Axis &>(ax), inputShape.Rank());
+            if (!axis.IsStaticAxis())
+                LogicError("Squeeze: can only squeeze static axes.");
+            auto idx = axis.StaticAxisIndex();
+            if (inputShape[idx] != 1)
+                LogicError("Squeeze: cannot squeeze a static axis whose dimension (=%zd) is not 1.", inputShape[idx]);
+            squeezedIdx.push_back(idx);
+        }
+        // delete all squeezed indices from back to front
+        std::sort(std::begin(squeezedIdx), std::end(squeezedIdx), [](const size_t a, const size_t b) {return a > b; });
+        for (auto i : squeezedIdx)
+            replacementDims.erase(std::begin(replacementDims) + i);
+
+        return NDShape(replacementDims);
+    }
+
+    NDShape GetSqueezedShape(const NDShape& inputShape, const Dictionary& squeezeConfig)
+    {
+        // collect all indices that need to be squeezed
+        if (squeezeConfig.Contains(PrimitiveFunctionAttribute::AttributeNameAxisVec))
+        {
+            auto axes = AsVector<Axis>(squeezeConfig[PrimitiveFunctionAttribute::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+            return GetSqueezedShape(inputShape, axes);
+        }
+        else
+            return GetSqueezedShape(inputShape);
+    }
+
+    NDMaskPtr CreateMask(const std::vector<size_t>& sequenceLengths, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device)
+    {
+        size_t numSequences = sequenceLengths.size();
+
+        if (!sequenceStartFlags.empty() && (sequenceStartFlags.size() != numSequences))
+            InvalidArgument("Value::Create:: The number (%zu) of sequence start flags does not match the number (%zu) of sequences,",
+                sequenceStartFlags.size(), numSequences);
+
+        std::vector<bool> actualStarts = sequenceStartFlags;
+        if (actualStarts.empty())
+            actualStarts.resize(numSequences, true);
+
+        size_t maxSequenceLength = 0;
+        for (size_t i = 0; i < numSequences; ++i)
+            maxSequenceLength = std::max(maxSequenceLength, sequenceLengths[i]);
+
+        bool needsMask = (std::find(actualStarts.begin(), actualStarts.end(), false) != actualStarts.end());
+        needsMask = needsMask || (std::find_if(sequenceLengths.begin(), sequenceLengths.end(), [maxSequenceLength](const size_t& currentSequenceLength) {
+            return (currentSequenceLength != maxSequenceLength);
+        }) != sequenceLengths.end());
+
+        // If needed, create a mask to account for variability in lengths of specified sequences
+        NDMaskPtr deviceValueMask;
+        if (needsMask)
+        {
+            NDShape valueMaskShape = { maxSequenceLength, numSequences };
+            deviceValueMask = MakeSharedObject<NDMask>(valueMaskShape, device);
+            for (size_t i = 0; i < numSequences; ++i)
+            {
+                if (actualStarts[i])
+                    deviceValueMask->MarkSequenceBegin({ 0, i });
+                deviceValueMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+            }
+        }
+
+        return deviceValueMask;
+    }
+
+    double ReductionIdentityValue(const std::wstring& reductionOpName)
+    {
+        auto reductionOpEnumValue = ReduceElementsNode<double>::ReductionOpEnumValue(reductionOpName);
+        return ReduceElementsNode<double>::NeutralValue(reductionOpEnumValue);
     }
 
     template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);
@@ -802,6 +1074,7 @@ namespace CNTK
     template void DictionaryValue::AllocateDataPtr<wstring>(const wstring& value);
     template void DictionaryValue::AllocateDataPtr<Dictionary>(const Dictionary& value);
     template void DictionaryValue::AllocateDataPtr<NDArrayView>(const NDArrayView& value);
+    template void DictionaryValue::AllocateDataPtr<CNTK::TrainingParameterSchedule<double >>(const CNTK::TrainingParameterSchedule<double>& value);
 
     template void DictionaryValue::FreePtrAsType<NDShape>();
     template void DictionaryValue::FreePtrAsType<Axis>();
@@ -809,13 +1082,18 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<wstring>();
     template void DictionaryValue::FreePtrAsType<Dictionary>();
     template void DictionaryValue::FreePtrAsType<NDArrayView>();
+    template void DictionaryValue::FreePtrAsType<CNTK::TrainingParameterSchedule<double >>();
+    template void DictionaryValue::FreePtrAsType<Function>();
+
 
     template class TrainingParameterSchedule<double>;
     template class TrainingParameterSchedule<size_t>;
 
     Learners::Learners(const std::vector<LearnerPtr>& learners) :
         m_learners(learners),
-        m_isDistributed(false)
+        m_isDistributed(false),
+        m_metricAggregatingLearner(nullptr),
+        DoAggregateMetricsIfNeededLambda(nullptr)
     {
         if (learners.empty())
             InvalidArgument("These must be at least one learner.");
@@ -823,8 +1101,32 @@ namespace CNTK
         std::unordered_set<Parameter> learnerParameters;
         for (const auto& learner : m_learners)
         {
-            if (dynamic_pointer_cast<DistributedLearner>(learner) != nullptr)
+            DistributedLearnerPtr distLearner = dynamic_pointer_cast<DistributedLearner>(learner);
+            if (distLearner)
+            {
                 m_isDistributed = true;
+
+                // If this is the only learner, set it as the MetricAggregator
+                // so that the user does not need to explicitly mark it.
+                if (m_learners.size() == 1)
+                {
+                    distLearner->SetAsMetricAggregator();
+                }
+                else
+                {
+                    if (dynamic_pointer_cast<QuantizedDistributedCommunicator>(distLearner->GetCommunicator()) != nullptr)
+                    {
+                        InvalidArgument("Learners with QuantizedDistributedCommunicator is not supported in a multiple learner distributed training scenarios.");
+                    }
+                }
+
+                // Use only one of the learners marked as MetricAggregator to aggregate loss and eval.
+                if (distLearner->IsMetricAggregator())
+                {
+                    m_metricAggregatingLearner = learner;
+                    DoAggregateMetricsIfNeededLambda = std::bind(&DistributedLearner::DoAggregateMetricsIfNeeded, distLearner, std::placeholders::_1, std::placeholders::_2);
+                }
+            }
 
             const auto& currentLearnerParameters = learner->Parameters();
             for (const auto& parameter : currentLearnerParameters)
@@ -833,6 +1135,11 @@ namespace CNTK
                 if (!insertRetVal.second)
                     InvalidArgument("Parameter '%S' is covered by 2 different learners", parameter.AsString().c_str());
             }
+        }
+
+        if (!m_metricAggregatingLearner)
+        {
+            m_metricAggregatingLearner = m_learners.front();
         }
 
         if (m_isDistributed)
@@ -846,6 +1153,18 @@ namespace CNTK
             if (dynamic_pointer_cast<DistributedLearner>(learner) == nullptr)
                 InvalidArgument("Cannot use a non-distributed learner for some parameters together with a distributed learner for other parameters, in a single Trainer.");
         }
+
+        size_t distributeAfter = dynamic_pointer_cast<DistributedLearner>(m_learners.front())->ParallelizationAfter();
+        for (const auto& learner : m_learners)
+        {
+            if (distributeAfter != dynamic_pointer_cast<DistributedLearner>(learner)->ParallelizationAfter())
+                InvalidArgument("All distributed learners need to have the same DistributeAfterSamples limit.");
+        }
+    }
+
+    const LearnerPtr& Learners::GetMetricAggregatingLearner() const
+    {
+        return m_metricAggregatingLearner;
     }
 
     void Learners::GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients)
@@ -875,14 +1194,46 @@ namespace CNTK
 
     bool Learners::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatch)
     {
+        std::vector<MinibatchInfo> mbInfoPerLearner;
+        mbInfoPerLearner.resize(m_learners.size());
+
+        MinibatchInfo tmpMinibatchInfo{
+            minibatch.atEndOfData,
+            minibatch.atEndOfSweep,
+            minibatch.numberOfSamples,
+            minibatch.trainingLossValue->DeepClone(),
+            minibatch.evalCriterionValue->DeepClone() };
+
+        bool metricAggregatorUpdated = false;
         bool anyUpdatesPerformed = false;
-        for (auto l : m_learners)
+        size_t metricAggregatorIndex = 0;
+        for (size_t i = 0; i < m_learners.size(); i++)
         {
+            auto l  = m_learners[i];
             auto learner = dynamic_pointer_cast<DistributedLearner>(l);
+            assert(learner != nullptr); // Already checked in the constructor.
+
+            if (learner->IsMetricAggregator())
+            {
+                mbInfoPerLearner[i] = minibatch;
+                metricAggregatorUpdated = true;
+                metricAggregatorIndex = i;
+            }
+            else
+            {
+                mbInfoPerLearner[i] = tmpMinibatchInfo;
+            }
+
             std::unordered_map<Parameter, NDArrayViewPtr> learnerGradients;
             GetLearnerGradients(learner, gradientValues, learnerGradients);
-            anyUpdatesPerformed |= learner->Update(learnerGradients, minibatch);
+            anyUpdatesPerformed |= learner->Update(learnerGradients, mbInfoPerLearner[i]);
         }
+        if (!metricAggregatorUpdated)
+            RuntimeError("Update failed: Metric aggregation did not happen, none of the learners was marked as metric aggregator.");
+
+        // In a single trainer, the number of samples should be same for each learner. 
+        // Assign the minibatch to the information from the matrix aggregating learner. 
+        minibatch = mbInfoPerLearner[metricAggregatorIndex];
         return anyUpdatesPerformed;
     }
 
@@ -905,14 +1256,17 @@ namespace CNTK
         }
     }
 
-    template std::pair<std::shared_ptr<const Matrix<float>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<float>(const Variable& var, const ValuePtr& value);
-    template std::pair<std::shared_ptr<const Matrix<double>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<double>(const Variable& var, const ValuePtr& value);
+    template std::pair<std::shared_ptr<const Matrix<float>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<float>(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape);
+    template std::pair<std::shared_ptr<const Matrix<double>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<double>(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape);
+    template std::pair<std::shared_ptr<const Matrix<half>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<half>(const Variable& var, const ValuePtr& value, NDShape* inferredVarShape);
 
     template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
     template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<half>(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const Matrix<half>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
 
-    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const Variable& var, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
-    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const Variable& var, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const Variable& var, const ComputationNodeBasePtr& computationNode, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const Variable& var, const ComputationNodeBasePtr& computationNode, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<half>(const Variable& var, const ComputationNodeBasePtr& computationNode, const Matrix<half>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
 
     void Accumulator::Update(const ValuePtr& delta, const DeviceDescriptor& device)
     {
@@ -920,7 +1274,7 @@ namespace CNTK
             InvalidArgument("Attempting to accumulate a null Value.");
 
         bool copied = false;
-        if (!Data() ||
+        if (!m_isInitialized ||
             GetDataType() != delta->GetDataType() ||
             Shape() != delta->Shape() ||
             Device() != device ||
@@ -930,12 +1284,15 @@ namespace CNTK
             m_data = MakeSharedObject<NDArrayView>(delta->GetDataType(), delta->Shape(), device);
             m_mask = delta->Mask();
             ResetToZero();
+            m_isInitialized = true;
         }
 
         if (delta->GetDataType() == DataType::Float)
             Data()->GetWritableTensorView<float>()->AddCopyOf(*delta->Data()->GetTensorView<float>());
-        else
+        else if(delta->GetDataType() == DataType::Double)
             Data()->GetWritableTensorView<double>()->AddCopyOf(*delta->Data()->GetTensorView<double>());
+        else
+            RuntimeError("Unexpected data type in accumulator");
 
         if (copied && m_numUpdates != 0)
             RuntimeError("Accumulation values are created when accumulated num updates not zero");
@@ -951,19 +1308,15 @@ namespace CNTK
 
     void Accumulator::ResetToZero()
     {
-        if (Data() == nullptr)
-        {
+        if (!m_isInitialized)
             return;
-        }
 
         if (GetDataType() == DataType::Float)
-        {
             Data()->SetValue(0.0f);
-        }
-        else
-        {
+        else if (GetDataType() == DataType::Double)
             Data()->SetValue(0.0);
-        }
+        else
+            RuntimeError("Unsupported data type in Accumulator");
     }
 
     std::wstring DynamicAxesAsString(const std::vector<Axis>& axes, bool rowMajor)
@@ -995,5 +1348,4 @@ namespace CNTK
         wss << "]";
         return wss.str();
     }
-
 }

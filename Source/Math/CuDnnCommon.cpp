@@ -6,9 +6,15 @@
 #include "stdafx.h"
 #include "GPUMatrix.h"
 #include "CuDnnCommon.h"
+#include "half.hpp"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
+#ifndef CPUONLY
+MATH_API std::size_t GetCUDNNVersion()
+{
+    return cudnnGetVersion();
+}
+#endif
 template <>
 const float Consts<float>::One = 1;
 template <>
@@ -18,8 +24,31 @@ const float Consts<float>::Zero = 0;
 template <>
 const double Consts<double>::Zero = 0;
 
+const float Consts<half>::Zero = 0;
+const float Consts<half>::One = 1;
+
+
+CuDnnTensor::CuDnnTensor()
+    : m_tensor(nullptr)
+{
+}
+
 CuDnnTensor::CuDnnTensor(const TensorShape& src, cudnnDataType_t dataType)
     : m_tensor(nullptr)
+{
+    Set(src, dataType);
+}
+
+CuDnnTensor::~CuDnnTensor()
+{
+    if (m_tensor != nullptr)
+    {
+        cudnnDestroyTensorDescriptor(m_tensor);
+        m_tensor = nullptr;
+    }
+}
+
+void CuDnnTensor::Set(const TensorShape& src, cudnnDataType_t dataType)
 {
     CUDNN_CALL(cudnnCreateTensorDescriptor(&m_tensor));
     // Set cuDNN tensor dimensions. cuDNN uses row-major format while TensorShape - column-major
@@ -37,15 +66,6 @@ CuDnnTensor::CuDnnTensor(const TensorShape& src, cudnnDataType_t dataType)
     dims[0] = 1;
     strides[0] = strides[1] * dims[1];
     CUDNN_CALL(cudnnSetTensorNdDescriptor(m_tensor, dataType, (int)dims.size(), dims.data(), strides.data()));
-}
-
-CuDnnTensor::~CuDnnTensor()
-{
-    if (m_tensor != nullptr)
-    {
-        cudnnDestroyTensorDescriptor(m_tensor);
-        m_tensor = nullptr;
-    }
 }
 
 void CuDnnTensor::UpdateBatchSize(size_t batchSize)
@@ -70,12 +90,15 @@ cudnnDataType_t CuDnnTensor::GetDataType()
         return CUDNN_DATA_FLOAT;
     else if (typeid(ElemType) == typeid(double))
         return CUDNN_DATA_DOUBLE;
+    else if (typeid(ElemType) == typeid(half))
+        return CUDNN_DATA_HALF;
     else
         InvalidArgument("cuDNN engine currently supports only single and double precision data types.");
 }
 
 template cudnnDataType_t CuDnnTensor::GetDataType<float>();
 template cudnnDataType_t CuDnnTensor::GetDataType<double>();
+template cudnnDataType_t CuDnnTensor::GetDataType<half>();
 
 CuDnn::ptr_t CuDnn::Instance()
 {

@@ -8,6 +8,6 @@ Our AlexNet model is a slight variation of the Caffe implementation of AlexNet (
 
 `python AlexNet_ImageNet_Distributed.py`
 
-You may use this python script to train AlexNet on multiple GPUs or machines. For a reference on distributed training, please check [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#32-python). For example, the command for distributed training on the same machine (with multiple GPUs) with Windows is:
+You may use this python script to train AlexNet on multiple GPUs or machines. For a reference on distributed training, please check [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Multiple-GPUs-and-machines). For example, the command for distributed training on the same machine (with multiple GPUs) with Windows is:
 
 `mpiexec -n <#workers> python AlexNet_ImageNet_Distributed.py`

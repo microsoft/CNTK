@@ -1,0 +1,226 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-1650 v4 @ 3.60GHz
+    Hardware threads: 12
+    Total Memory: 16691576 kB
+-------------------------------------------------------------------
+Test CNTKLibraryCSTrainingExamples
+======== Train model using GPU build ========
+======== running CifarResNet.TrainAndEvaluate using GPU ========
+Minibatch: 0 CrossEntropyLoss = 2.333495, EvaluationCriterion = 0.421875
+Minibatch: 20 CrossEntropyLoss = 2.464462, EvaluationCriterion = 0.453125
+Minibatch: 40 CrossEntropyLoss = 2.807168, EvaluationCriterion = 0.5
+Minibatch: 60 CrossEntropyLoss = 2.355406, EvaluationCriterion = 0.421875
+Minibatch: 80 CrossEntropyLoss = 2.385771, EvaluationCriterion = 0.40625
+Minibatch: 100 CrossEntropyLoss = 2.276371, EvaluationCriterion = 0.390625
+Minibatch: 120 CrossEntropyLoss = 2.426975, EvaluationCriterion = 0.46875
+Minibatch: 140 CrossEntropyLoss = 2.315636, EvaluationCriterion = 0.3125
+Minibatch: 160 CrossEntropyLoss = 2.303918, EvaluationCriterion = 0.390625
+Minibatch: 180 CrossEntropyLoss = 2.359009, EvaluationCriterion = 0.328125
+Minibatch: 200 CrossEntropyLoss = 2.376983, EvaluationCriterion = 0.390625
+Minibatch: 220 CrossEntropyLoss = 2.281856, EvaluationCriterion = 0.328125
+Minibatch: 240 CrossEntropyLoss = 2.15635, EvaluationCriterion = 0.296875
+Minibatch: 260 CrossEntropyLoss = 2.166675, EvaluationCriterion = 0.25
+Minibatch: 280 CrossEntropyLoss = 2.06148, EvaluationCriterion = 0.234375
+Minibatch: 300 CrossEntropyLoss = 2.164481, EvaluationCriterion = 0.328125
+Minibatch: 320 CrossEntropyLoss = 2.030533, EvaluationCriterion = 0.171875
+Minibatch: 340 CrossEntropyLoss = 2.057975, EvaluationCriterion = 0.171875
+Minibatch: 360 CrossEntropyLoss = 2.054785, EvaluationCriterion = 0.1875
+Minibatch: 380 CrossEntropyLoss = 1.922267, EvaluationCriterion = 0.1875
+Minibatch: 400 CrossEntropyLoss = 2.05998, EvaluationCriterion = 0.203125
+Minibatch: 420 CrossEntropyLoss = 1.827882, EvaluationCriterion = 0.1875
+Minibatch: 440 CrossEntropyLoss = 1.952479, EvaluationCriterion = 0.1875
+Minibatch: 460 CrossEntropyLoss = 1.967869, EvaluationCriterion = 0.1875
+Minibatch: 480 CrossEntropyLoss = 1.905865, EvaluationCriterion = 0.203125
+Minibatch: 500 CrossEntropyLoss = 1.82837, EvaluationCriterion = 0.140625
+Minibatch: 520 CrossEntropyLoss = 1.963352, EvaluationCriterion = 0.171875
+Minibatch: 540 CrossEntropyLoss = 1.757965, EvaluationCriterion = 0.09375
+Minibatch: 560 CrossEntropyLoss = 1.79649, EvaluationCriterion = 0.125
+Minibatch: 580 CrossEntropyLoss = 1.926134, EvaluationCriterion = 0.140625
+Minibatch: 600 CrossEntropyLoss = 1.823262, EvaluationCriterion = 0.171875
+Minibatch: 620 CrossEntropyLoss = 1.890901, EvaluationCriterion = 0.109375
+Minibatch: 640 CrossEntropyLoss = 1.610857, EvaluationCriterion = 0.125
+Minibatch: 660 CrossEntropyLoss = 1.750837, EvaluationCriterion = 0.109375
+Minibatch: 680 CrossEntropyLoss = 1.855928, EvaluationCriterion = 0.15625
+Minibatch: 700 CrossEntropyLoss = 1.775493, EvaluationCriterion = 0.15625
+Minibatch: 720 CrossEntropyLoss = 1.796175, EvaluationCriterion = 0.09375
+Minibatch: 740 CrossEntropyLoss = 1.837116, EvaluationCriterion = 0.21875
+Minibatch: 760 CrossEntropyLoss = 1.639684, EvaluationCriterion = 0.09375
+Minibatch: 780 CrossEntropyLoss = 1.725345, EvaluationCriterion = 0.15625
+Minibatch: 800 CrossEntropyLoss = 1.854697, EvaluationCriterion = 0.15625
+Minibatch: 820 CrossEntropyLoss = 1.881888, EvaluationCriterion = 0.140625
+Minibatch: 840 CrossEntropyLoss = 1.817703, EvaluationCriterion = 0.1875
+Minibatch: 860 CrossEntropyLoss = 1.729814, EvaluationCriterion = 0.15625
+Minibatch: 880 CrossEntropyLoss = 1.758284, EvaluationCriterion = 0.1875
+Minibatch: 900 CrossEntropyLoss = 1.442502, EvaluationCriterion = 0.109375
+Minibatch: 920 CrossEntropyLoss = 1.714656, EvaluationCriterion = 0.09375
+Minibatch: 940 CrossEntropyLoss = 1.654067, EvaluationCriterion = 0.109375
+Minibatch: 960 CrossEntropyLoss = 1.830062, EvaluationCriterion = 0.15625
+Minibatch: 980 CrossEntropyLoss = 1.601088, EvaluationCriterion = 0.09375
+Minibatch: 1000 CrossEntropyLoss = 1.544845, EvaluationCriterion = 0.09375
+Minibatch: 1020 CrossEntropyLoss = 1.605525, EvaluationCriterion = 0.15625
+Minibatch: 1040 CrossEntropyLoss = 1.583692, EvaluationCriterion = 0.125
+Minibatch: 1060 CrossEntropyLoss = 1.653613, EvaluationCriterion = 0.125
+Minibatch: 1080 CrossEntropyLoss = 1.665253, EvaluationCriterion = 0.09375
+Minibatch: 1100 CrossEntropyLoss = 1.694074, EvaluationCriterion = 0.09375
+Minibatch: 1120 CrossEntropyLoss = 1.746353, EvaluationCriterion = 0.09375
+Minibatch: 1140 CrossEntropyLoss = 1.60593, EvaluationCriterion = 0.0625
+Minibatch: 1160 CrossEntropyLoss = 1.640195, EvaluationCriterion = 0.140625
+Minibatch: 1180 CrossEntropyLoss = 1.561996, EvaluationCriterion = 0.125
+Minibatch: 1200 CrossEntropyLoss = 1.676121, EvaluationCriterion = 0.15625
+Minibatch: 1220 CrossEntropyLoss = 1.583523, EvaluationCriterion = 0.078125
+Minibatch: 1240 CrossEntropyLoss = 1.57977, EvaluationCriterion = 0.078125
+Minibatch: 1260 CrossEntropyLoss = 1.352952, EvaluationCriterion = 0.046875
+Minibatch: 1280 CrossEntropyLoss = 1.642044, EvaluationCriterion = 0.140625
+Minibatch: 1300 CrossEntropyLoss = 1.637193, EvaluationCriterion = 0.125
+Minibatch: 1320 CrossEntropyLoss = 1.616712, EvaluationCriterion = 0.03125
+Minibatch: 1340 CrossEntropyLoss = 1.577613, EvaluationCriterion = 0.046875
+Minibatch: 1360 CrossEntropyLoss = 1.531423, EvaluationCriterion = 0.0625
+Minibatch: 1380 CrossEntropyLoss = 1.659725, EvaluationCriterion = 0.125
+Minibatch: 1400 CrossEntropyLoss = 1.716063, EvaluationCriterion = 0.125
+Minibatch: 1420 CrossEntropyLoss = 1.140117, EvaluationCriterion = 0.046875
+Minibatch: 1440 CrossEntropyLoss = 1.789172, EvaluationCriterion = 0.140625
+Minibatch: 1460 CrossEntropyLoss = 2.180288, EvaluationCriterion = 0.21875
+Minibatch: 1480 CrossEntropyLoss = 1.43923, EvaluationCriterion = 0.046875
+Minibatch: 1500 CrossEntropyLoss = 1.508373, EvaluationCriterion = 0.03125
+Minibatch: 1520 CrossEntropyLoss = 1.525245, EvaluationCriterion = 0.078125
+Minibatch: 1540 CrossEntropyLoss = 1.583065, EvaluationCriterion = 0.09375
+Minibatch: 1560 CrossEntropyLoss = 1.430822, EvaluationCriterion = 0.078125
+Minibatch: 1580 CrossEntropyLoss = 1.572433, EvaluationCriterion = 0.078125
+Minibatch: 1600 CrossEntropyLoss = 1.462126, EvaluationCriterion = 0.078125
+Minibatch: 1620 CrossEntropyLoss = 1.543767, EvaluationCriterion = 0.125
+Minibatch: 1640 CrossEntropyLoss = 1.489448, EvaluationCriterion = 0.0625
+Minibatch: 1660 CrossEntropyLoss = 1.52602, EvaluationCriterion = 0.140625
+Minibatch: 1680 CrossEntropyLoss = 1.580739, EvaluationCriterion = 0.109375
+Minibatch: 1700 CrossEntropyLoss = 1.512835, EvaluationCriterion = 0.125
+Minibatch: 1720 CrossEntropyLoss = 1.21987, EvaluationCriterion = 0.078125
+Minibatch: 1740 CrossEntropyLoss = 1.54007, EvaluationCriterion = 0.078125
+Minibatch: 1760 CrossEntropyLoss = 1.211461, EvaluationCriterion = 0.015625
+Minibatch: 1780 CrossEntropyLoss = 1.469038, EvaluationCriterion = 0.078125
+Minibatch: 1800 CrossEntropyLoss = 1.47556, EvaluationCriterion = 0.109375
+Minibatch: 1820 CrossEntropyLoss = 1.682598, EvaluationCriterion = 0.09375
+Minibatch: 1840 CrossEntropyLoss = 1.441237, EvaluationCriterion = 0.0625
+Minibatch: 1860 CrossEntropyLoss = 1.421524, EvaluationCriterion = 0.09375
+Minibatch: 1880 CrossEntropyLoss = 1.301462, EvaluationCriterion = 0.0625
+Minibatch: 1900 CrossEntropyLoss = 1.425353, EvaluationCriterion = 0.015625
+Minibatch: 1920 CrossEntropyLoss = 1.449759, EvaluationCriterion = 0.078125
+Minibatch: 1940 CrossEntropyLoss = 1.535363, EvaluationCriterion = 0.09375
+Minibatch: 1960 CrossEntropyLoss = 1.400969, EvaluationCriterion = 0.09375
+Minibatch: 1980 CrossEntropyLoss = 1.239291, EvaluationCriterion = 0.03125
+Minibatch: 2000 CrossEntropyLoss = 1.45871, EvaluationCriterion = 0.03125
+Minibatch: 2020 CrossEntropyLoss = 1.486623, EvaluationCriterion = 0.0625
+Minibatch: 2040 CrossEntropyLoss = 1.204163, EvaluationCriterion = 0.046875
+Minibatch: 2060 CrossEntropyLoss = 1.690926, EvaluationCriterion = 0.109375
+Minibatch: 2080 CrossEntropyLoss = 1.328946, EvaluationCriterion = 0.03125
+Minibatch: 2100 CrossEntropyLoss = 1.246482, EvaluationCriterion = 0.046875
+Minibatch: 2120 CrossEntropyLoss = 1.529872, EvaluationCriterion = 0.015625
+Minibatch: 2140 CrossEntropyLoss = 1.317243, EvaluationCriterion = 0.078125
+Minibatch: 2160 CrossEntropyLoss = 1.142787, EvaluationCriterion = 0.015625
+Minibatch: 2180 CrossEntropyLoss = 1.294775, EvaluationCriterion = 0.0625
+Minibatch: 2200 CrossEntropyLoss = 1.449941, EvaluationCriterion = 0.109375
+Minibatch: 2220 CrossEntropyLoss = 1.264285, EvaluationCriterion = 0.03125
+Minibatch: 2240 CrossEntropyLoss = 1.369312, EvaluationCriterion = 0.046875
+Minibatch: 2260 CrossEntropyLoss = 1.466467, EvaluationCriterion = 0.046875
+Minibatch: 2280 CrossEntropyLoss = 1.396536, EvaluationCriterion = 0.09375
+Minibatch: 2300 CrossEntropyLoss = 1.482825, EvaluationCriterion = 0.046875
+Minibatch: 2320 CrossEntropyLoss = 1.471087, EvaluationCriterion = 0.109375
+Minibatch: 2340 CrossEntropyLoss = 1.275162, EvaluationCriterion = 0.0625
+Minibatch: 2360 CrossEntropyLoss = 1.663199, EvaluationCriterion = 0.109375
+Minibatch: 2380 CrossEntropyLoss = 1.329671, EvaluationCriterion = 0.0625
+Minibatch: 2400 CrossEntropyLoss = 1.478907, EvaluationCriterion = 0.078125
+Minibatch: 2420 CrossEntropyLoss = 1.539858, EvaluationCriterion = 0.078125
+Minibatch: 2440 CrossEntropyLoss = 1.342712, EvaluationCriterion = 0.078125
+Minibatch: 2460 CrossEntropyLoss = 1.431222, EvaluationCriterion = 0.078125
+Minibatch: 2480 CrossEntropyLoss = 1.26415, EvaluationCriterion = 0.078125
+Minibatch: 2500 CrossEntropyLoss = 1.217869, EvaluationCriterion = 0.03125
+Minibatch: 2520 CrossEntropyLoss = 1.204249, EvaluationCriterion = 0.0625
+Minibatch: 2540 CrossEntropyLoss = 1.251839, EvaluationCriterion = 0.015625
+Minibatch: 2560 CrossEntropyLoss = 1.391348, EvaluationCriterion = 0.0625
+Minibatch: 2580 CrossEntropyLoss = 1.408173, EvaluationCriterion = 0.0625
+Minibatch: 2600 CrossEntropyLoss = 1.312891, EvaluationCriterion = 0.03125
+Minibatch: 2620 CrossEntropyLoss = 1.148816, EvaluationCriterion = 0.09375
+Minibatch: 2640 CrossEntropyLoss = 1.139464, EvaluationCriterion = 0.0625
+Minibatch: 2660 CrossEntropyLoss = 1.587179, EvaluationCriterion = 0.078125
+Minibatch: 2680 CrossEntropyLoss = 1.12348, EvaluationCriterion = 0.015625
+Minibatch: 2700 CrossEntropyLoss = 1.244038, EvaluationCriterion = 0.03125
+Minibatch: 2720 CrossEntropyLoss = 1.462077, EvaluationCriterion = 0.09375
+Minibatch: 2740 CrossEntropyLoss = 1.244141, EvaluationCriterion = 0.046875
+Minibatch: 2760 CrossEntropyLoss = 1.287201, EvaluationCriterion = 0.046875
+Minibatch: 2780 CrossEntropyLoss = 1.387046, EvaluationCriterion = 0.109375
+Minibatch: 2800 CrossEntropyLoss = 1.545406, EvaluationCriterion = 0.046875
+Minibatch: 2820 CrossEntropyLoss = 1.122855, EvaluationCriterion = 0.0625
+Minibatch: 2840 CrossEntropyLoss = 1.141649, EvaluationCriterion = 0.0625
+Minibatch: 2860 CrossEntropyLoss = 1.122379, EvaluationCriterion = 0.046875
+Minibatch: 2880 CrossEntropyLoss = 1.234108, EvaluationCriterion = 0.046875
+Minibatch: 2900 CrossEntropyLoss = 1.376284, EvaluationCriterion = 0.0625
+Minibatch: 2920 CrossEntropyLoss = 1.482529, EvaluationCriterion = 0.078125
+Minibatch: 2940 CrossEntropyLoss = 1.206665, EvaluationCriterion = 0.015625
+Minibatch: 2960 CrossEntropyLoss = 1.33894, EvaluationCriterion = 0.0625
+Minibatch: 2980 CrossEntropyLoss = 1.172812, EvaluationCriterion = 0.03125
+Minibatch: 3000 CrossEntropyLoss = 1.054718, EvaluationCriterion = 0.046875
+Minibatch: 3020 CrossEntropyLoss = 1.316513, EvaluationCriterion = 0.078125
+Minibatch: 3040 CrossEntropyLoss = 1.208571, EvaluationCriterion = 0.03125
+Minibatch: 3060 CrossEntropyLoss = 1.353949, EvaluationCriterion = 0.046875
+Minibatch: 3080 CrossEntropyLoss = 1.359389, EvaluationCriterion = 0.078125
+Minibatch: 3100 CrossEntropyLoss = 1.4141, EvaluationCriterion = 0.03125
+Minibatch: 3120 CrossEntropyLoss = 1.484648, EvaluationCriterion = 0.0625
+Minibatch: 3140 CrossEntropyLoss = 1.195581, EvaluationCriterion = 0.015625
+Minibatch: 3160 CrossEntropyLoss = 1.255503, EvaluationCriterion = 0.03125
+Minibatch: 3180 CrossEntropyLoss = 1.511614, EvaluationCriterion = 0.0625
+Minibatch: 3200 CrossEntropyLoss = 1.216494, EvaluationCriterion = 0.078125
+Minibatch: 3220 CrossEntropyLoss = 1.270319, EvaluationCriterion = 0.03125
+Minibatch: 3240 CrossEntropyLoss = 1.164637, EvaluationCriterion = 0.03125
+Minibatch: 3260 CrossEntropyLoss = 1.004019, EvaluationCriterion = 0.03125
+Minibatch: 3280 CrossEntropyLoss = 1.100412, EvaluationCriterion = 0.03125
+Minibatch: 3300 CrossEntropyLoss = 1.290565, EvaluationCriterion = 0.03125
+Minibatch: 3320 CrossEntropyLoss = 1.478629, EvaluationCriterion = 0.078125
+Minibatch: 3340 CrossEntropyLoss = 1.137183, EvaluationCriterion = 0.046875
+Minibatch: 3360 CrossEntropyLoss = 1.434527, EvaluationCriterion = 0.046875
+Minibatch: 3380 CrossEntropyLoss = 1.26199, EvaluationCriterion = 0.03125
+Minibatch: 3400 CrossEntropyLoss = 1.132683, EvaluationCriterion = 0.015625
+Minibatch: 3420 CrossEntropyLoss = 1.47915, EvaluationCriterion = 0.078125
+Minibatch: 3440 CrossEntropyLoss = 1.277168, EvaluationCriterion = 0.0625
+Minibatch: 3460 CrossEntropyLoss = 1.167146, EvaluationCriterion = 0.0625
+Minibatch: 3480 CrossEntropyLoss = 1.200064, EvaluationCriterion = 0.046875
+Minibatch: 3500 CrossEntropyLoss = 1.232586, EvaluationCriterion = 0.09375
+Minibatch: 3520 CrossEntropyLoss = 0.8987522, EvaluationCriterion = 0
+Minibatch: 3540 CrossEntropyLoss = 1.311291, EvaluationCriterion = 0.03125
+Minibatch: 3560 CrossEntropyLoss = 1.520043, EvaluationCriterion = 0.125
+Minibatch: 3580 CrossEntropyLoss = 1.312983, EvaluationCriterion = 0.0625
+Minibatch: 3600 CrossEntropyLoss = 1.330515, EvaluationCriterion = 0.03125
+Minibatch: 3620 CrossEntropyLoss = 1.022658, EvaluationCriterion = 0.046875
+Minibatch: 3640 CrossEntropyLoss = 1.180851, EvaluationCriterion = 0.0625
+Minibatch: 3660 CrossEntropyLoss = 1.053585, EvaluationCriterion = 0.046875
+Minibatch: 3680 CrossEntropyLoss = 1.171253, EvaluationCriterion = 0.046875
+Minibatch: 3700 CrossEntropyLoss = 1.381408, EvaluationCriterion = 0.09375
+Minibatch: 3720 CrossEntropyLoss = 1.370672, EvaluationCriterion = 0.046875
+Minibatch: 3740 CrossEntropyLoss = 1.199799, EvaluationCriterion = 0.046875
+Minibatch: 3760 CrossEntropyLoss = 1.035354, EvaluationCriterion = 0.015625
+Minibatch: 3780 CrossEntropyLoss = 1.121823, EvaluationCriterion = 0.03125
+Minibatch: 3800 CrossEntropyLoss = 1.405032, EvaluationCriterion = 0.0625
+Minibatch: 3820 CrossEntropyLoss = 1.071151, EvaluationCriterion = 0.03125
+Minibatch: 3840 CrossEntropyLoss = 1.554252, EvaluationCriterion = 0.09375
+Minibatch: 3860 CrossEntropyLoss = 1.473704, EvaluationCriterion = 0.109375
+Minibatch: 3880 CrossEntropyLoss = 0.9835132, EvaluationCriterion = 0.015625
+Minibatch: 3900 CrossEntropyLoss = 0.9593511, EvaluationCriterion = 0.015625
+Validating Model: Total Samples = 50, Misclassify Count = 20
+Validating Model: Total Samples = 100, Misclassify Count = 42
+Validating Model: Total Samples = 150, Misclassify Count = 59
+Validating Model: Total Samples = 200, Misclassify Count = 87
+Validating Model: Total Samples = 250, Misclassify Count = 108
+Validating Model: Total Samples = 300, Misclassify Count = 126
+Validating Model: Total Samples = 350, Misclassify Count = 147
+Validating Model: Total Samples = 400, Misclassify Count = 167
+Validating Model: Total Samples = 450, Misclassify Count = 192
+Validating Model: Total Samples = 500, Misclassify Count = 214
+Validating Model: Total Samples = 550, Misclassify Count = 239
+Validating Model: Total Samples = 600, Misclassify Count = 260
+Validating Model: Total Samples = 650, Misclassify Count = 280
+Validating Model: Total Samples = 700, Misclassify Count = 304
+Validating Model: Total Samples = 750, Misclassify Count = 327
+Validating Model: Total Samples = 800, Misclassify Count = 350
+Validating Model: Total Samples = 850, Misclassify Count = 372
+Validating Model: Total Samples = 900, Misclassify Count = 395
+Validating Model: Total Samples = 950, Misclassify Count = 415
+Validating Model: Total Samples = 1000, Misclassify Count = 442
+Model Validation Error = 0.4209524
+======== Train completes. ========

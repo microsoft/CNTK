@@ -7,10 +7,9 @@
 
 #include <vector>
 #include "DataDeserializer.h"
+#include "Reader.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
-
-class ConfigParameters;
+namespace CNTK {
 
 // Defines a set of sequences for a set of streams.
 // Return by the sequence enumerator.
@@ -41,7 +40,7 @@ class SequenceEnumerator
 {
 public:
     // Describes streams the sequence enumerator produces.
-    virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const = 0;
+    virtual std::vector<StreamInformation> GetStreamDescriptions() const = 0;
 
     // Sets current epoch configuration.
     // TODO: should be deprecated.
@@ -51,17 +50,17 @@ public:
     virtual void SetConfiguration(const ReaderConfiguration& config) = 0;
 
     // Set current sample position
-    virtual void SetCurrentSamplePosition(size_t currentSamplePosition) = 0;
+    virtual void SetState(const std::map<std::wstring, size_t>& state) = 0;
+
+    // Returns the current state of the enumerator.
+    virtual std::map<std::wstring, size_t> GetState() = 0;
 
     // Gets next sequences up to a maximum count of local and global samples.
     virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) = 0;
-
-    // Returns current position in the global timeline. The returned value is in samples.
-    virtual size_t GetCurrentSamplePosition() = 0;
 
     virtual ~SequenceEnumerator()
     {
     }
 };
 
-}}}
+}

@@ -5,6 +5,8 @@
 # ==============================================================================
 
 from __future__ import print_function
+from __future__ import division
+
 import os
 import math
 import argparse
@@ -13,10 +15,14 @@ import cntk
 import _cntk_py
 
 import cntk.io.transforms as xforms
-from cntk.logging import *
-from cntk.ops import *
+from cntk.debugging import start_profiler, stop_profiler, enable_profiler
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.debugging import *
+from cntk.learners import learning_parameter_schedule, momentum_schedule, momentum_sgd
+from cntk.logging import ProgressPrinter, log_number_of_parameters
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
+from cntk.ops import input_variable
+from cntk.train import training_session, CheckpointConfig, TestConfig, Trainer
 
 from BN_Inception import bn_inception_cifar_model
 
@@ -28,10 +34,10 @@ model_path = os.path.join(abs_path, "Models")
 log_dir = None
 
 # model dimensions
-image_height = 32
-image_width  = 32
-num_channels = 3  # RGB
-num_classes  = 10
+IMAGE_HEIGHT = 32
+IMAGE_WIDTH = 32
+NUM_CHANNELS = 3  # RGB
+NUM_CLASSES = 10
 
 # Create a minibatch source.
 def create_image_mb_source(map_file, mean_file, is_training, total_number_of_samples):
@@ -47,31 +53,32 @@ def create_image_mb_source(map_file, mean_file, is_training, total_number_of_sam
             ]
     else:
         transforms += [
-            xforms.crop(crop_type='center', crop_size=image_width)
+            xforms.crop(crop_type='center', crop_size=IMAGE_WIDTH)
         ]
 
     transforms += [
-        xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
+        xforms.scale(width=IMAGE_WIDTH, height=IMAGE_HEIGHT, channels=NUM_CHANNELS, interpolations='linear'),
         xforms.mean(mean_file)
     ]
 
     # deserializer
     return MinibatchSource(
         ImageDeserializer(map_file, StreamDefs(
-            features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-            labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
-        randomize = is_training, 
+            features=StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+            labels=StreamDef(field='label', shape=NUM_CLASSES))),   # and second as 'label'
+        randomize=is_training,
+        max_samples=total_number_of_samples,
         multithreaded_deserializer = True)
 
 # Create the network.
 def create_bn_inception():
 
     # Input variables denoting the features and label data
-    feature_var = input((num_channels, image_height, image_width))
-    label_var = input((num_classes))
+    feature_var = input_variable((NUM_CHANNELS, IMAGE_HEIGHT, IMAGE_WIDTH))
+    label_var = input_variable((NUM_CLASSES))
 
     bn_time_const = 4096
-    z = bn_inception_cifar_model(feature_var, num_classes, bn_time_const)
+    z = bn_inception_cifar_model(feature_var, NUM_CLASSES, bn_time_const)
 
     # loss and metric
     ce  = cross_entropy_with_softmax(z, label_var)
@@ -91,7 +98,7 @@ def create_bn_inception():
     }
 
 # Create trainer
-def create_trainer(network, epoch_size, num_epochs, minibatch_size):
+def create_trainer(network, epoch_size, num_epochs, minibatch_size, progress_writers):
     
     # CNTK weights new gradient by (1-momentum) for unit gain, 
     # thus we divide Caffe's learning rate by (1-momentum)
@@ -107,19 +114,19 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size):
         lr_per_mb.extend([learning_rate] * learn_rate_adjust_interval)
         learning_rate *= learn_rate_decrease_factor
 
-    lr_schedule       = cntk.learning_rate_schedule(lr_per_mb, unit=cntk.learner.UnitType.minibatch, epoch_size=epoch_size)
-    mm_schedule       = cntk.learner.momentum_schedule(0.9)
+    lr_schedule       = learning_parameter_schedule(lr_per_mb, epoch_size=epoch_size)
+    mm_schedule       = momentum_schedule(0.9)
     l2_reg_weight     = 0.0001 # CNTK L2 regularization is per sample, thus same as Caffe
     
     # Create learner
-    learner = cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, 
-                                            l2_regularization_weight=l2_reg_weight)
+    learner = momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule,
+                           l2_regularization_weight=l2_reg_weight)
 
     # Create trainer
-    return cntk.Trainer(network['output'], (network['ce'], network['pe']), learner)
+    return Trainer(network['output'], (network['ce'], network['pe']), learner, progress_writers)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, max_epochs, minibatch_size, epoch_size, restore, profiler_dir):
+def train_and_test(network, trainer, train_source, test_source, max_epochs, minibatch_size, epoch_size, restore, profiler_dir, progress_printer, testing_parameters):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -147,15 +154,14 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
     # Finished
     # Evaluation parameters
-    test_epoch_size = 10000
-    test_minibatch_size = 128
+    test_epoch_size, test_minibatch_size = testing_parameters
 
     # process minibatches and evaluate the model
     metric_numer    = 0
     metric_denom    = 0
     sample_count    = 0
     minibatch_index = 0
-    
+
     while sample_count < test_epoch_size:
         current_minibatch = min(test_minibatch_size, test_epoch_size - sample_count)
         # Fetch next test min batch.
@@ -175,21 +181,22 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
 # Train and evaluate the network.
 def bn_inception_train_and_eval(train_data, test_data, mean_data, minibatch_size=128, epoch_size=50000, max_epochs=200, 
-                         restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, profiler_dir=None):
+                         restore=True, log_to_file=None, num_mbs_per_log=100, gen_heartbeat=False, profiler_dir=None, testing_parameters=(10000,128)):
     _cntk_py.set_computation_network_trace_level(0)
 
-    progress_printer = ProgressPrinter(
+    progress_writers = [ProgressPrinter(
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
         gen_heartbeat=gen_heartbeat,
-        num_epochs=max_epochs)
+        num_epochs=max_epochs)]
 
     network = create_bn_inception()
-    trainer = create_trainer(network, epoch_size, max_epochs, minibatch_size)
+    trainer = create_trainer(network, epoch_size, max_epochs, minibatch_size, progress_writers)
     train_source = create_image_mb_source(train_data, mean_data, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, False, total_number_of_samples=FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, progress_printer, max_epochs, minibatch_size, epoch_size, restore, profiler_dir)
+    return train_and_test(network, trainer, train_source, test_source, max_epochs, minibatch_size,
+                          epoch_size, restore, profiler_dir, progress_writers[0], testing_parameters)
  
  
 if __name__=='__main__':
@@ -211,33 +218,29 @@ if __name__=='__main__':
 
     if args['outputdir'] is not None:
         model_path = args['outputdir'] + "/models"
-    if args['datadir'] is not None:
-        data_path = args['datadir']
     if args['logdir'] is not None:
         log_dir = args['logdir']    
     if args['profilerdir'] is not None:
         profiler_dir = args['profilerdir']
     if args['device'] is not None:
-        cntk.device.set_default_device(cntk.device.gpu(args['device']))
+        cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
+
+    data_path = args['datadir']
+    
+    if not os.path.isdir(data_path):
+        raise RuntimeError("Directory %s does not exist" % data_path)
 
     mean_data = os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data = os.path.join(data_path, 'train_map.txt')
     test_data = os.path.join(data_path, 'test_map.txt')
 
-    # Find the mean file
-    if not os.path.exists(mean_data):
-        mean_data = os.path.join(data_path, 'CIFAR-10_mean.xml')
-    if not os.path.exists(mean_data):
-        mean_data = os.path.join(data_path, 'CIFAR-10_mean.xml')
-    if not os.path.exists(mean_data):
-        raise RuntimeError("Can not find the mean file. Please put the 'CIFAR-10_mean.xml' file in Data Directory or Config Directory.")
-
+    os.chdir(data_path)
     bn_inception_train_and_eval(train_data, test_data, mean_data,
-                             minibatch_size=args['minibatch_size'], 
-                             epoch_size=args['epoch_size'],
-                             max_epochs=args['num_epochs'],
-                             restore=not args['restart'],
-                             log_to_file=args['logdir'],
-                             num_mbs_per_log=100,
-                             gen_heartbeat=True,
-                             profiler_dir=args['profilerdir'])
+                                minibatch_size=args['minibatch_size'],
+                                epoch_size=args['epoch_size'],
+                                max_epochs=args['num_epochs'],
+                                restore=not args['restart'],
+                                log_to_file=args['logdir'],
+                                num_mbs_per_log=100,
+                                gen_heartbeat=True,
+                                profiler_dir=args['profilerdir'])

@@ -1,0 +1,18 @@
+isPythonTest: No
+
+dataDir: .
+
+tags:
+  # CPU-only for now.
+  - bvt-i (build_sku == 'cpu')
+  - nightly-i (build_sku == 'cpu')
+  - weekly-i (build_sku == 'cpu')
+
+testCases:
+  Each test passes:
+    patterns:
+      - Passed
+
+  Test run successful:
+    patterns:
+      - "Test Run Successful."

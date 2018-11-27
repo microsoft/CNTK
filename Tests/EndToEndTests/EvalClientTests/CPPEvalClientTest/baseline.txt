@@ -57,7 +57,6 @@ Changed current directory to C:\repos\cntk\Examples\Image\MNIST\Data
 09/23/2016 12:00:59: 		Last modified date: Fri Sep 23 11:28:25 2016
 09/23/2016 12:00:59: 		Build type: Release
 09/23/2016 12:00:59: 		Build target: CPU-only
-09/23/2016 12:00:59: 		With 1bit-SGD: yes
 09/23/2016 12:00:59: 		Math lib: mkl
 09/23/2016 12:00:59: 		Build Branch: zhouwang/add-e2etests
 09/23/2016 12:00:59: 		Build SHA1: 0c25b63da32c14869deb9232a6257daef6f9d285 (modified)

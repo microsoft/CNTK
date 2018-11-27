@@ -35,8 +35,11 @@ Readme text
 *.psm1 text
 *.ps text
 *.i text
+*.cmake text
+*.patch text
 
 *.sh text eol=lf
+*.awk text eol=lf
 build-and-test text eol=lf
 configure text eol=lf
 generate_build_info text eol=lf
@@ -64,6 +67,7 @@ Makefile text
 *.asax text
 
 *.h text
+*.hpp text
 *.cpp text
 *.cc text
 *.cu text
@@ -71,7 +75,7 @@ Makefile text
 *.proto text
 
 *.cs text
-
+*.java text
 *.yml text
 *.yml.bak text
 
@@ -87,6 +91,7 @@ Makefile text
 *.list text
 
 *.log text
+*.prototxt text
 
 Dockerfile* text
 .dockerignore text
@@ -122,10 +127,14 @@ TIMIT*.statelist text
 TIMIT*.tfsa text
 TIMIT*.transitions text
 
+Examples/Evaluation/UWPImageRecognition/ImageRecognizerLib/utils.inl text
 Examples/LanguageUnderstanding/ATIS/Data/ATIS.* text
 Examples/LanguageUnderstanding/ATIS/BrainScript/*.wl text
-
 Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
+Examples/Text/LightRNN/test/word-0.location text
+
+*.xaml text
+*.appxmanifest text
 
 # Binary extensions:
 *.ark binary
@@ -140,7 +149,19 @@ Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
 *.vsdm binary
 *.zip binary
 *.dnn binary
-Examples/Image/Detection/FastRCNN/fastRCNN/*/*.pyd binary
-Examples/Image/Detection/FastRCNN/fastRCNN/*/*.so binary
+Examples/Image/Detection/FastRCNN/BrainScript/fastRCNN/*/*.pyd binary
+Examples/Image/Detection/FastRCNN/BrainScript/fastRCNN/*/*.so binary
+Examples/Image/Detection/utils/cython_modules/*.pyd binary
+Examples/Image/Detection/utils/cython_modules/*.so binary
 Tests/UnitTests/V2LibraryTests/data/*.bin binary
 Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/*.bin binary
+Tests/EndToEndTests/ParallelTraining/AsynchronousSGD/ASGD_Resnet.model.1 binary
+Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve.a binary
+Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve.lib binary
+Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.a binary
+Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_convolve_nofeatures.lib binary
+Tests/EndToEndTests/Speech/Data/mlf2.bin binary
+external/gsl text
+Source/CNTKv2LibraryDll/proto/onnx/onnx_repo text
+#certificates
+*.pfx binary

@@ -4,10 +4,6 @@
 
 OriginalTestDir=../CuDNN
 
-(cd $TEST_DIR/$OriginalTestDir && md5sum baseline*) | (cd $TEST_DIR && md5sum --status -c -)
-if [ $? != 0 ]; then
-  echo Error: Baselines must match original test. Copy from $OriginalTestDir.
-  exit 1
-fi
+checkOriginalBaseline $TEST_DIR $OriginalTestDir
 
 cntkrun 01_OneHidden.cntk batchNormalizationEngine=cntk

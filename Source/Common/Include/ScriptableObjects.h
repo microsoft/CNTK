@@ -398,7 +398,7 @@ public:
         // const C * wanted = (C *) nullptr; const auto * got = get(); wanted; got;   // allows to see C in the debugger
         const auto p = dynamic_cast<C *>(get());
         if (p == nullptr) // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
-            Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>());
+            Fail(L"config member has wrong type (" + Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(typeid(*get()).name()) + L"), expected a " + TypeId<C>());
         return *p;
     }
     template <class C>
@@ -407,7 +407,7 @@ public:
         EnsureIsResolved();
         const auto p = dynamic_pointer_cast<C>(*this);
         if (!p) // TODO: can we make this look the same as TypeExpected in BrainScriptEvaluator.cpp? We'd need the type name
-            Fail(L"config member has wrong type (" + msra::strfun::utf16(typeid(*get()).name()) + L"), expected a " + TypeId<C>());
+            Fail(L"config member has wrong type (" + Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(typeid(*get()).name()) + L"), expected a " + TypeId<C>());
         return p;
     }
 
@@ -427,7 +427,7 @@ public:
 
     const ConfigValuePtr &ResolveValue() const // (this is const but mutates the value if it resolves)
     {
-        // call this when a a member might be as-of-yet unresolved, to evaluate it on-demand
+        // call this when a member might be as-of-yet unresolved, to evaluate it on-demand
         // get() is a pointer to a Thunk in that case, that is, a function object that yields the value
         const auto thunkp = GetThunk(); // is it a Thunk?
         if (thunkp)                     // value is a Thunk: we need to resolve
@@ -485,7 +485,7 @@ struct IConfigRecord // any class that exposes config can derive from this
     }
     std::string operator()(const std::wstring &id, const char *defaultValue) const
     {
-        return msra::strfun::utf8(operator()(id, (std::wstring) msra::strfun::utf16(defaultValue)));
+        return Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(operator()(id, Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(defaultValue))));
     } // special case for narrow strings
     std::wstring operator()(const std::wstring &id, const wchar_t *defaultValue) const
     {

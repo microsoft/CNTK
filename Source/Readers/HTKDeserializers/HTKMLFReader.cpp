@@ -6,8 +6,8 @@
 #include "stdafx.h"
 #include "HTKMLFReader.h"
 #include "Config.h"
-#include "HTKDataDeserializer.h"
-#include "MLFDataDeserializer.h"
+#include "HTKDeserializer.h"
+#include "MLFDeserializer.h"
 #include "ConfigHelper.h"
 #include "Bundler.h"
 #include "StringUtil.h"
@@ -17,9 +17,10 @@
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+using namespace Microsoft::MSR::CNTK;
 
-std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& readerConfig)
+std::vector<DataDeserializerPtr> CreateDeserializers(const ConfigParameters& readerConfig, CorpusDescriptorPtr corpus)
 {
     std::vector<std::wstring> featureNames;
     std::vector<std::wstring> labelNames;
@@ -32,30 +33,27 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
         InvalidArgument("Network needs at least 1 feature specified.");
     }
 
-    bool useNumericSequenceKeys = readerConfig(L"useNumericSequenceKeys", false);
-    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
-
-    std::vector<IDataDeserializerPtr> featureDeserializers;
-    std::vector<IDataDeserializerPtr> labelDeserializers;
+    std::vector<DataDeserializerPtr> featureDeserializers;
+    std::vector<DataDeserializerPtr> labelDeserializers;
 
     bool primary = true;
     // The first deserializer is the driving one, it defines chunking.
     // TODO: should we make this explicit configuration parameter
     for (const auto& featureName : featureNames)
     {
-        auto deserializer = std::make_shared<HTKDataDeserializer>(corpus, readerConfig(featureName), featureName, primary);
+        auto deserializer = std::make_shared<HTKDeserializer>(corpus, readerConfig(featureName), featureName, primary);
         primary = false;
         featureDeserializers.push_back(deserializer);
     }
 
     for (const auto& labelName : labelNames)
     {
-        auto deserializer = std::make_shared<MLFDataDeserializer>(corpus, readerConfig(labelName), labelName);
+        auto deserializer = std::make_shared<MLFDeserializer>(corpus, readerConfig(labelName), labelName);
 
         labelDeserializers.push_back(deserializer);
     }
 
-    std::vector<IDataDeserializerPtr> deserializers;
+    std::vector<DataDeserializerPtr> deserializers;
     deserializers.insert(deserializers.end(), featureDeserializers.begin(), featureDeserializers.end());
     deserializers.insert(deserializers.end(), labelDeserializers.begin(), labelDeserializers.end());
 
@@ -97,23 +95,31 @@ HTKMLFReader::HTKMLFReader(const ConfigParameters& readerConfig)
     m_numParallelSequencesForAllEpochs =
         readerConfig(L"nbruttsineachrecurrentiter", ConfigParameters::Array(intargvector(vector<int> { 1 })));
 
+    bool useNumericSequenceKeys = readerConfig(L"useNumericSequenceKeys", false);
+    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
+
     ConfigHelper config(readerConfig);
     size_t window = config.GetRandomizationWindow();
-    auto deserializers = CreateDeserializers(readerConfig);
+    auto deserializers = CreateDeserializers(readerConfig, corpus);
     if (deserializers.empty())
     {
         LogicError("Please specify at least a single input stream.");
     }
 
     bool cleanse = readerConfig(L"checkData", true);
-    auto bundler = std::make_shared<Bundler>(readerConfig, deserializers[0], deserializers, cleanse);
+    auto bundler = std::make_shared<Bundler>(readerConfig, corpus, deserializers[0], deserializers, cleanse);
     int verbosity = readerConfig(L"verbosity", 0);
     std::wstring readMethod = config.GetRandomizer();
 
     // TODO: this should be bool. Change when config per deserializer is allowed.
     if (AreEqualIgnoreCase(readMethod, std::wstring(L"blockRandomize")))
     {
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, window, bundler, true  /* should Prefetch */);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, window, bundler, 
+            /*shouldPrefetch =*/ true,
+            /*multithreadedGetNextSequences =*/ false, // default
+            /*maxNumberOfInvalidSequences =*/ 0, // default
+            /*sampleBasedRandomizationWindow =*/ true, // default
+            GetRandomSeed(readerConfig));
     }
     else if (AreEqualIgnoreCase(readMethod, std::wstring(L"none")))
     {
@@ -127,16 +133,15 @@ HTKMLFReader::HTKMLFReader(const ConfigParameters& readerConfig)
     // Create output stream descriptions (all dense)
     for (auto d : deserializers)
     {
-        for (auto i : d->GetStreamDescriptions())
+        for (auto stream : d->StreamInfos())
         {
-            StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*i);
             if (m_packingMode == PackingMode::truncated)
             {
                 // TODO: Currently BPTT does not support sparse format as output.
                 // We always require dense.
-                stream->m_storageType = StorageType::dense;
+                stream.m_storageFormat = StorageFormat::Dense;
             }
-            stream->m_id = m_streams.size();
+            stream.m_id = m_streams.size();
             m_streams.push_back(stream);
         }
     }
@@ -165,7 +170,7 @@ HTKMLFReader::HTKMLFReader(const ConfigParameters& readerConfig)
     }
 }
 
-std::vector<StreamDescriptionPtr> HTKMLFReader::GetStreamDescriptions()
+std::vector<StreamInformation> HTKMLFReader::GetStreamDescriptions()
 {
     assert(!m_streams.empty());
     return m_streams;
@@ -196,4 +201,4 @@ void HTKMLFReader::StartEpoch(const EpochConfiguration& config, const std::map<s
     ReaderBase::StartEpoch(cfg, requiredStreams);
 }
 
-}}}
+}

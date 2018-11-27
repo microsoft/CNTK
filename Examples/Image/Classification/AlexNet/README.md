@@ -26,9 +26,4 @@ We give examples for both Python and BrainScript. Compared to the original AlexN
 
 ## Pre-trained Models
 
-### Caffe-Converted
-
-|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/AlexNet_ImageNet.model
-|:---------|:---
-|Source Caffe model website | https://github.com/BVLC/caffe/tree/master/models/bvlc_alexnet
-|Single crop top 5 error | 19.8%
+Pre-trained AlexNet models can be found [here](../../../../PretrainedModels/Image.md#alexnet). 

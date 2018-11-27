@@ -9,4 +9,4 @@ downloaded by cd to this directory, Examples/Image/DataSets/Grocery and running 
 
 After running the script, you will see three folders with images (positive, negative and test) and several text files that contain mappings and annotations. 
 
-The grocery dataset is for example used in the Fast R-CNN object detection example, see [here](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN).
+The grocery dataset is for example used in the Fast R-CNN object detection example, see [here](https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN).

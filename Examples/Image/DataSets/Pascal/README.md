@@ -10,7 +10,7 @@ downloaded by running the following Python command:
 
 `python install_pascalvoc.py`
 
-This will download roughly 3.15GB of data and unpack it into the folder structure that is assumed in the [object recognition tutorial](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN#run-pascal-voc)
+This will download roughly 3.15GB of data and unpack it into the folder structure that is assumed in the [object recognition tutorial](https://docs.microsoft.com/en-us/cognitive-toolkit/Object-Detection-using-Fast-R-CNN#run-pascal-voc)
 
 ## Alternative: download data manually
 

@@ -1,0 +1,40 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz
+    Hardware threads: 6
+    Total Memory: 58719796 kB
+-------------------------------------------------------------------
++ set -e -o pipefail
++ [[ -z d:\Data\CNTKTestData ]]
++ [[ ! -d d:\Data\CNTKTestData ]]
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -au 'd:\Data\CNTKTestData/Bindings/Java'
++ TestDataDir=/cygdrive/d/Data/CNTKTestData/Bindings/Java
+++ cygpath -au 'd:\Data\CNTKTestData/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn'
++ ModelFile=/cygdrive/d/Data/CNTKTestData/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn
++ LocalDataDir=/cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data
++ '[' '!' -d /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data ']'
++ mkdir /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data
++ cp /cygdrive/d/Data/CNTKTestData/Bindings/Java/00000.png /cygdrive/d/Data/CNTKTestData/Bindings/Java/00001.png /cygdrive/d/Data/CNTKTestData/Bindings/Java/00002.png /cygdrive/d/Data/CNTKTestData/Bindings/Java/00003.png /cygdrive/d/Data/CNTKTestData/Bindings/Java/00004.png /cygdrive/d/Data/CNTKTestData/Bindings/Java/00005.png /cygdrive/d/Data/CNTKTestData/Bindings/Java/z.model /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data
++ cp /cygdrive/d/Data/CNTKTestData/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -aw /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/debug_CpuOnly
++ DllDir='C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\debug_CpuOnly'
+++ cygpath -aw /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/EvalClientTests/JavaEvalTest/data
++ WindowsDataDir='C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\EvalClientTests\JavaEvalTest\data'
++ PATH='/cygdrive/c/local/msmpi-dlls-7.0.12437.6:/cygdrive/c/local/msmpi-7.0.12437.6/Bin:/usr/bin:/cygdrive/c/local/systools:/cygdrive/c/ProgramData/Oracle/Java/javapath:/cygdrive/c/Windows/system32:/cygdrive/c/Windows:/cygdrive/c/Windows/System32/Wbem:/cygdrive/c/Windows/System32/WindowsPowerShell/v1.0:/cygdrive/c/Program Files/Docker:/cygdrive/c/Program Files/Git/cmd:%USERPROFILE%/.dnx/bin:/cygdrive/c/Program Files/Microsoft DNX/Dnvm:/cygdrive/c/Program Files/Microsoft SQL Server/130/Tools/Binn:/cygdrive/c/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit:/cygdrive/c/Users/jclient/AppData/Local/Microsoft/WindowsApps:/cygdrive/c/Program Files (x86)/Microsoft SDKs/Azure/AzCopy:/cygdrive/c/local/graphviz-2.38/release/bin:/cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/debug_CpuOnly'
++ cd /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/debug_CpuOnly
++ java.exe '-Djava.library.path=C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\debug_CpuOnly' -classpath 'C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\debug_CpuOnly\java;C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\debug_CpuOnly\java\cntk.jar' Main 'C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\EvalClientTests\JavaEvalTest\data'
+Working Directory = C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\debug_CpuOnly
+EvaluateSingleImage
+-4.189664 
+-3.1175408 
+-1.7266451 
+17.445856 
+-3.7881997 
+7.442085 
+-3.8764064 
+-6.151011 
+3.721258 
+-5.6161685 
+Evaluation Complete
+Selected CPU as the process wide default device.

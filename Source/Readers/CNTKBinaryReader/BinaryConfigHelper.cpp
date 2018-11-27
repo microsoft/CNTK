@@ -21,7 +21,9 @@ using std::map;
 
 #undef max // max is defined in minwindef.h
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+    using namespace Microsoft::MSR::CNTK;
 
     BinaryConfigHelper::BinaryConfigHelper(const ConfigParameters& config)
     {
@@ -34,13 +36,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             for (const pair<string, ConfigParameters>& section : input)
             {
                 ConfigParameters sectionConfig = section.second;
-                wstring name = msra::strfun::utf16(section.first);
+                wstring name = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(section.first);
 
                 // If there is an option for "alias", we will rename the stream with the "alias"
                 // name to the target name.
                 if (sectionConfig.ExistsCurrent(L"alias"))
                 {
-                    wstring alias = msra::strfun::utf16(sectionConfig(L"alias"));
+                    wstring alias = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(sectionConfig(L"alias"));
                     m_streams[alias] = name;
                 }
                 else
@@ -51,18 +53,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         string precision = config.Find("precision", "float");
         if (AreEqualIgnoreCase(precision, "double"))
         {
-            m_elementType = ElementType::tdouble;
+            m_elementType = DataType::Double;
         }
         else if (AreEqualIgnoreCase(precision, "float"))
         {
-            m_elementType = ElementType::tfloat;
+            m_elementType = DataType::Float;
         }
         else
         {
             RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
         }
 
-        m_filepath = msra::strfun::utf16(config(L"file"));
+        m_filepath = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(config(L"file"));
         m_keepDataInMemory = config(L"keepDataInMemory", false);
 
         m_randomizationWindow = GetRandomizationWindowFromConfig(config);
@@ -79,4 +81,4 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_traceLevel = config(L"traceLevel", 1);
     }
 
-}}}
+}

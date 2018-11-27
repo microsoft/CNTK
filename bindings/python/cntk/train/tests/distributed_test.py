@@ -4,16 +4,12 @@
 # for full license information.
 # ==============================================================================
 
-import math
-import numpy as np
-import pytest
 from cntk import Function, sequence
-from ..trainer import *
-from cntk.learners import *
 from .. import distributed
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from cntk import parameter, input, times, plus, reduce_sum
+from cntk import parameter, plus, reduce_sum
+import cntk as C
 
 def create_data_parallel_distributed_learner(learner, quantized, distributed_after):
     return distributed.data_parallel_distributed_learner(
@@ -37,16 +33,16 @@ def create_block_momentum_distributed_learner_with_time_constant(learner, distri
 
 def run_distributed_training(tmpdir, create_func):
 
-    in1 = sequence.input(shape=1)
-    labels = sequence.input(shape=1)
+    in1 = sequence.input_variable(shape=1)
+    labels = sequence.input_variable(shape=1)
     p = parameter(shape=2, init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
 
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
-    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    dist_learner = create_func(momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True))
+    momentum_time_constant = C.momentum_as_time_constant_schedule(1100)
+    lr_per_sample = C.learning_parameter_schedule(0.007, 1)
+    dist_learner = create_func(C.momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True))
 
     communicator = dist_learner.communicator()
     workers = communicator.workers()
@@ -58,7 +54,7 @@ def run_distributed_training(tmpdir, create_func):
 
     assert found_rank
 
-    trainer = Trainer(z, (ce, errs), [ dist_learner ])
+    trainer = C.Trainer(z, (ce, errs), [ dist_learner ])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
@@ -108,7 +104,7 @@ def test_distributed_mb_source(tmpdir):
 9	|S0 61:1 |# A	|S1 32:1 |# ~AH
 10	|S0 61:1 |# A	|S1 32:1 |# ~AH
 '''
-    from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, FULL_DATA_SWEEP
+    from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 
     ctf_file = str(tmpdir/'2seqtest.txt')
     with open(ctf_file, 'w') as f:
@@ -120,14 +116,14 @@ def test_distributed_mb_source(tmpdir):
         features  = StreamDef(field='S0', shape=input_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
         )), 
-        randomize=False, epoch_size=36) # A bit more than a sweep
+        randomize=False, max_samples=36) # A bit more than a sweep
     mb1 = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
         features  = StreamDef(field='S0', shape=input_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
         )), 
-        randomize=False, epoch_size=36) # A bit more than a sweep
-    input = sequence.input(shape=(input_dim,))
-    label = sequence.input(shape=(input_dim,))
+        randomize=False, max_samples=36) # A bit more than a sweep
+    input = sequence.input_variable(shape=(input_dim,))
+    label = sequence.input_variable(shape=(input_dim,))
     input_map = {
         input : mb0.streams.features,
         label : mb0.streams.labels
@@ -170,14 +166,12 @@ def test_distributed_mb_source(tmpdir):
     mb3 = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
         features  = StreamDef(field='S0', shape=input_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
-        )), 
-        randomize=True, epoch_size=FULL_DATA_SWEEP)
+        )), max_sweeps=1)
 
     mb4 = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
         features  = StreamDef(field='S0', shape=input_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
-        )), 
-        randomize=True, epoch_size=FULL_DATA_SWEEP)
+        )), max_sweeps=1)
 
     data = mb3.next_minibatch(minibatch_size_in_samples=10, input_map=input_map, num_data_partitions=2, partition_index=0)
     assert(data[input].num_samples == 5)
@@ -197,20 +191,51 @@ def test_distributed_mb_source(tmpdir):
     data = mb4.next_minibatch(minibatch_size_in_samples=10, input_map=input_map, num_data_partitions=2, partition_index=1)
     assert(len(data) == 0) # Due to chunking we do not expect any data for rank 1
 
+def test_distributed_mb_source_again(tmpdir):
+    import random
+    from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 
-def test_distributed(tmpdir, is_1bit_sgd):
-    quantized=(True if is_1bit_sgd==1 else False)
+    ctf_data = '''0  |S0 1   |S1 1
+0   |S0 2   |S1 2
+0   |S0 3
+1   |S0 4
+1   |S0 5   |S1 3
+1   |S0 6   |S1 4
+'''
+    ctf_file = str(tmpdir/'2seqtest.txt')
+    with open(ctf_file, 'w') as f:
+        f.write(ctf_data)
 
+    ctf = CTFDeserializer(ctf_file, StreamDefs(
+        features  = StreamDef(field='S0', shape=1),
+        labels    = StreamDef(field='S1', shape=1)
+        ))
+    
+    random.seed(1234)
+    mb_sources = []
+    for randomize in [True, False]:
+        mb_sources.append(MinibatchSource(ctf, randomize=randomize))
+        mb_sources.append(MinibatchSource(ctf, randomize=randomize,  max_sweeps=random.randint(1, 10)))
+        mb_sources.append(MinibatchSource(ctf, randomize=randomize, max_samples=random.randint(1, 30)))
+
+    for i in range(20):
+        for source in mb_sources:
+            data = source.next_minibatch(minibatch_size_in_samples=5, 
+                num_data_partitions=2, partition_index=i % 2)
+            features = source.streams['features']
+            assert(len(data) == 0 or data[features].num_samples == 3)
+
+
+def test_distributed(tmpdir):
     simple_aggregation=lambda learner: create_data_parallel_distributed_learner(learner, False, 0)
     run_distributed_training(tmpdir, create_func=simple_aggregation)
 
-    if is_1bit_sgd == 1:
-        quantized_aggregation=lambda learner: create_data_parallel_distributed_learner(learner, True, 100)
-        run_distributed_training(tmpdir, create_func=quantized_aggregation)
+    quantized_aggregation=lambda learner: create_data_parallel_distributed_learner(learner, True, 100)
+    run_distributed_training(tmpdir, create_func=quantized_aggregation)
 
-        block_momentum=lambda learner: create_block_momentum_distributed_learner(learner, 100)
-        run_distributed_training(tmpdir, create_func=block_momentum)
+    block_momentum=lambda learner: create_block_momentum_distributed_learner(learner, 100)
+    run_distributed_training(tmpdir, create_func=block_momentum)
 
-        block_momentum_with_time=lambda learner: create_block_momentum_distributed_learner_with_time_constant(learner, 100)
-        run_distributed_training(tmpdir, create_func=block_momentum_with_time)
+    block_momentum_with_time=lambda learner: create_block_momentum_distributed_learner_with_time_constant(learner, 100)
+    run_distributed_training(tmpdir, create_func=block_momentum_with_time)
     distributed.Communicator.finalize()

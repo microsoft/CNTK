@@ -235,7 +235,7 @@ template<class ElemType, int direction>
         //     - matrix column indices into the initial state
         //        - if initial-state sequence has >1 steps, then index from back
         //        - if 1 step, then broadcast that to all
-        //     - or -1 for non-boundary entires
+        //     - or -1 for non-boundary entries
 
         // our own output MB layout
         let& outMBLayout = GetMBLayout();
@@ -244,6 +244,7 @@ template<class ElemType, int direction>
         let& inMBLayout = InputRef(1).GetMBLayout();
         // loop over all sequences (of the initial state)
         let& inSequences = inMBLayout->GetAllSequences();
+        m_packedIndexHaveDups = false;
         for (size_t i = 0; i < inSequences.size(); i++)
         {
             let& inSeq = inSequences[i];
@@ -253,6 +254,7 @@ template<class ElemType, int direction>
             let& outSeq = outMBLayout->FindMatchingSequence(inSequences, i);
             let Tout = outSeq.GetNumTimeSteps(); // length of this output sequence
             let Tin  =  inSeq.GetNumTimeSteps(); // length of initial state's sequence. 1 means broadcasting in case m_timeStep > 1.
+            m_packedIndexHaveDups = m_packedIndexHaveDups || (Tin == 1 && m_timeStep > 1);
             // unless we are broadcasting, we will need m_timeStep values from the initial-state sequence
             if (Tin != 1 && Tin < m_timeStep)
                 InvalidArgument("%ls %ls operation requires second argument (initialState) sequences to be either of length 1 or at least as long as the timestep (%d).", NodeName().c_str(), OperationName().c_str(), (int)m_timeStep);
@@ -294,7 +296,7 @@ template<class ElemType, int direction>
 /*private*/ TensorView<ElemType> DelayedValueNodeBase<ElemType, direction>::GetMaskTensor(size_t rank, const FrameRange& fr) const
 {
     // tensorShape of m_inputInvalidMatrix is [1 x S x T]
-    auto tensorShape = TensorShape(1);
+    auto tensorShape = TensorShape();
     tensorShape.AppendInPlace(rank++, GetMBLayout()->GetNumParallelSequences());
     tensorShape.AppendInPlace(rank++, GetMBLayout()->GetNumTimeSteps());
 
@@ -332,6 +334,7 @@ template<class ElemType, int direction>
     size_t rank = DetermineElementwiseTensorRank();
     TensorView<ElemType> src;
     int t_delayed = (int)(fr.t() + direction * m_timeStep); // this might end up outside the current window
+    int latency = direction * m_pMBLayout->RightSplice();
     if (t_delayed < 0) // handle special case of truncated BPTT
     {
         if (!m_inputAnySeqValid[fr.t()])
@@ -341,7 +344,16 @@ template<class ElemType, int direction>
             // truncated BPTT carry-over
             size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0; // (note: should never happen in full-sequence mode)
             auto tensorShape = GetTensorShape(rank);
-            auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + T_delayedActivation), m_delayedActivationMBLayout);
+
+            // Make sure we properly have the sequence length from the previous minibatch.
+            if (T_delayedActivation > 0 && HasMBLayout())
+            {
+                auto dims = tensorShape.GetDims();
+                dims[dims.size() - 1] = T_delayedActivation;
+                tensorShape = TensorShape(dims);
+            }
+
+            auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + latency + T_delayedActivation), m_delayedActivationMBLayout);
             tensorShape.NarrowTo(slice);
             src = TensorView<ElemType>(m_delayedValue, tensorShape);
         }
@@ -353,7 +365,11 @@ template<class ElemType, int direction>
         if (!m_inputAnySeqValid[fr.t()])
             ; // none valid: leave it uninitialized
         else  // truncated BPTT goes left-to-right only
-            LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
+        {
+            // LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
+            // init using inititalMatrix zero init for latency control blstm
+            src = TensorView<ElemType>(m_zeroMatrix, TensorShape(1));
+        }
     }
     else // regular case
         src = InputRef(0).ValueTensorFor(rank, frDelayed);
@@ -434,7 +450,7 @@ template<class ElemType, int direction>
             let&  idx  =                 DataFor(*m_packedIndexMatrix, fr); // column indices that guide the copy operation
             let&  src  =             GradientFor                      (fr); // gradient as received from top = source
             auto& init = InputRef(1).Gradient();                            // target is the initial state. Not sliced, but we only copy parts.
-            init.DoScatterColumnsOf(/*beta=*/1, idx, src, /*alpha=*/1);
+            init.DoScatterColumnsOf(/*beta=*/1, idx, src, /*alpha=*/1, /*idxHaveDups*/ m_packedIndexHaveDups);
         }
     }
     else if (inputIndex == 0)
@@ -578,9 +594,11 @@ template<class ElemType, int direction>
 // instantiate the classes that derive from the above
 template class PastValueNode<float>;
 template class PastValueNode<double>;
+template class PastValueNode<half>;
 
 template class FutureValueNode<float>;
 template class FutureValueNode<double>;
+template class FutureValueNode<half>;
 
 // -----------------------------------------------------------------------
 // DelayedValueNodeState -- helper class for exporting/importing state from/to DelayedValueNodes.

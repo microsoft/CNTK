@@ -49,7 +49,6 @@ Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/T
 01/23/2017 11:56:32: 		Last modified date: Sun Jan 22 16:12:11 2017
 01/23/2017 11:56:32: 		Build type: release
 01/23/2017 11:56:32: 		Build target: CPU-only
-01/23/2017 11:56:32: 		With 1bit-SGD: no
 01/23/2017 11:56:32: 		With ASGD: yes
 01/23/2017 11:56:32: 		Math lib: mkl
 01/23/2017 11:56:32: 		Build Branch: HEAD

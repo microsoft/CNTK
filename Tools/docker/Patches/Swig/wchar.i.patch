@@ -1,0 +1,90 @@
+--- wchar.i	2017-09-05 18:29:41.000000000 +0000
++++ wchar.modified.i	2018-05-31 20:36:25.778548300 +0000
+@@ -18,10 +18,36 @@
+ %}
+ 
+ %pragma(csharp) imclasscode=%{
+-  protected class SWIGWStringHelper {
++  /* On Linux, C# strings are encoded as UTF8 rather than UTF16 as they are on Windows. In C++, wchar_t is 4 bytes on Linux and 2 bytes on Windows. On Windows, conversion between
++     a C++ wchar_t based-string and a C# string work because they are both the same size (UTF16 and sizeof(wchar_t) == 2). On Linux, we must convert the C++ string from wchar_t (4 bytes)
++     and UTF8 (multi-byte).
++
++     Ideally, swig would peform this conversion for us. There is an issue opened on April 18, 2018 addressing this limitation: http://github.com/swig/swig/issues/1233. 
++  */ 
++  public class SWIGWStringHelperImpl {
++    public static string CreateUTF8String([global::System.Runtime.InteropServices.MarshalAs(global::System.Runtime.InteropServices.UnmanagedType.LPWStr)]global::System.IntPtr cString) {
++      int length = 0;
++
++      while(global::System.Runtime.InteropServices.Marshal.ReadInt32(cString, length) != 0)
++        length += 4;
++
++      if(length == 0)
++        return string.Empty;
++
++      byte[] buffer = new byte[length];
++
++      global::System.Runtime.InteropServices.Marshal.Copy(cString, buffer, 0, buffer.Length);
++
++      byte[] utf8buffer = global::System.Text.Encoding.Convert(global::System.Text.Encoding.UTF32, global::System.Text.Encoding.UTF8, buffer);
++
++      return global::System.Text.Encoding.Default.GetString(utf8buffer);
++    }
++  };
++
++  protected class SWIGWStringHelper : SWIGWStringHelperImpl {
+ 
+     public delegate string SWIGWStringDelegate(global::System.IntPtr message);
+-    static SWIGWStringDelegate wstringDelegate = new SWIGWStringDelegate(CreateWString);
++    static SWIGWStringDelegate wstringDelegate = new SWIGWStringDelegate(CreateUTF8String);
+ 
+     [global::System.Runtime.InteropServices.DllImport("$dllimport", EntryPoint="SWIGRegisterWStringCallback_$module")]
+     public static extern void SWIGRegisterWStringCallback_$module(SWIGWStringDelegate wstringDelegate);
+@@ -45,6 +71,25 @@
+ SWIGEXPORT void SWIGSTDCALL SWIGRegisterWStringCallback_$module(SWIG_CSharpWStringHelperCallback callback) {
+   SWIG_csharp_wstring_callback = callback;
+ }
++
++#include <string>
++
++// Converts from a UTF8 string into a std::wstring.
++std::wstring UTF8ToWString(const char *str)
++{
++  if(str == nullptr)
++    return std::wstring();
++
++  // Note that this code ONLY WORKS for ASCII CHARS. Need to calculate the mblength for true UTF8.
++  size_t const length(strlen(str) + 1);
++  std::wstring buffer;
++
++  buffer.resize(length);
++
++  size_t const result(std::mbstowcs(const_cast<wchar_t *>(buffer.data()), str, buffer.size() * sizeof(std::wstring::value_type)));
++  return result != static_cast<std::size_t>(-1) ? buffer : L"";
++}
++
+ %}
+ #endif // SWIG_CSHARP_WSTRING_HELPER_
+ #endif // SWIG_CSHARP_NO_WSTRING_HELPER
+@@ -82,8 +127,8 @@
+ 
+ %typemap(csin) wchar_t * "$csinput"
+ %typemap(csout, excode=SWIGEXCODE) wchar_t * {
+-    string ret = global::System.Runtime.InteropServices.Marshal.PtrToStringUni($imcall);$excode
+-    return ret;
++    global::System.IntPtr cString = $imcall;$excode
++    return $imclassname.SWIGWStringHelperImpl.CreateUTF8String(cString);
+   }
+ %typemap(csvarin, excode=SWIGEXCODE2) wchar_t * %{
+     set {
+@@ -95,7 +140,10 @@
+       return ret;
+     } %}
+ 
+-%typemap(in) wchar_t * %{ $1 = ($1_ltype)$input; %}
++%typemap(in) wchar_t * 
++%{ std::wstring $1_buffer(UTF16ToWString($input));
++   $1 = const_cast<wchar_t *>($1_buffer.c_str());  %}
++
+ %typemap(out) wchar_t * %{ $result = (wchar_t *)$1; %}
+ 
+ %typemap(typecheck) wchar_t * = char *;

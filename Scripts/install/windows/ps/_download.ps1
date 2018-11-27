@@ -39,7 +39,7 @@ function Download(
     $source = $table["Source"]
     $destination = $table["Destination"]
 
-    $downloadOk = Copy-FileWebRequest -SourceFile $source -OutFile $destination -maxtry 2
+    $downloadOk = Get-FileFromLocation -SourceFile $source -OutFile $destination -Maxtry 2
 
     if (-not $downloadOk) {
         throw "Download $SourceFile Failed!"

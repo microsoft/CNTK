@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSTrainingCPUOnlyExamples", "CSTrainingCPUOnlyExamples\CSTrainingCPUOnlyExamples.csproj", "{E34BCBF0-9E9B-4225-8C1A-7592C95BAC0B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSTrainingGPUExamples", "CSTrainingGPUExamples\CSTrainingGPUExamples.csproj", "{507F0B82-4568-4AFE-9754-5E46A2EE41CD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E34BCBF0-9E9B-4225-8C1A-7592C95BAC0B}.Debug|x64.ActiveCfg = Debug|x64
+		{E34BCBF0-9E9B-4225-8C1A-7592C95BAC0B}.Debug|x64.Build.0 = Debug|x64
+		{E34BCBF0-9E9B-4225-8C1A-7592C95BAC0B}.Release|x64.ActiveCfg = Release|x64
+		{E34BCBF0-9E9B-4225-8C1A-7592C95BAC0B}.Release|x64.Build.0 = Release|x64
+		{507F0B82-4568-4AFE-9754-5E46A2EE41CD}.Debug|x64.ActiveCfg = Debug|x64
+		{507F0B82-4568-4AFE-9754-5E46A2EE41CD}.Debug|x64.Build.0 = Debug|x64
+		{507F0B82-4568-4AFE-9754-5E46A2EE41CD}.Release|x64.ActiveCfg = Release|x64
+		{507F0B82-4568-4AFE-9754-5E46A2EE41CD}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,3 +1,6 @@
+
+defMbSize=false
+
 space_separated = [
     precision = "double"
     reader = [
@@ -7,6 +10,7 @@ space_separated = [
 
         input = [
              features1 = [
+                definesMbSize=$defMBSize$
                 alias = "F1"
                 dim = 15 
                 format = "dense"
@@ -35,6 +39,7 @@ missing_trailing_newline = [
 
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 dim = 1 
                 format = "dense"
             ]
@@ -50,6 +55,7 @@ blank_lines = [
         skipSequenceIds = true
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 dim = 1 
                 format = "dense"
             ]
@@ -66,6 +72,7 @@ blank_lines_ignored = [
         randomize = false
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 dim = 1 
                 format = "dense"
             ]
@@ -80,6 +87,7 @@ duplicate_inputs = [
         file = "duplicate_inputs.txt"
         input = [
              features1 = [
+                definesMbSize=$defMBSize$
                 alias = "F1"
                 dim = 1
                 format = "dense"
@@ -103,6 +111,7 @@ empty_samples = [
         randomize=false
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 10
                 format = "dense"
@@ -126,6 +135,7 @@ ref_data_with_escape_sequences = [
         randomize=false
         input = [
              features = [
+                definesMbSize=$defMBSize$
                 alias = "F0"
                 dim = 100
                 format = "sparse"

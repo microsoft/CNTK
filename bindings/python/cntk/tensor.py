@@ -3,7 +3,13 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+"""
+Tensor operations.
+"""
 
+
+import warnings
+from scipy import sparse
 
 class TensorOpsMixin(object):
     '''
@@ -90,11 +96,28 @@ class TensorOpsMixin(object):
         '''
         from . import ops
 
+        if hasattr(self, 'outputs') and len(self.outputs) > 1:
+            try:
+                return self.outputs[arg]
+            except Exception as e:
+                msg = 'Slice for multioutput functions is not supported, ' \
+                      'the fallback to select to output requires ' \
+                      'that only one index is provided. arg: {}, self: {}'.format(
+                    arg, self)
+                raise KeyError(msg)
+
         # int or slice: normalize into a tuple of int or tuple of slice
-        if not isinstance(arg, tuple): 
+        if not isinstance(arg, tuple):
             arg = (arg,)
         r = self
         axis0 = 0
+
+        from cntk.default_options import get_global_option, get_default_override, default_override_or
+
+        keras_mode_flag = get_global_option('align_axis', 0)
+        if keras_mode_flag == 1:
+            if (getattr(self, 'dynamic_axes') is not None and len(self.dynamic_axes) > 0):
+                axis0 = -get_default_override(None, axis_offset=default_override_or(len(self.dynamic_axes)))
 
         for axis, s in enumerate(arg):
             if s is Ellipsis: # ellipsis means index relative to end after this point
@@ -104,15 +127,10 @@ class TensorOpsMixin(object):
                 s = slice(s, s+1)
 
             if isinstance(s, slice):
-                if s.step is not None and s.step != 1:
-                    # TODO: This is not hard to implement in SliceNode.
-                    raise ValueError("slicing with a step other than 1 is "
-                                     "currently not supported")
-                # implement as a CNTK slice() operation
                 begin = s.start or 0
                 end   = s.stop  or 0
                 if begin != 0 or end != 0:
-                    r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
+                    r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end, strides=s.step)
             elif isinstance(s, (tuple, list)):
                 # Select multiple elements from the same dimension. This is
                 # different from NumPy's advanced indexing, since we just go
@@ -156,39 +174,92 @@ def _add_tensor_ops(klass):
 
 
 class ArrayMixin(object):
-    @property
-    def __array_interface__(self):
+    def asarray(self):
+        '''
+        Converts the instance's data to a NumPy array.
+        '''
         import cntk
-        if isinstance(self, (cntk.cntk_py.Constant, cntk.cntk_py.Parameter, cntk.cntk_py.MinibatchData)):
-            np_array = self.value
-        elif isinstance(self, cntk.core.Value):
-            np_array = self.data.to_ndarray()
-        elif isinstance(self, cntk.cntk_py.Value):
-            np_array = self.data().to_ndarray()
+        result = None
+        if isinstance(self, cntk.Constant):
+            ndav = super(cntk.Constant, self).value()
+            is_sparse = ndav.is_sparse()
+        elif isinstance(self, cntk.Parameter):
+            ndav = super(cntk.Parameter, self).value()
+            is_sparse = ndav.is_sparse()
+        elif isinstance(self, (cntk.cntk_py.Constant, cntk.cntk_py.Parameter)):
+            ndav = self.value()
+            is_sparse = ndav.is_sparse()
+
         elif isinstance(self, (cntk.cntk_py.NDArrayView, cntk.cntk_py.NDMask)):
-            np_array = self.to_ndarray()
+            ndav = self
+            if isinstance(self, cntk.NDArrayView):
+                is_sparse = ndav.is_sparse
+            elif isinstance(self, cntk.cntk_py.NDArrayView):
+                is_sparse = ndav.is_sparse()
+            else:
+                is_sparse = False
+
+        # Value and MinibatchData have a mask, which means that we need the
+        # corresponding Variable to do the proper conversion. For easy
+        # discoverability, we nevertheless add asarray() to those classes as
+        # well, but issue a warning.
+        elif isinstance(self, cntk.cntk_py.Value) or isinstance(self, cntk.cntk_py.MinibatchData):
+
+            if isinstance(self, cntk.cntk_py.MinibatchData):
+                value = self.data
+            else:
+                value = self
+
+            if isinstance(value, cntk.Value):
+                is_sparse = value.is_sparse
+                has_mask = super(cntk.Value, value).mask() is not None
+                ndav = value.data
+            else:
+                is_sparse = value.is_sparse()
+                has_mask = value.mask() is not None
+                ndav = value.data()
+
+            if has_mask:
+                warnings.warn('asarray() will ignore the mask information. '
+                              'Please use as_sequences() to do the proper '
+                              'conversion.')
+
+        if is_sparse:
+            from cntk.internal.sanitize import _sparse_to_dense_network_cache
+
+            device = ndav.device
+            if callable(device):
+                device = device()
+
+            network = _sparse_to_dense_network_cache(ndav.shape[1:], False,
+                                                     device)
+            warnings.warn('converting Value object to CSR format might be slow')
+
+            dense_data = network.eval(self, device=device)
+
+            def to_csr(dense_data):
+                if len(dense_data.shape) > 2:
+                    warnings.warn('Cannot convert a sparse NDArrayView or Value object '
+                                     'with shape %s of rank > 2 to a scipy.csr matrix.'
+                                     ' Returning dense data.' % str(dense_data.shape))
+                    return dense_data
+                return sparse.csr_matrix(dense_data)
+
+            if isinstance(dense_data, list):
+                result = [to_csr(d) for d in dense_data]
+            else:
+                result = to_csr(dense_data)
+
         else:
-            # Ideally an exception would be raised here, but getattr would swallow it
-            # so we return None
-            return None
+            result = ndav.to_ndarray()
 
-        interface_copy = np_array.__array_interface__
+        return result
 
-        # for np arrays (other than 0-d arrays) data entry in __array_interface__ dict
-        # must be replaced with data member of array
-        if len(np_array.shape):
-            interface_copy["data"] = np_array.data
-        else:
-            # save a reference to np_array so that it does not disappear
-            self.np_array = np_array
+def _add_asarray(klass):
+    member_name = 'asarray'
 
-        return interface_copy
-
-def _add_array_interface(klass):
-    array_interface_name = '__array_interface__'
-
-    if getattr(klass, array_interface_name, None):
+    if getattr(klass, member_name, None):
         raise ValueError('class "%s" has already an attribute "%s"' %
-                         (klass, array_interface_name))
+                         (klass, member_name))
 
-    setattr(klass, array_interface_name, getattr(ArrayMixin, array_interface_name))
+    setattr(klass, member_name, ArrayMixin.__dict__[member_name])

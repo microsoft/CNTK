@@ -29,11 +29,16 @@ namespace CNTK
     const std::wstring functionsKey = L"primitive_functions";
     const std::wstring sampleCountKey = L"sample_count";
     const std::wstring minibatchCountKey = L"minibatchCount"; // TODO: Python-style spelling
+    const std::wstring sweepCountKey = L"sweepCount";
     const std::wstring unitKey = L"unit";
+    const std::wstring refMBSizeKey = L"ref_mb_size";
     const std::wstring epochSizeKey = L"epoch_size";
     const std::wstring scheduleKey = L"schedule";
     const std::wstring learningRateScheduleKey = L"learnig_rate_schedule";
     const std::wstring smoothedGradientsKey = L"smoothed_gradients";
+    const std::wstring noiseInjectionSeedKey = L"noise_injection_seed";
+    const std::wstring masterParameterUpdatedKey = L"master_parameter_updated";
+    const std::wstring smoothedCountKey = L"smoothed_count";
     const std::wstring stateKey = L"state";
     const std::wstring rngSeedKey = L"rng_seed";
     const std::wstring rngOffsetKey = L"rng_offset";
@@ -41,6 +46,12 @@ namespace CNTK
     const std::wstring blockFunctionOpNameKey = L"block_function_op_name";
     const std::wstring blockFunctionCompositeArgumentsMapKeysKey = L"block_function_composite_arguments_map_keys";
     const std::wstring blockFunctionCompositeArgumentsMapValuesKey = L"block_function_composite_arguments_map_values";
+    const std::wstring internalWorkerStateKey = L"internal_worker_state";
+    const std::wstring externalWorkerStateKey = L"external_worker_state";
+    const std::wstring userDefinedStateKey = L"user_defined_state";
+    const std::wstring udfModuleNameKey = L"module";
+    const std::wstring udfFactoryMethodNameKey = L"deserialize_method";
+    const std::wstring nativeUDFKey = L"native";
 
     template <typename T> 
     inline std::string GetVersionsString(size_t currentVersion, size_t dictVersion)

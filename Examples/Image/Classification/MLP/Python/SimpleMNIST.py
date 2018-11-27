@@ -8,19 +8,19 @@ import argparse
 import numpy as np
 import sys
 import os
+import cntk as C
 from cntk.train import Trainer, minibatch_size_schedule 
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk.device import cpu, try_set_default_device
-from cntk.learners import adadelta, learning_rate_schedule, UnitType
-from cntk.ops import input, relu, element_times, constant
+from cntk.learners import adadelta, learning_parameter_schedule_per_sample
+from cntk.ops import relu, element_times, constant
+from cntk.layers import Dense, Sequential, For
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
 from cntk.train.training_session import *
 from cntk.logging import ProgressPrinter, TensorBoardProgressWriter
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "common"))
-from nn import fully_connected_classifier_net
 
 def check_path(path):
     if not os.path.exists(path):
@@ -33,7 +33,7 @@ def create_reader(path, is_training, input_dim, label_dim):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         features  = StreamDef(field='features', shape=input_dim, is_sparse=False),
         labels    = StreamDef(field='labels',   shape=label_dim, is_sparse=False)
-    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+    )), randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 
 # Creates and trains a feedforward classification model for MNIST images
@@ -45,13 +45,14 @@ def simple_mnist(tensorboard_logdir=None):
     hidden_layers_dim = 200
 
     # Input variables denoting the features and label data
-    feature = input(input_dim, np.float32)
-    label = input(num_output_classes, np.float32)
+    feature = C.input_variable(input_dim, np.float32)
+    label = C.input_variable(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
     scaled_input = element_times(constant(0.00390625), feature)
-    z = fully_connected_classifier_net(
-        scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, relu)
+
+    z = Sequential([For(range(num_hidden_layers), lambda i: Dense(hidden_layers_dim, activation=relu)),
+                    Dense(num_output_classes)])(scaled_input)
 
     ce = cross_entropy_with_softmax(z, label)
     pe = classification_error(z, label)
@@ -84,17 +85,18 @@ def simple_mnist(tensorboard_logdir=None):
         progress_writers.append(TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z))
 
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(z, (ce, pe), adadelta(z.parameters), progress_writers)
+    lr = learning_parameter_schedule_per_sample(1)
+    trainer = Trainer(z, (ce, pe), adadelta(z.parameters, lr), progress_writers)
 
     training_session(
         trainer=trainer,
         mb_source = reader_train,
         mb_size = minibatch_size,
-        var_to_stream = input_map,
+        model_inputs_to_streams = input_map,
         max_samples = num_samples_per_sweep * num_sweeps_to_train_with,
         progress_frequency=num_samples_per_sweep
     ).train()
-    
+
     # Load test data
     path = os.path.normpath(os.path.join(data_dir, "Test-28x28_cntk_text.txt"))
     check_path(path)
@@ -107,6 +109,11 @@ def simple_mnist(tensorboard_logdir=None):
     }
 
     # Test data for trained model
+    C.debugging.start_profiler()
+    C.debugging.enable_profiler()
+    C.debugging.set_node_timing(True)
+    #C.cntk_py.disable_cpueval_optimization() # uncomment this to check CPU eval perf without optimization
+
     test_minibatch_size = 1024
     num_samples = 10000
     num_minibatches_to_test = num_samples / test_minibatch_size
@@ -115,6 +122,9 @@ def simple_mnist(tensorboard_logdir=None):
         mb = reader_test.next_minibatch(test_minibatch_size, input_map=input_map)
         eval_error = trainer.test_minibatch(mb)
         test_result = test_result + eval_error
+
+    C.debugging.stop_profiler()
+    trainer.print_node_timing()
 
     # Average of evaluation errors of all test minibatches
     return test_result / num_minibatches_to_test

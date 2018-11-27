@@ -7,6 +7,8 @@
 
 #include "CNTKLibrary.h"
 #include "Constants.h"
+#include "NcclComm.h"
+#include "MPIWrapper.h"
 #include <MatrixQuantizerImpl.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -51,6 +53,9 @@ namespace CNTK
             const std::vector<NDArrayViewPtr>& values,
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
 
+        virtual void AllReduceSparseBlockColumn(
+            std::vector<NDArrayViewPtr>& sbcValues) override;
+
         virtual void Aggregate(
             const std::vector<NDArrayViewPtr>& inValues,
             std::vector<NDArrayViewPtr>& outValues,
@@ -88,6 +93,11 @@ namespace CNTK
         std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> m_aggregationBufferFloat;
         std::unique_ptr<Microsoft::MSR::CNTK::Matrix<double>> m_aggregationBufferDouble;
 
+        // NcclComm
+        std::unique_ptr<Microsoft::MSR::CNTK::NcclComm> m_nccl;
+
+        std::vector<Buffer> m_intermediateSBCIndexCPUBuffers;
+        std::vector<Buffer> m_intermediateSBCValueCPUBuffers;
     protected:
         DeviceDescriptor GetNonCPUDevice(const std::vector<NDArrayViewPtr>& values)
         {
@@ -116,16 +126,24 @@ namespace CNTK
 
         Microsoft::MSR::CNTK::MPIWrapperPtr m_mpi;
 
+        bool ShouldCopyDataToCPU(NDArrayViewPtr inputValue);
+        void CopyDataFromGPUToCPU(std::vector<NDArrayViewPtr>& inputValues);
+
         template <typename ElemType>
-        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<ElemType>> setContinousBuffer(std::vector<size_t>& packedGradientsIndex, size_t packedGradientsSizeInBytes,
+        std::unique_ptr<Microsoft::MSR::CNTK::Matrix<ElemType>> SetContinuousBuffer(std::vector<size_t>& packedGradientsIndex, size_t packedGradientsSizeInBytes,
             const std::vector<NDArrayViewPtr>& inputValues, const std::vector<NDArrayViewPtr>& outputValues,
             std::vector<NDArrayViewPtr>& valuesToAggregate, std::vector<NDArrayViewPtr>& valuesAfterAggregate);
 
         template <typename ElemType>
-        void packToContinousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, std::vector<size_t>& packedGradientsIndex,
+        void PackToContinuousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, std::vector<size_t>& packedGradientsIndex,
             const std::vector<NDArrayViewPtr>& inputValues, const std::vector<NDArrayViewPtr>& outputValues, std::vector<NDArrayViewPtr>& valuesToAggregate, std::vector<NDArrayViewPtr>& valuesAfterAggregate);
 
         template <typename ElemType>
-        void unpackFromContinousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, const std::vector<NDArrayViewPtr>& outputValues, std::vector<size_t>& packedGradientsIndex);
+        void UnpackFromContinuousBuffer(Microsoft::MSR::CNTK::Matrix<ElemType>* aggregationBuffer, const std::vector<NDArrayViewPtr>& outputValues, std::vector<size_t>& packedGradientsIndex);
+
+        template <typename ElemType>
+        void AllReduceData(ElemType* inputData, ElemType* outputData, size_t numElements, std::vector<MPI_Request>* pAllReduceRequests, bool dataOnCPU, MPI_Op op = MPI_SUM, bool forceSync = false);
+
+        void AllReduceDataHalf(half* inputData, half* outputData, size_t numElements, std::vector<MPI_Request>* pAllReduceRequests, bool dataOnCPU, MPI_Op op = MPI_SUM, bool forceSync = false);
     };
 }

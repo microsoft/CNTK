@@ -1,5 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
@@ -18,21 +19,9 @@
 #include <cuda_runtime.h>
 #include <assert.h>
 #include <float.h>
+#include "half.hpp"
+#include "fpgeneric.h"
 #pragma pop_macro("TENSOR_OPS_DECL")
-
-// REVIEW alexeyk: disable warnings properly for GCC/clang
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4100) // 'identifier': unreferenced formal parameter
-#pragma warning(disable : 4127) // conditional expression is constant
-#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
-#pragma warning(disable : 4458) // declaration of 'identifier' hides class member
-#pragma warning(disable : 4515) // 'namespace': namespace uses itself
-#endif
-#include <cub/cub.cuh>
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
 
 // We would like to use 64-bit integer to support large matrices. However, CUDA seems to support only 32-bit integer
 // For now, use int32_t to ensure that both Linux and Windows see this as 32 bit integer type.
@@ -40,10 +29,6 @@
 #ifndef CUDA_LONG
 #define CUDA_LONG int32_t
 #endif
-
-// special markers in BlockId2ColOrRow()/ColOrRow2BlockId()
-static const GPUSPARSE_INDEX_TYPE Id_NotAssigned = -1;
-static const GPUSPARSE_INDEX_TYPE Id_Pending = INT_MAX;
 
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 
@@ -61,6 +46,13 @@ static __inline__ __device__ double atomicAdd(double* address, double val)
     return __longlong_as_double(old);
 }
 #endif
+// overload atomicAdd for half
+static __inline__ __device__ half atomicAdd(half* address, half val)
+{
+    assert(false); // TODO: implement later
+    return val;
+}
+
 
 // TODO: replace this with TensorOps.h LogAdd(). It differs in using ElemType throughout, while this one seems to use 'double' versions of exp() and log().
 // The 'k' in the name is to avoid naming conflicts with various versions of logadd() that are defined throughout the codebase.
@@ -101,8 +93,11 @@ static INT CeilDiv(INT a, INT2 b) // ceil(a/b)
 
 struct GridDim
 {
-    static const CUDA_LONG maxThreadsPerBlock = 1024; // use this many threads per block
-    static const CUDA_LONG maxWarpsPerBlock = 32;     // use this many warps per block. This means 1024 threads for warpSize=32
+    enum : CUDA_LONG
+    {
+        maxThreadsPerBlock = 1024, // use this many threads per block
+        maxWarpsPerBlock = 32,     // use this many warps per block. This means 1024 threads for warpSize=32
+    };
 
     // use these for launching
     //   GridDim grid(NN);
@@ -144,12 +139,14 @@ struct GridDim
     {
         std::call_once(s_cachedDevicePropsInitFlag, [=]{
             int numDevices;
+            // must wait GPU idle, otherwise cudaGetDeviceProperties might fail
+            CUDA_CALL(cudaDeviceSynchronize());
             CUDA_CALL(cudaGetDeviceCount(&numDevices));
             s_cachedDeviceProps.resize(numDevices);
             for (int i = 0; i < numDevices; i++)
                 CUDA_CALL(cudaGetDeviceProperties(&s_cachedDeviceProps[i], i));
         });
-       
+
         return s_cachedDeviceProps;
     }
 
@@ -174,7 +171,7 @@ struct GridDim
         return blockDim.x * blockIdx.x + threadIdx.x;
     }
 
-private: 
+private:
     // TODO: drop call_once and co. and make cached devices a local static, once we're on VS2015.
     static std::vector<cudaDeviceProp> s_cachedDeviceProps;
     static std::once_flag s_cachedDevicePropsInitFlag;
@@ -209,6 +206,7 @@ __global__ void _elementWisePowerOnCuda(
     ElemType* res,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
     if (alpha == 0)
     {
@@ -220,22 +218,15 @@ __global__ void _elementWisePowerOnCuda(
     }
     else if (alpha == 2)
     {
-        res[id] = a[id] * a[id];
+        res[id] = (comp_t)a[id] * (comp_t)a[id];
     }
     else if (alpha == 3)
     {
-        res[id] = a[id] * a[id] * a[id];
+        res[id] = (comp_t)a[id] * (comp_t)a[id] * (comp_t)a[id];
     }
     else
     {
-        if (sizeof(ElemType) == sizeof(double))
-        {
-            res[id] = pow(a[id], alpha);
-        }
-        else
-        {
-            res[id] = powf(a[id], alpha);
-        }
+        res[id] = pow_((comp_t)a[id], (comp_t)alpha);
     }
 };
 
@@ -247,18 +238,19 @@ __global__ void _elementWiseSigmoidOnCuda(
     ElemType* res,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
 #if 0 // this computes the same thing but is twice as fast on CUDA
-    res[id] = Microsoft::MSR::CNTK::Sigmoid(a[id]);
+    res[id] = Microsoft::MSR::CNTK::Sigmoid((comp_t)a[id]);
 #else
     if (a[id] >= 0)
     {
-        ElemType e = exp_(-a[id]);
+        comp_t e = exp_(-(comp_t)a[id]);
         res[id] = 1 / (1 + e);
     }
     else
     {
-        ElemType e = exp_(a[id]);
+        comp_t e = exp_((comp_t)a[id]);
         res[id] = e / (1 + e);
     }
 #endif
@@ -270,6 +262,7 @@ __global__ void _assignSigmoidOf(
     ElemType* res,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
 
 // This function computes 1 / (1 + e^(-x)) which yields 1 / (1 + e^|x|) if x is negative,
@@ -277,10 +270,10 @@ __global__ void _assignSigmoidOf(
 // BUGBUG: This does not invert the calculation when the exp argument becomes large, potentially causing overflows.
 //         There is a second version of this function that does. That should be used.
 #if 0 // this has the same speed now, although not identical accuracy
-    res[id] = Microsoft::MSR::CNTK::Sigmoid(a[id]);
+    res[id] = Microsoft::MSR::CNTK::Sigmoid((comp_t)a[id]);
 #else
-    ElemType negElem = -a[id];
-    ElemType e = exp_(negElem);
+    comp_t negElem = -(comp_t)a[id];
+    comp_t e = exp_(negElem);
 
     res[id] = 1 / (e + 1);
 #endif
@@ -316,6 +309,16 @@ __global__ void _elementWiseTanhOnCuda(
     res[id] = tanh_(a[id]);
 };
 
+template <class ElemType>
+__global__ void _elementWiseAtanhOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = atanh_(a[id]);
+};
+
 //to prevent negative values caused by floating operations, we force inputs to be >=0
 //this may, however, hide problems in the caller.
 template <class ElemType>
@@ -344,8 +347,9 @@ __global__ void _elementWiseLogOnCuda(
     ElemType* res,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
-    res[id] = (a[id] < EPS_IN_LOG) ? LOG_OF_EPS_IN_LOG : log_(a[id]);
+    res[id] = ((comp_t)a[id] < EPS_IN_LOG) ? (comp_t)LOG_OF_EPS_IN_LOG : log_((comp_t)a[id]);
 };
 
 template <class ElemType>
@@ -354,8 +358,9 @@ __global__ void _elementWiseAbsOnCuda(
     ElemType* res,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
-    res[id] = fabs_(a[id]);
+    res[id] = fabs_((comp_t)a[id]);
 };
 
 template <class ElemType>
@@ -374,8 +379,79 @@ __global__ void _elementWiseNegativeSineOnCuda(
     ElemType* res,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
-    res[id] = -sin_(a[id]);
+    res[id] = -sin_((comp_t)a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseTanOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = tan_(a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseAcosOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = acos_(a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseAsinOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = asin_(a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseAtanOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = atan_(a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseCoshOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = cosh_(a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseSinhOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = sinh_(a[id]);
+};
+
+template <class ElemType>
+__global__ void _elementWiseAsinhOnCuda(
+    const ElemType* a,
+    ElemType* res,
+    const CUDA_LONG N)
+{
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    res[id] = asinh_(a[id]);
 };
 
 template <class ElemType>
@@ -400,6 +476,18 @@ __global__ void _setValue(
     if (id >= N)
         return;
     a[id] = d_v[0];
+};
+
+template <class ElemType, class ElemType2>
+__global__ void _castValue(
+    const ElemType2* a,
+    ElemType* c,
+    const CUDA_LONG N)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    c[id] = (ElemType)a[id];
 };
 
 template <class ElemType>
@@ -445,6 +533,7 @@ __global__ void _assignRowSliceValuesOf(ElemType* dest, ElemType* src, const CUD
 template <class ElemType>
 __global__ void _addToRowSliceValuesOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
@@ -453,12 +542,13 @@ __global__ void _addToRowSliceValuesOf(ElemType* dest, ElemType* src, const CUDA
     CUDA_LONG row = id - (col * srcRows);
 
     // dest[col*destRows + row + startIndex] += src[id];
-    dest[IDX2C(row + startIndex, col, destRows)] += src[id];
+    dest[IDX2C(row + startIndex, col, destRows)] = (comp_t)dest[IDX2C(row + startIndex, col, destRows)] + (comp_t)src[id];
 }
 
 template <class ElemType>
 __global__ void _addWithRowSliceValuesOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG startIndex, const CUDA_LONG destRows, const CUDA_LONG srcRows)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
@@ -466,7 +556,7 @@ __global__ void _addWithRowSliceValuesOf(ElemType* dest, ElemType* src, const CU
     CUDA_LONG col = id / destRows; // dest is the full matrix, rowslice is taken from the src
     CUDA_LONG row = id - (col * destRows);
 
-    dest[id] += src[IDX2C(row + startIndex, col, srcRows)];
+    dest[id] = (comp_t)dest[id] + (comp_t)src[IDX2C(row + startIndex, col, srcRows)];
 }
 
 template <class ElemType>
@@ -523,6 +613,7 @@ __global__ void _assignRepeatOf(ElemType* dest, ElemType* src, const CUDA_LONG N
 template <class ElemType>
 __global__ void _addToRowRepeatValuesOf(ElemType* dest, ElemType* src, const CUDA_LONG N, const CUDA_LONG srcRows, const CUDA_LONG srcCols, const CUDA_LONG destRows)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
@@ -531,7 +622,7 @@ __global__ void _addToRowRepeatValuesOf(ElemType* dest, ElemType* src, const CUD
     CUDA_LONG row = (id - (col * srcRows)) % destRows;
 
     // dest[col*destRows + row + startIndex] += src[id];
-    dest[IDX2C(row, col, destRows)] += src[id];
+    dest[IDX2C(row, col, destRows)] = (comp_t)dest[IDX2C(row, col, destRows)] + (comp_t)src[id];
 }
 
 template <class ElemType>
@@ -575,10 +666,11 @@ __global__ void _assignDifferenceOf1(
     const ElemType* a,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    us[id] = alpha - a[id];
+    us[id] = (comp_t)alpha - (comp_t)a[id];
 };
 
 template <class ElemType>
@@ -588,10 +680,11 @@ __global__ void _assignDifferenceOf2(
     const ElemType* a,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    us[id] = a[id] - alpha;
+    us[id] = (comp_t)a[id] - (comp_t)alpha;
 };
 
 ///a is a scalar
@@ -606,21 +699,23 @@ __global__ void _scaleAndAddScalar(
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    c[id] = alpha * a[0] + b[id];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    c[id] = (comp_t)alpha * (comp_t)a[0] + (comp_t)b[id];
 };
 
 template <class ElemType>
 __global__ void _multiply1x1AndWeightedAdd(
     ElemType alpha, const ElemType* a, const ElemType* b, ElemType beta, ElemType* c, CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    ElemType f = alpha * *a; // scalar matrix
+    comp_t f = (comp_t)alpha * (comp_t)*a; // scalar matrix
     if (beta == 0)           // don't even read the memory if beta is 0
-        c[id] = b[id] * f;
+        c[id] = (comp_t)b[id] * f;
     else
-        c[id] = b[id] * f + c[id] * beta;
+        c[id] = (comp_t)b[id] * f + (comp_t)c[id] * (comp_t)beta;
 }
 
 template <class ElemType>
@@ -629,10 +724,11 @@ __global__ void _addValue(
     const ElemType v,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    a[id] += v;
+    a[id] = (comp_t)a[id] + (comp_t)v;
 };
 
 template <class ElemType>
@@ -641,10 +737,11 @@ __global__ void _addValue(
     const ElemType* d_v,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    a[id] += d_v[0];
+    a[id] = (comp_t)a[id] + (comp_t)d_v[0];
 };
 
 template <class ElemType>
@@ -653,10 +750,11 @@ __global__ void _elemMul(
     const ElemType* b,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    a[id] *= b[id];
+    a[id] = (comp_t)a[id] * (comp_t)b[id];
 };
 
 template <class ElemType>
@@ -666,10 +764,11 @@ __global__ void _assignElementProductOf(
     const ElemType* b,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    us[id] = a[id] * b[id];
+    us[id] = (comp_t)a[id] * (comp_t)b[id];
 }
 
 template <class ElemType>
@@ -681,6 +780,7 @@ __global__ void _assignKhatriRaoProductOf(
     const CUDA_LONG rowsB,
     const CUDA_LONG cols)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 
     const CUDA_LONG rows = rowsA * rowsB;
@@ -692,7 +792,7 @@ __global__ void _assignKhatriRaoProductOf(
     const CUDA_LONG rowB = row / rowsA;
     const CUDA_LONG rowA = row % rowsA;
 
-    us[id] = a[rowA + col * rowsA] * b[rowB + col * rowsB];
+    us[id] = (comp_t)a[rowA + col * rowsA] * (comp_t)b[rowB + col * rowsB];
 }
 
 template <class ElemType>
@@ -705,6 +805,7 @@ __global__ void _addColumnReshapeProductOf(
     const CUDA_LONG cols,
     const bool transposeAColumn)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
 
     const CUDA_LONG col = id / rowsC;
@@ -714,14 +815,14 @@ __global__ void _addColumnReshapeProductOf(
     const CUDA_LONG row = id % rowsC;
     CUDA_LONG bBase = col * rowsB;
     CUDA_LONG aBase = bBase * rowsC;
-    ElemType v = 0;
+    comp_t v = 0;
 
     if (transposeAColumn)
     {
         aBase += row * rowsB;
         for (CUDA_LONG i = 0; i < rowsB; i++)
         {
-            v += a[aBase++] * b[bBase++];
+            v += (comp_t)a[aBase++] * (comp_t)b[bBase++];
         }
     }
     else
@@ -729,11 +830,11 @@ __global__ void _addColumnReshapeProductOf(
         aBase += row;
         for (CUDA_LONG i = 0; i < rowsB; i++)
         {
-            v += a[aBase] * b[bBase++];
+            v += (comp_t)a[aBase] * (comp_t)b[bBase++];
             aBase += rowsC;
         }
     }
-    us[row + col * rowsC] += v;
+    us[row + col * rowsC] = (comp_t)us[row + col * rowsC] + v;
 }
 
 template <class ElemType>
@@ -743,20 +844,21 @@ __global__ void _assignElementDivisionOf(
     const ElemType* b,
     const CUDA_LONG N)
 {
-    ElemType smallValue = EPS_IN_INVERSE;
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    comp_t smallValue = EPS_IN_INVERSE;
 
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
 
-    ElemType v = b[id];
+    comp_t v = b[id];
 
     if (v < 0 && v > -smallValue)
-        us[id] = a[id] / (-smallValue);
+        us[id] = (comp_t)a[id] / (-smallValue);
     else if (v >= 0 && v < smallValue)
-        us[id] = a[id] / smallValue;
+        us[id] = (comp_t)a[id] / smallValue;
     else
-        us[id] = a[id] / v;
+        us[id] = (comp_t)a[id] / v;
 }
 
 template <class ElemType>
@@ -764,7 +866,8 @@ __global__ void _elemInverse(
     ElemType* us,
     const CUDA_LONG N)
 {
-    ElemType smallValue = EPS_IN_INVERSE;
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    comp_t smallValue = EPS_IN_INVERSE;
 
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
@@ -775,7 +878,7 @@ __global__ void _elemInverse(
     else if (us[id] >= 0 && us[id] < smallValue)
         us[id] = 1 / smallValue;
     else
-        us[id] = 1 / us[id];
+        us[id] = 1 / (comp_t)us[id];
 }
 
 template <class ElemType>
@@ -784,12 +887,13 @@ __global__ void _logSoftMaxColWise(
     const CUDA_LONG m_numCols,
     const CUDA_LONG m_numRows) // ld
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int col_id = blockDim.x * blockIdx.x + threadIdx.x;
     if (col_id >= m_numCols)
         return;
 
-    __shared__ ElemType maxV[GridDim::maxThreadsPerBlock];
-    __shared__ ElemType Sum[GridDim::maxThreadsPerBlock];
+    __shared__ comp_t maxV[GridDim::maxThreadsPerBlock];
+    __shared__ comp_t Sum[GridDim::maxThreadsPerBlock];
     maxV[threadIdx.x] = a[IDX2C(0, col_id, m_numRows)];
     Sum[threadIdx.x] = 0;
 
@@ -803,13 +907,13 @@ __global__ void _logSoftMaxColWise(
 
     for (CUDA_LONG i = 0; i < m_numRows; ++i)
     {
-        ElemType tmp = a[IDX2C(i, col_id, m_numRows)] - maxV[threadIdx.x];
-        Sum[threadIdx.x] += (sizeof(ElemType) == sizeof(float) ? expf(tmp) : exp(tmp));
+        comp_t tmp = (comp_t)a[IDX2C(i, col_id, m_numRows)] - maxV[threadIdx.x];
+        Sum[threadIdx.x] += exp_(tmp);
     }
-    Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType) == sizeof(float) ? logf(Sum[threadIdx.x]) : log(Sum[threadIdx.x]));
+    Sum[threadIdx.x] = maxV[threadIdx.x] + log_(Sum[threadIdx.x]);
     for (CUDA_LONG i = 0; i < m_numRows; ++i)
     {
-        a[IDX2C(i, col_id, m_numRows)] -= Sum[threadIdx.x];
+        a[IDX2C(i, col_id, m_numRows)] = (comp_t)a[IDX2C(i, col_id, m_numRows)] - Sum[threadIdx.x];
     }
 }
 
@@ -839,14 +943,7 @@ __global__ void _logSoftMaxColWise(
 //
 //    for (CUDA_LONG i=0;i<m_numRows;++i)
 //    {
-//        if (sizeof(ElemType)==sizeof(float))
-//        {
-//            us[IDX2C(i,col_id,m_numRows)] = expf(a[IDX2C(i,col_id,m_numRows)]-maxV[threadIdx.x]);
-//        }
-//        else
-//        {
-//            us[IDX2C(i,col_id,m_numRows)] = exp(a[IDX2C(i,col_id,m_numRows)]-maxV[threadIdx.x]);
-//        }
+//        us[IDX2C(i,col_id,m_numRows)] = exp_(a[IDX2C(i,col_id,m_numRows)]-maxV[threadIdx.x]);
 //        Sum[threadIdx.x] +=  us[IDX2C(i,col_id,m_numRows)];
 //    }
 //
@@ -864,13 +961,14 @@ __global__ void _assignColumnwiseLogSoftmaxOf512Threads(
     const CUDA_LONG m_numCols,
     const CUDA_LONG m_numRows)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     // We first find max per column
-    __shared__ ElemType partials[512];
+    __shared__ comp_t partials[512];
     partials[threadIdx.x] = -10000000;
 
     for (int i = threadIdx.x; i < m_numRows; i += 512)
     {
-        partials[threadIdx.x] = max(partials[threadIdx.x], a[IDX2C(i, blockIdx.x, m_numRows)]);
+        partials[threadIdx.x] = max(partials[threadIdx.x], (comp_t)a[IDX2C(i, blockIdx.x, m_numRows)]);
     }
     __syncthreads();
 
@@ -916,7 +1014,7 @@ __global__ void _assignColumnwiseLogSoftmaxOf512Threads(
     }
     __syncthreads();
 
-    __shared__ ElemType colMax[1];
+    __shared__ comp_t colMax[1];
     if (threadIdx.x == 0)
     {
         colMax[0] = max(max(partials[0], partials[1]), max(partials[2], partials[3]));
@@ -927,9 +1025,9 @@ __global__ void _assignColumnwiseLogSoftmaxOf512Threads(
     // Now start finding sums
     for (int i = threadIdx.x; i < m_numRows; i += 512)
     {
-        ElemType tmp = a[IDX2C(i, blockIdx.x, m_numRows)] - colMax[0];
+        comp_t tmp = (comp_t)a[IDX2C(i, blockIdx.x, m_numRows)] - colMax[0];
         us[IDX2C(i, blockIdx.x, m_numRows)] = tmp;
-        partials[threadIdx.x] += (sizeof(ElemType) == sizeof(float)) ? expf(tmp) : exp(tmp);
+        partials[threadIdx.x] += exp_(tmp);
     }
     __syncthreads();
 
@@ -975,17 +1073,17 @@ __global__ void _assignColumnwiseLogSoftmaxOf512Threads(
     }
     __syncthreads();
 
-    __shared__ ElemType colSum[1];
+    __shared__ comp_t colSum[1];
     if (threadIdx.x == 0)
     {
         colSum[0] = partials[0] + partials[1] + partials[2] + partials[3];
-        colSum[0] = (sizeof(ElemType) == sizeof(float)) ? logf(colSum[0]) : log(colSum[0]);
+        colSum[0] = log_(colSum[0]);
     }
     __syncthreads();
 
     for (int i = threadIdx.x; i < m_numRows; i += 512)
     {
-        us[IDX2C(i, blockIdx.x, m_numRows)] -= colSum[0];
+        us[IDX2C(i, blockIdx.x, m_numRows)] = (comp_t)us[IDX2C(i, blockIdx.x, m_numRows)] - colSum[0];
     }
 }
 
@@ -995,12 +1093,13 @@ __global__ void _logSoftMaxRowWise(
     const CUDA_LONG m_numCols,
     const CUDA_LONG m_numRows) // ld
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int row_id = blockDim.x * blockIdx.x + threadIdx.x;
     if (row_id >= m_numRows)
         return;
 
-    __shared__ ElemType maxV[GridDim::maxThreadsPerBlock];
-    __shared__ ElemType Sum[GridDim::maxThreadsPerBlock];
+    __shared__ comp_t maxV[GridDim::maxThreadsPerBlock];
+    __shared__ comp_t Sum[GridDim::maxThreadsPerBlock];
     maxV[threadIdx.x] = a[IDX2C(row_id, 0, m_numRows)];
     Sum[threadIdx.x] = 0;
 
@@ -1014,13 +1113,13 @@ __global__ void _logSoftMaxRowWise(
 
     for (CUDA_LONG j = 0; j < m_numCols; ++j)
     {
-        ElemType tmp = a[IDX2C(row_id, j, m_numRows)] - maxV[threadIdx.x];
-        Sum[threadIdx.x] += sizeof(ElemType) == sizeof(float) ? expf(tmp) : exp(tmp);
+        comp_t tmp = (comp_t)a[IDX2C(row_id, j, m_numRows)] - maxV[threadIdx.x];
+        Sum[threadIdx.x] += exp_(tmp);
     }
-    Sum[threadIdx.x] = maxV[threadIdx.x] + (sizeof(ElemType) == sizeof(float) ? logf(Sum[threadIdx.x]) : log(Sum[threadIdx.x]));
+    Sum[threadIdx.x] = maxV[threadIdx.x] + log_(Sum[threadIdx.x]);
     for (CUDA_LONG j = 0; j < m_numCols; ++j)
     {
-        a[IDX2C(row_id, j, m_numRows)] -= Sum[threadIdx.x];
+        a[IDX2C(row_id, j, m_numRows)] = (comp_t)a[IDX2C(row_id, j, m_numRows)] - Sum[threadIdx.x];
     }
 }
 
@@ -1195,19 +1294,12 @@ __global__ void _setToZeroIfAbsLessThan(
     const ElemType threshold,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    if (sizeof(ElemType) == sizeof(float))
-    {
-        if (fabsf(a[id]) < threshold)
-            a[id] = 0;
-    }
-    else
-    {
-        if (fabs(a[id]) < threshold)
-            a[id] = 0;
-    }
+    if (fabs_((comp_t)a[id]) < (comp_t)threshold)
+        a[id] = 0;
 }
 
 template <class ElemType>
@@ -1218,23 +1310,14 @@ __global__ void _areEqual(
     const ElemType threshold,
     long* d_res)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
 
-    if (sizeof(ElemType) == sizeof(float))
+    if (fabs_((comp_t)a[id] - (comp_t)b[id]) > (comp_t)threshold)
     {
-        if (fabsf(a[id] - b[id]) > threshold)
-        {
-            d_res[0] = 0;
-        }
-    }
-    else
-    {
-        if (fabs(1.0 * a[id] - 1.0 * b[id]) > threshold)
-        {
-            d_res[0] = 0;
-        }
+        d_res[0] = 0;
     }
 }
 
@@ -1243,6 +1326,7 @@ template <class ElemType>
 __global__ void _tensorShuffleScaleAndAdd(
     ElemType keepWeight, const ElemType* pa, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const ElemType* pb, ElemType* pc)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     size_t N = D * S * M * K * T;
     CUDA_LONG na = blockDim.x * blockIdx.x + threadIdx.x; // input tensor of dimension (D x S x M x K x T)
     if (na >= N)
@@ -1256,8 +1340,8 @@ __global__ void _tensorShuffleScaleAndAdd(
     // compute index for the a and b/c tensors
     size_t nb = (((t * S + s) * M + m) * K + k) * D + d; // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
     // perform the computation
-    ElemType cval = keepWeight ? keepWeight * pb[nb] : 0; // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
-    cval += scaleFactor * pa[na];
+    comp_t cval = (comp_t)keepWeight ? (comp_t)keepWeight * (comp_t)pb[nb] : (comp_t)0; // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
+    cval += (comp_t)scaleFactor * (comp_t)pa[na];
     pc[nb] = cval;
 }
 
@@ -1361,12 +1445,13 @@ template <class ElemType>
 __global__ void _setDiagonalValueFromVector(
     ElemType* a,
     const ElemType* b,
-    const CUDA_LONG N)
+    const CUDA_LONG N,
+    const CUDA_LONG ld)
 {
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    a[IDX2C(id, id, N)] = b[id];
+    a[IDX2C(id, id, ld)] = b[id];
 }
 
 template <class ElemType>
@@ -1376,15 +1461,19 @@ __global__ void _adagrad(
     const CUDA_LONG N,
     ElemType* multipliers)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
 
-    const ElemType floor = 1e-16f;
+    const comp_t floor = 1e-16f;
+    comp_t a_comp = a[id];
+    comp_t d_v_comp = d_v[id];
 
-    a[id] += d_v[id] * d_v[id];
-    ElemType temp = sqrt(a[id] + floor);
-    d_v[id] /= temp;
+    a_comp += d_v_comp * d_v_comp;
+    a[id] = a_comp;
+    comp_t temp = sqrt_(a_comp + floor);
+    d_v[id] = d_v_comp / temp;
 
     if (multipliers != nullptr)
         multipliers[id] = 1 / temp;
@@ -1412,7 +1501,7 @@ __global__ void _adagrad4BlockSparse(
 
     size_t indexInA = row + col * numRows;
     a[indexInA] += d_v[id] * d_v[id];
-    ElemType temp = sqrt(a[indexInA] + floor);
+    ElemType temp = sqrt_(a[indexInA] + floor);
     d_v[id] /= temp;
 
     if (multipliers != nullptr)
@@ -1421,41 +1510,35 @@ __global__ void _adagrad4BlockSparse(
 
 template <class ElemType>
 __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType typedUnitGainFactor)
 {
-    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    const comp_t unitGainFactor = (comp_t)typedUnitGainFactor;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
     {
-        ElemType g = grad[idx];
-        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+        comp_t g = grad[idx];
+        comp_t adaSqr = (comp_t)adaWeight * (comp_t)smoothAda[idx] + (1.0f - (comp_t)adaWeight) * g * g;
         smoothAda[idx] = adaSqr;
         if (adaSqr != 0.0f)
         {
-            ElemType w;
-            if (sizeof(ElemType) == sizeof(double))
-            {
-                w = adaMul * rsqrt(adaSqr);
-            }
-            else
-            {
-                w = adaMul * rsqrtf(adaSqr);
-            }
+            comp_t w;
+            w = (comp_t)adaMul * rsqrt_(adaSqr);
 
-            if (w > 10.0f)
-                w = 10.0f;
+            if (w > static_cast<comp_t>(10.0))
+                w = static_cast<comp_t>(10.0);
             g *= w;
         }
 
-        if (mom > 0.0f)
+        if ((comp_t)mom > 0.0f)
         {
-            g = mom * smoothMom[idx] + unitGainFactor * g;
+            g = (comp_t)mom * (comp_t)smoothMom[idx] + unitGainFactor * g;
             smoothMom[idx] = g;
         }
 
-        g *= lr;
-        val[idx] -= g;
+        g *= (comp_t)lr;
+        val[idx] = (comp_t)val[idx] - g;
     }
 }
 
@@ -1465,7 +1548,7 @@ inline __device__ ElemType _getvalue4BlockSparseCol(ElemType* v, const GPUSPARSE
     CUDA_LONG col = idx / len;
     CUDA_LONG row = idx - col * len;
     CUDA_LONG blockid = colOrRow2blockId[col];
-    return (blockid == Id_NotAssigned) ? 0 : v[blockid * len + row];
+    return (blockid == SparseIndex_NotAssigned) ? (ElemType)0 : v[blockid * len + row];
 }
 
 template<class ElemType>
@@ -1474,19 +1557,18 @@ inline __device__ void _scalevalue4BlockSparseCol(ElemType* v, const GPUSPARSE_I
     CUDA_LONG col = idx / len;
     CUDA_LONG row = idx - col * len;
     CUDA_LONG blockid = colOrRow2blockId[col];
-    if (blockid != Id_NotAssigned)
+    if (blockid != SparseIndex_NotAssigned)
     {
         v[blockid * len + row] *= s;
     }
 }
 
 template <class ElemType>
-__global__ void _fsadagrad4BlockSparseCol(CUDA_LONG size, 
+__global__ void _fsadagrad4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType unitGainFactor)
 {
-    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
@@ -1497,14 +1579,7 @@ __global__ void _fsadagrad4BlockSparseCol(CUDA_LONG size,
         if (adaSqr != 0.0f)
         {
             ElemType w;
-            if (sizeof(ElemType) == sizeof(double))
-            {
-                w = adaMul * rsqrt(adaSqr);
-            }
-            else
-            {
-                w = adaMul * rsqrtf(adaSqr);
-            }
+            w = adaMul * rsqrt_(adaSqr);
 
             if (w > 10.0f)
                 w = 10.0f;
@@ -1528,11 +1603,12 @@ __global__ void _rmsprop_init(
     ElemType* curr_grad,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i >= N)
         return;
 
-    ElemType tmp = curr_grad[i];
+    comp_t tmp = curr_grad[i];
     avars[i] = tmp * tmp;
     signs[i] = ElemType(0.0);
     steps[i] = ElemType(0.02);
@@ -1565,11 +1641,17 @@ __global__ void _rmsprop(
     ElemType* upd_gpu,
     ElemType* multipliers)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
     if (i >= N)
         return;
 
-    avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0) - RMS_GAMMA) * (curr_grad[i] * curr_grad[i]);
+    comp_t avars_comp = avars[i];
+    comp_t RMS_GAMMA_comp = RMS_GAMMA;
+    comp_t curr_grad_comp = curr_grad[i];
+    comp_t steps_comp = steps[i];
+
+    avars_comp = RMS_GAMMA_comp * avars_comp + (comp_t(1.0) - RMS_GAMMA_comp) * (curr_grad_comp * curr_grad_comp);
 
     // // grad sign base 3: 0->neg, 1->zero, 2->pos
     // const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
@@ -1591,18 +1673,20 @@ __global__ void _rmsprop(
     //    steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
     //    break;
     // }
-    // curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+    // curr_grad[i] *= steps[i] / sqrt_(avars[i] + floor);
 
-    const int grad_sign = (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
+    const int grad_sign = (comp_t(0) < curr_grad_comp) - (curr_grad_comp < comp_t(0));
 
     if (signs[i] * grad_sign > 0)
-        steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+        steps_comp = min(steps_comp * (comp_t)RMS_WGT_INC, (comp_t)RMS_WGT_MAX);
     else
-        steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+        steps_comp = max(steps_comp * (comp_t)RMS_WGT_DEC, (comp_t)RMS_WGT_MIN);
 
-    ElemType temp = steps[i] / sqrt(avars[i] + floor);
-    curr_grad[i] *= temp;
+    comp_t temp = steps_comp / sqrt_(avars_comp + (comp_t)floor);
+    curr_grad[i] = curr_grad_comp * temp;
     signs[i] = grad_sign;
+    avars[i] = avars_comp;
+    steps[i] = steps_comp;
 
     if (multipliers != nullptr)
         multipliers[i] = temp;
@@ -1655,7 +1739,7 @@ __global__ void _rmsprop4BlockSparseCol(
     else
         steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
 
-    ElemType temp = steps[i] / sqrt(avars[i] + floor);
+    ElemType temp = steps[i] / sqrt_(avars[i] + floor);
     _scalevalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, i, temp);
     signs[i] = grad_sign;
 
@@ -1670,10 +1754,41 @@ __global__ void _rescaleToRange(
     const ElemType low,
     const ElemType high)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    a[id] = a[id] * (high - low) + low;
+    a[id] = (comp_t)a[id] * ((comp_t)high - (comp_t)low) + (comp_t)low;
+}
+
+template <class ElemType>
+__global__ void _truncated_normal_transform(
+    ElemType* a,
+    const CUDA_LONG N,
+    const ElemType mean,
+    const ElemType sigma)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    const comp_t high = (comp_t)0.97724986805182079; // normcdf(2);
+    const comp_t low = (comp_t)0.022750131948179195; // normcdf(-2);
+    a[id] = normcdfinv((comp_t)a[id] * (high - low) + low) * (comp_t)sigma + (comp_t)mean;
+}
+
+template <class ElemType>
+__global__ void _gumbelFromUniform(
+    ElemType* a,
+    const CUDA_LONG N,
+    const ElemType loc,
+    const ElemType scale)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    a[id] = (comp_t)loc - (comp_t)scale * log_(comp_t(1e-40) - log_((comp_t)a[id])); //a[id] is uniform in (0,1] exactly opposite from every other rng implementation
 }
 
 template <class ElemType>
@@ -1686,7 +1801,10 @@ __global__ void _setMaskAndScale(
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    a[id] = a[id] <= maskRate ? 0 : scaleValue;
+
+    bool tmp = a[id] <= maskRate;
+    if(tmp)     a[id] = 0;
+    else     a[id] = scaleValue;
 }
 
 template <class ElemType>
@@ -1697,24 +1815,25 @@ __global__ void _vectorSum(
     const CUDA_LONG m, // a.numCols
     const bool isColWise)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if ((isColWise && id >= m) || (!isColWise && id >= n))
         return;
 
-    ElemType sum = 0;
+    comp_t sum = 0;
 
     if (isColWise)
     {
         for (CUDA_LONG i = 0; i < n; ++i)
         {
-            sum += a[IDX2C(i, id, n)];
+            sum += (comp_t)a[IDX2C(i, id, n)];
         }
     }
     else
     {
         for (CUDA_LONG j = 0; j < m; ++j)
         {
-            sum += a[IDX2C(id, j, n)];
+            sum += (comp_t)a[IDX2C(id, j, n)];
         }
     }
     c[id] = sum;
@@ -1728,38 +1847,25 @@ __global__ void _vectorNorm1(
     const CUDA_LONG m, // a.numCols
     const bool isColWise)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if ((isColWise && id >= m) || (!isColWise && id >= n))
         return;
 
-    ElemType sum = 0;
+    comp_t sum = 0;
 
     if (isColWise)
     {
         for (CUDA_LONG i = 0; i < n; ++i)
         {
-            if (sizeof(ElemType) == sizeof(float))
-            {
-                sum += fabsf(a[IDX2C(i, id, n)]);
-            }
-            else
-            {
-                sum += fabs(a[IDX2C(i, id, n)]);
-            }
+            sum += fabs_((comp_t)a[IDX2C(i, id, n)]);
         }
     }
     else
     {
         for (CUDA_LONG j = 0; j < m; ++j)
         {
-            if (sizeof(ElemType) == sizeof(float))
-            {
-                sum += fabsf(a[IDX2C(id, j, n)]);
-            }
-            else
-            {
-                sum += fabs(a[IDX2C(id, j, n)]);
-            }
+            sum += fabs_((comp_t)a[IDX2C(id, j, n)]);
         }
     }
     c[id] = sum;
@@ -1774,16 +1880,17 @@ __global__ void _vectorNorm2(
     const CUDA_LONG M, // a.GetNumCols();
     const bool isColWise)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if ((isColWise && id >= M) || (!isColWise && id >= N))
         return;
 
-    ElemType sum = 0;
+    comp_t sum = 0;
     if (isColWise)
     {
         for (CUDA_LONG i = 0; i < N; ++i)
         {
-            ElemType v = a[IDX2C(i, id, N)];
+            comp_t v = (comp_t)a[IDX2C(i, id, N)];
             sum += v * v;
         }
     }
@@ -1791,15 +1898,12 @@ __global__ void _vectorNorm2(
     {
         for (CUDA_LONG j = 0; j < M; ++j)
         {
-            ElemType v = a[IDX2C(id, j, N)];
+            comp_t v = (comp_t)a[IDX2C(id, j, N)];
             sum += v * v;
         }
     }
 
-    if (sizeof(ElemType) == sizeof(float))
-        c[id] = sqrtf(sum);
-    else
-        c[id] = sqrt(sum);
+    c[id] = sqrt_(sum);
 }
 
 template <class ElemType>
@@ -1898,6 +2002,7 @@ __global__ void _unpackConvolutionInput(const ElemType* packedMatrix, ElemType* 
                                         const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputChannels,
                                         const CUDA_LONG kernelWidth, const CUDA_LONG kernelHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample, const bool zeroPadding)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     const CUDA_LONG inputHeightTimesChannel = inputHeight * inputChannels;
     const size_t inputDim = inputWidth * inputHeightTimesChannel;
 
@@ -1925,23 +2030,23 @@ __global__ void _unpackConvolutionInput(const ElemType* packedMatrix, ElemType* 
         const CUDA_LONG halfKernelWidth = kernelWidth / 2;
         const CUDA_LONG halfKernelHeight = kernelHeight / 2;
 
-        x0 = max(0.0f, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); // row : first wrow in which x is in
+        x0 = max(0.0f, ceil((x - (comp_t) kernelHeight + 1.0f + halfKernelHeight) / (comp_t) verticalSubsample)); // row : first wrow in which x is in
         x1 = x + halfKernelHeight - x0 * verticalSubsample;                                                           // first posxInKernel
-        y0 = max(0.0f, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); // col : first wcol in which y is in
+        y0 = max(0.0f, ceil((y - (comp_t) kernelWidth + 1.0f + halfKernelWidth) / (comp_t) horizontalSubsample)); // col : first wcol in which y is in
         y1 = y + halfKernelWidth - y0 * horizontalSubsample;                                                          // first posyInKernel
     }
     else
     {
-        x0 = max(0.0f, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  // row : first wrow in which x is in
+        x0 = max(0.0f, ceil((x - (comp_t) kernelHeight + 1) / (comp_t) verticalSubsample));  // row : first wrow in which x is in
         x1 = x - x0 * verticalSubsample;                                                         // first posxInKernel
-        y0 = max(0.0f, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); // col : first wcol in which y is in
+        y0 = max(0.0f, ceil((y - (comp_t) kernelWidth + 1) / (comp_t) horizontalSubsample)); // col : first wcol in which y is in
         y1 = y - y0 * horizontalSubsample;                                                       // first posyInKernel
     }
 
     // PACK_ELEM_ROWPOS(channel, posxInKernel, posyInKernel) = (channel * kernelWidth * kernelHeight + posxInKernel + posyInKernel * kernelHeight)
     // PACK_ELEM_COLPOS(sample, wrow, wcol) = (sample*packedInputColsPerSample + outputHeight*wcol + wrow
 
-    ElemType currentInputValue = inputSubBatch[id + sample * inputDim];
+    comp_t currentInputValue = inputSubBatch[id + sample * inputDim];
     CUDA_LONG packColBase = sample * packedInputColsPerSample + y0 * outputHeight;
     for (CUDA_LONG wcol = y0, posyInKernel = y1; wcol < outputWidth && posyInKernel >= 0; wcol++, posyInKernel -= horizontalSubsample)
     {
@@ -1950,7 +2055,7 @@ __global__ void _unpackConvolutionInput(const ElemType* packedMatrix, ElemType* 
         {
             const CUDA_LONG packRow = packRowBase + posxInKernel;
             const CUDA_LONG packCol = packColBase + wrow;
-            currentInputValue += packedMatrix[packRow + packCol * packedInputRows];
+            currentInputValue += (comp_t)packedMatrix[packRow + packCol * packedInputRows];
         }
         packColBase += outputHeight;
     }
@@ -2007,6 +2112,7 @@ __global__ void _addMaxPoolingGradient(ElemType* inputGradientBatch, const ElemT
                                        const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample,
                                        const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     const CUDA_LONG inputIndex = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG sample = inputIndex / inputSizePerSample;
     if (sample >= batchSize)
@@ -2037,14 +2143,14 @@ __global__ void _addMaxPoolingGradient(ElemType* inputGradientBatch, const ElemT
     const ElemType* outputGradientBatchBase4Sample = outputGradientBatch + sample * outputSizePerSample;
     const ElemType* outputBatchBase4Sample = outputBatch + sample * outputSizePerSample;
 
-    ElemType inputValue = inputBatch[inputIndexWithinSample + sample * inputSizePerSample];
+    comp_t inputValue = inputBatch[inputIndexWithinSample + sample * inputSizePerSample];
     for (CUDA_LONG outY = startOutY; outY <= endOutY; outY++)
     {
         for (CUDA_LONG outX = startOutX; outX <= endOutX; outX++)
         {
             CUDA_LONG outputIndex = outY * outputHeightTimesChannel + outX * channels + c;
-            if (inputValue == outputBatchBase4Sample[outputIndex])
-                inputGradientBatchBase4Sample[inputIndexWithinSample] += outputGradientBatchBase4Sample[outputIndex];
+            if (inputValue == (comp_t)outputBatchBase4Sample[outputIndex])
+                inputGradientBatchBase4Sample[inputIndexWithinSample] = (comp_t)inputGradientBatchBase4Sample[inputIndexWithinSample] + (comp_t)outputGradientBatchBase4Sample[outputIndex];
         }
     }
 }
@@ -2054,6 +2160,7 @@ __global__ void _assignAveragePoolingResult(ElemType* outputBatch, const ElemTyp
                                             const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample,
                                             const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     const CUDA_LONG outputIndex = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG sample = outputIndex / outputSizePerSample;
     if (sample >= batchSize)
@@ -2076,19 +2183,19 @@ __global__ void _assignAveragePoolingResult(ElemType* outputBatch, const ElemTyp
 
     const ElemType* inputBatchBase4Sample = inputBatch + sample * inputSizePerSample;
 
-    register ElemType average = 0;
+    register comp_t average = 0;
     const CUDA_LONG rowInWindowBase = (x * verticalSubsample + y * horizontalSubsample * inputHeight) * channels + c;
     for (CUDA_LONG colInWindow = 0; colInWindow < windowWidth; colInWindow++)
     {
         CUDA_LONG rowInInput = rowInWindowBase + colInWindow * inputHeightTimesChannel;
         for (CUDA_LONG rowInWindow = 0; rowInWindow < windowHeight; rowInWindow++)
         {
-            average += inputBatchBase4Sample[rowInInput];
+            average += (comp_t)inputBatchBase4Sample[rowInInput];
             rowInInput += channels;
         }
     }
 
-    outputBatch[outputIndexWithinSample + sample * outputSizePerSample] = average / windowWidth / windowHeight;
+    outputBatch[outputIndexWithinSample + sample * outputSizePerSample] = average / (comp_t)windowWidth / (comp_t)windowHeight;
 }
 
 template <class ElemType>
@@ -2098,6 +2205,7 @@ __global__ void _addAveragePoolingGradient(ElemType* inputGradientBatch, const E
                                            const CUDA_LONG outputWidth, const CUDA_LONG outputHeight, const CUDA_LONG outputSizePerSample,
                                            const CUDA_LONG windowWidth, const CUDA_LONG windowHeight, const CUDA_LONG horizontalSubsample, const CUDA_LONG verticalSubsample)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     const CUDA_LONG inputIndex = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG sample = inputIndex / inputSizePerSample;
     if (sample >= batchSize)
@@ -2133,7 +2241,7 @@ __global__ void _addAveragePoolingGradient(ElemType* inputGradientBatch, const E
         for (CUDA_LONG outX = startOutX; outX <= endOutX; outX++)
         {
             CUDA_LONG outputIndex = outY * outputHeightTimesChannel + outX * channels + c;
-            inputGradientBatchBase4Sample[inputIndexWithinSample] += outputGradientBatchBase4Sample[outputIndex] / windowSize;
+            inputGradientBatchBase4Sample[inputIndexWithinSample] = (comp_t)inputGradientBatchBase4Sample[inputIndexWithinSample] + (comp_t)outputGradientBatchBase4Sample[outputIndex] / (comp_t)windowSize;
         }
     }
 }
@@ -2184,10 +2292,11 @@ __global__ void _addElementProductOf(
     const ElemType* b,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    us[id] += (a[id] * b[id]);
+    us[id] = (comp_t)us[id] + ((comp_t)a[id] * (comp_t)b[id]);
 }
 
 template <class ElemType>
@@ -2197,16 +2306,17 @@ __global__ void _columnElementMultiplyWith(
     const CUDA_LONG N, // a.GetNumRows();
     const CUDA_LONG M) // us.GetNumCols();
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
 
     // __shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     // _a[threadIdx.x]=a[id];
-    ElemType mul = a[id];
+    comp_t mul = a[id];
     for (CUDA_LONG j = 0; j < M; ++j)
     {
-        us[IDX2C(id, j, N)] = us[IDX2C(id, j, N)] * mul;
+        us[IDX2C(id, j, N)] = (comp_t)us[IDX2C(id, j, N)] * mul;
     }
 }
 
@@ -2217,16 +2327,17 @@ __global__ void _rowElementMultiplyWith(
     const CUDA_LONG N, // us.GetNumRows();
     const CUDA_LONG M) // a.GetNumCols();
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= M)
         return;
 
     // __shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     // _a[threadIdx.x]=a[id];
-    ElemType mul = a[id];
+    comp_t mul = a[id];
     for (CUDA_LONG i = 0; i < N; ++i)
     {
-        us[IDX2C(i, id, N)] = us[IDX2C(i, id, N)] * mul;
+        us[IDX2C(i, id, N)] = (comp_t)us[IDX2C(i, id, N)] * mul;
     }
 }
 
@@ -2237,13 +2348,14 @@ __global__ void _rowElementDivideBy(
     const CUDA_LONG N, // us.GetNumRows();
     const CUDA_LONG M) // a.GetNumCols();
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= M)
         return;
 
     // __shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     // _a[threadIdx.x]=a[id];
-    ElemType v = a[id];
+    comp_t v = a[id];
     if (v >= 0 && v < EPS_IN_INVERSE)
         v = EPS_IN_INVERSE;
     else if (v < 0 && v > -EPS_IN_INVERSE)
@@ -2251,7 +2363,7 @@ __global__ void _rowElementDivideBy(
 
     for (CUDA_LONG i = 0; i < N; ++i)
     {
-        us[IDX2C(i, id, N)] = us[IDX2C(i, id, N)] / v;
+        us[IDX2C(i, id, N)] = (comp_t)us[IDX2C(i, id, N)] / v;
     }
 }
 
@@ -2262,23 +2374,24 @@ __global__ void _ColumnElementDivideBy(
     const CUDA_LONG N, // a.GetNumRows();
     const CUDA_LONG M) // us.GetNumCols();
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
 
-    ElemType smallValue = EPS_IN_INVERSE;
+    comp_t smallValue = EPS_IN_INVERSE;
 
     // __shared__ ElemType _a[GridDim::maxThreadsPerBlock];
     // _a[threadIdx.x]=a[id];
-    ElemType v = a[id];
+    comp_t v = a[id];
     for (CUDA_LONG j = 0; j < M; ++j)
     {
         if (v < 0 && v > -smallValue)
-            us[IDX2C(id, j, N)] /= (-smallValue);
+            us[IDX2C(id, j, N)] = (comp_t)us[IDX2C(id, j, N)] / (-smallValue);
         else if (v >= 0 && v < smallValue)
-            us[IDX2C(id, j, N)] /= smallValue;
+            us[IDX2C(id, j, N)] = (comp_t)us[IDX2C(id, j, N)] / smallValue;
         else
-            us[IDX2C(id, j, N)] /= v;
+            us[IDX2C(id, j, N)] = (comp_t)us[IDX2C(id, j, N)] / v;
     }
 }
 
@@ -2291,18 +2404,19 @@ __global__ void _innerProduct(
     const CUDA_LONG M, // a.GetNumCols();
     const bool isColWise)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if ((isColWise && id >= M) || (!isColWise && id >= N))
         return;
 
-    ElemType sum = 0;
+    comp_t sum = 0;
     CUDA_LONG index;
     if (isColWise)
     {
         for (CUDA_LONG i = 0; i < N; ++i)
         {
             index = IDX2C(i, id, N);
-            sum += a[index] * b[index];
+            sum += (comp_t)a[index] * (comp_t)b[index];
         }
     }
     else
@@ -2310,7 +2424,7 @@ __global__ void _innerProduct(
         for (CUDA_LONG j = 0; j < M; ++j)
         {
             index = IDX2C(id, j, N);
-            sum += a[index] * b[index];
+            sum += (comp_t)a[index] * (comp_t)b[index];
         }
     }
 
@@ -2381,11 +2495,12 @@ __global__ void _addSignOf(
     const ElemType* b,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    ElemType v = b[id];
-    a[id] += (v == (ElemType) 0 ? (ElemType) 0 : (v > 0 ? (ElemType) 1 : (ElemType)(-1)));
+    comp_t v = b[id];
+    a[id] = (comp_t)a[id] + (v == (comp_t) 0 ? (comp_t) 0 : (v > (comp_t)0 ? (comp_t) 1 : (comp_t)(-1)));
 }
 
 // This function processes 1 column per block. this function needs 512 threads
@@ -2613,7 +2728,8 @@ __global__ void _matrixMatrixAddOnCuda(
     const CUDA_LONG N)
 {
     CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
-    c[id] = alpha * a[id] + b[id];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    c[id] = (comp_t)alpha * (comp_t)a[id] + (comp_t)b[id];
 }
 
 template <class ElemType>
@@ -2630,7 +2746,8 @@ __global__ void _matrixVectorRowWiseAddWithThreadPerElem(
 
     CUDA_LONG col = id / m;
 
-    us[id] = alpha * a[col] + b[id];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    us[id] = (comp_t)alpha * (comp_t)a[col] + (comp_t)b[id];
 }
 
 //this implementation uses more threads but also more memory access
@@ -2649,7 +2766,8 @@ __global__ void _matrixVectorColumnWiseAddWithThreadPerElem(
     CUDA_LONG col = id / m;
     CUDA_LONG row = id - col * m;
 
-    us[id] = alpha * a[row] + b[id];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    us[id] = (comp_t)alpha * (comp_t)a[row] + (comp_t)b[id];
 }
 
 template <class ElemType>
@@ -2717,7 +2835,8 @@ __global__ void _addScaledDifference(
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    c[id] = c[id] + (a[id] - b[id]) * (alpha);
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    c[id] = (comp_t)c[id] + ((comp_t)a[id] - (comp_t)b[id]) * ((comp_t)alpha);
 }
 
 template <class ElemType>
@@ -2728,10 +2847,11 @@ __global__ void _assignScaledDifference(
     ElemType* c,
     CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    c[id] = (a[id] - b[id]) * (alpha);
+    c[id] = ((comp_t)a[id] - (comp_t)b[id]) * ((comp_t)alpha);
 }
 
 template <class ElemType>
@@ -2745,7 +2865,8 @@ __global__ void _addScaledDifference(
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    c[id] = c[id] + (a[id] - b[id]) * alpha[0];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    c[id] = (comp_t)c[id] + ((comp_t)a[id] - (comp_t)b[id]) * (comp_t)alpha[0];
 }
 
 template <class ElemType>
@@ -2756,10 +2877,11 @@ __global__ void _assignScaledDifference(
     ElemType* c,
     CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    c[id] = (a[id] - b[id]) * alpha[0];
+    c[id] = ((comp_t)a[id] - (comp_t)b[id]) * (comp_t)alpha[0];
 }
 
 template <class ElemType>
@@ -2768,11 +2890,12 @@ __global__ void _addElementToElement(
     const ElemType* a, CUDA_LONG indexA,
     ElemType* c, CUDA_LONG indexC)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     //CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;  // only one thread launched
     //if (id > 0)
     //    return;
-    ElemType us = beta ? beta * c[indexC] : 0; // do not multiply if beta is 0, could be a NaN
-    us += a[indexA];
+    comp_t us = (comp_t)beta ? (comp_t)beta * (comp_t)c[indexC] : (comp_t)0; // do not multiply if beta is 0, could be a NaN
+    us += (comp_t)a[indexA];
     c[indexC] = us;
 }
 
@@ -2783,13 +2906,14 @@ __global__ void _assignNumOfDiff1024Threads(
     ElemType* c,
     CUDA_LONG N)
 {
-    __shared__ ElemType partialSums[1024];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partialSums[1024];
     partialSums[threadIdx.x] = 0;
     // int id = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG loadPerThread = N / blockDim.x;
     for (CUDA_LONG i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        partialSums[threadIdx.x] += (a[i] != b[i]);
+        partialSums[threadIdx.x] += ((comp_t)a[i] != (comp_t)b[i]);
     }
     __syncthreads();
 
@@ -3074,7 +3198,7 @@ __global__ void _dense1DConvMultSparseCSCAndWeightedAddToDense(
         }
     }
 
-    c[IDX2C(rowInC, colInC, m * numSteps)] = alpha * s + (beta == 0 ? 0 : beta * c[IDX2C(rowInC, colInC, m * numSteps)]); // If beta is zero then don't lookup c
+    c[IDX2C(rowInC, colInC, m * numSteps)] = alpha * s + (beta == 0 ? (ElemType)0 : beta * c[IDX2C(rowInC, colInC, m * numSteps)]); // If beta is zero then don't lookup c
 }
 
 /// c += alpha * a * b^T
@@ -3133,6 +3257,100 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
             s = a[IDX2C(i, rowInC % m, k)] * bnzValues[j];
 
         atomicAdd(&c[IDX2C(rowInC, colInC, m * numSteps)], alpha * s);
+    }
+}
+
+template <class ElemType>
+__global__ void _columnwiseScaleAndWeightedAdd(
+    ElemType alpha,
+    const ElemType* aData,
+    const ElemType* vData,
+    ElemType beta,
+    ElemType* cData,
+    int m, int n)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= m * n)
+        return;
+
+    CUDA_LONG col = id / m;
+
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    if (beta == 0) // don't even read the memory if beta is 0
+        cData[id] = (comp_t)alpha * (comp_t)vData[col] * (comp_t)aData[id];
+    else
+        cData[id] = (comp_t)alpha * (comp_t)vData[col] * (comp_t)aData[id] + (comp_t)beta * (comp_t)cData[id];
+}
+
+template <class ElemType>
+__global__ void _columnwiseScaleAndWeightedAdd4CSC(
+    ElemType alpha,
+    const ElemType* aData, const GPUSPARSE_INDEX_TYPE* aSecondaryIndices, const GPUSPARSE_INDEX_TYPE* aMajorIndices,
+    const ElemType* vData,
+    ElemType beta,
+    ElemType* cData,
+    int m, int n)
+{
+    CUDA_LONG col = blockDim.x * blockIdx.x + threadIdx.x;
+    if (col >= n)
+        return;
+
+    GPUSPARSE_INDEX_TYPE start = aSecondaryIndices[col];
+    GPUSPARSE_INDEX_TYPE end = aSecondaryIndices[col + 1];
+
+    for (GPUSPARSE_INDEX_TYPE p = start; p < end; p++)
+    {
+        GPUSPARSE_INDEX_TYPE row = aMajorIndices[p];
+        ElemType val = aData[p];
+
+        if (beta == 0) // don't even read the memory if beta is 0
+            cData[IDX2C(row, col, m)] = alpha * vData[col] * val;
+        else
+            cData[IDX2C(row, col, m)] = alpha * vData[col] * val + beta * cData[IDX2C(row, col, m)];
+    }
+}
+
+///
+/// adjusts the sparse block column matrix with the new Col2BlockId
+/// For each column, if new Col2BlockId contains valid index, a corresponding block exists at the index
+/// if old col2BlockId[i] contains value at that column, it would be copied over; otherwise the block would be filled with zeros
+///
+template <class ElemType>
+__global__ void _adjustCol2BlockId(
+    const int numRows,
+    const int numCols,
+    const GPUSPARSE_INDEX_TYPE* oldCol2BlockId,
+    const ElemType* oldNZ,
+    const GPUSPARSE_INDEX_TYPE* newCol2BlockId,
+    ElemType* newNZ,
+    GPUSPARSE_INDEX_TYPE* newBlockId2Col)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numCols)
+        return;
+
+    int newBlockId = newCol2BlockId[id];
+    if (newBlockId != SparseIndex_NotAssigned)
+    {
+        newBlockId2Col[newBlockId] = id;
+        int oldBlockId = oldCol2BlockId[id];
+        if (oldBlockId != SparseIndex_NotAssigned)
+        {
+            const ElemType* oldValue = oldNZ + numRows * oldBlockId;
+            ElemType* newValue = newNZ + numRows * newBlockId;
+            for (int row = 0; row < numRows; row++)
+            {
+                newValue[row] = oldValue[row];
+            }
+        }
+        else
+        {
+            ElemType* newValue = newNZ + numRows * newBlockId;
+            for (int row = 0; row < numRows; row++)
+            {
+                newValue[row] = 0;
+            }
+        }
     }
 }
 
@@ -3207,8 +3425,8 @@ __global__ void _findColsWithValues(
     if (nzIndex >= nnz)
         return;
 
-    if (col2BlockIds[rowIndexes[nzIndex]] == Id_NotAssigned)
-        col2BlockIds[rowIndexes[nzIndex]] = Id_Pending; // this row has value.
+    if (col2BlockIds[rowIndexes[nzIndex]] == SparseIndex_NotAssigned)
+        col2BlockIds[rowIndexes[nzIndex]] = SparseIndex_Pending; // this row has value.
 }
 
 //called before _denseMulSparseCSCTransposeToSparseBlockCol and after _findColsWithValuesto determine which columns have values and
@@ -3226,7 +3444,7 @@ __global__ void _determineBlockIds(
     if (col >= numCols)
         return;
 
-    if (col2BlockId[col] == Id_Pending)
+    if (col2BlockId[col] == SparseIndex_Pending)
     {
         GPUSPARSE_INDEX_TYPE blockIndex = atomicAdd((unsigned int*)blockSize, (unsigned int)1);
         col2BlockId[col] = blockIndex;
@@ -3268,7 +3486,7 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol2(
         CUDA_LONG resultCol = col2blockIds[rhsRow]; // resultCol == rhsRow maps to columnid
 
         // assume resultValues are 0-initialized
-        atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal);
+        atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal); //TODO: this does not work with fp16 for sparse embedding
     }
 }
 
@@ -3609,6 +3827,7 @@ __global__ void _computeNceOutputMax512Threads(
     const ElemType* bias,
     ElemType* res)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     // val and col are in CSR format
     // val is an array contains log_Pn(w). To differentiate positive and negative samples,
     // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
@@ -3618,7 +3837,7 @@ __global__ void _computeNceOutputMax512Threads(
     // res is the buffer to store computed output (sparse)
 
     // follow the convention, this kernel must be run on 512 threads per block
-    __shared__ ElemType partials[512];
+    __shared__ comp_t partials[512];
     partials[threadIdx.x] = 0;
 
     // threadIdx.x range from[0 ~ 512)
@@ -3643,7 +3862,7 @@ __global__ void _computeNceOutputMax512Threads(
         int tend = min(numCols_a, loadPerThread * (threadIdx.x + 1));
 
         for (int j = tstart; j < tend; j++)
-            partials[threadIdx.x] = a[IDX2C(j, batchid, numCols_a)] * b[IDX2C(j, wid, numCols_a)];
+            partials[threadIdx.x] = (comp_t)a[IDX2C(j, batchid, numCols_a)] * (comp_t)b[IDX2C(j, wid, numCols_a)];
 
         __syncthreads();
 
@@ -3663,7 +3882,7 @@ __global__ void _computeNceOutputMax512Threads(
         }
 
         if (threadIdx.x == 0)
-            res[i] = partials[0] + bias[wid];
+            res[i] = partials[0] + (comp_t)bias[wid];
     }
 }
 
@@ -3674,6 +3893,7 @@ __global__ void _assignSoftmaxSumMax512Threads(
     const ElemType* a,
     ElemType* c) // run on 512 threads per block
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     // val and col are in CSR format
     // val is an array contains log_Pn(w). To differentiate positive and negative samples,
     // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
@@ -3683,7 +3903,7 @@ __global__ void _assignSoftmaxSumMax512Threads(
     // tmp is the buffer that stores NCE output calculated from _computeNceOutputMax512Threads
     // c is the matrix to store objective
 
-    __shared__ ElemType partials[512];
+    __shared__ comp_t partials[512];
     partials[threadIdx.x] = 0;
 
     int total = sampleCount;
@@ -3695,7 +3915,7 @@ __global__ void _assignSoftmaxSumMax512Threads(
     for (int i = start; i < end; i++)
     {
         int wid = (int) a[i];
-        partials[threadIdx.x] += softmax[IDX2C(i, wid, sampleCount)];
+        partials[threadIdx.x] += (comp_t)softmax[IDX2C(i, wid, sampleCount)];
     }
 
     __syncthreads();
@@ -3730,6 +3950,7 @@ __global__ void _assignNoiseContrastiveEstimationMax512Threads(
     ElemType* tmp,
     ElemType* c) // run on 512 threads per block
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     // val and col are in CSR format
     // val is an array contains log_Pn(w). To differentiate positive and negative samples,
     // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
@@ -3739,7 +3960,7 @@ __global__ void _assignNoiseContrastiveEstimationMax512Threads(
     // tmp is the buffer that stores NCE output calculated from _computeNceOutputMax512Threads
     // c is the matrix to store objective
 
-    __shared__ ElemType partials[512];
+    __shared__ comp_t partials[512];
     partials[threadIdx.x] = 0;
 
     int total = numRows * sampleCount;
@@ -3749,20 +3970,20 @@ __global__ void _assignNoiseContrastiveEstimationMax512Threads(
     int start = loadPerThread * threadIdx.x;
     int end = min(total, loadPerThread * (threadIdx.x + 1));
 
-    ElemType log_num_noise_samples = log((ElemType)(sampleCount - 1));
+    comp_t log_num_noise_samples = log_((comp_t)(sampleCount - 1));
     for (int i = start; i < end; i++)
     {
-        ElemType prob = -val[2 * i + 1];
+        comp_t prob = -(comp_t)val[2 * i + 1];
         bool positive = (prob > 0);
         if (positive)
             prob = -prob;
-        ElemType score_noise = log_num_noise_samples + prob;
-        ElemType z = logaddk(tmp[i], score_noise);
-        ElemType logprob = tmp[i] - z;
-        ElemType logprob_noise = score_noise - z;
-        tmp[i] = -exp(logprob);
+        comp_t score_noise = log_num_noise_samples + prob;
+        comp_t z = logaddk((comp_t)tmp[i], score_noise);
+        comp_t logprob = (comp_t)tmp[i] - z;
+        comp_t logprob_noise = score_noise - z;
+        tmp[i] = -exp_(logprob);
         if (positive)
-            tmp[i] += 1;
+            tmp[i] = (comp_t)tmp[i] + 1;
         if (positive)
             partials[threadIdx.x] += logprob;
         else
@@ -3870,6 +4091,7 @@ __global__ void _assignNceDerivativeNew(
     ElemType* c,
     size_t inputIndex)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     // val and col are CSR format sparse matrix for label
     // val is an array contains log_Pn(w). To differentiate positive and negative samples
     // we store log_Pn(w) as it is for positive samples, and -log_Pn(w) for negative samples
@@ -3888,14 +4110,14 @@ __global__ void _assignNceDerivativeNew(
     if (n < total)
     {
         int wid = (int) val[2 * n];
-        ElemType er = tmp[n];
+        comp_t er = tmp[n];
         if (inputIndex == 1)
         {
             for (int i = 0; i < width; i++)
             {
                 int j = (i + n) % width; // introduce randomization to avoid conflicts
-                ElemType val = -er * b[IDX2C(j, wid, width)];
-                atomicAdd(&c[IDX2C(j, batchId, width)], val);
+                comp_t val = -er * (comp_t)b[IDX2C(j, wid, width)];
+                atomicAdd(&c[IDX2C(j, batchId, width)], (ElemType)val);
             }
         }
         else if (inputIndex == 2)
@@ -3903,12 +4125,12 @@ __global__ void _assignNceDerivativeNew(
             for (int i = 0; i < width; i++)
             {
                 int j = (i + n) % width; // introduce randomization to avoid conflicts
-                ElemType val = -er * a[IDX2C(j, batchId, width)];
-                atomicAdd(&c[IDX2C(j, wid, width)], val);
+                comp_t val = -er * (comp_t)a[IDX2C(j, batchId, width)];
+                atomicAdd(&c[IDX2C(j, wid, width)], (ElemType)val);
             }
         }
         else
-            atomicAdd(&c[wid], -er);
+            atomicAdd(&c[wid], (ElemType)-er);
     }
 }
 
@@ -3983,14 +4205,15 @@ __global__ void _inplaceTruncate(
     const ElemType threshold,
     const CUDA_LONG N)
 {
-    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N)
-    ElemType locThresholdPos = abs(threshold);
-    ElemType locTHresholdNeg = -locThresholdPos;
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    CALCULATE_ELEMENTWISE_INDEX_OR_EXIT(id, N);
+    comp_t locThresholdPos = fabs_((comp_t)threshold);
+    comp_t locTHresholdNeg = -locThresholdPos;
     if (a[id] > locThresholdPos)
     {
         a[id] = locThresholdPos;
     }
-    else if (a[id] < locTHresholdNeg)
+    else if ((comp_t)a[id] < locTHresholdNeg)
     {
         a[id] = locTHresholdNeg;
     }
@@ -4002,17 +4225,18 @@ __global__ void _inplaceSoftThreshold(
     const ElemType threshold,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
 
     if (a[id] > threshold)
     {
-        a[id] -= threshold;
+        a[id] = (comp_t)a[id] - (comp_t)threshold;
     }
-    else if (a[id] < -threshold)
+    else if (a[id] < -(comp_t)threshold)
     {
-        a[id] += threshold;
+        a[id] = (comp_t)a[id] + (comp_t)threshold;
     }
     else
         a[id] = 0;
@@ -4028,9 +4252,8 @@ __global__ void _normalGradForSparseBlock(
     ElemType* lhsValues, // lhs is blockCol or blockRow
     const GPUSPARSE_INDEX_TYPE* blockIds,
     ElemType* rhs,
-    bool unitGainMomentum)
+    ElemType unitGainFactor)
 {
-    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - momentum) : 1.0;
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG row, col;
     if (blockCol)
@@ -4061,14 +4284,14 @@ __global__ void _reductionSum1024Threads(
     ElemType* sum,
     CUDA_LONG N)
 {
-
-    __shared__ ElemType partialSums[1024];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partialSums[1024];
     partialSums[threadIdx.x] = 0;
     // int id = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG loadPerThread = N / blockDim.x;
     for (CUDA_LONG i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        partialSums[threadIdx.x] += data[i];
+        partialSums[threadIdx.x] += (comp_t)data[i];
     }
     __syncthreads();
 
@@ -4143,14 +4366,15 @@ __global__ void _reductionSumAndAssign1024Threads(
     CUDA_LONG N, // length of data
     CUDA_LONG M) // length of toAssign
 {
-    __shared__ ElemType partialSums[1024];
-    __shared__ ElemType res;
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partialSums[1024];
+    __shared__ comp_t res;
     partialSums[threadIdx.x] = 0;
     // int id = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG loadPerThread = N / blockDim.x;
     for (CUDA_LONG i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        partialSums[threadIdx.x] += data[i];
+        partialSums[threadIdx.x] += (comp_t)data[i];
     }
     __syncthreads();
 
@@ -4227,15 +4451,15 @@ __global__ void _reductionSum21024Threads(
     CUDA_LONG N,
     bool takeSqrt = false)
 {
-
-    __shared__ ElemType partialSums[1024];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partialSums[1024];
     partialSums[threadIdx.x] = 0;
     // int id = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG loadPerThread = N / blockDim.x;
     for (CUDA_LONG i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     // for (int i= threadIdx.x*loadPerThread; i<(threadIdx.x+1)*loadPerThread;++i)
     {
-        partialSums[threadIdx.x] += (data[i] * data[i]);
+        partialSums[threadIdx.x] += ((comp_t)data[i] * (comp_t)data[i]);
     }
     __syncthreads();
 
@@ -4297,13 +4521,13 @@ __global__ void _reductionSum21024Threads(
 
     if (threadIdx.x == 0)
     {
-        sum[0] = partialSums[0] + partialSums[1] + partialSums[2] + partialSums[3];
         if (takeSqrt)
         {
-            if (sizeof(ElemType) == sizeof(float))
-                sum[0] = sqrtf(sum[0]);
-            else
-                sum[0] = sqrt(sum[0]);
+            sum[0] = sqrt_(partialSums[0] + partialSums[1] + partialSums[2] + partialSums[3]);
+        }
+        else
+        {
+            sum[0] = partialSums[0] + partialSums[1] + partialSums[2] + partialSums[3];
         }
     }
 }
@@ -4316,21 +4540,14 @@ __global__ void _reductionMatrixNormInf1024Threads(
     ElemType* maxAbs,
     CUDA_LONG N)
 {
-
-    __shared__ ElemType partialSums[1024];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partialSums[1024];
     partialSums[threadIdx.x] = 0;
     // int id = blockDim.x * blockIdx.x + threadIdx.x;
     int loadPerThread = N / blockDim.x;
     for (int i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        if (sizeof(ElemType) == sizeof(float))
-        {
-            partialSums[threadIdx.x] = max(fabsf(data[i]), partialSums[threadIdx.x]);
-        }
-        else
-        {
-            partialSums[threadIdx.x] = max(fabs(data[i]), partialSums[threadIdx.x]);
-        }
+        partialSums[threadIdx.x] = max(fabs_((comp_t)data[i]), partialSums[threadIdx.x]);
     }
     __syncthreads();
 
@@ -4404,14 +4621,14 @@ __global__ void _reductionMatrixNorm01024Threads(
     ElemType* nz,
     CUDA_LONG N)
 {
-
-    __shared__ ElemType partialSums[1024];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partialSums[1024];
     partialSums[threadIdx.x] = 0;
     // int id = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG loadPerThread = N / blockDim.x;
     for (CUDA_LONG i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        if (data[i] != 0)
+        if ((comp_t)data[i] != 0)
             ++partialSums[threadIdx.x];
     }
     __syncthreads();
@@ -4505,8 +4722,9 @@ __global__ void _lrHelper512Threads(
     const CUDA_LONG N,
     ElemType* d_res)
 {
-    __shared__ ElemType partialSums1[512];
-    __shared__ ElemType partialSums2[512];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partialSums1[512];
+    __shared__ comp_t partialSums2[512];
     partialSums1[threadIdx.x] = 0;
     partialSums2[threadIdx.x] = 0;
 
@@ -4514,8 +4732,8 @@ __global__ void _lrHelper512Threads(
     int loadPerThread = N / blockDim.x;
     for (int i = threadIdx.x * loadPerThread; i < (threadIdx.x == blockDim.x - 1 ? N : (threadIdx.x + 1) * loadPerThread); ++i)
     {
-        partialSums1[threadIdx.x] += (data1[i] * data1[i]);
-        partialSums2[threadIdx.x] += (data2[i] * data2[i]);
+        partialSums1[threadIdx.x] += ((comp_t)data1[i] * (comp_t)data1[i]);
+        partialSums2[threadIdx.x] += ((comp_t)data2[i] * (comp_t)data2[i]);
     }
     __syncthreads();
 
@@ -4586,16 +4804,9 @@ __global__ void _lrHelper512Threads(
 
     if (threadIdx.x == 0)
     {
-        ElemType fns1 = partialSums1[0] + partialSums1[1] + partialSums1[2] + partialSums1[3];
-        ElemType fns2 = partialSums2[0] + partialSums2[1] + partialSums2[2] + partialSums2[3];
-        if (sizeof(ElemType) == sizeof(float))
-        {
-            d_res[0] = max((ElemType) 0, d_res[0] / max((ElemType) 1.0e-10, sqrtf(fns1)) / max((ElemType) 1.0e-10, sqrtf(fns2)));
-        }
-        else
-        {
-            d_res[0] = max((ElemType) 0, d_res[0] / max((ElemType) 1.0e-10, sqrt(fns1)) / max((ElemType) 1.0e-10, sqrt(fns2)));
-        }
+        comp_t fns1 = partialSums1[0] + partialSums1[1] + partialSums1[2] + partialSums1[3];
+        comp_t fns2 = partialSums2[0] + partialSums2[1] + partialSums2[2] + partialSums2[3];
+        d_res[0] = max((comp_t)0, (comp_t)d_res[0] / max((comp_t) 1.0e-10, sqrt_(fns1)) / max((ElemType) 1.0e-10, sqrt_(fns2)));
     }
 }
 
@@ -4604,14 +4815,7 @@ template<class ElemType>
 __global__ void _lrHelper512Threads(
 ElemType* d_tmp)
 {
-if (sizeof(ElemType)==sizeof(float))
-{
-d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrtf(d_tmp[1]))/max((ElemType)1.0e-10,sqrtf(d_tmp[2])));
-}
-else
-{
-d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt(d_tmp[1]))/max((ElemType)1.0e-10,sqrt(d_tmp[2])));
-}
+    d_tmp[0] = max((ElemType)0, d_tmp[0]/max((ElemType)1.0e-10,sqrt_(d_tmp[1]))/max((ElemType)1.0e-10,sqrt_(d_tmp[2])));
 }
 */
 
@@ -4624,6 +4828,7 @@ __global__ void _assignElementProductOfWithShiftNeg(
     const int NTPlusOne,
     const int BS)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG idx = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG idy = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -4633,13 +4838,13 @@ __global__ void _assignElementProductOfWithShiftNeg(
     if (idx == 0)
     {
         // this is row-0. No need to shift
-        us[IDX2C(idx, idy, NTPlusOne)] = a[idy] * b[idy];
+        us[IDX2C(idx, idy, NTPlusOne)] = (comp_t)a[idy] * (comp_t)b[idy];
     }
     else
     {
         int cs = shift + idx - 1;
         int tmpidy = (idy + cs) % BS;
-        us[IDX2C(idx, idy, NTPlusOne)] = a[idy] * b[tmpidy];
+        us[IDX2C(idx, idy, NTPlusOne)] = (comp_t)a[idy] * (comp_t)b[tmpidy];
     }
 }
 
@@ -4653,13 +4858,14 @@ __global__ void _innerProductWithShiftNeg(
     const CUDA_LONG shift,
     const CUDA_LONG NTPlusOne)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG idx = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG idy = blockDim.y * blockIdx.y + threadIdx.y;
 
     if (idx >= NTPlusOne || idy >= M)
         return;
 
-    ElemType sum = 0;
+    comp_t sum = 0;
     CUDA_LONG index_a = 0;
     CUDA_LONG index_b = 0;
     CUDA_LONG col_a = 0;
@@ -4672,7 +4878,7 @@ __global__ void _innerProductWithShiftNeg(
         for (CUDA_LONG i = 0; i < N; ++i)
         {
             index_a = IDX2C(i, col_a, N);
-            sum += a[index_a] * b[index_a];
+            sum += (comp_t)a[index_a] * (comp_t)b[index_a];
         }
     }
     else
@@ -4684,7 +4890,7 @@ __global__ void _innerProductWithShiftNeg(
         {
             index_a = IDX2C(i, col_a, N);
             index_b = IDX2C(i, col_b, N);
-            sum += a[index_a] * b[index_b];
+            sum += (comp_t)a[index_a] * (comp_t)b[index_b];
         }
     }
     c[IDX2C(idx, idy, NTPlusOne)] = sum;
@@ -4716,6 +4922,7 @@ __global__ void _conductRowElementMultiplyWithShift(
     const int shift,
     const bool isafixed)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG idx = blockDim.x * blockIdx.x + threadIdx.x;
     CUDA_LONG idy = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -4726,12 +4933,12 @@ __global__ void _conductRowElementMultiplyWithShift(
     if (isafixed)
     {
         // we fix a, and shift b
-        us[IDX2C(idx, idy, O)] = a[idy] * b[IDX2C(idx, tmpidy, O)];
+        us[IDX2C(idx, idy, O)] = (comp_t)a[idy] * (comp_t)b[IDX2C(idx, tmpidy, O)];
     }
     else
     {
         // we fix b, but shift a
-        us[IDX2C(idx, idy, O)] = a[tmpidy] * b[IDX2C(idx, idy, O)];
+        us[IDX2C(idx, idy, O)] = (comp_t)a[tmpidy] * (comp_t)b[IDX2C(idx, idy, O)];
     }
 }
 
@@ -4743,12 +4950,13 @@ __global__ void _assignElementProductOfWithShift(
     const int shift,
     const CUDA_LONG N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
 
     int tmpidb = (id + shift) % N;
-    us[id] = a[id] * b[tmpidb];
+    us[id] = (comp_t)a[id] * (comp_t)b[tmpidb];
 }
 
 // minus 1 at a specific position
@@ -4778,15 +4986,16 @@ __global__ void _rcrfBackwardComputeMax1024Labels(
     const ElemType* gpair_scores, // column slice at current time t
     const size_t iNumLab, const int shift)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
     extern __shared__ double sh_alpha_and_beta[]; // [id] or [id + iNumLab] or [id + 2 * iNumLab)]
     // need byte size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
-    ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
-    ElemType* beta_t1 = (ElemType*) (alpha + iNumLab);
-    ElemType* zeta = (ElemType*) (beta_t1 + iNumLab);
-    ElemType pair_scores[1024];  // [j=0..iNumLab-1]
+    comp_t* alpha = (comp_t*) (sh_alpha_and_beta);
+    comp_t* beta_t1 = (comp_t*) (alpha + iNumLab);
+    comp_t* zeta = (comp_t*) (beta_t1 + iNumLab);
+    comp_t pair_scores[1024];  // [j=0..iNumLab-1]
 
     if (id < 0 || id >= iNumLab)
         return;
@@ -4802,7 +5011,7 @@ __global__ void _rcrfBackwardComputeMax1024Labels(
     for (int j = 0; j < iNumLab; j++)
         pair_scores[j] = gpair_scores[IDX2C(j, id, iNumLab)];
 
-    ElemType fTmp = LZERO;
+    comp_t fTmp = LZERO;
     if (t == iNumPos - 1)
     {
         fTmp = alpha[id] - zeta[id];
@@ -4829,13 +5038,14 @@ __global__ void _rcrfBackwardComputeZetaMax1024Labels(
     const ElemType* gpair_scores,
     const size_t iNumLab, const int shift)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
     extern __shared__ double sh_alpha_and_beta[]; // [id]
     // need byte size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
-    ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
-    ElemType pair_scores[1024]; // [j=0..iNumLab-1]
+    comp_t* alpha = (comp_t*) (sh_alpha_and_beta);
+    comp_t pair_scores[1024]; // [j=0..iNumLab-1]
 
     if (id < 0 || id >= iNumLab)
         return;
@@ -4848,7 +5058,7 @@ __global__ void _rcrfBackwardComputeZetaMax1024Labels(
     for (int j = 0; j < iNumLab; j++)
         pair_scores[j] = gpair_scores[IDX2C(id, j, iNumLab)];
 
-    ElemType fSum = LZERO;
+    comp_t fSum = LZERO;
     for (int m = 0; m < iNumLab; m++)
     {
         if (t == iNumPos - 1)
@@ -4873,13 +5083,14 @@ __global__ void _rcrfTransGrdComputeZetaMax1024Labels(
     const size_t start_lbl,
     const int shift)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
     extern __shared__ double sh_alpha_and_beta[]; // [id]
     // need byte size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
-    ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
-    ElemType pair_scores[1024]; // [j=0..iNumLab-1]
+    comp_t* alpha = (comp_t*) (sh_alpha_and_beta);
+    comp_t pair_scores[1024]; // [j=0..iNumLab-1]
 
     if (id < 0 || id >= iNumLab)
         return;
@@ -4893,8 +5104,8 @@ __global__ void _rcrfTransGrdComputeZetaMax1024Labels(
     for (int j = 0; j < iNumLab; j++)
         pair_scores[j] = gpair_scores[IDX2C(id, j, iNumLab)];
 
-    ElemType fSum = LZERO;
-    ElemType fTmp;
+    comp_t fSum = LZERO;
+    comp_t fTmp;
     for (int m = 0; m < iNumLab; m++)
     {
         if (t < 0)
@@ -4928,15 +5139,16 @@ __global__ void _rcrfTransGrdComputeMax1024Labels(
     const size_t iNumLab,
     const int shift)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int id = blockDim.x * blockIdx.x + threadIdx.x;
 
     extern __shared__ double sh_alpha_and_beta[]; // [id]
     // need byte size = (iNumPos * iNumLab * 2 + iNumLab * iNumLab) * sizeof(ElemType)
 
-    ElemType* alpha = (ElemType*) (sh_alpha_and_beta);
-    ElemType* beta = (ElemType*) (alpha + iNumLab);
-    ElemType* zeta = (ElemType*) (beta + iNumLab);
-    ElemType pair_scores[1024]; // [j=0..iNumLab-1]
+    comp_t* alpha = (comp_t*) (sh_alpha_and_beta);
+    comp_t* beta = (comp_t*) (alpha + iNumLab);
+    comp_t* zeta = (comp_t*) (beta + iNumLab);
+    comp_t pair_scores[1024]; // [j=0..iNumLab-1]
 
     if (id < 0 || id >= iNumLab)
         return;
@@ -4952,8 +5164,8 @@ __global__ void _rcrfTransGrdComputeMax1024Labels(
     for (int j = 0; j < iNumLab; j++)
         pair_scores[j] = gpair_scores[IDX2C(j, id, iNumLab)];
 
-    ElemType fTmp;
-    ElemType fTmp2;
+    comp_t fTmp;
+    comp_t fTmp2;
     for (int j = 0; j < iNumLab; j++)
     {
         if (t == 0)
@@ -4970,8 +5182,8 @@ __global__ void _rcrfTransGrdComputeMax1024Labels(
         assert(fTmp2 <= 0.0);
         fTmp2 += beta[j];
 
-        fTmp = exp(fTmp2);
-        grd[IDX2C(j, id, iNumLab)] += fTmp;
+        fTmp = exp_(fTmp2);
+        grd[IDX2C(j, id, iNumLab)] = (comp_t)grd[IDX2C(j, id, iNumLab)] + fTmp;
     }
 
     if ((t == 0 && id == start_lbl) || (t > 0 && t < iNumPos && lbls[IDX2C(id, t - 1, iNumLab)] != 0))
@@ -4979,7 +5191,7 @@ __global__ void _rcrfTransGrdComputeMax1024Labels(
         for (int ik = 0; ik < iNumLab; ik++)
         {
             if (lbls[IDX2C(ik, t, iNumLab)] != 0)
-                grd[IDX2C(ik, id, iNumLab)] -= 1.0;
+                grd[IDX2C(ik, id, iNumLab)] = (comp_t)grd[IDX2C(ik, id, iNumLab)] - 1.0;
         }
     }
 };
@@ -4991,8 +5203,8 @@ __global__ void _reductionLogAddSum(
     const size_t sum_size,
     CUDA_LONG N)
 {
-
-    __shared__ ElemType partialLogAddSum[GridDim::maxThreadsPerBlock];
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partialLogAddSum[GridDim::maxThreadsPerBlock];
 
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     int tid = threadIdx.x;
@@ -5008,7 +5220,7 @@ __global__ void _reductionLogAddSum(
     size_t start_width = ceil((N + 0.0) / 2.0);
     for (size_t s = start_width; s > 0; s >>= 1)
     {
-        ElemType lSum = LZERO;
+        comp_t lSum = LZERO;
         if (tid < s)
         {
             lSum = logaddk(partialLogAddSum[tid], partialLogAddSum[tid + s]);
@@ -5044,7 +5256,7 @@ __global__ void _DropFrame(
     {
         int idx = IDX2C(i, col_id, m_numRows);
         // printf("%u ", idx);
-        if (fabs(label[idx] - 1.0) < 0.1) // we found the 1 in the vector
+        if (fabs_(label[idx] - 1.0) < 0.1) // we found the 1 in the vector
         {
             if (gamma[idx] < framedropthreshhold)
                 dropframe = true;
@@ -5066,10 +5278,11 @@ template <class ElemType>
 __global__ void _AssignSequenceError(const ElemType hsmoothingWeight, ElemType* error, const ElemType* label,
                                      const ElemType* dnnoutput, const ElemType* gamma, ElemType alpha, const long N)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     int id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= N)
         return;
-    error[id] -= alpha * (label[id] - (1.0 - hsmoothingWeight) * dnnoutput[id] - hsmoothingWeight * gamma[id]);
+    error[id] = (comp_t)error[id] - (comp_t)alpha * ((comp_t)label[id] - (1.0 - (comp_t)hsmoothingWeight) * (comp_t)dnnoutput[id] - (comp_t)hsmoothingWeight * (comp_t)gamma[id]);
     // change to ce
     // error[id] -= alpha * (label[id] - dnnoutput[id] );
 }
@@ -5141,30 +5354,34 @@ __global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LON
 
 template <class ElemType>
 __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType typedUnitGainFactor, bool adamax)
 {
-    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    const comp_t unitGainFactor = (comp_t)typedUnitGainFactor;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
     {
-        ElemType g = grad[idx];
-        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
-        smoothAda[idx] = adaSqr;
-        ElemType w;
-        if (sizeof(ElemType) == sizeof(double))
+        comp_t g = grad[idx];
+        comp_t w;
+        if (!adamax)
         {
-            w = adaMul * rsqrt(adaSqr + 1e-8);
+            comp_t adaSqr = (comp_t)adaWeight * (comp_t)smoothAda[idx] + (1.0f - (comp_t)adaWeight) * g * g;
+            smoothAda[idx] = adaSqr;
+            w = (comp_t)adaMul * 1.0 / (sqrt_(adaSqr) + (comp_t)epsilon);
         }
         else
         {
-            w = adaMul * rsqrtf(adaSqr + 1e-8);
+            comp_t gAbs;
+            gAbs = fabs_(g);
+            smoothAda[idx] = max((comp_t)adaWeight * (comp_t)smoothAda[idx], gAbs);
+            w = (comp_t)adaMul / (comp_t)smoothAda[idx];
         }
 
-        g = mom * smoothMom[idx] + unitGainFactor * g;
+        g = (comp_t)mom * (comp_t)smoothMom[idx] + unitGainFactor * g;
         smoothMom[idx] = g;
-        g = lr*g*w;
-        val[idx] -= g;
+        g = (comp_t)lr*g*w;
+        val[idx] = (comp_t)val[idx] - g;
     }
 }
 
@@ -5172,24 +5389,27 @@ template <class ElemType>
 __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
 {
-    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
     {
         ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
-        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
-        smoothAda[idx] = adaSqr;
         ElemType w;
-        if (sizeof(ElemType) == sizeof(double))
+        if (!adamax)
         {
-            w = adaMul * rsqrt(adaSqr + 1e-8);
+            ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+            smoothAda[idx] = adaSqr;
+
+            w = adaMul * (ElemType)1.0 / (sqrt_(adaSqr) + epsilon);
         }
         else
         {
-            w = adaMul * rsqrtf(adaSqr + 1e-8);
+            ElemType gAbs;
+            gAbs = fabs_(g);
+            smoothAda[idx] = max(adaWeight * smoothAda[idx], gAbs);
+            w = adaMul / smoothAda[idx];
         }
 
         g = mom * smoothMom[idx] + unitGainFactor * g;
@@ -5199,71 +5419,86 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     }
 }
 
-template <class ElemType>
-__global__ void _adadelta(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
-    ElemType rho, ElemType epsilon)
+template <class ElemType, class GradType>
+__global__ void _adadelta(CUDA_LONG size, GradType* grad, ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
+    ElemType learningRate, ElemType rho, ElemType epsilon)
 {
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
     {
-        ElemType g = grad[idx];
+        ElemType g = (ElemType)grad[idx];
         ElemType adaSqr = rho * smoothAda[idx] + (1.0f - rho) * g * g;
         smoothAda[idx] = adaSqr;
         ElemType x2 = smoothX2[idx];
         ElemType deltaX;
-        if (sizeof(ElemType) == sizeof(double))
-        {
-            deltaX = -sqrt(x2 + epsilon) * rsqrt(adaSqr + epsilon) * g;
-        }
-        else
-        {
-            deltaX = -sqrtf(x2 + epsilon) * rsqrtf(adaSqr + epsilon) * g;
-        }
+        deltaX = -sqrt_(x2 + epsilon) * rsqrt_(adaSqr + epsilon) * g;
 
         smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
-        val[idx] += deltaX;
+        val[idx] = val[idx] + learningRate * deltaX;
     }
 }
 
-template <class ElemType>
+template <class GradType, class AccumType>
 __global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
-    ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
-    ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
-    ElemType rho, ElemType epsilon)
+    const GradType* grad_bsc, const GPUSPARSE_INDEX_TYPE* blockId2ColOrRow, size_t numRows,
+    AccumType* smoothAda, AccumType* smoothX2, AccumType* val,
+    AccumType learningRate, AccumType rho, AccumType epsilon,
+    const int* timestamps, int currentTimestamp)
 {
-    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
-    CUDA_LONG stride = blockDim.x * gridDim.x;
-    for (; idx < size; idx += stride)
+    auto sparseIndex = blockDim.x * blockIdx.x + threadIdx.x;
+    if (sparseIndex >= size)
+        return;
+    auto blockid = sparseIndex / numRows;
+    auto col = blockId2ColOrRow[blockid];
+    auto decay = pow_(rho, (AccumType)(currentTimestamp - 1 - timestamps[col]));
+    auto denseIndex = col * numRows + sparseIndex % numRows;
+    AccumType g = (AccumType)grad_bsc[sparseIndex];
+    AccumType adaSqr = rho * decay * smoothAda[denseIndex] + (1.0f - rho) * g * g;
+    smoothAda[denseIndex] = adaSqr;
+    AccumType x2 = decay * smoothX2[denseIndex];
+    AccumType deltaX;
+    if (sizeof(AccumType) == sizeof(double))
     {
-        ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
-        ElemType adaSqr = rho * smoothAda[idx] + (1.0f - rho) * g * g;
-        smoothAda[idx] = adaSqr;
-        ElemType x2 = smoothX2[idx];
-        ElemType deltaX;
-        if (sizeof(ElemType) == sizeof(double))
-        {
-            deltaX = -sqrt(x2 + epsilon) * rsqrt(adaSqr + epsilon) * g;
-        }
-        else
-        {
-            deltaX = -sqrtf(x2 + epsilon) * rsqrtf(adaSqr + epsilon) * g;
-        }
+        deltaX = -sqrt_(x2 + epsilon) * rsqrt_(adaSqr + epsilon) * g;
+    }
+    else
+    {
+        deltaX = -sqrt_(x2 + epsilon) * rsqrt_(adaSqr + epsilon) * g;
+    }
+    smoothX2[denseIndex] = rho * x2 + (1.0f - rho) * deltaX * deltaX;
+    val[denseIndex] += learningRate * deltaX;
+}
 
-        smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
-        val[idx] += deltaX;
+
+template <class ElemType>
+__global__ void _adadeltaFlush(CUDA_LONG N, size_t rows, ElemType* smoothAda, ElemType* smoothX2,
+    ElemType rho, int* timestamps, int currentTimestamp)
+{
+    auto col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (col >= N)
+        return;
+    
+    auto decay = pow_(rho, (ElemType)(currentTimestamp - timestamps[col]));
+    auto offset = rows * col;
+    timestamps[col] = 0;
+    for (auto row = 0; row < rows; ++row)
+    {
+        smoothAda[offset + row] *= decay;
+        smoothX2[offset + row] *= decay;
     }
 }
 
-// Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+
+// Calculate alpha in forward-backward calculation. equation (6), (7) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
 // prob (input): the posterior output from the network
-// alpha (output): alpha for forward-backward calculation. 
-// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
-// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// alpha (output): alpha for forward-backward calculation.
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance
 // uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
 // uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
-// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
 // uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
 // numChannels (input): channel number in this minibatch
 // uttNum (input): number of utterances
@@ -5293,12 +5528,13 @@ __global__ void _assignAlphaScore(
     const size_t blankTokenId,
     const int delayConstraint)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
     // Index of the label in the sequence
     LONG64 phoneSeqId = blockDim.y * blockIdx.y + threadIdx.y;
 
     // Number of phones and frames in this utterance
-    LONG64 phoneNum = uttPhoneNum[uttId]; 
+    LONG64 phoneNum = uttPhoneNum[uttId];
     LONG64 frameNum = uttFrameNum[uttId];
 
     if (uttId >= uttNum || phoneSeqId >= phoneNum - 1 || t >= frameNum || phoneSeqId == 0) return;
@@ -5335,30 +5571,30 @@ __global__ void _assignAlphaScore(
     {
         if (phoneSeqId >= 1)
         {
-            ElemType x = LZERO;
+            comp_t x = LZERO;
 
-            ElemType ascore;
+            comp_t ascore;
             if (phoneSeqId > 2)
             {
                 // if current label is not blank and not equal prev non-blank label
                 if ((LONG64)(phoneSeq[labelid]) != blankTokenId && phoneId != (LONG64)(phoneSeq[labelid_2]))
                 {
-                    x = logaddk(x, alphaScore[alphaId_2]);
+                    x = logaddk(x, (comp_t)alphaScore[alphaId_2]);
                 }
             }
 
             if (phoneSeqId > 1)
             {
-                x = logaddk(x, alphaScore[alphaId_1]);
+                x = logaddk(x, (comp_t)alphaScore[alphaId_1]);
             }
 
-            x = logaddk(x, alphaScore[alphaId_0]);
+            x = logaddk(x, (comp_t)alphaScore[alphaId_0]);
 
             if (phoneId != SIZE_MAX)
                 ascore = prob[probId]; // Probability of observing given label at given time
             else
                 ascore = 0;
-            alphaScore[alphaId] = (ElemType)x + ascore;
+            alphaScore[alphaId] = x + ascore;
             if (delayConstraint != -1)
             {
                 LONG64 labelid_r = labelid + 2;
@@ -5379,7 +5615,7 @@ __global__ void _assignAlphaScore(
     }
 }
 
-// Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// Calculate beta in forward-backward calculation, equation (10), (11) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
 template<class ElemType>
 __global__ void _assignBetaScore(
@@ -5399,6 +5635,7 @@ __global__ void _assignBetaScore(
     const size_t blankTokenId,
     const int delayConstraint)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
     // Index of the label in the sequence
     LONG64 phoneSeqId = blockDim.y * blockIdx.y + threadIdx.y;
@@ -5429,28 +5666,28 @@ __global__ void _assignBetaScore(
     {
         if (phoneSeqId >= 1)
         {
-            ElemType x = LZERO;
-            ElemType ascore;
+            comp_t x = LZERO;
+            comp_t ascore;
             if (phoneSeqId < phoneNum - 3)
             {
                 if (phoneSeq[labelid] != blankTokenId && phoneId != phoneSeq[labelid_2])
                 {
-                    x = logaddk(x, betaScore[betaid_2]);
+                    x = logaddk(x, (comp_t)betaScore[betaid_2]);
                 }
             }
 
             if (phoneSeqId < phoneNum - 2)
             {
-                x = logaddk(x, betaScore[betaid_1]);
+                x = logaddk(x, (comp_t)betaScore[betaid_1]);
             }
 
-            x = logaddk(x, betaScore[betaid_0]);
+            x = logaddk(x, (comp_t)betaScore[betaid_0]);
 
             if (phoneId != SIZE_MAX)
                 ascore = prob[probId];
             else
                 ascore = 0;
-            betaScore[betaid] = (ElemType)x + ascore;
+            betaScore[betaid] = x + ascore;
             if (delayConstraint != -1)
             {
                 LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_2]);
@@ -5469,7 +5706,7 @@ __global__ void _assignBetaScore(
     }
 }
 
-// Calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// Calculate derivative, equation (15) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
 template<class ElemType>
 __global__ void _assignCTCScore(
@@ -5487,6 +5724,7 @@ __global__ void _assignCTCScore(
     const long maxPhoneNum,
     const long totalPhoneNum)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
     LONG64 t = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -5495,34 +5733,34 @@ __global__ void _assignCTCScore(
         LONG64 phoneNum = uttPhoneNum[uttId];
         LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
         LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
-        ElemType P_lx = betaScore[alphaId_0];
+        comp_t P_lx = betaScore[alphaId_0];
 
         for (int s = 1; s < phoneNum - 1; s++)
         {
-            long phoneId = phoneSeq[uttId*maxPhoneNum + s];
+            long phoneId = (comp_t)phoneSeq[uttId*maxPhoneNum + s];
             LONG64 alphaId = maxPhoneNum* timeId + s;
             LONG64 probId = timeId*totalPhoneNum + phoneId;
 
             if (phoneId != SIZE_MAX)
             {
-                ElemType logoccu = alphaScore[alphaId] + betaScore[alphaId] - prob[probId] - (ElemType)P_lx;
-                CTCscore[probId] = logaddk(CTCscore[probId], logoccu);
+                comp_t logoccu = (comp_t)alphaScore[alphaId] + (comp_t)betaScore[alphaId] - (comp_t)prob[probId] - P_lx;
+                CTCscore[probId] = logaddk((comp_t)CTCscore[probId], logoccu);
             }
         }
 
         for (int s = 0; s < totalPhoneNum; s++)
         {
             LONG64 probId = timeId*totalPhoneNum + s;
-            ElemType logoccu = CTCscore[probId];
+            comp_t logoccu = CTCscore[probId];
             if (logoccu < LZERO)
                 CTCscore[probId] = 0.0f;
             else
-                CTCscore[probId] = exp(logoccu);
+                CTCscore[probId] = exp_(logoccu);
         }
     }
 }
 
-// Calculate CTC score. equation (8) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// Calculate CTC score. equation (8) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 template<class ElemType>
 __global__ void _assignTotalScore(ElemType *betaScore,
     ElemType *totalScore,
@@ -5532,13 +5770,15 @@ __global__ void _assignTotalScore(ElemType *betaScore,
     const size_t numChannels,
     const size_t maxPhoneNum)
 {
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
     LONG64 uttId = blockIdx.x;
     if (uttId < uttNum)
     {
         LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
 
-        betaScore[alphaId_0] = logaddk(betaScore[alphaId_0 + 1], betaScore[alphaId_0 + 2]);
-        totalScore[uttId] = betaScore[alphaId_0];
+        betaScore[alphaId_0] = logaddk((comp_t)betaScore[alphaId_0 + 1], (comp_t)betaScore[alphaId_0 + 2]);
+        // Negative sum
+        atomicAdd(&totalScore[0], -1 * betaScore[alphaId_0]);
     }
 }
 
@@ -5556,10 +5796,52 @@ __global__ void _assignOneHot(ElemType *indices,
         {
             size_t block_id = index / num_item;
             size_t item_id = index % num_item;
-            targetBuffer[block_id * num_class * num_item + item_id + num_item * (size_t)indices[index]] = 1;
+            targetBuffer[block_id * num_class * num_item + item_id + num_item * (size_t)(unsigned long long int)indices[index]] = 1;
         }
     }
 }
+
+template<class ElemType>
+__global__ void _gatherFromTarget(ElemType *indices,
+                                  ElemType *target,
+                                  ElemType *buffer,
+                                  size_t num_row_elements,
+                                  size_t num_indices,
+                                  CUDA_LONG num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_elements)
+    {
+        size_t indices_index = index / num_row_elements;
+        size_t offset = index % num_row_elements;
+        buffer[index] = target[(size_t)(unsigned long long int)indices[indices_index] * num_row_elements + offset];
+    }
+}
+
+template<class ElemType>
+__global__ void _scatterToIndices(ElemType *indices,
+                                  ElemType *value,
+                                  ElemType *buffer,
+                                  char *mask,
+                                  size_t num_indices_elems_per_mask_col,
+                                  size_t num_row_elements,
+                                  size_t num_indices,
+                                  CUDA_LONG num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_elements)
+    {
+        size_t indices_index = index / num_row_elements;
+        size_t offset = index % num_row_elements;
+        //Skip missing values
+        assert(!mask || num_indices_elems_per_mask_col != 0);
+        if (mask && mask[indices_index / num_indices_elems_per_mask_col] == 0) return;
+        //We resort to nondeterministic behavior (floating point addition is not associative).
+        //Note that the CPU parallel algorithm will have poor performance on the GPU because of thread divergence
+        atomicAdd(&buffer[(size_t)(unsigned long long int)indices[indices_index] * num_row_elements + offset], value[index]);
+    }
+}
+
 
 template<class ElemType>
 __global__ void _assignOneHotAsSparse(ElemType *indices,
@@ -5568,8 +5850,6 @@ __global__ void _assignOneHotAsSparse(ElemType *indices,
                                       ElemType *targetBuffer,
                                       size_t num_class,
                                       int num_item,
-                                      size_t num_rows,
-                                      size_t num_columns,
                                       size_t num_elements)
 {
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -5580,33 +5860,68 @@ __global__ void _assignOneHotAsSparse(ElemType *indices,
         // for invalid indices, theorically they should not belong to nz elements.
         // but if we scan the indices to count the valid indices number,
         // it will be difficult for parallel calculation, especially on GPU.
-        // here we chose to keep those elements in nz element list, but with value 0
-        // it is tricky, but the data view is correct.
+        // here we chose to keep those elements in nz element list, but with value 0 at row 0
         if (indices[index] >= 0 && indices[index] < num_class)
         {
             targetBuffer[index] = 1;
-            majorIndices[index] = (block_id * num_class * num_item + item_id + num_item * (int)indices[index]) % (num_rows * num_class);
+            majorIndices[index] = ((int)indices[index] * num_item) + item_id;
         }
         else
         {
             targetBuffer[index] = 0;
-            majorIndices[index] = (block_id * num_class * num_item + item_id) % (num_rows * num_class);
+            majorIndices[index] = item_id;
         }
-    }
 
-    if (index  < num_columns)
+        if (item_id == 0)
+            secondaryIndices[block_id + 1] = num_item * (block_id + 1);
+
+        if (index == 0)
+            secondaryIndices[0] = 0;
+    }
+}
+
+template<class ElemType>
+__global__ void _setSparseDiagonalValue(ElemType v,
+    GPUSPARSE_INDEX_TYPE *secondaryIndices,
+    GPUSPARSE_INDEX_TYPE *majorIndices,
+    ElemType *targetBuffer,
+    size_t diagSize,
+    size_t num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < diagSize)
     {
-        secondaryIndices[index + 1] = num_rows * (index + 1);
+        majorIndices[index] = index;
+        targetBuffer[index] = v;
+        secondaryIndices[index] = index;
     }
-
-    if (index == 0)
+    else if (index < num_elements)
     {
-        secondaryIndices[0] = 0;
+        secondaryIndices[index] = diagSize;
     }
 }
 
+template<class ElemType>
+__global__ void _setSparseDiagonalValue(ElemType *vector,
+    GPUSPARSE_INDEX_TYPE *secondaryIndices,
+    GPUSPARSE_INDEX_TYPE *majorIndices,
+    ElemType *targetBuffer,
+    size_t diagSize,
+    size_t num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < diagSize)
+    {
+        majorIndices[index] = index;
+        targetBuffer[index] = vector[index];
+        secondaryIndices[index] = index;
+    }
+    else if (index < num_elements)
+    {
+        secondaryIndices[index] = diagSize;
+    }
 }
-}
-}
+
+}}}
 
 #endif // !CPUONLY

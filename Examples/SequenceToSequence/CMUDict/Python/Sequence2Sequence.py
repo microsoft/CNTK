@@ -8,9 +8,10 @@ from __future__ import print_function
 import numpy as np
 import os
 from cntk import Trainer, Axis
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learners import momentum_sgd, fsadagrad, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk import input, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
+from cntk.learners import momentum_sgd, fsadagrad, momentum_schedule_per_sample, \
+                 learning_parameter_schedule, learning_parameter_schedule_per_sample
+from cntk import input, cross_entropy_with_softmax, classification_error, sequence, \
                  element_select, alias, hardmax, placeholder, combine, parameter, times, plus
 from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.initializer import glorot_uniform
@@ -64,7 +65,7 @@ def create_reader(path, is_training):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         features = StreamDef(field='S0', shape=input_vocab_dim, is_sparse=True),
         labels   = StreamDef(field='S1', shape=label_vocab_dim, is_sparse=True)
-    )), randomize = is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+    )), randomize = is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 ########################
 # define the model     #
@@ -170,9 +171,8 @@ def create_model_greedy(s2smodel):
         # which holds 'input' in its closure.
         unfold = UnfoldFrom(lambda history: s2smodel(history, input) >> hardmax,
                             until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
-                            length_increase=length_increase, initial_state=sentence_start)
-        # TODO: The signature should be changed, so that the initial_state is passed as data.
-        return unfold(dynamic_axes_like=input)
+                            length_increase=length_increase)
+        return unfold(initial_state=sentence_start, dynamic_axes_like=input)
     return model_greedy
 
 def create_criterion_function(model):
@@ -219,8 +219,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     minibatch_size = 72
     lr = 0.001 if use_attention else 0.005   # TODO: can we use the same value for both?
     learner = fsadagrad(model_train.parameters,
-                        lr       = learning_rate_schedule([lr]*2+[lr/2]*3+[lr/4], UnitType.sample, epoch_size),
-                        momentum = momentum_as_time_constant_schedule(1100),
+                        lr       = learning_parameter_schedule_per_sample([lr]*2+[lr/2]*3+[lr/4], epoch_size=epoch_size),
+                        momentum = momentum_schedule_per_sample(0.9990913221888589),
                         gradient_clipping_threshold_per_sample=2.3,
                         gradient_clipping_with_truncation=True)
     trainer = Trainer(None, criterion, learner)
@@ -280,7 +280,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
 # This decodes the test set and counts the string error rate.
 def evaluate_decoding(reader, s2smodel, i2w):
-    
+
     model_decoding = create_model_greedy(s2smodel) # wrap the greedy decoder around the model
 
     progress_printer = ProgressPrinter(tag='Evaluation')
@@ -302,7 +302,7 @@ def evaluate_decoding(reader, s2smodel, i2w):
 
         num_total += len(outputs)
         num_wrong += sum([label != output for output, label in zip(outputs, labels)])
-        
+
     rate = num_wrong / num_total
     print("string error rate of {:.1f}% in {} samples".format(100 * rate, num_total))
     return rate
@@ -315,16 +315,16 @@ def evaluate_decoding(reader, s2smodel, i2w):
 # TODO: replace by a proper such class once available
 def Evaluator(model, criterion):
     from cntk import Trainer
-    from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+    from cntk.learners import momentum_sgd, momentum_schedule_per_sample
     loss, metric = Trainer._get_loss_metric(criterion)
     parameters = set(loss.parameters)
     if model:
         parameters |= set(model.parameters)
     if metric:
         parameters |= set(metric.parameters)
-    dummy_learner = momentum_sgd(tuple(parameters), 
-                                 lr = learning_rate_schedule(1, UnitType.minibatch),
-                                 momentum = momentum_as_time_constant_schedule(0))
+    dummy_learner = momentum_sgd(tuple(parameters),
+                                 lr = learning_parameter_schedule(1),
+                                 momentum = momentum_schedule_per_sample(0))
     return Trainer(model, (loss, metric), dummy_learner)
 
 # This computes the metric on the test set.
@@ -374,7 +374,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
         return []
 
     # convert to one_hot
-    query = Value.one_hot([w], len(vdict))
+    query = Value.one_hot([w], len(vdict), sparse_output=True)
     pred = model_decoding(query)
     pred = pred[0] # first sequence (we only have one) -> [len, vocab size]
     if use_attention:
@@ -383,10 +383,10 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
     # print out translation and stop at the sequence-end tag
     prediction = np.argmax(pred, axis=-1)
     translation = [i2w[i] for i in prediction]
-    
+
     # show attention window (requires matplotlib, seaborn, and pandas)
     if use_attention and show_attention:
-    
+
         #att_value = model_decoding.attention_model.attention_weights(query)
         # BUGBUG: fails with "Forward: Feature Not Implemented"
         q = combine([model_decoding.attention_model.attention_weights])
@@ -441,7 +441,7 @@ def get_vocab(path):
     vocab = [w.strip() for w in open(path).readlines()]
     i2w = { i:w for i,w in enumerate(vocab) }
     w2i = { w:i for i,w in enumerate(vocab) }
-    
+
     return (vocab, i2w, w2i)
 
 # Given a vocab and tensor, print the output
@@ -455,9 +455,9 @@ def debug_attention(model, input):
     words_p = q(input)
     words = words_p[0]
     p     = words_p[1]
-    len = words.shape[attention_axis-1]
+    seq_len = words[0].shape[attention_axis-1]
     span = 7 #attention_span  #7 # test sentence is 7 tokens long
-    p_sq = np.squeeze(p[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
+    p_sq = np.squeeze(p[0][:seq_len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
     opts = np.get_printoptions()
     np.set_printoptions(precision=5)
     print(p_sq)
@@ -478,7 +478,7 @@ if __name__ == '__main__':
 
     # create inputs and create model
     model = create_model()
-    
+
     # train
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
     valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
@@ -490,7 +490,7 @@ if __name__ == '__main__':
     # test string error rate on decoded output
     test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
     evaluate_decoding(test_reader, model, i2w)
-    
+
     # test same metric same as in training on test set
     test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
     evaluate_metric(test_reader, model)

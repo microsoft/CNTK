@@ -9,6 +9,7 @@
 
 #include "Platform.h"
 #include "ExceptionWithCallStack.h"
+#include "StringUtil.h"
 #include <cmath>
 #include <string>
 #include <vector>
@@ -74,9 +75,7 @@ __declspec_noreturn static inline void ThrowFormattedVA(const char* format, va_l
     
     va_end(args_copy);
 
-#ifdef _DEBUG // print this to log, so we can see what the error is before throwing
     fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer.c_str());
-#endif
     throw ExceptionWithCallStack<E>(buffer, callstack);
 }
 
@@ -134,6 +133,7 @@ static inline void Warning(const char* format, ...)
 
     va_start(args, format);
     vsprintf(buffer, format, args);
+    va_end(args);
 };
 #pragma warning(pop)
 static inline void Warning(const string& message)
@@ -150,6 +150,11 @@ static inline void Warning(const string& message)
     \
 }
 #endif
+
+
+// Computes the smallest multiple of k greater or equal to n
+inline size_t AsMultipleOf(size_t n, size_t k) { return n + (k - n % k) % k; }
+
 }}}
 
 #ifndef _MSC_VER
@@ -213,6 +218,7 @@ struct _strprintf : public std::basic_string<_T>
             std::vector<_T> varbuf(n + 1); // incl. '\0'
             this->assign(_sprintf(&varbuf[0], varbuf.size(), format, args), n);
         }
+        va_end(args);
     }
 
 private:
@@ -220,16 +226,18 @@ private:
     inline size_t _cprintf(const wchar_t* format, va_list args)
     {
 #ifdef _MSC_VER
-        return vswprintf(nullptr, 0, format, args);
+        return _vscwprintf(format, args);
 #elif defined(__UNIX__)
-        // TODO: Really??? Write to file in order to know the length of a string?
-        FILE* dummyf = fopen("/dev/null", "w");
-        if (dummyf == NULL)
-            perror("The following error occurred in basetypes.h:cprintf");
-        int n = vfwprintf(dummyf, format, args);
-        if (n < 0)
-            perror("The following error occurred in basetypes.h:cprintf");
-        fclose(dummyf);
+        const int BUF_SIZE = 256;
+        int n = 0;
+        std::vector<wchar_t> vec(BUF_SIZE);
+        do {
+            vec.resize(vec.size() * 2);
+            va_list args2;
+            va_copy(args2, args);
+            n = vswprintf(&vec[0], vec.size(), format, args2);
+            va_end(args2);
+        } while (n < 0);
         return n;
 #endif
     }
@@ -238,14 +246,11 @@ private:
 #ifdef _MSC_VER
         return _vscprintf(format, args);
 #elif defined(__UNIX__)
-        // TODO: Really??? Write to file in order to know the length of a string?
-        FILE* dummyf = fopen("/dev/null", "wb");
-        if (dummyf == NULL)
-            perror("The following error occurred in basetypes.h:cprintf");
-        int n = vfprintf(dummyf, format, args);
+        int n = vsnprintf(NULL, 0, format, args);
         if (n < 0)
+        {
             perror("The following error occurred in basetypes.h:cprintf");
-        fclose(dummyf);
+        }
         return n;
 #endif
     }
@@ -273,106 +278,6 @@ typedef ::msra::strfun::_strprintf<char>    strprintf;  // char version
 typedef ::msra::strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 
 // ----------------------------------------------------------------------------
-// utf8(), utf16() -- convert between narrow and wide strings
-// ----------------------------------------------------------------------------
-
-#ifdef _MSC_VER
-// string-encoding conversion functions
-struct utf8 : std::string
-{
-    utf8(const std::wstring& p) // utf-16 to -8
-    {
-        size_t len = p.length();
-        if (len == 0)
-        {
-            return;
-        }                                   // empty string
-        std::vector<char> buf(3 * len + 1); // max: 1 wchar => up to 3 mb chars
-        // ... TODO: this fill() should be unnecessary (a 0 is appended)--but verify
-        std::fill(buf.begin(), buf.end(), 0);
-        int rc = WideCharToMultiByte(CP_UTF8, 0, p.c_str(), (int) len,
-                                     &buf[0], (int) buf.size(), NULL, NULL);
-        if (rc == 0)
-            RuntimeError("WideCharToMultiByte");
-        (*(std::string*) this) = &buf[0];
-    }
-};
-struct utf16 : std::wstring
-{
-    utf16(const std::string& p) // utf-8 to -16
-    {
-        size_t len = p.length();
-        if (len == 0)
-        {
-            return;
-        } // empty string
-        std::vector<wchar_t> buf(len + 1);
-        // ... TODO: this fill() should be unnecessary (a 0 is appended)--but verify
-        std::fill(buf.begin(), buf.end(), (wchar_t) 0);
-        int rc = MultiByteToWideChar(CP_UTF8, 0, p.c_str(), (int) len,
-                                     &buf[0], (int) buf.size());
-        if (rc == 0)
-            RuntimeError("MultiByteToWideChar");
-        assert(rc < buf.size());
-        (*(std::wstring*) this) = &buf[0];
-    }
-};
-#endif
-
-#ifndef _MSC_VER // these are needed by the gcc conversion functions
-// Note: generally, 8-bit strings in this codebase are UTF-8.
-// One exception are functions that take 8-bit pathnames. Those will be interpreted by the OS as MBS. Best use wstring pathnames for all file accesses.
-#pragma warning(push)
-#pragma warning(disable : 4996)                           // Reviewed by Yusheng Li, March 14, 2006. depr. fn (wcstombs, mbstowcs)
-static inline std::string wcstombs(const std::wstring& p) // output: MBCS
-{
-    size_t len = p.length();
-    std::vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
-    std::fill(buf.begin(), buf.end(), 0);
-    ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
-    return std::string(&buf[0]);
-}
-static inline std::wstring mbstowcs(const std::string& p) // input: MBCS
-{
-    size_t len = p.length();
-    std::vector<wchar_t> buf(len + 1); // max: >1 mb chars => 1 wchar
-    std::fill(buf.begin(), buf.end(), (wchar_t) 0);
-    // OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
-    ::mbstowcs(&buf[0], p.c_str(), len + 1);
-    return std::wstring(&buf[0]);
-}
-#pragma warning(pop)
-#endif
-
-#ifdef _MSC_VER
-static inline cstring utf8(const std::wstring& p)
-{
-    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(p);
-} // utf-16 to -8
-static inline wcstring utf16(const std::string& p)
-{
-    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().from_bytes(p);
-} // utf-8 to -16
-#else // BUGBUG: we cannot compile the above on Cygwin GCC, so for now fake it using the mbs functions, which will only work for 7-bit ASCII strings
-static inline std::string utf8(const std::wstring& p)
-{
-    return msra::strfun::wcstombs(p.c_str());
-} // output: UTF-8... not really
-static inline std::wstring utf16(const std::string& p)
-{
-    return msra::strfun::mbstowcs(p.c_str());
-} // input: UTF-8... not really
-#endif
-static inline cstring utf8(const std::string& p)
-{
-    return p;
-} // no conversion (useful in templated functions)
-static inline wcstring utf16(const std::wstring& p)
-{
-    return p;
-}
-
-// ----------------------------------------------------------------------------
 // charpath() -- convert a wchar_t path to what gets passed to CRT functions that take narrow characters
 // This is needed for the Linux CRT which does not accept wide-char strings for pathnames anywhere.
 // Always use this function for mapping the paths.
@@ -381,14 +286,7 @@ static inline wcstring utf16(const std::wstring& p)
 
 static inline cstring charpath(const std::wstring& p)
 {
-#ifdef _MSC_VER
-    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(p);
-#else // old version, delete once we know it works
-    size_t len = p.length();
-    std::vector<char> buf(2 * len + 1, 0); // max: 1 wchar => 2 mb chars
-    ::wcstombs(buf.data(), p.c_str(), 2 * len + 1);
-    return msra::strfun::cstring(&buf[0]);
-#endif
+    return Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(p));
 }
 
 // ----------------------------------------------------------------------------
@@ -658,7 +556,7 @@ public:
 template <class C>
 static wstring TypeId()
 {
-    return msra::strfun::utf16(typeid(C).name());
+    return Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(typeid(C).name());
 }
 
 // ----------------------------------------------------------------------------
@@ -675,10 +573,13 @@ public:
         : m_hModule(NULL)
     {
     }
-    template <class STRING> // accepts char (UTF-8) and wide string
-    FARPROC Load(const STRING& plugin, const std::string& proc)
+    FARPROC Load(const std::string& plugin, const std::string& proc, bool isCNTKPlugin = true)
     {
-        return LoadInternal(msra::strfun::utf16(plugin), proc);
+        return LoadInternal(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(plugin), proc, isCNTKPlugin);
+    }
+    FARPROC Load(const std::wstring& plugin, const std::string& proc, bool isCNTKPlugin = true)
+    {
+        return LoadInternal(plugin, proc, isCNTKPlugin);
     }
     ~Plugin()
     {
@@ -687,7 +588,7 @@ public:
     // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
 
 private:
-    FARPROC LoadInternal(const std::wstring& plugin, const std::string& proc);
+    FARPROC LoadInternal(const std::wstring& plugin, const std::string& proc, bool isCNTKPlugin);
 };
 #else
 class Plugin
@@ -701,9 +602,9 @@ public:
     {
     }
     template <class STRING> // accepts char (UTF-8) and wide string
-    void *Load(const STRING& plugin, const std::string& proc)
+    void *Load(const STRING& plugin, const std::string& proc, bool isCNTKPlugin = true)
     {
-        return LoadInternal(msra::strfun::utf8(plugin), proc);
+        return LoadInternal(Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(plugin)), proc, isCNTKPlugin);
     }
     ~Plugin()
     {
@@ -718,7 +619,7 @@ public:
     }
 
 private:
-    void *LoadInternal(const std::string& plugin, const std::string& proc);
+    void *LoadInternal(const std::string& plugin, const std::string& proc, bool isCNTKPlugin);
 };
 #endif
 

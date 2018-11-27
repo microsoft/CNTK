@@ -446,7 +446,7 @@ private:
     double m_pvariance;
 
     // second pass measures
-    double m_varSum; // accumulated sum of difference between the mean and and the value squared
+    double m_varSum; // accumulated sum of difference between the mean and the value squared
 
     // compute after second pass
     double m_variance;

@@ -34,7 +34,7 @@ checkEmptyStdout \
   "git ls-tree: path names will illegal characters encountered:"
 
 checkEmptyStdout \
-  "git grep -l \$'\t' $gitTree -- *.cpp *.h *.cu *.bat *.bs CNTK.Cpp.props | cut -d: -f2-" \
+  "git grep -l \$'\t' $gitTree -- *.cpp *.h *.cu *.bat *.bs CNTK.Cpp.props *.i *.cs | cut -d: -f2-" \
   "files with hard tabs encountered"
 
 checkEmptyStdout \
@@ -43,7 +43,7 @@ checkEmptyStdout \
 
 
 checkEmptyStdout \
-  "git ls-tree --full-tree -r HEAD --name-only | git check-attr text --cached --stdin | grep -v 'text: set' | cut -d: -f1 | git check-attr binary --cached --stdin | grep -v 'binary: set' | cut -d: -f1 | grep -v Source/Multiverso | grep -v Source/1BitSGD" \
+  "git ls-tree --full-tree -r HEAD --name-only | git check-attr text --cached --stdin | grep -v 'text: set' | cut -d: -f1 | git check-attr binary --cached --stdin | grep -v 'binary: set' | cut -d: -f1 | grep -v Source/Multiverso" \
   "files that are neither marked as binary nor text; should extend .gitattributes"
 
 # TODO line ending checks

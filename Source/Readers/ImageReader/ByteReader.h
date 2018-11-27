@@ -13,7 +13,7 @@
 #include "ConcStack.h"
 #endif
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 using MultiMap = std::map<std::string, std::vector<size_t>>;
 
@@ -55,10 +55,10 @@ private:
     ZipPtr OpenZip();
 
     std::string m_zipPath;
-    conc_stack<ZipPtr> m_zips;
+    Microsoft::MSR::CNTK::conc_stack<ZipPtr> m_zips;
     std::unordered_map<size_t, std::pair<zip_uint64_t, zip_uint64_t>> m_seqIdToIndex;
-    conc_stack<std::vector<unsigned char>> m_workspace;
+    Microsoft::MSR::CNTK::conc_stack<std::vector<unsigned char>> m_workspace;
 };
 #endif
 
-}}}
+}

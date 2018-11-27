@@ -21,10 +21,6 @@
 #include <vld.h> // leak detection
 #endif
 #include "BestGpu.h"
-#include "DataDeserializer.h"
-#include "SequencePacker.h"
-#include "NoRandomizer.h"
-#include "HeapMemoryProvider.h"
 #include "InputAndParamNodes.h"
 #include "latticearchive.h"
 #include <limits>
@@ -148,7 +144,7 @@ void CNTKEval<ElemType>::GetNodeDimensions(std::map<std::wstring, size_t>& dimen
 }
 
 // StartEvaluateMinibatchLoop - Prepare network for Evaluate() calls.
-// ouputNodeName - name of node that will be evaluated
+// outputNodeName - name of node that will be evaluated
 template <typename ElemType>
 void CNTKEval<ElemType>::StartEvaluateMinibatchLoop(const std::wstring& outputNodeName)
 {
@@ -162,11 +158,13 @@ template <typename ElemType>
 void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
 {
     size_t minibatchSize = this->m_config(L"minibatchSize", (size_t) 10240);
+    size_t rightSplice = this->m_config(L"rightSplice", (size_t) 0);
     // get the evaluation names from the output string
     vector<wstring> outNodeNames;
 
     ConfigParameters config;
     // config["deviceId"] = to_string(this->m_net->GetDeviceId());
+    config["rightSplice"] = to_string(rightSplice);
 
     // create the reader if necessary
     if (m_reader == nullptr)

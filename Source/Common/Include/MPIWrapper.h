@@ -5,8 +5,8 @@
 #pragma once
 
 #if HAS_MPI
-// Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#ms-mpi or
-// https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi for setup instructions
+// Please see https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Windows#ms-mpi or
+// https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-CNTK-on-Linux#open-mpi for setup instructions
 // of an MPI implementation on your platform.
 
 #ifdef _MSC_VER
@@ -81,12 +81,6 @@ public:
     static void DeleteInstance();
     static MPIWrapperPtr s_mpi;
 
-    // Note that specifically, this function is such that it does not require
-    // MPI initialization. Moreover, it can be used without actually loading any
-    // MPI libs.
-    // TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
-    static int GetTotalNumberOfMPINodes();
-
     virtual size_t NumNodesInUse() const = 0;
     virtual size_t CurrentNodeRank() const = 0;
     virtual bool IsMainNode() const = 0;
@@ -95,6 +89,9 @@ public:
     virtual bool UsingAllNodes() const = 0;
     virtual size_t MainNodeRank() const = 0;
     virtual bool IsMultiHost() const = 0;
+
+    // Use GPUDirect RDMA support
+    virtual bool UseGpuGdr() = 0;
 
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
@@ -110,7 +107,6 @@ public:
     virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request) = 0;
     virtual int Abort(int errorcode) = 0;
     virtual int Error_string(int errorcode, char* string, int* resultlen) = 0;
-
 
     // helpers to determine the MPI_Datatype of a pointer
     static MPI_Datatype GetDataType(char *);

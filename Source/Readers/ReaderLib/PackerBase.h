@@ -11,7 +11,7 @@
 #include "Packer.h"
 #include "CorpusDescriptor.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // A base class for Packers.
 class PackerBase : public Packer
@@ -34,12 +34,17 @@ protected:
 
     PackerBase(CorpusDescriptorPtr corpus,
                SequenceEnumeratorPtr sequenceEnumerator,
-               const std::vector<StreamDescriptionPtr>& streams,
+               const std::vector<StreamInformation>& streams,
                size_t numberOfBuffers);
 
     typedef std::vector<SequenceDataPtr> StreamBatch;
 
-    size_t GetSampleSize(StreamDescriptionPtr stream);
+    size_t GetSampleSize(const StreamInformation& stream);
+
+    std::vector<StreamInformation> GetStreamDescriptions() override
+    {
+        return m_outputStreamDescriptions;
+    }
 
     // Packs a sparse sample as dense:
     //  - 0-fills a region of sampleSize bytes in the block of memory pointed to by destination;
@@ -61,15 +66,15 @@ protected:
     // Assumes the sequences inside MBLayout have the same order as Sequences.
     void EstablishIdToKey(Minibatch& minibatch, const Sequences& sequences);
 
-    static void CheckNameUniqueness(const std::vector<StreamDescriptionPtr>& streams);
+    static void CheckNameUniqueness(const std::vector<StreamInformation>& streams);
 
     SequenceEnumeratorPtr m_sequenceEnumerator;
 
     // Input stream descriptions provided by the transformer.
-    std::vector<StreamDescriptionPtr> m_outputStreamDescriptions;
+    std::vector<StreamInformation> m_outputStreamDescriptions;
 
     // Output stream descriptions expected by the network.
-    std::vector<StreamDescriptionPtr> m_inputStreamDescriptions;
+    std::vector<StreamInformation> m_inputStreamDescriptions;
 
     // Indicates how many internal buffers with pinned memory are supported.
     // If N - then N sequential calls to PackMinibatch are valid, and N+1 call will overwrite 
@@ -128,4 +133,4 @@ inline void PackerBase::PackDenseSample(char* destination, SequenceDataPtr seque
     memcpy(destination, (const char*)(sequence->GetDataBuffer()) + sampleOffset, sampleSize);
 }
 
-}}}
+}

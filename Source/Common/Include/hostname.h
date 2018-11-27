@@ -28,6 +28,9 @@ class GetHostName : public std::string
 public:
     GetHostName()
     {
+#ifdef CNTK_UWP
+        assign("localhost"); // This is only used for diag messages in code that today is unreachable in UWP
+#else
         static std::string hostname; // it's costly, so we cache the name
         if (hostname.empty())
         {
@@ -47,5 +50,6 @@ public:
 #endif
         }
         assign(hostname);
+#endif // CNTK_UWP
     }
 };

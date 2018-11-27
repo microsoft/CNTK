@@ -25,6 +25,7 @@ static const wchar_t* GlorotNormalInitializerTypeName =     L"glorotNormal";
 static const wchar_t* HeUniformInitializerTypeName =        L"heUniform";
 static const wchar_t* HeNormalInitializerTypeName =         L"heNormal";
 static const wchar_t* BilinearInitializerTypeName =         L"bilinear";
+static const wchar_t* TruncNormalInitializerTypeName =      L"TruncNormal";
 
 // -----------------------------------------------------------------------
 // LearnableParameter (/*no input*/)
@@ -107,7 +108,7 @@ private:
         {
             fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f(%f*%f), onCPU=%s.\n)",
                     NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
-                    (int)randomSeed, (int)fanOut, (int)fanIn, range, range/initValueScale, initValueScale, initOnCPUOnly ? "true" : "false");
+                    (int)randomSeed, (int)fanOut, (int)fanIn, (float)range, (float)(range/initValueScale), (float)(initValueScale), initOnCPUOnly ? "true" : "false");
         }
     }
 
@@ -235,6 +236,7 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, pu
     void Init(const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName, float learningRateMultiplier = 0)
     {
         m_isSparse = isSparse;
+        Base::m_isValueSparse = isSparse;
         MarkValueNonSharable();
         if (isSparse)
             ConvertToSparseMatrix();
@@ -373,25 +375,6 @@ public:
         if (printMetadata)
         {
             fstream << "[" << string(GetSampleLayout()) << "]";
-        }
-    }
-
-private:
-    // determine the size that we should set our Matrix storage to
-    void DetermineDataSize(size_t& rows, size_t& cols) const override
-    {
-        if (!m_isSparse || !HasMBLayout())
-            Base::DetermineDataSize(rows, cols);
-        else
-        {
-            const auto& shape = GetSampleLayout();
-            size_t rank = shape.GetRank();
-            rows = rank > 0 ? shape[0] : 1;
-            cols = rank > 0 ? 1 : 1;
-            for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
-                cols *= shape[k];
-
-            cols *= GetMBLayout()->GetNumCols();
         }
     }
 
@@ -748,4 +731,129 @@ public:
 template class LookupTableNode<float>;
 template class LookupTableNode<double>;
 
+// -----------------------------------------------------------------------
+// ConstantNode
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class ConstantNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ConstantOp"; }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(ConstantNode);
+    ConstantNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+        m_fillValue = ElemType(0);
+    }
+    ConstantNode(DEVICEID_TYPE deviceId, const wstring& name, double fillValue)
+        : Base(deviceId, name)
+    {
+        m_fillValue = ElemType(fillValue);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /* inputIndex */, const FrameRange& /* t */) override
+    {
+        // Node is constant nothing to backpropagate
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto& result = Value();
+        result.SetValue(m_fillValue);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+private:
+    ElemType m_fillValue;
+};
+
+template class ConstantNode<float>;
+template class ConstantNode<double>;
+
+// -----------------------------------------------------------------------
+// DiagonalLikeNode
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class EyeLikeNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"EyeLikeOp"; }
+public:
+    DeclareConstructorFromConfigWithNumInputs(EyeLikeNode);
+    EyeLikeNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : EyeLikeNode(deviceId, name, false)
+    {
+    }
+
+    EyeLikeNode(DEVICEID_TYPE deviceId, const wstring& name, bool isOutputSparse)
+        : Base(deviceId, name), m_isOutputSparse(isOutputSparse)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /* inputIndex */, const FrameRange& /* t */) override
+    {
+        // EyeLikeNode is constant; nothing to backpropagate
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto& result = this->Value();
+        if (m_isOutputSparse && result.GetMatrixType() != SPARSE)
+        {
+            result.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+        }
+        result.SetValue(static_cast<ElemType>(0.0));
+        result.SetDiagonalValue(static_cast<ElemType>(1.0));
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_isOutputSparse;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_isOutputSparse;
+    }
+private:
+    bool m_isOutputSparse;
+};
+
+template class EyeLikeNode<float>;
+template class EyeLikeNode<double>;
 }}}

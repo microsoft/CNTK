@@ -2,6 +2,7 @@
 // <copyright file="MASGD.h" company="Microsoft">
 //     Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 //
 #pragma  once 
 
@@ -12,6 +13,7 @@
 #include "Matrix.h"
 #include "MPIWrapper.h"
 #include "TimerUtility.h"
+#include "NcclComm.h"
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -129,6 +131,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              m_numWorkers(pMPI->NumNodesInUse()), 
              m_myRank(pMPI->CurrentNodeRank()),
              m_pMPI(pMPI), 
+             m_nccl(devId, pMPI),
              m_deviceId(devId),
              m_perfReporter(pMPI->CurrentNodeRank(), pMPI->NumNodesInUse())
          {
@@ -319,6 +322,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t                      m_myRank;
         MASGDPerfStats              m_perfReporter;
         MPIWrapperPtr               m_pMPI;
+        NcclComm                    m_nccl;
         DEVICEID_TYPE               m_deviceId;
  };
 
@@ -329,6 +333,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         typedef IMASGD<ElemType> Base; 
         using Base::m_pMPI;
+        using Base::m_nccl;
         using Base::DownCast;
 
     public:
@@ -388,18 +393,30 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // 2.1.2. normalize the weight matrix 
                 Matrix<ElemType>::Scale(factor, mat);
                 // 2.1.3. send weight matrix over MPI nodes; 
-                unique_ptr<ElemType[]> px(mat.CopyToArray());
-                //ElemType* px = mat.CopyToArray();
-                size_t    nx = mat.GetNumElements();
-                // 2.1.4. inplace sum 
-                commTimer.Restart();
-                m_pMPI->AllReduce(px.get(), nx);
-                commTimer.Stop();
-                secondsOnCommunication += (float)commTimer.ElapsedSeconds();
-                // 2.1.5. set value 
-                pNode->Value().SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px.get());
-                // 2.1.6. clean up 
-                //delete[]px;
+
+                if (!m_nccl.IsSupported())
+                {
+                    unique_ptr<ElemType[]> px(mat.CopyToArray());
+                    //ElemType* px = mat.CopyToArray();
+                    size_t    nx = mat.GetNumElements();
+                    // 2.1.4. inplace sum
+                    commTimer.Restart();
+                    m_pMPI->AllReduce(px.get(), nx);
+                    commTimer.Stop();
+                    secondsOnCommunication += (float)commTimer.ElapsedSeconds();
+                    // 2.1.5. set value
+                    pNode->Value().SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px.get());
+                    // 2.1.6. clean up
+                    //delete[]px;
+                }
+                else
+                {
+                    commTimer.Restart();
+                    m_nccl.AllReduce(mat.Data(), mat.Data(), mat.GetNumElements());
+                    m_nccl.Sync();
+                    commTimer.Stop();
+                    secondsOnCommunication += (float)commTimer.ElapsedSeconds();
+                }
             }
         }
     };

@@ -65,7 +65,6 @@ public:
 
             // prep for parallel implementation (CUDA)
             parallellattice.setdevice(DeviceId);
-
             if (parallellattice.enabled())                             // send hmm set to GPU if GPU computation enabled
                 parallellattice.entercomputation(m_hset, mbrclassdef); // cache senone2classmap if mpemode
             initialmark = true;
@@ -209,6 +208,7 @@ public:
                                                                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
                                                                    (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,
                                                                    lmf, wp, amf, boostmmifactor, seqsMBRmode, uidsstripe, boundariesstripe);
+
             objectValue += (ElemType)((numavlogp - denavlogp) * numframes);
 
             if (samplesInRecurrentStep == 1)
@@ -284,14 +284,13 @@ public:
         std::vector<size_t> phoneSeq;
         std::vector<size_t> phoneBound;
 
-        ElemType finalScore = 0;
         if (blankTokenId == SIZE_MAX)
             blankTokenId = numRows - 1;
 
         size_t mbsize = numCols / numParallelSequences;
 
         // Prepare data structures from the reader
-        // the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+        // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
         std::vector<size_t> uttBeginFrame;
         // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
         std::vector<size_t> uttFrameNum;
@@ -373,7 +372,7 @@ public:
         // compute alpha, beta and CTC scores
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
-        CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, finalScore, uttToChanInd, uttBeginFrame,
+        CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, totalScore, uttToChanInd, uttBeginFrame,
             uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, /*isColWise=*/true );
         
         Microsoft::MSR::CNTK::Matrix<ElemType> rowSum(m_deviceid);
@@ -382,8 +381,6 @@ public:
         // Normalize the CTC scores
         CTCPosterior.VectorSum(CTCPosterior, rowSum, /*isColWise=*/true);
         CTCPosterior.RowElementDivideBy(rowSum);
-
-        totalScore(0, 0) = -finalScore;
     }
 
 private:

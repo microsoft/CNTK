@@ -89,7 +89,9 @@ if __name__ == "__main__":
         output = open(args.output, "w")
 
     convert([open(d, encoding="utf-8") for d in args.map], inputs, output, args.unk, args.annotated == "True")
-
+    output.flush()
+    if (output != sys.stdout):
+        output.close()
 
 #####################################################################################################
 # Tests

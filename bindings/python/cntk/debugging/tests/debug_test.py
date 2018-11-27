@@ -4,11 +4,12 @@
 # ==============================================================================
 
 import numpy as np
-
-from cntk import sgd, Trainer, learning_rate_schedule, parameter, \
-                 input, times, cross_entropy_with_softmax, \
+import cntk as C
+from cntk import sgd, Trainer, learning_parameter_schedule, parameter, \
+                 times, cross_entropy_with_softmax, \
                  classification_error, UnitType, combine
 from cntk.debugging.debug import debug_model, _DebugNode
+import pytest
 
 
 def _generate_random_data_sample(sample_size, feature_dim, num_classes):
@@ -23,6 +24,27 @@ def _generate_random_data_sample(sample_size, feature_dim, num_classes):
     return X, Y
 
 
+def _train_backcompatible_test(z, loss, eval_error,
+           f_input, l_input,
+           num_output_classes,
+           steps):
+    np.random.seed(0)
+
+    input_dim = 2
+
+    lr_schedule = learning_parameter_schedule(0.5)
+
+    learner = sgd(z.parameters, lr_schedule)
+    trainer = Trainer(z, (loss, eval_error), [learner])
+
+    minibatch_size = 10
+
+    for i in range(steps):
+        features, labels = _generate_random_data_sample(
+            minibatch_size, input_dim, num_output_classes)
+
+        trainer.train_minibatch({f_input: features, l_input: labels})
+
 def _train(z, loss, eval_error,
            f_input, l_input,
            num_output_classes,
@@ -31,9 +53,9 @@ def _train(z, loss, eval_error,
 
     input_dim = 2
 
-    lr_schedule = learning_rate_schedule(0.5, UnitType.minibatch)
-
-    learner = sgd(z.parameters, lr_schedule)
+    lr_schedule = C.learning_parameter_schedule(0.5)
+    #now we want the learning be compatible with the way in the literature without the per sample benefit:
+    learner = sgd(z.parameters, lr_schedule, minibatch_size = C.learners.IGNORE)
     trainer = Trainer(z, (loss, eval_error), [learner])
 
     minibatch_size = 10
@@ -69,12 +91,17 @@ class OutStream(object):
     def flush(self):
         pass
 
+TRAIN_FUNCIONS = [
+    _train,
+    _train_backcompatible_test
+]
 
-def test_debug_1():
+@pytest.mark.parametrize("train_f", TRAIN_FUNCIONS)
+def test_debug_1(train_f):
     input_dim = 2
     num_output_classes = 2
 
-    f_input = input(input_dim, np.float32, needs_gradient=True, name='features')
+    f_input = C.input_variable(input_dim, np.float32, needs_gradient=True, name='features')
     p = parameter(shape=(input_dim,), init=10, name='p')
 
     ins = InStream(['n', 'n', 'n'])
@@ -83,11 +110,11 @@ def test_debug_1():
     z = times(f_input, p, name='z')
     z = debug_model(z, ins, outs)
 
-    l_input = input(num_output_classes, np.float32, name='labels')
+    l_input = C.input_variable(num_output_classes, np.float32, name='labels')
     loss = cross_entropy_with_softmax(z, l_input)
     eval_error = classification_error(z, l_input)
 
-    _train(z, loss, eval_error,
+    train_f(z, loss, eval_error,
            loss.find_by_name('features'),
            loss.find_by_name('labels'),
            num_output_classes, 1)
@@ -106,7 +133,7 @@ def test_debug_1():
 
     v_p = "Parameter('p', "
     v_i = "Input('features'"
-    v_t = 'Times: '
+    v_t = 'z: Times('
 
     assert outs.written[0].startswith('=') and 'forward' in outs.written[0]
     line_1, line_2, line_3 = outs.written[1:4]
@@ -117,12 +144,12 @@ def test_debug_1():
     assert line_6.startswith(v_p) and line_7.startswith(v_i) or \
            line_6.startswith(v_i) and line_7.startswith(v_p)
 
-
-def test_debug_multi_output():
+@pytest.mark.parametrize("train_f", TRAIN_FUNCIONS)
+def test_debug_multi_output(train_f):
     input_dim = 2
     num_output_classes = 2
 
-    f_input = input(input_dim, np.float32, needs_gradient=True, name='features')
+    f_input = C.input_variable(input_dim, np.float32, needs_gradient=True, name='features')
     p = parameter(shape=(input_dim,), init=10, name='p')
 
     comb = combine([f_input, p])
@@ -133,11 +160,11 @@ def test_debug_multi_output():
     z = times(comb.outputs[0], comb.outputs[1], name='z')
     z = debug_model(z, ins, outs)
 
-    l_input = input(num_output_classes, np.float32, name='labels')
+    l_input = C.input_variable(num_output_classes, np.float32, name='labels')
     loss = cross_entropy_with_softmax(z, l_input)
     eval_error = classification_error(z, l_input)
 
-    _train(z, loss, eval_error,
+    train_f(z, loss, eval_error,
            loss.find_by_name('features'),
            loss.find_by_name('labels'),
            num_output_classes, 1)
@@ -156,7 +183,7 @@ def test_debug_multi_output():
 
     v_p = "Parameter('p', "
     v_i = "Input('features'"
-    v_t = 'Times: '
+    v_t = 'z: Times('
 
     assert outs.written[0].startswith('=') and 'forward' in outs.written[0]
     line_1, line_2, line_3 = outs.written[1:4]

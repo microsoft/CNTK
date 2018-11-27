@@ -14,7 +14,7 @@ The network achieves an error rate of `0.5%`, which is very good considering no 
 
 ### ConvNet_CIFAR10.cntk
 
-The second example applies CNN on the CIFAR-10 dataset. The network contains four convolution layers and three dense layers. Max pooling is conducted for every two convolution layers. Dropout is applied after the first two dense layers. No data augmentation is used. Please refer to the CTNK configuration file [ConvNet_CIFAR10.cntk](./ConvNet_CIFAR10.cntk) for more details.
+The second example applies CNN on the CIFAR-10 dataset. The network contains four convolution layers and three dense layers. Max pooling is conducted for every two convolution layers. Dropout is applied after the first two dense layers. No data augmentation is used. Please refer to the CNTK configuration file [ConvNet_CIFAR10.cntk](./ConvNet_CIFAR10.cntk) for more details.
 
 Run the example from the current folder using:
 
@@ -25,7 +25,7 @@ The network achieves an error rate of around `18%` after 30 epochs. This is comp
 ### ConvNet_CIFAR10_DataAug.cntk
 
 The third example uses the same CNN as the previous example, but it improves by adding data augmentation to training. For this purpose, we use the `ImageReader` instead of the `CNTKTextFormatReader` to load the data. The ImageReader currently supports crop, flip, scale, color jittering, and mean subtraction.
-For a reference on image reader and transforms, please check [here](https://github.com/Microsoft/CNTK/wiki/Image-reader).
+For a reference on image reader and transforms, please check [here](https://docs.microsoft.com/en-us/cognitive-toolkit/BrainScript-Image-Reader).
 
 Run the example from the current folder using:
 

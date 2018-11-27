@@ -13,7 +13,7 @@
 #include <deque>
 #include <random>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Randomized sequence description.
 struct RandomizedSequenceDescription
@@ -34,7 +34,7 @@ class SequenceRandomizer
 public:
     SequenceRandomizer(
         int verbosity,
-        IDataDeserializerPtr deserializer,
+        DataDeserializerPtr deserializer,
         ChunkRandomizerPtr chunkRandomizer);
 
     // Resets the current sweep according to the randomization seed provided.
@@ -45,20 +45,12 @@ public:
     // If the offset points in the middle of last sequence, the end of the sweep is returned.
     size_t Seek(size_t sweepSampleOffset, size_t sweep);
 
-    // Gets the next randomized sequence descriptions not exceeding the global and local sample count,
-    // when atLeastOneSequenceNeeded is false. Otherwise (when atLeastOneSequenceNeeded is true), 
-    // returns at least one sequence description even when its length is greater than the required sample count.
-    // Whether a sequence is considered local is defined by the isLocalSequence predicate.
-    // Returns a pair whose first element indicates the number of global samples read,
-    // and second -- the number of local samples read (== sum of number of sample over all elements in the 
-    // 'sequences' vector).
-    std::pair<size_t, size_t> GetNextSequenceDescriptions(
-        size_t globalSampleCount,
-        size_t localSampleCount,
-        const std::function<bool(const RandomizedSequenceDescription*)>& isLocalSequence,
-        ClosedOpenChunkInterval& requiredChunks,
-        std::vector<RandomizedSequenceDescription>& sequences,
-        bool atLeastOneSequenceNeeded = true);
+    // Repeatedly invokes provided callback passing to it sequence descriptors from the randomized
+    // timeline until the callback returns false. On each successful invocation, it advances the
+    // current position (cursor) in the timeline.
+    void GetNextSequenceDescriptions(
+        const std::function<bool(const RandomizedSequenceDescription&)>& callback,
+        ClosedOpenChunkInterval& requiredChunks);
 
 private:
     DISABLE_COPY_AND_MOVE(SequenceRandomizer);
@@ -84,10 +76,10 @@ private:
     // Release chunks from the chunk window that are not needed anymore.
     void ReleaseChunks();
 
-    IDataDeserializerPtr m_deserializer;
+    DataDeserializerPtr m_deserializer;
 
     // Used only as a buffer to get sequence descriptions without memory reallocation.
-    std::vector<SequenceDescription> m_bufferOriginalSequences;
+    std::vector<SequenceInfo> m_bufferOriginalSequences;
 
     // Randomized chunks.
     const std::vector<RandomizedChunk>& m_randomizedChunks;
@@ -168,4 +160,4 @@ private:
 };
 
 typedef std::shared_ptr<SequenceRandomizer> SequenceRandomizerPtr;
-}}}
+}

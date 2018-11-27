@@ -20,6 +20,7 @@
       <Filter>Linked Source</Filter>
     </ClCompile>
     <ClCompile Include="CNTKBinaryReaderTests.cpp" />
+    <ClCompile Include="ReaderUtilTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

@@ -4,16 +4,16 @@ import os.path
 import tarfile
 import zipfile
 try: 
-    from urllib.request import urlretrieve 
+    from urllib.request import urlretrieve, ContentTooShortError
 except ImportError: 
-    from urllib import urlretrieve
+    from urllib import urlretrieve, ContentTooShortError
     
 def download_and_untar(url, filename, filesize):
     if not os.path.exists(filename):
         print ('Downloading ' + filesize + ' from ' + url + ', may take a while...')
         try:
             urlretrieve(url, filename)
-        except (urllib.ContentTooShortError, IOError) as e:
+        except (ContentTooShortError, IOError) as e:
             print ("Error downloading file: " + str(e))
             os.remove(filename)
             quit()
@@ -26,9 +26,9 @@ def download_and_untar(url, filename, filesize):
         print ('Done.')
     finally:
         os.remove(filename)
-    return;
     
 if __name__ == "__main__":
+    os.chdir(os.path.abspath(os.path.dirname(__file__)))
     directory = "./VOCdevkit/VOC2007"
     if not os.path.exists(directory):
         download_and_untar(
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     if not os.path.exists(directory):
         os.makedirs(directory)
         download_and_untar(
-            "http://www.cs.berkeley.edu/~rbg/fast-rcnn-data/selective_search_data.tgz", 
+            "http://dl.dropboxusercontent.com/s/orrt7o6bp6ae0tc/selective_search_data.tgz?dl=0", 
             "./selective_search_data.tgz", 
             "460MB")
     else:

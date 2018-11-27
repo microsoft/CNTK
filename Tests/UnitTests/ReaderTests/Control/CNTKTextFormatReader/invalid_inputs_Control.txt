@@ -1,6 +1,6 @@
 WARNING: Sparse index value (10) at offset 90 in the input file (invalid_inputs.txt) exceeds the maximum expected value (9).
 WARNING: Dense sample (size = 2) at offset 165 in the input file (invalid_inputs.txt) exceeds the expected size (1).
-WARNING: Maximum per-input number of samples for sequence (id = 1) at offset 199 in the input file (invalid_inputs.txt) is less than expected (2 vs. 3).
+WARNING: Number of samples for sequence (id = 1) at offset 199 in the input file (invalid_inputs.txt) is less than expected (2 vs. 3).
 INFO: Finished loading sequence (id = 1) at offset 199 in the input file (invalid_inputs.txt), successfully read 3 out of expected 3 rows.
 WARNING: Unexpected character (',') in a floating point value at offset 221 in the input file (invalid_inputs.txt).
 WARNING: Unexpected character (':') in a floating point value at offset 245 in the input file (invalid_inputs.txt).
@@ -13,7 +13,7 @@ WARNING: Unexpected character ('f') in a floating point value at offset 370 in t
 WARNING: Unexpected character('.') in place of the index delimiter (':') after a sparse value index (2) at offset 393 in the input file (invalid_inputs.txt).
 WARNING: Unexpected character('.') in place of the index delimiter (':') after a sparse value index (2) at offset 409 in the input file (invalid_inputs.txt).
 WARNING: Expected a uint64 value, but none found at offset 428 in the input file (invalid_inputs.txt).
-WARNING: Maximum per-input number of samples for sequence (id = 2) at offset 435 in the input file (invalid_inputs.txt) is less than expected (9 vs. 14).
+WARNING: Number of samples for sequence (id = 2) at offset 435 in the input file (invalid_inputs.txt) is less than expected (9 vs. 14).
 INFO: Finished loading sequence (id = 2) at offset 435 in the input file (invalid_inputs.txt), successfully read 14 out of expected 14 rows.
 WARNING: Input name prefix ('|') is followed by an invalid character (' ') at offset 454 in the input file (invalid_inputs.txt).
 WARNING: Input name prefix ('|') is followed by an invalid character (' ') at offset 483 in the input file (invalid_inputs.txt).
@@ -21,7 +21,7 @@ INFO: Skipping unknown input ('C') at offset 544 in the input file (invalid_inpu
 WARNING: Empty input row at offset 549 in the input file (invalid_inputs.txt).
 WARNING: Could not read a row (# 9) while loading sequence (id = 3) at offset 549 in the input file (invalid_inputs.txt).
 WARNING: Exhausted all input expected for the current sequence (id = 3) at offset 549 in the input file (invalid_inputs.txt), but only read 8 out of 9 expected rows.
-WARNING: Maximum per-input number of samples for sequence (id = 3) at offset 549 in the input file (invalid_inputs.txt) is less than expected (7 vs. 9).
+WARNING: Number of samples for sequence (id = 3) at offset 549 in the input file (invalid_inputs.txt) is less than expected (7 vs. 9).
 INFO: Finished loading sequence (id = 3) at offset 549 in the input file (invalid_inputs.txt), successfully read 8 out of expected 9 rows.
 WARNING: Input name prefix ('|') is followed by an invalid character (' ') at offset 567 in the input file (invalid_inputs.txt).
 WARNING: Empty input row at offset 569 in the input file (invalid_inputs.txt).
@@ -35,10 +35,10 @@ WARNING: Could not read a row (# 5) while loading sequence (id = 4) at offset 58
 WARNING: Empty input row at offset 589 in the input file (invalid_inputs.txt).
 WARNING: Could not read a row (# 6) while loading sequence (id = 4) at offset 589 in the input file (invalid_inputs.txt).
 WARNING: Exhausted all input expected for the current sequence (id = 4) at offset 613 in the input file (invalid_inputs.txt), but only read 3 out of 7 expected rows.
-WARNING: Maximum per-input number of samples for sequence (id = 4) at offset 613 in the input file (invalid_inputs.txt) is less than expected (3 vs. 7).
+WARNING: Number of samples for sequence (id = 4) at offset 613 in the input file (invalid_inputs.txt) is less than expected (3 vs. 7).
 INFO: Finished loading sequence (id = 4) at offset 613 in the input file (invalid_inputs.txt), successfully read 3 out of expected 7 rows.
 INFO: Finished loading sequence (id = 5) at offset 671 in the input file (invalid_inputs.txt), successfully read 1 out of expected 1 rows.
-WARNING: Maximum per-input number of samples for sequence (id = 123) at offset 778 in the input file (invalid_inputs.txt) is less than expected (2 vs. 3).
+WARNING: Number of samples for sequence (id = 123) at offset 778 in the input file (invalid_inputs.txt) is less than expected (2 vs. 3).
 INFO: Finished loading sequence (id = 123) at offset 778 in the input file (invalid_inputs.txt), successfully read 3 out of expected 3 rows.
 WARNING: A dense sample at offset 870 in the input file (invalid_inputs.txt) has a sparse suffix (expected size = 1, actual size = 0).
 WARNING: Dense sample (size = 2) at offset 888 in the input file (invalid_inputs.txt) exceeds the expected size (1).

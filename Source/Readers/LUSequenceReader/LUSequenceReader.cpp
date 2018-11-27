@@ -699,7 +699,7 @@ bool BatchLUSequenceReader<ElemType>::EnsureDataAvailable(size_t /*mbStartSample
         if (mSentenceEndAt.size() != mToProcess.size())
             RuntimeError("LUSequenceReader : need to preallocate mSentenceEnd");
         if (mMaxSentenceLength > m_mbSize)
-            RuntimeError("LUSequenceReader : minibatch size needs to be large enough to accomodate the longest sentence");
+            RuntimeError("LUSequenceReader : minibatch size needs to be large enough to accommodate the longest sentence");
 
         // reset all sentence-end indices to NO_INPUT, which is negative
         mSentenceEndAt.assign(mSentenceEndAt.size(), NO_INPUT);
@@ -1019,7 +1019,7 @@ bool BatchLUSequenceReader<ElemType>::DataEnd()
     for (size_t i = 0; i < mToProcess.size(); i++)
     {
         if (mSentenceEndAt[i] == NO_INPUT)
-            LogicError("BatchLUSequenceReader: Minibatch should be large enough to accomodate the longest sentence.");
+            LogicError("BatchLUSequenceReader: Minibatch should be large enough to accommodate the longest sentence.");
         size_t k = mToProcess[i];
         mProcessed[k] = true;
     }

@@ -6,4 +6,4 @@ This hands-on lab shows how to implement convolution-based image recognition wit
 
 ## Tutorial
 
-Please find a detailed tutorial that uses the data and configurations in this folder on out website at [https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition)
+Please find a detailed tutorial that uses the data and configurations in this folder on out website at https://docs.microsoft.com/en-us/cognitive-toolkit/Hands-On-Labs-Image-Recognition

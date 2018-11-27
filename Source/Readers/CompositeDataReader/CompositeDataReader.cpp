@@ -22,8 +22,13 @@
 #include "ConfigUtil.h"
 #include "StringUtil.h"
 #include "ReaderConstants.h"
+#include "V2Dependencies.h"
+#include "LTNoRandomizer.h"
+#include "LTTumblingWindowRandomizer.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
+
+using namespace Microsoft::MSR::CNTK;
 
 // The whole CompositeDataReader is meant as a stopgap to allow deserializers/transformers composition until SGD talkes 
 // directly to the new Reader API. 
@@ -35,12 +40,19 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     wstring action = config(L"action", L"");
     bool isActionWrite = AreEqualIgnoreCase(action, L"write");
 
-    // We currently by default using numeric keys for ctf and image deserializers.
-    bool useNumericSequenceKeys = ContainsDeserializer(config, L"CNTKTextFormatDeserializer") ||
-        ContainsDeserializer(config, L"ImageDeserializer");
+    // By default, we use numeric sequence keys (i.e., for cbf, ctf, image and base64 readers).
+    // For MLF and HTK deserializers, we use non-numeric (string) sequence keys.
+    bool useNumericSequenceKeys = true;
+    if (ContainsDeserializer(config, L"HTKFeatureDeserializer") ||
+        ContainsDeserializer(config, L"HTKMLFDeserializer")) 
+    {
+        useNumericSequenceKeys = false;
+    }
 
     useNumericSequenceKeys = config(L"useNumericSequenceKeys", useNumericSequenceKeys);
-    m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
+
+    bool useHash = config(L"hashSequenceKeys", false);
+    m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys, useHash);
 
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", false);
@@ -72,24 +84,27 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         m_packingMode = PackingMode::sequence;
     }
 
+    m_rightSplice = config(L"rightSplice", 0);
+    if (m_rightSplice > m_truncationLength)
+        InvalidArgument("rightSplice should not be greater than truncation length");
+
     m_precision = config("precision", "float");
 
     // Creating deserializers.
-    // TODO: Currently the primary deserializer defines the corpus. The logic will be moved to CorpusDescriptor class.
-    CreateDeserializers(config);
-
+    bool composable = CreateDeserializers(config);
     if (m_deserializers.empty())
-    {
         InvalidArgument("Could not find deserializers in the reader config.");
-    }
 
-    IDataDeserializerPtr deserializer = m_deserializers.front();
+    if (!composable && m_deserializers.size() > 1)
+        InvalidArgument("Currently user defined deserializers do not support composability. Please specify a single deserializer.");
+
+    DataDeserializerPtr deserializer = m_deserializers.front();
     if (m_deserializers.size() > 1)
     {
         // Bundling deserializers together.
         // Option whether we need to check data between different deserializers.
         bool cleanse = config(L"checkData", true);
-        deserializer = std::make_shared<Bundler>(config, deserializer, m_deserializers, cleanse);
+        deserializer = std::make_shared<Bundler>(config, m_corpus, deserializer, m_deserializers, cleanse);
     }
 
     int verbosity = config(L"verbosity", 0);
@@ -104,65 +119,70 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     // It makes sense to put it to true for cases when deserialization is CPU intensive,
     // i.e. decompression of images.
     bool multiThreadedDeserialization = config(L"multiThreadedDeserialization", ContainsDeserializer(config, L"ImageDeserializer"));
-    if (randomize)
+
+    if (!composable) // Pick up simple interface.
     {
-        // By default randomizing the whole data set.
-        size_t randomizationWindow = requestDataSize;
-
-        // Currently in case of images, a single chunk is a single image. So no need to randomize, chunks will be randomized anyway.
-        if (ContainsDeserializer(config, L"ImageDeserializer") && m_deserializers.size() == 1)
+        if (randomize)
         {
-            randomizationWindow = 1;
-            m_packingMode = PackingMode::sample;
+            bool sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", false);
+            m_sequenceEnumerator = std::make_shared<LTTumblingWindowRandomizer>(deserializer,
+                sampleBasedRandomizationWindow, config(L"randomizationWindow", requestDataSize),
+                GetRandomSeed(config),
+                multiThreadedDeserialization, maxErrors);
         }
-
-        randomizationWindow = config(L"randomizationWindow", randomizationWindow);
-        bool sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", true);
-
-        if (ContainsDeserializer(config, L"CNTKTextFormatDeserializer") && !config.ExistsCurrent(L"randomizationWindow"))
-        {
-            if (!config.ExistsCurrent(L"sampleBasedRandomizationWindow") || // sampleBasedRandomizationWindow is not specified
-                !sampleBasedRandomizationWindow) // randomization window is in chunks
-            {
-                sampleBasedRandomizationWindow = false;
-                size_t chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default
-                randomizationWindow = g_4GB / chunkSizeBytes; // ~ 4 GB disk space worth of chunks
-                // TODO: decrease randomization window if m_deserializers.size() > 1 ?
-            }
-            else
-            {
-                // config explicitly says to use a sample-based window, but does not specify its size.
-                LogicError("'sampleBasedRandomizationWindow' (== 'true') requires that the 'randomizationWindow' is explicitly specified.");
-            }
-        }
-
-        bool shouldPrefetch = true;
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, 
-            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow);
+        else
+            m_sequenceEnumerator = std::make_shared<LTNoRandomizer>(deserializer, multiThreadedDeserialization, maxErrors);
     }
     else
     {
-        m_sequenceEnumerator = std::make_shared<NoRandomizer>(deserializer, multiThreadedDeserialization, maxErrors);
+        if (randomize)
+        {
+            // By default randomizing the whole data set.
+            size_t randomizationWindow = requestDataSize;
+
+            // Currently in case of images, a single chunk is a single image. So no need to randomize, chunks will be randomized anyway.
+            if (ContainsDeserializer(config, L"ImageDeserializer") && m_deserializers.size() == 1)
+            {
+                randomizationWindow = 1;
+                m_packingMode = PackingMode::sample;
+            }
+
+            randomizationWindow = config(L"randomizationWindow", randomizationWindow);
+            bool sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", true);
+
+            if (ContainsDeserializer(config, L"CNTKTextFormatDeserializer") && !config.ExistsCurrent(L"randomizationWindow"))
+            {
+                if (!config.ExistsCurrent(L"sampleBasedRandomizationWindow") || // sampleBasedRandomizationWindow is not specified
+                    !sampleBasedRandomizationWindow) // randomization window is in chunks
+                {
+                    sampleBasedRandomizationWindow = false;
+                    size_t chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default
+                    randomizationWindow = g_4GB / chunkSizeBytes; // ~ 4 GB disk space worth of chunks
+                                                                  // TODO: decrease randomization window if m_deserializers.size() > 1 ?
+                }
+                else
+                {
+                    // config explicitly says to use a sample-based window, but does not specify its size.
+                    LogicError("'sampleBasedRandomizationWindow' (== 'true') requires that the 'randomizationWindow' is explicitly specified.");
+                }
+            }
+
+            bool shouldPrefetch = true;
+            m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch,
+                multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow, GetRandomSeed(config));
+        }
+        else
+            m_sequenceEnumerator = std::make_shared<NoRandomizer>(deserializer, multiThreadedDeserialization, maxErrors);
     }
 
     // In case when there are transforms, applying them to the data.
     m_sequenceEnumerator = m_transforms.empty()
         ? m_sequenceEnumerator
-        : std::make_shared<TransformController>(m_transforms, m_sequenceEnumerator);
+        : std::make_shared<TransformController>(m_transforms, m_sequenceEnumerator, multiThreadedDeserialization);
 
-    // TODO: Creating output stream descriptions - this should come from the network so that we can check 
+    // TODO: Output stream descriptions - this should come from the network so that we can check 
     // that input matches what the network expects (including tensor shape, etc.).
-    for (const auto& streamDescription : m_sequenceEnumerator->GetStreamDescriptions())
-    {
-        StreamDescriptionPtr stream = std::make_shared<StreamDescription>(*streamDescription);
-        if (m_packingMode == PackingMode::truncated)
-        {
-            // TODO: Currently BPTT does not support sparse format as output.
-            // We always require dense.
-            stream->m_storageType = StorageType::dense;
-        }
-        m_streams.push_back(stream);
-    }
+    std::vector<StreamInformation> outputStreams = m_sequenceEnumerator->GetStreamDescriptions();
 
     // Currently for prefetch we use two alternating buffers,
     // same is the default.
@@ -175,7 +195,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     case PackingMode::sample:
         m_packer = std::make_shared<FramePacker>(
             m_sequenceEnumerator,
-            m_streams,
+            outputStreams,
             numAlternatingBuffers,
             localTimeline,
             m_corpus);
@@ -183,16 +203,21 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     case PackingMode::sequence:
         m_packer = std::make_shared<SequencePacker>(
             m_sequenceEnumerator,
-            m_streams,
+            outputStreams,
             numAlternatingBuffers,
             localTimeline,
             m_corpus);
         break;
     case PackingMode::truncated:
     {
+        // Currently BPTT does not support sparse format as output.
+        // We always require dense from the packer.
+        for (auto& s : outputStreams)
+            s.m_storageFormat = StorageFormat::Dense;
+
         m_packer = std::make_shared<TruncatedBPTTPacker>(
             m_sequenceEnumerator,
-            m_streams,
+            outputStreams,
             numAlternatingBuffers,
             m_corpus);
         break;
@@ -202,21 +227,25 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     }
 }
 
-std::vector<StreamDescriptionPtr> CompositeDataReader::GetStreamDescriptions()
+std::vector<StreamInformation> CompositeDataReader::GetStreamDescriptions()
 {
-    return m_streams;
+    return m_packer->GetStreamDescriptions();
 }
 
 // Create deserializers based on the specified configuration. 
 // deserializers = [
 //        [ type = "ImageDataDeserializer" module = "ImageReader" ...]
 //        [ type = "CNTKTextFormatDeserializer" module = "CNTKTextFormatReader" ...]
-void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConfig)
+bool CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConfig)
 {
     argvector<ConfigValue> deserializerConfigs =
         readerConfig(L"deserializers", ConfigParameters::Array(argvector<ConfigValue>(vector<ConfigValue> {})));
 
     assert(m_deserializers.empty());
+
+    auto traceLevel = readerConfig.Find("traceLevel");
+    bool composable = true;
+
     bool primary = true;  // Currently, the first deserializer becomes primary - it drives chunking.
     for (size_t i = 0; i < deserializerConfigs.size(); ++i)
     {
@@ -224,25 +253,31 @@ void CompositeDataReader::CreateDeserializers(const ConfigParameters& readerConf
         ConfigParameters p = deserializerConfigs[i];
         p.Insert("frameMode", m_packingMode == PackingMode::sample ? "true" : "false");
         p.Insert("precision", m_precision);
+        if (!traceLevel.empty()) 
+        {
+            p.Insert("traceLevel", traceLevel);
+        }
 
-        IDataDeserializerPtr d = CreateDeserializer(p, primary);
+        composable &= p(L"composable", true);
+        DataDeserializerPtr d = CreateDeserializer(p, primary);
         primary = false;
         m_deserializers.push_back(d);
     }
+    return composable;
 }
 
 // Creates a particular deserializer based on the config: its loads the external module and calls CreateDeserializer
 // factory function for a particular deserializer type.
-IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig, bool primary)
+DataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParameters& deserializerConfig, bool primary)
 {
-    typedef bool(*CreateDeserializerFactory) (IDataDeserializer** d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus, bool primary);
+    typedef bool(*CreateDeserializerFactory) (DataDeserializerPtr& d, const std::wstring& type, const ConfigParameters& cfg, CorpusDescriptorPtr corpus, bool primary);
 
     std::string deserializerModule = deserializerConfig("module");
     CreateDeserializerFactory f = (CreateDeserializerFactory)Plugin::Load(deserializerModule, "CreateDeserializer");
 
     std::wstring deserializerType = deserializerConfig("type");
-    IDataDeserializer* d;
-    if (!f(&d, deserializerType, deserializerConfig, m_corpus, primary))
+    DataDeserializerPtr d;
+    if (!f(d, deserializerType, deserializerConfig, m_corpus, primary))
     {
         RuntimeError("Cannot create deserializer. Please check module and type in the configuration.");
     }
@@ -251,7 +286,7 @@ IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamet
     CreateTransforms(deserializerConfig);
 
     assert(d != nullptr);
-    return IDataDeserializerPtr(d);
+    return d;
 }
 
 // Create transformers based on the configuration, i.e.
@@ -259,47 +294,41 @@ IDataDeserializerPtr CompositeDataReader::CreateDeserializer(const ConfigParamet
 //     [
 //         type = "ImageDataDeserializer"
 //         module = "ImageReader"
-//         inputs = [
+//         input = [
 //               features = [
 //---->              transforms = [
 //                       [type = "Crop"]:[type = "Scale"]...
-
 void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerConfig)
 {
     std::string defaultModule = deserializerConfig("module");
-    argvector<ConfigParameters> inputs = deserializerConfig("input");
-    for (size_t i = 0; i < inputs.size(); ++i)
+    if (!deserializerConfig.Exists("input"))
+        return;
+
+    const ConfigParameters& inputs = deserializerConfig("input");
+    for (const pair<string, ConfigParameters>& section : inputs)
     {
-        // Trying to find transfomers in a stream section of the config.
-        auto inputSections = TryGetSectionsWithParameter(inputs[i], "transforms");
-        if (inputSections.size() > 1)
-        {
-            LogicError("Only a single 'transforms' config is allowed per stream.");
-        }
+        ConfigParameters inputBody = section.second;
 
-        // No need to create anything for this stream, skipping.
-        if (inputSections.empty())
-        {
+        // Trying to find transforms in the input section of the config.
+        if (inputBody.find("transforms") == inputBody.end())
             continue;
-        }
 
-        ConfigParameters input = inputs[i](inputSections.front());
-        std::wstring inputName = msra::strfun::utf16(input.ConfigName());
+        std::wstring inputName = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(section.first);
 
-        // Read tranformers in order and appending them to the transformer pipeline.
-        argvector<ConfigParameters> transforms = input("transforms");
+        // Read transformers in order and appending them to the transformer pipeline.
+        argvector<ConfigParameters> transforms = inputBody("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {
             ConfigParameters p = transforms[j];
             p.Insert("precision", deserializerConfig("precision"));
 
             TransformerPtr transformer = CreateTransformer(p, defaultModule, std::wstring());
-            m_transforms.push_back(Transformation{transformer, inputName});
+            m_transforms.push_back(Transformation{ transformer, inputName });
         }
 
         // Let's add a cast transformer by default. It is noop if the type provided by others is float
         // or double, but will do a proper cast if the type is uchar.
-        auto cast = CreateTransformer(input, defaultModule, std::wstring(L"Cast"));
+        auto cast = CreateTransformer(inputBody, defaultModule, std::wstring(L"Cast"));
         m_transforms.push_back(Transformation{ cast, inputName });
     }
 }
@@ -331,6 +360,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg, const std::m
     if (m_packingMode == PackingMode::truncated)
     {
         config.m_truncationSize = m_truncationLength;
+        config.m_rightSplice = m_rightSplice;
     }
 
     ReaderBase::StartEpoch(config, inputDescriptions);
@@ -351,4 +381,4 @@ bool CompositeDataReader::ContainsDeserializer(const ConfigParameters& readerCon
     return false;
 }
 
-}}}
+}

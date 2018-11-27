@@ -137,7 +137,7 @@ cn_command="$cn_command $cntk_train_opts DeviceNumber=$device"
 cn_command="$cn_command command=TrainModel"
 $cmd $parallel_opts JOB=1:1 $dir/log/cntk.train.JOB.log $cn_command || exit 1;
 
-echo "$0 successfuly finished.. $dir"
+echo "$0 successfully finished.. $dir"
 
 sleep 3
 exit 0

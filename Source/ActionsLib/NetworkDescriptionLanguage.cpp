@@ -150,9 +150,14 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     if (allowUndeterminedVariable)
         *allowUndeterminedVariable = true; // be default we allow undetermined variables
 
-    wstring nodeType = msra::strfun::utf16(p_nodeType);
+    wstring nodeType = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(p_nodeType);
     bool ret = false;
          if (EqualInsensitive(nodeType, OperationNameOf(AbsNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AcosNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AsinNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AtanNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AsinhNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(AtanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode))) ret = true;
 #ifdef COMING_SOON
@@ -161,6 +166,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassificationErrorNode), L"ErrorPrediction")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(EditDistanceErrorNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(StopGradientNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(EqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(GreaterEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;
@@ -176,6 +182,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(PoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceNode), L"CosDist")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceWithNegativeSamplesNode), L"CosWithNegSamples")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CoshNode), L"Cosh")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosineNode), L"Cos")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyWithSoftmaxNode), L"CEWithSM")) ret = true;
@@ -223,7 +230,9 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceDecoderNode), L"SEWithSM")) ret = true;
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LatticeSequenceWithSoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(SinhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SparseInputValue), L"SparseInput")) ret = true;
@@ -231,6 +240,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(SquareErrorNode), L"SE")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SumColumnElementsNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SumElementsNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(TanNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(TimesNode))) ret = true;
     //else if (EqualInsensitive(nodeType, OperationNameOf(TransposeDimensionsNode))) ret = true; // not supported from NDL, use Transpose()
@@ -248,7 +258,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 
     // return the actual node name in the parameter if we found something
     if (ret)
-        p_nodeType = msra::strfun::utf8(nodeType);
+        p_nodeType = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(nodeType));
     return ret;
 }
 

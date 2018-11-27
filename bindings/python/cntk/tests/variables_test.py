@@ -8,13 +8,13 @@
 Unit tests for Variable and its descendents.
 """
 
-from ..variables import *
-from .. import times, placeholder, constant, plus, input, alias
+from .. import times, placeholder, constant, plus, alias,\
+    initializer
 import numpy as np
-
+import cntk as C
 import pytest
 
-VARIABLE_TYPES = [Constant, Parameter]
+VARIABLE_TYPES = [C.Constant, C.Parameter]
 
 
 @pytest.mark.parametrize("variable_type", VARIABLE_TYPES)
@@ -43,7 +43,7 @@ VALUES = [
         ]
 
 def test_parameter_set_value():
-    p = Parameter(shape=(2,3), init=1);
+    p = C.Parameter(shape=(2,3), init=1);
     n = np.random.randn(2, 3)
     p.value = n
     assert np.all(p.value == n.astype(p.dtype))
@@ -55,17 +55,17 @@ def test_parameter_set_value():
     value = output[op.output]
     assert np.all(value == 2*n.astype(p.dtype))
 
-    p.value = sanitize_value(p.shape, 1.0, np.float32, None)
+    p.value = C.internal.sanitize_value(p.shape, 1.0, np.float32, None)
     assert np.all(p.value == np.ones((2,3)))
 
 @pytest.mark.parametrize("value", VALUES)
 def test_constant_value(value):
-    c = Constant(value=value)
+    c = C.Constant(value=value)
     assert np.allclose(c.value, value)
 
 @pytest.mark.parametrize("value", VALUES)
 def test_parameter_value(value):
-    c = Parameter(init=value)
+    c = C.Parameter(init=value)
     assert np.allclose(c.value, value)
 
 def test_constant():
@@ -90,21 +90,21 @@ def test_constant_shape_inf():
         c.value
 
 def test_convert_to_variable_dtype():
-    assert input(1).dtype == np.float32
+    assert C.input_variable(1).dtype == np.float32
 
     data = np.arange(1, dtype=np.int32)
-    result = (input(1)+2).eval([data])
+    result = (C.input_variable(1)+2).eval([data])
     assert result==[[[2]]]
     assert result.dtype == np.float32
 
     data = np.arange(1., dtype=np.float64)
-    (input(1)+2).eval([data])
-    result = (input(1)+2).eval([data])
+    (C.input_variable(1)+2).eval([data])
+    result = (C.input_variable(1)+2).eval([data])
     assert result==[[[2]]]
     assert result.dtype == np.float32
 
 def test_getitem():
-    x = input(5)
+    x = C.input_variable(5)
     y = x+0
     f = y[3]
     r = f.eval([np.array([[1, 2, 3, 4, 5]])])
@@ -118,6 +118,21 @@ def test_getitem():
     f = y[:3]
     r = f.eval([np.array([[1, 2, 3, 4, 5]])])
     assert np.allclose(r, [[[1,2,3]]])
-    with pytest.raises(ValueError):
-        f = y[1:4:2]
-        r = f.eval([np.array([[1, 2, 3, 4, 5]])])
+    f = y[1:4:2]
+    r = f.eval([np.array([[1, 2, 3, 4, 5]])])
+    assert np.allclose(r, [[[2, 4]]])
+
+def test_initializer_scale():
+    # this should work fine:
+    p = C.Parameter(shape=(1,), init=initializer.uniform(1));
+    with pytest.raises(ValueError) as excinfo:
+        name = 'uniform_zero'
+        p = C.Parameter(shape=(1,), init=initializer.uniform(0), name=name);
+        assert 'CreateInitializer' in str(excinfo.value)
+        assert name in str(excinfo.value)
+
+    with pytest.raises(ValueError) as excinfo:
+        name = 'glorot_negative_one'
+        p = C.Parameter(shape=(1,), init=initializer.glorot_uniform(-1), name=name);
+        assert 'CreateInitializer' in str(excinfo.value)
+        assert name in str(excinfo.value)

@@ -57,7 +57,7 @@ class NDLScript;
 template <typename ElemType>
 class NDLNode;
 
-// NDLNodeEvaluator - Node evaluaton interface
+// NDLNodeEvaluator - Node evaluation interface
 // implemented by execution engines to convert script to approriate internal formats
 template <typename ElemType>
 class NDLNodeEvaluator
@@ -75,7 +75,7 @@ public:
     virtual NDLNode<ElemType>* EvaluateParameter(NDLNode<ElemType>* node, NDLNode<ElemType>* nodeParam, const std::wstring& baseName, const NDLPass pass) = 0;
 
     // EvaluateParameters - Evaluate the parameters of a call
-    // node - NDLNode we are evaluating paramters for
+    // node - NDLNode we are evaluating parameters for
     // baseName - baseName for the current node
     // nodeParamStart - starting parameter that contains a node
     // nodeParamCount - ending parameter that contains a node
@@ -412,7 +412,7 @@ public:
         std::wstring newBase = baseName;
         if (!newBase.empty())
             newBase += L".";
-        newBase += msra::strfun::utf16(m_name);
+        newBase += Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(m_name);
 
         // now evaluate  the contained macro script
         NDLNode<ElemType>* nodeResult = m_script->Evaluate(nodeEval, newBase, pass);

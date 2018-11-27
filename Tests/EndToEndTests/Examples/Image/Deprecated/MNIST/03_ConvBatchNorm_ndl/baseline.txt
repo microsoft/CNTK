@@ -11,7 +11,6 @@ Build info:
 		Last modified date: Tue Sep 13 08:14:18 2016
 		Build type: Release
 		Build target: GPU
-		With 1bit-SGD: no
 		Math lib: mkl
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 		CUB_PATH: C:\src\cub-1.4.1
@@ -30,7 +29,6 @@ Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160
 09/13/2016 08:53:50: 		Last modified date: Tue Sep 13 08:14:18 2016
 09/13/2016 08:53:50: 		Build type: Release
 09/13/2016 08:53:50: 		Build target: GPU
-09/13/2016 08:53:50: 		With 1bit-SGD: no
 09/13/2016 08:53:50: 		Math lib: mkl
 09/13/2016 08:53:50: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 09/13/2016 08:53:50: 		CUB_PATH: C:\src\cub-1.4.1

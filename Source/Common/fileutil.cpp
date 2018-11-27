@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <glob.h>
 #include <dirent.h>
+#include <sys/sendfile.h>
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -422,6 +423,7 @@ void fprintfOrDie(FILE* f, const char* fmt, ...)
     va_list arg_ptr;
     va_start(arg_ptr, fmt);
     int rc = vfprintf(f, fmt, arg_ptr);
+    va_end(arg_ptr);
     if (rc < 0)
     {
         RuntimeError("error writing to file: %s", strerror(errno));
@@ -651,8 +653,13 @@ void renameOrDie(const std::string& from, const std::string& to)
     if (fexists(to.c_str()) && !DeleteFileA(to.c_str()))
         RuntimeError("error deleting file: '%s': %d", to.c_str(), GetLastError());
 
+#if CNTK_UWP
+    to;
+    RuntimeError("error renaming file '%s': Not supported in UWP", from.c_str());
+#else
     if (!MoveFileA(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%s': %d", from.c_str(), GetLastError());
+#endif
 #else
     // Delete destination file if it exists
     // WORKAROUND: "rename" should do this but this is a workaround
@@ -672,12 +679,49 @@ void renameOrDie(const std::wstring& from, const std::wstring& to)
     // deleting destination file if exits (to match Linux semantic)
     if (fexists(to.c_str()) && !DeleteFileW(to.c_str()))
         RuntimeError("error deleting file '%ls': %d", to.c_str(), GetLastError());
-
+#if CNTK_UWP
+    to;
+    RuntimeError("error renaming file '%ls': Not supported in UWP", from.c_str());
+#else
     if (!MoveFileW(from.c_str(), to.c_str()))
         RuntimeError("error renaming file '%ls': %d", from.c_str(), GetLastError());
+#endif
 #else
     renameOrDie(wtocharpath(from.c_str()).c_str(), wtocharpath(to.c_str()).c_str());
 #endif
+}
+
+// ----------------------------------------------------------------------------
+// copyOrDie(): copy file with error handling.
+// ----------------------------------------------------------------------------
+
+void copyOrDie(const string& from, const string& to)
+{
+    // Call wide string implementation.
+    copyOrDie(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(from), Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(to));
+}
+
+void copyOrDie(const wstring& from, const wstring& to)
+{
+    const wstring tempTo = to + L".tmp";
+#ifdef _WIN32
+#ifdef CNTK_UWP
+    to;
+    RuntimeError("error copying file 'l%s' to '%ls' : Not supported in UWP", from.c_str(), tempTo.c_str());
+#else
+    const BOOL succeeded = CopyFile(from.c_str(), tempTo.c_str(), FALSE);
+    if (!succeeded)
+        RuntimeError("error copying file '%ls' to '%ls': %d", from.c_str(), tempTo.c_str(), GetLastError());
+#endif // CNTK_UWP
+#else
+    FILE* fromFile = fopenOrDie(from, L"rb");
+    FILE* tempToFile = fopenOrDie(tempTo, L"wb");
+    const size_t fromFileSize = filesize(fromFile);
+    sendfile(fileno(tempToFile), fileno(fromFile), 0, fromFileSize);
+    fcloseOrDie(fromFile);
+    fcloseOrDie(tempToFile);
+#endif
+    renameOrDie(tempTo, to);
 }
 
 // ----------------------------------------------------------------------------
@@ -837,7 +881,7 @@ CHAR* fgetline(FILE* f, CHAR* buf, int size)
     {
         basic_string<CHAR> example(p, n < 100 ? n : 100);
         uint64_t filepos = fgetpos(f); // (for error message only)
-        RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int) filepos, (int) size - 1, msra::strfun::utf8(example).c_str());
+        RuntimeError("input line too long at file offset %d (max. %d characters allowed) [%s ...]", (int) filepos, (int) size - 1, Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(example)).c_str());
     }
 
     // remove newline at end
@@ -1193,9 +1237,9 @@ void fputText<bool>(FILE* f, bool v)
 
 std::string fgetTag(FILE* f)
 {
-    char tag[5];
-    freadOrDie(&tag[0], sizeof(tag[0]), 4, f);
-    tag[4] = 0;
+    char tag[LATTICE_TAG_LENGTH +1];
+    freadOrDie(&tag[0], sizeof(tag[0]), LATTICE_TAG_LENGTH, f);
+    tag[LATTICE_TAG_LENGTH] = 0;
     return std::string(tag);
 }
 
@@ -1889,7 +1933,7 @@ void expand_wildcards(const wstring& path, vector<wstring>& paths)
 
     for (unsigned int i = 0; i < globResult.gl_pathc; ++i)
     {
-        paths.push_back(msra::strfun::utf16(globResult.gl_pathv[i]));
+        paths.push_back(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(globResult.gl_pathv[i]));
     }
     globfree(&globResult);
 #endif
@@ -1960,7 +2004,7 @@ std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::w
     std::vector<std::wstring> result;
 #ifdef _WIN32
     WIN32_FIND_DATA ffd = {};
-    HANDLE hFind = FindFirstFile(directory.c_str(), &ffd);
+    HANDLE hFind = FindFirstFile((directory + L"/*").c_str(), &ffd);
     if (INVALID_HANDLE_VALUE == hFind)
         RuntimeError("Cannot get information about directory '%ls'.", directory.c_str());
 
@@ -1978,7 +2022,7 @@ std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::w
     if (dwError != ERROR_NO_MORE_FILES)
         RuntimeError("Error iterating directory '%ls'", directory.c_str());
 #else
-    std::string d = msra::strfun::utf8(directory);
+    std::string d = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(directory));
     auto dirp = opendir(d.c_str());
     dirent *dp = nullptr;
     struct stat st = {};
@@ -1996,7 +2040,7 @@ std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::w
         if ((st.st_mode & S_IFDIR) != 0)
             continue;
 
-        result.push_back(msra::strfun::utf16(fileName));
+        result.push_back(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(fileName));
     }
     closedir(dirp);
 #endif
@@ -2055,7 +2099,7 @@ static inline std::string wcstombs(const std::wstring& p) // output: MBCS
 {
     size_t len = p.length();
     vector<char> buf(2 * len + 1); // max: 1 wchar => 2 mb chars
-    fill(buf.begin(), buf.end(), 0);
+    fill(buf.begin(), buf.end(), (char)0);
     ::wcstombs(&buf[0], p.c_str(), 2 * len + 1);
     return std::string(&buf[0]);
 }
@@ -2067,27 +2111,4 @@ static inline std::wstring mbstowcs(const std::string& p) // input: MBCS
     // OACR_WARNING_SUPPRESS(UNSAFE_STRING_FUNCTION, "Reviewed OK. size checked. [rogeryu 2006/03/21]");
     ::mbstowcs(&buf[0], p.c_str(), len + 1);
     return std::wstring(&buf[0]);
-}
-
-wstring s2ws(const string& str)
-{
-#ifdef __unix__
-    return mbstowcs(str);
-#else
-    typedef std::codecvt_utf8<wchar_t> convert_typeX;
-    std::wstring_convert<convert_typeX, wchar_t> converterX;
-    return converterX.from_bytes(str);
-
-#endif
-}
-
-string ws2s(const wstring& wstr)
-{
-#ifdef __unix__
-    return wcstombs(wstr);
-#else
-    typedef codecvt_utf8<wchar_t> convert_typeX;
-    wstring_convert<convert_typeX, wchar_t> converterX;
-    return converterX.to_bytes(wstr);
-#endif
 }

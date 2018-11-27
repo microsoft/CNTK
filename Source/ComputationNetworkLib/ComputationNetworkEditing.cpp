@@ -37,7 +37,7 @@ ComputationNodeBasePtr ComputationNetwork::CopyNode(const ComputationNetwork& fr
     ComputationNodeBasePtr pFromNode = fromNet.GetNodeFromName(fromName);
     ComputationNodeBasePtr pToNode;
 
-    // don't allow cross network child copy unless caller explicity handles children fixup
+    // don't allow cross network child copy unless caller explicitly handles children fixup
     if ((flags & CopyNodeFlags::copyNodeInputLinks) &&
         this != &fromNet && !(flags & CopyNodeFlags::copyNodeAcrossNetworks))
     {

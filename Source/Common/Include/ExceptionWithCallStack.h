@@ -10,7 +10,9 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 #endif
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif // NOMINMAX
 #pragma comment(lib, "Dbghelp.lib")
 #else
 #include <execinfo.h>

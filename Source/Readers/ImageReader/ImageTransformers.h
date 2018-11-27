@@ -13,11 +13,12 @@
 
 #include "Transformer.h"
 #include "ConcStack.h"
+#include "ConcVector.h"
 #include "Config.h"
 #include "ImageConfigHelper.h"
 #include "TransformBase.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace CNTK {
 
 // Sequence data that is used for images.
 struct ImageSequenceData : DenseSequenceData
@@ -39,20 +40,25 @@ struct ImageSequenceData : DenseSequenceData
 
         return m_image.ptr();
     }
-};
 
-class ConfigParameters;
+    const NDShape& GetSampleShape() override
+    {
+        return m_sampleShape;
+    }
+
+    NDShape m_sampleShape;
+};
 
 // Base class for image transformations based on OpenCV
 // that helps to wrap the sequences into OpenCV::Mat class.
 class ImageTransformerBase : public TransformBase
 {
 public:
-    explicit ImageTransformerBase(const ConfigParameters& config) : TransformBase(config)
+    explicit ImageTransformerBase(const Microsoft::MSR::CNTK::ConfigParameters& config) : TransformBase(config)
     {};
 
     // Transformation of the sequence.
-    SequenceDataPtr Transform(SequenceDataPtr sequence) override;
+    SequenceDataPtr Transform(SequenceDataPtr sequence, int indexInBatch=0) override;
 
 protected:
     using Base = Transformer;
@@ -61,8 +67,8 @@ protected:
 
     int ExpectedOpenCVPrecision() const
     {
-        assert(m_precision == ElementType::tfloat || m_precision == ElementType::tdouble);
-        return m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+        assert(m_precision == DataType::Float || m_precision == DataType::Double);
+        return m_precision == DataType::Float ? CV_32F : CV_64F;
     }
 
     void ConvertToFloatingPointIfRequired(cv::Mat& image)
@@ -73,9 +79,9 @@ protected:
     }
 
     // The only function that should be redefined by the inherited classes.
-    virtual void Apply(uint8_t copyId, cv::Mat &from) = 0;
+    virtual void Apply(uint8_t copyId, cv::Mat &from, int indexInBatch) = 0;
 
-    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+    Microsoft::MSR::CNTK::conc_vector<std::unique_ptr<std::mt19937>> m_rngs;
 };
 
 // Crop transformation of the image.
@@ -83,10 +89,12 @@ protected:
 class CropTransformer : public ImageTransformerBase
 {
 public:
-    explicit CropTransformer(const ConfigParameters& config);
+    explicit CropTransformer(const Microsoft::MSR::CNTK::ConfigParameters& config);
+
+    StreamInformation Transform(const StreamInformation& inputStream);
 
 private:
-    void Apply(uint8_t copyId, cv::Mat &mat) override;
+    void Apply(uint8_t copyId, cv::Mat &mat, int indexInBatch) override;
 
 private:
     enum class RatioJitterType
@@ -107,7 +115,7 @@ private:
     cv::Rect GetCropRectRandomArea(int crow, int ccol, std::mt19937 &rng);
     cv::Rect GetCropRectMultiView10(int viewIndex, int crow, int ccol, std::mt19937 &rng);
 
-    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+    Microsoft::MSR::CNTK::conc_vector<std::unique_ptr<std::mt19937>> m_rngs;
     CropType m_cropType; 
     int m_cropWidth; 
     int m_cropHeight; 
@@ -130,9 +138,9 @@ private:
 class ScaleTransformer : public ImageTransformerBase
 {
 public:
-    explicit ScaleTransformer(const ConfigParameters& config);
+    explicit ScaleTransformer(const Microsoft::MSR::CNTK::ConfigParameters& config);
 
-    StreamDescription Transform(const StreamDescription& inputStream) override;
+    StreamInformation Transform(const StreamInformation& inputStream) override;
 
 private:
     enum class ScaleMode
@@ -141,7 +149,7 @@ private:
         Crop = 1,
         Pad  = 2
     };
-    void Apply(uint8_t copyId, cv::Mat &mat) override;
+    void Apply(uint8_t copyId, cv::Mat &mat, int indexInBatch) override;
 
     size_t m_imgWidth;
     size_t m_imgHeight;
@@ -157,10 +165,10 @@ private:
 class MeanTransformer : public ImageTransformerBase
 {
 public:
-    explicit MeanTransformer(const ConfigParameters& config);
+    explicit MeanTransformer(const Microsoft::MSR::CNTK::ConfigParameters& config);
 
 private:
-    void Apply(uint8_t copyId, cv::Mat &mat) override;
+    void Apply(uint8_t copyId, cv::Mat &mat, int indexInBatch) override;
 
     cv::Mat m_meanImg;
 };
@@ -169,13 +177,13 @@ private:
 class TransposeTransformer : public TransformBase
 {
 public:
-    explicit TransposeTransformer(const ConfigParameters&);
+    explicit TransposeTransformer(const Microsoft::MSR::CNTK::ConfigParameters&);
 
     // Transformation of the stream.
-    StreamDescription Transform(const StreamDescription& inputStream) override;
+    StreamInformation Transform(const StreamInformation& inputStream) override;
 
     // Transformation of the sequence.
-    SequenceDataPtr Transform(SequenceDataPtr sequence) override;
+    SequenceDataPtr Transform(SequenceDataPtr sequence, int indexInBatch=0) override;
 
 private:
     // A helper class transposes images using a set of typed memory buffers.
@@ -187,8 +195,8 @@ private:
         TypedTranspose(TransposeTransformer* parent) : m_parent(parent) {}
 
         template <class TElementFrom>
-        SequenceDataPtr Apply(ImageSequenceData* inputSequence);
-        conc_stack<std::vector<TElementTo>> m_memBuffers;
+        SequenceDataPtr Apply(ImageSequenceData* inputSequence, int indexInBatch);
+        Microsoft::MSR::CNTK::conc_stack<std::vector<TElementTo>> m_memBuffers;
     };
 
     // Auxiliary buffer to handle images of float type.
@@ -206,21 +214,21 @@ private:
 class IntensityTransformer : public ImageTransformerBase
 {
 public:
-    explicit IntensityTransformer(const ConfigParameters& config);
+    explicit IntensityTransformer(const Microsoft::MSR::CNTK::ConfigParameters& config);
 
 private:
     void StartEpoch(const EpochConfiguration &config) override;
 
-    void Apply(uint8_t copyId, cv::Mat &mat) override;
+    void Apply(uint8_t copyId, cv::Mat &mat, int indexInBatch) override;
     template <typename ElemType>
-    void Apply(cv::Mat &mat);
+    void Apply(cv::Mat &mat, int indexInBatch);
 
     double m_stdDev;
 
     cv::Mat m_eigVal;
     cv::Mat m_eigVec;
 
-    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
+    Microsoft::MSR::CNTK::conc_vector<std::unique_ptr<std::mt19937>> m_rngs;
 };
 
 // Color jittering transform based on the paper: http://arxiv.org/abs/1312.5402
@@ -228,21 +236,21 @@ private:
 class ColorTransformer : public ImageTransformerBase
 {
 public:
-    explicit ColorTransformer(const ConfigParameters& config);
+    explicit ColorTransformer(const Microsoft::MSR::CNTK::ConfigParameters& config);
 
 private:
     void StartEpoch(const EpochConfiguration &config) override;
 
-    void Apply(uint8_t copyId, cv::Mat &mat) override;
+    void Apply(uint8_t copyId, cv::Mat &mat, int indexInBatch) override;
     template <typename ElemType>
-    void Apply(cv::Mat &mat);
+    void Apply(cv::Mat &mat, int indexInBatch);
 
     double m_brightnessRadius;
     double m_contrastRadius;
     double m_saturationRadius;
 
-    conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
-    conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;
+    Microsoft::MSR::CNTK::conc_vector<std::unique_ptr<std::mt19937>> m_rngs;
+    Microsoft::MSR::CNTK::conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;
 };
 
 // Cast the input to a particular type.
@@ -253,13 +261,13 @@ private:
 class CastTransformer : public TransformBase
 {
 public:
-    explicit CastTransformer(const ConfigParameters&);
+    explicit CastTransformer(const Microsoft::MSR::CNTK::ConfigParameters&);
 
     // Transformation of the stream.
-    StreamDescription Transform(const StreamDescription& inputStream) override;
+    StreamInformation Transform(const StreamInformation& inputStream) override;
 
     // Transformation of the sequence.
-    SequenceDataPtr Transform(SequenceDataPtr sequence) override;
+    SequenceDataPtr Transform(SequenceDataPtr sequence, int indexInBatch) override;
 
 private:
 
@@ -273,12 +281,11 @@ private:
 
         template <class TElementFrom>
         SequenceDataPtr Apply(SequenceDataPtr inputSequence);
-        conc_stack<std::vector<TElementTo>> m_memBuffers;
+        Microsoft::MSR::CNTK::conc_stack<std::vector<TElementTo>> m_memBuffers;
     };
 
     TypedCast<float> m_floatTransform;
     TypedCast<double> m_doubleTransform;
 };
 
-
-}}}
+}

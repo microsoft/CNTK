@@ -23,6 +23,12 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// Names of random variable types
+static const wstring RandomDistributionTypeUniform   = L"uniform";
+static const wstring RandomDistributionTypeNormal    = L"normal";
+static const wstring RandomDistributionTypeGumbel    = L"gumbel";
+static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
+
 // -----------------------------------------------------------------------
 // SquareErrorNode (left, right)
 // = SumElements ((left - right) .* (left - right))
@@ -519,7 +525,7 @@ public:
                     {
                         Url& UrlJ = *itUrlJ;
                         discountJ = m_logWeights[UrlJ.m_rank];
-                        if (abs(gainI - UrlJ.m_gain) < 0.0000001)
+                        if (abs(gainI - UrlJ.m_gain) < (ElemType)0.0000001)
                         {
                             continue;
                         }
@@ -528,7 +534,7 @@ public:
                         lambdaIJ = (gainI - UrlJ.m_gain) * (discountI - discountJ) / (discountI * discountJ);
 
                         // |delta NDCG|
-                        lambdaIJ = (idealMetric == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric));
+                        lambdaIJ = (idealMetric == (ElemType)0.0 ? (ElemType) 0.0 : (ElemType)abs(lambdaIJ / idealMetric));
 
                         // Combine lambda
                         lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
@@ -626,7 +632,7 @@ public:
         }
 
         // Update K (number of url pairs that have smaller or equal gain), rk (rank of 
-        // score in descending order) and and m_pairwiseDifferences (save for gradient 
+        // score in descending order) and m_pairwiseDifferences (save for gradient 
         // computation).
         size_t pairCount = 0;
         for (auto &qu : m_queryUrls)
@@ -1232,6 +1238,88 @@ protected:
     std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 
+
+// -----------------------------------------------------------------------
+// RandomDistributionNode (/*no input*/)
+// a random variable
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class RandomDistributionNode : public ComputationNode<ElemType>, public RngUser
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"RandomDistribution"; }
+
+    enum RandomDistributionType : unsigned int
+    {
+        Uniform,
+        Normal,
+        Gumbel,
+        Bernoulli
+    };
+
+    RandomDistributionType GetRandomDistributionType(const std::wstring rvType)
+    {
+        if (rvType == RandomDistributionTypeUniform)
+            return RandomDistributionType::Uniform;
+        else if (rvType == RandomDistributionTypeNormal)
+            return RandomDistributionType::Normal;
+        else if (rvType == RandomDistributionTypeGumbel)
+            return RandomDistributionType::Gumbel;
+        else if (rvType == RandomDistributionTypeBernoulli)
+            return RandomDistributionType::Bernoulli;
+        else
+            InvalidArgument("GetRandomDistributionType: Unknown random distribution type '%ls'", rvType.c_str());
+    }
+
+public:
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+        SetRngState(CreateUniqId());
+    }
+
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args)
+        : Base(deviceId, name), m_type(GetRandomDistributionType(rvType)) /*, m_shape(TensorShape())*/
+    {
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+    }
+
+    RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args, const TensorShape& sampleLayout)
+        : Base(deviceId, name), m_type(GetRandomDistributionType(rvType)), m_shape(sampleLayout)
+    {
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override;
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override;
+    virtual bool /*ComputationNodeBase::*/ IsOutOfDateWrtInputs() const override;
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        auto numInputs = GetNumInputs();
+        if (numInputs == 0)
+        {
+            this->m_pMBLayout = nullptr;
+            SetDims(m_shape, /*HasMbLayout=*/ false);
+        }
+        else if (numInputs == 1)
+            ValidateUnaryMap(isFinalValidationPass);
+        else
+            LogicError("%ls %ls RandomDistributionNode::Validate: Operation must either have 0 or 1 inputs", NodeName().c_str(), OperationName().c_str());
+    }
+
+    RNGHandle& GetRNGHandle()
+    {
+        return RngUser::GetRNGHandle(ValuePtr()->GetDeviceId());
+    }
+private:
+    RandomDistributionType m_type;
+    std::vector<ElemType> m_args;
+    TensorShape m_shape;
+};
+
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleNodeBase(samplingWeights, sizeOfSampledSet, allowDuplicates): 
 // Base class for RandomSampleNode and RandomSampleInclusionFrequencyNode.
@@ -1359,9 +1447,9 @@ public:
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 private:
-    // Approximates the expected number of occurences of a class in the sampled set.
+    // Approximates the expected number of occurrences of a class in the sampled set.
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
-    // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
+    // the probability that a specific class in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
     // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
     double EstimateInSampleFrequency(double p, double estimatedNumTries) const;
 
@@ -1436,7 +1524,7 @@ private:
         return sz;
     }
 
-    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
+    // compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // this should never be called for input[0], which is controlled through learningRateMultiplier == 0
@@ -1693,7 +1781,7 @@ public:
 
         size_t nS = InputRef(0).GetNumParallelSequences();
         if (nS != 1)
-            LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly.");
+            LogicError("CRFNode: >1 parallel sequences are currently not implemented correctly.");
         for (size_t i = 0; i < nS; i++) // process parallel sequences one by one  --BUGBUG: We should loop over individual sequences.
         {
             FrameRange sequenceRange = fr.Sequence(i); // FrameRange to select one sequence
@@ -2056,7 +2144,7 @@ public:
 
             if (isFinalValidationPass &&
                 !(Input(0)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() &&
-                  (Input(0)->GetMBLayout() == Input(2)->GetMBLayout() || !Input(0)->HasMBLayout() || !Input(2)->HasMBLayout())))
+                  Input(0)->IsMBLayoutCompatibleWith(Input(2))))
             {
                 LogicError("The Matrix dimensions of the second argument weights the %ls %ls operation do not match.", NodeName().c_str(), OperationName().c_str());
             }
@@ -2108,13 +2196,40 @@ private:
 template class LogisticNode<float>;
 template class LogisticNode<double>;
 
+
+
+// Non-temlate base class for the DropoutNode containing the getter/setter for the dropout rate.
+class DropoutNodeBase 
+{
+public:
+    void SetDropoutRate(double value) 
+    {
+        if (value < 0 || value >= 1)
+            LogicError("DropoutRate must be >= 0 and < 1.");
+        m_dropoutRate = value;
+    }
+
+    bool IsEnabled() const
+    {
+        return m_dropoutRate > 0;
+    }
+
+    double GetDropoutRate() const 
+    {
+        return m_dropoutRate;
+    }
+
+protected:
+    virtual ~DropoutNodeBase() = default;
+    double m_dropoutRate {0};
+};
+
 // -----------------------------------------------------------------------
 // DropoutNode (input) -- perform drop-out
 // Output is scaled such that no post-scaling is necessary.
 // -----------------------------------------------------------------------
-
 template <class ElemType>
-class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, public RngUser
+class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, public DropoutNodeBase, public RngUser
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -2126,8 +2241,7 @@ class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, publi
 public:
     DeclareConstructorFromConfigWithNumInputs(DropoutNode);
     DropoutNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name),
-        m_dropoutRate(0)
+        : Base(deviceId, name)
     {
         SetRngState(CreateUniqId());
     }
@@ -2140,20 +2254,34 @@ public:
         Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-        if (m_dropoutRate > 0)
-            sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+        if (InputRef(0).IsGradientInitializedBy(this))
+        {
+            if (IsEnabled())
+                sliceInput0Grad.AssignElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+            else
+                sliceInput0Grad.AssignValuesOf(sliceOutputGrad);
+        }
         else
-            sliceInput0Grad += sliceOutputGrad;
+        {
+            if (IsEnabled())
+                sliceInput0Grad.AddElementProductOf(sliceOutputGrad, DataFor(*m_maskOfDropout, fr));
+            else
+                sliceInput0Grad += sliceOutputGrad;
+        }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* /*input*/) const
+    {
+        return ParentGradientOptimization::Overwrite;
+    }
 
     virtual void UpdateFunctionMBSize() override
     {
         Base::UpdateFunctionMBSize();
         // resize temporaries to their proper size
-        if (m_dropoutRate > 0)
+        if (IsEnabled())
             m_maskOfDropout->Resize(Input(0)->Value());
     }
 
@@ -2162,7 +2290,7 @@ public:
         Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
-        if (Environment().IsInferring() || m_dropoutRate <= 0)
+        if (Environment().IsInferring() || !IsEnabled())
         {
             sliceOutputValue.SetValue(sliceInput0Value);
         }
@@ -2170,7 +2298,7 @@ public:
         {
             // determine drop-out mask for this minibatch
             auto sliceMask = DataFor(*m_maskOfDropout, fr);
-            sliceMask.SetUniformRandomMask((ElemType)m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate)) /*pre-scaled*/, GetRNGHandle());
+            sliceMask.SetUniformRandomMask((ElemType)GetDropoutRate(), (ElemType)(1.0 / (1.0 - GetDropoutRate())) /*pre-scaled*/, GetRNGHandle());
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
             UpdateRngOffset(GetRngOffset() + sliceMask.GetNumElements());
@@ -2180,14 +2308,6 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         ValidateUnaryMap(isFinalValidationPass);
-    }
-
-    // special methods for this node type which ComputationNetwork knows about and calls to pass parameters
-    void SetDropoutRate(const double val)
-    {
-        if (val < 0 || val >= 1)
-            LogicError("DropoutRate must be >= 0 and < 1.");
-        m_dropoutRate = val;
     }
 
     RNGHandle& GetRNGHandle()
@@ -2201,7 +2321,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
-            node->m_dropoutRate = m_dropoutRate;
+            node->SetDropoutRate(GetDropoutRate());
             node->SetRngState(GetRngSeed(), GetRngOffset());
             node->m_maskOfDropout = m_maskOfDropout;
         }
@@ -2220,18 +2340,15 @@ public:
         ReleaseMatrixToPool(m_maskOfDropout, matrixPool);
     }
 
-    double GetDropoutRate() const { return m_dropoutRate; }
-
 private:
-    double m_dropoutRate;
     shared_ptr<Matrix<ElemType>> m_maskOfDropout;
 };
 
 // -----------------------------------------------------------------------
 // BatchNormalizationNode (input, scale, bias, runMean, runVariance, runCount,
 //                         spatial, normalizationTimeConstant = 0, blendTimeConstant = 0,
-//                         epsilon = 0.00001,
-//                         useCntkEngine = true, imageLayout = 'cudnn')
+//                         epsilon = 0.00001, useCntkEngine = true, 
+//                         disableRegularization = false, imageLayout = 'cudnn')
 //
 // Implements batch normalization technique as described in:
 // Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift [S. Ioffe, C. Szegedy]
@@ -2267,6 +2384,7 @@ private:
 //      Value 1#INF (infinity) means only running mean / var will be used(this is used, for example, in evaluation phase).
 // * epsilon is a conditioner constant used in computing inverse standard deviation
 // * useCntkEngine is a Boolean flag that specifies which batch normalization implementation to use: CNTK or cuDNN-based.
+// * disableRegularization is a Boolean flag that specifies this batch normalization node turns off regularization or not.
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
 template <class ElemType>
@@ -2275,6 +2393,8 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"BatchNormalization"; }
+
+    typedef typename std::conditional<std::is_same<ElemType, half>::value, float, ElemType>::type StatType;
 
     // inputs
     // TODO: Change all of these throughout the codebase to 'class enum'. Also change all places where we still use integer constants.
@@ -2287,19 +2407,19 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial = false,
                            double normalizationTimeConstant=0, double blendTimeConstant=0,
-                           double epsilon = 0, bool useCntkEngine = true, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
+                           double epsilon = 0, bool useCntkEngine = true, bool disableRegularization = false, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_disableRegularization(disableRegularization), m_imageLayoutKind(imageLayoutKind),
         m_runCountUntied(0),
-        m_convertRunningVariancePending(false),
-        m_one(1, 1, deviceId)
+        m_one(1, 1, deviceId),
+        m_convertRunningVariancePending(false)
     {
-        m_one.SetValue((ElemType)1); // (constant value used for GPU-side update of runCount)
+        m_one.SetValue((StatType)1); // (constant value used for GPU-side update of runCount)
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
         BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
-                               configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"), 
-                               configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
+                               configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"),
+                               configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"), configp->Get(L"disableRegularization"),
                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         //AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
@@ -2420,13 +2540,14 @@ public:
             auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeP);
             assert(node != nullptr);
 
-            node->m_spatial         = m_spatial;
-            node->m_normTimeConst   = m_normTimeConst;
-            node->m_blendTimeConst  = m_blendTimeConst;
-            node->m_imageLayoutKind = m_imageLayoutKind;
-            node->m_runCountUntied  = m_runCountUntied;
-            node->m_epsilon         = m_epsilon;
-            node->m_useCntkEngine   = m_useCntkEngine;
+            node->m_spatial               = m_spatial;
+            node->m_normTimeConst         = m_normTimeConst;
+            node->m_blendTimeConst        = m_blendTimeConst;
+            node->m_imageLayoutKind       = m_imageLayoutKind;
+            node->m_runCountUntied        = m_runCountUntied;
+            node->m_epsilon               = m_epsilon;
+            node->m_useCntkEngine         = m_useCntkEngine;
+            node->m_disableRegularization = m_disableRegularization;
         }
     }
 
@@ -2445,14 +2566,14 @@ private: // time-constant conversions
     void ResetRunCount()
     {
         if (HasTiedRunCount())
-            Input(RUN_COUNT)->Value().SetValue(0);
+            this->template TypedInput<StatType>(RUN_COUNT)->Value().SetValue(0);
         m_runCountUntied = 0;
     }
     void AggregateRunCount(size_t countToAdd)
     {
         if (HasTiedRunCount())
         {
-            Input(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(ElemType)countToAdd, m_one); // this += countToAdd * (1)
+            this->template TypedInput<StatType>(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(StatType)countToAdd, m_one); // this += countToAdd * (1)
             if (countToAdd != 0)
                 m_runCountUntied = SIZE_MAX; // we only need this for 0 checks, this value says we only know it's not 0
         }
@@ -2462,7 +2583,7 @@ private: // time-constant conversions
     size_t RunCount() const // const version of above; keep identical
     {
         if (HasTiedRunCount())
-            m_runCountUntied = (size_t)Input(RUN_COUNT)->Value().Get00Element(); // if needed then cache it over
+            m_runCountUntied = (size_t)this->template TypedInput<StatType>(RUN_COUNT)->Value().Get00Element(); // if needed then cache it over
         return m_runCountUntied;
     }
     bool IsRunCount0() const { return m_runCountUntied == 0 && RunCount() == 0; } // tied count >= untied one, so we can ask the untied one first to avoid GPU sync
@@ -2545,10 +2666,10 @@ public:
         FrameRange fr(Input(DATA)->GetMBLayout());
 
         Matrix<ElemType> sliceInputValue  = Input(DATA)->MaskedValueFor(fr);
-        const Matrix<ElemType>& scale     = Input(SCALE)->Value();
-        const Matrix<ElemType>& bias      = Input(BIAS)->Value();
-        Matrix<ElemType>& runMean         = Input(RUN_MEAN)->Value();
-        Matrix<ElemType>& runVariance     = Input(RUN_VAR)->Value();
+        const Matrix<StatType>& scale     = this->template TypedInput<StatType>(SCALE)->Value();
+        const Matrix<StatType>& bias      = this->template TypedInput<StatType>(BIAS)->Value();
+        Matrix<StatType>& runMean         = this->template TypedInput<StatType>(RUN_MEAN)->Value();
+        Matrix<StatType>& runVariance     = this->template TypedInput<StatType>(RUN_VAR)->Value();
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         assert(scale.GetNumRows() == bias.GetNumRows());
@@ -2599,8 +2720,8 @@ public:
         {
             auto sliceOutputGrad          = MaskedGradientFor(fr);
             auto sliceInputValue          = Input(DATA)->ValueFor(fr);
-            const Matrix<ElemType>& scale = Input(SCALE)->Value();
-            const Matrix<ElemType>& bias  = Input(BIAS)->Value();
+            const Matrix<StatType>& scale = this->template TypedInput<StatType>(SCALE)->Value();
+            const Matrix<StatType>& bias  = this->template TypedInput<StatType>(BIAS)->Value();
 
             // If inputIndex is not DATA and we get here, then it means that DATA receives no gradient.
             // However, the underlying engine does not foresee this case, and thus always needs a place
@@ -2624,24 +2745,42 @@ public:
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
                               *m_savedMean, *m_savedInvStdDev,  // (in)  saved mean/invstddev values used in ForwardProp()
-                              *m_dScale, *m_dBias);             // (out) gradients for scale and bias
+                              *m_dScale, *m_dBias,              // (out) gradients for scale and bias
+                              !Input(DATA)->IsGradientInitializedBy(this)); // whether data gradient should be accumulated
 
             m_gradientValid = true;
         }
         if (inputIndex == SCALE) // derivative with respect to the scale, precomputed during input derivative computation
         {
             assert(m_gradientValid);
-            Input(SCALE)->Gradient() += *m_dScale;
+
+            if (this->template TypedInput<StatType>(SCALE)->IsGradientInitializedBy(this))
+                this->template TypedInput<StatType>(SCALE)->Gradient().AssignValuesOf(*m_dScale);
+            else
+                this->template TypedInput<StatType>(SCALE)->Gradient() += *m_dScale;
         }
         else if (inputIndex == BIAS) // derivative with respect to the bias, precomputed during input derivative computation
         {
             assert(m_gradientValid);
-            Input(BIAS)->Gradient() += *m_dBias;
+
+            if (this->template TypedInput<StatType>(BIAS)->IsGradientInitializedBy(this))
+                this->template TypedInput<StatType>(BIAS)->Gradient().AssignValuesOf(*m_dBias);
+            else
+                this->template TypedInput<StatType>(BIAS)->Gradient() += *m_dBias;
         }
         // No derivatives with respect to running mean and variance.
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const
+    {
+        auto iter = std::find_if(m_inputs.begin(), m_inputs.end(), [input](ComputationNodeBasePtr p) { return input == &*p; });
+        if (iter == m_inputs.end())
+            InvalidArgument("%ls is not an input of %ls.", input->NodeName().c_str(), NodeName().c_str());
+        auto inputIndex = iter - m_inputs.begin();
+        return (inputIndex == DATA || inputIndex == SCALE || inputIndex == BIAS) ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None;
+    }
 
     void Validate(bool isFinalValidationPass) override
     {
@@ -2657,11 +2796,14 @@ public:
 
         const auto& inputLayout = Input(DATA)->GetSampleLayout();
 
-        // running statistics inputs must be learnable parameters, since we update them directly here
-        for (size_t i = RUN_MEAN; i < GetNumInputs(); i++)
-            //if (!Input(i)->Is<LearnableParameter<ElemType>>()) // somehow this does not compile on gcc (works on VS)
-            if (!dynamic_cast<LearnableParameter<ElemType>*>(Input(i).get()))
-                InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), (int)RUN_MEAN, (int)GetNumInputs());
+        if (Environment().IsTraining())
+        {
+            // running statistics inputs must be learnable parameters, since we update them directly here
+            for (size_t i = RUN_MEAN; i < GetNumInputs(); i++)
+                //if (!Input(i)->Is<LearnableParameter<ElemType>>()) // somehow this does not compile on gcc (works on VS)
+                if (!dynamic_cast<LearnableParameter<StatType>*>(this->template TypedInput<StatType>(i).get()))
+                    InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), (int)RUN_MEAN, (int)GetNumInputs());
+        }
 
         // infer dimensions of learnable parameters
         // BUGBUG: Parameter dimensions are totally wrong. E.g. a valid spatial bias for [15 x 15 x 32] is currently [32 x 1].
@@ -2670,7 +2812,7 @@ public:
 #if 1   // Workaround for today's definition: Trigger on [0 x 1] and infer that 0 as the total # elements needed.
         for (size_t i = SCALE; i < RUN_COUNT; i++) // scale, bias, run_mean, and run_variance
         {
-            auto paramLayout = Input(i)->GetSampleLayout();
+            auto paramLayout = this->template TypedInput<StatType>(i)->GetSampleLayout();
             if (paramLayout.GetRank() == 2 && paramLayout[0] == 0 && paramLayout[1] == 1 && inputLayout.GetNumElements() > 0) // [0 x 1]
             {
                 size_t total = m_spatial ? inputLayout.GetDims().back() : inputLayout.GetNumElements();
@@ -2704,10 +2846,11 @@ public:
             // check inputs
             for (size_t i = SCALE; i < RUN_COUNT; i++) // scale, bias, run_mean, and run_variance
             {
-                if (Input(i)->HasMBLayout())
+                auto inputPtr = this->template TypedInput<StatType>(i);
+                if (inputPtr->HasMBLayout())
                     InvalidArgument("%ls: Input[%d] has a dynamic axis. BatchNormalization parameters cannot have that.", NodeDescription().c_str(), (int)i);
-                auto paramLayout = Input(i)->GetSampleLayout();
-                if (paramLayout != Input(SCALE)->GetSampleLayout())
+                auto paramLayout = inputPtr->GetSampleLayout();
+                if (paramLayout != this->template TypedInput<StatType>(SCALE)->GetSampleLayout())
                     InvalidArgument("%ls: Input[%d] has a layout different from Input[1]. All must be identical.", NodeDescription().c_str(), (int)i);
 #if 0           // BUGBUG: For this to work, parameter shapes must be correct (cf. comment above on inference).
                 if (paramLayout.GetRank() > inputLayout.GetRank())
@@ -2720,9 +2863,9 @@ public:
             if (HasTiedRunCount()) // 0-th order statistics (count) (optional for backcompat with old code which didn't correctly share it)
             {
                 // This must always be a [1] tensor. No inference allowed.
-                size_t i = RUN_COUNT;
-                if (Input(i)->HasMBLayout() || Input(i)->GetSampleLayout() != TensorShape(1))
-                    InvalidArgument("%ls: Input[%d] must be a vector of 1 element without dynamic axis.", NodeDescription().c_str(), (int)i);
+                auto inputPtr = this->template TypedInput<StatType>(RUN_COUNT);
+                if (inputPtr->HasMBLayout() || (inputPtr->GetSampleLayout().GetRank() > 1) || (inputPtr->GetSampleLayout().GetNumElements() != 1))
+                    InvalidArgument("%ls: Input[RUN_COUNT] must be a vector of 1 element without dynamic axis.", NodeDescription().c_str());
                 RunCount(); // cache the shared value into the local cache, for 0 checks
             }
             if (m_spatial && m_imageLayoutKind != CHW)
@@ -2765,8 +2908,13 @@ public:
             if (m_bnEng == nullptr)
             {
                 auto shape = GetSampleLayout();
-                m_bnEng = BatchNormEngine<ElemType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind,
+                m_bnEng = BatchNormEngine<ElemType, StatType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind,
                                                             m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
+            }
+
+            if (m_disableRegularization)
+            {
+                this->DisableRegInBatchNormalization();
             }
         }
     }
@@ -2774,26 +2922,26 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_savedMean, matrixPool);
-        RequestMatrixFromPool(m_savedInvStdDev, matrixPool);
+        this->template TypedRequestMatrixFromPool<StatType>(m_savedMean, matrixPool);
+        this->template TypedRequestMatrixFromPool<StatType>(m_savedInvStdDev, matrixPool);
     }
 
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_dDataDummy, matrixPool);
-        RequestMatrixFromPool(m_dScale, matrixPool);
-        RequestMatrixFromPool(m_dBias, matrixPool);
+        this->template TypedRequestMatrixFromPool<StatType>(m_dScale, matrixPool);
+        this->template TypedRequestMatrixFromPool<StatType>(m_dBias, matrixPool);
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_savedMean, matrixPool);
-        ReleaseMatrixToPool(m_savedInvStdDev, matrixPool);
+        this->template TypedReleaseMatrixToPool<StatType>(m_savedMean, matrixPool);
+        this->template TypedReleaseMatrixToPool<StatType>(m_savedInvStdDev, matrixPool);
         ReleaseMatrixToPool(m_dDataDummy, matrixPool);
-        ReleaseMatrixToPool(m_dScale, matrixPool);
-        ReleaseMatrixToPool(m_dBias, matrixPool);
+        this->template TypedReleaseMatrixToPool<StatType>(m_dScale, matrixPool);
+        this->template TypedReleaseMatrixToPool<StatType>(m_dBias, matrixPool);
     }
 
     void SetNormalizationTimeConstants(double normalizationTimeConstant, double prevNormalizationTimeConstant,
@@ -2828,8 +2976,8 @@ public:
     // Turn off the L1 and L2 regularization
     void DisableRegInBatchNormalization()
     {
-        let scaleNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(Input(SCALE));
-        let biasNode  = dynamic_pointer_cast<LearnableParameter<ElemType>>(Input(BIAS));
+        let scaleNode = dynamic_pointer_cast<LearnableParameter<StatType>>(this->template TypedInput<StatType>(SCALE));
+        let biasNode  = dynamic_pointer_cast<LearnableParameter<StatType>>(this->template TypedInput<StatType>(BIAS));
         scaleNode->SetRegMultiplier(0.f);
         biasNode->SetRegMultiplier(0.f);
     }
@@ -2838,6 +2986,7 @@ public:
     bool Spatial() const { return m_spatial; }
     double Epsilon() const { return m_epsilon; }
     bool UseCNTKEngine() const { return m_useCntkEngine; }
+    bool DisableRegularization() const { return m_disableRegularization; }
 
 private:
     // Old versioning - do not use. Do not remove until we're sure there are no old models around.
@@ -2884,6 +3033,8 @@ private:
     double m_epsilon;
     // Whether to use CNTK or cuDNN BN implementation.
     bool m_useCntkEngine;
+    // Whether to disable regulararization in Batch Normalization.
+    bool m_disableRegularization;
     // Layout (e.g. CHW).
     ImageLayoutKind m_imageLayoutKind;
 
@@ -2901,20 +3052,20 @@ private:
     // This value is not updated unless needed, so it may be out of date during most operation.
     // It will be updated at start (Validate()) and saving models, and any time the true value is needed.
     mutable size_t m_runCountUntied; // cached running sample count (mutable since it is a cache)
-    Matrix<ElemType> m_one;  // constant [1x1] matrix that contains a 1 (used for updating the shared count)
+    Matrix<StatType> m_one;  // constant [1x1] matrix that contains a 1 (used for updating the shared count)
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.
-    shared_ptr<Matrix<ElemType>> m_savedMean;
-    shared_ptr<Matrix<ElemType>> m_savedInvStdDev;
+    shared_ptr<Matrix<StatType>> m_savedMean;
+    shared_ptr<Matrix<StatType>> m_savedInvStdDev;
     // Temp buffer for scale and bias derivatives. Only used in BackpropTo(), carrying info from first call to subsequent calls.
     // Not used for blendFactor=1 in CNTK engine.
     shared_ptr<Matrix<ElemType>> m_dDataDummy;
-    shared_ptr<Matrix<ElemType>> m_dScale;
-    shared_ptr<Matrix<ElemType>> m_dBias;
+    shared_ptr<Matrix<StatType>> m_dScale;
+    shared_ptr<Matrix<StatType>> m_dBias;
 
     bool m_gradientValid = false;
 
-    std::unique_ptr<BatchNormEngine<ElemType>> m_bnEng;
+    std::unique_ptr<BatchNormEngine<ElemType, StatType>> m_bnEng;
 
     bool m_convertRunningVariancePending;
 };
