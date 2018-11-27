@@ -571,18 +571,19 @@ namespace CNTK
         void ResetBufferHalf(size_t index, const NDArrayViewPtr& p)
         {
             auto data = p->GetMatrix<half>();
-            NDShape shape = p->Shape();
+            size_t rows = data->GetNumRows();
+            size_t cols = data->GetNumCols();
             if (!m_blockLevelSmoothedGradient[index])
             {
                 // has not been initialized yet
-                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<float>(), NDShape({shape[0], shape[1] * 2}), AsDeviceDescriptor(data->GetDeviceId()));
+                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<float>(), NDShape({rows, cols * 2}), AsDeviceDescriptor(data->GetDeviceId()));
                 pSmoothedGrad->SetValue(static_cast<float>(0));
                 m_blockLevelSmoothedGradient[index] = pSmoothedGrad;
             }
 
             if (!m_prevParameters[index])
             {
-                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<float16>(), NDShape({ shape[0], shape[1] * 2 }), AsDeviceDescriptor(data->GetDeviceId()));
+                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<float16>(), NDShape({ rows, cols * 2 }), AsDeviceDescriptor(data->GetDeviceId()));
                 std::shared_ptr<Matrix<half>> newData = newValue->GetWritableMatrix<half>();
                 newData->SetValue(*data);
                 m_prevParameters[index] = newValue;
@@ -590,7 +591,7 @@ namespace CNTK
             else
             {
                 const auto& compoundMatrix = GetWritableMatrix<half>(m_prevParameters[index]);
-                auto previousWeight = compoundMatrix->ColumnSlice(0, shape[1]); // prev model value
+                auto previousWeight = compoundMatrix->ColumnSlice(0, cols); // prev model value
                 previousWeight.SetValue(*data);
                 //m_prevParameters[index]->GetWritableMatrix<half>()->SetValue(*data);
             }
