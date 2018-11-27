@@ -567,11 +567,6 @@ namespace CNTK
             }
         }
 
-        template <typename ElementType>
-        static shared_ptr<Matrix<ElementType>> GetWritableMatrix(const NDArrayViewPtr& arrayView)
-        {
-            return arrayView->GetWritableMatrix<ElementType>();
-        }
         void ResetBufferExtra(size_t index, const NDArrayViewPtr& p)
         {
             // Extra buffer in float solving half underflow problems
@@ -586,13 +581,8 @@ namespace CNTK
 
             if (!m_tempBlockGradientFloat[index])
             {
-                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+                m_tempBlockGradientFloat[index] = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
             }
-        }
-
-        virtual void AggregateBlockGradientsInPlace()
-        {
-            m_communicator->AggregateInPlace(m_tempBlockGradient, m_communicator->Workers());
         }
 
         template<class ElemType>
@@ -653,7 +643,7 @@ namespace CNTK
 
         void SynchronizeModelHalf(const std::vector<NDArrayViewPtr>& parameterValues)
         {
-            half blockMomentum = (half)TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_numSamplesSeenInCurrentBlock);
+            float blockMomentum = (float)TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_numSamplesSeenInCurrentBlock);
 
             // 1. Let's aggregate weights
             for (size_t i = 0; i < parameterValues.size(); ++i)
@@ -692,7 +682,7 @@ namespace CNTK
                     // 2.2.1 update block level smoothed gradient; 
                     // This is essentially a first-order infinite impulse response (IIR) filter with the gain (1 - blockMomentum)*m_blockLearningRate:
                     // smoothedGradient(t)=blockMomentum * smoothedGradients(t-1) + (1 - blockMomentum)*m_blockLearningRate*blockGrad(t)
-                    Matrix<float>::ScaleAndAdd((float)((1 - blockMomentum)*m_blockLearningRate), blockGradFloat, (float)blockMomentum, sgFloat);
+                    Matrix<float>::ScaleAndAdd((float)((1 - blockMomentum)*m_blockLearningRate), blockGradFloat, blockMomentum, sgFloat);
 
                     // cast sg back to half
                     sg.CastAssignValuesOf(sgFloat);
@@ -717,6 +707,7 @@ namespace CNTK
                 }
             }
         }
+
         static double TimeConstant2Momentum(double timeConstant, size_t syncPeroid)
         {
             if (timeConstant == 0)
