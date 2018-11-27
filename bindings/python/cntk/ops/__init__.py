@@ -263,18 +263,83 @@ def labels_to_graph(labels, name=''):
 @typemap
 def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name=''):
     '''
-    Criterion node for training methods that rely on forward-backward Viterbi-like passes, e.g. Connectionist Temporal Classification (CTC) training
-    The node takes as the input the graph of labels, produced by the labels_to_graph operation that determines the exact forward/backward procedure.
+    Criterion node for training methods that rely on forward-backward Viterbi-like passes,
+    e.g. Connectionist Temporal Classification (CTC) training
+    The node takes as the input the graph of labels, produced by the labels_to_graph
+    operation that determines the exact forward/backward procedure.
+
     Example:
         graph = cntk.labels_to_graph(labels)
         networkOut = model(features)
         fb = C.forward_backward(graph, networkOut, 132)
 
+    This op requires that both graph and features have the same dynamic sequence axis (i.e. same sequence length).
+
+    Labels feed into cntk.labels_to_graph and hence to forward_backward are represented as 1-hot vectors
+    for each frame. The 1-hot vectors may have either value 1 or 2 at the position of the phone
+    corresponding to the frame, where the value 1 means the frame is within phone boundary (i.e. not the
+    first frame of the phone) and 2 means the frame is the phone boundary (i.e. is the first frame of the phone).
+    If you are using HTKMLFDeserializer, this encoding will be automatically done.
+
+    Example:
+        labels = [[0, 2, 0, 0, 0],  # first frame of label_id = 1
+                  [0, 1, 0, 0, 0],  # second frame of label_id = 1
+                  [0, 0, 2, 0, 0],  # first frame of label_id = 2
+                  [0, 2, 0, 0, 0],] # first frame of label_id = 1
+
+    For cases where labels are not frame-aligned (i.e. sequence length of labels is shorter than the
+    sequence length of features), you can pad the labels by duplicating the last label and setting the value as 1
+    until the sequence length is equal to features.
+
+    Alternatively, you can also generate the labels to have uniform (equal) distribution of the labels across
+    the feature frames (keeping in mind to set the value in the one hot encoding appropriately (1 or 2 depending
+    on whether label is the first frame or not).
+
+    Example:
+        # Padding labels by duplicating the last label
+
+        from sklearn.preprocessing import LabelBinarizer
+
+        lb = LabelBinarizer(pos_label=2).fit(range(6))
+        labels = lb.transform([0, 2, 0, 1, 3, 4]) # blank is the label 5
+
+        # labels = [[2,0,0,...,0,0], [0,0,2,...,0,0], ..., [0,0,0,...,2,0]]
+
+        # Retrieve the input's sequence length
+        sequence_dim = input.shape[-2]
+        expanded_labels = np.zeros((sequence_dim, labels.shape[-1]))
+
+        # We first copy the original one-hot labels
+        expanded_labels[:len(labels)] = labels
+
+        # Then, we replicate the last label as one-hot-1 encoded
+        expanded_labels[len(labels):, labels[-1].argmax()] = 1
+
+        # expanded_labels = [[2,0,0,...,0,0], [0,0,2,...,0,0], ...,
+        #                     [0,0,0,...,2,0], [0,0,0,...,1,0], ...,
+        #                     [0,0,0,...,1,0]]
+
+        # We can define the model and the variables
+        input_var = sequence.input_variable((input.shape[-1]), name='input')
+        labels_var = sequence.input_variable((6), name='label')
+
+        # The model should be defined here
+        # model = ...
+
+        # Now, we can use the forward-backward algorithm
+        labels_graph = cntk.labels_to_graph(labels_var)
+        network_out = model(input_var)
+        fb = forward_backward(labels_graph, network_out, 5)
+        fb.eval({'input': input.astype(np.float32), 'label': expanded_labels.astype(np.float32)})
+
     Args:
         graph: labels graph
         features: network output
         blankTokenId: id of the CTC blank label
-        delayConstraint: label output delay constraint introduced during training that allows to have shorter delay during inference. This is using the original time information to enforce that CTC tokens only get aligned within a time margin. Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy. delayConstraint=-1 means no constraint
+        delayConstraint: label output delay constraint introduced during training that allows to have shorter
+         delay during inference. This is using the original time information to enforce that CTC tokens only get
+         aligned within a time margin. Setting this parameter smaller will result in shorted delay between label
+         output during decoding, yet may hurt accuracy. delayConstraint=-1 means no constraint
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''

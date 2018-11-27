@@ -178,6 +178,7 @@
     <ClInclude Include="Logger.h" />
     <ClInclude Include="MinibatchSource.h" />
     <ClInclude Include="proto\onnx\CNTKToONNX.h" />
+    <ClInclude Include="proto\onnx\ControlFlowHelper.h" />
     <ClInclude Include="proto\onnx\core\common\profiler.h" />
     <ClInclude Include="proto\onnx\core\common\task_thread_pool.h" />
     <ClInclude Include="proto\onnx\core\framework\tensorutils.h" />
@@ -223,8 +224,11 @@
     <ClInclude Include="proto\onnx\ONNXToCNTK.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\checker.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\common\assertions.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\common\model_helpers.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\common\status.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\common\stl_backports.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\data_type_utils.h" />
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\function.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\schema.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\shape_inference.h" />
     <ClInclude Include="proto\onnx\onnx_repo\onnx\onnx-operators_pb.h" />
@@ -276,6 +280,7 @@
     <ClCompile Include="proto\onnx\core\graph\function.cc" />
     <ClCompile Include="proto\onnx\core\graph\graph.cc" />
     <ClCompile Include="proto\onnx\core\graph\graph_transformer_mgr.cc" />
+    <ClCompile Include="proto\onnx\core\graph\graph_viewer.cc" />
     <ClCompile Include="proto\onnx\core\graph\model.cc" />
     <ClCompile Include="proto\onnx\core\graph\op.cc" />
     <ClCompile Include="proto\onnx\core\graph\schema_registry.cc" />
@@ -291,10 +296,15 @@
     <ClCompile Include="proto\onnx\ONNXToCNTK.cpp" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\checker.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\common\assertions.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\common\model_helpers.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\common\status.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\controlflow\defs.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\data_type_utils.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\experiments\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\experiments\experiments_functions.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\function.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\generator\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\generator\old.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\logical\defs.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\logical\old.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\math\defs.cc" />
@@ -308,6 +318,7 @@
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\tensor\defs.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\tensor\old.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\traditionalml\defs.cc" />
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\shape_inference\implementation.cc" />
     <ClCompile Include="proto\onnx\Operators.cpp" />
     <ClCompile Include="proto\onnx\RNNHelper.cpp" />
     <ClCompile Include="Serialization.cpp" />

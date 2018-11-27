@@ -5,7 +5,7 @@
 
 namespace onnxruntime {
 // Add customized domain to min/max version.
-::onnxruntime::common::Status LotusOpSchemaRegistry::SetBaselineAndOpsetVersionForDomain(
+::onnxruntime::common::Status OnnxRuntimeOpSchemaRegistry::SetBaselineAndOpsetVersionForDomain(
     const std::string& domain,
     int baseline_opset_version,
     int opset_version) {
@@ -13,7 +13,7 @@ namespace onnxruntime {
 
   auto it = domain_version_range_map_.find(domain);
   if (domain_version_range_map_.end() != it) {
-    return ::onnxruntime::common::Status(::onnxruntime::common::LOTUS, ::onnxruntime::common::FAIL, "Domain already set in registry");
+    return ::onnxruntime::common::Status(::onnxruntime::common::ONNXRUNTIME, ::onnxruntime::common::FAIL, "Domain already set in registry");
   }
 
   domain_version_range_map_[domain].baseline_opset_version = baseline_opset_version;
@@ -22,7 +22,7 @@ namespace onnxruntime {
   return ::onnxruntime::common::Status::OK();
 }
 
-Domain_To_Version_Map LotusOpSchemaRegistry::GetLatestOpsetVersions(bool is_onnx_only) const {
+Domain_To_Version_Map OnnxRuntimeOpSchemaRegistry::GetLatestOpsetVersions(bool is_onnx_only) const {
   Domain_To_Version_Map domain_version_map;
 
   for (auto& domain : domain_version_range_map_) {
@@ -34,26 +34,26 @@ Domain_To_Version_Map LotusOpSchemaRegistry::GetLatestOpsetVersions(bool is_onnx
   return domain_version_map;
 }
 
-::onnxruntime::common::Status LotusOpSchemaRegistry::RegisterOpSet(
+::onnxruntime::common::Status OnnxRuntimeOpSchemaRegistry::RegisterOpSet(
     std::vector<ONNX_NAMESPACE::OpSchema>& schemas,
     const std::string& domain,
     int baseline_opset_version,
     int opset_version) {
-  LOTUS_RETURN_IF_ERROR(SetBaselineAndOpsetVersionForDomain(domain, baseline_opset_version, opset_version));
+  ONNXRUNTIME_RETURN_IF_ERROR(SetBaselineAndOpsetVersionForDomain(domain, baseline_opset_version, opset_version));
   for (auto& schema : schemas)
-    LOTUS_RETURN_IF_ERROR(RegisterOpSchema(std::move(schema)));
+    ONNXRUNTIME_RETURN_IF_ERROR(RegisterOpSchema(std::move(schema)));
   return ::onnxruntime::common::Status::OK();
 }
 
-::onnxruntime::common::Status LotusOpSchemaRegistry::RegisterOpSchema(ONNX_NAMESPACE::OpSchema&& op_schema) {
+::onnxruntime::common::Status OnnxRuntimeOpSchemaRegistry::RegisterOpSchema(ONNX_NAMESPACE::OpSchema&& op_schema) {
   return RegisterOpSchemaInternal(std::move(op_schema));
 }
 
-::onnxruntime::common::Status LotusOpSchemaRegistry::RegisterOpSchemaInternal(ONNX_NAMESPACE::OpSchema&& op_schema) {
+::onnxruntime::common::Status OnnxRuntimeOpSchemaRegistry::RegisterOpSchemaInternal(ONNX_NAMESPACE::OpSchema&& op_schema) {
   try {
     op_schema.Finalize();
   } catch (const std::exception& e) {
-    return ::onnxruntime::common::Status(::onnxruntime::common::LOTUS, ::onnxruntime::common::INVALID_ARGUMENT, "Schema error: " + std::string(e.what()));
+    return ::onnxruntime::common::Status(::onnxruntime::common::ONNXRUNTIME, ::onnxruntime::common::INVALID_ARGUMENT, "Schema error: " + std::string(e.what()));
   }
 
   auto& op_name = op_schema.Name();
@@ -69,7 +69,7 @@ Domain_To_Version_Map LotusOpSchemaRegistry::GetLatestOpsetVersions(bool is_onnx
             << op_schema.line()
             << ", but it is already registered from file "
             << schema.file() << " line " << schema.line() << std::endl;
-    return ::onnxruntime::common::Status(::onnxruntime::common::LOTUS, ::onnxruntime::common::INVALID_ARGUMENT, ostream.str());
+    return ::onnxruntime::common::Status(::onnxruntime::common::ONNXRUNTIME, ::onnxruntime::common::INVALID_ARGUMENT, ostream.str());
   }
 
   auto ver_range_it = domain_version_range_map_.find(op_domain);
@@ -80,7 +80,7 @@ Domain_To_Version_Map LotusOpSchemaRegistry::GetLatestOpsetVersions(bool is_onnx
             << ") from file " << op_schema.file() << " line "
             << op_schema.line() << ", but it its domain is not"
             << "known by the checker." << std::endl;
-    return ::onnxruntime::common::Status(::onnxruntime::common::LOTUS, ::onnxruntime::common::INVALID_ARGUMENT, ostream.str());
+    return ::onnxruntime::common::Status(::onnxruntime::common::ONNXRUNTIME, ::onnxruntime::common::INVALID_ARGUMENT, ostream.str());
   }
   if (ver > ver_range_it->second.opset_version) {
     std::ostringstream ostream;
@@ -90,7 +90,7 @@ Domain_To_Version_Map LotusOpSchemaRegistry::GetLatestOpsetVersions(bool is_onnx
         << ") from file " << op_schema.file() << " line "
         << op_schema.line() << ", but it its version is higher"
         << "than the operator set version " << ver_range_it->second.opset_version << std::endl;
-    return ::onnxruntime::common::Status(::onnxruntime::common::LOTUS, ::onnxruntime::common::INVALID_ARGUMENT, ostream.str());
+    return ::onnxruntime::common::Status(::onnxruntime::common::ONNXRUNTIME, ::onnxruntime::common::INVALID_ARGUMENT, ostream.str());
   }
   GSL_SUPPRESS(es .84)
   map_[op_name][op_domain].emplace(std::make_pair(ver, op_schema));
@@ -101,7 +101,7 @@ Domain_To_Version_Map LotusOpSchemaRegistry::GetLatestOpsetVersions(bool is_onnx
 // <op_set_version> in specified domain. The value of earliest_opset_where_unchanged
 // is also set to the earliest version preceding op_set_version where the operator
 // is known to be unchanged.
-void LotusOpSchemaRegistry::GetSchemaAndHistory(
+void OnnxRuntimeOpSchemaRegistry::GetSchemaAndHistory(
     const std::string& key,
     const int op_set_version,
     const std::string& domain,
@@ -150,7 +150,7 @@ void LotusOpSchemaRegistry::GetSchemaAndHistory(
   }
 }
 
-void SchemaRegistryManager::RegisterRegistry(std::shared_ptr<ILotusOpSchemaCollection> registry) {
+void SchemaRegistryManager::RegisterRegistry(std::shared_ptr<IOnnxRuntimeOpSchemaCollection> registry) {
   registries.push_front(registry);
 }
 

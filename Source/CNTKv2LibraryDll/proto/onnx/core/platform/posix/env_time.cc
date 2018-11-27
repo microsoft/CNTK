@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+// Portions Copyright (c) Microsoft Corporation
 
 #include <sys/time.h>
 #include <ctime>
@@ -35,12 +36,12 @@ class PosixEnvTime : public EnvTime {
 
 }  // namespace
 
-// #if defined(PLATFORM_POSIX) || defined(__ANDROID__)
+//#if defined(PLATFORM_POSIX) || defined(__ANDROID__)
 EnvTime* EnvTime::Default() {
   static PosixEnvTime default_env_time;
   return &default_env_time;
 }
-// #endif
+//#endif
 
 bool GetMonotonicTimeCounter(TIME_SPEC* value) {
   return clock_gettime(CLOCK_MONOTONIC, value) == 0;

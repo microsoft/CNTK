@@ -534,6 +534,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/function.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph_transformer_mgr.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/graph_viewer.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/model.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/op.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/graph/schema_registry.cc \
@@ -544,9 +545,14 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/core/platform/posix/stacktrace.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/checker.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/common/assertions.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/common/model_helpers.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/common/status.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/controlflow/defs.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/experiments/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/experiments/experiments_functions.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/function.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/generator/defs.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/generator/old.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/logical/defs.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/logical/old.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/math/defs.cc \
@@ -561,6 +567,7 @@ CNTKLIBRARY_COMMON_SRC =\
     $(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/traditionalml/defs.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/data_type_utils.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/schema.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/shape_inference/implementation.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.pb.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.pb.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/Operators.cpp \

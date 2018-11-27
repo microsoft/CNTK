@@ -169,6 +169,27 @@
     <ClCompile Include="proto\onnx\core\platform\windows\stacktrace.cc">
       <Filter>proto\onnx\core\platform\windows</Filter>
     </ClCompile>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\function.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\common\status.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\common</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\experiments\experiments_functions.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs\experiments</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\generator\old.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\defs\generator</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\common\model_helpers.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\common</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnx_repo\onnx\shape_inference\implementation.cc">
+      <Filter>proto\onnx\onnx_repo\onnx\shape_inference</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\core\graph\graph_viewer.cc">
+      <Filter>proto\onnx\core\graph</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -391,6 +412,18 @@
     <ClInclude Include="proto\onnx\core\platform\windows\debug_alloc.h">
       <Filter>proto\onnx\core\platform\windows</Filter>
     </ClInclude>
+    <ClInclude Include="proto\onnx\ControlFlowHelper.h">
+      <Filter>proto\onnx</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\defs\function.h">
+      <Filter>proto\onnx\onnx_repo\onnx\defs</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\common\status.h">
+      <Filter>proto\onnx\onnx_repo\onnx\common</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\onnx_repo\onnx\common\model_helpers.h">
+      <Filter>proto\onnx\onnx_repo\onnx\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">
@@ -501,6 +534,9 @@
     <Filter Include="proto\onnx\core\platform\windows">
       <UniqueIdentifier>{938a6293-26e8-4aad-9aa3-200d9b96102b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="proto\onnx\onnx_repo\onnx\shape_inference">
+      <UniqueIdentifier>{b8ebfd65-98ba-44fb-b10d-ac1e7e8e5246}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Proto Include="proto\CNTK.proto">
@@ -508,12 +544,6 @@
     </Proto>
     <Proto Include="tensorboard\tensorboard.proto">
       <Filter>tensorboard</Filter>
-    </Proto>
-    <Proto Include="proto\onnx\onnx_repo\onnx\onnx-ml.proto">
-      <Filter>proto\onnx\onnx_repo\onnx</Filter>
-    </Proto>
-    <Proto Include="proto\onnx\onnx_repo\onnx\onnx-operators-ml.proto">
-      <Filter>proto\onnx\onnx_repo\onnx</Filter>
     </Proto>
   </ItemGroup>
 </Project>

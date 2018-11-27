@@ -4003,7 +4003,7 @@ labelIn
 
 \begin_deeper
 \begin_layout Itemize
-useWordMap – [Ture, False] specifies if using word map to map input words
+useWordMap – [True, False] specifies if using word map to map input words
  to other input words.
  
 \end_layout

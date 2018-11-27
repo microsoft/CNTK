@@ -14,22 +14,29 @@ class Node;
 namespace onnxruntime {
 
 // Function representation class.
-class FunctionImpl : public Function {
+class FunctionImpl final : public Function {
  public:
   FunctionImpl(const onnxruntime::Graph& graph,
-               std::unique_ptr<IndexedSubGraph> customized_func);
+    std::unique_ptr<IndexedSubGraph> customized_func);
 
-  virtual const ONNX_NAMESPACE::OpSchema& OpSchema() const override;
+  FunctionImpl(const onnxruntime::Graph& graph,
+    const onnxruntime::NodeIndex& node_index,
+    const ONNX_NAMESPACE::FunctionProto* onnx_func);
 
-  virtual const onnxruntime::GraphBase& Body() const override;
+  const ONNX_NAMESPACE::OpSchema& OpSchema() const override;
 
-  virtual const IndexedSubGraph& GetIndexedSubGraph() const override;
+  const onnxruntime::Graph& Body() const override;
+
+  const IndexedSubGraph& GetIndexedSubGraph() const override;
+
+  const ONNX_NAMESPACE::FunctionProto* GetFuncProto() const;
 
  private:
-  const onnxruntime::Graph* parent_graph_;
+  const onnxruntime::Graph* const parent_graph_;
   std::unique_ptr<IndexedSubGraph> customized_func_body_;
   std::unique_ptr<ONNX_NAMESPACE::OpSchema> op_schema_;
   std::unique_ptr<onnxruntime::Model> body_;
+  const ONNX_NAMESPACE::FunctionProto* onnx_func_proto_;
 };
 
 }  // namespace onnxruntime

@@ -1,8 +1,4 @@
 /**
- * Derived from caffe2, need copy right annoucement here.
- */
-
-/**
  * Copyright (c) 2016-present, Facebook, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+// Portions Copyright (c) Microsoft Corporation
 
 #pragma once
 
@@ -45,32 +42,32 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 using common::Status;
 
 #ifdef _WIN32
-#define UNUSED_PARAMETER(x) (x)
+#define ONNXRUNTIME_UNUSED_PARAMETER(x) (x)
 #else
-#define UNUSED_PARAMETER(x) (void)(x)
+#define ONNXRUNTIME_UNUSED_PARAMETER(x) (void)(x)
 #endif
 
-#ifndef LOTUS_HAVE_ATTRIBUTE
+#ifndef ONNXRUNTIME_HAVE_ATTRIBUTE
 #ifdef __has_attribute
-#define LOTUS_HAVE_ATTRIBUTE(x) __has_attribute(x)
+#define ONNXRUNTIME_HAVE_ATTRIBUTE(x) __has_attribute(x)
 #else
-#define LOTUS_HAVE_ATTRIBUTE(x) 0
+#define ONNXRUNTIME_HAVE_ATTRIBUTE(x) 0
 #endif
 #endif
 
-// LOTUS_ATTRIBUTE_UNUSED
+// ONNXRUNTIME_ATTRIBUTE_UNUSED
 //
 // Prevents the compiler from complaining about or optimizing away variables
 // that appear unused on Linux
-#if LOTUS_HAVE_ATTRIBUTE(unused) || (defined(__GNUC__) && !defined(__clang__))
-#undef LOTUS_ATTRIBUTE_UNUSED
-#define LOTUS_ATTRIBUTE_UNUSED __attribute__((__unused__))
+#if ONNXRUNTIME_HAVE_ATTRIBUTE(unused) || (defined(__GNUC__) && !defined(__clang__))
+#undef ONNXRUNTIME_ATTRIBUTE_UNUSED
+#define ONNXRUNTIME_ATTRIBUTE_UNUSED __attribute__((__unused__))
 #else
-#define LOTUS_ATTRIBUTE_UNUSED
+#define ONNXRUNTIME_ATTRIBUTE_UNUSED
 #endif
 
 // macro to explicitly ignore the return value from a function call so Code Analysis doesn't complain
-#define IGNORE_RETURN_VALUE(fn) \
+#define ONNXRUNTIME_IGNORE_RETURN_VALUE(fn) \
   static_cast<void>(fn)
 
 inline static std::vector<std::string> GetStackTrace() { return {}; }
@@ -82,66 +79,66 @@ inline static std::vector<std::string> GetStackTrace() { return {}; }
 #endif
 
 // Capture where a message is coming from. Use __FUNCTION__ rather than the much longer __PRETTY_FUNCTION__
-#define WHERE \
+#define ONNXRUNTIME_WHERE \
   ::onnxruntime::CodeLocation(__FILE__, __LINE__, __FUNCTION__)
 
-#define WHERE_WITH_STACK \
+#define ONNXRUNTIME_WHERE_WITH_STACK \
   ::onnxruntime::CodeLocation(__FILE__, __LINE__, __PRETTY_FUNCTION__, ::onnxruntime::GetStackTrace())
 
 // Throw an exception with optional message.
 // NOTE: The arguments get streamed into a string via ostringstream::operator<<
 // DO NOT use a printf format string, as that will not work as you expect.
-#define LOTUS_THROW(...) throw ::onnxruntime::LotusException(WHERE_WITH_STACK, ::onnxruntime::MakeString(__VA_ARGS__))
+#define ONNXRUNTIME_THROW(...) throw ::onnxruntime::OnnxRuntimeException(ONNXRUNTIME_WHERE_WITH_STACK, ::onnxruntime::MakeString(__VA_ARGS__))
 
 // Just in order to mark things as not implemented. Do not use in final code.
-#define LOTUS_NOT_IMPLEMENTED(...) throw ::onnxruntime::NotImplementedException(::onnxruntime::MakeString(__VA_ARGS__))
+#define ONNXRUNTIME_NOT_IMPLEMENTED(...) throw ::onnxruntime::NotImplementedException(::onnxruntime::MakeString(__VA_ARGS__))
 
 // Check condition.
 // NOTE: The arguments get streamed into a string via ostringstream::operator<<
 // DO NOT use a printf format string, as that will not work as you expect.
-#define LOTUS_ENFORCE(condition, ...) \
-  if (!(condition)) throw ::onnxruntime::LotusException(WHERE_WITH_STACK, #condition, ::onnxruntime::MakeString(__VA_ARGS__))
+#define ONNXRUNTIME_ENFORCE(condition, ...) \
+  if (!(condition)) throw ::onnxruntime::OnnxRuntimeException(ONNXRUNTIME_WHERE_WITH_STACK, #condition, ::onnxruntime::MakeString(__VA_ARGS__))
 
-#define LOTUS_MAKE_STATUS(category, code, ...) \
+#define ONNXRUNTIME_MAKE_STATUS(category, code, ...) \
   ::onnxruntime::common::Status(::onnxruntime::common::category, ::onnxruntime::common::code, ::onnxruntime::MakeString(__VA_ARGS__))
 
 // Check condition. if not met, return status.
-#define LOTUS_RETURN_IF_NOT(condition, ...)                                                                                             \
-  if (!(condition)) {                                                                                                                   \
-    return LOTUS_MAKE_STATUS(LOTUS, FAIL, "Not satsified: " #condition "\n", WHERE.ToString(), ::onnxruntime::MakeString(__VA_ARGS__)); \
+#define ONNXRUNTIME_RETURN_IF_NOT(condition, ...)                                                                                                       \
+  if (!(condition)) {                                                                                                                           \
+    return ONNXRUNTIME_MAKE_STATUS(ONNXRUNTIME, FAIL, "Not satsified: " #condition "\n", ONNXRUNTIME_WHERE.ToString(), ::onnxruntime::MakeString(__VA_ARGS__)); \
   }
 
 // Macros to disable the copy and/or move ctor and assignment methods
 // These are usually placed in the private: declarations for a class.
 
-#define LOTUS_DISALLOW_COPY(TypeName) TypeName(const TypeName&) = delete
+#define ONNXRUNTIME_DISALLOW_COPY(TypeName) TypeName(const TypeName&) = delete
 
-#define LOTUS_DISALLOW_ASSIGN(TypeName) TypeName& operator=(const TypeName&) = delete
+#define ONNXRUNTIME_DISALLOW_ASSIGNMENT(TypeName) TypeName& operator=(const TypeName&) = delete
 
-#define LOTUS_DISALLOW_COPY_AND_ASSIGN(TypeName) \
-  LOTUS_DISALLOW_COPY(TypeName);                 \
-  LOTUS_DISALLOW_ASSIGN(TypeName)
+#define ONNXRUNTIME_DISALLOW_COPY_AND_ASSIGNMENT(TypeName) \
+  ONNXRUNTIME_DISALLOW_COPY(TypeName);                     \
+  ONNXRUNTIME_DISALLOW_ASSIGNMENT(TypeName)
 
-#define LOTUS_DISALLOW_MOVE(TypeName) \
-  TypeName(TypeName&&) = delete;      \
+#define ONNXRUNTIME_DISALLOW_MOVE(TypeName) \
+  TypeName(TypeName&&) = delete;    \
   TypeName& operator=(TypeName&&) = delete
 
-#define LOTUS_DISALLOW_COPY_ASSIGN_AND_MOVE(TypeName) \
-  LOTUS_DISALLOW_COPY_AND_ASSIGN(TypeName);           \
-  LOTUS_DISALLOW_MOVE(TypeName)
+#define ONNXRUNTIME_DISALLOW_COPY_ASSIGNMENT_AND_MOVE(TypeName) \
+  ONNXRUNTIME_DISALLOW_COPY_AND_ASSIGNMENT(TypeName);           \
+  ONNXRUNTIME_DISALLOW_MOVE(TypeName)
 
-#define LOTUS_RETURN_IF_ERROR(expr)        \
+#define ONNXRUNTIME_RETURN_IF_ERROR(expr)          \
   do {                                     \
     auto _status = (expr);                 \
     if ((!_status.IsOK())) return _status; \
   } while (0)
 
 // use this macro when cannot early return
-#define LOTUS_CHECK_AND_SET_RETVAL(expr) \
-  do {                                   \
-    if (retval.IsOK()) {                 \
-      retval = (expr);                   \
-    }                                    \
+#define ONNXRUNTIME_CHECK_AND_SET_RETVAL(expr) \
+  do {                                 \
+    if (retval.IsOK()) {               \
+      retval = (expr);                 \
+    }                                  \
   } while (0)
 
 // C++ Core Guideline check suppression
@@ -153,12 +150,12 @@ inline static std::vector<std::string> GetStackTrace() { return {}; }
 
 #if defined(__GNUC__)
 #if __GNUC_PREREQ(4, 9)
-#define LOTUS_EXPORT [[gnu::visibility("default")]]
+#define ONNXRUNTIME_EXPORT [[gnu::visibility("default")]]
 #else
-#define LOTUS_EXPORT __attribute__((__visibility__("default")))
+#define ONNXRUNTIME_EXPORT __attribute__((__visibility__("default")))
 #endif
 #else
-#define LOTUS_EXPORT
+#define ONNXRUNTIME_EXPORT
 #endif
 
 inline void MakeStringInternal(std::ostringstream& /*ss*/) noexcept {}
@@ -216,9 +213,5 @@ inline std::string GetCurrentTimeString() {
 }
 
 struct null_type {};
-
-inline size_t Align256(size_t v) {
-  return (v + 255) & ~static_cast<size_t>(255);
-}
 
 }  // namespace onnxruntime

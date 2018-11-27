@@ -2274,7 +2274,7 @@ namespace CNTK
             auto refPlaceholder = PlaceholderVariable();
             auto lastAxis = Axis(-1);
             auto swapped = TransposeAxes(refPlaceholder, lastAxis, axis);
-            auto gatherSwapped = GatherOp(indPlaceholder, swapped);
+            auto gatherSwapped = GatherOp(indPlaceholder, swapped, name + L"_inner");
             auto result = TransposeAxes(gatherSwapped, lastAxis, axis);
             return AsBlock(std::move(result), { { indPlaceholder, indices }, { refPlaceholder, reference } }, std::move(additionalProperties), L"GatherOp", name);
         }

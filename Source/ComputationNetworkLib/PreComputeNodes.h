@@ -270,7 +270,8 @@ public:
         : Base(deviceId, name),
           m_mean(make_shared<Matrix<ElemType>>(deviceId)),
           m_var (make_shared<Matrix<ElemType>>(deviceId)),
-          m_temp(make_shared<Matrix<ElemType>>(deviceId))
+          m_temp(make_shared<Matrix<ElemType>>(deviceId)),
+          m_inputTemp(make_shared<Matrix<ElemType>>(deviceId))
     {
     }
 
@@ -311,6 +312,8 @@ public:
 
         // set gaps to zero, since we are reducing in time
         InputRef(0).MaskMissingValueColumnsToZero(fr);
+        m_inputTemp->Resize(InputRef(0).Value()); // same size of input
+        m_inputTemp->SetValue(0);
 
         size_t numNewSamples = InputRef(0).GetMBLayout()->GetActualNumSamples();
         size_t totalNumSamples = m_numSamples + numNewSamples;
@@ -320,10 +323,11 @@ public:
         ElemType beta  = (ElemType)m_numSamples / totalNumSamples;
 
         size_t rank = DetermineElementwiseTensorRank();
-        auto input    = InputRef(0).ValueTensorFor(        rank, fr);
-        auto mean     =            DataTensorFor(m_mean, rank, FrameRange());
-        auto temp     =            DataTensorFor(m_temp, rank, FrameRange());
-        auto var      =            DataTensorFor(m_var,  rank, FrameRange());
+        auto input     = InputRef(0).ValueTensorFor(        rank, fr);
+        auto mean      =            DataTensorFor(m_mean, rank, FrameRange());
+        auto temp      =            DataTensorFor(m_temp, rank, FrameRange());
+        auto var       =            DataTensorFor(m_var,  rank, FrameRange());
+        auto inputTemp = TensorView<ElemType>(m_inputTemp, InputRef(0).GetTensorSliceFor(rank, fr));
 
         // preserve the old mean value for the next step
         temp.AssignCopyOf(mean);
@@ -337,7 +341,9 @@ public:
         var.AddSqrOf(temp);          // add the square
 
         // var += (input - mean)^2
-        var.DoSqrOfDifferenceOf(beta, input, mean, alpha); // this reduces as well
+        inputTemp.AssignSqrOfDifferenceOf(input, mean, 1.0f); // this doesn't reduce yet.
+        MaskMissingColumnsToZero(*m_inputTemp, InputRef(0).GetMBLayout(), fr); // set gaps to zero.
+        var.DoCopyOf(beta, inputTemp, alpha); // now reduce
 
         m_numSamples += InputRef(0).GetMBLayout()->GetActualNumSamples();
     }
@@ -358,6 +364,7 @@ private:
     shared_ptr<Matrix<ElemType>> m_mean;
     shared_ptr<Matrix<ElemType>> m_var;
     shared_ptr<Matrix<ElemType>> m_temp;
+    shared_ptr<Matrix<ElemType>> m_inputTemp;
 };
 
 template class InvStdDevNode<float>;

@@ -21,8 +21,8 @@ class Record {
   Record() = default;
 
   Record(const std::vector<std::string>& names, const Values& values) {
-    LOTUS_ENFORCE(std::tuple_size<Values>::value == names.size(),
-                  "Parameter sizes do not match. %d != %d", std::tuple_size<Values>::value, names.size());
+    ONNXRUNTIME_ENFORCE(std::tuple_size<Values>::value == names.size(),
+                "Parameter sizes do not match. %d != %d", std::tuple_size<Values>::value, names.size());
     names_ = names;
     values_ = values;
   }
@@ -34,7 +34,7 @@ class Record {
 
   Status GetName(int index, const std::string** pp_name) const {
     if (nullptr == pp_name || index >= names_.size()) {
-      return Status(LOTUS, common::INVALID_ARGUMENT);
+      return Status(ONNXRUNTIME, common::INVALID_ARGUMENT);
     }
 
     *pp_name = &(names_[index]);

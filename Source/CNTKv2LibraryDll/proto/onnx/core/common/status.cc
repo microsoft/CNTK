@@ -8,7 +8,7 @@ namespace onnxruntime {
 namespace common {
 Status::Status(StatusCategory category, int code, const std::string& msg) {
   // state_ will be allocated here causing the status to be treated as a failure
-  LOTUS_ENFORCE(code != static_cast<int>(MLStatus::OK));
+  ONNXRUNTIME_ENFORCE(code != static_cast<int>(MLStatus::OK));
 
   state_ = std::make_unique<State>(category, code, msg);
 }
@@ -44,7 +44,7 @@ std::string Status::ToString() const {
     result += "SystemError";
     result += " : ";
     result += std::to_string(errno);
-  } else if (common::LOTUS == state_->category) {
+  } else if (common::ONNXRUNTIME == state_->category) {
     result += "[LotusError]";
     result += " : ";
     result += std::to_string(Code());

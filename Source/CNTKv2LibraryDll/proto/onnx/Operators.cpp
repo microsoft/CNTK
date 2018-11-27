@@ -8,6 +8,8 @@
 #include "Operators.h"
 #include "Utils.h"
 
+int BatchSizeProcessor::overrideBatchSize = BatchSizeProcessor::defaultFreeBatchSize;
+
 namespace CNTK
 {
 namespace ONNX
@@ -116,6 +118,7 @@ namespace ONNX
         // From Generator
         { L"RandomDistribution", { {
             { L"UniformRandom", "RandomUniform" },
+            { L"uniform", "RandomUniform" },
             // { L"", "low" },
             // { L"", "high" },
             { L"rngSeed", "seed" },
@@ -123,6 +126,7 @@ namespace ONNX
         } } },
         { L"RandomDistribution", { {
             { L"NormalRandom", "RandomNormal" },
+            { L"normal", "RandomNormal" },
             // { L"", "mean" },
             // { L"", "scale" },
             { L"rngSeed", "seed" },
@@ -230,6 +234,9 @@ namespace ONNX
         } } },
         { L"StableSigmoid", { {
             { L"StableSigmoid", "Sigmoid" },
+        } } },
+        { L"Sigmoid", { {
+            { L"Sigmoid", "Sigmoid" },
         } } },
         { L"ElementMax", { {
             { L"ElementMax", "Max" },
@@ -362,6 +369,11 @@ namespace ONNX
             { L"axis", "axes" },
             { L"keepdims", "keepdims" },
         } } },
+        { L"Sequence::ReduceElements",{ {
+            { L"Sequence::ReduceElements", "ReduceSum" },
+            { L"axisVec", "axes" },
+            { L"reductionKeepDimensions", "keepdims" },
+        } } },
 
         // From tensor
         { L"Cast", { {
@@ -419,6 +431,18 @@ namespace ONNX
             } } },
         { L"Alias",{ {
             { L"Alias", "Identity" },
+        } } },
+        { L"UnpackBatchAxis",{ {
+            { L"UnpackBatchAxis", "Identity" },
+        } } },
+        { L"ToBatchAxis",{ {
+            { L"ToBatchAxis", "Identity" },
+        } } },
+        { L"UnpackSequenceOp",{ {
+            { L"UnpackSequenceOp", "Identity" },
+        } } },
+        { L"ToSequenceOp",{ {
+            { L"ToSequenceOp", "Identity" },
         } } },
         { L"StopGradient",{ {
             { L"StopGradient", "Identity" },
@@ -498,7 +522,8 @@ namespace ONNX
     {
         return (cntkOpName == L"Plus") || (cntkOpName == L"Minus") ||
             (cntkOpName == L"ElementTimes") || (cntkOpName == L"ElementDivide") ||
-            (cntkOpName == L"And") || (cntkOpName == L"Or") || (cntkOpName == L"Xor");
+            (cntkOpName == L"And") || (cntkOpName == L"Or") || (cntkOpName == L"Xor") ||
+            (cntkOpName == L"Splice");
     }
 
     bool Operators::SupportBroadcastONNXOp(const std::string& onnxOpName)
@@ -517,7 +542,14 @@ namespace ONNX
     {
         return opName == "LSTM" || opName == "GRU" || opName == "RNN" || opName == "RNNStep";
     }
-        std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
+    
+    bool Operators::IsSequenceBlockOp(const std::string &opName)
+    {
+        return opName == "Sequence::ReduceElements" || opName == "Sequence::BroadcastAs" || 
+            opName == "Sequence::Gather" || opName == "Sequence::Softmax";
+    }
+
+    std::unordered_map<std::wstring, std::set<size_t>> Operators::_cntkBlockOPInvalidIndices = {
             { L"Clip",{ 1, 2 } },
             { L"ELU",{ 0, 1 } },
             { L"LeakyReLU",{ 0, 1 } },
@@ -536,7 +568,8 @@ namespace ONNX
             { L"Softsign",{ 0 } },
             { L"ImageScaler",{ 0, 1, 2, 3 } },
             { L"MeanVarianceNormalization",{ 0 } },
-            { L"Sequence::Slice",{ 0, 1 } },
+            { L"Sequence::Slice",{ 0, 1, 2, 3, 4 } },
+            { L"GatherPacked",{ 1 } },
         };
 
         std::unordered_map<std::wstring, std::vector<int>> Operators::_cntkToONNXInputIndices = {

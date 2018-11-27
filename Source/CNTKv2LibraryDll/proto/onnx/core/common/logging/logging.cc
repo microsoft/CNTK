@@ -3,6 +3,7 @@
 
 #include <exception>
 #include <ctime>
+#include <utility>
 
 #include "core/common/exceptions.h"
 #include "core/common/logging/isink.h"
@@ -16,7 +17,7 @@
 #endif
 
 namespace onnxruntime {
-namespace Logging {
+namespace logging {
 const char* Category::onnxruntime = "onnxruntime";
 const char* Category::System = "System";
 
@@ -133,7 +134,7 @@ void LoggingManager::CreateDefaultLogger(const std::string& logger_id) {
 }
 
 std::unique_ptr<Logger> LoggingManager::CreateLogger(std::string logger_id) {
-  return CreateLogger(logger_id, default_min_severity_, default_filter_user_data_, default_max_vlog_level_);
+  return CreateLogger(std::move(logger_id), default_min_severity_, default_filter_user_data_, default_max_vlog_level_);
 }
 
 std::unique_ptr<Logger> LoggingManager::CreateLogger(std::string logger_id,
@@ -179,8 +180,8 @@ std::exception LoggingManager::LogFatalAndCreateException(const char* category,
 
   // create Capture in separate scope so it gets destructed (leading to log output) before we throw.
   {
-    ::onnxruntime::Logging::Capture c{::onnxruntime::Logging::LoggingManager::DefaultLogger(),
-                                      ::onnxruntime::Logging::Severity::kFATAL, category, ::onnxruntime::Logging::DataType::SYSTEM, location};
+    ::onnxruntime::logging::Capture c{::onnxruntime::logging::LoggingManager::DefaultLogger(),
+                                      ::onnxruntime::logging::Severity::kFATAL, category, ::onnxruntime::logging::DataType::SYSTEM, location};
     va_list args;
     va_start(args, format_str);
 
@@ -190,7 +191,7 @@ std::exception LoggingManager::LogFatalAndCreateException(const char* category,
     exception_msg = c.Message();
   }
 
-  return LotusException(location, exception_msg);
+  return OnnxRuntimeException(location, exception_msg);
 }
 
 unsigned int GetThreadId() {
@@ -212,5 +213,5 @@ unsigned int GetProcessId() {
 #endif
 }
 
-}  // namespace Logging
+}  // namespace logging
 }  // namespace onnxruntime

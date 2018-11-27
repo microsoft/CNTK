@@ -22,7 +22,31 @@ const int64_t ReshapeKeepInputDim = 0;
 const std::string FreeSequenceDimParam = "Sequence";
 const size_t numBiasInOnnxLstm = 2; // bias for W, and bias for R (also called H in CNTK).
                                     // TODO: support cases where batch size is not 1.
-const int FreeBatchSize = 1;
+
+// See comment for BatchSizeOverride
+// we need to object to keep OverridedBatch dimension in case defaultFreeBatchSize is overrided 
+// by broadcast (and possible other ops TO BE FIGURED OUT) ops. 
+class BatchSizeProcessor
+{
+public:
+    static int FreeBatchSize()
+    {
+        return overrideBatchSize;
+    }
+
+    static void OverrideBatchSize(int i_overrideBatchSize)
+    {
+        overrideBatchSize = i_overrideBatchSize;
+    }
+
+    static void ResetOverrideBatchSize()
+    {
+        overrideBatchSize = defaultFreeBatchSize;
+    }
+private:
+    static const int defaultFreeBatchSize = 1;
+    static int overrideBatchSize;
+};
 
 namespace CNTK
 {
@@ -152,6 +176,7 @@ public:
 
     static bool IsLoopOp(const std::string &opName);
     static bool IsRNNOp(const std::string &opName);
+    static bool IsSequenceBlockOp(const std::string &opName);
 
 private:
     static std::unordered_multimap<std::wstring, AttributesMapping> _cntkToONNXOpName;
