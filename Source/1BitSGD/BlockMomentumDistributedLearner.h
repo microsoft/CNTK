@@ -464,7 +464,8 @@ namespace CNTK
             else if (parameters.front()->GetDataType() == DataType::Float)
                 SynchronizeModel<float>(parameters);
             else if (parameters.front()->GetDataType() == DataType::Float16)
-                SynchronizeModel<half>(parameters);
+                //SynchronizeModel<half>(parameters);
+                SynchronizeModelHalf(parameters);
             else
                 RuntimeError("Unsupported type.");
 
@@ -525,7 +526,8 @@ namespace CNTK
                 else if (p->GetDataType() == DataType::Float)
                     ResetBuffer<float>(i, p);
                 else if (p->GetDataType() == DataType::Float16)
-                    ResetBuffer<half, float16>(i, p);
+                    //ResetBuffer<half, float16>(i, p);
+                    ResetBufferHalf(i, p);
                 else
                     RuntimeError("Unsupported type.");
             }
@@ -559,6 +561,49 @@ namespace CNTK
             {
                 m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<ElemTypeV2>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
             }
+        }
+
+        template <typename ElementType>
+        static shared_ptr<Matrix<ElementType>> GetWritableMatrix(const NDArrayViewPtr& arrayView)
+        {
+            return arrayView->GetWritableMatrix<ElementType>();
+        }
+        void ResetBufferHalf(size_t index, const NDArrayViewPtr& p)
+        {
+            auto data = p->GetMatrix<half>();
+            NDShape shape = p->Shape();
+            if (!m_blockLevelSmoothedGradient[index])
+            {
+                // has not been initialized yet
+                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<float>(), NDShape({shape[0], shape[1] * 2}), AsDeviceDescriptor(data->GetDeviceId()));
+                pSmoothedGrad->SetValue(static_cast<float>(0));
+                m_blockLevelSmoothedGradient[index] = pSmoothedGrad;
+            }
+
+            if (!m_prevParameters[index])
+            {
+                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<float16>(), NDShape({ shape[0], shape[1] * 2 }), AsDeviceDescriptor(data->GetDeviceId()));
+                std::shared_ptr<Matrix<half>> newData = newValue->GetWritableMatrix<half>();
+                newData->SetValue(*data);
+                m_prevParameters[index] = newValue;
+            }
+            else
+            {
+                const auto& compoundMatrix = GetWritableMatrix<half>(m_prevParameters[index]);
+                auto previousWeight = compoundMatrix->ColumnSlice(0, shape[1]); // prev model value
+                previousWeight.SetValue(*data);
+                //m_prevParameters[index]->GetWritableMatrix<half>()->SetValue(*data);
+            }
+
+            if (!m_tempBlockGradient[index])
+            {
+                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<float16>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+            }
+        }
+
+        virtual void AggregateBlockGradientsInPlace()
+        {
+            m_communicator->AggregateInPlace(m_tempBlockGradient, m_communicator->Workers());
         }
 
         template<class ElemType>
@@ -617,6 +662,73 @@ namespace CNTK
             }
         }
 
+        void SynchronizeModelHalf(const std::vector<NDArrayViewPtr>& parameterValues)
+        {
+            half blockMomentum = (half)TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_numSamplesSeenInCurrentBlock);
+
+            // 1. Let's aggregate weights
+            for (size_t i = 0; i < parameterValues.size(); ++i)
+            {
+                // Get current model
+                Matrix<half>& currentWeight = *parameterValues[i]->GetWritableMatrix<half>();
+                const auto& compoundMatrix = GetWritableMatrix<half>(m_prevParameters[i]);
+                auto previousWeight = compoundMatrix->ColumnSlice(0, currentWeight.GetNumCols()); // prev model value
+                Matrix<half>& blockGrad = *m_tempBlockGradient[i]->GetWritableMatrix<half>();
+
+                // Subtract it from the previous model
+                blockGrad = previousWeight - currentWeight; // matW becomes local block gradient (of one worker)
+            }
+
+            // Send block gradient over MPI nodes.
+            AggregateBlockGradientsInPlace();
+
+            // 2. Let's update the model
+            for (size_t i = 0; i < parameterValues.size(); ++i)
+            {
+                // 2 block gradient aggregation
+                // 2.1. get current model
+                Matrix<half>& currentWeight = *parameterValues[i]->GetWritableMatrix<half>();
+                const auto& compoundMatrix = GetWritableMatrix<half>(m_prevParameters[i]);
+                auto previousWeight = compoundMatrix->ColumnSlice(0, currentWeight.GetNumCols()); // prev model value
+                Matrix<half>& blockGrad = *m_tempBlockGradient[i]->GetWritableMatrix<half>();
+                // 2.2. model update 
+                {
+                    const auto& compoundMatrixFloat = GetWritableMatrix<float>(m_blockLevelSmoothedGradient[i]);
+                    auto sgFloat = compoundMatrixFloat->ColumnSlice(0, currentWeight.GetNumCols());       // smoothed gradient
+
+                    // cast block gradients from half to float
+                    auto tmpBlockGradFloat = compoundMatrixFloat->ColumnSlice(currentWeight.GetNumCols(), currentWeight.GetNumCols());       // temp block gradients in float
+                    tmpBlockGradFloat.CastAssignValuesOf(blockGrad);
+
+                    // 2.2.1 update block level smoothed gradient; 
+                    // This is essentially a first-order infinite impulse response (IIR) filter with the gain (1 - blockMomentum)*m_blockLearningRate:
+                    // smoothedGradient(t)=blockMomentum * smoothedGradients(t-1) + (1 - blockMomentum)*m_blockLearningRate*blockGrad(t)
+                    Matrix<float>::ScaleAndAdd((float)((1 - blockMomentum)*m_blockLearningRate), tmpBlockGradFloat, (float)blockMomentum, sgFloat);
+
+                    // cast sg back to half
+                    auto sg = compoundMatrix->ColumnSlice(currentWeight.GetNumCols(), currentWeight.GetNumCols());       // temp sg in half
+                    sg.CastAssignValuesOf(sgFloat);
+
+                    // 2.2.2 update parameters; 
+                    currentWeight.SetValue(previousWeight);
+                    currentWeight -= sg;
+                    // 2.2.3 Nesterov Momentum 
+                    // A Nesterov momentum here is to do a partial weight update before calculating the gradient, i.e., 
+                    // (step 1) w(t) <-- w(t) - \eta* v(t) 
+                    // (step 2) g(t+1) <-- forwardbackward on minibatches with initial model as w(t)
+                    // (step 3) v(t+1) <-- \eta*v(t) + (1-\eta)*learningRate*g(t+1)
+                    // (step 4) w(t+1) <-- w(t)-v(t)
+                    // (step 5) t      <-- t+1
+                    // without step 1, this becomes stanard momentum
+                    if (m_useNesterovMomentum)
+                    {
+                        Matrix<half>::ScaleAndAdd((half)-blockMomentum, sg, currentWeight);
+                    }
+                    // 2.2.4 update bookkeeping
+                    previousWeight.SetValue(currentWeight);
+                }
+            }
+        }
         static double TimeConstant2Momentum(double timeConstant, size_t syncPeroid)
         {
             if (timeConstant == 0)

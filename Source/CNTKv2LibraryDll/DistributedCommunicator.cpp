@@ -90,7 +90,7 @@ namespace CNTK
                 m_workers.insert({ i,  L"" });
         }
         m_packThresholdSizeInBytes = packThresholdSizeInBytes;
-        m_useFP16 = true; // TODO - plumb with config
+        m_useFP16 = false; // TODO - plumb with config
     }
 
     void MPICommunicatorImpl::Initialize(const std::vector<NDArrayViewPtr>& values)
