@@ -164,26 +164,30 @@ def run_model(model, data, device=None):
     o = model.eval(feed, device=device)
     return o
 
-def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None, resave = True):
+def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None, resave = True, bypass_load_into_cntk = False):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
 
     # onnx does not specify sparse tensor. to run imported model, a sparse matrix needs to be converted to a dense matrix 
-    dataOnnx = None
-    if is_list_of_sparse(data):
-        dataOnnx = transpose_dynamic_axis(sparse_to_dense(data))
+    if bypass_load_into_cntk:
+        dataOnnx = data
+        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, model, resave, True)
     else:
-        if (type(data) == list):
-            dataOnnx = []
-            for i in range(0, len(data)):
-                if (model.arguments[i].has_sequence_axis()):
-                    dataOnnx.append(transpose_dynamic_axis(data[i]))
-                else:
-                    dataOnnx.append(data[i])
+        dataOnnx = None
+        if is_list_of_sparse(data):
+            dataOnnx = transpose_dynamic_axis(sparse_to_dense(data))
         else:
-            dataOnnx = transpose_dynamic_axis(data)
+            if (type(data) == list):
+                dataOnnx = []
+                for i in range(0, len(data)):
+                    if (model.arguments[i].has_sequence_axis()):
+                        dataOnnx.append(transpose_dynamic_axis(data[i]))
+                    else:
+                        dataOnnx.append(data[i])
+            else:
+                dataOnnx = transpose_dynamic_axis(data)
 
-    loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model, resave)
+        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model, resave)
 
     o0 = run_model(model, data, device=device)
     o1 = run_model(loaded_model, dataOnnx, device=device)
@@ -1778,6 +1782,24 @@ def test_SequenceLast(tmpdir, dtype):
     x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
     verify_sequence_model(y, x0, tmpdir, "SequenceLast")
 
+def test_SequenceIsFirst(tmpdir):
+    batch_size = 1
+    sequence_length = 4
+    input_shape = (3,2)
+    shape = (batch_size, sequence_length, *input_shape)
+    data = np.reshape(range(0, np.prod(shape)), shape).astype(np.float32)
+    model = C.sequence.is_first(C.sequence.input_variable(input_shape))
+    verify_sequence_model(model, data, tmpdir, 'SequenceIsFirst', bypass_load_into_cntk = True)
+    
+def test_SequenceIsLast(tmpdir):
+    batch_size = 1
+    sequence_length = 5
+    input_shape = (4,3)
+    shape = (batch_size, sequence_length, *input_shape)
+    data = np.reshape(range(0, np.prod(shape)), shape).astype(np.float32)
+    model = C.sequence.is_last(C.sequence.input_variable(input_shape))
+    verify_sequence_model(model, data, tmpdir, 'SequenceIsLast', bypass_load_into_cntk = True)
+    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SequenceReduceSum(tmpdir, dtype):
     x = C.sequence.input_variable(shape=(3,2))
