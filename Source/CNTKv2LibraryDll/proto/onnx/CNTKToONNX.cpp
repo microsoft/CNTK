@@ -374,6 +374,10 @@ private:
         const std::string &outArgName, onnxruntime::Graph* graph);
     static onnxruntime::Node *AddSqueezeNode(onnxruntime::NodeArg &inputArg, const std::vector<int64_t> &axes,
         const std::string &outArgName, onnxruntime::Graph* graph);
+    static onnxruntime::Node* AddConstantLikeNode(onnxruntime::NodeArg& inputArg, const std::string& outArgName, onnxruntime::Graph* graph,
+                                                  const float value);
+    static onnxruntime::Node* AddPadNode(onnxruntime::NodeArg& inputArg, onnxruntime::Graph* graph, const std::string& outArgName, const onnx::TypeProto& outputType,
+                                         const std::vector<int64_t> pads, const float value, const std::string& mode);
     static onnxruntime::Node *AddExpandNode(onnxruntime::NodeArg &nodeArg, const std::vector<int64_t> &newShape, const std::string &outArgName,
         onnxruntime::Graph* graph);
     static onnxruntime::Node *AddReshapeNode(onnxruntime::NodeArg &nodeArg, const std::vector<int64_t> &newShape, const std::string &outArgName,
@@ -3193,6 +3197,10 @@ onnxruntime::Node *CNTKToONNXHelper::AddSliceNode(onnxruntime::NodeArg &inputArg
                     newdim->set_dim_value(newval);
                 }
             }
+            else if (inputTypeProto.tensor_type().shape().dim(i).has_dim_param())
+            {
+                newdim->set_dim_param(inputTypeProto.tensor_type().shape().dim(i).dim_param());
+            }
             ++j;
         }
         else {
@@ -3221,9 +3229,39 @@ onnxruntime::Node *CNTKToONNXHelper::AddEyeLikeNode(onnxruntime::NodeArg &inputA
     return eyeLikeNode;
 }
 
+// add ConstantLike node
+onnxruntime::Node* CNTKToONNXHelper::AddConstantLikeNode(onnxruntime::NodeArg& inputArg,
+                                                         const std::string& outArgName, onnxruntime::Graph* graph, const float value = 0.0)
+{
+    const TypeProto* inputTypeProto = inputArg.TypeAsProto();
+    onnx::TypeProto outputTypeProto(*inputTypeProto);
+
+    onnxruntime::NodeArg& outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
+    onnxruntime::Node* constantLikeNode = graph->AddNode(
+        outArgName + string("_constant_like"), "ConstantLike", "", {&inputArg}, {&outputNodeArg});
+    constantLikeNode->AddAttribute("value", value);
+    return constantLikeNode;
+}
+
+// add Pad node
+onnxruntime::Node* CNTKToONNXHelper::AddPadNode(onnxruntime::NodeArg& inputArg, onnxruntime::Graph* graph, const std::string& outArgName, const onnx::TypeProto& outputType,
+                                                const std::vector<int64_t> pads, const float value = 0.0, const std::string& mode = "constant")
+{
+    const TypeProto* inputTypeProto = inputArg.TypeAsProto();
+    
+    onnxruntime::NodeArg& outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputType);
+    onnxruntime::Node* padNode = graph->AddNode(
+        outArgName + string("_pad"), "Pad", "", {&inputArg}, {&outputNodeArg});
+
+    padNode->AddAttribute("mode", mode);
+    padNode->AddAttribute("pads", pads);
+    padNode->AddAttribute("value", value);
+    return padNode;
+}
+
 // add a squeeze node
-onnxruntime::Node *CNTKToONNXHelper::AddSqueezeNode(onnxruntime::NodeArg &inputArg, const std::vector<int64_t> &axes,
-    const std::string &outArgName, onnxruntime::Graph* graph)
+onnxruntime::Node* CNTKToONNXHelper::AddSqueezeNode(onnxruntime::NodeArg& inputArg, const std::vector<int64_t>& axes,
+                                                    const std::string& outArgName, onnxruntime::Graph* graph)
 {
     const TypeProto* inputTypeProto = inputArg.TypeAsProto();
     onnx::TensorProto_DataType elemType = inputTypeProto->tensor_type().elem_type();
@@ -3234,14 +3272,16 @@ onnxruntime::Node *CNTKToONNXHelper::AddSqueezeNode(onnxruntime::NodeArg &inputA
     {
         if (std::find(axes.begin(), axes.end(), index) == axes.end())
         {
-            outputTypeProto.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(
-                inputTypeProto->tensor_type().shape().dim(index).dim_value());
+            if (inputTypeProto->tensor_type().shape().dim(index).has_dim_param())
+                outputTypeProto.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_param(inputTypeProto->tensor_type().shape().dim(index).dim_param());
+            else
+                outputTypeProto.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(inputTypeProto->tensor_type().shape().dim(index).dim_value());
         }
     }
 
-    onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
+    onnxruntime::NodeArg& outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
     onnxruntime::Node* squeezeNode = graph->AddNode(
-        outArgName + string("_squeeze"), "Squeeze", "", { &inputArg }, { &outputNodeArg });
+        outArgName + string("_squeeze"), "Squeeze", "", {&inputArg}, {&outputNodeArg});
     squeezeNode->AddAttribute("axes", axes);
     return squeezeNode;
 }
@@ -3599,45 +3639,45 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceIsFirstOrLastNode(const Funct
     if (CNTKToONNXHelper::isProcessingScan)
         LogicError("SequenceIsFirst cannot be in a scan loop");
 
-    std::vector<onnxruntime::NodeArg *> inputs;
+    std::vector<onnxruntime::NodeArg*> inputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs, scanLoops, createLoopIndex);
 
-    std::vector<int64_t> axes, sliceStarts, sliceEnds;
+    std::vector<int64_t> slice0_axes, slice0_starts, slice0_ends;
+
     // TODO: how to handle batch size not being one?
-    for (int n = 0; n < src->Inputs()[2].Shape().Rank() + 2; n++)
+    for (int n = 1; n < src->Inputs()[2].Shape().Rank() + 2; n++)
     {
-        if (n != 1)
-        {
-            axes.push_back(n);
-            sliceStarts.push_back(0);
-            sliceEnds.push_back(1);
-        }
+        slice0_axes.push_back(n);
+        slice0_starts.push_back(0);
+        slice0_ends.push_back(1);
     }
 
-    Node *sliceNode = AddSliceNode(*inputs[2], axes, sliceStarts, sliceEnds, 
-        ToLegacyString(ToUTF8(src->Uid())) + "_slice_output0", graph);
+    std::string outputName = UniqueNodeNameStorage::GetUniqueOutputNodeName(src->BlockRoot()->Output());
 
-    axes.pop_back();
-    Node *squeezeNode = AddSqueezeNode(const_cast<NodeArg &>(*sliceNode->OutputDefs().at(0)), axes,
-        ToLegacyString(ToUTF8(src->Uid())) + "_squeeze_output0", graph);
-    
-    std::vector<int64_t> newShape({ (int64_t)NDShape::FreeDimension, (int64_t)NDShape::FreeDimension });
-    Node *expandNode = AddExpandNode(const_cast<NodeArg &>(*squeezeNode->OutputDefs().at(0)), newShape,
-        ToLegacyString(ToUTF8(src->Uid())) + "_expand_output0", graph);
+    Node* sliceNode0 = AddSliceNode(*inputs[inputs.size() - 1], slice0_axes, slice0_starts, slice0_ends,
+                                    ToLegacyString(ToUTF8(src->Uid())) + "_slice0_output", graph);
 
-    Node *eyeLikeNode = AddEyeLikeNode(const_cast<NodeArg &>(*expandNode->OutputDefs()[0]),
-        ToLegacyString(ToUTF8(src->Uid())) + "_eye_like_output0", graph);
+    slice0_axes.pop_back();
+    Node* squeezeNode = AddSqueezeNode(const_cast<NodeArg&>(*sliceNode0->OutputDefs().at(0)), slice0_axes,
+                                       ToLegacyString(ToUTF8(src->Uid())) + "_squeeze_output", graph);
 
-    Node *sliceNode2 = AddSliceNode(const_cast<NodeArg &>(*eyeLikeNode->OutputDefs()[0]), 
-        { 0 }, 
-        isFirst ? std::vector<int64_t>({ 0 }) : std::vector<int64_t>({-2}),
-        isFirst ? std::vector<int64_t>({ 1 }) : std::vector<int64_t>({-1}),
-        ToLegacyString(ToUTF8(src->Uid())) + "_second_slice_output0", graph);
+    Node* constantLikeNode = AddConstantLikeNode(const_cast<NodeArg&>(*squeezeNode->OutputDefs().at(0)),
+                                                 ToLegacyString(ToUTF8(src->Uid())) + "_constantlike_output", graph, 0.0F);
 
-    Node *squeezeNode2 = AddSqueezeNode(const_cast<NodeArg &>(*sliceNode2->OutputDefs().at(0)), 
-        { 0 },
-        ToLegacyString(ToUTF8(src->Uid())) + "_second_squeeze_output0", graph);
-    return squeezeNode2;
+    std::vector<int64_t> pads({0, 0, 0, 0});
+    pads.at(isFirst ? 0 : 2) = 1;
+
+    NodeArg& padInputArg = const_cast<NodeArg&>(*constantLikeNode->OutputDefs().at(0));
+    Node* padNode = AddPadNode(padInputArg, graph, ToLegacyString(ToUTF8(src->Uid())) + "_padding_output", *padInputArg.TypeAsProto(), pads, 1.0F);
+
+    vector<int64_t> slice1_axes({0});
+    vector<int64_t> slice1_starts({isFirst ? 0 : 1});
+    vector<int64_t> slice1_ends({isFirst ? -1 : INT_MAX});
+    Node* sliceNode1 = AddSliceNode(const_cast<NodeArg&>(*padNode->OutputDefs().at(0)), slice1_axes,
+                                    slice1_starts, slice1_ends, outputName, graph);
+
+    functionNodes.emplace(src, sliceNode1);
+    return sliceNode1;
 }
 
 //
@@ -4862,9 +4902,10 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                 continue;
         }
 
-        if (src->OpName() == L"Sequence::Slice" && inputIndex != src->Inputs().size() - 1)
+        if ((src->OpName() == L"Sequence::Slice" || src->OpName() == L"Sequence::IsFirst" || src->OpName() == L"Sequence::IsLast")
+            && inputIndex != src->Inputs().size() - 1)
         {
-            // for Sequence::Slice, only the last input is the real valid input.
+            // for these sequence ops, only the last input is the real valid input.
             continue;
         }
         else if (FilterInput(src, input, inputIndex))
