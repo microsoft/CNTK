@@ -5073,9 +5073,9 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
 
         if (isInitialStateOfSubGraph)
         {
-            Variable &initialState = src->Inputs()[1];
-            Variable &stateInput = src->Inputs()[0];
-            Variable &stateOutput = src->Outputs()[0];
+            Variable initialState = src->Inputs()[1];
+            Variable stateInput = src->Inputs()[0];
+            Variable stateOutput = src->Outputs()[0];
 
             // create initial state constant and final state nodeArg
             // define a state output so executors know this is the place 
