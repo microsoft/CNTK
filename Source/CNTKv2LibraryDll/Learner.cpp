@@ -119,6 +119,26 @@ namespace CNTK
         }
     }
 
+    bool LearnerBase::GetFullPrecisionModelAt(size_t i, const Parameter& parameter, const NDArrayViewPtr& result)
+    {
+        if (parameter.GetDataType() == DataType::Float16)
+        {
+            const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
+
+            // get fp32 parameter values
+            auto sg = smoothedGradientValue->GetWritableMatrix<float>();
+            auto pv16 = parameter.Value()->GetWritableMatrix<half>();
+            size_t factor = sg->GetNumCols() / pv16->GetNumCols();
+            auto pv = sg->ColumnSlice(pv16->GetNumCols() * (factor - 1), pv16->GetNumCols());
+
+            // get result matrix
+            Matrix<float>& resultMatrix = *result->GetWritableMatrix<float>();
+            resultMatrix.SetValue(pv);
+            return true;
+        }
+        return false;
+    }
+
     // Clipping gradients to prevent outliers,
     template <typename ElementType>
     void LearnerBase::ClipGradient(Matrix<ElementType>& gradient, size_t actualMBSize) const

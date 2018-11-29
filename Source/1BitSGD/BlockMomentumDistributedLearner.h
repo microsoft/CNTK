@@ -96,12 +96,10 @@ namespace CNTK
             GetParameterValues(learner->Parameters(), parameterValues);
 
             m_blockLevelSmoothedGradient.resize(parameterValues.size());
-            m_blockLevelSmoothedGradientFloat.resize(parameterValues.size());
             m_prevParameters.resize(parameterValues.size());
-            m_prevParametersFloat.resize(parameterValues.size());
-            m_currentParametersFloat.resize(parameterValues.size());
             m_tempBlockGradient.resize(parameterValues.size());
             m_tempBlockGradientFloat.resize(parameterValues.size());
+            m_currentParameters.resize(parameterValues.size());
             Reset(parameterValues);
         }
 
@@ -531,8 +529,8 @@ namespace CNTK
                     ResetBuffer<float>(i, p);
                 else if (p->GetDataType() == DataType::Float16)
                 {
-                    ResetBuffer<half, float16>(i, p);
-                    ResetBufferExtra(i, p);
+                    //ResetBuffer<half, float16>(i, p);
+                    ResetBufferHalf(i, p);
                 }
                 else
                     RuntimeError("Unsupported type.");
@@ -569,40 +567,40 @@ namespace CNTK
             }
         }
 
-        void ResetBufferExtra(size_t index, const NDArrayViewPtr& p)
+        void ResetBufferHalf(size_t index, const NDArrayViewPtr& p)
         {
-            // Extra buffer in float solving half underflow problems
+            // buffer in float solving half underflow problems
             auto data = p->GetMatrix<half>();
 
-            if (!m_blockLevelSmoothedGradientFloat[index])
+
+            if (!m_blockLevelSmoothedGradient[index])
             {
                 auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
                 pSmoothedGrad->SetValue(static_cast<float>(0));
-                m_blockLevelSmoothedGradientFloat[index] = pSmoothedGrad;
+                m_blockLevelSmoothedGradient[index] = pSmoothedGrad;
             }
 
-            if (!m_prevParametersFloat[index])
+            if (!m_prevParameters[index])
             {
-                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
-                std::shared_ptr<Matrix<float>> newData = newValue->GetWritableMatrix<float>();
-                newData->CastAssignValuesOf(*data);
-                m_prevParametersFloat[index] = newValue;
+                m_prevParameters[index] = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
             }
-            else
-            {
-                m_prevParametersFloat[index]->GetWritableMatrix<float>()->CastAssignValuesOf(*data);
-            }
+            PopulateFullPrecisionModel(index, m_prevParameters[index]);
 
-            if (!m_currentParametersFloat[index])
+            if (!m_currentParameters[index])
             {
                 auto newValue = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
                 newValue->SetValue(static_cast<float>(0));
-                m_currentParametersFloat[index] = newValue;
+                m_currentParameters[index] = newValue;
             }
 
             if (!m_tempBlockGradientFloat[index])
             {
                 m_tempBlockGradientFloat[index] = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+            }
+
+            if (!m_tempBlockGradient[index])
+            {
+                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<half>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
             }
         }
 
@@ -670,21 +668,17 @@ namespace CNTK
             for (size_t i = 0; i < parameterValues.size(); ++i)
             {
                 // Get current model
-                //Matrix<half>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<half>();                  // prev model value
-                Matrix<half>& currentWeight = *parameterValues[i]->GetWritableMatrix<half>();
-                Matrix<half>& blockGrad = *m_tempBlockGradient[i]->GetWritableMatrix<half>();
-                Matrix<float>& previousWeightFloat = *m_prevParametersFloat[i]->GetWritableMatrix<float>();                  // prev model value
-                Matrix<float>& currentWeightFloat = *m_currentParametersFloat[i]->GetWritableMatrix<float>();
+                PopulateFullPrecisionModel(i, m_currentParameters[i]);
+
+                Matrix<float>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<float>();                  // prev model value
+                Matrix<float>& currentWeight = *m_currentParameters[i]->GetWritableMatrix<float>();
                 Matrix<float>& blockGradFloat = *m_tempBlockGradientFloat[i]->GetWritableMatrix<float>();
+                Matrix<half>& blockGrad = *m_tempBlockGradient[i]->GetWritableMatrix<half>();
 
                 // Subtract it from the previous model
-                //blockGrad = previousWeight - currentWeight; // matW becomes local block gradient (of one worker)
+                blockGradFloat = previousWeight - currentWeight;
 
-                // cast current weight to float
-                currentWeightFloat.CastAssignValuesOf(currentWeight);
-                // calculate
-                blockGradFloat = previousWeightFloat - currentWeightFloat;
-                // cast back to half
+                // cast back to half for all reduce
                 blockGrad.CastAssignValuesOf(blockGradFloat);
             }
 
@@ -696,36 +690,24 @@ namespace CNTK
             {
                 // 2 block gradient aggregation
                 // 2.1. get current model
-                Matrix<half>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<half>();                  // prev model value
-                Matrix<half>& currentWeight = *parameterValues[i]->GetWritableMatrix<half>();
-                Matrix<half>& blockGrad = *m_tempBlockGradient[i]->GetWritableMatrix<half>();
-                Matrix<float>& previousWeightFloat = *m_prevParametersFloat[i]->GetWritableMatrix<float>();                  // prev model value
-                Matrix<float>& currentWeightFloat = *m_currentParametersFloat[i]->GetWritableMatrix<float>();
+                Matrix<float>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<float>();                  // prev model value
+                Matrix<float>& currentWeight = *m_currentParameters[i]->GetWritableMatrix<float>();
                 Matrix<float>& blockGradFloat = *m_tempBlockGradientFloat[i]->GetWritableMatrix<float>();
+                Matrix<half>& blockGrad = *m_tempBlockGradient[i]->GetWritableMatrix<half>();
+
+                // cast block gradients from half to float
+                blockGradFloat.CastAssignValuesOf(blockGrad);
 
                 // 2.2. model update 
                 {
-                    Matrix<half>& sg = *m_blockLevelSmoothedGradient[i]->GetWritableMatrix<half>();       // smoothed gradient
-                    Matrix<float>& sgFloat = *m_blockLevelSmoothedGradientFloat[i]->GetWritableMatrix<float>();
-
-                    // cast block gradients from half to float
-                    blockGradFloat.CastAssignValuesOf(blockGrad);
-                    // Block level smoothed gradients - in float
-
+                    Matrix<float>& sg = *m_blockLevelSmoothedGradient[i]->GetWritableMatrix<float>();       // smoothed gradient
                     // 2.2.1 update block level smoothed gradient; 
                     // This is essentially a first-order infinite impulse response (IIR) filter with the gain (1 - blockMomentum)*m_blockLearningRate:
                     // smoothedGradient(t)=blockMomentum * smoothedGradients(t-1) + (1 - blockMomentum)*m_blockLearningRate*blockGrad(t)
-                    Matrix<float>::ScaleAndAdd((float)((1 - blockMomentum)*m_blockLearningRate), blockGradFloat, blockMomentum, sgFloat);
-
-                    // cast sg back to half
-                    sg.CastAssignValuesOf(sgFloat);
-
+                    Matrix<float>::ScaleAndAdd((float)((1 - blockMomentum)*m_blockLearningRate), blockGradFloat, blockMomentum, sg);
                     // 2.2.2 update parameters; 
-                    currentWeightFloat.SetValue(previousWeightFloat);
-                    currentWeightFloat -= sgFloat;
-                    //currentWeight.SetValue(previousWeight);
-                    //currentWeight -= sg;
-
+                    currentWeight.SetValue(previousWeight);
+                    currentWeight -= sg;
                     // 2.2.3 Nesterov Momentum 
                     // A Nesterov momentum here is to do a partial weight update before calculating the gradient, i.e., 
                     // (step 1) w(t) <-- w(t) - \eta* v(t) 
@@ -736,15 +718,30 @@ namespace CNTK
                     // without step 1, this becomes stanard momentum
                     if (m_useNesterovMomentum)
                     {
-                        Matrix<float>::ScaleAndAdd(-blockMomentum, sgFloat, currentWeightFloat);
+                        Matrix<float>::ScaleAndAdd(-blockMomentum, sg, currentWeight);
                     }
-
                     // 2.2.4 update bookkeeping
-                    previousWeightFloat.SetValue(currentWeightFloat);
-                    currentWeight.CastAssignValuesOf(currentWeightFloat);
                     previousWeight.SetValue(currentWeight);
                 }
             }
+        }
+
+        void PopulateFullPrecisionModel(size_t i, NDArrayViewPtr &parameterFloat)
+        {
+            auto parameter = m_learner->Parameters()[i];
+
+            // if it is LearnerMomentumSGD, get the cached fp32 model
+            LearnerMomentumSGD* pLocalLearner = dynamic_cast<LearnerMomentumSGD*>(m_learner.get());
+            if (pLocalLearner &&
+                pLocalLearner->GetFullPrecisionModelAt(i, parameter, parameterFloat))
+            {
+                return;
+            }
+
+            // otherwise, get from parameter and cast
+            Matrix<half>& currentWeight = *parameter.Value()->GetWritableMatrix<half>();
+            Matrix<float>& currentWeightFloat = *parameterFloat->GetWritableMatrix<float>();
+            currentWeightFloat.CastAssignValuesOf(currentWeight);
         }
 
         static double TimeConstant2Momentum(double timeConstant, size_t syncPeroid)
@@ -776,10 +773,8 @@ namespace CNTK
 
         // parameters at the last model aggregation point
         std::vector<NDArrayViewPtr> m_prevParameters;
-        std::vector<NDArrayViewPtr> m_prevParametersFloat;
-        std::vector<NDArrayViewPtr> m_currentParametersFloat;
+        std::vector<NDArrayViewPtr> m_currentParameters;
         std::vector<NDArrayViewPtr> m_blockLevelSmoothedGradient;
-        std::vector<NDArrayViewPtr> m_blockLevelSmoothedGradientFloat;
         std::vector<NDArrayViewPtr> m_tempBlockGradient;
         std::vector<NDArrayViewPtr> m_tempBlockGradientFloat;
 
