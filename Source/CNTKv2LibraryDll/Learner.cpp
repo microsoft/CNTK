@@ -110,10 +110,18 @@ namespace CNTK
     {
         for(auto v : m_smoothedGradientValues)
         {
-            if (v.second->GetDataType() == DataType::Float)
+            if (v.first.GetDataType() == DataType::Float)
                 v.second->SetValue(0.0f);
-            else if (v.second->GetDataType() == DataType::Double)
+            else if (v.first.GetDataType() == DataType::Double)
                 v.second->SetValue(0.0);
+            else if (v.first.GetDataType() == DataType::Float16)
+            {
+                // reset gradients only, don't reset other things
+                const auto& parameterMatrix = GetWritableMatrix<half>(v.first.Value());
+                const auto& compoundMatrix = GetWritableMatrix<float>(v.second);
+                auto smoothedGradientMatrix = compoundMatrix->ColumnSlice(0, parameterMatrix->GetNumCols());
+                smoothedGradientMatrix.SetValue(0.0f);
+            }
             else
                 LogicError("Unsupported DataType %s", DataTypeName(v.second->GetDataType()));
         }
