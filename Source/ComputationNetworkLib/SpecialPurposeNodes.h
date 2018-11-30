@@ -561,7 +561,7 @@ public:
         gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right-in");
 #endif
-        gammaFromLattice.Print("student gamma");
+        //gammaFromLattice.Print("student gamma");
         inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
         inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
 #if DUMPOUTPUT
@@ -580,7 +580,7 @@ public:
 #endif
         //gammaFromLatticeTeacher.Print("teacher gamma");
         //gammaFromLattice.Print("student gamma");
-        inputGradientValues.AssignScaledDifference(gradientValues.Get00Element(), gammaFromLatticeTeacher, gammaFromLattice, inputGradientValues);
+        inputGradientValues.AssignScaledDifference(gradientValues.Get00Element(), gammaFromLattice, gammaFromLatticeTeacher, inputGradientValues);
         
         //inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
 #if DUMPOUTPUT
