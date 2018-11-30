@@ -572,7 +572,6 @@ namespace CNTK
             // buffer in float solving half underflow problems
             auto data = p->GetMatrix<half>();
 
-
             if (!m_blockLevelSmoothedGradient[index])
             {
                 auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
@@ -584,6 +583,7 @@ namespace CNTK
             {
                 m_prevParameters[index] = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
             }
+            fprintf(stderr, "ResetBufferHalf - call PopulateFullPrecisionModel - %zu\n", index);
             PopulateFullPrecisionModel(index, m_prevParameters[index]);
 
             if (!m_currentParameters[index])
@@ -668,6 +668,7 @@ namespace CNTK
             for (size_t i = 0; i < parameterValues.size(); ++i)
             {
                 // Get current model
+                fprintf(stderr, "SynchronizeModelHalf - call PopulateFullPrecisionModel - %zu\n", i);
                 PopulateFullPrecisionModel(i, m_currentParameters[i]);
 
                 Matrix<float>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<float>();                  // prev model value
@@ -728,20 +729,21 @@ namespace CNTK
 
         void PopulateFullPrecisionModel(size_t i, NDArrayViewPtr &parameterFloat)
         {
-            auto parameter = m_learner->Parameters()[i];
-
             // if it is LearnerMomentumSGD, get the cached fp32 model
             LearnerMomentumSGD* pLocalLearner = dynamic_cast<LearnerMomentumSGD*>(m_learner.get());
             if (pLocalLearner &&
-                pLocalLearner->GetFullPrecisionModelAt(i, parameter, parameterFloat))
+                pLocalLearner->GetFullPrecisionModelAt(i, parameterFloat))
             {
+                fprintf(stderr, "PopulateFullPrecisionModel - GetFullPrecisionModelAt %zu successfully\n", i);
                 return;
             }
 
             // otherwise, get from parameter and cast
+            auto parameter = m_learner->Parameters()[i];
             Matrix<half>& currentWeight = *parameter.Value()->GetWritableMatrix<half>();
             Matrix<float>& currentWeightFloat = *parameterFloat->GetWritableMatrix<float>();
             currentWeightFloat.CastAssignValuesOf(currentWeight);
+            fprintf(stderr, "PopulateFullPrecisionModel - %zu - cast from fp16\n", i);
         }
 
         static double TimeConstant2Momentum(double timeConstant, size_t syncPeroid)

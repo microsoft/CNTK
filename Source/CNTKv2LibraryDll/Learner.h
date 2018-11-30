@@ -29,7 +29,7 @@ namespace CNTK
 
         virtual void ResetSmoothedGradients() override;
 
-        bool GetFullPrecisionModelAt(size_t i, const Parameter& parameter, const NDArrayViewPtr& result);
+        bool GetFullPrecisionModelAt(size_t i, const NDArrayViewPtr& result);
 
     protected:
         LearnerBase(const std::vector<Parameter>& parameters,
