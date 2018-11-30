@@ -1786,7 +1786,7 @@ def test_SequenceIsFirst(tmpdir):
     batch_size = 1
     sequence_length = 4
     input_shape = (3,2)
-    shape = (batch_size, sequence_length, *input_shape)
+    shape = (batch_size, sequence_length, 3, 2)
     data = np.reshape(range(0, np.prod(shape)), shape).astype(np.float32)
     model = C.sequence.is_first(C.sequence.input_variable(input_shape))
     verify_sequence_model(model, data, tmpdir, 'SequenceIsFirst', bypass_load_into_cntk = True)
@@ -1795,7 +1795,7 @@ def test_SequenceIsLast(tmpdir):
     batch_size = 1
     sequence_length = 5
     input_shape = (4,3)
-    shape = (batch_size, sequence_length, *input_shape)
+    shape = (batch_size, sequence_length, 4, 3)
     data = np.reshape(range(0, np.prod(shape)), shape).astype(np.float32)
     model = C.sequence.is_last(C.sequence.input_variable(input_shape))
     verify_sequence_model(model, data, tmpdir, 'SequenceIsLast', bypass_load_into_cntk = True)
