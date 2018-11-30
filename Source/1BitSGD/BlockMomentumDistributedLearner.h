@@ -114,6 +114,13 @@ namespace CNTK
             std::vector<NDArrayViewPtr> values;
             GetParameterValues(m_learner->Parameters(), values);
 
+            // note this is only for the first update, after that SyncBlock handles the bookkeeping
+            if (!m_prevParamInitialized)
+            {
+                Reset(values);
+                m_prevParamInitialized = true;
+            }
+
             // do local update first, then block update. Local update would have different gradient for each worker,
             // and this order is to make sure all workers got the same model after block update
             if (!info.IsEmpty())
@@ -127,6 +134,7 @@ namespace CNTK
                 GetParameterValues(m_learner->Parameters(), values);
             }
 
+            /*
             // note this is only for the first update, after that SyncBlock handles the bookkeeping
             // do this after the local update, so we have the first full precision parameters
             if (!m_prevParamInitialized)
@@ -134,6 +142,7 @@ namespace CNTK
                 Reset(values);
                 m_prevParamInitialized = true;
             }
+            */
 
             auto profGradientAgg = Microsoft::MSR::CNTK::ProfilerTimeBegin();
             bool updated = PerformDistributedUpdateIfNeeded(values, info);
@@ -467,8 +476,8 @@ namespace CNTK
             else if (parameters.front()->GetDataType() == DataType::Float)
                 SynchronizeModel<float>(parameters);
             else if (parameters.front()->GetDataType() == DataType::Float16)
-                //SynchronizeModel<half>(parameters);
-                SynchronizeModelHalf(parameters);
+                SynchronizeModel<half>(parameters);
+                //SynchronizeModelHalf(parameters);
             else
                 RuntimeError("Unsupported type.");
 
@@ -530,8 +539,8 @@ namespace CNTK
                     ResetBuffer<float>(i, p);
                 else if (p->GetDataType() == DataType::Float16)
                 {
-                    //ResetBuffer<half, float16>(i, p);
-                    ResetBufferHalf(i, p);
+                    ResetBuffer<half, float16>(i, p);
+                    //ResetBufferHalf(i, p);
                 }
                 else
                     RuntimeError("Unsupported type.");
