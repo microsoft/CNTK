@@ -139,7 +139,7 @@ namespace CNTK
         Matrix<float>& resultMatrix = *result->GetWritableMatrix<float>();
         resultMatrix.SetValue(pv);
 
-        fprintf(stderr, "GetFullPrecisionModelAt %zu \n", i);
+        //fprintf(stderr, "GetFullPrecisionModelAt %zu \n", i);
         return true;
     }
 

@@ -114,13 +114,6 @@ namespace CNTK
             std::vector<NDArrayViewPtr> values;
             GetParameterValues(m_learner->Parameters(), values);
 
-            // note this is only for the first update, after that SyncBlock handles the bookkeeping
-            if (!m_prevParamInitialized)
-            {
-                Reset(values);
-                m_prevParamInitialized = true;
-            }
-
             // do local update first, then block update. Local update would have different gradient for each worker,
             // and this order is to make sure all workers got the same model after block update
             if (!info.IsEmpty())
@@ -132,6 +125,14 @@ namespace CNTK
                 // after local update, use the latest model for block update
                 values.clear();
                 GetParameterValues(m_learner->Parameters(), values);
+            }
+
+            // note this is only for the first update, after that SyncBlock handles the bookkeeping
+            // do this after the local update, so we have the first full precision parameters
+            if (!m_prevParamInitialized)
+            {
+                Reset(values);
+                m_prevParamInitialized = true;
             }
 
             auto profGradientAgg = Microsoft::MSR::CNTK::ProfilerTimeBegin();
@@ -583,7 +584,7 @@ namespace CNTK
             {
                 m_prevParameters[index] = std::make_shared<NDArrayView>(AsDataType<float>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
             }
-            fprintf(stderr, "ResetBufferHalf - call PopulateFullPrecisionModel - %zu\n", index);
+            //fprintf(stderr, "ResetBufferHalf - call PopulateFullPrecisionModel - %zu\n", index);
             PopulateFullPrecisionModel(index, m_prevParameters[index]);
 
             if (!m_currentParameters[index])
@@ -668,7 +669,7 @@ namespace CNTK
             for (size_t i = 0; i < parameterValues.size(); ++i)
             {
                 // Get current model
-                fprintf(stderr, "SynchronizeModelHalf - call PopulateFullPrecisionModel - %zu\n", i);
+                //fprintf(stderr, "SynchronizeModelHalf - call PopulateFullPrecisionModel - %zu\n", i);
                 PopulateFullPrecisionModel(i, m_currentParameters[i]);
 
                 Matrix<float>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<float>();                  // prev model value
@@ -734,7 +735,7 @@ namespace CNTK
             if (pLocalLearner &&
                 pLocalLearner->GetFullPrecisionModelAt(i, parameterFloat))
             {
-                fprintf(stderr, "PopulateFullPrecisionModel - GetFullPrecisionModelAt %zu successfully\n", i);
+                //fprintf(stderr, "PopulateFullPrecisionModel - GetFullPrecisionModelAt %zu successfully\n", i);
                 return;
             }
 
@@ -743,7 +744,7 @@ namespace CNTK
             Matrix<half>& currentWeight = *parameter.Value()->GetWritableMatrix<half>();
             Matrix<float>& currentWeightFloat = *parameterFloat->GetWritableMatrix<float>();
             currentWeightFloat.CastAssignValuesOf(currentWeight);
-            fprintf(stderr, "PopulateFullPrecisionModel - %zu - cast from fp16\n", i);
+            //fprintf(stderr, "PopulateFullPrecisionModel - %zu - cast from fp16\n", i);
         }
 
         static double TimeConstant2Momentum(double timeConstant, size_t syncPeroid)
