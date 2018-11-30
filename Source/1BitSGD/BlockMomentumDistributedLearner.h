@@ -601,7 +601,7 @@ namespace CNTK
 
             if (!m_tempBlockGradient[index])
             {
-                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<half>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<float16>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
             }
         }
 
@@ -722,6 +722,7 @@ namespace CNTK
                     {
                         Matrix<float>::ScaleAndAdd(-blockMomentum, sg, currentWeight);
                     }
+                    UpdateFullPrecisionModel(i, m_currentParameters[i]);
                     // 2.2.4 update bookkeeping
                     previousWeight.SetValue(currentWeight);
                 }
@@ -745,6 +746,25 @@ namespace CNTK
             Matrix<float>& currentWeightFloat = *parameterFloat->GetWritableMatrix<float>();
             currentWeightFloat.CastAssignValuesOf(currentWeight);
             //fprintf(stderr, "PopulateFullPrecisionModel - %zu - cast from fp16\n", i);
+        }
+
+        void UpdateFullPrecisionModel(size_t i, NDArrayViewPtr &parameterFloat)
+        {
+            // if it is LearnerMomentumSGD, set the cached fp32 model and parameters
+            LearnerMomentumSGD* pLocalLearner = dynamic_cast<LearnerMomentumSGD*>(m_learner.get());
+            if (pLocalLearner &&
+                pLocalLearner->SetFullPrecisionModelAt(i, parameterFloat))
+            {
+                //fprintf(stderr, "UpdateFullPrecisionModel - SetFullPrecisionModelAt %zu successfully\n", i);
+                return;
+            }
+
+            // otherwise, set from parameter and cast
+            auto parameter = m_learner->Parameters()[i];
+            Matrix<half>& currentWeight = *parameter.Value()->GetWritableMatrix<half>();
+            Matrix<float>& currentWeightFloat = *parameterFloat->GetWritableMatrix<float>();
+            currentWeight.CastAssignValuesOf(currentWeightFloat);
+            //fprintf(stderr, "UpdateFullPrecisionModel - %zu - cast from fp32\n", i);
         }
 
         static double TimeConstant2Momentum(double timeConstant, size_t syncPeroid)

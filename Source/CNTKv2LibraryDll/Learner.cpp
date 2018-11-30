@@ -110,10 +110,18 @@ namespace CNTK
     {
         for(auto v : m_smoothedGradientValues)
         {
-            if (v.second->GetDataType() == DataType::Float)
+            if (v.first.GetDataType() == DataType::Float)
                 v.second->SetValue(0.0f);
-            else if (v.second->GetDataType() == DataType::Double)
+            else if (v.first.GetDataType() == DataType::Double)
                 v.second->SetValue(0.0);
+            else if (v.first.GetDataType() == DataType::Float16)
+            {
+                // reset gradients only, don't reset other things
+                const auto& parameterMatrix = GetWritableMatrix<half>(v.first.Value());
+                const auto& compoundMatrix = GetWritableMatrix<float>(v.second);
+                auto smoothedGradientMatrix = compoundMatrix->ColumnSlice(0, parameterMatrix->GetNumCols());
+                smoothedGradientMatrix.SetValue(0.0f);
+            }
             else
                 LogicError("Unsupported DataType %s", DataTypeName(v.second->GetDataType()));
         }
@@ -140,6 +148,36 @@ namespace CNTK
         resultMatrix.SetValue(pv);
 
         //fprintf(stderr, "GetFullPrecisionModelAt %zu \n", i);
+        return true;
+    }
+
+    bool LearnerBase::SetFullPrecisionModelAt(size_t i, const NDArrayViewPtr& newValue)
+    {
+        if (newValue->GetDataType() != DataType::Float16)
+        {
+            return false;
+        }
+
+        const Parameter& parameter = Parameters()[i];
+        if (parameter.GetDataType() != DataType::Float16)
+        {
+            return false;
+        }
+
+        const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
+
+        // get fp16/fp32 parameter values
+        auto sg = smoothedGradientValue->GetWritableMatrix<float>();
+        auto pv16 = parameter.Value()->GetWritableMatrix<half>();
+        size_t factor = sg->GetNumCols() / pv16->GetNumCols();
+        auto pv = sg->ColumnSlice(pv16->GetNumCols() * (factor - 1), pv16->GetNumCols());
+
+        // update to new values
+        Matrix<float>& newValueMatrix = *newValue->GetWritableMatrix<float>();
+        pv.SetValue(newValueMatrix);
+        pv16->CastAssignValuesOf(pv);
+
+        //fprintf(stderr, "SetFullPrecisionModelAt %zu \n", i);
         return true;
     }
 

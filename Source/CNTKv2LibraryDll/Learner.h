@@ -31,6 +31,8 @@ namespace CNTK
 
         bool GetFullPrecisionModelAt(size_t i, const NDArrayViewPtr& result);
 
+        bool SetFullPrecisionModelAt(size_t i, const NDArrayViewPtr& newValue);
+
     protected:
         LearnerBase(const std::vector<Parameter>& parameters,
             const LearningRateSchedule& learningRateSchedule,
