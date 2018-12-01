@@ -210,6 +210,7 @@ protected:
 
     bool m_gradientClippingWithTruncation;
     double m_clippingThresholdPerSample;
+    double m_normFactor = 1.0;
 
     intargvector m_numSamples4Search;
     size_t m_numBestSearchEpoch;

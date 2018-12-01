@@ -580,7 +580,7 @@ public:
         m_derivativeForG.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
             numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);
         //do derivative norm
-        Microsoft::MSR::CNTK::Matrix<ElemType> tempMatrix1(m_deviceid_gpu), tempMatrix2(m_deviceid_gpu);
+        /*Microsoft::MSR::CNTK::Matrix<ElemType> tempMatrix1(m_deviceid_gpu), tempMatrix2(m_deviceid_gpu);
         Microsoft::MSR::CNTK::Matrix<ElemType>::VectorSum(m_derivativeForF, tempMatrix1, false);
         tempMatrix2.AssignVectorNorm2Of(tempMatrix1,true);
         //tempMatrix1.Print("sum of F");
@@ -588,7 +588,8 @@ public:
         //fprintf(stderr, "framenum %d phonenum %d\n", (int) totalframenum, (int) totalphonenum);
         ElemType norm_coef = (ElemType) 10.0/ tempMatrix2.Get00Element();
         Microsoft::MSR::CNTK::Matrix<ElemType>::Scale(norm_coef, m_derivativeForF);
-        Microsoft::MSR::CNTK::Matrix<ElemType>::Scale(norm_coef * (ElemType) totalphonenum / (ElemType)totalframenum, m_derivativeForG);
+        Microsoft::MSR::CNTK::Matrix<ElemType>::Scale(norm_coef * (ElemType) totalphonenum / (ElemType)totalframenum, m_derivativeForG);*/
+
         /*//tempMatrix2.Print("norm of F");
         Microsoft::MSR::CNTK::Matrix<ElemType>::VectorSum(m_derivativeForG, tempMatrix1, false);
         //tempMatrix1.Print("sum of G");
