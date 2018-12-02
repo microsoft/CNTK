@@ -53,7 +53,60 @@ public:
         size_t rank = DetermineElementwiseTensorRank();
         auto result =             ValueTensorFor(rank, fr);
         auto input  = InputRef(0).ValueTensorFor(rank, fr);
+   /*     if (opForward == opSigmoid)
+            fprintf(stderr, "sigm\n");*/
         result.DoUnaryOpOf(0, input, 1, opForward, opSum);
+        //if (result.GetSOBPtr()->HasNan("opForward")) {
+        //    fprintf(stderr, "opForward \n");
+        //    time_t rawtime;
+        //    struct tm * timeinfo;
+        //    char buffer[80];
+
+        //    time(&rawtime);
+        //    timeinfo = localtime(&rawtime);
+        //    strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
+        //    string date = std::string(buffer);
+
+        //    ofstream myfile;
+        //    myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "opForward.result.txt");
+        //    if (myfile.is_open())
+        //    {
+        //        auto pm = result.GetSOBPtr();
+        //        //const Matrix<ElemType>& m = Value();
+        //        /* if (typeid(ElemType).name() == "float")
+        //        {*/
+        //        for (size_t i = 0; i < pm->GetNumRows(); i++)
+        //        {
+        //            for (size_t j = 0; j < pm->GetNumCols(); j++)
+        //            {
+        //                myfile << float((*pm)(i, j));
+        //                myfile << " ";
+        //            }
+        //            myfile << "\n";
+        //        }
+        //    }
+        //    myfile.close();
+
+        //    myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "opForward.input.txt");
+        //    if (myfile.is_open())
+        //    {
+        //        auto pm = input.GetSOBPtr();
+        //        //const Matrix<ElemType>& m = Value();
+        //        /* if (typeid(ElemType).name() == "float")
+        //        {*/
+        //        for (size_t i = 0; i < pm->GetNumRows(); i++)
+        //        {
+        //            for (size_t j = 0; j < pm->GetNumCols(); j++)
+        //            {
+        //                myfile << float((*pm)(i, j));
+        //                myfile << " ";
+        //            }
+        //            myfile << "\n";
+        //        }
+        //    }
+        //    myfile.close();
+
+        //}
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -67,6 +120,9 @@ public:
 
         GradientOperationType opTypeHolder = opType;  // preventing pragma warning C4127
 
+        /*if constexpr (opBackward == opSigmoid || opBackward == opSigmoidDerivative)
+            fprintf(stderr, "sigm\n");
+*/
         if (opTypeHolder == noGradient)
         {
             // Do nothing
@@ -82,6 +138,57 @@ public:
             auto sliceValue = (opType == binaryWithOutputGradient) ? ValueTensorFor(rank, fr) : // using input or output value
                 InputRef(0).ValueTensorFor(rank, fr);
             sliceInputGrad.DoBinaryOpOf(Input(inputIndex)->IsGradientInitializedBy(this) ? 0.0f : 1.0f, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
+        }
+
+        if (sliceInputGrad.GetSOBPtr()->HasNan("opForward") || sliceOutputGrad.GetSOBPtr()->HasNan("sliceOutputGrad")) {
+            fprintf(stderr, "opForward \n");
+            time_t rawtime;
+            struct tm * timeinfo;
+            char buffer[80];
+
+            time(&rawtime);
+            timeinfo = localtime(&rawtime);
+            strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
+            string date = std::string(buffer);
+
+            ofstream myfile;
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "sliceInputGrad.input.txt");
+            if (myfile.is_open())
+            {
+                auto pm = sliceInputGrad.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
+
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "sliceOutputGrad.output.txt");
+            if (myfile.is_open())
+            {
+                auto pm = sliceOutputGrad.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
         }
     }
 

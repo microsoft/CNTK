@@ -248,8 +248,8 @@ void Matrix<ElemType>::SetDataLocation(CurrentDataLocation location, MatrixType 
         {
             assert(m_currentDataLocation == CurrentDataLocation::GPU || m_CPUMatrix);
             assert(m_currentDataLocation == CurrentDataLocation::CPU || m_GPUMatrix);
-            if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUMatrix.get())->VerifyMigratable("SetDataLocation [CPUMatrix]");
-            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUMatrix.get())->VerifyMigratable("SetDataLocation [GPUMatrix]");
+           /* if (m_currentDataLocation != CurrentDataLocation::GPU) ((BaseMatrix<ElemType>*)m_CPUMatrix.get())->VerifyMigratable("SetDataLocation [CPUMatrix]");
+            if (m_currentDataLocation != CurrentDataLocation::CPU) ((BaseMatrix<ElemType>*)m_GPUMatrix.get())->VerifyMigratable("SetDataLocation [GPUMatrix]");*/
         }
         else if (m_matrixType == MatrixType::SPARSE)
         {
@@ -1929,12 +1929,9 @@ void Matrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const 
         { m_GPUMatrix->Resize(numRows, numCols, growOnly); },
         { m_CPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); },
         { m_GPUSparseMatrix->RequireSizeAndAllocate(numRows, numCols, numNZElemToReserve, growOnly, false); });
-#ifdef _DEBUG
-    if (GetMatrixType() != MatrixType::SPARSE && !keepValue)
-        Invalidate(); // Fill the matrix with NaNs to detect using the content which is undefined. Unfortunately this won't work for sparse matrices.
-#else
+
     UNUSED(keepValue);
-#endif
+
 }
 
 template <class ElemType>
@@ -5851,7 +5848,7 @@ bool Matrix<ElemType>::HasNan(const char* name) const
         Matrix<ElemType> sum(GetDeviceId());
         sum.AssignSumOfElements(*this);
         auto x = sum.Get00Element();
-        if (!std::isnan(x))
+        if (!std::isnan(x) && !std::isinf(x))
             return false;
     }
 
@@ -5859,9 +5856,9 @@ bool Matrix<ElemType>::HasNan(const char* name) const
     const Matrix<ElemType>& us = *this;
 
     foreach_coord (i, j, us)
-        if (std::isnan(us(i, j)))
+        if (std::isnan(us(i, j)) || std::isinf(us(i, j)))
         {
-            fprintf(stderr, "HasNan: NaN detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, (int) GetNumRows(), (int) GetNumCols());
+            fprintf(stderr, "HasNan: NaN or Inf detected at %s (%ld,%ld) in (%d,%d) matrix\n", name, i, j, (int) GetNumRows(), (int) GetNumCols());
             return true;
         }
     return false;

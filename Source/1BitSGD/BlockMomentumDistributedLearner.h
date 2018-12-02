@@ -466,7 +466,7 @@ namespace CNTK
             else if (parameters.front()->GetDataType() == DataType::Float16)
                 SynchronizeModel<half>(parameters);
             else
-                RuntimeError("Unsupported type.");
+                RuntimeError("Unsupported type1.");
 
             m_numSamplesSeenInCurrentBlock = 0;
 
@@ -525,7 +525,7 @@ namespace CNTK
                 else if (p->GetDataType() == DataType::Float)
                     ResetBuffer<float>(i, p);
                 else
-                    RuntimeError("Unsupported type.");
+                    RuntimeError("Unsupported type2.");
             }
         }
 

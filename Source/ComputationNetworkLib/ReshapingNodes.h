@@ -1248,6 +1248,58 @@ public:
         let outputSubSlice = NarrowToStripe(outputSlice, inputIndex);
         let outputGrad = TensorView<ElemType>(GradientPtr(), outputSubSlice);
         inputGrad.AddCopyOf(outputGrad);
+
+        time_t rawtime;
+        struct tm * timeinfo;
+        char buffer[80];
+
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
+        strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
+        string date = std::string(buffer);
+
+        if (inputGrad.GetSOBPtr()->HasNan("inputGrad-RowStackNode") || outputGrad.GetSOBPtr()->HasNan("outputGrad-RowStackNode"))
+        {
+            fprintf(stderr, "Node Nan %ls", NodeName().c_str());
+            ofstream myfile;
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "input1RowStackNode.txt");
+            if (myfile.is_open())
+            {
+                auto pm = inputGrad.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
+
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "outputRowStackNode.txt");
+            if (myfile.is_open())
+            {
+                auto pm = outputGrad.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
+        }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }

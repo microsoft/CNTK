@@ -1404,6 +1404,7 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     if (islogzero(totalfwscore))
     {
         fprintf(stderr, "forwardbackward: WARNING: no path found in lattice (%d nodes/%d edges)\n", (int) nodes.size(), (int) edges.size());
+        throw std::invalid_argument("received negative value");
         return LOGZERO; // failed, do not use resulting matrix
     }
 

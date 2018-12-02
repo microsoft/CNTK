@@ -145,6 +145,10 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {
     if (node->IsOutOfDateWrtInputs())
     {
+        if (node->NodeName().find(L".g_t") != std::string::npos || node->NodeName().find(L".o_t") != std::string::npos
+            || node->NodeName().find(L".i_t") != std::string::npos
+            || node->NodeName().find(L".f_t") != std::string::npos)
+            fprintf(stderr, "bx\n");
         node->BeginForwardProp();
         node->BeginTiming(false /*backward*/);
         node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
@@ -163,7 +167,13 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange& fr) /*override*/
 {
     for (auto& node : m_nestedNodes)
+    {
+        if (node->NodeName().find(L".g_t") != std::string::npos || node->NodeName().find(L".o_t") != std::string::npos
+            || node->NodeName().find(L".i_t") != std::string::npos
+            || node->NodeName().find(L".f_t") != std::string::npos)
+            fprintf(stderr, "ax\n");
         ForwardProp(node, fr);
+    }
 }
 
 /*static*/ void ComputationNetwork::PARTraversalFlowControlNode::PostForwardAndBackProp(const ComputationNodeBasePtr& node)
@@ -285,6 +295,11 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
     {
         for (auto& node : m_nestedNodes)
         {
+            /*if (node->NodeName().find(L".g_t") != std::string::npos || node->NodeName().find(L".o_t") != std::string::npos
+                || node->NodeName().find(L".i_t") != std::string::npos
+                || node->NodeName().find(L".f_t") != std::string::npos)
+                fprintf(stderr, "xx\n");*/
+
             node->BeginTiming(false /*backward*/);
             node->ForwardProp(t);
             node->EndTiming(false /*backward*/);

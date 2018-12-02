@@ -1248,7 +1248,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                 // compute eval node first since when gradient is computed the forward function values
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
-                net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
+                try {
+                    net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
+                }
+                catch (const std::invalid_argument) {
+                    wstring w = msra::strfun::wstrprintf(L"%ls.%ls", m_modelPath.c_str(), "debug");
+                    // m_modelPath = m_modelPath + L "debug"
+                    fprintf(stderr, "Saving model for debugging to:%ls", w.c_str());
+                    net->Save(w);
+                    throw std::invalid_argument("received negative value");
+                }
 
                 // ===========================================================
                 // backprop
@@ -1405,10 +1414,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
                                   m_needAveMultiplier, m_useNesterovMomentum);
                     node->BumpEvalTimeStamp();
-#ifdef _DEBUG
+//#ifdef _DEBUG
                     if (dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().HasNan("TrainOneEpoch/UpdateWeights(): "))
+                    {
+                        //dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().Print();
+                        //dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().Print();
+                        //(*smoothedGradientIter).Print();
+                        fprintf(stderr, "smoothedCountIter %lf %f  \n", *smoothedCountIter, nodeDependentLearningRatePerSample);
+                        //smoothedCountIter.print();
                         LogicError("%ls %ls operation has NaNs in functionValues after parameter update.", node->NodeName().c_str(), node->OperationName().c_str());
-#endif
+                    }
+//#endif
                 }
             }
         }

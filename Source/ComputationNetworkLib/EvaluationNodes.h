@@ -60,9 +60,9 @@ public:
         MaskMissingColumnsToZero(*m_maxIndexes0, InputRef(0).GetMBLayout(), fr);
         MaskMissingColumnsToZero(*m_maxIndexes1, InputRef(1).GetMBLayout(), fr);
         Value().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
-#if NANCHECK
+
         Value().HasNan("ClassificationError");
-#endif
+
 #if DUMPOUTPUT
         Value().Print("ClassificationErrorNode");
 #endif

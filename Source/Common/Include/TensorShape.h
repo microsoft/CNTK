@@ -90,17 +90,11 @@ class SmallVector
 {
     T m_data[12];
     size_t m_size;
-#ifdef _DEBUG
-    static const char defaultUnusedValue = std::numeric_limits<T>::is_signed ? -1 : 0;
-    void DebugWipe() // initialize to 0 or -1 to make it easier to parse visually in a debugger
-    {
-        memset(m_data, defaultUnusedValue, sizeof(m_data));
-    }
-#else
+
     void DebugWipe()
     {
     }
-#endif
+
 public:
     size_t capacity() const
     {
@@ -129,9 +123,7 @@ public:
         if (m_size == 0)
             LogicError("SmallVector: pop_back() called on empty vector");
         m_size--;
-#ifdef _DEBUG
-        m_data[m_size] = (T)defaultUnusedValue; // make this easier to parse in the debugger
-#endif
+
     }
     void resize(size_t sz, const T& val)
     {

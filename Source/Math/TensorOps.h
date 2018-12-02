@@ -243,10 +243,12 @@ template <class ElemType>
 DECL ElemType Sigmoid(ElemType z)
 {
 #if 1 // BUGBUG: Numerically bad. But if I don't use this, results change.
-    ElemType negElem = -z;
+    //fprintf(stderr, "kind2 \n");
+   /* ElemType negElem = -z;
     ElemType e = exp_(negElem);
 
-    return 1 / (e + 1);
+    return 1 / (e + 1);*/
+    return StableSigmoid(z);
 #else
 #if 1 // Efficient implementation that avoids to divergent CUDA code paths that both compute exp() [jdroppo]. This version compiles to PTX without branches.
     ElemType q = exp_(-fabs_(z));
@@ -278,6 +280,8 @@ DECL ElemType StraightThrough(ElemType z)
 template <class ElemType>
 DECL ElemType StableSigmoid(ElemType z)
 {
+    //fprintf(stderr, "kind4 \n");
+
     ElemType q = exp_(-fabs_(z));
     ElemType numer;
     if (z > 0) // q = exp(-z)
@@ -290,8 +294,10 @@ DECL ElemType StableSigmoid(ElemType z)
 template <class ElemType>
 DECL ElemType SigmoidDerivative(ElemType z)
 {
-    ElemType v = Sigmoid(z);
-    return v * (1 - v);
+    //fprintf(stderr, "kind3 \n");
+    /*ElemType v = Sigmoid(z);
+    return v * (1 - v);*/
+    return StableSigmoidDerivative(z);
 }
 
 template <class ElemType>

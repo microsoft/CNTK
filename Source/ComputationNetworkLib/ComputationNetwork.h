@@ -165,6 +165,10 @@ public:
         set<ComputationNodeBasePtr> completedSEQNodes;
         for (auto& node : combinedEvalOrder)
         {
+            /*if (node->NodeName().find(L".g_t") != std::string::npos || node->NodeName().find(L".o_t") != std::string::npos
+                || node->NodeName().find(L".i_t") != std::string::npos
+                || node->NodeName().find(L".f_t") != std::string::npos)
+                fprintf(stderr, "\n");*/
             if (node->IsPartOfLoop())
             {
                 shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, node);

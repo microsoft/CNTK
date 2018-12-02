@@ -60,9 +60,9 @@ public:
         ElemType v = m_leftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ (I0[i] - I1[i])^2 } )
         Value().VerifySize(1, 1);
         Value().SetValue(v * v);  // Value = sum{ (I0[i] - I1[i])^2 }
-#if NANCHECK
+
         Value().HasNan("SquareError");
-#endif
+
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
@@ -162,9 +162,7 @@ public:
 #if DUMPOUTPUT
             InputRef(1).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
-#ifdef _DEBUG
-            InputRef(1).InvalidateMissingGradientColumns(fr); // TODO: This should not be necessary.
-#endif
+
         }
     }
 
@@ -193,9 +191,9 @@ public:
         // reduce over all frames
         Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr), *m_logSoftmaxOfRight);
         Value() *= -1;
-#if NANCHECK
+
         Value().HasNan("CrossEntropyWithSoftmax");
-#endif
+
 #if DUMPOUTPUT
         Value().Print("CrossEntropyWithSoftmaxNode");
 #endif
@@ -317,9 +315,9 @@ public:
         MaskMissingColumnsToZero(*m_logOfRight, InputRef(1).GetMBLayout(), fr);
         Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr), *m_logOfRight);
         Value() *= -1;
-#if NANCHECK
+
         Value().HasNan("CrossEntropy");
-#endif
+
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -421,9 +419,9 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         Value().VerifySize(1, 1);
         Value().SetValue(InputRef(0).MaskedValueFor(fr).MatrixNorm1());
-#if NANCHECK
+
         Value().HasNan("MatrixL1Reg");
-#endif
+
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -957,9 +955,9 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         Value().VerifySize(1, 1);
         Value().SetValue(InputRef(0).MaskedValueFor(fr).FrobeniusNorm());
-#if NANCHECK
+
         Value().HasNan("MatrixL2Reg");
-#endif
+
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -1672,9 +1670,9 @@ public:
 
         functionValues *= (-1);
 
-#if NANCHECK
+
         functionValues.HasNan("ClassBasedCrossEntropyWithSoftmax");
-#endif
+
         m_needRecomputeGradientToSoftmaxInput = true;
     }
 

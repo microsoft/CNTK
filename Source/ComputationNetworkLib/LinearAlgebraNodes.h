@@ -57,6 +57,15 @@ public:
         auto gradient      =                    GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
+        time_t rawtime;
+        struct tm * timeinfo;
+        char buffer[80];
+
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
+        strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
+        string date = std::string(buffer);
+
         // if reduction then mask the respective input(s) (zero out the gaps)
         if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
             MaskMissingGradientColumnsToZero(fr);
@@ -73,6 +82,49 @@ public:
         }
         else
             inputGradient.AddCopyOf(gradient);
+
+        if (inputGradient.GetSOBPtr()->HasNan("inputGradient-PlusNode") || gradient.GetSOBPtr()->HasNan("gradient-PlusNode"))
+        {
+            fprintf(stderr, "Node Nan %ls", NodeName().c_str());
+            ofstream myfile;
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "input1PlusNode.txt");
+            if (myfile.is_open())
+            {
+                auto pm = inputGradient.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
+
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "outputPlusNode.txt");
+            if (myfile.is_open())
+            {
+                auto pm = gradient.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
+        }
     }
 
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
@@ -262,6 +314,15 @@ public:
         auto gradient      =                    GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
+        time_t rawtime;
+        struct tm * timeinfo;
+        char buffer[80];
+
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
+        strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
+        string date = std::string(buffer);
+
         // if reduction then mask the respective input(s) (zero out the gaps)
         if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
             MaskMissingGradientColumnsToZero(fr);
@@ -279,6 +340,49 @@ public:
         }
         else
             inputGradient.AddCopyOf(gradient, sign);
+
+        if (inputGradient.GetSOBPtr()->HasNan("inputGradient-minusNode") || gradient.GetSOBPtr()->HasNan("gradient-minusNode"))
+        {
+            fprintf(stderr, "Node Nan %ls", NodeName().c_str());
+            ofstream myfile;
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "input1minusNode.txt");
+            if (myfile.is_open())
+            {
+                auto pm = inputGradient.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
+
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "outputMinusNode.txt");
+            if (myfile.is_open())
+            {
+                auto pm = gradient.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
+        }
     }
 
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
@@ -359,6 +463,76 @@ public:
             inputGradient.AssignElementwiseProductOf(gradient, otherInputValue);
         else
             inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
+
+        time_t rawtime;
+        struct tm * timeinfo;
+        char buffer[80];
+
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
+        strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
+        string date = std::string(buffer);
+
+        if (inputGradient.GetSOBPtr()->HasNan("inputGradient") || gradient.GetSOBPtr()->HasNan("gradient") || otherInputValue.GetSOBPtr()->HasNan("otherInputValue"))
+        {
+            ofstream myfile;
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "inputGradientElementTime.txt");
+            if (myfile.is_open())
+            {
+                auto pm = inputGradient.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
+
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "gradientElementTimes.txt");
+            if (myfile.is_open())
+            {
+                auto pm = gradient.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
+
+            myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "otherInputValueElementTimes.txt");
+            if (myfile.is_open())
+            {
+                auto pm = otherInputValue.GetSOBPtr();
+                //const Matrix<ElemType>& m = Value();
+                /* if (typeid(ElemType).name() == "float")
+                {*/
+                for (size_t i = 0; i < pm->GetNumRows(); i++)
+                {
+                    for (size_t j = 0; j < pm->GetNumCols(); j++)
+                    {
+                        myfile << float((*pm)(i, j));
+                        myfile << " ";
+                    }
+                    myfile << "\n";
+                }
+            }
+            myfile.close();
+        }
     }
 };
 
@@ -642,6 +816,8 @@ public:
     {
         // If argument A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
         // This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
+        bool hasSparse;
+
         auto inputMBLayout = InputRef(0).GetMBLayout();
         if (!fr.IsOneColumnWrt(inputMBLayout))
         {
@@ -659,7 +835,6 @@ public:
             }
 
             // speed up using ElementTimes or InnerProduct to avoid unroll if possible
-            bool hasSparse;
             if (IsReduceableDotProduct(fr, hasSparse))
             {
                 // for sparse transposed, use InnerProduct
@@ -718,6 +893,10 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        /*bool currentNode = true;*/
+        /*if (NodeName() == L"clonedmodel.LSTMBackwardOutput1.F_ifgo")
+            currentNode = true;*/
+
         // special treatment if A is minibatch data; see Forward() for comment
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
         {
@@ -816,12 +995,22 @@ public:
 
         bool overwriteInputGradient = (Input(inputIndex)->IsGradientInitializedBy(this) && !m_beingUnrolled);
 
+        time_t rawtime;
+        struct tm * timeinfo;
+        char buffer[80];
+
+        time(&rawtime);
+        timeinfo = localtime(&rawtime);
+        strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
+        string date = std::string(buffer);
+        
         if (inputIndex == 0) // left derivative
         {
             if (InputRef(1).Value().GetMatrixType() == SPARSE &&
                 InputRef(0).GetPreferredGradientMatrixType() == UNDETERMINED &&
                 Gradient().GetMatrixType() == DENSE)
             {
+                fprintf(stderr, "Node Nan %ls", NodeName().c_str());
                 // Special case for DENSE * SPARSE -> DENSE, which leads to a SPARSE gradient for input0 (common for embedding)
                 // We need a sparse matrix for the gradient. We allocate a new one instead of switching the type in place
                 // since switching in place may affect other nodes who share this matrix due to memory sharing
@@ -862,6 +1051,68 @@ public:
                 input0Gradient.AssignMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
             else
                 input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
+
+            if (input1.GetSOBPtr()->HasNan("input1") || outputGradient.GetSOBPtr()->HasNan("outputGradient") || input0Gradient.GetSOBPtr()->HasNan("input0Gradient"))
+            {
+                fprintf(stderr, "Node Nan %ls", NodeName().c_str());
+                ofstream myfile;
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "input1.txt");
+                if (myfile.is_open())
+                {
+                    auto pm = input1.GetSOBPtr();
+                    //const Matrix<ElemType>& m = Value();
+                    /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < pm->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < pm->GetNumCols(); j++)
+                        {
+                            myfile << float((*pm)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "outputGradient.txt");
+                if (myfile.is_open())
+                {
+                    auto pm = outputGradient.GetSOBPtr();
+                    //const Matrix<ElemType>& m = Value();
+                    /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < pm->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < pm->GetNumCols(); j++)
+                        {
+                            myfile << float((*pm)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "input0Gradient.txt");
+                if (myfile.is_open())
+                {
+                    auto pm = input0Gradient.GetSOBPtr();
+                    //const Matrix<ElemType>& m = Value();
+                   /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < pm->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < pm->GetNumCols(); j++)
+                        {
+                            myfile << float((*pm)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+            }
         }
         else if (inputIndex == 1) // right derivative
         {
@@ -875,12 +1126,77 @@ public:
                 // this is a rare case and the performance is not optimized
                 InputRef(1).Gradient().SwitchToMatrixType(DENSE, matrixFormatDense, !overwriteInputGradient);
             }
+
             InputRef(1).SetPreferredGradientMatrixType(DENSE);
+
+            
 
             if (overwriteInputGradient)
                 input1Gradient.AssignMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
             else
                 input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+            if (input0.GetSOBPtr()->HasNan("input0") || outputGradient.GetSOBPtr()->HasNan("outputGradient") || input1Gradient.GetSOBPtr()->HasNan("input1Gradient"))
+            {
+                fprintf(stderr, "Node Nan %ls", NodeName().c_str());
+
+                ofstream myfile;
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "input0.txt");
+                if (myfile.is_open())
+                {
+                    auto pm = input0.GetSOBPtr();
+                    //const Matrix<ElemType>& m = Value();
+                    /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < pm->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < pm->GetNumCols(); j++)
+                        {
+                            myfile << float((*pm)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "outputGradient.txt");
+                if (myfile.is_open())
+                {
+                    auto pm = outputGradient.GetSOBPtr();
+                    //const Matrix<ElemType>& m = Value();
+                    /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < pm->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < pm->GetNumCols(); j++)
+                        {
+                            myfile << float((*pm)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "input1Gradient.txt");
+                if (myfile.is_open())
+                {
+                    auto pm = input1Gradient.GetSOBPtr();
+                    //const Matrix<ElemType>& m = Value();
+                   /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < pm->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < pm->GetNumCols(); j++)
+                        {
+                            myfile << float((*pm)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+            }
         }
     }
 

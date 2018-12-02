@@ -1196,9 +1196,9 @@ public:
 #else
         const auto &us = *this;
         foreach_coord (i, j, us)
-            if (std::isnan(us(i, j)))
+            if (std::isnan(us(i, j)) || std::isinf(us(i, j)))
             {
-                fprintf(stderr, "hasnan: NaN detected at %s (%d,%d)\n", name, (int) i, (int) j);
+                fprintf(stderr, "hasnan: NaN or Inf detected at %s (%d,%d)\n", name, (int) i, (int) j);
                 return true;
             }
 #endif

@@ -573,28 +573,28 @@ void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsM
     if (val != 0)
         LogicError("MaskColumnsValue is not implmented for a non-zero mask for sparse matrices.");
 
-#ifdef _DEBUG
-    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
-    {
-        // TODO: We could do this on the GPU, but for now C++ is easier.
-        // Download the binary columns mask
-        char* maskedCols = columnsMask.CopyToArray();
-
-        // If we're CSC, we only need to verify that the columns to be zeroed are empty, since val == 0.
-        // So just download the condensed column vector.
-        GPUSPARSE_INDEX_TYPE* colVector = GetCondensedVector();
-
-        // Verify that if the column is to be masked, there are no elements in it.
-        size_t n = columnsMask.GetNumCols();
-        #pragma omp parallel for
-        for (long j = 0; j < n; j++)
-            for (long k = 0; k < numColsPerMaskEntry; ++k)
-                if (maskedCols[j] == 0 && colVector[(j * numColsPerMaskEntry) + k + 1] != colVector[(j * numColsPerMaskEntry) + k])
-                    RuntimeError("GPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", (int)((j * numColsPerMaskEntry) + k), (int)(colVector[(j * numColsPerMaskEntry) + k + 1] - colVector[(j * numColsPerMaskEntry) + k]));
-    }
-    else
-        NOT_IMPLEMENTED;
-#endif
+//#ifdef _DEBUG
+//    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+//    {
+//        // TODO: We could do this on the GPU, but for now C++ is easier.
+//        // Download the binary columns mask
+//        char* maskedCols = columnsMask.CopyToArray();
+//
+//        // If we're CSC, we only need to verify that the columns to be zeroed are empty, since val == 0.
+//        // So just download the condensed column vector.
+//        GPUSPARSE_INDEX_TYPE* colVector = GetCondensedVector();
+//
+//        // Verify that if the column is to be masked, there are no elements in it.
+//        size_t n = columnsMask.GetNumCols();
+//        #pragma omp parallel for
+//        for (long j = 0; j < n; j++)
+//            for (long k = 0; k < numColsPerMaskEntry; ++k)
+//                if (maskedCols[j] == 0 && colVector[(j * numColsPerMaskEntry) + k + 1] != colVector[(j * numColsPerMaskEntry) + k])
+//                    RuntimeError("GPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", (int)((j * numColsPerMaskEntry) + k), (int)(colVector[(j * numColsPerMaskEntry) + k + 1] - colVector[(j * numColsPerMaskEntry) + k]));
+//    }
+//    else
+//        NOT_IMPLEMENTED;
+//#endif
 }
 
 

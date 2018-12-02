@@ -485,9 +485,9 @@ public:
                     Gradient(), *m_gammaFromLattice, m_fsSmoothingWeight, m_frameDropThreshold);
                 MaskMissingColumnsToZero(Input(inputIndex)->Gradient(), Input(0)->GetMBLayout(), fr);
             }
-#ifdef _DEBUG
-            Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
-#endif
+//#ifdef _DEBUG
+//            Input(inputIndex)->InvalidateMissingGradientColumns(FrameRange(Input(inputIndex)->GetMBLayout()));
+//#endif
         }
         else if (inputIndex == 2)
         {
@@ -511,6 +511,14 @@ public:
 #endif
 
         Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues /*1x1*/, logSoftmaxOfRight, 1.0f, inputGradientValues);
+
+        if (inputGradientValues.HasNan("inputGradientValues") || logSoftmaxOfRight.HasNan("logSoftmaxOfRight") || gradientValues.HasNan("gradientValues"))
+        {
+            logSoftmaxOfRight.Print("SequenceWithSoftmaxNode Partial-logSoftmaxOfRight");
+            gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
+            inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-in");
+        }
+
 #if DUMPOUTPUT
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-out");
 #endif
@@ -529,6 +537,16 @@ public:
 
         inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
         inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
+
+        if (gammaFromLattice.HasNan("gammaFromLattice") || softmaxOfRight.HasNan("softmaxOfRight") || inputFunctionValues.HasNan("inputFunctionValues") || inputGradientValues.HasNan("inputGradientValues") || gradientValues.HasNan("gradientValues"))
+        {
+            gammaFromLattice.Print("gammaFromLattice");
+            inputFunctionValues.Print("inputFunctionValues");
+            softmaxOfRight.Print("SequenceWithSoftmaxNode Partial-softmaxOfRight");
+            gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
+            inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-in");
+        }
+
 #if DUMPOUTPUT
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
 #endif
@@ -561,14 +579,24 @@ public:
 
         m_gammaFromLattice->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_gammaFromLattice->Resize(*m_softmaxOfRight);
+        m_gammaFromLattice->SetValue(0.0);
+
+        if (Input(2)->Value().HasNan("loglls"))
+            LogicError("loglls");
+
+        if (Input(0)->Value().HasNan("labels"))
+            LogicError("labels");
+
         m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
                                         Input(0)->Value() /*labels*/, *m_gammaFromLattice,
                                         m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
                                         Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
 
-#if NANCHECK
-        Value().HasNan("SequenceWithSoftmaxNode");
-#endif
+        if ((*m_gammaFromLattice).HasNan("gammaFromLattice"))
+            LogicError("gammaFromLattice");
+
+        if (Value().HasNan("tSequenceWithSoftmaxNodeempmatrix"))
+            LogicError("SequenceWithSoftmaxNode");
 #if DUMPOUTPUT
         Value().Print("SequenceWithSoftmaxNode");
 #endif

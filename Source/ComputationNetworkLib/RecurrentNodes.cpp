@@ -423,6 +423,15 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
+    time_t rawtime;
+    struct tm * timeinfo;
+    char buffer[80];
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
+    string date = std::string(buffer);
+
     // input 1 (initial state) is done in bulk
     if (inputIndex == 1)    
     {
@@ -439,6 +448,49 @@ template<class ElemType, int direction>
             tgt.AddCondOf(GetMaskTensor(rank, fr), src, zero); // when back-propping into initial state, we swap the args and propagate the invalid ones
             // This will drag along the gaps as well, hence we mask them to zero above. --TODO : this is not optimal.
             // Alternative is a targeted copy using indices. Also needed to support initial state from nodes with time dimension.
+            
+            if (src.GetSOBPtr()->HasNan("src") || tgt.GetSOBPtr()->HasNan("tgt"))
+            {
+                fprintf(stderr, "Node Nan %ls", NodeName().c_str());
+                ofstream myfile;
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "input1DelayedValueNodeBase.txt");
+                if (myfile.is_open())
+                {
+                    auto pm = src.GetSOBPtr();
+                    //const Matrix<ElemType>& m = Value();
+                    /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < pm->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < pm->GetNumCols(); j++)
+                        {
+                            myfile << float((*pm)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "outputDelayedValueNodeBase.txt");
+                if (myfile.is_open())
+                {
+                    auto pm = tgt.GetSOBPtr();
+                    //const Matrix<ElemType>& m = Value();
+                    /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < pm->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < pm->GetNumCols(); j++)
+                        {
+                            myfile << float((*pm)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+            }
         }
         else // per-sequence initial state uses Scatter() instead
         {
@@ -451,6 +503,45 @@ template<class ElemType, int direction>
             let&  src  =             GradientFor                      (fr); // gradient as received from top = source
             auto& init = InputRef(1).Gradient();                            // target is the initial state. Not sliced, but we only copy parts.
             init.DoScatterColumnsOf(/*beta=*/1, idx, src, /*alpha=*/1, /*idxHaveDups*/ m_packedIndexHaveDups);
+
+            if (src.HasNan("src") || src.HasNan("init"))
+            {
+                fprintf(stderr, "Node Nan %ls", NodeName().c_str());
+                ofstream myfile;
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "input1DelayedValueNodeBase.txt");
+                if (myfile.is_open())
+                {
+                    //const Matrix<ElemType>& m = Value();
+                    /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < src.GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < src.GetNumCols(); j++)
+                        {
+                            myfile << float(src(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "outputDelayedValueNodeBase.txt");
+                if (myfile.is_open())
+                {
+                    for (size_t i = 0; i < init.GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < init.GetNumCols(); j++)
+                        {
+                            myfile << float(init(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+            }
+
         }
     }
     else if (inputIndex == 0)
@@ -491,6 +582,49 @@ template<class ElemType, int direction>
                 tgt.AddCondOf(GetMaskTensor(rank, fr), zero, src); // now add either source or zero value, based on the mask
             else // none valid: nothing to back-prop
                 ;
+
+            if (src.GetSOBPtr()->HasNan("src") || tgt.GetSOBPtr()->HasNan("tgt"))
+            {
+                fprintf(stderr, "Node Nan %ls", NodeName().c_str());
+                ofstream myfile;
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "input1DelayedValueNodeBase.txt");
+                if (myfile.is_open())
+                {
+                    auto pm = src.GetSOBPtr();
+                    //const Matrix<ElemType>& m = Value();
+                    /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < pm->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < pm->GetNumCols(); j++)
+                        {
+                            myfile << float((*pm)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "outputDelayedValueNodeBase.txt");
+                if (myfile.is_open())
+                {
+                    auto pm = tgt.GetSOBPtr();
+                    //const Matrix<ElemType>& m = Value();
+                    /* if (typeid(ElemType).name() == "float")
+                    {*/
+                    for (size_t i = 0; i < pm->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < pm->GetNumCols(); j++)
+                        {
+                            myfile << float((*pm)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+            }
         }
     }
 }
@@ -1042,10 +1176,6 @@ public:
             if (fr.GetIterationDimension() != m_shiftDimParam) // TODO: this was removed; GetIterationDimension() is always -1 now
                 LogicError("ShiftNode::ForwardProp(): FrameRange not iterating over user-specified dimension.");
 
-#ifdef _DEBUG
-            // for debugging, invalidate the output region, so we will catch if we missed to update something
-            ValueFor(fr).Invalidate();
-#endif
 
             // STEP 1: whole-sale copy a shifted version of the input to the output
             //  - consider the saved parts from the last minibatch as part of the input at dimensions beyond the bounds

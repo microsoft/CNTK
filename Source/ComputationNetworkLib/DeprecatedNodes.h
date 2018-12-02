@@ -192,6 +192,81 @@ public:
             Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(fr);
             m_innerproduct->AssignInnerProductOf(sliceOutputGrad, sliceInput1Value, false);
             InputRef(0).GradientAsMatrix() += *m_innerproduct;
+
+            if (sliceOutputGrad.HasNan("sliceOutputGrad") || sliceInput1Value.HasNan("sliceInput1Value") || m_innerproduct->HasNan("m_innerproduct") || InputRef(0).GradientAsMatrix().HasNan("InputRef(0).GradientAsMatrix()")) {
+                fprintf(stderr, "DiagTimesNode \n");
+
+                time_t rawtime;
+                struct tm * timeinfo;
+                char buffer[80];
+
+                time(&rawtime);
+                timeinfo = localtime(&rawtime);
+                strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
+                string date = std::string(buffer);
+
+                ofstream myfile;
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "m_innerproduct-DiagTimesNode.input.txt");
+                if (myfile.is_open())
+                {
+                    for (size_t i = 0; i < m_innerproduct->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < m_innerproduct->GetNumCols(); j++)
+                        {
+                            myfile << float((*m_innerproduct)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "sliceInput1Value.DiagTimesNode.txt");
+                if (myfile.is_open())
+                {
+                    for (size_t i = 0; i < sliceInput1Value.GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < sliceInput1Value.GetNumCols(); j++)
+                        {
+                            myfile << float(sliceInput1Value(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "InputRef(0).GradientAsMatrix().DiagTimesNode.txt");
+                if (myfile.is_open())
+                {
+                    for (size_t i = 0; i < InputRef(0).GradientAsMatrix().GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < InputRef(0).GradientAsMatrix().GetNumCols(); j++)
+                        {
+                            myfile << float(InputRef(0).GradientAsMatrix()(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "sliceOutputGrad.DiagTimesNode.txt");
+                if (myfile.is_open())
+                {
+                    for (size_t i = 0; i < sliceOutputGrad.GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < sliceOutputGrad.GetNumCols(); j++)
+                        {
+                            myfile << float(sliceOutputGrad(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+            }
+
         }
         else // right derivative
         {
@@ -200,7 +275,83 @@ public:
             m_rightGradient->SetValue(sliceOutputGrad);
             m_rightGradient->ColumnElementMultiplyWith(InputRef(0).ValueAsMatrix());
             sliceInput1Grad += *m_rightGradient;
+
+            if (sliceOutputGrad.HasNan("sliceOutputGrad") || sliceInput1Grad.HasNan("sliceInput1Grad") || m_rightGradient->HasNan("m_rightGradient") || InputRef(0).ValueAsMatrix().HasNan("InputRef(0).GradientAsMatrix()")) {
+                fprintf(stderr, "DiagTimesNode \n");
+
+                time_t rawtime;
+                struct tm * timeinfo;
+                char buffer[80];
+
+                time(&rawtime);
+                timeinfo = localtime(&rawtime);
+                strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
+                string date = std::string(buffer);
+
+                ofstream myfile;
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "sliceOutputGrad-DiagTimesNode.input.txt");
+                if (myfile.is_open())
+                {
+                    for (size_t i = 0; i < sliceOutputGrad.GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < sliceOutputGrad.GetNumCols(); j++)
+                        {
+                            myfile << float(sliceOutputGrad(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "sliceInput1Grad.DiagTimesNode.txt");
+                if (myfile.is_open())
+                {
+                    for (size_t i = 0; i < sliceInput1Grad.GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < sliceInput1Grad.GetNumCols(); j++)
+                        {
+                            myfile << float(sliceInput1Grad(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "InputRef(0).GradientAsMatrix().DiagTimesNode.txt");
+                if (myfile.is_open())
+                {
+                    for (size_t i = 0; i < InputRef(0).ValueAsMatrix().GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < InputRef(0).ValueAsMatrix().GetNumCols(); j++)
+                        {
+                            myfile << float(InputRef(0).ValueAsMatrix()(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+
+                myfile.open("D:\\users\\vadimma\\SE\\logs\\" + date + "m_rightGradient.DiagTimesNode.txt");
+                if (myfile.is_open())
+                {
+                    for (size_t i = 0; i < m_rightGradient->GetNumRows(); i++)
+                    {
+                        for (size_t j = 0; j < m_rightGradient->GetNumCols(); j++)
+                        {
+                            myfile << float((*m_rightGradient)(i, j));
+                            myfile << " ";
+                        }
+                        myfile << "\n";
+                    }
+                }
+                myfile.close();
+            }
         }
+
+        
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
