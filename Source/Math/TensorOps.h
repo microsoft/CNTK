@@ -288,7 +288,7 @@ DECL ElemType StableSigmoid(ElemType z)
         numer = 1;
     else // q = exp(z)
         numer = q;
-    return numer / (1 + q);
+    return numer / (1 + q); //
 }
 
 template <class ElemType>
@@ -418,7 +418,7 @@ DefUnaryOp(Not, !a);
 DefUnaryOp(Abs, fabs_(a));
 DefUnaryOp(Floor, floor_(a));
 DefUnaryOp(Sigmoid, Sigmoid(a));
-DefUnaryOp(Tanh, tanh_(a));
+DefUnaryOp(Tanh, Sigmoid(a));
 DefUnaryOp(Sqr, Sqr(a));
 DefUnaryOp(Sqrt, Sqrt(a));
 DefUnaryOp(Exp, exp_(a));
@@ -469,7 +469,6 @@ DefBinaryOp(Or, (float)((!!a) || (!!b)));
 DefBinaryOp(Xor, (float)((!!a) ^ (!!b)));
 DefBinaryOp(MaskNegative, b >= (ElemType)0 ? a : (ElemType)0);
 DefBinaryOp(ElementwiseProductWithSigmoidDerivativeFromOutput, a*(b*(1 - b))); // b = output
-DefBinaryOp(ElementwiseProductWithTanhDerivativeFromOutput, a*(1 - b * b));
 DefBinaryOp(ElementwiseProductWithLinearRectifierDerivativeFromOutput, b > (ElemType)0 ? a : (ElemType)0);
 DefBinaryOp(ElementwiseProductWithLogDerivativeFromOutput, a* exp_(-b));
 DefBinaryOp(ElementwiseProductWithCosDerivative, a * -sin_(b)); // note: b = input for cos()

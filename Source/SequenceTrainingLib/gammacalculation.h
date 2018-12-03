@@ -223,8 +223,10 @@ public:
             }
             else
                 parallellattice.getgamma(tempmatrix);
+#if NANCHECK
             if (tempmatrix.HasNan("tempmatrix"))
                 LogicError("tempmatrix");
+#endif
             // set gamma for multi channel
             if (samplesInRecurrentStep > 1)
             {

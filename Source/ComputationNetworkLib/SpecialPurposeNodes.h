@@ -512,12 +512,14 @@ public:
 
         Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues /*1x1*/, logSoftmaxOfRight, 1.0f, inputGradientValues);
 
+#if NANCHECK
         if (inputGradientValues.HasNan("inputGradientValues") || logSoftmaxOfRight.HasNan("logSoftmaxOfRight") || gradientValues.HasNan("gradientValues"))
         {
             logSoftmaxOfRight.Print("SequenceWithSoftmaxNode Partial-logSoftmaxOfRight");
             gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-in");
         }
+#endif
 
 #if DUMPOUTPUT
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-out");
@@ -538,6 +540,7 @@ public:
         inputGradientValues.AssignSequenceError((ElemType) hsmoothingWeight, inputFunctionValues, softmaxOfRight, gammaFromLattice, gradientValues.Get00Element());
         inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
 
+#if NANCHECK
         if (gammaFromLattice.HasNan("gammaFromLattice") || softmaxOfRight.HasNan("softmaxOfRight") || inputFunctionValues.HasNan("inputFunctionValues") || inputGradientValues.HasNan("inputGradientValues") || gradientValues.HasNan("gradientValues"))
         {
             gammaFromLattice.Print("gammaFromLattice");
@@ -546,6 +549,7 @@ public:
             gradientValues.Print("SequenceWithSoftmaxNode Partial-gradientValues");
             inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Left-in");
         }
+#endif
 
 #if DUMPOUTPUT
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
@@ -581,22 +585,25 @@ public:
         m_gammaFromLattice->Resize(*m_softmaxOfRight);
         m_gammaFromLattice->SetValue(0.0);
 
+#if NANCHECK
         if (Input(2)->Value().HasNan("loglls"))
             LogicError("loglls");
 
         if (Input(0)->Value().HasNan("labels"))
             LogicError("labels");
-
+#endif
         m_gammaCalculator.calgammaformb(Value(), m_lattices, Input(2)->Value() /*log LLs*/,
                                         Input(0)->Value() /*labels*/, *m_gammaFromLattice,
                                         m_uids, m_boundaries, Input(1)->GetNumParallelSequences(),
                                         Input(0)->GetMBLayout(), m_extraUttMap, m_doReferenceAlignment);
 
+#if NANCHECK
         if ((*m_gammaFromLattice).HasNan("gammaFromLattice"))
             LogicError("gammaFromLattice");
 
         if (Value().HasNan("tSequenceWithSoftmaxNodeempmatrix"))
             LogicError("SequenceWithSoftmaxNode");
+#endif
 #if DUMPOUTPUT
         Value().Print("SequenceWithSoftmaxNode");
 #endif

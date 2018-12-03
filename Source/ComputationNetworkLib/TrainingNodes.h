@@ -61,7 +61,9 @@ public:
         Value().VerifySize(1, 1);
         Value().SetValue(v * v);  // Value = sum{ (I0[i] - I1[i])^2 }
 
+#if NANCHECK
         Value().HasNan("SquareError");
+#endif
 
     }
 
@@ -192,7 +194,9 @@ public:
         Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr), *m_logSoftmaxOfRight);
         Value() *= -1;
 
+#if NANCHECK
         Value().HasNan("CrossEntropyWithSoftmax");
+#endif
 
 #if DUMPOUTPUT
         Value().Print("CrossEntropyWithSoftmaxNode");
@@ -316,7 +320,9 @@ public:
         Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr), *m_logOfRight);
         Value() *= -1;
 
+#if NANCHECK
         Value().HasNan("CrossEntropy");
+#endif
 
     }
 
@@ -420,7 +426,9 @@ public:
         Value().VerifySize(1, 1);
         Value().SetValue(InputRef(0).MaskedValueFor(fr).MatrixNorm1());
 
+#if NANCHECK
         Value().HasNan("MatrixL1Reg");
+#endif
 
     }
 
@@ -956,8 +964,9 @@ public:
         Value().VerifySize(1, 1);
         Value().SetValue(InputRef(0).MaskedValueFor(fr).FrobeniusNorm());
 
+#if NANCHECK
         Value().HasNan("MatrixL2Reg");
-
+#endif
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -1670,9 +1679,9 @@ public:
 
         functionValues *= (-1);
 
-
+#if NANCHECK
         functionValues.HasNan("ClassBasedCrossEntropyWithSoftmax");
-
+#endif
         m_needRecomputeGradientToSoftmaxInput = true;
     }
 

@@ -322,10 +322,15 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         }
         else if (*layout != *streamLayout) // this does a deep value-level comparison
         {
-            RuntimeError("Dynamic axis layout '%ls' is shared between inputs '%ls' and '%ls', but layouts generated "
+            fprintf(stderr, "Dynamic axis layout '%ls' is shared between inputs '%ls' and '%ls', but layouts generated "
                 "from the input data are incompatible on this axis. Are you using different sequence lengths? "
                 "Did you consider adding a DynamicAxis() to the Input nodes?",
                 layout->GetAxisName(), layoutToInputMap[layout->GetAxisName()].c_str(), i->first.c_str());
+            return false;
+           /* RuntimeError("Dynamic axis layout '%ls' is shared between inputs '%ls' and '%ls', but layouts generated "
+                "from the input data are incompatible on this axis. Are you using different sequence lengths? "
+                "Did you consider adding a DynamicAxis() to the Input nodes?",
+                layout->GetAxisName(), layoutToInputMap[layout->GetAxisName()].c_str(), i->first.c_str());*/
         }
 
         // Check sample shape.

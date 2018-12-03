@@ -709,9 +709,10 @@ template <class ElemType>
     if (HasEnvironmentPtr() && Environment().trackGapNans)
     {
         MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+#if NANCHECK
         if (Value().HasNan("EndForwardProp"))
             LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
-
+#endif
         InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
     }
 

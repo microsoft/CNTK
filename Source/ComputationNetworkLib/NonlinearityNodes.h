@@ -140,6 +140,7 @@ public:
             sliceInputGrad.DoBinaryOpOf(Input(inputIndex)->IsGradientInitializedBy(this) ? 0.0f : 1.0f, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
         }
 
+#if NANCHECK
         if (sliceInputGrad.GetSOBPtr()->HasNan("opForward") || sliceOutputGrad.GetSOBPtr()->HasNan("sliceOutputGrad")) {
             fprintf(stderr, "opForward \n");
             time_t rawtime;
@@ -190,6 +191,7 @@ public:
             }
             myfile.close();
         }
+#endif
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -282,7 +284,7 @@ DeclareUnaryElementWiseWithOpCodeNode(Sin,                   Sin,               
 DeclareUnaryElementWiseWithOpCodeNode(Sinh,                  Sinh,                  ElementwiseProductWithSinhDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,                  Sqrt,                  ElementwiseProductWithSqrtDerivative,                            binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Tan,                   Tan,                   ElementwiseProductWithTanDerivative,                             binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Tanh,                  Tanh,                  ElementwiseProductWithTanhDerivativeFromOutput,                  binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Tanh,                  Sigmoid,               ElementwiseProductWithSigmoidDerivativeFromOutput,               binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(ExponentialLinearUnit, ExponentialLinearUnit, ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(StableSigmoid,         StableSigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,               binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(StraightThrough,       StraightThrough,       ElementwiseProductWithStraightThroughDerivative,                 binaryWithInputGradient);

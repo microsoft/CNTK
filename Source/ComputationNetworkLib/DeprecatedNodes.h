@@ -193,6 +193,7 @@ public:
             m_innerproduct->AssignInnerProductOf(sliceOutputGrad, sliceInput1Value, false);
             InputRef(0).GradientAsMatrix() += *m_innerproduct;
 
+#if NANCHECK
             if (sliceOutputGrad.HasNan("sliceOutputGrad") || sliceInput1Value.HasNan("sliceInput1Value") || m_innerproduct->HasNan("m_innerproduct") || InputRef(0).GradientAsMatrix().HasNan("InputRef(0).GradientAsMatrix()")) {
                 fprintf(stderr, "DiagTimesNode \n");
 
@@ -266,6 +267,7 @@ public:
                 }
                 myfile.close();
             }
+#endif
 
         }
         else // right derivative
@@ -276,6 +278,7 @@ public:
             m_rightGradient->ColumnElementMultiplyWith(InputRef(0).ValueAsMatrix());
             sliceInput1Grad += *m_rightGradient;
 
+#if NANCHECK
             if (sliceOutputGrad.HasNan("sliceOutputGrad") || sliceInput1Grad.HasNan("sliceInput1Grad") || m_rightGradient->HasNan("m_rightGradient") || InputRef(0).ValueAsMatrix().HasNan("InputRef(0).GradientAsMatrix()")) {
                 fprintf(stderr, "DiagTimesNode \n");
 
@@ -349,6 +352,7 @@ public:
                 }
                 myfile.close();
             }
+#endif
         }
 
         

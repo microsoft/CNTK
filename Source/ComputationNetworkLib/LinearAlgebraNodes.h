@@ -83,6 +83,7 @@ public:
         else
             inputGradient.AddCopyOf(gradient);
 
+#if NANCHECK
         if (inputGradient.GetSOBPtr()->HasNan("inputGradient-PlusNode") || gradient.GetSOBPtr()->HasNan("gradient-PlusNode"))
         {
             fprintf(stderr, "Node Nan %ls", NodeName().c_str());
@@ -125,6 +126,8 @@ public:
             }
             myfile.close();
         }
+#endif
+
     }
 
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
@@ -341,6 +344,7 @@ public:
         else
             inputGradient.AddCopyOf(gradient, sign);
 
+#if NANCHECK
         if (inputGradient.GetSOBPtr()->HasNan("inputGradient-minusNode") || gradient.GetSOBPtr()->HasNan("gradient-minusNode"))
         {
             fprintf(stderr, "Node Nan %ls", NodeName().c_str());
@@ -383,6 +387,7 @@ public:
             }
             myfile.close();
         }
+#endif
     }
 
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
@@ -473,6 +478,7 @@ public:
         strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
         string date = std::string(buffer);
 
+#if NANCHECK
         if (inputGradient.GetSOBPtr()->HasNan("inputGradient") || gradient.GetSOBPtr()->HasNan("gradient") || otherInputValue.GetSOBPtr()->HasNan("otherInputValue"))
         {
             ofstream myfile;
@@ -533,6 +539,7 @@ public:
             }
             myfile.close();
         }
+#endif
     }
 };
 
@@ -1052,6 +1059,7 @@ public:
             else
                 input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
 
+#if NANCHECK
             if (input1.GetSOBPtr()->HasNan("input1") || outputGradient.GetSOBPtr()->HasNan("outputGradient") || input0Gradient.GetSOBPtr()->HasNan("input0Gradient"))
             {
                 fprintf(stderr, "Node Nan %ls", NodeName().c_str());
@@ -1113,6 +1121,7 @@ public:
                 }
                 myfile.close();
             }
+#endif
         }
         else if (inputIndex == 1) // right derivative
         {
@@ -1135,6 +1144,8 @@ public:
                 input1Gradient.AssignMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
             else
                 input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+
+#if NANCHECK
             if (input0.GetSOBPtr()->HasNan("input0") || outputGradient.GetSOBPtr()->HasNan("outputGradient") || input1Gradient.GetSOBPtr()->HasNan("input1Gradient"))
             {
                 fprintf(stderr, "Node Nan %ls", NodeName().c_str());
@@ -1197,6 +1208,7 @@ public:
                 }
                 myfile.close();
             }
+#endif
         }
     }
 

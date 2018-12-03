@@ -1258,6 +1258,7 @@ public:
         strftime(buffer, sizeof(buffer), "%d-%m-%Y_%H_%M_%S", timeinfo);
         string date = std::string(buffer);
 
+#if NANCHECK
         if (inputGrad.GetSOBPtr()->HasNan("inputGrad-RowStackNode") || outputGrad.GetSOBPtr()->HasNan("outputGrad-RowStackNode"))
         {
             fprintf(stderr, "Node Nan %ls", NodeName().c_str());
@@ -1300,6 +1301,7 @@ public:
             }
             myfile.close();
         }
+#endif
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }

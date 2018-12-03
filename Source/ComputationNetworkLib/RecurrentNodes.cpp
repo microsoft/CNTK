@@ -448,7 +448,8 @@ template<class ElemType, int direction>
             tgt.AddCondOf(GetMaskTensor(rank, fr), src, zero); // when back-propping into initial state, we swap the args and propagate the invalid ones
             // This will drag along the gaps as well, hence we mask them to zero above. --TODO : this is not optimal.
             // Alternative is a targeted copy using indices. Also needed to support initial state from nodes with time dimension.
-            
+
+#if NANCHECK
             if (src.GetSOBPtr()->HasNan("src") || tgt.GetSOBPtr()->HasNan("tgt"))
             {
                 fprintf(stderr, "Node Nan %ls", NodeName().c_str());
@@ -491,6 +492,7 @@ template<class ElemType, int direction>
                 }
                 myfile.close();
             }
+#endif
         }
         else // per-sequence initial state uses Scatter() instead
         {
@@ -583,6 +585,7 @@ template<class ElemType, int direction>
             else // none valid: nothing to back-prop
                 ;
 
+#if NANCHECK
             if (src.GetSOBPtr()->HasNan("src") || tgt.GetSOBPtr()->HasNan("tgt"))
             {
                 fprintf(stderr, "Node Nan %ls", NodeName().c_str());
@@ -625,6 +628,7 @@ template<class ElemType, int direction>
                 }
                 myfile.close();
             }
+#endif
         }
     }
 }

@@ -182,7 +182,6 @@ enum ElementWiseOperator
     Macro(Xor);                                                              \
     Macro(MaskNegative);                                                     \
     Macro(ElementwiseProductWithSigmoidDerivativeFromOutput);                \
-    Macro(ElementwiseProductWithTanhDerivativeFromOutput);                   \
     Macro(ElementwiseProductWithAtanhDerivative);                            \
     Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput);        \
     Macro(ElementwiseProductWithLogDerivativeFromOutput);                    \
