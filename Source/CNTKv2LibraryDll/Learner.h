@@ -29,6 +29,8 @@ namespace CNTK
 
         virtual void ResetSmoothedGradients() override;
 
+        virtual void SetNeedToUpdateMasterParameter() override { m_masterParameterUpdated = false; }
+
         bool GetFullPrecisionModelAt(size_t i, const NDArrayViewPtr& result);
 
         bool SetFullPrecisionModelAt(size_t i, const NDArrayViewPtr& newValue);

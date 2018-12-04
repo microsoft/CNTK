@@ -483,6 +483,8 @@ namespace CNTK
 
             m_numSamplesSeenInCurrentBlock = 0;
 
+            m_learner->SetNeedToUpdateMasterParameter();
+
             if (m_resetSGDMomentumAfterAggregation)
                 m_learner->ResetSmoothedGradients();
         }
