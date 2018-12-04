@@ -292,6 +292,12 @@ DECL ElemType StableSigmoid(ElemType z)
 }
 
 template <class ElemType>
+DECL ElemType StableTanh(ElemType z)
+{
+    return 2 * StableSigmoid(2*z) - 1;
+}
+
+template <class ElemType>
 DECL ElemType SigmoidDerivative(ElemType z)
 {
     //fprintf(stderr, "kind3 \n");
@@ -430,6 +436,7 @@ DefUnaryOp(Tan, tan_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
 DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (ElemType)(exp_(a)-1));
 DefUnaryOp(StableSigmoid, StableSigmoid(a));
+DefUnaryOp(StableTanh, StableTanh(a));
 DefUnaryOp(Asin, asin_(a));
 DefUnaryOp(Acos, acos_(a));
 DefUnaryOp(Atan, atan_(a));
