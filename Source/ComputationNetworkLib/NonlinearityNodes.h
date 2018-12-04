@@ -175,7 +175,7 @@ DeclareUnaryElementWiseWithOpCodeNode(Sin,                   Sin,               
 DeclareUnaryElementWiseWithOpCodeNode(Sinh,                  Sinh,                  ElementwiseProductWithSinhDerivative,                            binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,                  Sqrt,                  ElementwiseProductWithSqrtDerivative,                            binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Tan,                   Tan,                   ElementwiseProductWithTanDerivative,                             binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Tanh,                  Tanh,                  ElementwiseProductWithTanhDerivativeFromOutput,                  binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Tanh,                  StableTanh,            ElementwiseProductWithTanhDerivativeFromOutput,                  binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(ExponentialLinearUnit, ExponentialLinearUnit, ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(StableSigmoid,         StableSigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,               binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(StraightThrough,       StraightThrough,       ElementwiseProductWithStraightThroughDerivative,                 binaryWithInputGradient);
