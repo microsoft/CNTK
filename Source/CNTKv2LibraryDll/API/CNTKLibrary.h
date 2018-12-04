@@ -5142,6 +5142,8 @@ namespace CNTK
         ///
         virtual void ResetSmoothedGradients() = 0;
 
+        virtual void SetNeedToUpdateMasterParameter() { NOT_IMPLEMENTED }
+
         ///
         /// Returns current learning rate.
         ///

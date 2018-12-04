@@ -29,6 +29,8 @@ namespace CNTK
 
         virtual void ResetSmoothedGradients() override;
 
+        virtual void SetNeedToUpdateMasterParameter() override { m_masterParameterUpdated = false; }
+
     protected:
         LearnerBase(const std::vector<Parameter>& parameters,
             const LearningRateSchedule& learningRateSchedule,
