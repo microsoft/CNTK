@@ -153,11 +153,6 @@ namespace CNTK
 
     bool LearnerBase::SetFullPrecisionModelAt(size_t i, const NDArrayViewPtr& newValue)
     {
-        if (newValue->GetDataType() != DataType::Float16)
-        {
-            return false;
-        }
-
         const Parameter& parameter = Parameters()[i];
         if (parameter.GetDataType() != DataType::Float16)
         {
