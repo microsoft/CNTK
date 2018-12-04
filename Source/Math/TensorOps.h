@@ -239,14 +239,24 @@ DECL T safepow_(T base, T exponent)
 // additional functions that are standard in our context
 // -----------------------------------------------------------------------
 
+// Numerically stable Sigmoid, we can't remove the old one due to Speech dependency.
+template <class ElemType>
+DECL ElemType StableSigmoid(ElemType z)
+{
+    ElemType q = exp_(-fabs_(z));
+    ElemType numer;
+    if (z > 0) // q = exp(-z)
+        numer = 1;
+    else // q = exp(z)
+        numer = q;
+    return numer / (1 + q);
+}
+
 template <class ElemType>
 DECL ElemType Sigmoid(ElemType z)
 {
 #if 1 // BUGBUG: Numerically bad. But if I don't use this, results change.
-    ElemType negElem = -z;
-    ElemType e = exp_(negElem);
-
-    return 1 / (e + 1);
+    return StableSigmoid(z);
 #else
 #if 1 // Efficient implementation that avoids to divergent CUDA code paths that both compute exp() [jdroppo]. This version compiles to PTX without branches.
     ElemType q = exp_(-fabs_(z));
@@ -274,24 +284,16 @@ DECL ElemType StraightThrough(ElemType z)
     return z > (ElemType)0 ? (ElemType)1 : (ElemType)-1;
 }
 
-// Numerically stable Sigmoid, we can't remove the old one due to Speech dependency.
 template <class ElemType>
-DECL ElemType StableSigmoid(ElemType z)
+DECL ElemType StableTanh(ElemType z)
 {
-    ElemType q = exp_(-fabs_(z));
-    ElemType numer;
-    if (z > 0) // q = exp(-z)
-        numer = 1;
-    else // q = exp(z)
-        numer = q;
-    return numer / (1 + q);
+    return 2 * StableSigmoid(2 * z) - 1;
 }
 
 template <class ElemType>
 DECL ElemType SigmoidDerivative(ElemType z)
 {
-    ElemType v = Sigmoid(z);
-    return v * (1 - v);
+    return StableSigmoidDerivative(z);
 }
 
 template <class ElemType>
@@ -424,6 +426,7 @@ DefUnaryOp(Tan, tan_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
 DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (ElemType)(exp_(a)-1));
 DefUnaryOp(StableSigmoid, StableSigmoid(a));
+DefUnaryOp(StableTanh, StableTanh(a));
 DefUnaryOp(Asin, asin_(a));
 DefUnaryOp(Acos, acos_(a));
 DefUnaryOp(Atan, atan_(a));

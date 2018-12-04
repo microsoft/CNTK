@@ -96,7 +96,7 @@ enum ElementWiseOperator
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
     opSigmoid, opTanh, opAtanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier,
-    opCosine, opSin, opTan, opAcos, opAsin, opAtan, opCosh, opSinh, opAsinh, opExponentialLinearUnit, opStableSigmoid, opStraightThrough,
+    opCosine, opSin, opTan, opAcos, opAsin, opAtan, opCosh, opSinh, opAsinh, opExponentialLinearUnit, opStableSigmoid, opStableTanh, opStraightThrough,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative, opStableSigmoidDerivative, opStraightThroughDerivative,
     // binary
@@ -158,6 +158,7 @@ enum ElementWiseOperator
     Macro(Asinh);                 \
     Macro(ExponentialLinearUnit); \
     Macro(StableSigmoid);         \
+    Macro(StableTanh);            \
     Macro(StraightThrough);
 
 #define ForAllBinaryOps(Macro)                                               \
