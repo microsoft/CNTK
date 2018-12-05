@@ -5743,6 +5743,19 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             size_t k = src->Attributes()[L"numItems"].Value<size_t>();
             node->AddAttribute(attributesMap[L"numItems"], static_cast<int64_t>(k));
         }
+        else if (src->OpName() == L"EyeLikeOp")
+        {
+            bool isOutputSparse = src->Attributes().Contains(L"OutputSparse") ? (bool)src->Attributes()[L"OutputSparse"].Value<bool>() : false;
+            if(isOutputSparse)
+                LogicError("Node '%S': 'OutputSparse' is True. Sparse format export not supported.", src->AsString().c_str());
+        }
+        else if (src->OpName() == L"ConstantOp")
+        {
+            if(!src->Attributes().Contains(L"fillValue"))
+                LogicError("Node '%S': 'fillValue' not present. Cannot export op.", src->AsString().c_str());
+            auto fillValue = static_cast<float>(src->Attributes()[L"fillValue"].Value<double>());
+            node->AddAttribute("value", fillValue);
+        }
         else if (src->OpName() == L"Crop")
         {
             const NDShape& inputShape = src->Inputs()[0].Shape();
@@ -6155,8 +6168,6 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
         //
         if (src->OpName() == L"Times")
         {
-            if (src->Uid() == L"Times4771")
-                std::cout << "";
             size_t py_api_output_rank_argument = src->Attributes()[L"outputRank"].Value<size_t>();
             auto input1Shape = orderedInputs[0]->Shape();
             auto input2Shape = orderedInputs[1]->Shape();

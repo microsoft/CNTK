@@ -1714,20 +1714,22 @@ namespace CNTK
         return AsBlock(std::move(result), { { operandPlaceholder, operand }}, L"ExpandDims", name);
     }
 
-    FunctionPtr ZerosLike(const Variable& operand, const std::wstring& name)
+    FunctionPtr ConstantLike(const Variable& operand, const double value, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = 0.0;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = value;
 
         return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ZerosLike(const Variable& operand, const std::wstring& name)
+    {
+        return ConstantLike(operand, 0.0, name);
+    }
+
     FunctionPtr OnesLike(const Variable& operand, const std::wstring& name)
     {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = 1.0;
-
-        return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
+        return ConstantLike(operand, 1.0, name);
     }
 
     FunctionPtr CustomProxyOp(const std::vector<Variable>& operands, const std::wstring& customOp, const NDShape& outputShape, DataType outputType, const std::wstring& name)

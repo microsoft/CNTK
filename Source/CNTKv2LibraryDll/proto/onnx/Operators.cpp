@@ -477,6 +477,12 @@ namespace ONNX
         { L"OneHotOp", { {
             { L"OneHotOp", "OneHotEncoder"},
         } } },
+        { L"EyeLikeOp",{ {
+            { L"EyeLikeOp", "EyeLike" },
+        } } },
+        { L"ConstantOp",{ {
+            { L"ConstantOp", "ConstantLike" },
+        } } },
     };
 
     // given a cntkOpName and cntk attribute OpName which is saved in CNTK::Function's attribute,
