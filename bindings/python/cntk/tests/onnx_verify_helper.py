@@ -30,6 +30,7 @@ known_issues = [
     'MVN_1',
     'MVN_2',
     'MVN_3',
+    'Eye_Like_0',
 ]
 
 def parse_single_result_case(case_str):

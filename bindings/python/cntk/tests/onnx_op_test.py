@@ -2063,3 +2063,27 @@ def test_Crop_Manual(tmpdir, dtype):
     model = C.crop_manual(x, y, 1, 2, name='crop_manual')
     data = np.asarray(range(4*4), dtype=np.float32).reshape((1,4,4))
     verify_one_input(model, data, tmpdir, "Crop_Manual_0")
+
+# eye_like
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Eye_Like(tmpdir, dtype):
+    x = C.input_variable((4, 4), dynamic_axes=[], dtype=dtype, name='feature')
+    model = C.eye_like(x, sparse_output=False)
+    data = np.asarray(range(4*4), dtype=dtype).reshape((4,4))
+    verify_one_input(model, data, tmpdir, "Eye_Like_0")
+
+# zeros_like
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Zeros_Like(tmpdir, dtype):
+    x = C.input_variable((3, 4), dynamic_axes=[], dtype=dtype, name='feature')
+    model = C.zeros_like(x, name='zeros_like_op')
+    data = np.asarray(range(3*4), dtype=dtype).reshape((3,4))
+    verify_one_input(model, data, tmpdir, "Zeros_Like_0")
+
+# ones_like
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_Ones_Like(tmpdir, dtype):
+    x = C.input_variable((3, 4), dynamic_axes=[], dtype=dtype, name='feature')
+    model = C.ones_like(x, name='ones_like_op')
+    data = np.asarray(range(3*4), dtype=dtype).reshape((3,4))
+    verify_one_input(model, data, tmpdir, "Ones_Like_0")

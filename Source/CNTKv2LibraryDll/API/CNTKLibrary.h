@@ -4161,7 +4161,12 @@ namespace CNTK
     /// Create an instance of the expand dims operation on specified tensor input operand, for the specified axis 
     ///
     CNTK_API FunctionPtr ExpandDims(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-    
+
+    //
+    /// Create an instance of a constant-like operation. This produces a tensor with given constant value with the shape and dynamic axes specified by the operand.
+    ///
+    CNTK_API FunctionPtr ConstantLike(const Variable& operand, const double value, const std::wstring& name = L"");
+
     ///
     /// Create an instance of a zeros-like operation. This produces zeros with the shape and dynamic axes specified by the operand.
     ///

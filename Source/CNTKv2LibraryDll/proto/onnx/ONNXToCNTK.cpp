@@ -2929,6 +2929,21 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         FunctionPtr cntkFunction = TopK(inputs[0], k, axis, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
+    else if (onnxOpName == "EyeLike")
+    {
+        // Only limited import support is provided.
+        FunctionPtr cntkFunction = EyeLike(inputs[0], false, ToFixedWStringFromMultiByte(node->Name()));
+        return cntkFunction;
+    }
+    else if (onnxOpName == "ConstantLike")
+    {
+        // Limited import support implemented. 'shape' attribute 
+        // node syntax not supported. Only syntax with input tensor
+        // for shape and 'value' attribute for value is supported.
+        float value = GetNamedAttributeAsFloat(node, "value", 0.0f);
+        FunctionPtr cntkFunction = ConstantLike(inputOperand0, static_cast<double>(value), ToFixedWStringFromMultiByte(node->Name()));
+        return cntkFunction;
+    }
     else if (onnxOpName == "Crop")
     {
         // inputShape: [W, H, C] x [N]
