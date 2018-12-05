@@ -149,19 +149,19 @@ function OpMSMPI70SDK(
         } )
 }
 
-function OpNvidiaCub174(
+function OpNvidiaCub180(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "NVidia CUB 1.7.4"
-    $prodFile = "cub-1.7.4.zip"
-    $prodSubDir = "cub-1.7.4"
+    $prodName = "NVidia CUB 1.8.0"
+    $prodFile = "cub-1.8.0.zip"
+    $prodSubDir = "cub-1.8.0"
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "CUB_PATH";
     $envValue = $targetPath
-    $downloadSource = "https://github.com/NVlabs/cub/archive/1.7.4.zip"
+    $downloadSource = "https://github.com/NVlabs/cub/archive/1.8.0.zip"
 
-    @( @{ShortName = "CUB174"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
+    @( @{ShortName = "CUB180"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = "$targetPath" },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
          Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile" } );
