@@ -251,7 +251,7 @@ void DoWriteOutput(const ConfigParameters& config)
         ConfigParameters writerConfig(config(L"writer"));
         bool writerUnittest = writerConfig(L"unittest", "false");
         DataWriter testDataWriter(writerConfig);
-        writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
+        writer.WriteOutput_greedy(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
     }
     else if (config.Exists("outputPath"))
     {

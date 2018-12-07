@@ -21,8 +21,12 @@
 
 using namespace std;
 
-namespace Microsoft { namespace MSR { namespace CNTK {
-
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 template <class ElemType>
 class SimpleOutputWriter
@@ -43,7 +47,7 @@ public:
             fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
 
         std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
-        std::vector<ComputationNodeBasePtr> inputNodes  = m_net->InputNodesForOutputs(outputNodeNames);
+        std::vector<ComputationNodeBasePtr> inputNodes = m_net->InputNodesForOutputs(outputNodeNames);
 
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
@@ -74,7 +78,7 @@ public:
             {
                 std::map<std::wstring, void*, nocase_compare> inputMatricesUnitTest;
                 for (auto& iter : inputMatrices)
-                    inputMatricesUnitTest[iter.first] = (void*) iter.second.matrix.get();  // BUGBUG: void* are evil
+                    inputMatricesUnitTest[iter.first] = (void*) iter.second.matrix.get(); // BUGBUG: void* are evil
                 dataWriter.SaveData(0, inputMatricesUnitTest, actualMBSize, actualMBSize, 0);
             }
             else
@@ -90,7 +94,145 @@ public:
         }
 
         if (m_verbosity > 0)
-            fprintf(stderr, "Total Samples Evaluated = %lu\n", (unsigned long)totalEpochSamples);
+            fprintf(stderr, "Total Samples Evaluated = %lu\n", (unsigned long) totalEpochSamples);
+
+        // clean up
+    }
+
+    void WriteOutput_greedy(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false)
+    {
+        ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
+
+        if (outputNodeNames.size() == 0 && m_verbosity > 0)
+            fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
+
+        std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
+
+        // allocate memory for forward computation
+        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+
+		//get encode input matrix
+        std::vector<std::wstring> encodeOutputNodeNames (outputNodeNames.begin(), outputNodeNames.begin()+1);       
+        std::vector<ComputationNodeBasePtr> encodeOutputNodes = m_net->OutputNodesByName(encodeOutputNodeNames);
+        std::vector<ComputationNodeBasePtr> encodeInputNodes = m_net->InputNodesForOutputs(encodeOutputNodeNames);
+        StreamMinibatchInputs encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
+		
+        //start encode network        
+        dataReader.StartMinibatchLoop(mbSize, 0, encodeInputMatrices.GetStreamDescriptions(), numOutputSamples);
+        if (!dataWriter.SupportMultiUtterances())
+            dataReader.SetNumParallelSequences(1);
+        m_net->StartEvaluateMinibatchLoop(encodeOutputNodes[0]);
+
+		//get decode input matrix
+        std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin()+1, outputNodeNames.begin() + 2);
+        std::vector<ComputationNodeBasePtr> decodeOutputNodes = m_net->OutputNodesByName(decodeOutputNodeNames);
+        std::vector<ComputationNodeBasePtr> decodeinputNodes = m_net->InputNodesForOutputs(decodeOutputNodeNames);
+        StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
+
+		//start decode network
+        m_net->StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
+        auto lminput = decodeinputMatrices.begin();
+        //dataReader.StartMinibatchLoop(1, 0, decodeinputMatrices.GetStreamDescriptions(), numOutputSamples);
+        
+        
+        //(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeinputNodes[0])->Value()).SetValue();
+        
+		size_t deviceid = lminput->second.GetMatrix<ElemType>().GetDeviceId();
+        //size_t totalEpochSamples = 0;
+        std::map<std::wstring, void*, nocase_compare> outputMatrices;
+        Matrix<ElemType> encodeOutput(deviceid);
+        Matrix<ElemType> decodeOutput(deviceid);
+        Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
+        Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
+        Matrix<ElemType> lmin(deviceid);
+        //encodeOutput.GetDeviceId
+        const size_t numIterationsBeforePrintingProgress = 100;
+        //size_t numItersSinceLastPrintOfProgress = 0;
+        size_t actualMBSize;
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
+        {
+			//encode forward prop for whole utterance
+            ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes);
+            m_net->ForwardProp(encodeOutputNodes[0]);
+            encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
+            //encodeOutput.Print("encodeoutput");
+            dataReader.DataEnd();
+
+			//decode forward prop step by step
+			size_t vocabSize = encodeOutput.GetNumRows();
+            size_t blankId = vocabSize - 1;
+            
+            /*lmin.Resize(vocabSize, 12);
+        lmin.SetValue(0.0);
+        std::vector<size_t> labels = {4, 3, 3, 3, 3, 3, 3, 2, 2, 3, 2, 3};
+        for (size_t n = 0; n < labels.size(); n++)
+        {
+            lmin(labels[n], n) = 1;
+        }
+        lminput->second.pMBLayout->Init(1, 12);
+        std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
+        lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 12);
+        m_net->ForwardProp(outputNodes[0]);
+        decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[0])->Value()));
+        decodeOutput.Print("decode output");*/
+
+            lmin.Resize(vocabSize, 1);
+            lmin.SetValue(0.0);
+            lmin(blankId, 0) = 1;
+
+            
+            // Resetting layouts.
+            lminput->second.pMBLayout->Init(1, 1);
+            std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
+            lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 200);
+            ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+            DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+            m_net->ForwardProp(decodeOutputNodes[0]);
+
+			greedyOutputMax.Resize(vocabSize, 200);
+            size_t lmt = 0;
+            for (size_t t = 0; t < encodeOutput.GetNumCols(); t++)
+            {
+                decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value()));
+                //decodeOutput.Print("decode output");
+                sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput);
+                //sumofENandDE.Print("sum");
+                sumofENandDE.VectorMax(maxIdx, maxVal, true);
+                size_t maxId = (size_t)(maxIdx.Get00Element());
+                if (maxId != blankId)
+                {
+                    //fprintf(stderr, "maxid: %d\n", (int) maxId);
+                    lmin.Resize(vocabSize, 1);
+                    lmin.SetValue(0.0);
+                    lmin(maxId, 0) = 1.0;
+					
+                    greedyOutputMax.SetColumn(lmin, lmt);
+					
+                    std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
+                    lminput->second.pMBLayout->Init(1, 1);
+                    lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, -1 - lmt, 199 - lmt);
+                    ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+                    DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+                    m_net->ForwardProp(decodeOutputNodes[0]);
+                    lmt++;
+                    //fprintf(stderr, "lmt: %d\n", (int) lmt);
+                }
+
+                //break;
+            }
+            greedyOutput.SetValue(greedyOutputMax.ColumnSlice(0, lmt));
+            //greedyOutput.Print("greedy output");
+            outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
+			dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
+            //break;
+        }
+
+        //decode
+        
+        
+        
+
+        
 
         // clean up
     }
@@ -109,25 +251,25 @@ public:
 
         m_net->ForwardProp(outputNodes);
         for (int i = 0; i < outputNodes.size(); i++)
-            outputMatrices[outputNodes[i]->NodeName()] = (void*)(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
+            outputMatrices[outputNodes[i]->NodeName()] = (void*) (&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
 
         // TODO: What should the data size be?
         dataWriter.SaveData(0, outputMatrices, 1, 1, 0);
     }
 
     void WriteMinibatch(FILE* f, ComputationNodePtr node,
-        const WriteFormattingOptions & formattingOptions, char formatChar, std::string valueFormatString, std::vector<std::string>& labelMapping,
-        size_t numMBsRun, bool gradient, std::function<std::string(size_t)>& idToKeyMapping)
+                        const WriteFormattingOptions& formattingOptions, char formatChar, std::string valueFormatString, std::vector<std::string>& labelMapping,
+                        size_t numMBsRun, bool gradient, std::function<std::string(size_t)>& idToKeyMapping)
     {
         const auto sequenceSeparator = formattingOptions.Processed(node->NodeName(), formattingOptions.sequenceSeparator, numMBsRun);
-        const auto sequencePrologue =  formattingOptions.Processed(node->NodeName(), formattingOptions.sequencePrologue,  numMBsRun);
-        const auto sequenceEpilogue =  formattingOptions.Processed(node->NodeName(), formattingOptions.sequenceEpilogue,  numMBsRun);
-        const auto elementSeparator =  formattingOptions.Processed(node->NodeName(), formattingOptions.elementSeparator,  numMBsRun);
-        const auto sampleSeparator =   formattingOptions.Processed(node->NodeName(), formattingOptions.sampleSeparator,   numMBsRun);
+        const auto sequencePrologue = formattingOptions.Processed(node->NodeName(), formattingOptions.sequencePrologue, numMBsRun);
+        const auto sequenceEpilogue = formattingOptions.Processed(node->NodeName(), formattingOptions.sequenceEpilogue, numMBsRun);
+        const auto elementSeparator = formattingOptions.Processed(node->NodeName(), formattingOptions.elementSeparator, numMBsRun);
+        const auto sampleSeparator = formattingOptions.Processed(node->NodeName(), formattingOptions.sampleSeparator, numMBsRun);
 
         node->WriteMinibatchWithFormatting(f, FrameRange(), SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, formattingOptions.isSparse, labelMapping,
-            sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
-            valueFormatString, gradient, false, idToKeyMapping);
+                                           sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
+                                           valueFormatString, gradient, false, idToKeyMapping);
     }
 
     void InsertNode(std::vector<ComputationNodeBasePtr>& allNodes, ComputationNodeBasePtr parent, ComputationNodeBasePtr newNode)
@@ -156,15 +298,15 @@ public:
         std::vector<ComputationNodePtr> gradientNodes;
         std::vector<ComputationNodeBasePtr> allOutputNodes = outputNodes;
 
-        if (!nodeUnitTest)                                        // regular operation
+        if (!nodeUnitTest) // regular operation
         {
             m_net->AllocateAllMatrices({}, outputNodes, nullptr); // don't allocate for backward pass
         }
-        else                                                      // we mis-appropriate this code for unit testing of the back-prop path
+        else // we mis-appropriate this code for unit testing of the back-prop path
         {
             // Unit test only makes sense for one output node.
             if (outputNodes.size() != 1)
-                RuntimeError("Expected exactly 1 output node for unit test, got %d.", (int)outputNodes.size());
+                RuntimeError("Expected exactly 1 output node for unit test, got %d.", (int) outputNodes.size());
 
             // Set up machinery to output gradients alongside forward pass output
             // Gradients are not passed on to inputs. Need to hook an identity function in between.
@@ -186,14 +328,14 @@ public:
 
             // Update the evaluation order, and other things.
             m_net->CompileNetwork();
-            
+
             // Allocate memory for forward and backward computation. In case of unit test, treat the output node
             // like a criterion node. Submitting a node as parameter 3 here will allocate the gradients.
             m_net->AllocateAllMatrices({}, outputNodes, outputNodes[0]);
         }
 
         StreamMinibatchInputs inputMatrices = DataReaderHelpers::RetrieveInputMatrices(inputNodes);
-        
+
         // load a label mapping if requested
         std::vector<std::string> labelMapping;
         if ((formattingOptions.isCategoryLabel || formattingOptions.isSparse) && !formattingOptions.labelMappingFile.empty())
@@ -202,7 +344,7 @@ public:
         // open output files
         File::MakeIntermediateDirs(outputPath);
         std::map<ComputationNodeBasePtr, shared_ptr<File>> outputStreams; // TODO: why does unique_ptr not work here? Complains about non-existent default_delete()
-        for (auto & onode : allOutputNodes)
+        for (auto& onode : allOutputNodes)
         {
             std::wstring nodeOutputPath = outputPath;
             if (nodeOutputPath != L"-")
@@ -218,7 +360,7 @@ public:
 
         size_t totalEpochSamples = 0;
 
-        for (auto & onode : outputNodes)
+        for (auto& onode : outputNodes)
         {
             FILE* f = *outputStreams[onode];
             fprintfOrDie(f, "%s", formattingOptions.prologue.c_str());
@@ -235,7 +377,7 @@ public:
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
             m_net->ForwardProp(outputNodes);
 
-            for (auto & onode : outputNodes)
+            for (auto& onode : outputNodes)
             {
                 // compute the node value
                 // Note: Intermediate values are memoized, so in case of multiple output nodes, we only compute what has not been computed already.
@@ -250,7 +392,7 @@ public:
 
             if (nodeUnitTest)
             {
-                for (auto & node : gradientNodes)
+                for (auto& node : gradientNodes)
                 {
                     FILE* file = *outputStreams[node];
                     if (!node->GradientPtr())
@@ -266,7 +408,7 @@ public:
             }
             totalEpochSamples += actualMBSize;
 
-            fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", (unsigned long)numMBsRun, (unsigned long)actualMBSize);
+            fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", (unsigned long) numMBsRun, (unsigned long) actualMBSize);
             if (outputPath == L"-") // if we mush all nodes together on stdout, add some visual separator
                 fprintf(stdout, "\n");
 
@@ -277,16 +419,16 @@ public:
             dataReader.DataEnd();
         } // end loop over minibatches
 
-        for (auto & stream : outputStreams)
+        for (auto& stream : outputStreams)
         {
             FILE* f = *stream.second;
             fprintfOrDie(f, "%s", formattingOptions.epilogue.c_str());
         }
 
-        fprintf(stderr, "Written to %ls*\nTotal Samples Evaluated = %lu\n", outputPath.c_str(), (unsigned long)totalEpochSamples);
+        fprintf(stderr, "Written to %ls*\nTotal Samples Evaluated = %lu\n", outputPath.c_str(), (unsigned long) totalEpochSamples);
 
         // flush all files (where we can catch errors) so that we can then destruct the handle cleanly without error
-        for (auto & iter : outputStreams)
+        for (auto& iter : outputStreams)
             iter.second->Flush();
     }
 
@@ -296,4 +438,6 @@ private:
     void operator=(const SimpleOutputWriter&); // (not assignable)
 };
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft
