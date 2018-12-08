@@ -43,9 +43,25 @@ public:
     {
         overrideBatchSize = defaultFreeBatchSize;
     }
+
+    static size_t FreeSequenceSize()
+    {
+        return overrideSequenceSize;
+    }
+    static void OverrideSequenceSize(size_t i_overrideSequenceSize)
+    {
+        overrideSequenceSize = i_overrideSequenceSize;
+    }
+
+    static void ResetOverrideSequenceSize()
+    {
+        overrideSequenceSize = CNTK::NDShape::FreeDimension;
+    }
 private:
     static const int defaultFreeBatchSize = 1;
     static int overrideBatchSize;
+
+    static size_t overrideSequenceSize;
 };
 
 namespace CNTK

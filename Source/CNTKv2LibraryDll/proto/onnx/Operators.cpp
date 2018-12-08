@@ -9,6 +9,8 @@
 #include "Utils.h"
 
 int BatchSizeProcessor::overrideBatchSize = BatchSizeProcessor::defaultFreeBatchSize;
+size_t BatchSizeProcessor::overrideSequenceSize = CNTK::NDShape::FreeDimension;
+
 
 namespace CNTK
 {
