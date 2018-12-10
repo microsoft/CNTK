@@ -127,6 +127,31 @@ namespace CNTK
         }
     }
 
+    void LearnerBase::ResetSmoothedGradients(const std::vector<NDArrayViewPtr>& newSmoothedGradients)
+    {
+
+        for (size_t i = 0; i < newSmoothedGradients.size(); ++i)
+        {
+            const Parameter& parameter = Parameters()[i];
+            if (parameter.GetDataType() != DataType::Float16)
+            {
+                LogicError("Only support float16 in ResetSmoothedGradients");
+            }
+
+            const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
+
+            // get fp32 parameter values
+            auto parameterMatrix = parameter.Value()->GetWritableMatrix<half>();
+            auto compoundMatrix = smoothedGradientValue->GetWritableMatrix<float>();
+            auto smoothedGradientMatrix = compoundMatrix->ColumnSlice(0, parameterMatrix->GetNumCols());
+            Matrix<half>& newSGMatrix = *newSmoothedGradients[i]->GetWritableMatrix<half>();
+
+            // Instead of reset it to 0.0, reset it to the new sg
+            smoothedGradientMatrix.CastAssignValuesOf(newSGMatrix);
+        }
+
+    }
+
     bool LearnerBase::GetFullPrecisionModelAt(size_t i, const NDArrayViewPtr& result)
     {
         const Parameter& parameter = Parameters()[i];

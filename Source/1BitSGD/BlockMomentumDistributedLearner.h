@@ -100,6 +100,10 @@ namespace CNTK
             m_tempBlockGradient.resize(parameterValues.size());
             m_tempBlockGradientFloat.resize(parameterValues.size());
             m_currentParameters.resize(parameterValues.size());
+
+            // TODO: make it configurable
+            m_resetSGDMomentumToBlockMomentumAfterAggregation = true;
+
             Reset(parameterValues);
         }
 
@@ -486,7 +490,17 @@ namespace CNTK
             m_learner->SetNeedToUpdateMasterParameter();
 
             if (m_resetSGDMomentumAfterAggregation)
-                m_learner->ResetSmoothedGradients();
+            {
+                LearnerMomentumSGD* pLocalLearner = dynamic_cast<LearnerMomentumSGD*>(m_learner.get());
+                if (m_resetSGDMomentumToBlockMomentumAfterAggregation && pLocalLearner)
+                {
+                    pLocalLearner->ResetSmoothedGradients(m_blockLevelSmoothedGradient);
+                }
+                else
+                {
+                    m_learner->ResetSmoothedGradients();
+                }
+            }
         }
 
         Dictionary CreateCheckpointImpl(std::vector<NDArrayViewPtr>& parameters)
@@ -819,6 +833,8 @@ namespace CNTK
 
         bool m_endOfDataReached;
         bool m_shutDownSeenBefore = false;
+
+        bool m_resetSGDMomentumToBlockMomentumAfterAggregation;
 
         DISABLE_COPY_AND_MOVE(BlockMomentumDistributedLearner);
      };
