@@ -111,25 +111,25 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-		//get encode input matrix
+        //get encode input matrix
         std::vector<std::wstring> encodeOutputNodeNames (outputNodeNames.begin(), outputNodeNames.begin()+1);       
         std::vector<ComputationNodeBasePtr> encodeOutputNodes = m_net->OutputNodesByName(encodeOutputNodeNames);
         std::vector<ComputationNodeBasePtr> encodeInputNodes = m_net->InputNodesForOutputs(encodeOutputNodeNames);
         StreamMinibatchInputs encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
-		
+        
         //start encode network        
         dataReader.StartMinibatchLoop(mbSize, 0, encodeInputMatrices.GetStreamDescriptions(), numOutputSamples);
         if (!dataWriter.SupportMultiUtterances())
             dataReader.SetNumParallelSequences(1);
         m_net->StartEvaluateMinibatchLoop(encodeOutputNodes[0]);
 
-		//get decode input matrix
+        //get decode input matrix
         std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin()+1, outputNodeNames.begin() + 2);
         std::vector<ComputationNodeBasePtr> decodeOutputNodes = m_net->OutputNodesByName(decodeOutputNodeNames);
         std::vector<ComputationNodeBasePtr> decodeinputNodes = m_net->InputNodesForOutputs(decodeOutputNodeNames);
         StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
-		//start decode network
+        //start decode network
         m_net->StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
         auto lminput = decodeinputMatrices.begin();
         //dataReader.StartMinibatchLoop(1, 0, decodeinputMatrices.GetStreamDescriptions(), numOutputSamples);
@@ -137,7 +137,7 @@ public:
         
         //(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeinputNodes[0])->Value()).SetValue();
         
-		size_t deviceid = lminput->second.GetMatrix<ElemType>().GetDeviceId();
+        size_t deviceid = lminput->second.GetMatrix<ElemType>().GetDeviceId();
         //size_t totalEpochSamples = 0;
         std::map<std::wstring, void*, nocase_compare> outputMatrices;
         Matrix<ElemType> encodeOutput(deviceid);
@@ -151,15 +151,15 @@ public:
         size_t actualMBSize;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
         {
-			//encode forward prop for whole utterance
+            //encode forward prop for whole utterance
             ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes);
             m_net->ForwardProp(encodeOutputNodes[0]);
             encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
             //encodeOutput.Print("encodeoutput");
             dataReader.DataEnd();
 
-			//decode forward prop step by step
-			size_t vocabSize = encodeOutput.GetNumRows();
+            //decode forward prop step by step
+            size_t vocabSize = encodeOutput.GetNumRows();
             size_t blankId = vocabSize - 1;
             
             /*lmin.Resize(vocabSize, 12);
@@ -189,7 +189,7 @@ public:
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
             m_net->ForwardProp(decodeOutputNodes[0]);
 
-			greedyOutputMax.Resize(vocabSize, 200);
+            greedyOutputMax.Resize(vocabSize, 200);
             size_t lmt = 0;
             for (size_t t = 0; t < encodeOutput.GetNumCols(); t++)
             {
@@ -205,9 +205,9 @@ public:
                     lmin.Resize(vocabSize, 1);
                     lmin.SetValue(0.0);
                     lmin(maxId, 0) = 1.0;
-					
+                    
                     greedyOutputMax.SetColumn(lmin, lmt);
-					
+                    
                     std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
                     lminput->second.pMBLayout->Init(1, 1);
                     lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, -1 - lmt, 199 - lmt);
@@ -223,7 +223,16 @@ public:
             greedyOutput.SetValue(greedyOutputMax.ColumnSlice(0, lmt));
             //greedyOutput.Print("greedy output");
             outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
-			dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
+            if (lmt == 0)               
+            {
+                greedyOutput.Resize(vocabSize, 1);
+                lmin.Resize(vocabSize, 1);
+                lmin.SetValue(0.0);
+                lmin(blankId, 0) = 1;
+                greedyOutput.SetColumn(lmin, 0);
+                lmt = 1;
+            }
+            dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
             //break;
         }
 
