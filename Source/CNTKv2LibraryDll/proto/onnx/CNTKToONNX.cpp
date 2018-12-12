@@ -4336,14 +4336,8 @@ void ResolveGraphAndSaveModel(onnxruntime::Model *model)
     model->SetProducerName(CNTK_ONNX_PRODUCER_NAME);
 
     // Uncomment below code for debugging and trouble shooting.
-    std::string savePath = "E:/LiqunWA/CNTK/ONNX/TestOps";
-    onnxruntime::Model::Save(*model, savePath + "/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
-
-    //std::shared_ptr<onnxruntime::Model> model2;
-    //onnxruntime::common::Status loadStatus = onnxruntime::Model::Load(
-    //    savePath + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx", model2);
-    //Graph* graph2 = &model->MainGraph();
-    //graph2->Resolve();
+    //std::string savePath = "C:/Temp";
+    //onnxruntime::Model::Save(*model, savePath + "/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
 }
 
 // use this method to attach an identity op so that state inputs/outputs of the subgraph are in the same order as the scan op
