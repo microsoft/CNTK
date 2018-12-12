@@ -3783,8 +3783,13 @@ onnxruntime::Node* CNTKToONNXHelper::CreateReconcileDynamicAxisNode(const Functi
         Node* inputReshapeNode = AddReshapeNode(*inputs[0], newShape, nodeName + "_input_reshape", graph);
         inputNodeArg = const_cast<onnxruntime::NodeArg *>(inputReshapeNode->OutputDefs()[0]);
     }
-    else
+    else if(input.DynamicAxes().size() == 0)
     {
+        inputNodeArg = inputs[0];
+    }
+    else if (input.DynamicAxes().size() == 2)
+    {
+        // This is the case with unfold op. It has been verified with onnx runtime.
         inputNodeArg = inputs[0];
     }
 
@@ -4048,6 +4053,10 @@ onnxruntime::Node* CNTKToONNXHelper::ExtractShapeWithDynamicAxes(onnxruntime::Gr
 //  ONNX: [#, 8,600]->ToSequenceOp->[8,#, 600]->Sequence::Gather->[6,#, 600]->UnpackSequenceOp->[#,6, 600]
 //
 // TODO: Waiting Skype smart reply with attention model before enabling the functionality of tracking sequence dimension.
+// 
+// CodeReview: to_sequence may take a second input 
+// (likely from Unpack_sequence_axis's second output)
+// This is needed only for batch size > 1.
 onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const FunctionPtr& src,
     onnxruntime::Graph* graph,
     std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
@@ -4118,7 +4127,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const Funct
                 src->Outputs()[1].Shape()[src->Outputs()[1].Shape().Rank() - 1] == NDShape::FreeDimension)
             {
                 // the second output of UnpackSequenceOp has a shape of [batch][sequence]
-                // ToTypeProto does not handle this case (it only swap is there are 2 dynamic axes [batch, sequence][d1...])
+                // ToTypeProto does not handle this case (it only swap if there are 2 dynamic axes [batch, sequence][d1...])
                 // make output onnx shape [sequence, batch] (was [batch,sequence])
                 ONNX_NAMESPACE::TensorShapeProto shapeProto = *outputs[1]->Shape();
                 const ::onnx::TensorShapeProto_Dimension dim0 = shapeProto.dim(0);
@@ -4453,7 +4462,9 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     }
 
                     // ProcessOutputs(src, outputs, graph);
-                    AddIdentityOp(*inputs[0], graph, ToLegacyString(ToUTF8(src->Outputs()[0].Uid())));
+                    // This is for the final state output - ONNX requires graph output being a pure output that 
+                    // do not server as an input to any other node. Thus we have to add an identity node.
+                    AddIdentityOp(*inputs[0], graph, UniqueNodeNameStorage::GetUniqueOutputNodeName(src->Outputs()[0]));
 
                     // do not create node from step ops.
                     return false;
@@ -4525,37 +4536,87 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     // in ProcessInputs with state shape (WITHOUT SEQUENCE AXIS). Here we alse need to use state shape (from m_stateOutput)
                     // to create a NodeArg.
                     // as an input to a scan op, state shall always has batch axis
-                    onnx::TypeProto scanInitialStateTypeProto = ToTypeProto(scanLoopState.m_stateOutput.Shape(),
+                    onnx::TypeProto calculatedScanInitialStateTypeProto = ToTypeProto(scanLoopState.m_stateOutput.Shape(),
                         true /* ScanWithoutBatchAxis ? false : scanLoopState.m_stateOutput.HasBatchAxis()*/,
                         /*scanLoopState.m_stateOutput.HasSequenceAxis()*/ false);
                     onnx::TensorProto_DataType elemType = ConvertDataTypeCNTKToTensorProto(scanLoopState.m_stateOutput.GetDataType());
-                    scanInitialStateTypeProto.mutable_tensor_type()->set_elem_type(elemType);
-
-                    onnxruntime::NodeArg &subGraphInitialStateNodeArg = *scanLoopState.m_initialStateNodeArg;
+                    calculatedScanInitialStateTypeProto.mutable_tensor_type()->set_elem_type(elemType);
 
                     std::string scanInitialStateNodeArgName = MakeInitialStateNodeArgName(scanLoopState.m_stateOutput);
-                    onnxruntime::NodeArg *scanInitialStateNodeArg = &graph->GetOrCreateNodeArg(
-                        scanInitialStateNodeArgName, &scanInitialStateTypeProto);
 
-                    const ::onnx::TensorShapeProto& shape0 = scanInitialStateTypeProto.tensor_type().shape();
-                    const ::onnx::TensorShapeProto& shape1 = *scanInitialStateNodeArg->Shape();
-
-                    if (CompareTensorShapeProtoEqual(scanInitialStateTypeProto.tensor_type().shape(), 
-                        *scanInitialStateNodeArg->Shape()))
+                    onnxruntime::NodeArg *scanInitialStateNodeArg = graph->GetNodeArg(scanInitialStateNodeArgName);
+                    // this following if-else does:
+                    //  scanInitialStateNodeArgName("Block89_Output_0PastValue96") -> Scan
+                    //          [#, d]
+                    //                      OR
+                    //  scanInitialStateNodeArgName("Block89_Output_0PastValue96") -> reshape -> "Block89_Output_0PastValue96_reshaped"-> Scan
+                    //          [d]                                                                     [#, d]
+                    if (scanInitialStateNodeArg == nullptr ||
+                        CompareTensorShapeProtoEqual(calculatedScanInitialStateTypeProto.tensor_type().shape(),
+                            *scanInitialStateNodeArg->Shape()))
                     {
+                        // 1. a node arg for the initial state does not exist - create one with calcualted shape.
+                        // 2. or a node arg for the initial state already exists with the same shape -
+                        //  use it as the scan initial state input.
+                        scanInitialStateNodeArg = &graph->GetOrCreateNodeArg(
+                            scanInitialStateNodeArgName, &calculatedScanInitialStateTypeProto);
                         input_args.push_back(scanInitialStateNodeArg);
                     }
                     else
                     {
-                        // initial state is an output. reshape it to match Scan spec.
-                        // the only difference is the bacth dimension.
+                        // a node arg for the initial state already exists but with a different shape.
+                        // reshape it to match Scan spec.
+                        // the only difference is the bacth dimension. 
+                        // The case that initial state being a scalar is treated in ProcessInputs.
                         std::string initialStateReshapedNodeArgName = scanInitialStateNodeArgName + "_reshaped";
-                        std::vector<int64_t> newShape = ToINTS(scanInitialStateTypeProto);
+                        std::vector<int64_t> newShape = ToINTS(calculatedScanInitialStateTypeProto);
                         Node *initialStateReshapedNode = AddReshapeNode(
                             *scanInitialStateNodeArg, newShape, initialStateReshapedNodeArgName, graph);
                         input_args.push_back(const_cast<NodeArg*>(initialStateReshapedNode->OutputDefs()[0]));
                     }
 
+                    // There are cases that one NodeArg inputs to 2 step functions as initial states.
+                    // Thus we name initial state NodeArg as a combination of state input and output in MakeInitialStateNodeArgName
+                    // to avoid duplication (e.g "Block89_Output_0PastValue96"). 
+                    // if there is a UniqueNodeNameStorage::GetUniqueOutputNodeName(scanLoopState.m_initialState)
+                    // in the main graph, it needs to be connected to the initial state input of the scan.
+                    // That is 
+                    //  "Block89_Output_0" -> Identity -> "Block89_Output_0PastValue96"
+                    // OR (if their shape if off by a batch axis)
+                    //  "Block89_Output_0" -> Reshape -> "Block89_Output_0PastValue96"
+                    //  
+                    // An example case is test_unfold.
+                    // this following if-else does:
+                    //  "Block89_Output_0" -> Indentity -> scanInitialStateNodeArgName("Block89_Output_0PastValue96")
+                    //          [#, d]                              [#, d]
+                    //                      OR
+                    //  "Block89_Output_0" -> Reshape -> scanInitialStateNodeArgName("Block89_Output_0PastValue96")
+                    //          [d]                                 [#, d]
+                    if (UniqueNodeNameStorage::GetUniqueOutputNodeName(scanLoopState.m_initialState) !=
+                        scanInitialStateNodeArgName)
+                    {
+                        // this is just to make sure scanInitialStateNodeArgName is concinated.
+                        {
+                            const NodeArg *possibleInputToInitialState = graph->GetNodeArg(
+                                UniqueNodeNameStorage::GetUniqueOutputNodeName(scanLoopState.m_initialState));
+                            if (possibleInputToInitialState != nullptr)
+                            {
+                                const ::onnx::TensorShapeProto& shape0 = *possibleInputToInitialState->Shape();
+                                const ::onnx::TensorShapeProto& shape1 = *scanInitialStateNodeArg->Shape();
+
+                                if (CompareTensorShapeProtoEqual(shape0, shape1))
+                                    AddIdentityOp(const_cast<NodeArg &>(*possibleInputToInitialState), graph, scanInitialStateNodeArgName);
+                                else
+                                {
+                                    std::vector<int64_t> newShape = ToINTS(calculatedScanInitialStateTypeProto);
+                                    Node *initialStateReshapedNode = AddReshapeNode(
+                                        const_cast<NodeArg &>(*possibleInputToInitialState), newShape, scanInitialStateNodeArgName, graph);
+                                }
+                            }
+                        }
+                    }
+
+                    onnxruntime::NodeArg &subGraphInitialStateNodeArg = *scanLoopState.m_initialStateNodeArg;
                     scanSubgraphOrderedInputs.push_back(&scanGraph.GetOrCreateNodeArg(subGraphInitialStateNodeArg.Name(), nullptr));
 
                     {
@@ -4566,7 +4627,7 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                             ConvertDataTypeCNTKToTensorProto(scanLoopState.m_stateOutput.GetDataType()));
 
                         // TODO: UniqueNodeNameStorage is causing model validation failure.
-                        std::string stateOutputName = ToLegacyString(ToUTF8(scanLoopState.m_stateOutput.Uid()));
+                        std::string stateOutputName = UniqueNodeNameStorage::GetUniqueOutputNodeName(scanLoopState.m_stateOutput);
                         // std::string stateOutputName = UniqueNodeNameStorage::GetUniqueInputNodeName(scanLoopState.m_stateOutput);
                             
                         onnxruntime::NodeArg &scanFinalStateNodeArg = 
@@ -4577,7 +4638,11 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     }
 
                     if (scanLoopState.m_hasInitializer)
-                        graph->AddInitializedTensor(scanLoopState.m_initialStateTensor);
+                    {
+                        const TensorProto *dummyInitTensor;
+                        if (!graph->GetInitializedTensor(scanLoopState.m_initialStateTensor.name(), dummyInitTensor))
+                            graph->AddInitializedTensor(scanLoopState.m_initialStateTensor);
+                    }
                     // else initializer is input. 
                 }
 
@@ -4679,8 +4744,6 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     onnxruntime::Node* functionNode = nullptr;
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
     std::string onnxOpName = ToOPName(src);
-
-    // std::cout << ToLegacyString(ToUTF8(src->Uid())) << std::endl;
 
     // TODO: uncomment this code once bidirectional LSTM is supprted.
     //if (cntkOpName == "Splice")
@@ -4926,23 +4989,6 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
 
     functionNodes.emplace(src, functionNode);
     return functionNode; 
-}
-
-Variable& SkipDynamicAxisPackUnpack(Variable &input, bool &dynamicAxisPackUnpackSkipped)
-{
-    dynamicAxisPackUnpackSkipped = false;
-    std::set<std::wstring> ops({ L"UnpackBatchAxis" , L"ToBatchAxis" , L"UnpackSequenceOp", L"ToSequenceOp" });
-    while (input.Owner() && ops.find(input.Owner()->OpName()) != ops.end())
-    {
-        // 
-        if (input.Owner()->OpName() == L"ToBatchAxis")
-            BatchSizeProcessor::OverrideBatchSize(input.Owner()->Inputs()[0].Shape().Dimensions()[0]);
-        else if (input.Owner()->OpName() == L"ToBatchAxis")
-        input = input.Owner()->Inputs()[0];
-        dynamicAxisPackUnpackSkipped = true;
-    } 
-    
-    return input;
 }
 
 bool TryMatchNodeArgType(onnx::TypeProto &argType, onnxruntime::Graph* graph, const std::string &nodeArgName)
@@ -5230,7 +5276,6 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                 LogicError("Node '%S': Placeholder isn't supported currently.", src->AsString().c_str());
         }
 
-        // first try to skip complex patterns otherwise SkipDynamicAxisPackUnpack may skip an element 
         // of the pattern so that complex patterns become not skipped as a whole.
         // retry SkipBatchAndSequenceAxisInput shall be good enough.
         input = SkipBatchAndSequenceAxisInput(input);
@@ -5246,7 +5291,6 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         //// if we keep CNTK dynamic semantics:
         //// (1987, 600) -> ToBatchAxis -> [#](600, )
         //// ElementTimes with [#][600] -> (#, 600) which is (1, 600)
-        //input = SkipDynamicAxisPackUnpack(input, dynamicAxisPackUnpackSkipped);
         //if (dynamicAxisPackUnpackSkipped)
         //    input = SkipBatchAndSequenceAxisInput(input);
 
@@ -6555,8 +6599,6 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
         //
         if (src->OpName() == L"Times")
         {
-            if (src->Uid() == L"Times4771")
-                std::cout << "";
             size_t py_api_output_rank_argument = src->Attributes()[L"outputRank"].Value<size_t>();
             auto input1Shape = orderedInputs[0]->Shape();
             auto input2Shape = orderedInputs[1]->Shape();

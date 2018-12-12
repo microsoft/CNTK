@@ -36,7 +36,9 @@ public:
 
     static void OverrideBatchSize(int i_overrideBatchSize)
     {
-        overrideBatchSize = i_overrideBatchSize;
+        // TODO: this does not work completely. 
+        // TODO: Waiting Skype smart reply with attention model before enabling the functionality of tracking sequence dimension.
+        // overrideBatchSize = i_overrideBatchSize;
     }
 
     static void ResetOverrideBatchSize()

@@ -247,8 +247,13 @@ def save_test_data(model, onnx_model, test_data_path, input_data, output_data, n
         save_cntk_data_as_onnx_tensor(os.path.join(str(test_data_path), 'output_{0}.pb'.format(0)), 
                         model.outputs[0], output_data, onnx_value_info_proto)
     else:
-        for i in range(0, len(model.outputs)): 
-            output_data_i = output_data[model.outputs[i]]
+        for i in range(0, len(model.outputs)):
+            output_data_i = None
+            if type(output_data) == dict:
+                output_data_i = output_data[model.outputs[i]]
+            else:
+                # models with such output exists
+                output_data_i = np.array(output_data[None][0][model.outputs[i]])
             onnx_value_info_proto = find_onnx_value_info_proto_with_matching_name(
                 onnx_model.graph.output, output_names[i], onnx_model.graph.output[i])
             save_cntk_data_as_onnx_tensor(os.path.join(str(test_data_path), 'output_{0}.pb'.format(i)), 
