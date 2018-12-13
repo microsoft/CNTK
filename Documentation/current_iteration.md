@@ -4,7 +4,7 @@
 * Moved to CUDA 10 for both Windows and Linux.
 * Support advance RNN loop in ONNX export.
 
-## CUDA support for CUDA 10
+## CNTK support for CUDA 10
 
 CNTK now supports CUDA 10. This requires an update to build environment to Visual Studio 2017 v15.9 for Windows.
 
