@@ -158,7 +158,7 @@ template <typename ElemType>
 void CNTKEval<ElemType>::Evaluate(std::map<std::wstring, std::vector<ElemType>*>& inputs, std::map<std::wstring, std::vector<ElemType>*>& outputs)
 {
     size_t minibatchSize = this->m_config(L"minibatchSize", (size_t) 10240);
-    size_t rightSplice = this->m_config(L"rightSplice", (size_t) 0);
+    size_t rightSplice = this->m_config(L"rightSplice", (size_t) 20);
     // get the evaluation names from the output string
     vector<wstring> outNodeNames;
 
