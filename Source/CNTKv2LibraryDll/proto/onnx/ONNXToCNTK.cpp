@@ -46,7 +46,7 @@ private:
     static Constant CreateConstant(const onnx::TensorProto &valueProto, const std::string &nodeName,
                                    const DeviceDescriptor &computeDevice);
     template <typename TDst, typename TSrc>
-    static const CNTK::Constant CreateConstantWithTensorData(CNTK::NDShape &shape, onnx::TensorProto_DataType tensorProtoDataType,
+    static const CNTK::Constant CreateConstantWithTensorData(CNTK::NDShape &shape, google::protobuf::int32 tensorProtoDataType,
                                                              CNTK::DataType cntkDataType, const TSrc *srcData, CNTK::NDShape &reversedShape,
                                                              const CNTK::DeviceDescriptor &computeDevice, const std::string &nodeName);
 
@@ -576,7 +576,7 @@ void CopyFromProto(const onnx::TensorProto &src, T &dst, int srcIndex, int dstIn
 }
 
 template <typename TDst, typename TSrc>
-const CNTK::Constant CNTK::ONNXToCNTKHelper::CreateConstantWithTensorData(CNTK::NDShape &shape, onnx::TensorProto_DataType tensorProtoDataType,
+const CNTK::Constant CNTK::ONNXToCNTKHelper::CreateConstantWithTensorData(CNTK::NDShape &shape, google::protobuf::int32 tensorProtoDataType,
                                                                           CNTK::DataType cntkDataType, const TSrc *srcData, CNTK::NDShape &reversedShape, const CNTK::DeviceDescriptor &computeDevice, const std::string &nodeName)
 {
     auto totalSize = shape.TotalSize();
@@ -633,7 +633,7 @@ const Node *ONNXToCNTKHelper::GetChildNode(const Node *parentNode, const NodeArg
     Node::NodeConstIterator itChildNode = parentNode->InputNodesBegin();
     for (; itChildNode != parentNode->InputNodesEnd(); ++itChildNode)
     {
-        const Node *childNode = *itChildNode;
+        const Node *childNode = &(*itChildNode);
         const ConstPointerContainer<std::vector<NodeArg *>> &childOutputDefs = childNode->OutputDefs();
         nodeArgIndex = 0;
         for (ConstPointerContainer<std::vector<NodeArg *>>::ConstIterator itChildOutput = childOutputDefs.begin(); 
@@ -3003,7 +3003,7 @@ std::pair<const Node *, int> FindParentAndChildIndex(const Node *node)
     Node::NodeConstIterator it = node->OutputNodesBegin();
     if (it != node->OutputNodesEnd())
     {
-        const Node *parent = *it;
+        const Node *parent = &(*it);
         int index = 0;
         for (auto nodeArg : parent->InputDefs())
         {
@@ -3768,14 +3768,14 @@ std::pair<bool, std::vector<FunctionPtr>> ONNXToCNTKHelper::CheckNodeBelongsToOp
         Node::NodeConstIterator it = node->OutputNodesBegin();
         if (it != node->OutputNodesEnd())
         {
-            firstParentNode = *it;
+            firstParentNode = &(*it);
         }
         if (firstParentNode != nullptr)
         {
             it = firstParentNode->OutputNodesBegin();
             if (it != firstParentNode->OutputNodesEnd())
             {
-                grandParentNode = *it;
+                grandParentNode = &(*it);
             }
         }
 

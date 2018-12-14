@@ -2654,7 +2654,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
         CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
 
     auto nodeName = ToLegacyString(ToUTF8(src->Uid()));
-    onnxruntime::Node *lstmNode = graph->AddNode(nodeName, "LSTM", "", nodeInputs, nodeOutputs);
+    onnxruntime::Node *lstmNode = &graph->AddNode(nodeName, "LSTM", "", nodeInputs, nodeOutputs);
 
     lstmNode->AddAttribute("activations", activations);
     lstmNode->AddAttribute("direction", direction);
@@ -2931,7 +2931,7 @@ onnxruntime::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
         CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
 
     auto nodeName = ToLegacyString(ToUTF8(src->Uid()));
-    onnxruntime::Node *gruNode = graph->AddNode(nodeName, "GRU", "", nodeInputs, nodeOutputs);
+    onnxruntime::Node *gruNode = &graph->AddNode(nodeName, "GRU", "", nodeInputs, nodeOutputs);
 
     gruNode->AddAttribute("activations", activations);
     gruNode->AddAttribute("direction", direction);
@@ -3119,7 +3119,7 @@ onnxruntime::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
         CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
 
     auto nodeName = UniqueNodeNameStorage::GetUniqueNodeName(src);
-    onnxruntime::Node *rnnNode = graph->AddNode(nodeName, "RNN", "", nodeInputs, nodeOutputs);
+    onnxruntime::Node *rnnNode = &graph->AddNode(nodeName, "RNN", "", nodeInputs, nodeOutputs);
 
     rnnNode->AddAttribute("activations", activations);
     rnnNode->AddAttribute("direction", direction);
@@ -3217,7 +3217,7 @@ onnxruntime::NodeArg &CNTKToONNXHelper::CreateAddShapeNodeArg(Graph *graph, cons
 onnxruntime::Node *CNTKToONNXHelper::AddReshapeNodeImpl(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t> &newShape)
 {
     onnxruntime::NodeArg &shapeInputArg = CreateAddShapeNodeArg(graph, newShape, output->Name() + "_shape");
-    auto reshapeNode1 = graph->AddNode(nodeName, "Reshape", "", { input, &shapeInputArg }, { output });
+    auto reshapeNode1 = &graph->AddNode(nodeName, "Reshape", "", { input, &shapeInputArg }, { output });
     return reshapeNode1;
 }
 
@@ -3248,7 +3248,7 @@ onnxruntime::Node *CNTKToONNXHelper::AddSliceNode(onnxruntime::NodeArg &inputArg
     const std::string &outArgName, onnxruntime::Graph* graph)
 {
     const TypeProto &inputTypeProto = *inputArg.TypeAsProto();
-    onnx::TensorProto_DataType elemType = inputTypeProto.tensor_type().elem_type();
+    google::protobuf::int32 elemType = inputTypeProto.tensor_type().elem_type();
     onnx::TypeProto outputTypeProto = MakeTypeProtoWithShape();
     outputTypeProto.mutable_tensor_type()->set_elem_type(elemType);
     for (int i = 0, j = 0; i < inputTypeProto.tensor_type().shape().dim_size(); ++i) {
@@ -3274,7 +3274,7 @@ onnxruntime::Node *CNTKToONNXHelper::AddSliceNode(onnxruntime::NodeArg &inputArg
     }
 
     onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
-    onnxruntime::Node* sliceNode = graph->AddNode(
+    onnxruntime::Node* sliceNode = &graph->AddNode(
         outArgName + string("_slice"), "Slice", "", { &inputArg }, { &outputNodeArg });
     sliceNode->AddAttribute("axes", axes);
     sliceNode->AddAttribute("starts", starts);
@@ -3289,7 +3289,7 @@ onnxruntime::Node *CNTKToONNXHelper::AddEyeLikeNode(onnxruntime::NodeArg &inputA
     const TypeProto *inputTypeProto = inputArg.TypeAsProto();
     onnx::TypeProto outputTypeProto(*inputTypeProto);
     onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
-    onnxruntime::Node* eyeLikeNode = graph->AddNode(
+    onnxruntime::Node* eyeLikeNode = &graph->AddNode(
         outArgName + string("_eye_like"), "EyeLike", "", { &inputArg }, { &outputNodeArg });
     return eyeLikeNode;
 }
@@ -3302,7 +3302,7 @@ onnxruntime::Node* CNTKToONNXHelper::AddConstantLikeNode(onnxruntime::NodeArg& i
     onnx::TypeProto outputTypeProto(*inputTypeProto);
 
     onnxruntime::NodeArg& outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
-    onnxruntime::Node* constantLikeNode = graph->AddNode(
+    onnxruntime::Node* constantLikeNode = &graph->AddNode(
         outArgName + string("_constant_like"), "ConstantLike", "", {&inputArg}, {&outputNodeArg});
     constantLikeNode->AddAttribute("value", value);
     return constantLikeNode;
@@ -3315,7 +3315,7 @@ onnxruntime::Node* CNTKToONNXHelper::AddPadNode(onnxruntime::NodeArg& inputArg, 
     const TypeProto* inputTypeProto = inputArg.TypeAsProto();
     
     onnxruntime::NodeArg& outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputType);
-    onnxruntime::Node* padNode = graph->AddNode(
+    onnxruntime::Node* padNode = &graph->AddNode(
         outArgName + string("_pad"), "Pad", "", {&inputArg}, {&outputNodeArg});
 
     padNode->AddAttribute("mode", mode);
@@ -3329,7 +3329,7 @@ onnxruntime::Node* CNTKToONNXHelper::AddSqueezeNode(onnxruntime::NodeArg& inputA
                                                     const std::string& outArgName, onnxruntime::Graph* graph)
 {
     const TypeProto* inputTypeProto = inputArg.TypeAsProto();
-    onnx::TensorProto_DataType elemType = inputTypeProto->tensor_type().elem_type();
+    google::protobuf::int32 elemType = inputTypeProto->tensor_type().elem_type();
     onnx::TypeProto outputTypeProto = MakeTypeProtoWithShape();
     outputTypeProto.mutable_tensor_type()->set_elem_type(elemType);
 
@@ -3345,7 +3345,7 @@ onnxruntime::Node* CNTKToONNXHelper::AddSqueezeNode(onnxruntime::NodeArg& inputA
     }
 
     onnxruntime::NodeArg& outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
-    onnxruntime::Node* squeezeNode = graph->AddNode(
+    onnxruntime::Node* squeezeNode = &graph->AddNode(
         outArgName + string("_squeeze"), "Squeeze", "", {&inputArg}, {&outputNodeArg});
     squeezeNode->AddAttribute("axes", axes);
     return squeezeNode;
@@ -3357,12 +3357,12 @@ onnxruntime::Node *CNTKToONNXHelper::AddExpandNode(onnxruntime::NodeArg &inputAr
 {
     onnxruntime::NodeArg &shapeNodeArg = CreateAddShapeNodeArg(graph, newShape, outArgName + "_expand_shape");
 
-    onnx::TensorProto_DataType elemType = inputArg.TypeAsProto()->tensor_type().elem_type();
+    google::protobuf::int32 elemType = inputArg.TypeAsProto()->tensor_type().elem_type();
     onnx::TypeProto outputTypeProto = ToTypeProto(newShape, false);
     outputTypeProto.mutable_tensor_type()->set_elem_type(elemType);
     onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
 
-    onnxruntime::Node* expandNode = graph->AddNode(
+    onnxruntime::Node* expandNode = &graph->AddNode(
         outArgName + string("_expand"), "Expand", "", { &inputArg, &shapeNodeArg }, { &outputNodeArg });
     return expandNode;
 }
@@ -3371,7 +3371,7 @@ onnxruntime::Node *CNTKToONNXHelper::AddReshapeNode(onnxruntime::NodeArg &nodeAr
     onnxruntime::Graph *graph)
 {
     onnx::TypeProto typeProto = ToTypeProto(newShape, false);
-    onnx::TensorProto_DataType elemType = nodeArg.TypeAsProto()->tensor_type().elem_type();
+    google::protobuf::int32 elemType = nodeArg.TypeAsProto()->tensor_type().elem_type();
     typeProto.mutable_tensor_type()->set_elem_type(elemType);
 
     onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(outArgName, &typeProto);
@@ -3384,7 +3384,7 @@ onnxruntime::Node *CNTKToONNXHelper::AddMatMulNode(onnxruntime::NodeArg &nodeArg
     const std::string &out_arg_name)
 {
     onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, nullptr);
-    onnxruntime::Node* argMatMulNode = graph->AddNode(
+    onnxruntime::Node* argMatMulNode = &graph->AddNode(
         nodeArg1.Name() + string("_matmul"), "MatMul", "", { &nodeArg1, &nodeArg2 }, { &outputArg });
     return argMatMulNode;
 }
@@ -3393,7 +3393,7 @@ onnxruntime::Node *CNTKToONNXHelper::AddAddNode(onnxruntime::NodeArg &nodeArg1, 
     const std::string &out_arg_name)
 {
     onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, nullptr);
-    onnxruntime::Node* argMatMulNode = graph->AddNode(
+    onnxruntime::Node* argMatMulNode = &graph->AddNode(
         nodeArg1.Name() + string("_add"), "Add", "", { &nodeArg1, &nodeArg2 }, { &outputArg });
     return argMatMulNode;
 }
@@ -3404,7 +3404,7 @@ onnxruntime::Node *CNTKToONNXHelper::AddIdentityOp(onnxruntime::NodeArg &nodeArg
     outputTypeProto.mutable_tensor_type()->set_elem_type(nodeArg.TypeAsProto()->tensor_type().elem_type());
 
     onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(out_arg_name, &outputTypeProto);
-    onnxruntime::Node* identityNode = graph->AddNode(
+    onnxruntime::Node* identityNode = &graph->AddNode(
         nodeArg.Name() + string("_identity"), "Identity", "", { &nodeArg}, { &outputArg });
     return identityNode;
 }
@@ -3413,7 +3413,7 @@ onnxruntime::Node *CNTKToONNXHelper::AddArgMaxNode(onnxruntime::NodeArg &nodeArg
 {
     // onnxruntime::NodeArg inputArg(nodeArg.Name(), nullptr);
     onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeArg.Name() + "argmax_out", nullptr);
-    onnxruntime::Node* argMaxNode = graph->AddNode(nodeArg.Name() + string("_argmax"), "ArgMax", "", { &nodeArg }, { &outputArg });
+    onnxruntime::Node* argMaxNode = &graph->AddNode(nodeArg.Name() + string("_argmax"), "ArgMax", "", { &nodeArg }, { &outputArg });
     argMaxNode->AddAttribute("axis", (int64_t)axis);
     return argMaxNode;
 }
@@ -3425,7 +3425,7 @@ onnxruntime::Node *CNTKToONNXHelper::AddCastNode(onnxruntime::NodeArg &nodeArg, 
     outputTypeProto.mutable_tensor_type()->set_elem_type(toType);
 
     onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(nodeArg.Name() + "_cast_out_" + outputNodeArgName, &outputTypeProto);
-    onnxruntime::Node* castNode = graph->AddNode(nodeArg.Name() + string("_cast_") + outputNodeArgName, 
+    onnxruntime::Node* castNode = &graph->AddNode(nodeArg.Name() + string("_cast_") + outputNodeArgName, 
         "Cast", "", { &nodeArg }, { &outputArg });
     castNode->AddAttribute("to", (int64_t)toType);
     return castNode;
@@ -3463,8 +3463,8 @@ NodeArg& CNTKToONNXHelper::AddTransposeBatchSequenceAxesNode(onnxruntime::NodeAr
     std::generate(perm.begin(), perm.end(), [axis = 0]() mutable { return axis++; });
     std::swap(perm[0], perm[1]);
     onnxruntime::Node* transposeNode = isInput ? 
-        graph->AddNode(nodeName, "Transpose", "", { &nodeArg }, { &otherArg }) : 
-        graph->AddNode(nodeName, "Transpose", "", { &otherArg }, { &nodeArg });
+        &graph->AddNode(nodeName, "Transpose", "", { &nodeArg }, { &otherArg }) : 
+        &graph->AddNode(nodeName, "Transpose", "", { &otherArg }, { &nodeArg });
     transposeNode->AddAttribute("perm", perm);
     return otherArg;
 }
@@ -3473,9 +3473,9 @@ onnxruntime::Node *CNTKToONNXHelper::AddTransposeNode(onnxruntime::NodeArg &node
     const std::vector<int64_t> &perm, onnx::TypeProto& transposeOutputArgType, const std::string &outputNodeArgName)
 {
     onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(outputNodeArgName, &transposeOutputArgType);
-    onnx::TensorProto_DataType elementType = nodeArg.TypeAsProto()->tensor_type().elem_type();
+    google::protobuf::int32 elementType = nodeArg.TypeAsProto()->tensor_type().elem_type();
     const_cast<TypeProto*>(outputArg.TypeAsProto())->mutable_tensor_type()->set_elem_type(elementType);
-    onnxruntime::Node* transposeNode = graph->AddNode(nodeArg.Name() + string("_transpose"), "Transpose", "", { &nodeArg }, { &outputArg });
+    onnxruntime::Node* transposeNode = &graph->AddNode(nodeArg.Name() + string("_transpose"), "Transpose", "", { &nodeArg }, { &outputArg });
     transposeNode->AddAttribute("perm", perm);
     return transposeNode;
 }
@@ -3605,7 +3605,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSoftmaxLikeNode(const FunctionPtr& sr
     UpdateONNXType(src->Output().GetDataType(), softmaxLikeOutputArgType);
 
     onnxruntime::NodeArg &innerSoftmaxLikeOutputArg = graph->GetOrCreateNodeArg(innerSoftmaxOutputNodeArgName, &softmaxLikeOutputArgType);
-    onnxruntime::Node* softmaxLikeNode = graph->AddNode(nodeName, onnxOpName, "", { inputToInnerSoftmaxArgNode }, { &innerSoftmaxLikeOutputArg });
+    onnxruntime::Node* softmaxLikeNode = &graph->AddNode(nodeName, onnxOpName, "", { inputToInnerSoftmaxArgNode }, { &innerSoftmaxLikeOutputArg });
 
     // always softmax on the last axes
     softmaxLikeNode->AddAttribute("axis", (int64_t)onnxRank - 1);
@@ -3676,13 +3676,13 @@ onnxruntime::Node* CNTKToONNXHelper::CreatePastFutureValueNode(const FunctionPtr
     Node * concatNode; 
     if (past)
     {
-        concatNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Concat", "",
+        concatNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Concat", "",
             { const_cast<NodeArg*>(initValueExpand->OutputDefs()[0]), const_cast<NodeArg*>(sliceNode->OutputDefs()[0]) }, 
             outputs);
     }
     else
     {
-        concatNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Concat", "",
+        concatNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Concat", "",
             { const_cast<NodeArg*>(sliceNode->OutputDefs()[0]), const_cast<NodeArg*>(initValueExpand->OutputDefs()[0]) },
             outputs);
     }
@@ -3832,7 +3832,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateReconcileDynamicAxisNode(const Functi
         inputNodeArg = inputs[0];
     }
 
-    onnxruntime::Node* elementWiseNode = graph->AddNode(nodeName + "_add", "Add", "",
+    onnxruntime::Node* elementWiseNode = &graph->AddNode(nodeName + "_add", "Add", "",
         { inputNodeArg, broadcastNodeArg }, outputs);
 
     functionNodes.emplace(src, elementWiseNode);
@@ -3889,7 +3889,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceBroadcastAsNode(const Functio
         inputNodeArg = inputs[0];
     }
 
-    onnxruntime::Node* elementWiseNode = graph->AddNode(nodeName + "_add", "Add", "",
+    onnxruntime::Node* elementWiseNode = &graph->AddNode(nodeName + "_add", "Add", "",
         { inputNodeArg, broadcastNodeArg }, outputs);
 
     functionNodes.emplace(src, elementWiseNode);
@@ -3935,7 +3935,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceGatherNode(const FunctionPtr&
     
     std::string nodeName  = UniqueNodeNameStorage::GetUniqueNodeName(src);
     std::string onnxOpName = "Compress";
-    Node *compressNode = graph->AddNode(nodeName, onnxOpName, "", inputs, { &compressOutputNodeArg });
+    Node *compressNode = &graph->AddNode(nodeName, onnxOpName, "", inputs, { &compressOutputNodeArg });
 
     int64_t sequenceAxis = 0;
     compressNode->AddAttribute("axis", sequenceAxis);
@@ -3965,7 +3965,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceReduceElementsNode(const Func
     std::vector<onnxruntime::NodeArg *> outputs;
     ProcessOutputs(src, inputs, outputs, graph);
 
-    Node *node = graph->AddNode(nodeName, onnxOpName, "", inputs, outputs);
+    Node *node = &graph->AddNode(nodeName, onnxOpName, "", inputs, outputs);
     SetReduceElementsAttributes(br, node, true);
     return node;
 }
@@ -4014,7 +4014,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNodeWithGatherPacked(const FunctionPt
         std::vector<onnxruntime::NodeArg *>({ gatherPackedInputs[0], const_cast<NodeArg *>(castScreezeNode->OutputDefs()[0]) }), 
         outputs, graph);
 
-    Node *compressNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Compress", "",
+    Node *compressNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Compress", "",
         { gatherPackedInputs[0], const_cast<NodeArg *>(castScreezeNode->OutputDefs()[0]) }, outputs);
     int64_t sequenceAxis = 0;
     compressNode->AddAttribute("axis", sequenceAxis);
@@ -4060,7 +4060,7 @@ onnxruntime::Node* CNTKToONNXHelper::ExtractShapeWithDynamicAxes(onnxruntime::Gr
 
         // prepare output NodeArg with shape of [sequence, batch]
         onnx::TypeProto typeProto = MakeTypeProtoWithShape();
-        onnx::TensorProto_DataType elemType = inputNodeArg->TypeAsProto()->tensor_type().elem_type();
+        google::protobuf::int32 elemType = inputNodeArg->TypeAsProto()->tensor_type().elem_type();
         typeProto.mutable_tensor_type()->set_elem_type(elemType);
         onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(nodeName + "_output", &typeProto);
 
@@ -4071,7 +4071,7 @@ onnxruntime::Node* CNTKToONNXHelper::ExtractShapeWithDynamicAxes(onnxruntime::Gr
             shapeProto.add_dim()->set_dim_value(BatchSizeProcessor::FreeBatchSize());
         outputNodeArg.SetShape(shapeProto);
 
-        Node *constantNode = graph->AddNode(nodeName + "_constant_like", "ConstantLike", "",
+        Node *constantNode = &graph->AddNode(nodeName + "_constant_like", "ConstantLike", "",
             { const_cast<NodeArg *>(squeezeNode->OutputDefs().at(0)) }, { &outputNodeArg });
         constantNode->AddAttribute("value", (float)0);
         return constantNode;
@@ -4136,7 +4136,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const Funct
         std::generate(perm.begin(), perm.end(), [axis = 0]() mutable { return axis++; });
         // transpose sequence and batch axes
         std::swap(perm[0], perm[1]);
-        Node* transposeNode = graph->AddNode(transposeNodeName, "Transpose", "", inputs, { outputs[0] });
+        Node* transposeNode = &graph->AddNode(transposeNodeName, "Transpose", "", inputs, { outputs[0] });
         transposeNode->AddAttribute("perm", perm);
         functionNodes.emplace(src, transposeNode);
 
@@ -4175,7 +4175,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const Funct
                 outputs[1]->SetShape(shapeProto);
             }
 
-            Node *constantNode = graph->AddNode(transposeNodeName + "_constant_like", "ConstantLike", "",
+            Node *constantNode = &graph->AddNode(transposeNodeName + "_constant_like", "ConstantLike", "",
                 { const_cast<NodeArg *>(squeezeNode->OutputDefs().at(0)) }, { outputs[1] });
             constantNode->AddAttribute("value", (float)1);
         }
@@ -4185,7 +4185,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const Funct
     {
         std::string identityNodeName = UniqueNodeNameStorage::GetUniqueNodeName(src);
         // this is the original output of CNTK UnpackSequence op which is just an identity in ONNX.
-        Node *identityNode = graph->AddNode(identityNodeName, "Identity", "", inputs, { outputs[0] });
+        Node *identityNode = &graph->AddNode(identityNodeName, "Identity", "", inputs, { outputs[0] });
         functionNodes.emplace(src, identityNode);
         return identityNode;
     }
@@ -4325,7 +4325,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceSliceNode(const FunctionPtr& 
     onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(sliceOutputName, &outputArgType);
 
     const std::string & nodeName = ToLegacyString(ToUTF8(src->Name()));
-    onnxruntime::Node *sequenceSliceNode = graph->AddNode(nodeName, "Slice", "", { inputs[inputs.size() - 1] }, { &outputNodeArg });
+    onnxruntime::Node *sequenceSliceNode = &graph->AddNode(nodeName, "Slice", "", { inputs[inputs.size() - 1] }, { &outputNodeArg });
     sequenceSliceNode->AddAttribute("axes", std::vector<int64_t>({ int64_t(0) }));
     sequenceSliceNode->AddAttribute("ends", std::vector<int64_t>({ endIndex }));
     sequenceSliceNode->AddAttribute("starts", std::vector<int64_t>({ beginIndex }));
@@ -4740,7 +4740,7 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 
                 scanGraph.SetInputOrder(scanSubgraphOrderedInputs);
                 scanGraph.SetOutputOrder(scanSubgraphOrderedOutputs);
-                Node *scanNode = graph->AddNode(scanNodeName, "Scan", "", input_args, output_args);
+                Node *scanNode = &graph->AddNode(scanNodeName, "Scan", "", input_args, output_args);
 
                 ResolveGraphAndSaveModel(scanSubModel.get());
 
@@ -5029,7 +5029,7 @@ bool TryMatchNodeArgType(onnx::TypeProto &argType, onnxruntime::Graph* graph, co
     const NodeArg* inputNodeArg = graph->GetNodeArg(nodeArgName);
     if (inputNodeArg)
     {
-        onnx::TensorProto_DataType inputType = inputNodeArg->TypeAsProto()->tensor_type().elem_type();
+        google::protobuf::int32 inputType = inputNodeArg->TypeAsProto()->tensor_type().elem_type();
         argType.mutable_tensor_type()->set_elem_type(inputType);
         return true;
 
@@ -5743,7 +5743,7 @@ void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src,
                     outputArgNodeName + "_post_cast_input", &castInputArgType);
                 onnxruntime::NodeArg &castOutputArg = graph->GetOrCreateNodeArg(outputArgNodeName, &outputArgType);
 
-                onnxruntime::Node* castNode = graph->AddNode(castInputArg.Name() + string("_cast_") + outputArgNodeName,
+                onnxruntime::Node* castNode = &graph->AddNode(castInputArg.Name() + string("_cast_") + outputArgNodeName,
                     "Cast", "", { &castInputArg }, { &castOutputArg });
                 castNode->AddAttribute("to", (int64_t)cntk_type);
 
@@ -5878,13 +5878,13 @@ void CNTKToONNXHelper::PostProcessGraph(onnxruntime::Graph* graph)
 
                         std::vector<NodeArg*> inputs;
                         std::vector<NodeArg*> outputs;
-                        maxPoolNode->ForEachDef([&inputs, &outputs](const NodeArg* def, bool isInput) {
-                            if (isInput) inputs.push_back(const_cast<NodeArg*>(def));
-                            else outputs.push_back(const_cast<NodeArg*>(def));
+                        maxPoolNode->ForEachDef([&inputs, &outputs](const NodeArg& def, bool isInput) {
+                            if (isInput) inputs.push_back(const_cast<NodeArg*>(&def));
+                            else outputs.push_back(const_cast<NodeArg*>(&def));
                         });
                         outputs.push_back(&indicesOutputNodeArg);
 
-                        onnxruntime::Node* newMaxPoolNode = graph->AddNode(maxPoolNode->Name(), maxPoolNode->OpType(), maxPoolNode->Description(),
+                        onnxruntime::Node* newMaxPoolNode = &graph->AddNode(maxPoolNode->Name(), maxPoolNode->OpType(), maxPoolNode->Description(),
                             inputs, outputs, &(maxPoolNode->GetAttributes()));
                         graph->RemoveNode(maxPoolNode->Index());
                         maxPoolNode = newMaxPoolNode;
@@ -6796,11 +6796,11 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
                     node = AddReshapeNodeImpl(graph, nodeName + "_output_reshape", &matMulOutputNodeArg, outputs[0], finalOutputShape);
                 }
                 else
-                    node = graph->AddNode(nodeName, ToOPName(src), "", { &inputOutput1Arg, &inputOutput2Arg }, outputs);
+                    node = &graph->AddNode(nodeName, ToOPName(src), "", { &inputOutput1Arg, &inputOutput2Arg }, outputs);
             }
             else
             {
-                node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
+                node = &graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
             }
         }
         else if (src->OpName() == L"LayerNormalization")
@@ -6819,26 +6819,26 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
             onnx::TypeProto input0ArgType = ToTypeProto(src->Inputs()[operandIndexInCntkInputs].Shape(), src->Inputs()[operandIndexInCntkInputs].HasBatchAxis());
             UpdateONNXType(src->Inputs()[operandIndexInCntkInputs].GetDataType(), input0ArgType);
             onnxruntime::NodeArg &mvnTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_mvn_output0"), &input0ArgType);
-            onnxruntime::Node* mvnNode = graph->AddNode(nodeName + string("_MVN"), "MeanVarianceNormalization",
+            onnxruntime::Node* mvnNode = &graph->AddNode(nodeName + string("_MVN"), "MeanVarianceNormalization",
                                                    "", { input0 }, { &mvnTensorOutputArg });
             mvnNode->AddAttribute("across_channels", static_cast<int64_t>(1));
             mvnNode->AddAttribute("normalize_variance", static_cast<int64_t>(1));
 
             auto input1 = inputs[scaleIndexInOnnxInputs];
             onnxruntime::NodeArg &mulTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_mul_output0"), &input0ArgType);
-            onnxruntime::Node* mulNode = graph->AddNode(nodeName + string("_mul"), "Mul",
+            onnxruntime::Node* mulNode = &graph->AddNode(nodeName + string("_mul"), "Mul",
                                                    "", { &mvnTensorOutputArg, input1 }, { &mulTensorOutputArg });
 
             auto input2 = inputs[biasIndexInOnnxInputs];
             onnxruntime::NodeArg &addTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_Output_0"), &input0ArgType);
-            node = graph->AddNode(nodeName + string("_add"), "Add",
+            node = &graph->AddNode(nodeName + string("_add"), "Add",
                                   "", { &mulTensorOutputArg, input2 }, { &addTensorOutputArg });
         }
         else if (src->OpName() == L"LogPlus")
         {
             // CNTK LogPlus is the equivalent to numpy.logaddexp
             // ONNX has a different but similar op: ReduceLogSumExp
-            onnx::TensorProto_DataType tensorType = orderedInputs[0]->TypeAsProto()->tensor_type().elem_type();
+            google::protobuf::int32 tensorType = orderedInputs[0]->TypeAsProto()->tensor_type().elem_type();
             std::vector<int64_t> broadcastShape = BroadcastInputs(orderedInputs, /*ignoreAxes=*/{}, src, graph);
             // Now both inputs should have the same shape.
             // Add another axis in front. This will be the axis to be reduced over later.
@@ -6852,7 +6852,7 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
                 onnx::TypeProto outputArgType = ToTypeProto(unsqueezeOutputShape, doReverseVec);
                 outputArgType.mutable_tensor_type()->set_elem_type(tensorType);
                 onnxruntime::NodeArg &unsqueezeTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_unsqueeze" + std::to_string(inputIndex) + "_output0"), &outputArgType);
-                onnxruntime::Node* unsqueezeNode = graph->AddNode(nodeName + string("_Unsqueeze") + std::to_string(inputIndex), "Unsqueeze", "", { orderedInputs[inputIndex] }, { &unsqueezeTensorOutputArg });
+                onnxruntime::Node* unsqueezeNode = &graph->AddNode(nodeName + string("_Unsqueeze") + std::to_string(inputIndex), "Unsqueeze", "", { orderedInputs[inputIndex] }, { &unsqueezeTensorOutputArg });
                 unsqueezeNode->AddAttribute("axes", std::vector<int64_t>(1, 0));
                 return unsqueezeTensorOutputArg;
             };
@@ -6863,14 +6863,14 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
             onnx::TypeProto concatOutputArgType = ToTypeProto(concatOutputShape, false);
             concatOutputArgType.mutable_tensor_type()->set_elem_type(tensorType);
             onnxruntime::NodeArg &concatTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_concat_output0"), &concatOutputArgType);
-            onnxruntime::Node* concatNode = graph->AddNode(nodeName + string("_Concat"), "Concat", "", { &unsqueezeTensorOutputArg0, &unsqueezeTensorOutputArg1 },
+            onnxruntime::Node* concatNode = &graph->AddNode(nodeName + string("_Concat"), "Concat", "", { &unsqueezeTensorOutputArg0, &unsqueezeTensorOutputArg1 },
                 { &concatTensorOutputArg });
             concatNode->AddAttribute("axis", static_cast<int64_t>(0));
 
             onnx::TypeProto outputArgType = ToTypeProto(broadcastShape, false);
             outputArgType.mutable_tensor_type()->set_elem_type(tensorType);
             onnxruntime::NodeArg &reduceLogSumExpTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_Output_0"), &outputArgType);
-            node = graph->AddNode(nodeName + string("_reduce_log_sum_exp"), "ReduceLogSumExp", "", { &concatTensorOutputArg }, { &reduceLogSumExpTensorOutputArg });
+            node = &graph->AddNode(nodeName + string("_reduce_log_sum_exp"), "ReduceLogSumExp", "", { &concatTensorOutputArg }, { &reduceLogSumExpTensorOutputArg });
             // reduce over the first axis.
             node->AddAttribute("axes", std::vector<int64_t>(1, 0));
             node->AddAttribute("keepdims", static_cast<int64_t>(0));
@@ -6881,11 +6881,11 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
             std::vector<int64_t> outputShape = ToINTS(*orderedInputs[1]->TypeAsProto());
             onnxruntime::NodeArg &shapeInputArg = CreateAddShapeNodeArg(graph, outputShape, orderedInputs[1]->Name() + "_shape");
             orderedInputs.push_back(&shapeInputArg);
-            node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
+            node = &graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
         }
         else
         {
-            node = graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
+            node = &graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
         }
     }
 
@@ -7177,7 +7177,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOneHotOp(const FunctionPt
     bool needsTransposeNode = !(onehotAxis == -1 || onehotAxis == static_cast<int64_t>(inputRank));
     onnxruntime::NodeArg* oneHotOutputArg = needsTransposeNode ? &graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_onehot_out"),
         nullptr) : outputs[0];
-    onnxruntime::Node* oneHotNode = graph->AddNode(nodeName, ToOPName(src), "", { inputs[0] }, { oneHotOutputArg }, nullptr, "ai.onnx.ml");
+    onnxruntime::Node* oneHotNode = &graph->AddNode(nodeName, ToOPName(src), "", { inputs[0] }, { oneHotOutputArg }, nullptr, "ai.onnx.ml");
 
     std::vector<int64_t> catsVector(numClass);
     std::iota(catsVector.begin(), catsVector.end(), 0);
@@ -7200,7 +7200,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOneHotOp(const FunctionPt
         std::iota(permVector.begin(), permVector.end(), 0);
         permVector.insert(permVector.begin() + onnxAxis, onnxOutputRank - 1);
         onnxruntime::NodeArg &transposeOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_transpose_out"), nullptr);
-        outputNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_Transpose"), "Transpose", "", { oneHotOutputArg }, { outputs[0] });
+        outputNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_Transpose"), "Transpose", "", { oneHotOutputArg }, { outputs[0] });
         outputNode->AddAttribute("perm", permVector);
     }
     else
@@ -7233,11 +7233,11 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForStraightThrough(const Fun
     onnxruntime::NodeArg& scalarZeroOutputArg = CreateScalarNode(graph, UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_zero_out"),
         src->Inputs()[0].GetDataType(), 0.0);
     onnxruntime::NodeArg& greaterOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_greater_out"), nullptr);
-    onnxruntime::Node* greaterNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_greater"),
+    onnxruntime::Node* greaterNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_greater"),
         "Greater", "", { inputs[0], &scalarZeroOutputArg }, { &greaterOutputArg });
 
     onnxruntime::NodeArg& castOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_cast_out"), nullptr);
-    onnxruntime::Node* castNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_cat"),
+    onnxruntime::Node* castNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_cat"),
         "Cast", "", { &greaterOutputArg }, { &castOutputArg });
     castNode->AddAttribute("to", static_cast<int64_t>(ConvertDataTypeCNTKToTensorProto(src->Inputs()[0].GetDataType())));
 
@@ -7245,13 +7245,13 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForStraightThrough(const Fun
         src->Inputs()[0].GetDataType(), 2.0);
 
     onnxruntime::NodeArg& mulOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_mul_out"), nullptr);
-    onnxruntime::Node* mulNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_mul"),
+    onnxruntime::Node* mulNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_mul"),
         "Mul", "", { &castOutputArg, &scalarTwoOutputArg }, { &mulOutputArg });
 
     onnxruntime::NodeArg& scalarOneOutputArg = CreateScalarNode(graph, UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_one_out"),
         src->Inputs()[0].GetDataType(), 1.0);
     onnxruntime::NodeArg& subOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_sub_out"), nullptr);
-    onnxruntime::Node* subNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_sub"),
+    onnxruntime::Node* subNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_sub"),
         "Sub", "", { &mulOutputArg, &scalarOneOutputArg }, { outputs[0] });
 
     functionNodes.emplace(src, subNode);
@@ -7367,7 +7367,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const F
         // ==== Step 6. Add ONNX LSTM node ====
         auto rnnOpNameLookup = Operators::OptimizedRnnToOnnxOpLookup();
         auto rnnNodeName = UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(ToLegacyString(ToUTF8(src->Uid())) + std::to_string(i));
-        functionNode = graph->AddNode(rnnNodeName, rnnOpNameLookup[recurrentOp], "", inputs, outputs);
+        functionNode = &graph->AddNode(rnnNodeName, rnnOpNameLookup[recurrentOp], "", inputs, outputs);
 
         std::vector<std::string> singleDirectionActivation;
         if (recurrentOp == L"lstm")
@@ -7645,7 +7645,7 @@ onnxruntime::NodeArg* CNTKToONNXHelper::LSTMOutputShapeAdapter(onnxruntime::Node
     }
     UpdateONNXType(outputType, transposeOutputArgType);
     onnxruntime::NodeArg &transposeOutputArg = graph->GetOrCreateNodeArg(adapterBasename + "_Transpose_Output", &transposeOutputArgType);
-    auto transposeNode = graph->AddNode(adapterBasename + "_Transpose", "Transpose", "", { &inputArg }, { &transposeOutputArg });
+    auto transposeNode = &graph->AddNode(adapterBasename + "_Transpose", "Transpose", "", { &inputArg }, { &transposeOutputArg });
     transposeNode->AddAttribute("perm", x);
 
     // Reshape to combine last two axes, i.e. [S, B, numDirections, hiddenSize] --> [S, B, numDirections*hiddenSize]
@@ -7695,7 +7695,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateBatchNormalization(const FunctionPtr 
     if (spatial)
     {
         // input and output are in correct shape.
-        node = graph->AddNode(nodeName, "BatchNormalization", "", inputs, outputs);
+        node = &graph->AddNode(nodeName, "BatchNormalization", "", inputs, outputs);
     }
     else
     {
@@ -7719,7 +7719,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateBatchNormalization(const FunctionPtr 
                 src->Inputs()[0].Shape().TotalSize());
 
             NodeArg &xFlattenOutput = graph->GetOrCreateNodeArg(inputs[0]->Name() + "_flatten_output", &xFlattenOutputTypeProto);
-            Node *xFlattenNode = graph->AddNode(inputs[0]->Name() + "_flatten", "Flatten", "", { inputs[0] }, { &xFlattenOutput });
+            Node *xFlattenNode = &graph->AddNode(inputs[0]->Name() + "_flatten", "Flatten", "", { inputs[0] }, { &xFlattenOutput });
             int64_t flattenAxis = src->Inputs()[0].DynamicAxes().size();
             xFlattenNode->AddAttribute("axis", flattenAxis);
             inputs[0] = const_cast<NodeArg *>(xFlattenNode->OutputDefs()[0]);
@@ -7740,7 +7740,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateBatchNormalization(const FunctionPtr 
             // TypeProto of BN's output is the same as its first input
             onnxruntime::NodeArg *bnOutput = &graph->GetOrCreateNodeArg(outputs[0]->Name() + "_BN_output",
                 inputs[0]->TypeAsProto());
-            node = graph->AddNode(nodeName, "BatchNormalization", "", inputs, { bnOutput });
+            node = &graph->AddNode(nodeName, "BatchNormalization", "", inputs, { bnOutput });
             // output shape and name are the same
             std::vector<int64_t> finalOutputShape = ToINTS(*outputs[0]->TypeAsProto());
             Node *postBNReshapeNode = AddReshapeNode(const_cast<NodeArg &>(*node->OutputDefs()[0]),
@@ -7749,7 +7749,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateBatchNormalization(const FunctionPtr 
         else
         {
             // input x is not flattened. 
-            node = graph->AddNode(nodeName, "BatchNormalization", "", inputs, outputs);
+            node = &graph->AddNode(nodeName, "BatchNormalization", "", inputs, outputs);
         }
     }
 
@@ -7793,12 +7793,12 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForTimesTranspose(const Func
     int rightInputRank = inputs[0]->Shape()->dim_size() - 1;
 
     onnxruntime::NodeArg &transposeOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_transpose_out"), nullptr);
-    onnxruntime::Node* transposeNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_transpose"),
+    onnxruntime::Node* transposeNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_transpose"),
         "Transpose", "", { inputs[0] }, { &transposeOutputArg });
     transposeNode->AddAttribute("perm", ToINTS(rightInputRank == 2 ? vector<int>({ 1, 2, 0 }) : vector<int>({ 0, 1 })));
 
     onnxruntime::NodeArg &matmulOutputArg = graph->GetOrCreateNodeArg(outputs[0]->Name(), nullptr);
-    onnxruntime::Node* matmulNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_matmul"),
+    onnxruntime::Node* matmulNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_matmul"),
         "MatMul", "", { inputs[1], &transposeOutputArg }, { &matmulOutputArg });
     
     functionNodes.emplace(src, matmulNode);
@@ -7843,7 +7843,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForFlatten(const FunctionPtr
             onnxruntime::Node* postReshapeNode = AddReshapeNodeImpl(graph, UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_post_reshape"),
                 &postReshapeInputArg, outputs[0], ToINTS(outputReshapeOut));
 
-            onnxruntime::Node* flattenNode = graph->AddNode(nodeName, ToOPName(src), "", { &preReshapeOutputArg }, { &postReshapeInputArg });
+            onnxruntime::Node* flattenNode = &graph->AddNode(nodeName, ToOPName(src), "", { &preReshapeOutputArg }, { &postReshapeInputArg });
 
             CopyAttributes(src, flattenNode);
 
@@ -7874,7 +7874,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSpliceNode(const FunctionPtr &src,
     int64_t axisIndex = ConvertAxisToOnnxForSpliceWithWithBroadcast(axis, src);
 
     BroadcastInputs(inputs, { axisIndex }, src, graph);
-    Node *node = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), ToOPName(src), "", inputs, outputs);
+    Node *node = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), ToOPName(src), "", inputs, outputs);
 
     node->AddAttribute("axis", axisIndex);
 
@@ -7908,7 +7908,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr 
 
     // Add a Clip node equivalent to min(abs(flag), 1).
     onnxruntime::NodeArg &clipOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_clip_out"), nullptr);
-    onnxruntime::Node* clipNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_clip"),
+    onnxruntime::Node* clipNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_clip"),
         "Clip", "", { &absOutputArg }, { &clipOutputArg });
     clipNode->AddAttribute("min", 0.0f); // Should be unnecesary for ONNX, but currently required by CNTK.
     clipNode->AddAttribute("max", 1.0f);
@@ -7921,7 +7921,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr 
     graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_mul_true"), "Mul", "", { &ceilOutputArg, inputs[1] }, { &mulTrueOutputArg });
 
     onnxruntime::NodeArg &oneOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_one_out"), nullptr);
-    onnxruntime::Node* oneNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_one"), "Constant", "", {}, { &oneOutputArg });
+    onnxruntime::Node* oneNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_one"), "Constant", "", {}, { &oneOutputArg });
     onnx::TensorProto oneTensor;
     oneTensor.set_data_type(onnx::TensorProto::FLOAT);
     oneTensor.add_float_data(1.0f);
@@ -7933,7 +7933,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForSelect(const FunctionPtr 
     onnxruntime::NodeArg &mulFalseOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_mul_false_out"), nullptr);
     graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_mul_false"), "Mul", "", { &oneSubOutputArg, inputs[2] }, { &mulFalseOutputArg });
 
-    onnxruntime::Node* sumNode = graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_sum"), "Sum", "", { &mulTrueOutputArg, &mulFalseOutputArg }, { outputs[0] });
+    onnxruntime::Node* sumNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_sum"), "Sum", "", { &mulTrueOutputArg, &mulFalseOutputArg }, { outputs[0] });
 
     functionNodes.emplace(src, sumNode);
     return sumNode;

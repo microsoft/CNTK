@@ -618,6 +618,8 @@ def test_Conv_SpecialCase_Autopad(tmpdir, dtype, device_id):
 def test_ConvTranspose(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
+    if dtype == np.float16:
+        pytest.skip('Test is temporarily skipped on float16 due to onnxrt bug comparing inf to inf.')
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype):
         # Keep the shapes below as they are, because this tests an earlier bug.
@@ -1407,6 +1409,7 @@ OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
 def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id):
     if device_id == -1:
         pytest.skip('Test only runs on GPU')
+    pytest.skip('test_OptimizedRNNStack is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
     dev = cntk_device(device_id)
     from _cntk_py import constant_initializer
     model_filename = 'optimized_rnn_stack_' + ('bi' if bidirectional else 'uni') + '_layers' + str(num_layers) + '_inp' + str(input_size) + '_hid' + str(hidden_size)
@@ -1643,6 +1646,7 @@ def test_Reshape(tmpdir, dtype):
 #RNN
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_RNN(tmpdir, dtype):
+    pytest.skip('test_RNN is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
     with C.default_options(dtype = dtype):
         def CreatRNN(cell_dim, 
                      activation, 
