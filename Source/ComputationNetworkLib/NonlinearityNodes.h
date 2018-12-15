@@ -50,6 +50,8 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
+        NVTXTracer tracer("FPUnary");
+
         size_t rank = DetermineElementwiseTensorRank();
         auto result =             ValueTensorFor(rank, fr);
         auto input  = InputRef(0).ValueTensorFor(rank, fr);
@@ -58,6 +60,8 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        NVTXTracer tracer("BPUnary");
+
         assert(inputIndex == 0), inputIndex;
 
         // get the args

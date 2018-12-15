@@ -13,6 +13,7 @@
 #include "MatrixPool.h"
 #include "ComputationEnvironment.h"
 #include "Globals.h"
+#include "nvToolsExt.h"
 
 #include <unordered_set>
 #include <map>
@@ -24,6 +25,7 @@
 #include <algorithm>
 #include <assert.h>
 #include <atomic>
+
 
 #define DEFAULT_HIDDEN_ACTIVATION 0.1
 
@@ -69,6 +71,17 @@
 // TODO: Make this a trace option, e.g. enabled by the ComputeEnvironment.
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+class NVTXTracer {
+public:
+    NVTXTracer(const char* name) {
+        nvtxRangePushA(name);
+    }
+    ~NVTXTracer() {
+        nvtxRangePop();
+    }
+};
+
 
 enum CopyNodeFlags // flags to be passed to the CopyTo() function
 {

@@ -115,6 +115,8 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType, direction>::BeginForwardProp() /*override*/
 {
+    NVTXTracer tracer("BFPDelay");
+
     Base::BeginForwardProp();
 
     // The following is specifically for handling of truncated sequences fed using the V2 API where
@@ -310,6 +312,8 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::ForwardProp(const FrameRange& fr) /*override*/
 {
+    NVTXTracer tracer("FPDelay");
+
     assert(m_pMBLayout);
 
     // special case: DelayedValueNodes may be used outside of loops
@@ -403,6 +407,8 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::EndForwardProp() /*override*/ // called after last iteration step of ForwardProp()
 {
+    NVTXTracer tracer("EFPDelay");
+
     // In truncated BPTT, we carry over left-to-right state across minibatches.
     // It is kept in m_delayedValue, m_delayedActivationMBLayout.
     // This could be optimized as follows:
@@ -423,6 +429,8 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
+    NVTXTracer tracer("BPDelay");
+
     // input 1 (initial state) is done in bulk
     if (inputIndex == 1)    
     {
