@@ -86,6 +86,11 @@ public:
         return _cntkToONNXOpName.find(opName) != _cntkToONNXOpName.end();
     }
 
+    static inline bool IsBlockFnNotConvertedThroughBlockRoot(FunctionPtr blkF)
+    {
+        return blkF->OpName() == L"Sequence::BroadcastAs";
+    }
+
     //
     // Layer APIs use block function as a wrapper, so we need to handle them with care.
     //
