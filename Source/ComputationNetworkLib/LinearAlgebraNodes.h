@@ -92,7 +92,102 @@ public:
 template class PlusNode<float>;
 template class PlusNode<double>;
 template class PlusNode<half>;
+/*
+// -----------------------------------------------------------------------
+// PlusBroadcastNode (summand1, summand2)
+// -----------------------------------------------------------------------
 
+template <class ElemType>
+class PlusBroadcastNode : public BinaryElementWiseNode<ElemType>
+{
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"Plus";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(PlusNode);
+    PlusNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void  ForwardProp(const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
+        result.AssignSumOf(input0, input1);
+    }
+
+    virtual void  BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        size_t rank = DetermineElementwiseTensorRank();
+        auto gradient = GradientTensorFor(rank, fr);
+        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+
+        // if reduction then mask the respective input(s) (zero out the gaps)
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+
+        if (Input(inputIndex)->IsGradientOptimized(this))
+        {
+            if (Input(inputIndex)->ParentGradientReused())
+            {
+                if (inputGradient.GetSOBPtr() != gradient.GetSOBPtr())
+                    LogicError("Gradients should be reused.");
+            }
+            else
+                inputGradient.AssignCopyOf(gradient);
+        }
+        else
+            inputGradient.AddCopyOf(gradient);
+    }
+
+	virtual void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr; // no layout
+
+        if (isFinalValidationPass)
+        {
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() && // match vector dimension
+                  Input(0)->HasMBLayout() &&
+                  Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
+            {
+                LogicError("The Matrix dimension in the RNNTNode operation does not match.");
+            }
+
+            auto leftNode = dynamic_pointer_cast<LabelsToGraphNode<ElemType>>(Input(0));
+            if (!leftNode)
+                LogicError("RNNTNode: Please pass LabelsToGraph(labels) for second argument");
+        }
+        LinkToMBLayout(minRankedIniputPtr->GetMBLayout());
+        SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+    }
+
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+    {
+        size_t i;
+        for (i = 0; i < GetNumInputs(); i++)
+        {
+            if (Input(i).get() == input)
+                break;
+        }
+        if (i == GetNumInputs())
+            LogicError("Cannot find input.");
+
+        return this->InputMatchesOutput(i) ? ParentGradientOptimization::Reuse : ParentGradientOptimization::Overwrite;
+    }
+};
+
+template class PlusNode<float>;
+template class PlusNode<double>;
+template class PlusNode<half>;
+*/
 // -----------------------------------------------------------------------
 // LogPlusNode (summand1, summand2)
 // Computes ln(exp(summand1) + exp(summand2)) in an overflow safe way.
