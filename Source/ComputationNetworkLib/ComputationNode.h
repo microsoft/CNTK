@@ -82,6 +82,9 @@ public:
     }
 };
 
+#define NVTXTRACEFP(t) EnsureTracingName(t); NVTXTracer tracer(m_nodeNameTypeForFPTracing.c_str());
+#define NVTXTRACEBP(t) EnsureTracingName(t); NVTXTracer tracer(m_nodeNameTypeForBPTracing.c_str());
+
 
 enum CopyNodeFlags // flags to be passed to the CopyTo() function
 {
@@ -697,6 +700,24 @@ public:
         //fprintf(stderr, "Node --> %ls : %ls\n", NodeName().c_str(), OperationName().c_str()), fflush(stderr);
     }
 
+    void EnsureTracingName(const char* nodeTypeStr)
+    {
+        if (m_nodeNameTypeForFPTracing == "")
+        {
+            // use operation name ?
+            m_nodeNameTypeForFPTracing = ">";
+            m_nodeNameTypeForFPTracing += nodeType;
+            m_nodeNameTypeForFPTracing += m_nodeName.c_str();
+        }
+        if (m_nodeNameTypeForBPTracing == "")
+        {
+            // use operation name ?
+            m_nodeNameTypeForBPTracing = "<";
+            m_nodeNameTypeForBPTracing += nodeType;
+            m_nodeNameTypeForBPTracing += m_nodeName.c_str();
+        }
+    }
+
     bool NeedsGradient() const { return m_needsGradient; }
 
     void MarkNeedsDynamicValidation() { m_needsDynamicValidation = true; }
@@ -968,6 +989,8 @@ protected:
     // administrative
     DEVICEID_TYPE m_deviceId; // CPU=-1, >=0 GPU
     std::wstring m_nodeName;
+    std::string m_nodeNameTypeForFPTracing;                                                                                                                              \
+    std::string m_nodeNameTypeForBPTracing;                                                                                                                              \
 
     // inputs
     std::vector<ComputationNodeBasePtr> m_inputs;
@@ -2482,6 +2505,8 @@ protected:                                                                      
     using Base::m_gradient;                                                                                                                              \
     using Base::m_inputs;                                                                                                                                \
     using Base::m_nodeName;                                                                                                                              \
+    using Base::m_nodeNameTypeForFPTracing;                                                                                                              \
+    using Base::m_nodeNameTypeForBPTracing;                                                                                                              \
     using Base::m_pMBLayout;                                                                                                                             \
     using Base::m_learningRateMultiplier;                                                                                                                \
     using Base::m_sampleLayout;                                                                                                                          \

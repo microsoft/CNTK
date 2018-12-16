@@ -115,7 +115,15 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType, direction>::BeginForwardProp() /*override*/
 {
-    NVTXTracer tracer("BFPDelay");
+    int pastOrFuture = direction; // (this avoids a 'conditional expression is constant' warning)
+    if (pastOrFuture == -1)
+    {
+       NVTXTRACEFP("<P")
+    }
+    else
+    {
+       NVTXTRACEFP("<F")
+    }
 
     Base::BeginForwardProp();
 
@@ -312,7 +320,15 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::ForwardProp(const FrameRange& fr) /*override*/
 {
-    NVTXTracer tracer("FPDelay");
+    int pastOrFuture = direction; // (this avoids a 'conditional expression is constant' warning)
+    if (pastOrFuture == -1)
+    {
+       NVTXTRACEFP("P")
+    }
+    else
+    {
+       NVTXTRACEFP("F")
+    }
 
     assert(m_pMBLayout);
 
@@ -407,7 +423,15 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::EndForwardProp() /*override*/ // called after last iteration step of ForwardProp()
 {
-    NVTXTracer tracer("EFPDelay");
+    int pastOrFuture = direction; // (this avoids a 'conditional expression is constant' warning)
+    if (pastOrFuture == -1)
+    {
+       NVTXTRACEFP(">P")
+    }
+    else
+    {
+       NVTXTRACEFP(">F")
+    }
 
     // In truncated BPTT, we carry over left-to-right state across minibatches.
     // It is kept in m_delayedValue, m_delayedActivationMBLayout.
@@ -429,7 +453,15 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
-    NVTXTracer tracer("BPDelay");
+    int pastOrFuture = direction; // (this avoids a 'conditional expression is constant' warning)
+    if (pastOrFuture == -1)
+    {
+       NVTXTRACEBP("P")
+    }
+    else
+    {
+       NVTXTRACEBP("F")
+    }
 
     // input 1 (initial state) is done in bulk
     if (inputIndex == 1)    

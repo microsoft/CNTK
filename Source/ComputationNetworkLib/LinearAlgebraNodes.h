@@ -44,7 +44,7 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        NVTXTracer tracer("FPPlus");
+        NVTXTRACEFP("+")
 
         size_t rank = DetermineElementwiseTensorRank();
         auto result =             ValueTensorFor(rank, fr);
@@ -55,7 +55,7 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        NVTXTracer tracer("BPPlus");
+        NVTXTRACEBP("+")
 
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient      =                    GradientTensorFor(rank, fr);
@@ -253,7 +253,7 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        NVTXTracer tracer("FPMinus");
+        NVTXTRACEFP("-")
 
         size_t rank = DetermineElementwiseTensorRank();
         auto result =             ValueTensorFor(rank, fr);
@@ -264,7 +264,7 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        NVTXTracer tracer("BPMinus");
+        NVTXTRACEBP("-")
 
         size_t rank = DetermineElementwiseTensorRank();
         auto gradient      =                    GradientTensorFor(rank, fr);
@@ -325,13 +325,13 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        NVTXTracer tracer("FPElementTimes");
+        NVTXTRACEFP("*")
         ForwardPropImpl(*this, fr, true/*allowBroadcast*/);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        NVTXTracer tracer("BPElementTimes");
+        NVTXTRACEBP("*")
         BackpropToImpl(*this, inputIndex, fr, true/*allowBroadcast*/);
     }
 
@@ -650,7 +650,7 @@ private:
 public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        NVTXTracer tracer("FPTimes");
+        NVTXTRACEFP("@")
 
         // If argument A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
         // This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
@@ -730,7 +730,7 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        NVTXTracer tracer("BPTimes");
+        NVTXTRACEBP("@")
 
         // special treatment if A is minibatch data; see Forward() for comment
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
