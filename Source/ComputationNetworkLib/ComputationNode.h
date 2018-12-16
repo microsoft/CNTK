@@ -82,8 +82,8 @@ public:
     }
 };
 
-#define NVTXTRACEFP(t) EnsureTracingName(t); NVTXTracer tracer(m_nodeNameTypeForFPTracing.c_str());
-#define NVTXTRACEBP(t) EnsureTracingName(t); NVTXTracer tracer(m_nodeNameTypeForBPTracing.c_str());
+#define NVTXTRACEFP(t) this->EnsureTracingName(t); NVTXTracer tracer(m_nodeNameTypeForFPTracing.c_str());
+#define NVTXTRACEBP(t) this->EnsureTracingName(t); NVTXTracer tracer(m_nodeNameTypeForBPTracing.c_str());
 
 
 enum CopyNodeFlags // flags to be passed to the CopyTo() function
