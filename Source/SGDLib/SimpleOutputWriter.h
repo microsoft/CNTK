@@ -37,6 +37,8 @@ class SimpleOutputWriter
         shared_ptr<Matrix<ElemType>> LabelMatrix;
         double logP;
         size_t length;
+        size_t processlength;
+        shared_ptr<Matrix<ElemType>> decodeoutput;
         bool operator<(const Sequence& rhs) const
         {
             return logP < rhs.logP;
@@ -50,7 +52,7 @@ public:
         : m_net(net), m_verbosity(verbosity)
     {
     }
-   
+
     void WriteOutput(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
@@ -253,14 +255,15 @@ public:
 
     Sequence newSeq(size_t numRow, size_t numCol, DEVICEID_TYPE deviceId)
     {
-        Sequence oneSeq = {make_shared<Matrix<ElemType>>(numRow, numCol, deviceId), 0.0, 0};
+        Sequence oneSeq = {make_shared<Matrix<ElemType>>(numRow, numCol, deviceId), 0.0, 0, 0, make_shared<Matrix<ElemType>>(numRow, (size_t) 1, deviceId)};
         oneSeq.LabelMatrix->SetValue(0.0);
         return oneSeq;
     }
     Sequence newSeq(Sequence a)
     {
-        Sequence oneSeq = {make_shared<Matrix<ElemType>>(a.LabelMatrix->GetNumRows(), (size_t) 200, a.LabelMatrix->GetDeviceId()), a.logP, a.length};
+        Sequence oneSeq = {make_shared<Matrix<ElemType>>(a.LabelMatrix->GetNumRows(), (size_t) 200, a.LabelMatrix->GetDeviceId()), a.logP, a.length, a.processlength, make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId())};
         oneSeq.LabelMatrix->SetValue(*(a.LabelMatrix));
+        oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
 
         return oneSeq;
     }
@@ -275,7 +278,7 @@ public:
         }
         return maxIt;
     }
-    void extendSeq(Sequence &insequence, size_t labelId, double logP)
+    void extendSeq(Sequence& insequence, size_t labelId, double logP)
     {
         ElemType* ftemp;
         size_t vocabSize = insequence.LabelMatrix->GetNumRows();
@@ -290,17 +293,25 @@ public:
 
     void forward_decode(Sequence oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes, std::vector<ComputationNodeBasePtr> decodeinputNodes)
     {
-        Matrix<ElemType> lmin(deviceID);
         size_t labelLength = oneSeq.length;
-        //greedyOutput.SetValue(greedyOutputMax.ColumnSlice(0, lmt));
-        lmin.SetValue(oneSeq.LabelMatrix->ColumnSlice(0, labelLength));
-        auto lminput = decodeinputMatrices.begin();
-        lminput->second.pMBLayout->Init(1, labelLength);
-        std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
-        lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, labelLength);
-        ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
-        DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
-        m_net->ForwardProp(decodeOutputNodes[0]);
+        if (labelLength > oneSeq.processlength)
+        {
+
+            Matrix<ElemType> lmin(deviceID);
+
+            //greedyOutput.SetValue(greedyOutputMax.ColumnSlice(0, lmt));
+            lmin.SetValue(oneSeq.LabelMatrix->ColumnSlice(0, labelLength));
+            auto lminput = decodeinputMatrices.begin();
+            lminput->second.pMBLayout->Init(1, labelLength);
+            std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
+            lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, labelLength);
+            ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+            DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+            m_net->ForwardProp(decodeOutputNodes[0]);
+            //Matrix<ElemType> tempMatrix = *(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value());
+            oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())).ColumnSlice(labelLength - 1, 1));
+            oneSeq.processlength = labelLength;
+        }
     }
     bool compareseq(Sequence a, Sequence b)
     {
@@ -386,14 +397,14 @@ public:
                 {
                     //auto maxSeq = getMaxSeq(CurSequences);
                     auto maxSeq = std::max_element(CurSequences.begin(), CurSequences.end());
-                        //std::max_element()
+                    //std::max_element()
                     //auto pos = std::find(CurSequences.begin(), CurSequences.end(), maxSeq);
                     Sequence tempSeq = newSeq(*maxSeq);
                     CurSequences.erase(maxSeq);
                     forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes);
-                    decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value()));
+                    //decodeOutput.SetValue(*(tempSeq.decodeoutput));
                     //decodeOutput.Print("decode output");
-                    sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput.ColumnSlice(decodeOutput.GetNumCols()-1, 1));
+                    sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(tempSeq.decodeoutput));
                     sumofENandDE.InplaceLogSoftmax(true);
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
@@ -410,20 +421,20 @@ public:
                         Sequence seqK = newSeq(tempSeq);
                         double newlogP = Elem.first + tempSeq.logP;
                         seqK.logP = newlogP;
-                        
-						if (Elem.second == blankId)
-						{
+
+                        if (Elem.second == blankId)
+                        {
                             nextSequences.push_back(seqK);
                             q.pop();
                             continue;
-						}
+                        }
                         extendSeq(seqK, Elem.second, newlogP);
                         CurSequences.push_back(seqK);
                         q.pop();
                     }
                     if (CurSequences.size() == 0)
                         break;
-					auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
+                    auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
                     auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
                     if (nextSequences.size() > beamSize && yb->logP > ya->logP)
                         break;
