@@ -2429,6 +2429,11 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
                                                         (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier, true);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
     }
+    else if (adpType == GradientsUpdateType::Adam)
+    {
+        smoothedGradientValues.AdamUpdate(gradientValues, functionValues, smoothedCount + 1, learnRatePerSample,
+            m_adam.meanMomentum, m_adam.varMomentum, m_adam.epsilon, (ElemType)(1 - m_adam.meanMomentum), false);
+    }
 
     if (noiseStd > 0)
     {
@@ -2840,6 +2845,7 @@ static GradientsUpdateType ParseGradUpdateType(const wstring& s)
     else if (EqualCI(s, L"adagrad"))                 return GradientsUpdateType::AdaGrad;
     else if (EqualCI(s, L"rmsProp"))                 return GradientsUpdateType::RmsProp;
     else if (EqualCI(s, L"fsAdagrad"))               return GradientsUpdateType::FSAdaGrad;
+    else if (EqualCI(s, L"adam"))                    return GradientsUpdateType::Adam;
     // legacy, deprecated
     else if (EqualCI(s, L"normal") || EqualCI(s, L"simple")) return GradientsUpdateType::None;
     else InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
@@ -3005,6 +3011,11 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_rpi.min = configSGD(L"rms_wgt_min", 0.1);
     m_rpi.max = configSGD(L"rms_wgt_max", 10.0);
     m_rpi.gamma = configSGD(L"rms_gamma", 0.99);
+
+    // Adam settings
+    m_adam.meanMomentum = configSGD(L"adam_meanMomentum", 0.9);
+    m_adam.varMomentum = configSGD(L"adam_varMomentum", 0.999);
+    m_adam.epsilon = configSGD(L"adam_epsilon", pow(10, -8));
 
     m_needAveMultiplier = configSGD(L"normWithAveMultiplier", true);
     m_L2RegWeight = configSGD(L"L2RegWeight", 0.0);
