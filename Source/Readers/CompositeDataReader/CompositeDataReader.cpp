@@ -84,7 +84,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         m_packingMode = PackingMode::sequence;
     }
 
-    m_rightSplice = config(L"rightSplice", 0);
+    m_rightSplice = config(L"rightSplice", 20);
     if (m_rightSplice > m_truncationLength)
         InvalidArgument("rightSplice should not be greater than truncation length");
 
