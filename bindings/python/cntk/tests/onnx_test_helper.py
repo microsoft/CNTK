@@ -10,7 +10,7 @@ import scipy
 import cntk as C
 import pytest
 onnx = pytest.importorskip("onnx")
-from .onnx_verify_helper import verify_model, get_onnx_test_runner_callscript
+from .onnx_verify_helper import verify_results_with_onnxruntime, get_onnx_test_runner_callscript
 
 CNTK_FREEDIM_AXIS_DENOTATION = -3
 DIM_SIZE_FOR_NON_BATCH_OPS = 1
@@ -264,5 +264,28 @@ def save_test_data(model, onnx_model, test_data_path, input_data, output_data, n
     # print out command line for onnx test runner
     print(get_onnx_test_runner_callscript(name, tmpdir))
 
-    failed_cases_count = verify_model(name, tmpdir)
-    assert failed_cases_count == 0, 'there are test failures.'
+    failed_cases_count = verify_results_with_onnxruntime(name, tmpdir)
+    assert failed_cases_count == 0
+
+def create_or_purge_folder(test_onnx_path, create=True):
+    if 'test_' not in test_onnx_path:
+        return
+    if os.path.exists(test_onnx_path):
+        shutil.rmtree(test_onnx_path, ignore_errors=True)
+    if create:
+        os.mkdir(test_onnx_path)
+
+def save_onnx_model_with_validation_data(tmpdir, model, data, name, device=None):
+    folder = os.path.join(str(tmpdir), "test_" + name)
+    create_or_purge_folder(folder)
+    model_file_name = os.path.join(folder, name + ".onnx")
+
+    input_dict = dict(zip(model.arguments, data))
+    o0 = model.eval(input_dict, device=device)
+    model.save(model_file_name, format = C.ModelFormat.ONNX)
+    
+    onnx_model = onnx.load(model_file_name)
+    
+    test_data_path = os.path.join(folder, "test_data_set_0")
+    create_or_purge_folder(test_data_path)
+    save_test_data(model, onnx_model, test_data_path, data, np.array(o0), name, tmpdir)

@@ -4,7 +4,9 @@
 # ==============================================================================
 
 from __future__ import print_function
-import os, re, sys, subprocess
+import os, re, sys, subprocess, scipy, pytest, numpy as np
+import cntk as C
+onnx = pytest.importorskip("onnx")
 
 windows = os.getenv("OS")=="Windows_NT"
 
@@ -55,7 +57,7 @@ def parse_verify_out_str(content):
 
     return total_failed_cases
 
-def verify_model(model_name, model_dir):
+def verify_results_with_onnxruntime(model_name, model_dir):
     path_prefix = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'], 'ONNXRuntime') if 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ else ''
     onnx_test_runner_path_str = str(os.path.join(path_prefix, 'onnx_test_runner.exe'))
     # run only on windows. 
@@ -67,3 +69,39 @@ def verify_model(model_name, model_dir):
 
 def get_onnx_test_runner_callscript(model_name, model_dir):
     return R'onnx_test_runner.exe -n ' + model_name + ' ' + str(model_dir)
+
+def generate_sequence_data(batch_size, seq_len, feature_size, input_as_index = False):
+    assert batch_size == 1
+    np.random.seed(0)
+    data = np.zeros((batch_size, seq_len)).astype(np.float32) if input_as_index else np.zeros((batch_size, seq_len, feature_size)).astype(np.float32) 
+    for i in range(0,seq_len):
+        one_hot_index = np.random.random_integers(0, feature_size - 1)
+        if input_as_index:
+            data[0][i] = one_hot_index
+        else:
+            data[0][i][one_hot_index] = 1
+    return data
+
+def generate_sequential_data(tensor_shape):
+    total = np.prod(tensor_shape)
+    return np.reshape(range(0, total), tensor_shape).astype(np.float32)
+
+def generate_sparse_data(batch_size, seq_len, feature_size):
+    sparse_data = []
+    for batch in range(0, batch_size):
+        data = np.zeros((seq_len, feature_size)).astype(np.float32)
+        np.random.seed(0)
+        for i in range(0,seq_len): 
+            one_hot_index = np.random.random_integers(0, feature_size - 1)
+            data[i][one_hot_index] = 1.0
+        sparse_data.append(scipy.sparse.csr_matrix(data))
+    return sparse_data
+
+def generate_sparse_data_non_seq(batch_size, feature_size):
+    data = np.zeros((batch_size, feature_size)).astype(np.float32)
+    np.random.seed(0)
+    for i in range(0,batch_size): 
+        one_hot_index = np.random.random_integers(0, feature_size - 1)
+        data[i][one_hot_index] = 1.0
+    sparse_data = scipy.sparse.csr_matrix(data)
+    return sparse_data

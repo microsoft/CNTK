@@ -14,9 +14,10 @@ import tempfile
 
 onnx = pytest.importorskip("onnx")
 from onnx import numpy_helper
+from .onnx_verify_helper import generate_sequence_data, generate_sequential_data, generate_sparse_data, verify_results_with_onnxruntime, generate_sparse_data_non_seq
+from .onnx_test_helper import find_onnx_value_info_proto_with_matching_name, save_cntk_data_as_onnx_tensor, save_test_data,  save_onnx_model_with_validation_data
 
-from .onnx_test_helper import find_onnx_value_info_proto_with_matching_name, save_cntk_data_as_onnx_tensor
-from .onnx_verify_helper import verify_model
+from .onnx_op_test import verify_sequence_model
 
 # To test models locally, create folder 'onnx_models' and put in model folders. 
 # For example.
@@ -313,4 +314,94 @@ def test_cntk_model(model_name):
             rtol=1e-3,
             atol=1e-4)
 
-    verify_model(model_name, str(os.path.abspath(tmpdir)))
+    verify_results_with_onnxruntime(model_name, str(os.path.abspath(tmpdir)))
+
+rnn_base_dir = get_base_dir('rnn_models')
+rnn_model_names = [dir for dir in os.listdir(rnn_base_dir)
+                    if os.path.isfile(os.path.join(rnn_base_dir, dir)) and dir.rfind('.model') + len('.model') == len(dir)] if os.path.exists(rnn_base_dir) else []
+
+skip_rnn_model_names = [
+    'SmartReply.Base_BiLSTM_Exported_input_replaced_with_gather_for_indice_input.cntk.model',
+    'SmartReply.cvae_input_replaced_with_gather_for_indice_input.cntk.model', 
+    'SmartReply.SelfAtt.infer_model.cnt.model',
+	'Speech.lstm_pit.cntk48.ElementTimes3117.model',
+]
+
+verify_with_resave = [
+    'SmartReply.Base_BiLSTM_Exported_input_replaced_with_gather_for_indice_input.cntk.model',
+    'SmartReply.cvae_input_replaced_with_gather_for_indice_input.cntk.model',
+    'SmartReply.3outputs.Trained.cnt_replaced_embedding_with_gather.model',
+    'SmartReply.3outputs.Untrained.model'
+]
+
+models_with_sequential_data = [
+    'Speech.princeton.gather.flattened.model',
+    'Speech.model.lstm.900.converted.LSTMoutputW.model',
+    'Speech.cris.ff.model.dbn.HLast.model',
+    'Speech.262.cntk.model'
+]
+
+seq_models_with_sparse_data = [
+    'Bing.Malta50.proto1_128_gru_normv3_ep3_z.model',
+    'SmartReply.3outputs.Trained.cnt_replaced_embedding_with_gather.model',
+    'SmartReply.3outputs.Untrained.model',
+]
+
+non_seq_models_with_sparse_data = [
+    'Speech.Polyphony.DNN.FinalModel.cmf.model'
+]
+
+def verify_model(cntk_model, node_name, tmpdir, model_name, image = None, skip_round_trip_test = True):
+    if (node_name is not None):
+        cntk_node = cntk_model.find_by_name(node_name)
+        if not cntk_node:
+            cntk_node = C.logging.depth_first_search(cntk_model, lambda x: x.uid == node_name, depth = 10)[0]
+        cntk_node_model = C.as_composite(cntk_node)
+    else:
+        node_name = "full"
+        cntk_node_model = cntk_model
+    sanitized_node_name = model_name + node_name.replace("/", ".")
+    if (image is None):
+        image = np.random.rand(*np.shape(cntk_model.arguments[0])).astype(np.float32)
+
+    test_model_path = os.path.join(str(tmpdir), R'test_' + sanitized_node_name)
+    print(test_model_path)
+
+    if os.path.exists(test_model_path):
+        shutil.rmtree(test_model_path, ignore_errors=True)
+    
+    verify_sequence_model(cntk_node_model, image, tmpdir, sanitized_node_name, resave = not skip_round_trip_test)
+
+
+@pytest.mark.parametrize('model_name',
+    [model_name for model_name in rnn_model_names],
+    ids=[model_name for model_name in rnn_model_names])
+def test_cntk_rnn_models(model_name):
+
+    if model_name in skip_rnn_model_names:
+        pytest.skip('Skip cntk rnn model test. ')
+
+    model_dir = os.path.join(rnn_base_dir, model_name)
+    model = C.Function.load(model_dir, format=C.ModelFormat.CNTKv2)
+
+    # Generate model-specific data
+    data = []
+    np.random.seed(0)
+    sequence_length = 10
+
+    for arg in model.arguments:
+        if model_name in models_with_sequential_data:
+            data.append(generate_sequential_data((1,sequence_length) + arg.shape))
+        elif model_name in seq_models_with_sparse_data:
+            data.append(generate_sparse_data(1, sequence_length, arg.shape[0]))
+        elif model_name in non_seq_models_with_sparse_data:
+            data.append(generate_sparse_data_non_seq(1, arg.shape[0]))
+        else:
+            data.append(generate_sequence_data(1, sequence_length, arg.shape[0]))
+            
+    # Validate model results
+    if(model_name in verify_with_resave):
+        verify_model(model, None, tmpdir, model_name, data[0] if len(data) == 1 else data , True)
+    else:
+        save_onnx_model_with_validation_data(tmpdir, model, data[0] if len(data) == 1 else data, model_name, device=None)
+        verify_results_with_onnxruntime(model_name, str(os.path.abspath(tmpdir)))
