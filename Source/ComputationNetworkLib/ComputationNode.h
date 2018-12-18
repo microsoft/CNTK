@@ -706,14 +706,14 @@ public:
         {
             // use operation name ?
             m_nodeNameTypeForFPTracing = ">";
-            m_nodeNameTypeForFPTracing += nodeType;
+            m_nodeNameTypeForFPTracing += nodeTypeStr;
             m_nodeNameTypeForFPTracing += m_nodeName.c_str();
         }
         if (m_nodeNameTypeForBPTracing == "")
         {
             // use operation name ?
             m_nodeNameTypeForBPTracing = "<";
-            m_nodeNameTypeForBPTracing += nodeType;
+            m_nodeNameTypeForBPTracing += nodeTypeStr;
             m_nodeNameTypeForBPTracing += m_nodeName.c_str();
         }
     }
