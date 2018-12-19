@@ -24,7 +24,10 @@
 #include "simplesenonehmm.h"
 #include "Matrix.h"
 #include <set>
-namespace msra { namespace math {
+namespace msra
+{
+namespace math
+{
 
 class ssematrixbase;
 template <class ssematrixbase>
@@ -34,14 +37,20 @@ class ssematrixstriperef;
 };
 };
 
-namespace msra { namespace lm {
+namespace msra
+{
+namespace lm
+{
 
 class CMGramLM;
 class CSymbolSet;
 };
 }; // for numer-lattice building
 
-namespace msra { namespace asr {
+namespace msra
+{
+namespace asr
+{
 
 template <typename A, typename B>
 class htkmlfreader;
@@ -49,7 +58,10 @@ struct htkmlfentry;
 };
 }; // for numer lattice building
 
-namespace msra { namespace lattices {
+namespace msra
+{
+namespace lattices
+{
 
 typedef msra::math::ssematrixbase matrixbase;
 typedef msra::math::ssematrix<matrixbase> matrix;
@@ -72,8 +84,8 @@ class lattice
     // definie structure for nbest EMBR
     struct TokenInfo
     {
-        double score; // the score of the token
-        size_t prev_edge_index; // edge ending with this token, edge start points to the previous node
+        double score;            // the score of the token
+        size_t prev_edge_index;  // edge ending with this token, edge start points to the previous node
         size_t prev_token_index; // the token index in the previous node
     };
     struct PrevTokenInfo
@@ -87,8 +99,8 @@ class lattice
     {
         // for sorting purpose
         // make sure the map is stored with keys in descending order
-        std::map<double, std::vector<PrevTokenInfo>, std::greater <double>> mp_score_token_infos; // for sorting the tokens in map
-        std::vector<TokenInfo> vt_nbest_tokens; // stores the nbest tokens in the node
+        std::map<double, std::vector<PrevTokenInfo>, std::greater<double>> mp_score_token_infos; // for sorting the tokens in map
+        std::vector<TokenInfo> vt_nbest_tokens;                                                  // stores the nbest tokens in the node
     };
 
     struct header_v1_v2
@@ -118,10 +130,13 @@ private:
     static_assert(sizeof(aligninfo) == 4, "unexpected size of aligninfo");
     std::vector<nodeinfo> nodes;
     mutable std::vector<std::vector<uint64_t>> vt_node_out_edge_indices; // vt_node_out_edge_indices[i]: it stores the outgoing edge indices starting from node i
-    std::vector<bool> is_special_words; // true if it is special words that do not count to WER computation, false if it is not
+    std::vector<bool> is_special_words;                                  // true if it is special words that do not count to WER computation, false if it is not
     std::vector<edgeinfowithscores> edges;
     std::vector<aligninfo> align;
-   
+
+    //linquan
+    std::unordered_map<int, std::wstring> id2wordmap4node; //keep id2word mapping specific for nodes of current lattice
+
     // V2 lattices  --for a while, we will store both in RAM, until all code is updated
     static int fsgn(float f)
     {
@@ -286,10 +301,9 @@ public: // TODO: make private again once
         }
 
         // sort edges
-        sort(edges2.begin(), edges2.end(), [&](const edgeinfo& e1, const edgeinfo& e2)
-             {
-                 return uniqueorder(e1, e2) < 0;
-             });
+        sort(edges2.begin(), edges2.end(), [&](const edgeinfo& e1, const edgeinfo& e2) {
+            return uniqueorder(e1, e2) < 0;
+        });
 
         // create a uniq'ed version of the align[] array, into uniquededgedatatokens[]
         uniquededgedatatokens.resize(0);
@@ -363,10 +377,9 @@ public: // TODO: make private again once
                 (int) align.size(), (int) numimpliedsp, (int) nonuniquenonsptokens, (int) uniquealigntokens, 100.0f * uniquealigntokens / nonuniquenonsptokens);
 
         // sort it back into original order (sorted by E, then by S)
-        sort(edges2.begin(), edges2.end(), [&](const edgeinfo& e1, const edgeinfo& e2)
-             {
-                 return latticeorder(e1, e2) < 0;
-             });
+        sort(edges2.begin(), edges2.end(), [&](const edgeinfo& e1, const edgeinfo& e2) {
+            return latticeorder(e1, e2) < 0;
+        });
 
         // TODO: be more consistent--we should clear out edges[] at this point!
     }
@@ -731,7 +744,6 @@ private:
                                       const float lmf, const float wp, const float amf, const_array_ref<size_t>& uids,
                                       const edgealignments& thisedgealignments, std::vector<double>& Eframescorrect) const;
 
-    
     void sMBRerrorsignal(parallelstate& parallelstate,
                          msra::math::ssematrixbase& errorsignal, msra::math::ssematrixbase& errorsignalneg,
                          const std::vector<double>& logpps, const float amf, double minlogpp,
@@ -768,7 +780,7 @@ private:
                                  const std::vector<double>& logEframescorrect, const double logEframescorrecttotal,
                                  msra::math::ssematrixbase& errorsignal, msra::math::ssematrixbase& errorsignalneg) const;
     void parallelEMBRerrorsignal(parallelstate& parallelstate, const edgealignments& thisedgealignments,
-        const std::vector<double>& edgeweights, msra::math::ssematrixbase& errorsignal) const;
+                                 const std::vector<double>& edgeweights, msra::math::ssematrixbase& errorsignal) const;
     void parallelmmierrorsignal(parallelstate& parallelstate, const edgealignments& thisedgealignments,
                                 const std::vector<double>& logpps, msra::math::ssematrixbase& errorsignal) const;
 
@@ -780,14 +792,14 @@ private:
                                           std::vector<double>& Eframescorrectbuf, double& logEframescorrecttotal) const;
 
     double parallelbackwardlatticeEMBR(parallelstate& parallelstate, const std::vector<float>& edgeacscores,
-        const float lmf, const float wp,
-        const float amf, std::vector<double>& edgelogbetas,
-        std::vector<double>& logbetas) const;
-    
-    void EMBRsamplepaths(const std::vector<double> &edgelogbetas,
-        const std::vector<double> &logbetas, const size_t numPathsEMBR, const bool enforceValidPathEMBR,  const bool excludeSpecialWords, std::vector< std::vector<size_t> > & vt_paths) const;
+                                       const float lmf, const float wp,
+                                       const float amf, std::vector<double>& edgelogbetas,
+                                       std::vector<double>& logbetas) const;
 
-    void EMBRnbestpaths(std::vector<NBestToken>& tokenlattice, std::vector<std::vector<size_t>> & vt_paths, std::vector<double>& path_posterior_probs) const;
+    void EMBRsamplepaths(const std::vector<double>& edgelogbetas,
+                         const std::vector<double>& logbetas, const size_t numPathsEMBR, const bool enforceValidPathEMBR, const bool excludeSpecialWords, std::vector<std::vector<size_t>>& vt_paths) const;
+
+    void EMBRnbestpaths(std::vector<NBestToken>& tokenlattice, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& path_posterior_probs) const;
 
     double get_edge_weights(std::vector<size_t>& wids, std::vector<std::vector<size_t>>& vt_paths, std::vector<double>& vt_edge_weights, std::vector<double>& vt_path_posterior_probs, std::string getPathMethodEMBR, double& onebestwer) const;
 
@@ -806,14 +818,15 @@ private:
                                   std::vector<double>& logEframescorrect, std::vector<double>& Eframescorrectbuf,
                                   double& logEframescorrecttotal) const;
 
-    double backwardlatticeEMBR(const std::vector<float>& edgeacscores, parallelstate& parallelstate, std::vector<double> &edgelogbetas,
-                                  std::vector<double>& logbetas,
-                                  const float lmf, const float wp, const float amf) const;
+    double backwardlatticeEMBR(const std::vector<float>& edgeacscores, parallelstate& parallelstate, std::vector<double>& edgelogbetas,
+                               std::vector<double>& logbetas,
+                               const float lmf, const float wp, const float amf) const;
 
-    void constructnodenbestoken(std::vector<NBestToken> &tokenlattice, const bool wordNbest, size_t numtokens2keep, size_t nidx) const;
+    void constructnodenbestoken(std::vector<NBestToken>& tokenlattice, const bool wordNbest, size_t numtokens2keep, size_t nidx) const;
 
-    double nbestlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<NBestToken> &vt_nbesttokens, const size_t numtokens, const bool enforceValidPathEMBR,  const bool excludeSpecialWords,
-        const float lmf, const float wp, const float amf,  const bool wordNbest, const bool useAccInNbest, const float accWeightInNbest, const size_t numPathsEMBR, std::vector<size_t> wids) const;
+    double nbestlatticeEMBR(const std::vector<float>& edgeacscores, parallelstate& parallelstate, std::vector<NBestToken>& vt_nbesttokens, const size_t numtokens, const bool enforceValidPathEMBR, const bool excludeSpecialWords,
+                            const float lmf, const float wp, const float amf, const bool wordNbest, const bool useAccInNbest, const float accWeightInNbest, const size_t numPathsEMBR, std::vector<size_t> wids) const;
+
 public:
     // construct from a HTK lattice file
     void fromhtklattice(const std::wstring& path, const std::unordered_map<std::string, size_t>& unitmap);
@@ -822,7 +835,6 @@ public:
     void frommlf(const std::wstring& key, const std::unordered_map<std::string, size_t>& unitmap, const msra::asr::htkmlfreader<msra::asr::htkmlfentry, lattice::htkmlfwordsequence>& labels,
                  const msra::lm::CMGramLM& lm, const msra::lm::CSymbolSet& unigramsymbols);
 
-  
     // check consistency
     //  - only one end node
     //  - only forward edges
@@ -929,7 +941,7 @@ public:
     template <typename HMMLOOKUPFUNCTION>
     void dump(FILE* f, const HMMLOOKUPFUNCTION& gethmmname) const // dump a lattice in HTK-like format
     {
-        fprintf(f, "N=%lu L=%lu\n", (unsigned long)nodes.size(), (unsigned long)edges.size());
+        fprintf(f, "N=%lu L=%lu\n", (unsigned long) nodes.size(), (unsigned long) edges.size());
         // foreach_index (i, nodes)
         //    fprintf (f, "I=%d\tt=%.2f\n", i, nodes[i].t * 0.01f);
         foreach_index (j, edges)
@@ -1011,8 +1023,8 @@ public:
             RuntimeError("freadvector: malformed file, number of vector elements differs from head, for tag %s", tag);
         freadOrDie(v, sz, f);
     }
-    
-    bool CheckTag(const char*& buffer, const std::string& expectedTag) 
+
+    bool CheckTag(const char*& buffer, const std::string& expectedTag)
     {
         std::string tag(buffer, expectedTag.length());
         if (tag != expectedTag)
@@ -1020,15 +1032,16 @@ public:
         buffer += expectedTag.length();
         return true;
     }
-    
+
     int ReadTagFromBuffer(const char*& buffer, const std::string& expectedTag, size_t expectedSize = SIZE_MAX)
     {
-        if (!CheckTag(buffer, expectedTag)) {
+        if (!CheckTag(buffer, expectedTag))
+        {
             // since lattice is packed densely by the reader, we may need to shift the buffer by 2 bytes.
             if (!CheckTag(buffer, expectedTag.substr(2)))
                 RuntimeError("ReadTagFromBuffer: malformed file, missing expected tag: %s,", expectedTag.c_str());
         }
-        int* sz = (int*)buffer;
+        int* sz = (int*) buffer;
         if (expectedSize != SIZE_MAX && *sz != expectedSize)
             RuntimeError("ReadTagFromBuffer: malformed file, number of vector elements differs from head, for tag %zu", expectedSize);
 
@@ -1041,7 +1054,8 @@ public:
     {
         int sz = ReadTagFromBuffer(buffer, expectedTag, expectedsize);
         v.resize(sz);
-        for (size_t i = 0;i < sz;i++) {
+        for (size_t i = 0; i < sz; i++)
+        {
             const T* element = reinterpret_cast<const T*>(buffer);
             v[i] = *element;
             buffer += sizeof(T);
@@ -1056,7 +1070,8 @@ public:
     // This will also map the aligninfo entries to the new symbol table, through idmap.
     // V1 lattices will be converted. 'spsenoneid' is used in that process.
     template <class IDMAP>
-    void fread(FILE* f, const IDMAP& idmap, size_t spunit, std::set<int>& specialwordids)
+    void fread(FILE* f, const IDMAP& idmap, size_t spunit,
+               std::unordered_map<int, std::wstring>& id2wordmapping, std::set<int>& specialwordids)
     {
         size_t version = freadtag(f, "LAT ");
         if (version == 1)
@@ -1089,7 +1104,7 @@ public:
             freadvector(f, "EDGS", edges2, info.numedges); // uniqued edges
             freadvector(f, "ALNS", uniquededgedatatokens); // uniqued alignments
             fcheckTag(f, "END ");
-            ProcessV2EMBRLattice(spunit, info, uniquededgedatatokens, idmap, specialwordids);
+            ProcessV2EMBRLattice(spunit, info, uniquededgedatatokens, idmap, id2wordmapping, specialwordids);
         }
         else
             RuntimeError("fread: unsupported lattice format version");
@@ -1114,25 +1129,23 @@ public:
         ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap);
     }
 
-    
     // Helper method to process v2 Lattice format
     template <class IDMAP>
-    void ProcessV2Lattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap) 
+    void ProcessV2Lattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap)
     {
         // check if we need to map
         if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size()) // we have buggy lattices like that--what do they mean??
         {
-            fprintf(stderr, "ProcessV2Lattice: detected buggy spunit id %d which is out of range (%d entries in map)\n", (int)info.impliedspunitid, (int)idmap.size());
+            fprintf(stderr, "ProcessV2Lattice: detected buggy spunit id %d which is out of range (%d entries in map)\n", (int) info.impliedspunitid, (int) idmap.size());
             RuntimeError("ProcessV2Lattice: out of bounds spunitid");
         }
 
         // This is critical--we have a buggy lattice set that requires no mapping where mapping would fail
         bool needsmapping = false;
-        foreach_index(k, idmap)
+        foreach_index (k, idmap)
         {
-            if (idmap[k] != (size_t)k
-                && (k != (int)idmap.size() - 1 || idmap[k] != spunit) // that HACK that we add one more /sp/ entry at the end...
-                )
+            if (idmap[k] != (size_t) k && (k != (int) idmap.size() - 1 || idmap[k] != spunit) // that HACK that we add one more /sp/ entry at the end...
+            )
             {
                 needsmapping = true;
                 break;
@@ -1174,7 +1187,7 @@ public:
                 k += skipscoretokens;
                 uniquealignments++;
             }
-            fprintf(stderr, "ProcessV2Lattice: mapped %d unique alignments\n", (int)uniquealignments);
+            fprintf(stderr, "ProcessV2Lattice: mapped %d unique alignments\n", (int) uniquealignments);
         }
         if (info.impliedspunitid != spunit)
         {
@@ -1184,38 +1197,58 @@ public:
         }
         // reconstruct old lattice format from this   --TODO: remove once we change to new data representation
         rebuildedges(info.impliedspunitid != spunit /*to be able to read somewhat broken V2 lattice archives*/);
-
     }
-    
-        template <class IDMAP>
-    void ProcessV2EMBRLattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap, std::set<int>& specialwordids) 
+
+    template <class IDMAP>
+    void ProcessV2EMBRLattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap,
+                              std::unordered_map<int, std::wstring>& id2wordmapping, std::set<int>& specialwordids)
     {
+        std::unordered_map<int, std::wstring>::const_iterator maptable_itr;
+        std::unordered_map<int, std::wstring>::const_iterator nodemaptable_itr;
+        int wordid;
+
         vt_node_out_edge_indices.resize(info.numnodes);
         for (size_t j = 0; j < info.numedges; j++)
         {
             // an edge with !NULL pointing to not <s>
-            // this code make sure if you always start from <s> in the sampled path. 
+            // this code make sure if you always start from <s> in the sampled path.
             // mask here: we delay the processing in EMBRsamplepaths controlled by flag: enforceValidPathEMBR
             // if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
 
             vt_node_out_edge_indices[edges2[j].S].push_back(j);
-
         }
 
         is_special_words.resize(info.numnodes);
+
         for (size_t i = 0; i < info.numnodes; i++)
         {
-            if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
-            else is_special_words[i] = false;
+            if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())
+                is_special_words[i] = true;
+            else
+                is_special_words[i] = false;
+
+            if (!id2wordmapping.empty())
+            {
+                wordid = int(nodes[i].wid);
+                maptable_itr = id2wordmapping.find(wordid);
+				if (maptable_itr != id2wordmapping.end())
+                {
+                    if (id2wordmap4node.find(wordid) == id2wordmap4node.end())
+                    {
+                        id2wordmap4node.insert(std::pair<int, std::wstring>(maptable_itr->first, maptable_itr->second));
+                    }
+                }
+                else //in theory, never happens
+                {
+                    fprintf(stderr, "no mapping id2word for %d \n", wordid);
+                    id2wordmap4node.insert(std::pair<int, std::wstring>(wordid, std::to_wstring(wordid)));
+                }
+            }
         }
 
-
-        
-        ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap); 
+        ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap);
     }
 
-
-    
     // parallel versions (defined in parallelforwardbackward.cpp)
     class parallelstate
     {
@@ -1263,13 +1296,13 @@ public:
     // Note: logLLs and posteriors may be the same matrix (aliased).
     double forwardbackward(parallelstate& parallelstate, const class msra::math::ssematrixbase& logLLs, const class msra::asr::simplesenonehmm& hmms,
                            class msra::math::ssematrixbase& result, class msra::math::ssematrixbase& errorsignalbuf,
-                           const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, const bool EMBR, const std::string EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR,  const std::string getPathMethodEMBR, const std::string showWERMode,
+                           const float lmf, const float wp, const float amf, const float boostingfactor, const bool sMBRmode, const bool EMBR, const std::string EMBRUnit, const size_t numPathsEMBR, const bool enforceValidPathEMBR, const std::string getPathMethodEMBR, const std::string showWERMode,
                            const bool excludeSpecialWords, const bool wordNbest, const bool useAccInNbest, const float accWeightInNbest, const size_t numRawPathsEMBR,
-                            array_ref<size_t> uids, std::vector<size_t> wids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
+                           array_ref<size_t> uids, std::vector<size_t> wids, const_array_ref<size_t> bounds = const_array_ref<size_t>(),
                            const_array_ref<htkmlfwordsequence::word> transcript = const_array_ref<htkmlfwordsequence::word>(), const std::vector<float>& transcriptunigrams = std::vector<float>()) const;
-    
-   void EMBRerrorsignal(parallelstate &parallelstate,
-        const edgealignments &thisedgealignments, std::vector<double>& edge_weights, msra::math::ssematrixbase &errorsignal) const;
+
+    void EMBRerrorsignal(parallelstate& parallelstate,
+                         const edgealignments& thisedgealignments, std::vector<double>& edge_weights, msra::math::ssematrixbase& errorsignal) const;
     std::wstring key; // (keep our own name (key) so we can identify ourselves for diagnostics messages)
     const wchar_t* getkey() const
     {
@@ -1294,14 +1327,14 @@ public:
     // set of phoneme mappings
     typedef std::vector<unsigned int> symbolidmapping;
     template <class SYMMAP>
-    static void GetSymList(symbolidmapping& idmap, const std::wstring& symlistpath, const SYMMAP& symmap) 
+    static void GetSymList(symbolidmapping& idmap, const std::wstring& symlistpath, const SYMMAP& symmap)
     {
         std::vector<char> textbuffer;
         auto lines = msra::files::fgetfilelines(symlistpath, textbuffer);
         // establish mapping of each entry to the corresponding id in 'symmap'; this should fail if the symbol is not found
         idmap.reserve(lines.size() + 1); // last entry is a fake entry to return the /sp/ unit
         std::string symstring, tosymstring;
-        foreach_index(i, lines)
+        foreach_index (i, lines)
         {
             char* sym = lines[i];
             // parse out a mapping  (log SPC phys)
@@ -1317,17 +1350,20 @@ public:
             }
             else
             {
-                if ((size_t)i != idmap.size()) // non-mappings must come first (this is to ensure compatibility with pre-mapping files)
+                if ((size_t) i != idmap.size()) // non-mappings must come first (this is to ensure compatibility with pre-mapping files)
                     RuntimeError("GetSymList: mixed up symlist file");
                 symstring = sym; // (reusing existing object to avoid malloc)
-                idmap.push_back((unsigned int)getid(symmap, symstring));
+                idmap.push_back((unsigned int) getid(symmap, symstring));
             }
         }
         // append a fixed-position entry: last entry means /sp/
-        idmap.push_back((unsigned int)getid(symmap, "sp"));
+        idmap.push_back((unsigned int) getid(symmap, "sp"));
     }
 
 private:
+    //linquan: id2word mapping table used for eMBR CER/WER calculation
+    //std::unordered_map<int, std::wstring> id2wordmapping;
+
     const std::unordered_map<std::string, size_t>& modelsymmap; // [triphone name] -> index used in model
     // set of lattice archive files referenced
     // Note that .toc files can be concatenated, i.e. one .toc file can reference multiple archive files.
@@ -1342,7 +1378,7 @@ private:
             archivepaths.push_back(path);
         return i;
     }
-    
+
     mutable std::vector<symbolidmapping> symmaps; // [archiveindex][unit] -> global unit map
     template <class SYMMAP>
     static size_t getid(const SYMMAP& symmap, const std::string& key)
@@ -1364,7 +1400,6 @@ private:
             if (verbosity > 0)
                 fprintf(stderr, "getcachedidmap: reading '%S'\n", symlistpath.c_str());
             archive::GetSymList(idmap, symlistpath, symmap);
-
         }
         return idmap;
     }
@@ -1451,7 +1486,7 @@ public:
             char c;
             uint64_t offset;
 #ifdef _WIN32
-            if (sscanf_s(q, "[%I64u]%c", &offset, &c, (unsigned int)sizeof(c)) != 1)
+            if (sscanf_s(q, "[%I64u]%c", &offset, &c, (unsigned int) sizeof(c)) != 1)
 #else
 
             if (sscanf(q, "[%" PRIu64 "]%c", &offset, &c) != 1)
@@ -1492,7 +1527,8 @@ public:
     // Lattices will have unit ids updated according to the modelsymmap.
     // V1 lattices will be converted. 'spsenoneid' is used in the conversion for optimizing storing 0-frame /sp/ aligns.
     void getlattice(const std::wstring& key, lattice& L,
-        std::set<int>& specialwordids, size_t expectedframes = SIZE_MAX) const
+                    std::unordered_map<int, std::wstring>& id2wordmapping, std::set<int>& specialwordids,
+                    size_t expectedframes = SIZE_MAX) const
     {
         auto iter = toc.find(key);
         if (iter == toc.end())
@@ -1519,7 +1555,7 @@ public:
             // seek to start
             fsetpos(f, offset);
             // get it
-            L.fread(f, idmap, spunit, specialwordids);
+            L.fread(f, idmap, spunit, id2wordmapping, specialwordids);
             L.setverbosity(verbosity);
 #ifdef HACK_IN_SILENCE // hack to simulate DEL in the lattice
             const size_t silunit = getid(modelsymmap, "sil");
@@ -1553,8 +1589,7 @@ public:
     //  - dump to stdout
     //  - merge two lattices (for merging numer into denom lattices)
     static void convert(const std::wstring& intocpath, const std::wstring& intocpath2, const std::wstring& outpath,
-        const msra::asr::simplesenonehmm& hset, std::set<int>& specialwordids);
+                        const msra::asr::simplesenonehmm& hset, std::unordered_map<int, std::wstring>& id2wordmapping, std::set<int>& specialwordids);
 };
 };
 };
-

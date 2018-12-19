@@ -405,8 +405,9 @@ void lattice::dedup()
 //  - empty ("") -> don't output, just check the format
 //  - dash ("-") -> dump lattice to stdout instead
 /*static*/ void archive::convert(const std::wstring &intocpath, const std::wstring &intocpath2, const std::wstring &outpath,
-                                 const msra::asr::simplesenonehmm &hset, std::set<int>& specialwordids)
-                                 {
+                                 const msra::asr::simplesenonehmm &hset,
+                                 std::unordered_map<int, std::wstring> &id2wordmapping, std::set<int> &specialwordids)
+{
     const auto &modelsymmap = hset.getsymmap();
 
     const std::wstring tocpath = outpath + L".toc";
@@ -457,7 +458,7 @@ void lattice::dedup()
 
         // fetch lattice  --this performs any necessary format conversions already
         lattice L;
-        archive.getlattice(key, L, specialwordids);
+        archive.getlattice(key, L, id2wordmapping, specialwordids);
         lattice L2;
         if (mergemode)
         {
@@ -467,7 +468,7 @@ void lattice::dedup()
                 skippedmerges++;
                 continue;
             }
-            archive2.getlattice(key, L2, specialwordids);
+            archive2.getlattice(key, L2, id2wordmapping, specialwordids);
             // merge it in
             // This will connect each node with matching 1-phone context conditions; aimed at merging numer lattices.
             L.removefinalnull(); // get rid of that final !NULL headache
@@ -508,20 +509,19 @@ void lattice::dedup()
                     invmodelsymmap[iter->second] = iter->first.c_str();
             }
             L.rebuildedges(false);
-            L.dump(stdout, [&](size_t i)
-                   {
-                       return invmodelsymmap[i];
-                   });
+            L.dump(stdout, [&](size_t i) {
+                return invmodelsymmap[i];
+            });
         }
     } // end for (toclines)
     if (skippedmerges > 0)
-        fprintf(stderr, "convert: %lu out of %lu merge operations skipped due to secondary lattice missing\n", (unsigned long)skippedmerges, (unsigned long)toclines.size());
+        fprintf(stderr, "convert: %lu out of %lu merge operations skipped due to secondary lattice missing\n", (unsigned long) skippedmerges, (unsigned long) toclines.size());
 
     // write out the updated unit map
     if (f && ftoc)
         writeunitmap(symlistpath, modelsymmap);
 
-    fprintf(stderr, "converted %lu lattices\n", (unsigned long)toclines.size());
+    fprintf(stderr, "converted %lu lattices\n", (unsigned long) toclines.size());
 }
 
 // ---------------------------------------------------------------------------

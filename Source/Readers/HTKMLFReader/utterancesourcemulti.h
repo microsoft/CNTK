@@ -44,6 +44,9 @@ class minibatchutterancesourcemulti : public minibatchsource
     // const std::vector<std::unique_ptr<latticesource>> &lattices;
     const latticesource &lattices;
 
+	//linquan
+    std::unordered_map<int, std::wstring> id2wordmapping; //keep id-to-real word/character mapping 
+
     // Flag indicating whether to use Mersenne Twister random generator.
     bool m_useMersenneTwister;
     std::mt19937_64 m_rng;
@@ -178,7 +181,8 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         // page in data for this chunk
         // We pass in the feature info variables by ref which will be filled lazily upon first read
-        void requiredata(std::string &featkind, size_t &featdim, unsigned int &sampperiod, const latticesource &latticesource, std::set<int>& specialwordids, int verbosity = 0) const
+        void requiredata(std::string &featkind, size_t &featdim, unsigned int &sampperiod, const latticesource &latticesource, 
+			 std::unordered_map<int, std::wstring>& id2wordmapping, std::set<int> &specialwordids, int verbosity = 0) const
         {
             
             if (numutterances() == 0)
@@ -209,7 +213,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                     reader.read(utteranceset[i].parsedpath, (const std::string &)featkind, sampperiod, uttframes, utteranceset[i].needsExpansion);  // note: file info here used for checkuing only
                     // page in lattice data
                     if (!latticesource.empty())
-                        latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols(), specialwordids);
+                        latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols(), id2wordmapping, specialwordids);
                 }
                 if (verbosity)
                 {
@@ -936,14 +940,14 @@ public:
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
     // This mode requires utterances with time stamps.
     minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::pair<std::vector<msra::asr::htkmlfentry>, std::vector<unsigned int>>>> &labels,
-       std::set<int>& specialwordids,
+                                  std::unordered_map<int, std::wstring> &id2wordmapping, std::set<int> &specialwordids, /*deal with WER/CER sepcifically*/
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
                                   const latticesource &lattices, const std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, std::vector<bool> expandToUtt,
                                   const size_t maxUtteranceLength, const bool truncated)
                                   : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), 
                                   lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), m_generatePhoneBoundaries(!lattices.empty()), 
-                                  m_frameRandomizer(randomizedchunks, useMersenneTwister), expandToUtt(expandToUtt), m_useMersenneTwister(useMersenneTwister), maxUtteranceLength(maxUtteranceLength), truncated(truncated)
-                                  , specialwordids(specialwordids)
+                                  m_frameRandomizer(randomizedchunks, useMersenneTwister), expandToUtt(expandToUtt), m_useMersenneTwister(useMersenneTwister), maxUtteranceLength(maxUtteranceLength), truncated(truncated), 
+								  specialwordids(specialwordids), id2wordmapping(id2wordmapping)
     // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
     // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
     {
@@ -1595,7 +1599,7 @@ private:
                     fprintf(stderr, "feature set %d: requirerandomizedchunk: paging in randomized chunk %d (frame range [%d..%d]), %d resident in RAM\n", m, (int) chunkindex, (int) chunk.globalts, (int) (chunk.globalte() - 1), (int) (chunksinram + 1));
                 msra::util::attempt(5, [&]() // (reading from network)
                                     {
-                    chunkdata.requiredata(featkind[m], featdim[m], sampperiod[m], this->lattices, specialwordids, verbosity);
+                                        chunkdata.requiredata(featkind[m], featdim[m], sampperiod[m], this->lattices, id2wordmapping, specialwordids, verbosity);
                                     });
             }
             chunksinram++;

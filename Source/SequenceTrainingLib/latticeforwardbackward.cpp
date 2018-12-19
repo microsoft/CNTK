@@ -816,19 +816,14 @@ float compute_wer(vector<size_t> &ref, vector<size_t> &rec)
 
 
 double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<NBestToken> &tokenlattice, const size_t numtokens, const bool enforceValidPathEMBR, const bool excludeSpecialWords, 
-    const float lmf, const float wp, const float amf, const bool wordNbest, const bool useAccInNbest, const float accWeightInNbest, const size_t numPathsEMBR, std::vector<size_t> wids) const
+    const float lmf, const float wp, const float amf, const bool wordNbest, const bool useAccInNbest, const float accWeightInNbest, const size_t numPathsEMBR, std::vector<size_t> wids 
+	/*, std::unordered_map<int, std::wstring> wordipmap /*added by linquan*/) const
 { // ^^ TODO: remove this
   // --- hand off to parallelized (CUDA) implementation if available
-    
   
-
     std::map<double, std::vector<PrevTokenInfo>>::iterator mp_itr;
 
-
-    
-
     size_t numtokens2keep;
-  
 
     // TODO: support parallel state
     parallelstate;
@@ -943,7 +938,38 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
                      if (!is_special_words[edges[path[k]].E]) path_ids.push_back(nodes[edges[path[k]].E].wid);
                  }
 
-                 float wer = compute_wer(wids, path_ids);
+				 /*Linquan added
+				 //revert character
+                 std::vector<std::wstring> refwords;
+                 std::vector<std::wstring> regwords;
+                 float wer;
+                 if (wordipmap.size() >0 )
+                 {
+                     for (std::vector<size_t>::const_iterator it = wids.begin(); it != wids.end(); ++it)
+                     {
+                         std::unordered_map<int, std::wstring>::const_iterator maptable_itr = wordipmap.find(*it);
+                         if (maptable_itr != wordipmap.end())
+                             refwords.push_back(maptable_itr->second);
+                         else
+                             refwords.push_back(std::to_wstring(*it));
+					 }
+
+					 for (std::vector<size_t>::const_iterator it = path_ids.begin(); it != path_ids.end(); ++it)
+                     {
+                         std::unordered_map<int, std::wstring>::const_iterator maptable_itr = wordipmap.find(*it);
+                         if (maptable_itr != wordipmap.end())
+                             refwords.push_back(maptable_itr->second);
+                         else
+                             refwords.push_back(std::to_wstring(*it));
+                     }
+
+					  wer = compute_wer(wids, path_ids);
+				 }
+                 else
+					 wer = compute_wer(wids, path_ids);
+				 */
+
+				 float wer = compute_wer(wids, path_ids);
                  // will favor the path with better WER
                  pathscore -= double(accWeightInNbest*wer);
 

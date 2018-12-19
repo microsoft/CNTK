@@ -1117,20 +1117,16 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                 {
      
      // convert word to uppercase
-     if (strcmp(toks[6], "<s>") != 0 
-                        && strcmp(toks[6], "</s>") != 0
-                        && strcmp(toks[6], "!sent_start") != 0
-                        && strcmp(toks[6], "!sent_end") != 0
-                       && strcmp(toks[6], "!silence") != 0)
-     {
-      for(size_t j = 0; j < strlen(toks[6]); j++)
-      {
-       if(toks[6][j] >= 'a' && toks[6][j] <= 'z')
-       {
-        toks[6][j] = toks[6][j] + 'A' - 'a';
-       }
-      }
-     }
+                    if (strcmp(toks[6], "<s>") != 0 && strcmp(toks[6], "</s>") != 0 && strcmp(toks[6], "!sent_start") != 0 && strcmp(toks[6], "!sent_end") != 0 && strcmp(toks[6], "!silence") != 0)
+                    {
+                        for (size_t j = 0; j < strlen(toks[6]); j++)
+                        {
+                            if (toks[6][j] >= 'a' && toks[6][j] <= 'z')
+                            {
+                                toks[6][j] = toks[6][j] + 'A' - 'a';
+                            }
+                        }
+                    }
                     const char* w = toks[6]; // the word name
                                              // For some alignment MLF the sentence start and end are both represented by <s>, we change sentence end <s> to be </s>
                     if (i > s && strcmp(w, "<s>") == 0)
