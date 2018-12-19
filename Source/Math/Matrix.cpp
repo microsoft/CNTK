@@ -6307,7 +6307,7 @@ template <class ElemType>
 void Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
     const Matrix<ElemType>& gradientValues,
     const Matrix<ElemType>& inputValues,
-    const Matrix<ElemType>& flags,
+    const Matrix<short>& flags,
     int flag_stride,
     int l_order, int l_stride,
     Matrix<ElemType>& leftFilterGradientValues)
