@@ -573,7 +573,7 @@ public:
         if (m_derivativeForG.GetDeviceId() != CPUDEVICE)
             printf("m_derivativeForG before is in GPU");*/
         
-		/*m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        /*m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         m_derivativeForG.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         m_derivativeForF.SetValue(0.0);
         m_derivativeForG.SetValue(0.0);

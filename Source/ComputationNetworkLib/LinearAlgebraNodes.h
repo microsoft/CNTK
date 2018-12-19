@@ -120,15 +120,15 @@ public:
         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout = InputRef(0).GetMBLayout();
         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout = InputRef(1).GetMBLayout();
 
-		
-		//get sequence number and channel number
-		numParallelSequences = pMBLayout->GetNumParallelSequences();
+        
+        //get sequence number and channel number
+        numParallelSequences = pMBLayout->GetNumParallelSequences();
         numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
         const auto numSequences = pMBLayout->GetNumSequences();
         //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
         assert(numSequences == phoneMBLayout->GetNumSequences());
 
-		//get frame number, phone number and output label number
+        //get frame number, phone number and output label number
         const size_t numRows = InputRef(0).Value().GetNumRows();
         const size_t numCols = InputRef(0).Value().GetNumCols();
         const size_t numPhoneCols = InputRef(1).Value().GetNumCols();
@@ -190,9 +190,9 @@ public:
         Value().AssignUserOp1(InputRef(0).Value(), InputRef(1).Value(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
                                                totalcol, numParallelSequences, numPhoneParallelSequences);
 
-		
+        
 
-		//Value().Print("output of plus");
+        //Value().Print("output of plus");
         //m_pMBLayout = nullptr;
         m_pMBLayout->Init(1, totalcol);
         m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
@@ -206,11 +206,11 @@ public:
         InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
                                        numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex);
 
-		//InputRef(inputIndex).Gradient().Print("devirative");
+        //InputRef(inputIndex).Gradient().Print("devirative");
         
     }
 
-	virtual void Validate(bool isFinalValidationPass) override
+    virtual void Validate(bool isFinalValidationPass) override
     {
         
         Base::Validate(isFinalValidationPass);
@@ -233,7 +233,7 @@ public:
     
 
 protected:
-	// Prepare data structures from the reader
+    // Prepare data structures from the reader
     // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
     std::vector<size_t> uttFrameBeginIdx, uttPhoneBeginIdx;
     // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
@@ -243,13 +243,13 @@ protected:
     // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
     std::vector<size_t> uttFrameToChanInd, uttPhoneToChanInd;
     size_t totalcol = 0;
-	// utt befin for output
+    // utt befin for output
     std::vector<size_t> uttBeginForOutputditribution;
 
-	size_t maxFrameNum;
+    size_t maxFrameNum;
     size_t maxPhoneNum;
 
-	size_t numParallelSequences;
+    size_t numParallelSequences;
     size_t numPhoneParallelSequences;
 };
 
