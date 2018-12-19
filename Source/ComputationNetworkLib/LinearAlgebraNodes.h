@@ -171,8 +171,6 @@ public:
         {
             auto node = dynamic_pointer_cast<BiVfsmnNode<ElemType>>(nodeP);
             assert(node != nullptr);
-            node->m_flags = m_flags;
-            node->m_flagStride = m_flagStride;
             node->m_lOrder  = m_lOrder;
             node->m_rOrder  = m_rOrder;
             node->m_lStride = m_lStride;
