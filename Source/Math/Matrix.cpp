@@ -6192,7 +6192,7 @@ template <class ElemType>
 void Matrix<ElemType>::ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // DxT
                                             const Matrix<ElemType>& l_filter,// DxN1 TODO: +1
                                             const Matrix<ElemType>& r_filter,// DxN2
-                                            const Matrix<ElemType>& flags,   // 1xT
+                                            const Matrix<short>& flags,   // 1xT
                                             int flag_stride,
                                             int l_order, int r_order,
                                             int l_stride, int r_stride,
@@ -6258,7 +6258,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
     const Matrix<ElemType>& gradientValues,
     const Matrix<ElemType>& l_filter,
     const Matrix<ElemType>& r_filter,
-    const Matrix<ElemType>& flags,
+    const Matrix<short>& flags,
     int flag_stride,
     int l_order, int r_order,
     int l_stride, int r_stride,
@@ -6318,8 +6318,8 @@ void Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
     // PrintMatrix(inputValues);
     // PrintMatrix(flags);
 
-    DecideAndMoveToRightDevice(gradientValues, inputValues, flags, leftFilterGradientValues);
-
+    DecideAndMoveToRightDevice(gradientValues, inputValues, leftFilterGradientValues);
+    flags._transferToDevice(gradientValues.GetDeviceId());
     if (leftFilterGradientValues.GetDeviceId() < 0) // CPU
     {
         // NOT_IMPLEMENTED;
@@ -6352,7 +6352,7 @@ template <class ElemType>
 void Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
     const Matrix<ElemType>& gradientValues,
     const Matrix<ElemType>& inputValues,
-    const Matrix<ElemType>& flags,
+    const Matrix<short>& flags,
     int flag_stride,
     int r_order, int r_stride,
     Matrix<ElemType>& rightFilterGradientValues)
@@ -6363,7 +6363,8 @@ void Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
     // PrintMatrix(inputValues);
     // PrintMatrix(flags);
 
-    DecideAndMoveToRightDevice(gradientValues, inputValues, flags, rightFilterGradientValues);
+    DecideAndMoveToRightDevice(gradientValues, inputValues,  rightFilterGradientValues);
+    flags._transferToDevice(gradientValues.GetDeviceId());
 
     if (rightFilterGradientValues.GetDeviceId() < 0) // CPU
     {

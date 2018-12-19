@@ -109,7 +109,7 @@ struct MBLayout
     // -------------------------------------------------------------------
 
     MBLayout(size_t numParallelSequences, size_t numTimeSteps, const std::wstring &name)
-        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE), m_rightSplice(0)
+        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsSeqIdx(CPUDEVICE), m_columnsValidityMask(CPUDEVICE), m_rightSplice(0)
     {
         Init(numParallelSequences, numTimeSteps);
         SetUniqueAxisName(name != L"" ? name : L"DynamicAxis");
@@ -140,6 +140,7 @@ struct MBLayout
         m_timeStepHasGap = other->m_timeStepHasGap;
 
         m_columnsValidityMask.SetValue(other->m_columnsValidityMask);
+        m_columnsSeqIdx.SetValue(other->m_columnsSeqIdx);
         m_writable = other->m_writable;
         m_rightSplice = other->m_rightSplice;
 
@@ -167,6 +168,7 @@ struct MBLayout
         m_timeStepHasGap = std::move(other->m_timeStepHasGap);
 
         m_columnsValidityMask = std::move(other->m_columnsValidityMask);
+        m_columnsSeqIdx = std::move(other->m_columnsSeqIdx);
         m_writable = other->m_writable;
         m_rightSplice = other->m_rightSplice;
 
@@ -192,6 +194,7 @@ public:
             m_timeStepHasGap.assign(m_numTimeSteps, false);
         }
         m_columnsValidityMask.Resize(0, 0); // invalidate
+        m_columnsSeqIdx.Resize(0, 0);
         // reset state
         m_numFramesDeclared = 0;
         m_numGapFrames = 0;
@@ -325,7 +328,7 @@ public:
     size_t GetActualNumSamples() const;
 
     const Matrix<char>& GetColumnsValidityMask(DEVICEID_TYPE deviceId) const;
-
+    const Matrix<short>& GetColumnsSeqIndex(DEVICEID_TYPE deviceId) const;
     // compare whether two layouts are the same
     bool operator==(const MBLayout& other) const
     {
@@ -637,7 +640,7 @@ private:
     // A value of 1 indicates that the column has valid content
     // and 0 indicates invalid (aka MinibatchPackingFlags::NoInput)
     mutable Matrix<char> m_columnsValidityMask;
-
+    mutable Matrix<short> m_columnsSeqIdx;
     // A boolean flag indicating whether the MBLayout can be further modified
     // When it's value is false, no set operations are allowed on the MBLayout.
     // Meant to guard in lazy creation of m_columnsValidityMask.
@@ -984,7 +987,38 @@ inline const Matrix<char>& MBLayout::GetColumnsValidityMask(DEVICEID_TYPE device
     }
     return m_columnsValidityMask;
 }
+inline const Matrix<short>& MBLayout::GetColumnsSeqIndex(DEVICEID_TYPE deviceId) const
+{
+    CheckIsValid();
+    // lazily compute
+    if (m_columnsSeqIdx.IsEmpty())
+    {
+        Lock();
+        size_t nT = GetNumTimeSteps();
+        size_t nS = GetNumParallelSequences();
+        std::vector<short> columnsSeqIdx(nT * nS, -1); // form the mask in a CPU-side STL vector first
+        size_t count = 0;
+        int seqIdxInMB = 1;
+        for (size_t i = 0; i < m_sequences.size(); ++i)
+        {
+            let& seq = m_sequences[i];
+            short seqIdx = seq.seqId == GAP_SEQUENCE_ID ? (short) -1 : (short) seqIdxInMB++;
 
+            size_t b = (size_t)(max(seq.tBegin, (ptrdiff_t) 0));
+            size_t e = (size_t)(min(seq.tEnd, nT));
+            for (size_t j = b; j < e; ++j)
+            {
+                columnsSeqIdx[j * nS + seq.s] = seqIdx;
+                count++;
+            }
+        }
+        assert(count == m_numFramesDeclared); // sanity check
+        if (deviceId != m_columnsSeqIdx.GetDeviceId())
+            m_columnsSeqIdx = Matrix<short>(deviceId);
+        m_columnsSeqIdx.SetValue(1, nS * nT, deviceId, columnsSeqIdx.data());
+    }
+    return m_columnsSeqIdx;
+}
 // class for defining an iteration over a sequence, forward and backward
 // One day, we may also have nested structures. For those, FrameRangeIterations will be able to be instantiated from FrameRange objects to loop over their nested dimension.
 class FrameRangeIteration
