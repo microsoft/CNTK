@@ -51,7 +51,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
 
     useNumericSequenceKeys = config(L"useNumericSequenceKeys", useNumericSequenceKeys);
 
-    bool useHash = config(L"hashSequenceKeys", false);
+    bool useHash = config(L"hashSequenceKeys", true);
     m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys, useHash);
 
     // Identifying packing mode.

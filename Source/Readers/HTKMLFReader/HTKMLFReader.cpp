@@ -63,7 +63,7 @@ template <class ConfigRecordType>
 void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
     m_truncated = readerConfig(L"truncated", false);
-    m_maxUtteranceLength = readerConfig(L"maxUtteranceLength", 10000);
+    m_maxUtteranceLength = readerConfig(L"maxUtteranceLength", 1024);
     m_convertLabelsToTargets = false;
 
     intargvector numberOfuttsPerMinibatchForAllEpochs = readerConfig(L"nbruttsineachrecurrentiter", ConfigRecordType::Array(intargvector(vector<int>{1})));
