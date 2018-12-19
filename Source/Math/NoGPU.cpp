@@ -1508,7 +1508,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
     const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBound, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution,
     const vector<size_t>& uttPhoneToChanInd, const vector<size_t> & uttPhoneBeginIdx,
     const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
-    GPUMatrix<ElemType>& totalScore, const size_t blankTokenId, GPUMatrix<ElemType>& m_derivativeForF, GPUMatrix<ElemType>& m_derivativeForG, const int delayConstraint, const bool isColWise)
+    GPUMatrix<ElemType>& totalScore, const size_t blankTokenId,  const int delayConstraint, const bool isColWise)
 {
     return *this;
 }

@@ -595,7 +595,7 @@ RowStack(inputs, axis=1, tag='') = new ComputationNode [ operation = 'RowStack' 
 EditDistanceError(leftInput, rightInput, subPen=1.0, delPen=1.0, insPen=1.0, squashInputs=false, tokensToIgnore=[||], tag='') = new ComputationNode [ operation = 'EditDistanceError' ; inputs = _AsNodes (leftInput : rightInput) /*plus the function args*/ ]
 LatticeSequenceWithSoftmax(labels, evaluation, scaledLogLikelihood, lattice, symListPath, phonePath, stateListPath, transProbPath, latticeConfigPath = "LatticeNode.config", hSmoothingWeight = 0.95, frameDropThresh = 1e-10, doReferenceAlign = false, seqGammarUsesMBR = false, seqGammarAMF = 14.0, seqGammarLMF = 14.0, seqGammarBMMIFactor = 0.0, seqGammarWordPen = 0.0, tag='') = new ComputationNode [ operation = 'LatticeSequenceWithSoftmax' ; inputs = _AsNodes (labels : evaluation : scaledLogLikelihood : lattice) /*plus the function args*/ ]
 ForwardBackward(graph, features, blankTokenId, delayConstraint=-1, tag='') = new ComputationNode [ operation = 'ForwardBackward' ; inputs = _AsNodes (graph : features) /*plus the function args*/ ]
-RNNT(graph, transcription, prediction, blankTokenId, delayConstraint=-1, tag='') = new ComputationNode [ operation = 'RNNT' ; inputs = _AsNodes (graph : transcription: prediction) /*plus the function args*/ ]
+RNNT(graph, transcription, prediction,mergedinput, blankTokenId,delayConstraint=-1, tag='') = new ComputationNode [ operation = 'RNNT' ; inputs = _AsNodes (graph : transcription: prediction: mergedinput) /*plus the function args*/ ]
 LabelsToGraph(labels, tag='') = new ComputationNode [ operation = 'LabelsToGraph' ; inputs = _AsNodes (labels) /*plus the function args*/ ]
 StopGradient(input, tag='') = new ComputationNode [ operation = 'StopGradient' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 Slice(beginIndex, endIndex, input, axis=1, tag='') =
@@ -666,6 +666,7 @@ GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVect
 InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = _AsNodes (dataVectorSequence) /*plus the function args*/ ]
 KhatriRaoProduct(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'KhatriRaoProduct' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 LogPlus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'LogPlus' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
+PlusBroadcast(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'PlusBroadcast' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 LogSoftmax(z, tag='') = new ComputationNode [ operation = 'LogSoftmax' ; inputs = _AsNodes (z) /*plus the function args*/ ]
 # TODO: ^^ along axis, like Softmax
 MatrixL1Reg(matrix, tag='') = new ComputationNode [ operation = 'MatrixL1Reg' ; inputs = _AsNodes (matrix) /*plus the function args*/ ]

@@ -92,7 +92,7 @@ public:
 template class PlusNode<float>;
 template class PlusNode<double>;
 template class PlusNode<half>;
-/*
+
 // -----------------------------------------------------------------------
 // PlusBroadcastNode (summand1, summand2)
 // -----------------------------------------------------------------------
@@ -104,90 +104,159 @@ class PlusBroadcastNode : public BinaryElementWiseNode<ElemType>
     UsingBinaryElementwiseNodeBaseMembers;
     static const std::wstring TypeName()
     {
-        return L"Plus";
+        return L"PlusBroadcast";
     }
 
 public:
-    DeclareConstructorFromConfigWithNumInputs(PlusNode);
-    PlusNode(DEVICEID_TYPE deviceId, const wstring& name)
+    DeclareConstructorFromConfigWithNumInputs(PlusBroadcastNode);
+    PlusBroadcastNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
     }
 
     virtual void  ForwardProp(const FrameRange& fr) override
     {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto result = ValueTensorFor(rank, fr);
-        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
-        result.AssignSumOf(input0, input1);
+        
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout = InputRef(0).GetMBLayout();
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout = InputRef(1).GetMBLayout();
+
+		
+		//get sequence number and channel number
+		numParallelSequences = pMBLayout->GetNumParallelSequences();
+        numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
+        const auto numSequences = pMBLayout->GetNumSequences();
+        //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
+        assert(numSequences == phoneMBLayout->GetNumSequences());
+
+		//get frame number, phone number and output label number
+        const size_t numRows = InputRef(0).Value().GetNumRows();
+        const size_t numCols = InputRef(0).Value().GetNumCols();
+        const size_t numPhoneCols = InputRef(1).Value().GetNumCols();
+
+        maxFrameNum = numCols / numParallelSequences;
+        maxPhoneNum = numPhoneCols / numPhoneParallelSequences;
+        
+        uttFrameNum.reserve(numSequences);
+        uttPhoneNum.reserve(numSequences);
+        uttFrameToChanInd.reserve(numSequences);
+        uttPhoneToChanInd.reserve(numSequences);
+        uttFrameBeginIdx.reserve(numSequences);
+        uttPhoneBeginIdx.reserve(numSequences);
+
+        //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
+        size_t seqId = 0; //frame
+        size_t totalframenum = 0, totalphonenum = 0;
+        for (const auto& seq : pMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttFrameToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttFrameBeginIdx.push_back(seq.tBegin);
+            uttFrameNum.push_back(numFrames);
+            totalframenum += numFrames;
+        }
+        seqId = 0; //phone
+        for (const auto& seq : phoneMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttPhoneToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttPhoneBeginIdx.push_back(seq.tBegin);
+            uttPhoneNum.push_back(numFrames);
+            totalphonenum += numFrames;
+            
+        }
+
+        //calculate the memory need for f*g
+        uttBeginForOutputditribution.reserve(numSequences);
+
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttBeginForOutputditribution.push_back(totalcol);
+            totalcol += uttFrameNum[s] * uttPhoneNum[s];
+        }
+
+        //compute f+g        
+        Value().AssignUserOp1(InputRef(0).Value(), InputRef(1).Value(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+                                               totalcol, numParallelSequences, numPhoneParallelSequences);
+
+		
+
+		//Value().Print("output of plus");
+        //m_pMBLayout = nullptr;
+        m_pMBLayout->Init(1, totalcol);
+        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
     }
 
     virtual void  BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto gradient = GradientTensorFor(rank, fr);
-        auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
+        //auto gradient = Gradient();
+        //auto inputGradient = InputRef(inputIndex).Gradient();
+        
+        InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+                                       numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex);
 
-        // if reduction then mask the respective input(s) (zero out the gaps)
-        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
-            MaskMissingGradientColumnsToZero(fr);
-
-        if (Input(inputIndex)->IsGradientOptimized(this))
-        {
-            if (Input(inputIndex)->ParentGradientReused())
-            {
-                if (inputGradient.GetSOBPtr() != gradient.GetSOBPtr())
-                    LogicError("Gradients should be reused.");
-            }
-            else
-                inputGradient.AssignCopyOf(gradient);
-        }
-        else
-            inputGradient.AddCopyOf(gradient);
+		//InputRef(inputIndex).Gradient().Print("devirative");
+        
     }
 
 	virtual void Validate(bool isFinalValidationPass) override
     {
+        
         Base::Validate(isFinalValidationPass);
-        m_pMBLayout = nullptr; // no layout
 
+        //m_pMBLayout = nullptr; // no layout
+        //InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
         if (isFinalValidationPass)
         {
-            if (!(Input(0)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() && // match vector dimension
-                  Input(0)->HasMBLayout() &&
-                  Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
+            m_pMBLayout = make_shared<MBLayout>();
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows()))
             {
-                LogicError("The Matrix dimension in the RNNTNode operation does not match.");
+                LogicError("The Matrix dimension in the PlusBroadcastNode operation does not match.");
             }
-
-            auto leftNode = dynamic_pointer_cast<LabelsToGraphNode<ElemType>>(Input(0));
-            if (!leftNode)
-                LogicError("RNNTNode: Please pass LabelsToGraph(labels) for second argument");
         }
-        LinkToMBLayout(minRankedIniputPtr->GetMBLayout());
-        SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+        //m_pMBLayout->Init(1, totalcol);
+        //m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
+        //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
     }
 
-    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
-    {
-        size_t i;
-        for (i = 0; i < GetNumInputs(); i++)
-        {
-            if (Input(i).get() == input)
-                break;
-        }
-        if (i == GetNumInputs())
-            LogicError("Cannot find input.");
+    
 
-        return this->InputMatchesOutput(i) ? ParentGradientOptimization::Reuse : ParentGradientOptimization::Overwrite;
-    }
+protected:
+	// Prepare data structures from the reader
+    // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+    std::vector<size_t> uttFrameBeginIdx, uttPhoneBeginIdx;
+    // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+    std::vector<size_t> uttFrameNum;
+    // the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+    std::vector<size_t> uttPhoneNum;
+    // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+    std::vector<size_t> uttFrameToChanInd, uttPhoneToChanInd;
+    size_t totalcol = 0;
+	// utt befin for output
+    std::vector<size_t> uttBeginForOutputditribution;
+
+	size_t maxFrameNum;
+    size_t maxPhoneNum;
+
+	size_t numParallelSequences;
+    size_t numPhoneParallelSequences;
 };
 
-template class PlusNode<float>;
-template class PlusNode<double>;
-template class PlusNode<half>;
-*/
+template class PlusBroadcastNode<float>;
+template class PlusBroadcastNode<double>;
+template class PlusBroadcastNode<half>;
+
 // -----------------------------------------------------------------------
 // LogPlusNode (summand1, summand2)
 // Computes ln(exp(summand1) + exp(summand2)) in an overflow safe way.

@@ -4649,9 +4649,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
     const size_t maxPhoneNum, 
     const size_t maxFrameNum,
     GPUMatrix<ElemType>& totalScore,
-    const size_t blankTokenId,
-    GPUMatrix<ElemType>& m_derivativeForF, 
-    GPUMatrix<ElemType>& m_derivativeForG,
+    const size_t blankTokenId,    
     const int delayConstraint, 
     const bool isColWise)
 {
@@ -4665,8 +4663,6 @@ uttBeginForOutputditribution;
 numPhoneParallelSequences;
 uttPhoneToChanInd;
 uttPhoneBeginIdx;
-        m_derivativeForF;
-        m_derivativeForG;
         PrepareDevice();
         // Total number of phones
         long totalPhoneNum = prob.GetNumRows();
@@ -4807,7 +4803,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
     SyncGuard syncGuard;
     SetValue(0.0);
     //move necessary resources to GPU
-    size_t *gpuFrameNum;
+    /*size_t *gpuFrameNum;
     CUDA_CALL(cudaMalloc((void **)&gpuFrameNum, uttNum * sizeof(size_t)));
     CUDA_CALL(cudaMemcpy(gpuFrameNum, uttFrameNum.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
 
@@ -4825,7 +4821,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
 
     size_t *gpuUttOutBeginId;
     CUDA_CALL(cudaMalloc((void **)&gpuUttOutBeginId, uttNum * sizeof(size_t)));
-    CUDA_CALL(cudaMemcpy(gpuUttOutBeginId, uttBeginForOutputditribution.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(gpuUttOutBeginId, uttBeginForOutputditribution.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));*/
 
     for(int s=0; s<uttNum;s++)
     {

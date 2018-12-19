@@ -1040,6 +1040,9 @@ namespace CNTK
                 case PrimitiveOpType::Plus:
                     ASSIGN_NEW_NODE(PlusNode, network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::PlusBroadcast:
+                    ASSIGN_NEW_NODE(PlusBroadcastNode, network->GetDeviceId(), internalNodeName);
+                    break;
                 case PrimitiveOpType::LogPlus:
                     ASSIGN_NEW_NODE(LogPlusNode, network->GetDeviceId(), internalNodeName);
                     break;

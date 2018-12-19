@@ -7518,7 +7518,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
     const CPUMatrix<ElemType>& phoneBoundary, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution, 
     const vector<size_t>& uttPhoneToChanInd, const vector<size_t> & uttPhoneBeginIdx,
     const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
-    CPUMatrix<ElemType>& totalScore, const size_t blankTokenId, CPUMatrix<ElemType>& m_derivativeForF, CPUMatrix<ElemType>& m_derivativeForG,  const int delayConstraint, const bool isColWise)
+    CPUMatrix<ElemType>& totalScore, const size_t blankTokenId,  const int delayConstraint, const bool isColWise)
 
 {
     // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
@@ -7553,8 +7553,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
         _assignRNNTTotalScore(alpha.Data(), beta.Data(), scores, uttNum, uttFrameToChanInd, uttFrameBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, maxPhoneNum);
         this->SetValue(0.0);
         
-        m_derivativeForF.SetValue(0.0);
-        m_derivativeForG.SetValue(0.0);
         _assignRNNTScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttFrameToChanInd,
             uttBeginForOutputditribution, numParallelSequences, maxPhoneNum,  totalPhoneNum, blankTokenId);
         //    _assignRNNTScore2(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttPhoneBeginIdx, uttFrameToChanInd, uttPhoneToChanInd,

@@ -397,9 +397,9 @@ public:
     void twodimForwardBackward(Microsoft::MSR::CNTK::Matrix<ElemType>& totalScore,
         Microsoft::MSR::CNTK::Matrix<ElemType>& F,
         Microsoft::MSR::CNTK::Matrix<ElemType>& G,
+        Microsoft::MSR::CNTK::Matrix<ElemType>& mergedinput,
         const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
-        Microsoft::MSR::CNTK::Matrix<ElemType>& m_derivativeForF,
-        Microsoft::MSR::CNTK::Matrix<ElemType>& m_derivativeForG,
+        Microsoft::MSR::CNTK::Matrix<ElemType>& m_derivative,
         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout,
         size_t blankTokenId)
@@ -480,7 +480,7 @@ public:
         }
         // for cpu 
         m_deviceid_gpu = maxIndexes.GetDeviceId();
-        m_deviceid = CPUDEVICE;
+        m_deviceid = m_deviceid_gpu;
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneSeqs(CPUDEVICE);
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneBounds(CPUDEVICE);
         // copy phone seq to matrix
@@ -535,19 +535,20 @@ public:
         //G.Print("G");
         
         //matrixOutputDistribution.Resize(numRows, totalcol);
-        matrixOutputDistribution.AssignUserOp1(F, G, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, 
-           totalcol, numParallelSequences, numPhoneParallelSequences);
+        //matrixOutputDistribution.AssignUserOp1(F, G, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, 
+        //   totalcol, numParallelSequences, numPhoneParallelSequences);
         //matrixOutputDistribution.Print("h");
         //log softmax of f+g
-        matrixOutputDistribution.InplaceLogSoftmax(true);
+        mergedinput.InplaceLogSoftmax(true);
         //matrixOutputDistribution.Print("prob");
         // forward backward to compute alpha, beta derivaitves
-        Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
-        Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
-        Microsoft::MSR::CNTK::Matrix<ElemType> RNNTPosterior(CPUDEVICE);
-        RNNTPosterior.AssignRNNTScore(matrixOutputDistribution, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd,  uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
-            uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, m_derivativeForF , m_derivativeForG ,-1,true);
+        Microsoft::MSR::CNTK::Matrix<ElemType> alpha(CPUDEVICE);
+        Microsoft::MSR::CNTK::Matrix<ElemType> beta(CPUDEVICE);
+        m_derivative.TransferToDeviceIfNotThere(CPUDEVICE);
+        m_derivative.AssignRNNTScore(mergedinput, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
+            uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, -1,true);
         ElemType finalscore = 0;
+        //m_derivative.Print("RNNT");
         finalscore =  totalScore.Get00Element();
         //fprintf(stderr, "finalscore:%f\n", finalscore);
         if (finalscore > 50 || finalscore < 0)
@@ -563,22 +564,24 @@ public:
         beta.Print("beta");
         prob.Print("prob");*/
        
-        RNNTPosterior.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
-        matrixOutputDistribution.ReleaseMemory();
+        m_derivative.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        //matrixOutputDistribution.ReleaseMemory();
 
         //compute derivatives for F and G
         /*if (m_derivativeForF.GetDeviceId() != CPUDEVICE)
             printf("m_derivativeForF before is in GPU");
         if (m_derivativeForG.GetDeviceId() != CPUDEVICE)
             printf("m_derivativeForG before is in GPU");*/
-        m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        
+		/*m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         m_derivativeForG.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         m_derivativeForF.SetValue(0.0);
         m_derivativeForG.SetValue(0.0);
         m_derivativeForF.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
             numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 0);
         m_derivativeForG.AssignUserOp2(RNNTPosterior, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);
+            numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, 1);*/
+
         //do derivative norm
         /*Microsoft::MSR::CNTK::Matrix<ElemType> tempMatrix1(m_deviceid_gpu), tempMatrix2(m_deviceid_gpu);
         Microsoft::MSR::CNTK::Matrix<ElemType>::VectorSum(m_derivativeForF, tempMatrix1, false);
@@ -605,6 +608,7 @@ public:
         m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         m_derivativeForG.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         printf("finish gamma");*/
+
     }
 
 private:

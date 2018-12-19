@@ -108,6 +108,7 @@ namespace CNTK
         Atan = 96,
         ConvolutionSequenceShape = 97,
         RNNT = 98,
+        PlusBroadcast = 99,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

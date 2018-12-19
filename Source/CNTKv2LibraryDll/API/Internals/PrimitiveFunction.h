@@ -45,6 +45,7 @@ namespace CNTK
         {PrimitiveOpType::Pooling, L"Pooling"},
         {PrimitiveOpType::SumAll, L"SumAll"},
         {PrimitiveOpType::Plus, L"Plus"},
+        {PrimitiveOpType::PlusBroadcast, L"PlusBroadcast"},
         {PrimitiveOpType::LogPlus, L"LogPlus"},
         {PrimitiveOpType::Minus, L"Minus"},
         {PrimitiveOpType::ElementTimes, L"ElementTimes"},

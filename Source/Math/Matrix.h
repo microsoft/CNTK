@@ -417,7 +417,7 @@ public:
         const Matrix<ElemType>& phoneBoundary, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution,
         const vector<size_t>& uttPhoneToChanInd, const vector<size_t> & uttPhoneBeginIdx, 
         const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
-        Matrix<ElemType>& totalScore, const size_t blankTokenId, Matrix<ElemType>& m_derivativeForF, Matrix<ElemType>& m_derivativeForG, const int delayConstraint, const bool isColWise);
+        Matrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
 
     Matrix<ElemType>& InplaceSqrt();
     Matrix<ElemType>& AssignSqrtOf(const Matrix<ElemType>& a);

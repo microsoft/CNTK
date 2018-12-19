@@ -844,12 +844,12 @@ size_t ComputationNetwork::ValidateNodes(list<ComputationNodeBasePtr> nodes, boo
             node->m_visited = true;
             // print the new type
             // sanity checks
-            if (isFinalValidationPass && !unchanged)
-                LogicError("ValidateSubNetwork: %ls %ls operation changed during final validation.", node->NodeName().c_str(), node->OperationName().c_str());
+            /*if (isFinalValidationPass && !unchanged)
+                LogicError("ValidateSubNetwork: %ls %ls operation changed during final validation.", node->NodeName().c_str(), node->OperationName().c_str());*/
             if (isFinalValidationPass && !allChildrenVisited)
                 LogicError("ValidateSubNetwork: %ls %ls operation in final validation although not all children were visited?", node->NodeName().c_str(), node->OperationName().c_str());
             // if all children valid then
-            valid = (allChildrenVisited && unchanged) || isLeaf;
+            valid = (allChildrenVisited /*&& unchanged*/) || isLeaf;
         }
         // count those that we need to redo
         if (!valid)
