@@ -270,7 +270,7 @@ public:
     iterator getMaxSeq(vector<Sequence> seqs)
     {
         double MaxlogP = LOGZERO;
-        vector<Sequence>::iterator maxIt;
+        typename vector<Sequence>::iterator maxIt;
         for (auto it = seqs.begin(); it != seqs.end(); it++)
         {
             if (it->logP > MaxlogP)
