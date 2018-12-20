@@ -4671,7 +4671,7 @@ uttPhoneBeginIdx;
         // Max number of phones in utterances in this minibatch
         //size_t maxPhoneNum = phoneSeq.GetNumRows();
 
-        size_t *gpuFrameNum;
+         size_t *gpuFrameNum;
         CUDA_CALL(cudaMalloc((void **)&gpuFrameNum, uttNum * sizeof(size_t)));
         CUDA_CALL(cudaMemcpy(gpuFrameNum, uttFrameNum.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
 
@@ -4683,9 +4683,17 @@ uttPhoneBeginIdx;
         CUDA_CALL(cudaMalloc((void **)&gpuBeginFrame, uttNum * sizeof(size_t)));
         CUDA_CALL(cudaMemcpy(gpuBeginFrame, uttFrameBeginIdx.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
 
-        size_t *gpuUttToChanInd;
-        CUDA_CALL(cudaMalloc((void **)&gpuUttToChanInd, uttNum * sizeof(size_t)));
-        CUDA_CALL(cudaMemcpy(gpuUttToChanInd, uttFrameToChanInd.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
+        size_t* gpuBeginPhone;
+        CUDA_CALL(cudaMalloc((void**) &gpuBeginPhone, uttNum * sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(gpuBeginPhone, uttPhoneBeginIdx.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
+
+        size_t *gpuFrameToChanInd;
+        CUDA_CALL(cudaMalloc((void**) &gpuFrameToChanInd, uttNum * sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(gpuFrameToChanInd, uttFrameToChanInd.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
+
+        size_t* gpuUttBeginForMergedinput;
+        CUDA_CALL(cudaMalloc((void**) &gpuUttBeginForMergedinput, uttNum * sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(gpuUttBeginForMergedinput, uttBeginForOutputditribution.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
 
         cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
@@ -4693,24 +4701,42 @@ uttPhoneBeginIdx;
         // x dimension is for utterances
         // y dimention is for phone sequence in each utterance
         // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances 
-        dim3 block_tail((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
-        for (long t = 0; t < maxFrameNum; t++)
-        {
-            _assignAlphaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
-                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
-        }
-
-        for (long t = maxFrameNum - 1; t >= 0; t--)
-        {
-            _assignBetaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
-                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
-        }
+        SyncGuard syncGuard;
         
-        ElemType zerVar = 0.0;
-        totalScore.SetColumn(&zerVar, 0);
-        _assignTotalScore << <uttNum, 1, 0, t_stream >> > (beta.Data(), totalScore.Data(), uttNum, gpuUttToChanInd, gpuBeginFrame, numParallelSequences, maxPhoneNum);
+        int blocksPerGrid = (int) ceil(1.0 * uttNum / GridDim::maxThreadsPerBlock);
+        //_AssignSequenceError<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(hsmoothingWeight, Data(), label.Data(), dnnoutput.Data(), gamma.Data(), alpha, N);
 
-        dim3 block_tail_2((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+
+        for (size_t t = 0; t < maxFrameNum; t++)
+        {
+            for (size_t u = 0; u < maxPhoneNum; u++)
+                _assignRNNTAlphaScore<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(),
+                gpuFrameNum, gpuPhoneNum, gpuBeginFrame, gpuFrameToChanInd, gpuUttBeginForMergedinput, numParallelSequences, t, u, 
+                    maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+        }
+
+        for (LONG64 t = maxFrameNum - 1; t >= 0; t--)
+        {
+            for (LONG64 u = maxPhoneNum - 1; u >= 0; u--)
+                _assignRNNTBetaScore<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), 
+				gpuFrameNum, gpuPhoneNum, gpuBeginFrame, gpuFrameToChanInd, gpuUttBeginForMergedinput, numParallelSequences, t, u,
+                maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+        }
+
+       //beta.Print("beta");
+        std::vector<ElemType> scores(uttNum);
+        _assignRNNTTotalScore(alpha.Data(), beta.Data(), scores, uttNum, uttFrameToChanInd, uttFrameBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, maxPhoneNum);
+        this->SetValue(0.0);
+        dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+        // x dimension is for each phone
+        // y dimention is for each time
+        // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances
+        dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+        in1.PrepareDevice();
+        SyncGuard syncGuard;
+        _assignRNNTScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttFrameToChanInd,
+                         uttBeginForOutputditribution, numParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId);
+        
 
         _assignCTCScore << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, gpuUttToChanInd,
             gpuBeginFrame, gpuPhoneNum, gpuFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
