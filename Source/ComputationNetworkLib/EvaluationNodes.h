@@ -16,8 +16,12 @@
 #include <list>
 #include <memory>
 
-
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 // -----------------------------------------------------------------------
 // ClassificationErrorNode (label, prediction)   or ClassificationErrorNode (prediction, label)
@@ -28,8 +32,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class ClassificationErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"ClassificationError"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ClassificationError";
+    }
 
 public:
     DeclareConstructorFromConfig(ClassificationErrorNode);
@@ -134,7 +142,7 @@ template class ClassificationErrorNode<double>;
 
 // -----------------------------------------------------------------------
 // NDCG1EvalNode (gain, prediction, queryId)
-// NDCG @ 1 
+// NDCG @ 1
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -187,11 +195,11 @@ public:
         int previousQueryId = -1;
         int numberOfQueries = 0;
 
-        // Iterate all samples and populate m_queryUrls table. 
+        // Iterate all samples and populate m_queryUrls table.
         for (size_t i = 0; i < numberOfSamples; i++)
         {
-            int queryId = (int)queryIds(0, i);
-            // Samples are grouped by queries. Find all the urls 
+            int queryId = (int) queryIds(0, i);
+            // Samples are grouped by queries. Find all the urls
             // belonging to each individual query.
             if (queryId != previousQueryId)
             {
@@ -206,7 +214,7 @@ public:
             qub.m_urls.push_back(u);
         }
 
-        for (auto &qu : m_queryUrls)
+        for (auto& qu : m_queryUrls)
         {
             std::vector<Url>& urls = qu.m_urls;
             // Urls are pre-sorted in descending order of gains.
@@ -215,7 +223,7 @@ public:
             its = std::copy(it, urls.end(), its);
             std::sort(its0, its);
 
-            // Set the sorted rk order to each url and 
+            // Set the sorted rk order to each url and
             // the urls are still in the original order
             int rk = 0;
             for (it = its0; it != its; it++)
@@ -226,14 +234,14 @@ public:
 
         // calculate IRMetrics
         size_t sampleCount = 0;
-        for (const auto &qu: m_queryUrls)
+        for (const auto& qu : m_queryUrls)
         {
-            for (const auto &url : qu.m_urls)
+            for (const auto& url : qu.m_urls)
             {
                 (*m_urlGain0)(0, sampleCount) = url.m_gain;
                 (*m_urlGain1)(0, sampleCount) = url.m_gain;
-                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.m_rank0;
-                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.m_rank;
+                (*m_urlDiscount0)(0, sampleCount) = (ElemType) url.m_rank0;
+                (*m_urlDiscount1)(0, sampleCount) = (ElemType) url.m_rank;
                 sampleCount++;
             }
         }
@@ -254,12 +262,13 @@ public:
         ElemType idealMetric = 0.0, metric = 0.0;
 
         // IRMetric @ 1
-        for (auto &qu : m_queryUrls)
+        for (auto& qu : m_queryUrls)
         {
             idealMetric = urlDiscountedGain0(0, qu.m_urls.begin()->m_id);
-            if (idealMetric == 0.0) continue;
+            if (idealMetric == 0.0)
+                continue;
 
-            for (auto &url : qu.m_urls)
+            for (auto& url : qu.m_urls)
             {
                 if (url.m_rank == 0)
                 {
@@ -283,7 +292,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         if (m_inputs.size() != 3)
-            InvalidArgument("%ls operation requires three inputs instead of %d.", NodeDescription().c_str(), (int)m_inputs.size());
+            InvalidArgument("%ls operation requires three inputs instead of %d.", NodeDescription().c_str(), (int) m_inputs.size());
 
         if (Input(0)->NeedsGradient() == true)
             InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st input.", NodeName().c_str(), OperationName().c_str());
@@ -299,9 +308,12 @@ public:
         UpdateCounts();
 
         // clean up first
-        if (!m_queryUrls.empty()) m_queryUrls.clear();
-        if (!m_urlSorter.empty()) m_urlSorter.clear();
-        if (!m_logWeights.empty()) m_logWeights.clear();
+        if (!m_queryUrls.empty())
+            m_queryUrls.clear();
+        if (!m_urlSorter.empty())
+            m_urlSorter.clear();
+        if (!m_logWeights.empty())
+            m_logWeights.clear();
 
         m_urlGain0->Resize(1, m_numberOfQueryUrls);
         m_urlGain1->Resize(1, m_numberOfQueryUrls);
@@ -316,7 +328,7 @@ public:
         size_t i = 0;
         for (typename std::vector<ElemType>::iterator it = m_logWeights.begin(); it != m_logWeights.end(); it++, i++)
         {
-            *it = (ElemType)log(2.0 + i);
+            *it = (ElemType) log(2.0 + i);
         }
     }
 
@@ -363,7 +375,6 @@ public:
     }
 
 protected:
-
     void UpdateCounts()
     {
         FrameRange fr(Input(0)->GetMBLayout());
@@ -377,7 +388,7 @@ protected:
         size_t maxNumberOfUrlsPerQuery = 0;
         for (size_t i = 0; i < numberOfQueryUrls; i++)
         {
-            int queryId = (int)queryIds(0, i);
+            int queryId = (int) queryIds(0, i);
             if (queryId != previousQueryId)
             {
                 if (numberOfUrls > maxNumberOfUrlsPerQuery)
@@ -389,7 +400,7 @@ protected:
                 numberOfUrls = 0;
                 previousQueryId = queryId;
             }
-            
+
             numberOfUrls++;
         }
 
@@ -412,18 +423,20 @@ protected:
             m_id = 0;
             m_rank0 = 0;
             m_rank = 0;
-            m_score = (ElemType)0;
-            m_gain = (ElemType)0;
+            m_score = (ElemType) 0;
+            m_gain = (ElemType) 0;
         }
 
-        Url(int _id, int _rk0, ElemType _sc, ElemType _gn) : m_id(_id), m_rank0(_rk0), m_rank(0), m_score(_sc), m_gain(_gn) {}
+        Url(int _id, int _rk0, ElemType _sc, ElemType _gn)
+            : m_id(_id), m_rank0(_rk0), m_rank(0), m_score(_sc), m_gain(_gn) {}
 
         int m_id;         // sample id
-        int m_rank0;        // original rank based on label
-        int m_rank;         // rank based on s in the associated query
-        ElemType m_score;    // score
-        ElemType m_gain;    // gain
-        bool operator < (const Url &url) const{
+        int m_rank0;      // original rank based on label
+        int m_rank;       // rank based on s in the associated query
+        ElemType m_score; // score
+        ElemType m_gain;  // gain
+        bool operator<(const Url& url) const
+        {
             // tie breaking
             if (m_score == url.m_score || std::isnan(m_score) || std::isnan(url.m_score))
             {
@@ -460,7 +473,7 @@ template class NDCG1EvalNode<double>;
 
 // Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
 // Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
-// 
+//
 // The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and tokensToIgnore contains index of label '-' then
 // given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
 //
@@ -469,11 +482,15 @@ template class NDCG1EvalNode<double>;
 // Just like ClassificationError and other evaluation nodes, when used as an evaluation criterion, the SGD process will aggregate all values over an epoch and report the average, i.e. the error rate.
 // Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
 // Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
-template<class ElemType>
-class EditDistanceErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
+template <class ElemType>
+class EditDistanceErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"EditDistanceError"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"EditDistanceError";
+    }
 
 public:
     // subPen - substitution penalty
@@ -481,7 +498,7 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of indices of samples to ignore during edit distance evaluation
-    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 1.0f, float delPen = 1.0f, float insPen = 1.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
+    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring& name, float subPen = 1.0f, float delPen = 1.0f, float insPen = 1.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
         : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
     {
     }
@@ -531,7 +548,7 @@ public:
         m_maxValues->Resize(1, cols);
     }
 
-    virtual void CopyTo(ComputationNodeBasePtr  nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
 
@@ -576,17 +593,17 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of samples to ignore during edit distance evaluation
-    ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
-        float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& tokensToIgnore)
+    ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType>& secondSeq, MBLayoutPtr pMBLayout,
+                                      float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& tokensToIgnore)
     {
         std::vector<int> firstSeqVec, secondSeqVec;
 
         // Edit distance between subsequences
         Matrix<float> grid(CPUDEVICE);
-        
+
         // Number of insertions between subsequences
         Matrix<float> insMatrix(CPUDEVICE);
-        
+
         //Number of deletions between subsequences
         Matrix<float> delMatrix(CPUDEVICE);
 
@@ -619,7 +636,7 @@ public:
                 size_t secondSize = secondSeqVec.size();
                 if (Base::HasEnvironmentPtr() && Base::Environment().IsV2Library())
                     totalSampleNum += secondSize;
-                else 
+                else
                     totalSampleNum += firstSize;
 
                 grid.Resize(firstSize + 1, secondSize + 1);
@@ -632,14 +649,14 @@ public:
 
                 for (size_t i = 0; i < firstSize + 1; i++)
                 {
-                    grid(i, 0) = (float)(i * delPen);
-                    delMatrix(i, 0) = (float)i;
+                    grid(i, 0) = (float) (i * delPen);
+                    delMatrix(i, 0) = (float) i;
                 }
 
                 for (size_t j = 0; j < secondSize + 1; j++)
                 {
-                    grid(0, j) = (float)(j * insPen);
-                    insMatrix(0, j) = (float)j;
+                    grid(0, j) = (float) (j * insPen);
+                    insMatrix(0, j) = (float) j;
                 }
                 for (size_t i = 1; i < firstSize + 1; i++)
                 {
@@ -654,9 +671,9 @@ public:
                         }
                         else
                         {
-                            del = grid(i - 1, j) + delPen; //deletion 
-                            ins = grid(i, j - 1) + insPen;  //insertion
-                            sub = grid(i - 1, j - 1) + subPen; //substitution 
+                            del = grid(i - 1, j) + delPen;     //deletion
+                            ins = grid(i, j - 1) + insPen;     //insertion
+                            sub = grid(i - 1, j - 1) + subPen; //substitution
                             if (sub <= del && sub <= ins)
                             {
                                 insMatrix(i, j) = insMatrix(i - 1, j - 1);
@@ -711,11 +728,26 @@ public:
         fstream >> m_tokensToIgnore;
     }
 
-    float SubstitutionPenalty() const { return m_subPen; }
-    float DeletionPenalty() const { return m_delPen; }
-    float InsertionPenalty() const { return m_insPen; }
-    bool SquashInputs() const { return m_squashInputs; }
-    std::vector<size_t> TokensToIgnore() const { return m_tokensToIgnore; }
+    float SubstitutionPenalty() const
+    {
+        return m_subPen;
+    }
+    float DeletionPenalty() const
+    {
+        return m_delPen;
+    }
+    float InsertionPenalty() const
+    {
+        return m_insPen;
+    }
+    bool SquashInputs() const
+    {
+        return m_squashInputs;
+    }
+    std::vector<size_t> TokensToIgnore() const
+    {
+        return m_tokensToIgnore;
+    }
 
 private:
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
@@ -732,7 +764,7 @@ private:
         out_SampleSeqVec.clear();
 
         // Get the first element in the sequence
-        size_t lastId = (int)firstSeq(0, columnIndices[0]);
+        size_t lastId = (int) firstSeq(0, columnIndices[0]);
         if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), lastId) == tokensToIgnore.end())
             out_SampleSeqVec.push_back(lastId);
 
@@ -742,7 +774,7 @@ private:
             //squash sequences of identical samples
             for (size_t i = 1; i < columnIndices.size(); i++)
             {
-                size_t refId = (int)firstSeq(0, columnIndices[i]);
+                size_t refId = (int) firstSeq(0, columnIndices[i]);
                 if (lastId != refId)
                 {
                     lastId = refId;
@@ -755,7 +787,7 @@ private:
         {
             for (size_t i = 1; i < columnIndices.size(); i++)
             {
-                auto refId = (int)firstSeq(0, columnIndices[i]);
+                auto refId = (int) firstSeq(0, columnIndices[i]);
                 if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), refId) == tokensToIgnore.end())
                     out_SampleSeqVec.push_back(refId);
             }
@@ -766,7 +798,220 @@ private:
 template class EditDistanceErrorNode<float>;
 template class EditDistanceErrorNode<double>;
 
-// OneHotNode will create corresponding one hot tensor based on the input tensor. 
+template <class ElemType>
+class RNNTErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ClassificationError";
+    }
+
+public:
+    RNNTErrorNode(DEVICEID_TYPE deviceId, const wstring& name, vector<size_t> tokensToIgnore = {})
+        : Base(deviceId, name), m_tokensToIgnore(tokensToIgnore)
+    {
+    }
+
+    RNNTErrorNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RNNTErrorNode(configp->Get(L"deviceId"), L"<placeholder>", {})
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        m_tokensToIgnore = ScriptableObjects::ConfigArray::FlattenedVectorFrom<size_t>(configp->Get(L"tokensToIgnore"));
+    }
+
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        InputRef(1).ValueFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true);
+        InputRef(2).ValueFor(fr).VectorMax(*m_maxIndexes2, *m_maxValues, true);
+        MaskMissingColumnsToZero(*m_maxIndexes0, InputRef(0).GetMBLayout(), fr);
+        MaskMissingColumnsToZero(*m_maxIndexes2, InputRef(2).GetMBLayout(), fr);
+
+        getRNNTResults(*m_maxIndexes1, *m_maxIndexes2, *m_maxValues, InputRef(0).GetMBLayout(), InputRef(1).GetMBLayout(), m_tokensToIgnore);
+        Value().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, false);
+#if NANCHECK
+        Value().HasNan("RNNTErrorNode");
+#endif
+#if DUMPOUTPUT
+        Value().Print("RNNTErrorNode");
+#endif
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryReduce(isFinalValidationPass);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<RNNTErrorNode<ElemType>>(nodeP);
+            node->m_maxIndexes0->SetValue(*m_maxIndexes0);
+            node->m_maxIndexes1->SetValue(*m_maxIndexes1);
+            node->m_maxIndexes2->SetValue(*m_maxIndexes2);
+            node->m_maxValues->SetValue(*m_maxValues);
+            node->m_tokensToIgnore = m_tokensToIgnore;
+        }
+    }
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_maxIndexes0, matrixPool);
+        RequestMatrixFromPool(m_maxIndexes1, matrixPool);
+        RequestMatrixFromPool(m_maxIndexes2, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
+    }
+
+    // release temp matrices that are only used by forward computation
+    // don't release matrices that need to be used in the gradient computation
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes0, matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes2, matrixPool);
+        ReleaseMatrixToPool(m_maxValues, matrixPool);
+    }
+    void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,
+                        Microsoft::MSR::CNTK::Matrix<ElemType>& maxIdxes,
+                        Microsoft::MSR::CNTK::Matrix<ElemType>& maxValue,
+                        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
+                        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout,
+                        const vector<size_t>& tokensToIgnore)
+
+    {
+        output.SetValue(0.0);
+        const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
+        const auto numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
+        const auto numSequences = pMBLayout->GetNumSequences();
+        //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
+        assert(numSequences == phoneMBLayout->GetNumSequences());
+        
+        // Prepare data structures from the reader
+        // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttFrameBeginIdx, uttPhoneBeginIdx;
+        // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttFrameNum;
+        // the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttPhoneNum;
+        // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttFrameToChanInd, uttPhoneToChanInd;
+
+        uttFrameNum.reserve(numSequences);
+        uttPhoneNum.reserve(numSequences);
+        uttFrameToChanInd.reserve(numSequences);
+        uttPhoneToChanInd.reserve(numSequences);
+        uttFrameBeginIdx.reserve(numSequences);
+        uttPhoneBeginIdx.reserve(numSequences);
+
+        //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
+        size_t seqId = 0; //frame
+        size_t totalframenum = 0, totalphonenum = 0;
+        for (const auto& seq : pMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttFrameToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttFrameBeginIdx.push_back(seq.tBegin);
+            uttFrameNum.push_back(numFrames);
+            totalframenum += numFrames;
+        }
+        seqId = 0; //phone
+        for (const auto& seq : phoneMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttPhoneToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttPhoneBeginIdx.push_back(seq.tBegin);
+            uttPhoneNum.push_back(numFrames);
+            totalphonenum += numFrames;
+        }
+
+        //calculate the memory need for f*g
+        std::vector<size_t> uttBeginForOutputditribution;
+        uttBeginForOutputditribution.reserve(numSequences);
+
+        size_t totalcol = 0;
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttBeginForOutputditribution.push_back(totalcol);
+            totalcol += uttFrameNum[s] * uttPhoneNum[s];
+        }
+
+        vector<size_t> hyp;
+        //ElemType score;
+        size_t t, u;
+        //loop for utt
+        for (size_t uttId = 0; uttId < numSequences; uttId++)
+        {
+            size_t frameNum = uttFrameNum[uttId];
+            size_t phoneNum = uttPhoneNum[uttId];
+            hyp.clear();
+            
+            for (size_t i = 0; i < frameNum + phoneNum - 2; i++)
+            {
+                u = hyp.size();
+                t = i - u;
+                size_t tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + u;
+                size_t phoneID = size_t(maxIdxes(0, tuID));
+                if (phoneID != tokensToIgnore[0])
+                    hyp.push_back(phoneID);                
+            }
+            if (hyp.size() != phoneNum)
+            {
+                LogicError("output length mismatch: %u, %u\n", hyp.size(), phoneNum);
+            }
+            for (u = 0; u < phoneNum; u++)
+            {
+                size_t phoneid = (u + uttPhoneBeginIdx[uttId]) * numPhoneParallelSequences + uttPhoneToChanInd[uttId];
+                output(hyp[u], phoneid) = 1.0;
+            }
+        }
+    }
+    std::vector<size_t> TokensToIgnore() const
+    {
+        return m_tokensToIgnore;
+    }
+
+private:
+    shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1, m_maxIndexes2;
+    shared_ptr<Matrix<ElemType>> m_maxValues;
+    std::vector<size_t> m_tokensToIgnore;
+};
+
+template class RNNTErrorNode<float>;
+template class RNNTErrorNode<double>;
+
+// OneHotNode will create corresponding one hot tensor based on the input tensor.
 template <class ElemType>
 class OneHotNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
@@ -778,7 +1023,8 @@ class OneHotNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<
     }
 
 public:
-    OneHotNode(DEVICEID_TYPE deviceId, size_t num_class, bool is_sparse, int axis, const wstring& name) : Base(deviceId, name)
+    OneHotNode(DEVICEID_TYPE deviceId, size_t num_class, bool is_sparse, int axis, const wstring& name)
+        : Base(deviceId, name)
     {
         m_num_class = num_class;
         m_sparse = is_sparse;
@@ -786,7 +1032,8 @@ public:
         m_offset = -1;
     }
     //do we really need this?
-    OneHotNode(DEVICEID_TYPE deviceId, const wstring& name) : OneHotNode(deviceId, 0, false, -1, name)
+    OneHotNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : OneHotNode(deviceId, 0, false, -1, name)
     {
     }
 
@@ -816,11 +1063,13 @@ public:
         LogicError("The node \"%ls\" can be used in training, but it does not participate in gradient propagation.", OperationName().c_str());
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override {
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
         return false;
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
         return false;
     }
 
@@ -1079,4 +1328,6 @@ template class SequenceDecoderNode<double>;
 
 #endif
 
-} } }
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft

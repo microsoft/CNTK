@@ -686,6 +686,9 @@ static ConfigValuePtr Evaluate(const ExpressionPtr &e, const IConfigRecordPtr &s
             //  - disallow calling "{}"-declared functions from inside a "()"
             let &lambdaExpr = e->args[0]; // [0] = function
             let &argsExpr = e->args[1];   // [1] = arguments passed to the function ("()" expression of expressions)
+			size_t myi;
+            if (lambdaExpr->id == L"RNNTError")
+                myi = 1;
             let lambda = AsPtr<ConfigLambda>(Evaluate(lambdaExpr, scope, exprPath, L"" /*macros are not visible in expression names*/), lambdaExpr, L"function");
             if (argsExpr->op != L"()")
                 LogicError("argument list expected");

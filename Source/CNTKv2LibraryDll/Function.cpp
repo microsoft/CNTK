@@ -2194,6 +2194,13 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
+    FunctionPtr RNNTError(const Variable& prediction, const Variable& labels, const Variable& mergedinput, const vector<size_t>& tokensToIgnore, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameTokensToIgnore] = AsDictionaryValueVector(tokensToIgnore);
+        std::vector<Variable> operands = {prediction, labels, mergedinput};
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::RNNTError, operands, std::move(additionalProperties), name), name);
+    }
     FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symListPath, const std::wstring& phonePath, const std::wstring& stateListPath, const std::wstring& transProbPath, const std::wstring& latticeConfigPath, float hSmoothingWeight, float frameDropThresh, bool doReferenceAlign, bool seqGammarUsesMBR, float seqGammarAMF, float seqGammarLMF, float seqGammarBMMIFactor, float seqGammarWordPen, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
