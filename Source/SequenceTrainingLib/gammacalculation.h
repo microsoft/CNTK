@@ -558,7 +558,7 @@ public:
                 fprintf(stderr, "framenum:%d\n", (int)(uttFrameNum[i]));                
             }
             matrixPhoneSeqs.Print("phone seq");
-            matrixPhoneBounds.Print("phone bound");
+            //matrixPhoneBounds.Print("phone bound");
         }
         /*alpha.Print("alpha");
         beta.Print("beta");
