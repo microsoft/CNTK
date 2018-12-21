@@ -406,7 +406,7 @@ void lattice::dedup()
 //  - dash ("-") -> dump lattice to stdout instead
 /*static*/ void archive::convert(const std::wstring &intocpath, const std::wstring &intocpath2, const std::wstring &outpath,
                                  const msra::asr::simplesenonehmm &hset,
-                                 std::unordered_map<int, std::wstring> &id2wordmapping, std::set<int> &specialwordids)
+                                 std::unordered_map<size_t, std::wstring> &id2wordmapping, std::set<size_t> &specialwordids)
 {
     const auto &modelsymmap = hset.getsymmap();
 

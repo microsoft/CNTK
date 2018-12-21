@@ -1052,13 +1052,13 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
         }
     }
     void parseentry(const vector<std::string>& lines, size_t line, const set<wstring>& restricttokeys,
-        const std::unordered_map<std::string, int>& wordidmap, /* const UNITSYMBOLTABLE* unitmap,
+                    const std::unordered_map<std::string, size_t>& wordidmap, /* const UNITSYMBOLTABLE* unitmap,
         vector<typename WORDSEQUENCE::word>& wordseqbuffer, vector<typename WORDSEQUENCE::aligninfo>& alignseqbuffer,
         */
         const double htkTimeToFrame)
     {
         
-        std::unordered_map<std::string, int>::const_iterator mp_itr;
+        std::unordered_map<std::string, size_t>::const_iterator mp_itr;
 
         size_t idx = 0;
         string filename = lines[idx++];
@@ -1189,7 +1189,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
             {
                 
                 mp_itr = wordidmap.find("!silence");
-                int silence = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
+                size_t silence = ((mp_itr == wordidmap.end()) ? -1 : mp_itr->second);
                 
                 
                 // debug
@@ -1198,10 +1198,10 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                 if (silence >= 0)
                 {
                     mp_itr = wordidmap.find("!sent_start");
-                    int sentstart = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
+                    size_t sentstart = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
 
                     mp_itr = wordidmap.find("!sent_end");
-                    int sentend = ((mp_itr == wordidmap.end()) ? -1: mp_itr->second);
+                    size_t sentend = ((mp_itr == wordidmap.end()) ? -1 : mp_itr->second);
 
                     // map first and last !silence to !sent_start and !sent_end, respectively
                     if (sentstart >= 0 && wordids.front() == (size_t)silence)
@@ -1256,7 +1256,7 @@ public:
     }
 
 
-    htkmlfreader(const vector<wstring>& paths, const set<wstring>& restricttokeys, const wstring& stateListPath, const std::unordered_map<std::string, int>& wordidmap, const double htkTimeToFrame)
+    htkmlfreader(const vector<wstring>& paths, const set<wstring>& restricttokeys, const wstring& stateListPath, const std::unordered_map<std::string, size_t>& wordidmap, const double htkTimeToFrame)
     {
         // read state list
         if (stateListPath != L"")
@@ -1367,7 +1367,7 @@ public:
     }
 
     // note: this function is not designed to be pretty but to be fast
-    void read(const wstring& path, const set<wstring>& restricttokeys, const std::unordered_map<std::string, int>& wordidmap,  const double htkTimeToFrame)
+    void read(const wstring& path, const set<wstring>& restricttokeys, const std::unordered_map<std::string, size_t>& wordidmap, const double htkTimeToFrame)
     {
         if (!restricttokeys.empty() && this->size() >= restricttokeys.size()) // no need to even read the file if we are there (we support multiple files)
             return;

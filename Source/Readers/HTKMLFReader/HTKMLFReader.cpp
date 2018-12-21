@@ -113,9 +113,9 @@ void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
     }
 }
 
-void readwordidmap(const std::wstring& pathname, std::unordered_map<std::string, int>& wordidmap, int start_id)
+void readwordidmap(const std::wstring& pathname, std::unordered_map<std::string, size_t>& wordidmap, int start_id)
 {
-    std::unordered_map<std::wstring, int>::iterator mp_itr;
+    std::unordered_map<std::wstring, size_t>::iterator mp_itr;
     auto_file_ptr f(fopenOrDie(pathname, L"rbS"));
     fprintf(stderr, "readwordidmap: reading %ls \n", pathname.c_str());
     char buf[1024];
@@ -131,7 +131,7 @@ void readwordidmap(const std::wstring& pathname, std::unordered_map<std::string,
         }
         if (wordidmap.find(std::string(word)) == wordidmap.end())
         {
-            wordidmap.insert(pair<std::string, int>(string(word), start_id++));
+            wordidmap.insert(pair<std::string, size_t>(string(word), start_id++));
         }
     }
 
@@ -150,7 +150,7 @@ void readwordidmap2(const std::wstring& pathname, std::unordered_map<std::wstrin
     while (!feof(f))
     {
         buffer = fgetlinew(f);
-      /*  size_t posstart = buffer.find_first_of('\t');
+        /*  size_t posstart = buffer.find_first_of('\t');
         if (posstart == std::wstring::npos)
         {
             posstart = buffer.find_first_of(' ');
@@ -164,7 +164,7 @@ void readwordidmap2(const std::wstring& pathname, std::unordered_map<std::wstrin
         wordid = buffer.substr(0, posstart);
         word = buffer.substr(posend + 1, buffer.length());*/
 
-		size_t pos = buffer.find(' ');
+        size_t pos = buffer.find(' ');
         wordid = buffer.substr(0, pos);
         word = buffer.substr(pos + 1, buffer.length());
 
@@ -182,28 +182,28 @@ void readwordidmap2(const std::wstring& pathname, std::unordered_map<std::wstrin
     fclose(f);
 }
 
-std::unordered_map<int, std::wstring> CombineMappingTable(const std::unordered_map<std::string, int> trainwordidmap, const std::unordered_map<std::wstring, std::wstring>& wordidmap)
+std::unordered_map<size_t, std::wstring> CombineMappingTable(const std::unordered_map<std::string, size_t> trainwordidmap, const std::unordered_map<std::wstring, std::wstring>& wordidmap)
 {
-    std::unordered_map<int, std::wstring> combinedmapping;
-    std::unordered_map<std::string, int>::const_iterator idmap_itr;
+    std::unordered_map<size_t, std::wstring> combinedmapping;
+    std::unordered_map<std::string, size_t>::const_iterator idmap_itr;
     std::unordered_map<std::wstring, std::wstring>::const_iterator maptable_itr;
-	std::wstring id;
+    std::wstring id;
     std::wstring wid;
     std::wstring word;
 
     for (idmap_itr = trainwordidmap.begin(); idmap_itr != trainwordidmap.end(); ++idmap_itr)
-    {  		
-		maptable_itr = wordidmap.find(s2ws(idmap_itr->first));
+    {
+        maptable_itr = wordidmap.find(s2ws(idmap_itr->first));
         if (maptable_itr != wordidmap.end())
-            combinedmapping.insert(std::pair<int, std::wstring>(idmap_itr->second, maptable_itr->second));
+            combinedmapping.insert(std::pair<size_t, std::wstring>(idmap_itr->second, maptable_itr->second));
         else
         {
             //fprintf(stderr, "no mapping id for %ls %d \n", s2ws(idmap_itr->first).c_str(), (int) idmap_itr->second);
-            combinedmapping.insert(std::pair<int, std::wstring>(idmap_itr->second, s2ws(idmap_itr->first)));
-		}
-	}
+            combinedmapping.insert(std::pair<size_t, std::wstring>(idmap_itr->second, to_wstring(idmap_itr->second) /*s2ws(idmap_itr->first)*/));
+        }
+    }
 
-	return combinedmapping;
+    return combinedmapping;
 }
 
 // Load all input and output data.
@@ -224,6 +224,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     size_t numFiles;
     wstring unigrampath(L"");
     wstring wordidmappath(L"");
+    wstring word2widmappath(L""); //word2wid mapping table consistent with that used in training
 
     size_t randomize = randomizeAuto;
     size_t iFeat, iLabel;
@@ -557,14 +558,17 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (readerConfig.Exists(L"wordidmap"))
         wordidmappath = (const wstring&) readerConfig(L"wordidmap");
 
+	if (readerConfig.Exists(L"word2widmap"))
+        word2widmappath = (const wstring&) readerConfig(L"word2widmap");
+	
     // load a unigram if needed (this is used for MMI training)
     msra::lm::CSymbolSet unigramsymbols;
-    std::set<int> specialwordids;
+    std::set<size_t> specialwordids;
     std::vector<string> specialwords;
-    std::unordered_map<std::string, int> wordidmap;
+    std::unordered_map<std::string, size_t> wordidmap;
     std::unordered_map<std::wstring, std::wstring> wordidmap2;
-    std::unordered_map<int, std::wstring> id2wordmapping;
-    std::unordered_map<std::string, int>::iterator wordidmap_itr;
+    std::unordered_map<size_t, std::wstring> id2wordmapping;
+    std::unordered_map<std::string, size_t>::iterator wordidmap_itr;
 
     std::unique_ptr<msra::lm::CMGramLM> unigram;
     size_t silencewordid = SIZE_MAX;
@@ -633,19 +637,22 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         endwordid = 2;
 
         int start_id = 6;
-        /*changed by Linquan*/
         readwordidmap(wordidmappath, wordidmap, start_id);
-        const std::wstring mappingTable = L"D:\\Development\\TAMER\\eMBR\\CERCriteria\\Data2\\word2wid.dict.mapping.dict";
-        readwordidmap2(mappingTable, wordidmap2);
-		//id--> word string mapping
-        id2wordmapping = CombineMappingTable(wordidmap, wordidmap2);
-			
-		//temp code for debug
-		//id2wordmapping.insert(std::pair<int, std::wstring>(0, L"0"));
+        
+		//const std::wstring mappingTable = L"D:\\Development\\TAMER\\eMBR\\CERCriteria\\Data2\\word2wid.dict.mapping.dict";
+        //optional id--> word string mapping
+        /*changed by Linquan*/
+        if (word2widmappath != L"")
+        {
+            readwordidmap2(word2widmappath, wordidmap2);
+            id2wordmapping = CombineMappingTable(wordidmap, wordidmap2);
+        }
+        else
+            id2wordmapping.clear();
 
         specialwordids.clear();
         specialwords.clear();
-		specialwords.push_back("<s>");
+        specialwords.push_back("<s>");
 
         specialwords.push_back("</s>");
         specialwords.push_back("!NULL");
@@ -744,13 +751,11 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         // now get the frame source. This has better randomization and doesn't create temp files
         bool useMersenneTwisterRand = readerConfig(L"useMersenneTwisterRand", false);
-        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, id2wordmapping, specialwordids, 
-																		 m_featDims, m_labelDims, numContextLeft, numContextRight, randomize,
+        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, id2wordmapping, specialwordids,
+                                                                         m_featDims, m_labelDims, numContextLeft, numContextRight, randomize,
                                                                          *m_lattices, m_latticeMap, m_frameMode,
                                                                          m_expandToUtt, m_maxUtteranceLength, m_truncated));
         m_frameSource->setverbosity(m_verbosity);
-		m_lattices->setid2wordmapping(id2wordmapping);
-
     }
     else if (EqualCI(readMethod, L"rollingWindow"))
     {

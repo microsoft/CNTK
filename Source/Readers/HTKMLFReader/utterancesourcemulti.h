@@ -37,7 +37,7 @@ class minibatchutterancesourcemulti : public minibatchsource
     const bool truncated;                    //false -> truncated utterance or not within minibatch
     size_t maxUtteranceLength;               //10000 ->maximum utterance length in non-frame and non-truncated mode
 
-    std::set<int> specialwordids; // stores the word ids that will not be counted for WER computation
+    std::set<size_t> specialwordids;         // stores the word ids that will not be counted for WER computation
     std::vector<std::vector<size_t>> counts; // [s] occurence count for all states (used for priors)
     int verbosity;
     // lattice reader
@@ -45,7 +45,7 @@ class minibatchutterancesourcemulti : public minibatchsource
     const latticesource &lattices;
 
 	//linquan
-    std::unordered_map<int, std::wstring> id2wordmapping; //keep id-to-real word/character mapping 
+    std::unordered_map<size_t, std::wstring> id2wordmapping; //keep id-to-real word/character mapping 
 
     // Flag indicating whether to use Mersenne Twister random generator.
     bool m_useMersenneTwister;
@@ -182,7 +182,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         // page in data for this chunk
         // We pass in the feature info variables by ref which will be filled lazily upon first read
         void requiredata(std::string &featkind, size_t &featdim, unsigned int &sampperiod, const latticesource &latticesource, 
-			 std::unordered_map<int, std::wstring>& id2wordmapping, std::set<int> &specialwordids, int verbosity = 0) const
+			 std::unordered_map<size_t, std::wstring> &id2wordmapping, std::set<size_t> &specialwordids, int verbosity = 0) const
         {
             
             if (numutterances() == 0)
@@ -940,7 +940,7 @@ public:
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
     // This mode requires utterances with time stamps.
     minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::pair<std::vector<msra::asr::htkmlfentry>, std::vector<unsigned int>>>> &labels,
-                                  std::unordered_map<int, std::wstring> &id2wordmapping, std::set<int> &specialwordids, /*deal with WER/CER sepcifically*/
+                                  std::unordered_map<size_t, std::wstring> &id2wordmapping, std::set<size_t> &specialwordids, /*deal with WER/CER sepcifically*/
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
                                   const latticesource &lattices, const std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, std::vector<bool> expandToUtt,
                                   const size_t maxUtteranceLength, const bool truncated)
