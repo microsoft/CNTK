@@ -482,7 +482,7 @@ public:
         m_deviceid_gpu = maxIndexes.GetDeviceId();
         m_deviceid = m_deviceid_gpu;
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneSeqs(CPUDEVICE);
-        Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneBounds(CPUDEVICE);
+        //Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneBounds(CPUDEVICE);
         // copy phone seq to matrix
         matrixPhoneSeqs.Resize(maxPhoneNum, numSequences);
         //matrixPhoneBounds.Resize(maxPhoneNum, numSequences);
@@ -558,7 +558,7 @@ public:
                 fprintf(stderr, "framenum:%d\n", (int)(uttFrameNum[i]));                
             }
             matrixPhoneSeqs.Print("phone seq");
-            matrixPhoneBounds.Print("phone bound");
+            //matrixPhoneBounds.Print("phone bound");
         }
         /*alpha.Print("alpha");
         beta.Print("beta");
