@@ -135,7 +135,13 @@ public:
 
         maxFrameNum = numCols / numParallelSequences;
         maxPhoneNum = numPhoneCols / numPhoneParallelSequences;
-        
+        uttFrameNum.clear();
+        uttPhoneNum.clear();
+        uttFrameToChanInd.clear();
+        uttPhoneToChanInd.clear();
+        uttFrameBeginIdx.clear();
+        uttPhoneBeginIdx.clear();
+
         uttFrameNum.reserve(numSequences);
         uttPhoneNum.reserve(numSequences);
         uttFrameToChanInd.reserve(numSequences);
@@ -178,8 +184,9 @@ public:
         }
 
         //calculate the memory need for f*g
+        uttBeginForOutputditribution.clear();
         uttBeginForOutputditribution.reserve(numSequences);
-
+        totalcol = 0;
         for (size_t s = 0; s < numSequences; s++)
         {
             uttBeginForOutputditribution.push_back(totalcol);
@@ -219,7 +226,11 @@ public:
         //InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
         if (isFinalValidationPass)
         {
-            m_pMBLayout = make_shared<MBLayout>();
+            if (m_pMBLayout == InputRef(0).GetMBLayout())
+            {
+                m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+                m_pMBLayout->SetUniqueAxisName(L"PlusBroadcast");
+            }
             if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows()))
             {
                 LogicError("The Matrix dimension in the PlusBroadcastNode operation does not match.");

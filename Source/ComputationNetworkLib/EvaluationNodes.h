@@ -805,7 +805,7 @@ class RNNTErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemT
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
-        return L"ClassificationError";
+        return L"RNNTError";
     }
 
 public:
@@ -838,13 +838,19 @@ public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(InputRef(0).GetMBLayout());
-        InputRef(1).ValueFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true);
-        InputRef(2).ValueFor(fr).VectorMax(*m_maxIndexes2, *m_maxValues, true);
+        InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true);
+        //m_maxIndexes0->Print("max label id");
+        //InputRef(2).Value().VectorMax(*m_maxIndexes2, *m_maxValues, true);
         MaskMissingColumnsToZero(*m_maxIndexes0, InputRef(0).GetMBLayout(), fr);
-        MaskMissingColumnsToZero(*m_maxIndexes2, InputRef(2).GetMBLayout(), fr);
-
-        getRNNTResults(*m_maxIndexes1, *m_maxIndexes2, *m_maxValues, InputRef(0).GetMBLayout(), InputRef(1).GetMBLayout(), m_tokensToIgnore);
+        //MaskMissingColumnsToZero(*m_maxIndexes2, InputRef(2).GetMBLayout(), fr);
+        m_maxIndexes1->Resize(1, m_maxIndexes0->GetNumCols());
+        m_noblankValues->AssignRowSliceValuesOf(InputRef(2).Value(), 0, InputRef(2).Value().GetNumRows()-1);
+        m_noblankValues->VectorMax(*m_maxIndexes2, *m_maxValues, true);
+        //m_maxIndexes2->Print("max index");
+        ElemType framephoneratio;
+        getRNNTResults(*m_maxIndexes1, *m_maxIndexes2, *m_maxValues, InputRef(2).Value(), InputRef(1).GetMBLayout(), InputRef(0).GetMBLayout(), m_tokensToIgnore, framephoneratio);
         Value().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, false);
+        Value().Scale(framephoneratio, Value());
 #if NANCHECK
         Value().HasNan("RNNTErrorNode");
 #endif
@@ -855,7 +861,7 @@ public:
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        ValidateBinaryReduce(isFinalValidationPass);
+       // ValidateBinaryReduce(isFinalValidationPass);
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -868,6 +874,7 @@ public:
             node->m_maxIndexes1->SetValue(*m_maxIndexes1);
             node->m_maxIndexes2->SetValue(*m_maxIndexes2);
             node->m_maxValues->SetValue(*m_maxValues);
+            node->m_noblankValues->SetValue(*m_noblankValues);
             node->m_tokensToIgnore = m_tokensToIgnore;
         }
     }
@@ -879,6 +886,8 @@ public:
         RequestMatrixFromPool(m_maxIndexes1, matrixPool);
         RequestMatrixFromPool(m_maxIndexes2, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
+        RequestMatrixFromPool(m_noblankValues, matrixPool);
+        
     }
 
     // release temp matrices that are only used by forward computation
@@ -890,22 +899,26 @@ public:
         ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
         ReleaseMatrixToPool(m_maxIndexes2, matrixPool);
         ReleaseMatrixToPool(m_maxValues, matrixPool);
+        ReleaseMatrixToPool(m_noblankValues, matrixPool);
     }
     void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,
                         Microsoft::MSR::CNTK::Matrix<ElemType>& maxIdxes,
                         Microsoft::MSR::CNTK::Matrix<ElemType>& maxValue,
+                        Microsoft::MSR::CNTK::Matrix<ElemType>& inputMatrix,
                         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
                         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout,
-                        const vector<size_t>& tokensToIgnore)
+                        const vector<size_t>& tokensToIgnore,
+		                ElemType &framephoneratio)
 
     {
-        output.SetValue(0.0);
         const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
         const auto numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
         const auto numSequences = pMBLayout->GetNumSequences();
         //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
         assert(numSequences == phoneMBLayout->GetNumSequences());
-        
+        size_t numRows = inputMatrix.GetNumRows();
+        output.SetValue(0.0);
+        //maxIdxes.AssignRowSliceValuesOf(input,0,maxidxes)
         // Prepare data structures from the reader
         // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
         std::vector<size_t> uttFrameBeginIdx, uttPhoneBeginIdx;
@@ -969,44 +982,165 @@ public:
 
         vector<size_t> hyp;
         //ElemType score;
-        size_t t, u;
+        size_t  tuID, lastFrom, U, realU;
+        int t, u;
         //loop for utt
+        vector<ElemType> scores;
+        vector<size_t> RealUID;
+        ElemType prob;
+        Microsoft::MSR::CNTK::Matrix<ElemType> fromMatrix(CPUDEVICE);
         for (size_t uttId = 0; uttId < numSequences; uttId++)
         {
             size_t frameNum = uttFrameNum[uttId];
             size_t phoneNum = uttPhoneNum[uttId];
             hyp.clear();
-            
-            for (size_t i = 0; i < frameNum + phoneNum - 2; i++)
+            U = 2 * phoneNum - 1;
+            scores.clear();
+            scores.reserve(U);
+            RealUID.clear();
+            RealUID.reserve(U);
+            fromMatrix.Resize(frameNum, U);
+            fromMatrix.SetValue(0.0);
+            //initial t = 0
+            t = 0;
+            for (u = 1; u < phoneNum; u++)
             {
-                u = hyp.size();
-                t = i - u;
-                size_t tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + u;
-                size_t phoneID = size_t(maxIdxes(0, tuID));
-                if (phoneID != tokensToIgnore[0])
-                    hyp.push_back(phoneID);                
+                RealUID.push_back(0);
+                RealUID.push_back(u);
             }
-            if (hyp.size() != phoneNum)
+            RealUID.push_back(0);
+
+            //for (u = 0; u < 2; u++)
             {
-                LogicError("output length mismatch: %u, %u\n", hyp.size(), phoneNum);
+				//u=0
+                realU = RealUID[u];
+                tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + 0;
+                prob = inputMatrix(numRows - 1, tuID);
+                scores.push_back(prob);
+                fromMatrix(0, 0) = 0.0;
+				//u=1
+				realU = RealUID[u];
+                tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + 0;
+                prob = maxValue(0, tuID);
+                scores.push_back(prob);
+                fromMatrix(0, 1) = 0.0;
             }
+            for (u=2; u < U; u++)
+            {
+                scores.push_back(LOGZERO);
+                fromMatrix(0, u) = -1.0;
+            }
+            //viterbi search
+            for (t=1; t < frameNum; t++)
+            {
+                for (u = U - 1; u >= 0; u--)
+                {
+                    realU = RealUID[u];
+
+                    tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + (size_t)(ceil(u/2));
+                    if (realU == 0)
+                        prob = inputMatrix(numRows - 1, tuID);
+                    else
+                        prob = maxValue(0, tuID);
+                    if (u > 1)
+                    {
+                        if (realU != 0)
+                        {
+                            if (scores[u - 1] > scores[u - 2])
+                            {
+                                scores[u] = scores[u - 1] + prob;
+                                fromMatrix(t, u) = (ElemType)(u - 1);
+                            }
+                            else
+                            {
+                                scores[u] = scores[u - 2] + prob;
+                                fromMatrix(t, u) = (ElemType)(u - 2);
+                            }
+                        }
+                        else
+                        {
+                            if (scores[u - 1] > scores[u])
+                            {
+                                scores[u] = scores[u - 1] + prob;
+                                fromMatrix(t, u) = (ElemType)(u - 1);
+                            }
+                            else
+                            {
+                                scores[u] = scores[u] + prob;
+                                fromMatrix(t, u) = (ElemType)(u);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        scores[u] = scores[0] + prob;
+                        fromMatrix(t, u) = 0.0;
+                    }
+                }
+            }
+            //back trace
+            t = frameNum - 1;
+
+            //get the last phone
+
+            if (scores[U - 1] > scores[U - 2])
+            {
+                u = U - 1;
+            }
+            else
+                u = U - 2;
+            realU = RealUID[u];
+            hyp.push_back(numRows - 1);
+            //push the last phone
+            if (realU !=0)
+            {
+                tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + (size_t)(ceil(u/2));
+                hyp.push_back((size_t)maxIdxes(0,tuID));
+            }
+            for (; t >= 0; t--)
+            {
+                lastFrom = (size_t) fromMatrix(t, u);
+                u = lastFrom;
+                realU = RealUID[u];
+                if (realU != 0)
+                {
+                    tuID = uttBeginForOutputditribution[uttId] + (t - 1) * phoneNum + (size_t)(ceil(u/2));
+                    hyp.push_back((size_t) maxIdxes(0, tuID));
+                }
+            }
+
             for (u = 0; u < phoneNum; u++)
             {
+                size_t phone = hyp[phoneNum - u-1];
                 size_t phoneid = (u + uttPhoneBeginIdx[uttId]) * numPhoneParallelSequences + uttPhoneToChanInd[uttId];
-                output(hyp[u], phoneid) = 1.0;
+                output(0, phoneid) = (ElemType)phone;
             }
         }
-    }
-    std::vector<size_t> TokensToIgnore() const
-    {
-        return m_tokensToIgnore;
+        framephoneratio = (ElemType) totalframenum / (ElemType) totalphonenum;
     }
 
+
+std::vector<size_t> TokensToIgnore() const
+{
+    return m_tokensToIgnore;
+}
+virtual void Save(File& fstream) const override
+{
+    Base::Save(fstream);
+    fstream << m_tokensToIgnore;
+}
+
+virtual void Load(File& fstream, size_t modelVersion) override
+{
+    Base::Load(fstream, modelVersion);
+    fstream >> m_tokensToIgnore;
+}
+
 private:
-    shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1, m_maxIndexes2;
-    shared_ptr<Matrix<ElemType>> m_maxValues;
-    std::vector<size_t> m_tokensToIgnore;
-};
+shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1, m_maxIndexes2, m_noblankValues;
+shared_ptr<Matrix<ElemType>> m_maxValues;
+std::vector<size_t> m_tokensToIgnore;
+}; // namespace CNTK
 
 template class RNNTErrorNode<float>;
 template class RNNTErrorNode<double>;
@@ -1328,6 +1462,6 @@ template class SequenceDecoderNode<double>;
 
 #endif
 
-} // namespace CNTK
 } // namespace MSR
+} // namespace Microsoft
 } // namespace Microsoft
