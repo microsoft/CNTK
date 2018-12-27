@@ -143,6 +143,14 @@ public:
         std::vector<ComputationNodeBasePtr> decodeinputNodes = m_net->InputNodesForOutputs(decodeOutputNodeNames);
         StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
+
+		//get merged input 
+		ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
+        ComputationNodeBasePtr PlusTransNode = m_net->GetNodeFromName(outputNodeNames[3]);
+        //StreamMinibatchInputs PlusinputMatrices = 
+		std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
+        Plusnodes.push_back(PlusNode);
+        Plustransnodes.push_back(PlusTransNode);
         //start decode network
         m_net->StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
         auto lminput = decodeinputMatrices.begin();
@@ -172,7 +180,7 @@ public:
             dataReader.DataEnd();
 
             //decode forward prop step by step
-            size_t vocabSize = encodeOutput.GetNumRows();
+            size_t vocabSize = PlusTransNode->GetSampleMatrixNumRows();
             size_t blankId = vocabSize - 1;
 
             /*lmin.Resize(vocabSize, 12);
@@ -209,7 +217,17 @@ public:
                 //decodeOutput.Print("decode output");
                 sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput);
                 //sumofENandDE.Print("sum");
-                sumofENandDE.VectorMax(maxIdx, maxVal, true);
+                
+
+				(&dynamic_pointer_cast<ComputationNode<ElemType>> (PlusNode)->Value())->SetValue(sumofENandDE);
+                //SumMatrix.SetValue(sumofENandDE);
+                ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
+                auto PlusMBlayout = PlusNode->GetMBLayout();
+                PlusMBlayout->Init(1, 1);
+                PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+                m_net->ForwardProp(PlusTransNode);
+                decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+                decodeOutput.VectorMax(maxIdx, maxVal, true);
                 size_t maxId = (size_t)(maxIdx.Get00Element());
                 if (maxId != blankId)
                 {
@@ -226,6 +244,8 @@ public:
                     ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
                     DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
                     m_net->ForwardProp(decodeOutputNodes[0]);
+                    
+					//m_net->ForwardPropFromTo(decodeOutputNodes[0], PlusTransNode);
                     lmt++;
                     //fprintf(stderr, "lmt: %d\n", (int) lmt);
                 }
