@@ -1721,7 +1721,7 @@ public:
 
         if (isFinalValidationPass)
         {
-            if (!(Input(0)->GetSampleMatrixNumRows() == Input(2)->GetSampleMatrixNumRows() && // match vector dimension
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(3)->GetSampleMatrixNumRows() && // match vector dimension
                   Input(0)->HasMBLayout() &&
                   Input(0)->GetMBLayout() == Input(2)->GetMBLayout()))
             {
