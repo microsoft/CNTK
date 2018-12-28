@@ -542,9 +542,9 @@ public:
         mergedinput.InplaceLogSoftmax(true);
         //matrixOutputDistribution.Print("prob");
         // forward backward to compute alpha, beta derivaitves
-        Microsoft::MSR::CNTK::Matrix<ElemType> alpha(CPUDEVICE);
-        Microsoft::MSR::CNTK::Matrix<ElemType> beta(CPUDEVICE);
-        m_derivative.TransferToDeviceIfNotThere(CPUDEVICE);
+        Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid_gpu);
+        Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid_gpu);
+        m_derivative.TransferToDeviceIfNotThere(m_deviceid_gpu);
         m_derivative.AssignRNNTScore(mergedinput, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
             uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, -1,true);
         ElemType finalscore = 0;
@@ -564,7 +564,7 @@ public:
         beta.Print("beta");
         prob.Print("prob");*/
        
-        m_derivative.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        //m_derivative.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         //matrixOutputDistribution.ReleaseMemory();
 
         //compute derivatives for F and G
