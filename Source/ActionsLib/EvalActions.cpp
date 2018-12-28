@@ -253,7 +253,7 @@ void DoWriteOutput(const ConfigParameters& config)
         DataWriter testDataWriter(writerConfig);
        // ConfigParameters
         //writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
-        writer.WriteOutput_greedy(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
+        writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         
     }
     else if (config.Exists("outputPath"))

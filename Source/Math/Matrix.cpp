@@ -6245,9 +6245,11 @@ Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob
 {
     //DecideAndMoveToRightDevice(prob, *this);
     
-    _transferToDevice(CPUDEVICE);
+    /*_transferToDevice(CPUDEVICE);
     prob._transferToDevice(CPUDEVICE);
     totalScore._transferToDevice(CPUDEVICE);
+alpha._transferToDevice(CPUDEVICE);
+    beta._transferToDevice(CPUDEVICE);*/
     
     alpha.Resize(phoneSeq.GetNumRows(), numParallelSequences*maxFrameNum);
     beta.Resize(phoneSeq.GetNumRows(), numParallelSequences*maxFrameNum);

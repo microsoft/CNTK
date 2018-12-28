@@ -368,6 +368,14 @@ public:
         std::vector<ComputationNodeBasePtr> decodeinputNodes = m_net->InputNodesForOutputs(decodeOutputNodeNames);
         StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
+		//get merged input
+        ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
+        ComputationNodeBasePtr PlusTransNode = m_net->GetNodeFromName(outputNodeNames[3]);
+        //StreamMinibatchInputs PlusinputMatrices =
+        std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
+        Plusnodes.push_back(PlusNode);
+        Plustransnodes.push_back(PlusTransNode);
+
         //start decode network
         m_net->StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
         auto lminput = decodeinputMatrices.begin();
@@ -398,7 +406,7 @@ public:
             dataReader.DataEnd();
 
             //decode forward prop step by step
-            size_t vocabSize = encodeOutput.GetNumRows();
+            size_t vocabSize = PlusTransNode->GetSampleMatrixNumRows();
             size_t blankId = vocabSize - 1;
 
             nextSequences.clear();
@@ -425,10 +433,22 @@ public:
                     //decodeOutput.SetValue(*(tempSeq.decodeoutput));
                     //decodeOutput.Print("decode output");
                     sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(tempSeq.decodeoutput));
-                    sumofENandDE.InplaceLogSoftmax(true);
+                    //sumofENandDE.InplaceLogSoftmax(true);
+
+					//plus broadcast
+					(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
+                    //SumMatrix.SetValue(sumofENandDE);
+                    ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
+                    auto PlusMBlayout = PlusNode->GetMBLayout();
+                    PlusMBlayout->Init(1, 1);
+                    PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+                    m_net->ForwardProp(PlusTransNode);
+                    decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+                    //decodeOutput.VectorMax(maxIdx, maxVal, true);
+                    decodeOutput.InplaceLogSoftmax(true);
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
-                    ElemType* logP = sumofENandDE.CopyToArray();
+                    ElemType* logP = decodeOutput.CopyToArray();
                     std::priority_queue<std::pair<double, int>> q;
                     int iLabel;
                     for (iLabel = 0; iLabel < vocabSize; iLabel++)
