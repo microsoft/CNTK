@@ -844,7 +844,7 @@ public:
         MaskMissingColumnsToZero(*m_maxIndexes0, InputRef(0).GetMBLayout(), fr);
         //MaskMissingColumnsToZero(*m_maxIndexes2, InputRef(2).GetMBLayout(), fr);
         m_maxIndexes1->Resize(1, m_maxIndexes0->GetNumCols());
-        m_noblankValues->AssignRowSliceValuesOf(InputRef(2).Value(), 0, InputRef(2).Value().GetNumRows()-1);
+        m_noblankValues->AssignRowSliceValuesOf(InputRef(2).Value(), 0, InputRef(2).Value().GetNumRows() - 1);
         m_noblankValues->VectorMax(*m_maxIndexes2, *m_maxValues, true);
         //m_maxIndexes2->Print("max index");
         ElemType framephoneratio;
@@ -861,7 +861,7 @@ public:
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-       // ValidateBinaryReduce(isFinalValidationPass);
+        // ValidateBinaryReduce(isFinalValidationPass);
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -887,7 +887,6 @@ public:
         RequestMatrixFromPool(m_maxIndexes2, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
         RequestMatrixFromPool(m_noblankValues, matrixPool);
-        
     }
 
     // release temp matrices that are only used by forward computation
@@ -901,7 +900,7 @@ public:
         ReleaseMatrixToPool(m_maxValues, matrixPool);
         ReleaseMatrixToPool(m_noblankValues, matrixPool);
     }
-    void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,
+    /*void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,
                         Microsoft::MSR::CNTK::Matrix<ElemType>& maxIdxes,
                         Microsoft::MSR::CNTK::Matrix<ElemType>& maxValue,
                         Microsoft::MSR::CNTK::Matrix<ElemType>& inputMatrix,
@@ -1117,29 +1116,205 @@ public:
             }
         }
         framephoneratio = (ElemType) totalframenum / (ElemType) totalphonenum;
+    }*/
+
+    ElemType getScore(Microsoft::MSR::CNTK::Matrix<ElemType>& output, size_t t, size_t u, size_t k, size_t uttBeginID, size_t frameNum, size_t phoneNum, size_t phonesetSize)
+    {
+        ElemType score;
+        size_t tuID, probID;
+        if (t < frameNum && u < phoneNum && k < phonesetSize)
+        {
+            tuID = uttBeginID + t * phoneNum + u;
+            probID = tuID * phonesetSize + k;
+            score = output(k, tuID);
+        }
+        else
+            score = LOGZERO;
+        return score;
+    }
+    void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,
+                        Microsoft::MSR::CNTK::Matrix<ElemType>& maxIdxes,
+                        Microsoft::MSR::CNTK::Matrix<ElemType>& maxValue,
+                        Microsoft::MSR::CNTK::Matrix<ElemType>& inputMatrix,
+                        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
+                        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout,
+                        const vector<size_t>& tokensToIgnore,
+                        ElemType& framephoneratio)
+
+    {
+        const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
+        const auto numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
+        const auto numSequences = pMBLayout->GetNumSequences();
+        //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
+        assert(numSequences == phoneMBLayout->GetNumSequences());
+        size_t phonesetSize = inputMatrix.GetNumRows();
+        output.SetValue(0.0);
+
+        size_t beam = 4;
+        //maxIdxes.AssignRowSliceValuesOf(input,0,maxidxes)
+        // Prepare data structures from the reader
+        // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttFrameBeginIdx, uttPhoneBeginIdx;
+        // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttFrameNum;
+        // the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttPhoneNum;
+        // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttFrameToChanInd, uttPhoneToChanInd;
+
+        uttFrameNum.reserve(numSequences);
+        uttPhoneNum.reserve(numSequences);
+        uttFrameToChanInd.reserve(numSequences);
+        uttPhoneToChanInd.reserve(numSequences);
+        uttFrameBeginIdx.reserve(numSequences);
+        uttPhoneBeginIdx.reserve(numSequences);
+
+        //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
+        size_t seqId = 0; //frame
+        size_t totalframenum = 0, totalphonenum = 0;
+        for (const auto& seq : pMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttFrameToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttFrameBeginIdx.push_back(seq.tBegin);
+            uttFrameNum.push_back(numFrames);
+            totalframenum += numFrames;
+        }
+        seqId = 0; //phone
+        for (const auto& seq : phoneMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttPhoneToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttPhoneBeginIdx.push_back(seq.tBegin);
+            uttPhoneNum.push_back(numFrames);
+            totalphonenum += numFrames;
+        }
+
+        //calculate the memory need for f*g
+        std::vector<size_t> uttBeginForOutputditribution;
+        uttBeginForOutputditribution.reserve(numSequences);
+
+        size_t totalcol = 0;
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttBeginForOutputditribution.push_back(totalcol);
+            totalcol += uttFrameNum[s] * uttPhoneNum[s];
+        }
+
+        //ElemType score;
+        int t, u;
+        //loop for utt
+        vector<ElemType> scores;
+        vector<size_t> RealUID;
+        Microsoft::MSR::CNTK::Matrix<ElemType> fromMatrix(CPUDEVICE);
+        typedef std::map<std::vector<size_t>, ElemType> pathvec;
+        pathvec paths, newpaths;
+        pathvec::iterator path_iter;
+        std::vector<size_t> hyp, newhyp;
+        ElemType score, newscore, oldscore;
+        vector<pair<vector<size_t>, ElemType>> sortedpaths(beam);
+        for (size_t uttId = 0; uttId < numSequences; uttId++)
+        {
+            paths.clear();
+            paths.insert(pair<vector<size_t>, ElemType>({}, 0.0));
+            size_t frameNum = uttFrameNum[uttId];
+            size_t phoneNum = uttPhoneNum[uttId];
+            for (size_t i = 0; i < frameNum + phoneNum - 2; i++)
+            {
+                newpaths.clear();
+                //for (size_t p = 0; p < paths.size();p++)
+                for (path_iter = paths.begin(); path_iter != paths.end(); path_iter++)
+                {
+                    hyp = path_iter->first;
+                    score = path_iter->second;
+                    u = hyp.size();
+                    newscore = LOGZERO;
+                    if (i >= u)
+                    {
+                        t = i - u;
+                        for (size_t k = 0; k < phonesetSize; k++)
+                        {
+                            if (k == tokensToIgnore[0])
+                            {
+                                if (t < frameNum - 1)
+                                {
+                                    newhyp = hyp;
+                                    newscore = score + getScore(inputMatrix, t, u, k, uttBeginForOutputditribution[uttId], frameNum, phoneNum, phonesetSize);
+                                }
+                            }
+                            else if (u < phoneNum - 1)
+                            {
+                                newhyp = hyp;
+                                newhyp.push_back(k);
+                                newscore = score + getScore(inputMatrix, t, u, k, uttBeginForOutputditribution[uttId], frameNum, phoneNum, phonesetSize);
+                            }
+                            else
+                                continue;
+                            auto it = newpaths.find(newhyp);
+                            if (it != newpaths.end())
+                            {
+                                oldscore = it->second;
+                                newpaths[newhyp] = output.LogAdd(oldscore, newscore);
+                            }
+                            else
+                                newpaths[newhyp] = newscore;
+                        }
+                    }
+                }
+                //sortedpaths.clear();
+                //sortedpaths.reserve(beam);
+			    std::partial_sort_copy(newpaths.begin(), newpaths.end(), sortedpaths.begin(), sortedpaths.end(),
+                                                  [](std::pair<vector<size_t>, ElemType> const& l,
+                                                     std::pair<vector<size_t>, ElemType> const& r) {
+                                                      return l.second > r.second;
+                                                  });
+                paths.clear();
+                for (size_t n = 0; n < sortedpaths.size(); n++)
+                    paths.insert(sortedpaths[n]);
+            }
+            hyp = sortedpaths.begin()->first;
+            hyp.insert(hyp.begin(), tokensToIgnore[0]);
+            for (u = 0; u < hyp.size(); u++)
+            {
+                size_t phone = hyp[u];
+                size_t phoneid = (u + uttPhoneBeginIdx[uttId]) * numPhoneParallelSequences + uttPhoneToChanInd[uttId];
+                output(0, phoneid) = (ElemType) phone;
+            }
+            framephoneratio = (ElemType) totalframenum / (ElemType) totalphonenum;
+        }
+    }
+    std::vector<size_t> TokensToIgnore() const
+    {
+        return m_tokensToIgnore;
+    }
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_tokensToIgnore;
     }
 
-
-std::vector<size_t> TokensToIgnore() const
-{
-    return m_tokensToIgnore;
-}
-virtual void Save(File& fstream) const override
-{
-    Base::Save(fstream);
-    fstream << m_tokensToIgnore;
-}
-
-virtual void Load(File& fstream, size_t modelVersion) override
-{
-    Base::Load(fstream, modelVersion);
-    fstream >> m_tokensToIgnore;
-}
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_tokensToIgnore;
+    }
 
 private:
-shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1, m_maxIndexes2, m_noblankValues;
-shared_ptr<Matrix<ElemType>> m_maxValues;
-std::vector<size_t> m_tokensToIgnore;
+    shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1, m_maxIndexes2, m_noblankValues;
+    shared_ptr<Matrix<ElemType>> m_maxValues;
+    std::vector<size_t> m_tokensToIgnore;
 }; // namespace CNTK
 
 template class RNNTErrorNode<float>;
@@ -1462,6 +1637,6 @@ template class SequenceDecoderNode<double>;
 
 #endif
 
+} // namespace CNTK
 } // namespace MSR
-} // namespace Microsoft
 } // namespace Microsoft
