@@ -907,7 +907,7 @@ public:
                         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
                         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout,
                         const vector<size_t>& tokensToIgnore,
-		                ElemType &framephoneratio)
+                        ElemType &framephoneratio)
 
     {
         const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
@@ -1011,14 +1011,14 @@ public:
 
             //for (u = 0; u < 2; u++)
             {
-				//u=0
+                //u=0
                 realU = RealUID[u];
                 tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + 0;
                 prob = inputMatrix(numRows - 1, tuID);
                 scores.push_back(prob);
                 fromMatrix(0, 0) = 0.0;
-				//u=1
-				realU = RealUID[u];
+                //u=1
+                realU = RealUID[u];
                 tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + 0;
                 prob = maxValue(0, tuID);
                 scores.push_back(prob);
@@ -1097,7 +1097,7 @@ public:
                 hyp.push_back((size_t)maxIdxes(0,tuID));
             }
             for (; t >= 0; t--)
-            {
+            {F
                 lastFrom = (size_t) fromMatrix(t, u);
                 u = lastFrom;
                 realU = RealUID[u];
@@ -1275,7 +1275,7 @@ public:
                 }
                 //sortedpaths.clear();
                 //sortedpaths.reserve(beam);
-			    std::partial_sort_copy(newpaths.begin(), newpaths.end(), sortedpaths.begin(), sortedpaths.end(),
+                std::partial_sort_copy(newpaths.begin(), newpaths.end(), sortedpaths.begin(), sortedpaths.end(),
                                                   [](std::pair<vector<size_t>, ElemType> const& l,
                                                      std::pair<vector<size_t>, ElemType> const& r) {
                                                       return l.second > r.second;
