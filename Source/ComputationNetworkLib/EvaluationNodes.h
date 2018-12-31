@@ -844,7 +844,7 @@ public:
         MaskMissingColumnsToZero(*m_maxIndexes0, InputRef(0).GetMBLayout(), fr);
         //MaskMissingColumnsToZero(*m_maxIndexes2, InputRef(2).GetMBLayout(), fr);
         m_maxIndexes1->Resize(1, m_maxIndexes0->GetNumCols());
-        m_maxIndexes2->AssignLogSoftmaxOf(InputRef(2).Value(),true);
+        m_maxIndexes2->AssignLogSoftmaxOf(InputRef(2).Value(), true);
         //m_maxIndexes2->Print("max index");
         ElemType framephoneratio;
         getRNNTResults(*m_maxIndexes1, *m_maxIndexes2, InputRef(1).GetMBLayout(), InputRef(0).GetMBLayout(), m_tokensToIgnore, framephoneratio);
@@ -1131,7 +1131,21 @@ public:
             score = LOGZERO;
         return score;
     }
-    void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,                        
+    vector<pair<size_t, ElemType>> getTopN(Microsoft::MSR::CNTK::Matrix<ElemType>& prob, size_t N)
+    {
+        vector<pair<size_t, ElemType>> datapair;
+        typedef vector<pair<size_t, ElemType>>::value_type ValueType;
+        ElemType* probdata = prob.CopyToArray();
+        for (size_t n = 0; n < prob.GetNumRows(); n++)
+        {
+            datapair.push_back(ValueType(n, probdata[n]));
+        }
+        nth_element(datapair.begin(), datapair.begin() + N, datapair.end(), [](ValueType const& x, ValueType const& y) -> bool {
+            return y.second < x.second;
+        });
+        return datapair;
+    }
+    void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,
                         Microsoft::MSR::CNTK::Matrix<ElemType>& inputMatrix,
                         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
                         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout,
@@ -1144,7 +1158,7 @@ public:
         const auto numSequences = pMBLayout->GetNumSequences();
         //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
         assert(numSequences == phoneMBLayout->GetNumSequences());
-        size_t phonesetSize = inputMatrix.GetNumRows();
+//        size_t phonesetSize = inputMatrix.GetNumRows();
         output.SetValue(0.0);
 
         size_t beam = 4;
@@ -1215,7 +1229,7 @@ public:
         //loop for utt
         vector<ElemType> scores;
         vector<size_t> RealUID;
-        Microsoft::MSR::CNTK::Matrix<ElemType> fromMatrix(CPUDEVICE);
+        Microsoft::MSR::CNTK::Matrix<ElemType> Oneprob(CPUDEVICE);
         typedef std::map<std::vector<size_t>, ElemType> pathvec;
         pathvec paths, newpaths;
         typename pathvec::iterator path_iter;
@@ -1241,21 +1255,25 @@ public:
                     if (i >= u)
                     {
                         t = i - u;
-                        for (size_t k = 0; k < phonesetSize; k++)
+                        size_t tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + u;
+                        Oneprob = inputMatrix.ColumnSlice(tuID, 1);
+                        vector<pair<size_t, ElemType>> topN = getTopN(Oneprob, beam);
+                        for (size_t k = 0; k < beam; k++)
                         {
-                            if (k == tokensToIgnore[0])
+                            size_t phoneID = topN[k].first;
+                            if (phoneID == tokensToIgnore[0])
                             {
                                 if (t < frameNum - 1)
                                 {
                                     newhyp = hyp;
-                                    newscore = score + getScore(inputMatrix, t, u, k, uttBeginForOutputditribution[uttId], frameNum, phoneNum, phonesetSize);
+                                    newscore = score + topN[k].second;
                                 }
                             }
                             else if (u < phoneNum - 1)
                             {
                                 newhyp = hyp;
-                                newhyp.push_back(k);
-                                newscore = score + getScore(inputMatrix, t, u, k, uttBeginForOutputditribution[uttId], frameNum, phoneNum, phonesetSize);
+                                newhyp.push_back(phoneID);
+                                newscore = score + topN[k].second;
                             }
                             else
                                 continue;
@@ -1273,10 +1291,10 @@ public:
                 //sortedpaths.clear();
                 //sortedpaths.reserve(beam);
                 std::partial_sort_copy(newpaths.begin(), newpaths.end(), sortedpaths.begin(), sortedpaths.end(),
-                                                  [](std::pair<vector<size_t>, ElemType> const& l,
-                                                     std::pair<vector<size_t>, ElemType> const& r) {
-                                                      return l.second > r.second;
-                                                  });
+                                       [](std::pair<vector<size_t>, ElemType> const& l,
+                                          std::pair<vector<size_t>, ElemType> const& r) {
+                                           return l.second > r.second;
+                                       });
                 paths.clear();
                 for (size_t n = 0; n < sortedpaths.size(); n++)
                     paths.insert(sortedpaths[n]);
