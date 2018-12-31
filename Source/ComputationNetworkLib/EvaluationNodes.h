@@ -1221,7 +1221,7 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> fromMatrix(CPUDEVICE);
         typedef std::map<std::vector<size_t>, ElemType> pathvec;
         pathvec paths, newpaths;
-        pathvec::iterator path_iter;
+        typename pathvec::iterator path_iter;
         std::vector<size_t> hyp, newhyp;
         ElemType score, newscore, oldscore;
         vector<pair<vector<size_t>, ElemType>> sortedpaths(beam);
