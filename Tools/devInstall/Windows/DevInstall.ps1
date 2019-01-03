@@ -136,9 +136,9 @@ Function main
         $operation += OpScanProgram
         $operation += OpCheckVS2017
 
-        $operation += OpCheckCuda9
-        $operation += OpNVidiaCudnn7090 -cache $localCache -targetFolder $localDir
-        $operation += OpNvidiaCub174 -cache $localCache -targetFolder $localDir
+        $operation += OpCheckCuda10
+        $operation += OpNVidiaCudnn73100 -cache $localCache -targetFolder $localDir
+        $operation += OpNvidiaCub180 -cache $localCache -targetFolder $localDir
 
         $operation += OpCMake362 -cache $localCache
         $operation += OpMSMPI70 -cache $localCache

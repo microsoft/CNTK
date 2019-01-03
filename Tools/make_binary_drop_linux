@@ -122,7 +122,7 @@ declare -a opencvFiles=("libopencv_core.so.3.1" "libopencv_imgproc.so.3.1" "libo
 declare -a libzipFiles=("libzip.so.4")
 
 # CUDA
-declare -a cudaFiles=("libcudart.so.9.0" "libcublas.so.9.0" "libcurand.so.9.0" "libcusparse.so.9.0")
+declare -a cudaFiles=("libcudart.so.10.0" "libcublas.so.10.0" "libcurand.so.10.0" "libcusparse.so.10.0")
 
 # cuDNN
 # Note: can be only a single file currently, see copy below.
