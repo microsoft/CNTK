@@ -3777,24 +3777,51 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceBroadcastAsNode(const Functio
     //broadcastAsSqueezed has shape [sequence, batch], append 1s to get to the same rank as the input before broadcasting
     if (input.Shape().Rank() != 0)
     {
-        std::vector<int64_t> newShape = ToINTS(*broadcastAsSqueezed->OutputDefs()[0]->TypeAsProto());
+        TypeProto typeProto = *broadcastAsSqueezed->OutputDefs()[0]->TypeAsProto();
+        TensorShapeProto* tensorShapeProto = typeProto.mutable_tensor_type()->mutable_shape();
+        std::vector<int64_t> unsqueezeAxis;
         for (int i = 0; i < input.Shape().Rank(); i++)
-            newShape.push_back(1);
-        std::string broadcastReshapedNodeName = nodeName + "_squeezed_reshaped";
-        onnxruntime::Node* broadcastReshaped = AddReshapeNode(
-            *broadcastNodeArg, newShape, broadcastReshapedNodeName, graph);
-        broadcastNodeArg = const_cast<onnxruntime::NodeArg *>(broadcastReshaped->OutputDefs()[0]);
+        {
+            tensorShapeProto->add_dim()->set_dim_value(1);
+            unsqueezeAxis.push_back(i + broadcastNodeArg->Shape()->dim_size());
+        }
+
+        std::string broadcastUnsqueezeNodeName = nodeName + "_broadcast_as_unsqueeze";
+        std::string broadcastUnsqueezeOutputNodeArgName = broadcastUnsqueezeNodeName + "_output";
+        NodeArg *broadcastUnsqueezeOutputNodeArg = &graph->GetOrCreateNodeArg(broadcastUnsqueezeOutputNodeArgName, &typeProto);
+
+        Node *unsqueezeNode = graph->AddNode(broadcastUnsqueezeNodeName, "Unsqueeze", "",
+            { broadcastNodeArg }, { broadcastUnsqueezeOutputNodeArg });
+        unsqueezeNode->AddAttribute("axes", unsqueezeAxis);
+        broadcastNodeArg = const_cast<onnxruntime::NodeArg *>(unsqueezeNode->OutputDefs()[0]);
     }
 
     NodeArg *inputNodeArg = nullptr;
     if (input.DynamicAxes().size() == 1 && createLoopIndex < 0)
     {
         // not in a loop so there shall be a sequence axis.
-        // input does not have sequence axis, insert with size 1 so it is broadcasted
-        std::vector<int64_t> newShape = ToINTS(*inputs[0]->TypeAsProto());
-        newShape.insert(newShape.begin(), 1);
-        Node* inputReshapeNode = AddReshapeNode(*inputs[0], newShape, nodeName + "_input_reshape", graph);
-        inputNodeArg = const_cast<onnxruntime::NodeArg *>(inputReshapeNode->OutputDefs()[0]);
+        // input does not have sequence axis, prepend dim with dim_value = 1 so it is broadcasted
+        onnx::TypeProto unsqueezeNodeOutputTYpeProto = MakeTypeProtoWithShape();
+        onnx::TensorProto_DataType elemType = ConvertDataTypeCNTKToTensorProto(input.GetDataType());
+        unsqueezeNodeOutputTYpeProto.mutable_tensor_type()->set_elem_type(elemType);
+
+        ONNX_NAMESPACE::TensorShapeProto *shapeProto = unsqueezeNodeOutputTYpeProto.mutable_tensor_type()->mutable_shape();
+        shapeProto->add_dim()->set_dim_value(1);
+        for (int dim = 0; dim < inputs[0]->Shape()->dim_size(); dim++)
+        {
+            if (inputs[0]->Shape()->dim(dim).has_dim_value())
+                shapeProto->add_dim()->set_dim_value(inputs[0]->Shape()->dim(dim).dim_value());
+            else
+                shapeProto->add_dim()->set_dim_param(inputs[0]->Shape()->dim(dim).dim_param());
+        }
+
+        std::string unsqueezeNodeName = nodeName + "_input_unsqueeze";
+        NodeArg *unsqueezeOutputNodeArg = &graph->GetOrCreateNodeArg(unsqueezeNodeName + "_output", &unsqueezeNodeOutputTYpeProto);
+
+        Node* unsqueezeNode = graph->AddNode(unsqueezeNodeName, "Unsqueeze", "",
+            { inputs[0] }, { unsqueezeOutputNodeArg });
+        unsqueezeNode->AddAttribute("axes", std::vector<int64_t>({ 0 }));
+        inputNodeArg = const_cast<onnxruntime::NodeArg *>(unsqueezeNode->OutputDefs()[0]);
     }
     else
     {
@@ -4083,7 +4110,6 @@ onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const Funct
 
         if (src->OpName() == L"UnpackSequenceOp" && src->Outputs().size() == 2)
         {
-            std::string unpackMaskNodeName = transposeNodeName + "_mask";
             // 1. slice from [#,*][d1, d2...] to [#,*][1, 1...]
             // 2. squeeze to [#,*][1]
             // 3. ConstantLike with value = 1
@@ -4096,24 +4122,24 @@ onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const Funct
             }
 
             std::string sliceOutputArgName = transposeNodeName + "_slice";
-            Node *sliceNode = AddSliceNode(*inputs[0], sliceAxes, sliceStarts, sliceEnds, sliceOutputArgName, graph);
+            Node *sliceNode = AddSliceNode(*outputs[0], sliceAxes, sliceStarts, sliceEnds, sliceOutputArgName, graph);
 
             Node *squeezeNode = AddSqueezeNode(const_cast<NodeArg &>(*sliceNode->OutputDefs().at(0)), sliceAxes,
                 transposeNodeName + "_squeeze", graph);
-
 
             if (src->Outputs()[1].DynamicAxes().size() == 1 &&
                 src->Outputs()[1].Shape().Rank() > 0 &&
                 src->Outputs()[1].Shape()[src->Outputs()[1].Shape().Rank() - 1] == NDShape::FreeDimension)
             {
-                // the second output of UnpackSequenceOp has a shape of [batch][sequence]
-                // ToTypeProto does not handle this case (it only swap if there are 2 dynamic axes [batch, sequence][d1...])
-                // make output onnx shape [sequence, batch] (was [batch,sequence])
-                ONNX_NAMESPACE::TensorShapeProto shapeProto = *outputs[1]->Shape();
-                const ::onnx::TensorShapeProto_Dimension dim0 = shapeProto.dim(0);
-                *shapeProto.mutable_dim(0) = shapeProto.dim(1);
-                *shapeProto.mutable_dim(1) = dim0;
-                outputs[1]->SetShape(shapeProto);
+                //// the second output of UnpackSequenceOp has a shape of [batch][sequence]
+                //// ToTypeProto does not handle this case (it only swap if there are 2 dynamic axes [batch, sequence][d1...])
+                //// make output onnx shape [sequence, batch] (was [batch,sequence])
+                //ONNX_NAMESPACE::TensorShapeProto shapeProto = *outputs[1]->Shape();
+                //const ::onnx::TensorShapeProto_Dimension dim0 = shapeProto.dim(0);
+                //*shapeProto.mutable_dim(0) = shapeProto.dim(1);
+                //*shapeProto.mutable_dim(1) = dim0;
+                //outputs[1]->SetShape(shapeProto);
+                // std::cout << "";
             }
 
             Node *constantNode = graph->AddNode(transposeNodeName + "_constant_like", "ConstantLike", "",
@@ -4125,7 +4151,6 @@ onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const Funct
     else
     {
         std::string identityNodeName = UniqueNodeNameStorage::GetUniqueNodeName(src);
-        // this is the original output of CNTK UnpackSequence op which is just an identity in ONNX.
         Node *identityNode = graph->AddNode(identityNodeName, "Identity", "", inputs, { outputs[0] });
         functionNodes.emplace(src, identityNode);
         return identityNode;

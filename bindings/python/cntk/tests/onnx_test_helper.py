@@ -31,7 +31,7 @@ def sparse_to_dense(sparse_data):
 # this function transposes input data so that it can be used to test ONNX models and imported CNTK models.
 def transpose_dynamic_axis(data):
     rank = data.ndim
-    assert rank >= 2
+    assert rank >= 2, 'transpose_dynamic_axis requires data rank >= 2'
     perm = np.arange(rank)
     perm[0], perm[1] = perm[1], perm[0]
     return np.transpose(data, perm)
@@ -59,7 +59,9 @@ def compare_model_for_output_data_transpose(model_output, loaded_model_output):
 # find index to the sequence axis in an ONNX tensor
 def get_onnx_free_dimension_index(onnx_value_info_proto):
     indices = [onnx_free_dim_index for onnx_free_dim_index, d in enumerate(onnx_value_info_proto.type.tensor_type.shape.dim) if d.dim_param == "Sequence"]
-    if len(indices) != 1:
+    # TODO: a model output may have more than one sequence axes. 
+    # in such cases, we swap the first seqence with the batch axis. however this may not be correct in general.
+    if len(indices) == 0:
         return -1;
     return indices[0]
 
@@ -263,4 +265,4 @@ def save_test_data(model, onnx_model, test_data_path, input_data, output_data, n
     print(get_onnx_test_runner_callscript(name, tmpdir))
 
     failed_cases_count = verify_model(name, tmpdir)
-    assert failed_cases_count == 0
+    assert failed_cases_count == 0, 'there are test failures.'
