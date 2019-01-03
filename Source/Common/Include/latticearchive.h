@@ -1597,8 +1597,9 @@ public:
     static void convert(const std::wstring& intocpath, const std::wstring& intocpath2, const std::wstring& outpath,
                         const msra::asr::simplesenonehmm& hset, std::unordered_map<size_t, std::wstring>& id2wordmapping, std::set<size_t>& specialwordids);
 
-	static std::vector<std::wstring> splitword2character(const std::wstring& s);
+	/*static std::vector<std::wstring> splitword2character(const std::wstring& s);
     static bool istagword(const std::wstring& s);
+    static float computewerandcer(const std::vector<size_t>& wids, const std::vector<size_t>& path_ids, const std::unordered_map<size_t, std::wstring>* ptr_id2wordmap4node);*/
 };
 };
 };
