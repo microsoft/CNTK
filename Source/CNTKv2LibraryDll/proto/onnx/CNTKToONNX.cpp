@@ -4127,21 +4127,6 @@ onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const Funct
             Node *squeezeNode = AddSqueezeNode(const_cast<NodeArg &>(*sliceNode->OutputDefs().at(0)), sliceAxes,
                 transposeNodeName + "_squeeze", graph);
 
-            if (src->Outputs()[1].DynamicAxes().size() == 1 &&
-                src->Outputs()[1].Shape().Rank() > 0 &&
-                src->Outputs()[1].Shape()[src->Outputs()[1].Shape().Rank() - 1] == NDShape::FreeDimension)
-            {
-                //// the second output of UnpackSequenceOp has a shape of [batch][sequence]
-                //// ToTypeProto does not handle this case (it only swap if there are 2 dynamic axes [batch, sequence][d1...])
-                //// make output onnx shape [sequence, batch] (was [batch,sequence])
-                //ONNX_NAMESPACE::TensorShapeProto shapeProto = *outputs[1]->Shape();
-                //const ::onnx::TensorShapeProto_Dimension dim0 = shapeProto.dim(0);
-                //*shapeProto.mutable_dim(0) = shapeProto.dim(1);
-                //*shapeProto.mutable_dim(1) = dim0;
-                //outputs[1]->SetShape(shapeProto);
-                // std::cout << "";
-            }
-
             Node *constantNode = graph->AddNode(transposeNodeName + "_constant_like", "ConstantLike", "",
                 { const_cast<NodeArg *>(squeezeNode->OutputDefs().at(0)) }, { outputs[1] });
             constantNode->AddAttribute("value", (float)1);
