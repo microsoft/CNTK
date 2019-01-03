@@ -64,7 +64,7 @@ public:
     }
 
     void getlattices(const std::wstring& key, std::shared_ptr<const latticepair>& L, size_t expectedframes, 
-		std::unordered_map<size_t, std::wstring>& id2wordmapping1, std::set<size_t>& specialwordids) const
+        std::unordered_map<size_t, std::wstring>& id2wordmapping1, std::set<size_t>& specialwordids) const
     {
         std::shared_ptr<latticepair> LP(new latticepair);
         denlattices.getlattice(key, LP->second, id2wordmapping1, specialwordids, expectedframes); // this loads the lattice from disk, using the existing L.second object

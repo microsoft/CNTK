@@ -558,9 +558,9 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (readerConfig.Exists(L"wordidmap"))
         wordidmappath = (const wstring&) readerConfig(L"wordidmap");
 
-	if (readerConfig.Exists(L"word2widmap"))
+    if (readerConfig.Exists(L"word2widmap"))
         word2widmappath = (const wstring&) readerConfig(L"word2widmap");
-	
+    
     // load a unigram if needed (this is used for MMI training)
     msra::lm::CSymbolSet unigramsymbols;
     std::set<size_t> specialwordids;
@@ -639,7 +639,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         int start_id = 6;
         readwordidmap(wordidmappath, wordidmap, start_id);
         
-		//const std::wstring mappingTable = L"D:\\Development\\TAMER\\eMBR\\CERCriteria\\Data2\\word2wid.dict.mapping.dict";
+        //const std::wstring mappingTable = L"D:\\Development\\TAMER\\eMBR\\CERCriteria\\Data2\\word2wid.dict.mapping.dict";
         //optional id--> word string mapping
         /*changed by Linquan*/
         if (word2widmappath != L"")

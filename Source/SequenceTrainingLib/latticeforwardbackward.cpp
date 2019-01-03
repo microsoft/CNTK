@@ -960,7 +960,7 @@ float computewerandcer(std::vector<size_t> &wids, std::vector<size_t> &path_ids,
         wer = compute_wer(wids, path_ids);
     }
 
-	return wer;
+    return wer;
 }
 
 double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, parallelstate &parallelstate, std::vector<NBestToken> &tokenlattice, const size_t numtokens, const bool enforceValidPathEMBR, const bool excludeSpecialWords,
@@ -1088,7 +1088,7 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
                 }
 
                 //linquan
-				float wer = computewerandcer(wids, path_ids, ptr_id2wordmap4node);
+                float wer = computewerandcer(wids, path_ids, ptr_id2wordmap4node);
 
                 // will favor the path with better WER
                 pathscore -= double(accWeightInNbest * wer);

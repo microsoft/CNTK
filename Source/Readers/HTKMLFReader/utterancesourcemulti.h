@@ -44,7 +44,7 @@ class minibatchutterancesourcemulti : public minibatchsource
     // const std::vector<std::unique_ptr<latticesource>> &lattices;
     const latticesource &lattices;
 
-	//linquan
+    //linquan
     std::unordered_map<size_t, std::wstring> id2wordmapping; //keep id-to-real word/character mapping 
 
     // Flag indicating whether to use Mersenne Twister random generator.
@@ -182,7 +182,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         // page in data for this chunk
         // We pass in the feature info variables by ref which will be filled lazily upon first read
         void requiredata(std::string &featkind, size_t &featdim, unsigned int &sampperiod, const latticesource &latticesource, 
-			 std::unordered_map<size_t, std::wstring> &id2wordmapping, std::set<size_t> &specialwordids, int verbosity = 0) const
+             std::unordered_map<size_t, std::wstring> &id2wordmapping, std::set<size_t> &specialwordids, int verbosity = 0) const
         {
             
             if (numutterances() == 0)
@@ -947,7 +947,7 @@ public:
                                   : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), 
                                   lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), m_generatePhoneBoundaries(!lattices.empty()), 
                                   m_frameRandomizer(randomizedchunks, useMersenneTwister), expandToUtt(expandToUtt), m_useMersenneTwister(useMersenneTwister), maxUtteranceLength(maxUtteranceLength), truncated(truncated), 
-								  specialwordids(specialwordids), id2wordmapping(id2wordmapping)
+                                  specialwordids(specialwordids), id2wordmapping(id2wordmapping)
     // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
     // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
     {

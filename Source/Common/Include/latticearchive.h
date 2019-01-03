@@ -137,8 +137,8 @@ private:
     //linquan
     //std::unordered_map<int, std::wstring> id2wordmap4node; //keep id2word mapping specific for nodes of current lattice
 
-	//std::shared_ptr<std::unordered_map<int, std::wstring>> ptr_id2wordmap4node; 
-	const std::unordered_map<size_t, std::wstring>* ptr_id2wordmap4node;
+    //std::shared_ptr<std::unordered_map<int, std::wstring>> ptr_id2wordmap4node; 
+    const std::unordered_map<size_t, std::wstring>* ptr_id2wordmap4node;
 
     // V2 lattices  --for a while, we will store both in RAM, until all code is updated
     static int fsgn(float f)
@@ -1223,7 +1223,7 @@ public:
 
         is_special_words.resize(info.numnodes);
 
-		ptr_id2wordmap4node = &id2wordmapping;
+        ptr_id2wordmap4node = &id2wordmapping;
 
         for (size_t i = 0; i < info.numnodes; i++)
         {
@@ -1232,12 +1232,12 @@ public:
             else
                 is_special_words[i] = false;
 
-			//linquan disable wordid mapping
+            //linquan disable wordid mapping
     //        if (!id2wordmapping.empty())
     //        {
     //            wordid = int(nodes[i].wid);
     //            maptable_itr = id2wordmapping.find(wordid);
-				//if (maptable_itr != id2wordmapping.end())
+                //if (maptable_itr != id2wordmapping.end())
     //            {
     //                if (id2wordmap4node.find(wordid) == id2wordmap4node.end())
     //                {
@@ -1597,7 +1597,7 @@ public:
     static void convert(const std::wstring& intocpath, const std::wstring& intocpath2, const std::wstring& outpath,
                         const msra::asr::simplesenonehmm& hset, std::unordered_map<size_t, std::wstring>& id2wordmapping, std::set<size_t>& specialwordids);
 
-	/*static std::vector<std::wstring> splitword2character(const std::wstring& s);
+    /*static std::vector<std::wstring> splitword2character(const std::wstring& s);
     static bool istagword(const std::wstring& s);
     static float computewerandcer(const std::vector<size_t>& wids, const std::vector<size_t>& path_ids, const std::unordered_map<size_t, std::wstring>* ptr_id2wordmap4node);*/
 };
