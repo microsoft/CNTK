@@ -3829,7 +3829,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceBroadcastAsNode(const Functio
         std::string broadcastUnsqueezeOutputNodeArgName = broadcastUnsqueezeNodeName + "_output";
         NodeArg *broadcastUnsqueezeOutputNodeArg = &graph->GetOrCreateNodeArg(broadcastUnsqueezeOutputNodeArgName, &typeProto);
 
-        Node *unsqueezeNode = graph->AddNode(broadcastUnsqueezeNodeName, "Unsqueeze", "",
+        Node *unsqueezeNode = &graph->AddNode(broadcastUnsqueezeNodeName, "Unsqueeze", "",
             { broadcastNodeArg }, { broadcastUnsqueezeOutputNodeArg });
         unsqueezeNode->AddAttribute("axes", unsqueezeAxis);
         broadcastNodeArg = const_cast<onnxruntime::NodeArg *>(unsqueezeNode->OutputDefs()[0]);
@@ -3857,7 +3857,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceBroadcastAsNode(const Functio
         std::string unsqueezeNodeName = nodeName + "_input_unsqueeze";
         NodeArg *unsqueezeOutputNodeArg = &graph->GetOrCreateNodeArg(unsqueezeNodeName + "_output", &unsqueezeNodeOutputTYpeProto);
 
-        Node* unsqueezeNode = graph->AddNode(unsqueezeNodeName, "Unsqueeze", "",
+        Node* unsqueezeNode = &graph->AddNode(unsqueezeNodeName, "Unsqueeze", "",
             { inputs[0] }, { unsqueezeOutputNodeArg });
         unsqueezeNode->AddAttribute("axes", std::vector<int64_t>({ 0 }));
         inputNodeArg = const_cast<onnxruntime::NodeArg *>(unsqueezeNode->OutputDefs()[0]);
@@ -3914,7 +3914,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceGatherNode(const FunctionPtr&
 
     NodeArg& compressOutputNodeArg = CreateNodeArg(src->Outputs()[0], graph, false);
     
-    Node *compressNode = graph->AddNode(nodeName, onnxOpName, "", inputs, { &compressOutputNodeArg });
+    Node *compressNode = &graph->AddNode(nodeName, onnxOpName, "", inputs, { &compressOutputNodeArg });
 
     int64_t sequenceAxis = 0;
     compressNode->AddAttribute("axis", sequenceAxis);
@@ -4079,7 +4079,7 @@ onnxruntime::Node* CNTKToONNXHelper::ExtractShapeWithDynamicAxes(onnxruntime::Gr
         shapeProto.add_dim()->set_dim_value(BatchSizeProcessor::FreeBatchSize());
     outputNodeArg.SetShape(shapeProto);
 
-    Node *constantNode = graph->AddNode(nodeName + "_constant_like", "ConstantLike", "",
+    Node *constantNode = &graph->AddNode(nodeName + "_constant_like", "ConstantLike", "",
         { constantLikeInput }, { &outputNodeArg });
     constantNode->AddAttribute("value", (float)0);
     return constantNode;
@@ -4166,7 +4166,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const Funct
             Node *squeezeNode = AddSqueezeNode(const_cast<NodeArg &>(*sliceNode->OutputDefs().at(0)), sliceAxes,
                 transposeNodeName + "_squeeze", graph);
 
-            Node *constantNode = graph->AddNode(transposeNodeName + "_constant_like", "ConstantLike", "",
+            Node *constantNode = &graph->AddNode(transposeNodeName + "_constant_like", "ConstantLike", "",
                 { const_cast<NodeArg *>(squeezeNode->OutputDefs().at(0)) }, { outputs[1] });
             constantNode->AddAttribute("value", (float)1);
         }
@@ -4175,7 +4175,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateDynamicAxisPackUnpackNode(const Funct
     else
     {
         std::string identityNodeName = UniqueNodeNameStorage::GetUniqueNodeName(src);
-        Node *identityNode = graph->AddNode(identityNodeName, "Identity", "", inputs, { outputs[0] });
+        Node *identityNode = &graph->AddNode(identityNodeName, "Identity", "", inputs, { outputs[0] });
         functionNodes.emplace(src, identityNode);
         return identityNode;
     }
@@ -4533,7 +4533,7 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                 std::vector<NodeArg*> output_args;
 
                 // sequence_lens
-                AddEmptyInput(graph, input_args);
+                // AddEmptyInput(graph, input_args);
 
                 int numStates = scanLoops[loopIndex].scanLoopStates.size();
                 std::vector<int64_t> directions;
@@ -4725,7 +4725,7 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 
                 GraphProto graphProto(scanGraph.ToGraphProto());
                 scanNode->AddAttribute("body", graphProto);
-                scanNode->AddAttribute("directions", directions);
+                scanNode->AddAttribute("scan_output_directions", directions);
                 scanNode->AddAttribute("num_scan_inputs", (int64_t)(scanLoops[loopIndex].m_scanInputs.size()));
 
                 return false;
