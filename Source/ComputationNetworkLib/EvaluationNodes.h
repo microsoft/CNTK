@@ -844,11 +844,10 @@ public:
         MaskMissingColumnsToZero(*m_maxIndexes0, InputRef(0).GetMBLayout(), fr);
         //MaskMissingColumnsToZero(*m_maxIndexes2, InputRef(2).GetMBLayout(), fr);
         m_maxIndexes1->Resize(1, m_maxIndexes0->GetNumCols());
-        m_noblankValues->AssignRowSliceValuesOf(InputRef(2).Value(), 0, InputRef(2).Value().GetNumRows() - 1);
-        m_noblankValues->VectorMax(*m_maxIndexes2, *m_maxValues, true);
+        m_maxIndexes2->AssignLogSoftmaxOf(InputRef(2).Value(), true);
         //m_maxIndexes2->Print("max index");
         ElemType framephoneratio;
-        getRNNTResults(*m_maxIndexes1, *m_maxIndexes2, *m_maxValues, InputRef(2).Value(), InputRef(1).GetMBLayout(), InputRef(0).GetMBLayout(), m_tokensToIgnore, framephoneratio);
+        getRNNTResults(*m_maxIndexes1, *m_maxIndexes2, InputRef(1).GetMBLayout(), InputRef(0).GetMBLayout(), m_tokensToIgnore, framephoneratio);
         Value().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, false);
         Value().Scale(framephoneratio, Value());
 #if NANCHECK
@@ -900,7 +899,7 @@ public:
         ReleaseMatrixToPool(m_maxValues, matrixPool);
         ReleaseMatrixToPool(m_noblankValues, matrixPool);
     }
-    void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,
+    /*void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,
                         Microsoft::MSR::CNTK::Matrix<ElemType>& maxIdxes,
                         Microsoft::MSR::CNTK::Matrix<ElemType>& maxValue,
                         Microsoft::MSR::CNTK::Matrix<ElemType>& inputMatrix,
@@ -1118,7 +1117,7 @@ public:
         }
         framephoneratio = (ElemType) totalframenum / (ElemType) totalphonenum;
     }
-
+    */
     ElemType getScore(Microsoft::MSR::CNTK::Matrix<ElemType>& output, size_t t, size_t u, size_t k, size_t uttBeginID, size_t frameNum, size_t phoneNum, size_t phonesetSize)
     {
         ElemType score;
@@ -1147,7 +1146,7 @@ public:
         });
         return datapair;
     }
-    /*void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,
+    void getRNNTResults(Microsoft::MSR::CNTK::Matrix<ElemType>& output,
                         Microsoft::MSR::CNTK::Matrix<ElemType>& inputMatrix,
                         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
                         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout,
@@ -1311,7 +1310,7 @@ public:
             }
             framephoneratio = (ElemType) totalframenum / (ElemType) totalphonenum;
         }
-    }*/
+    }
     std::vector<size_t> TokensToIgnore() const
     {
         return m_tokensToIgnore;
