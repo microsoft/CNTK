@@ -6,7 +6,7 @@ channels:
 dependencies:
 - h5py=2.6.0=np111py35_2
 - imageio=2.2.0=py35_0
-- pyqt=5.6.0=py35ha878b3d_6
+- pyqt=5.6.0=py35_2
 - jupyter=1.0.0=py35_3
 - matplotlib=2.0.0=np111py35_0
 - numpy=1.11.2=py35_0

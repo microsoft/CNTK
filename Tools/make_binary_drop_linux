@@ -129,7 +129,7 @@ declare -a cudaFiles=("libcudart.so.10.0" "libcublas.so.10.0" "libcurand.so.10.0
 declare -a cudnnFiles=("libcudnn.so")
 
 # NCCL
-declare -a ncclFiles=("libnccl.so.2.1.2")
+declare -a ncclFiles=("libnccl.so.2.3.5")
 
 # OpenBLAS (Needed by Kaldi)
 declare -a openblasFiles=("libopenblas.so.0")
