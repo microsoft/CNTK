@@ -20,7 +20,7 @@ expectedEvalErrorByDeviceId = { -1: 7.4, 0: 7.4 }
 
 def test_cntk_103b_mnist_logisticregression_evalCorrect(nb, device_id):
     testCell = [cell for cell in nb.cells
-                if cell.cell_type == 'code' and re.search('trainer\.test_minibatch', cell.source)]
+                if cell.cell_type == 'code' and re.search(r'trainer\.test_minibatch', cell.source)]
     assert len(testCell) == 1
     m = re.match(r"Average test error: (?P<actualEvalError>\d+\.\d+)%\r?$", testCell[0].outputs[0]['text'])
     # TODO tighten tolerances

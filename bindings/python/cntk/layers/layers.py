@@ -922,19 +922,19 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
          (3, 128, 3, 4)
 
     Args:
-     filter_shape (`int` or tuple of `int`\ s): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+     filter_shape (`int` or tuple of `int`\\ s): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
      num_filters (int): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
      activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
      init (scalar or :mod:`cntk.initializer`, default :func:`~cntk.initializer.glorot_uniform`): initial value of weights `W`
-     pad (`bool` or tuple of `bool`\ s, default `False`): if `False`, then the filter will be shifted over the "valid"
+     pad (`bool` or tuple of `bool`\\ s, default `False`): if `False`, then the filter will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
       Use a `tuple` to specify a per-axis value.
-     strides (`int` or tuple of `int`\ s, default 1): stride of the convolution (increment when sliding the filter over the input). Use a `tuple` to specify a per-axis value.
+     strides (`int` or tuple of `int`\\ s, default 1): stride of the convolution (increment when sliding the filter over the input). Use a `tuple` to specify a per-axis value.
      sharing (`bool`, default `True`): weight sharing, must be True for now.
      bias (`bool`, optional, default `True`): the layer will have no bias if `False` is passed here
      init_bias (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `b`
-     output_shape (`int` or tuple of `int`\ s): output shape. When strides > 2, the output shape is non-deterministic. User can specify the wanted output shape. Note the
+     output_shape (`int` or tuple of `int`\\ s): output shape. When strides > 2, the output shape is non-deterministic. User can specify the wanted output shape. Note the
       specified shape must satisify the condition that if a convolution is perform from the output with the same setting, the result must have same shape as the input.
       that is stored with tensor shape (H,W) instead of (1,H,W)
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image.

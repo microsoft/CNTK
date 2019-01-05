@@ -25,7 +25,7 @@ def test_cntk_303_deep_structured_semantic_modeling_with_lstm_networks_trainerro
     for cell in nb.cells:
         try:
            if cell.cell_type == 'code':
-               m = re.search('Finished Evaluation.* metric = (?P<metric>\d+\.\d+)%', cell.outputs[0]['text'])
+               m = re.search(r'Finished Evaluation.* metric = (?P<metric>\d+\.\d+)%', cell.outputs[0]['text'])
                if m:
                    metrics.append(float(m.group('metric')))
         except IndexError:

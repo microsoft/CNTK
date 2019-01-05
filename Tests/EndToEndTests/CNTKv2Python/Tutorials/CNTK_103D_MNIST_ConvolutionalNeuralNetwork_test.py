@@ -24,7 +24,7 @@ def test_cntk_103d_mnist_convolutionalneuralnetwork_trainerror(nb, device_id):
     for cell in nb.cells:
         try:
            if cell.cell_type == 'code':
-               m = re.search('Average test error: (?P<metric>\d+\.\d+)%', cell.outputs[0]['text'])
+               m = re.search(r'Average test error: (?P<metric>\d+\.\d+)%', cell.outputs[0]['text'])
                if m:
                    metrics.append(float(m.group('metric')))
         except IndexError:

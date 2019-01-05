@@ -19,6 +19,6 @@ expectedEvalError = '0.12'
 
 def test_cntk_102_feedforward_evalCorrect(nb):
     testCell = [cell for cell in nb.cells
-                if cell.cell_type == 'code' and re.search('trainer\.test_minibatch', cell.source)]
+                if cell.cell_type == 'code' and re.search(r'trainer\.test_minibatch', cell.source)]
     assert len(testCell) == 1
     assert testCell[0].outputs[0]['data']['text/plain'] == expectedEvalError

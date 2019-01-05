@@ -79,7 +79,7 @@ def test_check_percentages_after_restarting_training(device_id):
 
     # Restarting training
     out = subprocess.check_output(cmdStr.split(" "), stderr=subprocess.STDOUT)
-    all_percentages = re.findall('.* Epoch\[ *\d+ of \d+]-Minibatch\[ *\d+- *\d+, *(\d+\.\d+)\%\].*', out.decode('utf-8'))
+    all_percentages = re.findall(r'.* Epoch\[ *\d+ of \d+]-Minibatch\[ *\d+- *\d+, *(\d+\.\d+)\%\].*', out.decode('utf-8'))
 
     expected_percentages = set(["14.29", "28.57", "57.14", "42.86", "71.43", "85.71", "100.00"])
     assert set(all_percentages) == expected_percentages

@@ -43,7 +43,7 @@ def mpiexec_execute(script, mpiexec_params, params, timeout_seconds=TIMEOUT_SECO
 
 def mpiexec_test(device_id, script, mpiexec_params, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE, timeout_seconds=TIMEOUT_SECONDS, use_only_cpu=False):
     str_out = mpiexec_execute(script, mpiexec_params, params, timeout_seconds, device_id, use_only_cpu)
-    results = re.findall("Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", str_out)
+    results = re.findall(r"Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", str_out)
 
     assert len(results) == 2, str_out
 

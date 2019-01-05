@@ -57,6 +57,6 @@ def test_htk_lstm_truncated_distributed_gpu_with_cv(device_id):
                "-device", str(device_id) ]
 
     output = mpiexec_execute(device_id=device_id, script=script_under_test, mpiexec_params=mpiexec_params, params=params)
-    results = re.findall("Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", output)
+    results = re.findall(r"Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", output)
     assert len(results) == 6, output
 

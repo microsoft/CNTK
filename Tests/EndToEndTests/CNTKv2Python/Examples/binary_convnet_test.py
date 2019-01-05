@@ -29,7 +29,7 @@ def test_binary_convnet_error(device_id):
         "Please check if HALIDE_PATH is configured properly "
         "and try building {1} again"
         .format('Cntk.BinaryConvolution-' + C.__version__.rstrip('+'),
-        'Extnsibiliy\BinaryConvolution'))
+        'Extnsibiliy\\BinaryConvolution'))
      
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')

@@ -24,6 +24,6 @@ expectedEvalError3 = '1.0'
 
 def test_cntk_208_speech_connectionist_temporal_classification_evalCorrect(nb):
     testCell = [cell for cell in nb.cells
-                if cell.cell_type == 'code' and re.search('trainer\.test_minibatch', cell.source)]
+                if cell.cell_type == 'code' and re.search(r'trainer\.test_minibatch', cell.source)]
     assert len(testCell) == 1
     assert testCell[0].outputs[0]['data']['text/plain'] == expectedEvalError1 or testCell[0].outputs[0]['data']['text/plain'] == expectedEvalError2 or testCell[0].outputs[0]['data']['text/plain'] == expectedEvalError3

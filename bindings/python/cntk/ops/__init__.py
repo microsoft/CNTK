@@ -663,7 +663,7 @@ def local_response_normalization(operand, depth_radius, bias, alpha, beta, name=
 
     The mathematical equation is:
 
-    ``b_{x,y}^i=a_{x,y}^i/(bias+\alpha\sum_{j=max(0,i-depth_radius)}^{min(N-1, i+depth_radius)}(a_{x,y}^j)^2)^\beta``
+    ``b_{x,y}^i=a_{x,y}^i/(bias+\\alpha\\sum_{j=max(0,i-depth_radius)}^{min(N-1, i+depth_radius)}(a_{x,y}^j)^2)^\\beta``
 
     where a_{x,y}^i is the activity of a neuron computed by applying kernel i at position (x,y)
     N is the total number of kernels, depth_radius is half normalization width.
@@ -1557,7 +1557,7 @@ def softplus(x, steepness=1, name=''):
     '''
     Softplus operation. Computes the element-wise softplus of ``x``:
 
-    :math:`\mathrm{softplus}(x) = {\log(1+\exp(x))}`
+    :math:`\\mathrm{softplus}(x) = {\\log(1+\\exp(x))}`
 
     The optional ``steepness`` allows to make the knee sharper (``steepness>1``) or softer, by computing
     ``softplus(x * steepness) / steepness``.
@@ -1593,7 +1593,7 @@ def softsign(x, steepness=1, name=''):
     '''
     Computes the element-wise softsign of ``x``:
 
-    :math:`sigmoid(x) = {x \over {1+\abs(x)}}`
+    :math:`sigmoid(x) = {x \\over {1+\\abs(x)}}`
 
     The output tensor has the same shape as ``x``.
 
@@ -1616,7 +1616,7 @@ def sigmoid(x, name=''):
     '''
     Computes the element-wise sigmoid of ``x``:
 
-    :math:`sigmoid(x) = {1 \over {1+\exp(-x)}}`
+    :math:`sigmoid(x) = {1 \\over {1+\\exp(-x)}}`
 
     The output tensor has the same shape as ``x``.
 
@@ -2031,7 +2031,7 @@ def exp(x, name=''):
     '''
     Computes the element-wise exponential of ``x``:
 
-    :math:`\exp(x) = {e^x}`
+    :math:`\\exp(x) = {e^x}`
 
     Example:
         >>> C.exp([0., 1.]).eval()
@@ -2079,7 +2079,7 @@ def sqrt(x, name=''):
     '''
     Computes the element-wise square-root of ``x``:
 
-    :math:`sqrt(x) = {\sqrt[2]{x}}`
+    :math:`sqrt(x) = {\\sqrt[2]{x}}`
 
     Example:
         >>> C.sqrt([0., 4.]).eval()
