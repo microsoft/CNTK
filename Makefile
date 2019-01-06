@@ -274,9 +274,13 @@ ifdef CNTK_CUDA_DEVICE_DEBUGINFO
   CUFLAGS += -G
 endif
 
+# Make sure we statically link with protobuf and avoid leaking symbols
+# (as users of this library may use their own version of protobuf library)
+PROTOBUF_STATIC_LIB:= $(PROTOBUF_PATH)/lib/libprotobuf.a -Wl,--exclude-libs,libprotobuf.a
+
 # Create the library link options for the linker.
 # LIBS_LIST must not be changed beyond this point.
-LIBS:= $(addprefix -l,$(LIBS_LIST))
+LIBS:= $(addprefix -l,$(LIBS_LIST)) $(PROTOBUF_STATIC_LIB)
 
 OBJDIR:= $(BUILD_TOP)/.build
 BINDIR:= $(BUILD_TOP)/bin
