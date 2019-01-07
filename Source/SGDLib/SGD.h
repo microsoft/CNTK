@@ -132,6 +132,8 @@ struct LRAPIInfo
 	double first_decay_steps;	//Number of steps to decay over
 	double t_mul;	//Used to derive the number of iterations in the i-th period
 	double m_mul;	//Used to derive the initial learning rate of the i-th period:
+	double initial_variance;
+	double variance_decay;
     size_t numItersToShowLR;
     size_t numItersToSaveModel;
     bool reachMaxIter = false;

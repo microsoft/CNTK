@@ -1286,10 +1286,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 				else if (AdjustType::Step == m_lrapiInfo.adjustType)
 					learnRatePerSample = m_lrapiInfo.base_ / m_mbSize[epochNumber] * pow(m_lrapiInfo.gamma, floor(1.0 * m_lrapiInfo.iter / m_lrapiInfo.step));
 				else if (AdjustType::Cosine == m_lrapiInfo.adjustType)
-					learnRatePerSample = m_lrapiInfo.base_ / m_mbSize[epochNumber] * (1 - m_minLearnRate) * 0.5 * (1 + cos(cospi * m_lrapiInfo.iter / m_lrapiInfo.maxIter)) + m_minLearnRate;
+					learnRatePerSample = m_lrapiInfo.base_ / m_mbSize[epochNumber] * ((1 - m_minLearnRate) * 0.5 * (1 + cos(cospi * m_lrapiInfo.iter / m_lrapiInfo.maxIter)) + m_minLearnRate);
 				else if (AdjustType::Liner_Cosine == m_lrapiInfo.adjustType)
-					learnRatePerSample = m_lrapiInfo.base_ / m_mbSize[epochNumber] * (m_minLearnRate + (m_lrapiInfo.maxIter - m_lrapiInfo.iter) / m_lrapiInfo.maxIter) * (0.5 * (1 + cos(cospi * 2 * m_lrapiInfo.num_periods * m_lrapiInfo.iter / m_lrapiInfo.maxIter))) + m_lrapiInfo.beta;
-                if (m_lrapiInfo.iter >= m_lrapiInfo.maxIter)
+					learnRatePerSample = m_lrapiInfo.base_ / m_mbSize[epochNumber] * ((m_minLearnRate + (m_lrapiInfo.maxIter - m_lrapiInfo.iter) / double(m_lrapiInfo.maxIter)) * 0.5 * (1 + cos(cospi *2 * m_lrapiInfo.num_periods * m_lrapiInfo.iter / m_lrapiInfo.maxIter)) + m_lrapiInfo.beta);
+				else if (AdjustType::Noisy_Liner_Cosine == m_lrapiInfo.adjustType)
+				{
+					double eps_t = 0.0;
+					eps_t = m_lrapiInfo.initial_variance / pow((1 + m_lrapiInfo.iter), m_lrapiInfo.variance_decay);
+					learnRatePerSample = m_lrapiInfo.base_ / m_mbSize[epochNumber] * ((m_minLearnRate + eps_t + (m_lrapiInfo.maxIter - m_lrapiInfo.iter) / double(m_lrapiInfo.maxIter)) * 0.5 * (1 + cos(cospi * 2 * m_lrapiInfo.num_periods * m_lrapiInfo.iter / m_lrapiInfo.maxIter)) + m_lrapiInfo.beta);
+				}
+				if (m_lrapiInfo.iter >= m_lrapiInfo.maxIter)
                     m_lrapiInfo.reachMaxIter = true;
                 if (m_lrapiInfo.sgdTraceLevel > 0 && 0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToShowLR)
                     fprintf(stderr, "Iteration %d: learning rate per sample = %.8g\n", (int) m_lrapiInfo.iter, learnRatePerSample);
@@ -3071,6 +3077,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 		m_lrapiInfo.adjustType = AdjustType::Cosine;
 	else if (EqualCI(adjustType, L"liner_cosine") || EqualCI(adjustType, L"Liner_Cosine"))
 		m_lrapiInfo.adjustType = AdjustType::Liner_Cosine;
+	else if (EqualCI(adjustType, L"noisy_liner_cosine") || EqualCI(adjustType, L"Noisy_Liner_Cosine"))
+		m_lrapiInfo.adjustType = AdjustType::Noisy_Liner_Cosine;
     else
         LogicError("Invalid learning rate adjust type.");
 
@@ -3086,7 +3094,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_lrapiInfo.power = configAALR(L"power", 1.0);
 	m_lrapiInfo.m_mul = configAALR(L"m_mul", 1.0);
 	m_lrapiInfo.t_mul = configAALR(L"t_mul", 2.0);
-	m_lrapiInfo.beta  = configAALR(L"beta", 0.001);
+	m_lrapiInfo.beta  = configAALR(L"beta", 0.000);
+	m_lrapiInfo.initial_variance = configAALR(L"initial_variance", 1.0);
+	m_lrapiInfo.variance_decay = configAALR(L"variance_decay", 0.55);
 	m_lrapiInfo.num_periods = configAALR(L"num_periods", 0.5);
 	m_lrapiInfo.first_decay_steps = configAALR(L"first_decay_steps", 0);
     m_lrapiInfo.numItersToShowLR = configAALR(L"numItersToShowLR", ((size_t) 1) << ((size_t) 60));
