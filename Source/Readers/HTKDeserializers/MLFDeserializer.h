@@ -81,6 +81,11 @@ public:
     // Retrieves sequence description by its key. Used for deserializers that are not in "primary"/"driving" mode.
     bool GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo& s) override;
 
+    const vector<StreamInformation>* GetStreamInfos() const
+    {
+        return &m_streams;
+    }
+
     // Gets description of all chunks.
     virtual std::vector<ChunkInfo> ChunkInfos() override;
 
