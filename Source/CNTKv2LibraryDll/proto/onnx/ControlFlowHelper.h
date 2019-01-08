@@ -28,6 +28,16 @@ namespace CNTK
         int m_delay;
     };
 
+    std::wstring ToString(FunctionPtr f)
+    {
+        return L"( " + f->Name() + L": " + f->Uid() + L")";
+    }
+
+    bool IsStepFunction(FunctionPtr f)
+    {
+        return f->OpName() == L"PastValue" || f->OpName() == L"FutureValue";
+    }
+
     class ScanLoop
     {
     public:
@@ -42,6 +52,7 @@ namespace CNTK
             m_loopstepfunctions(loopstepfunctions),
             m_scanOpCreated(false)
         {
+            Validate();
             // collect 
             // collect nodes in RNN ops as part of the body
             for (auto &f : m_body)
@@ -77,6 +88,17 @@ namespace CNTK
             }
         }
 
+        void Validate()
+        {
+            for (auto output : m_outputs)
+            {
+                if (output.Owner() && IsStepFunction(output.Owner()))
+                {
+                    fprintf(stderr, "Warning: a loop final state is consumed by an outside op. This is not supported. It has sequence dimension mismatch.");
+                }
+            }
+        }
+
         bool IsInBody(const FunctionPtr src)
         {
             if (std::find(this->m_body.begin(), this->m_body.end(), src) != this->m_body.end())
@@ -95,11 +117,14 @@ namespace CNTK
             return false;
         }
 
-        void MapScanOutputFromBlockOutoutsToUnderlyingVariable(const FunctionPtr rnnF)
+        void MapScanOutputFromBlockOutoutsToUnderlyingVariable(const FunctionPtr blkF)
         {
-            BlockFunction* block = dynamic_cast<BlockFunction *>(rnnF.get());
+            if (CNTK::ONNX::Operators::IsBlockFnNotConvertedThroughBlockRoot(blkF))
+                return;
+
+            BlockFunction* block = dynamic_cast<BlockFunction *>(blkF.get());
             std::unordered_map<Variable, Variable> bm = block->CompositeOutputsMap();
-            for (auto &blockOutput : rnnF->Outputs())
+            for (auto &blockOutput : blkF->Outputs())
             {
                 for (int i = 0; i < m_scanOutputs.size(); i++)
                 {
@@ -155,16 +180,6 @@ namespace CNTK
             return m_roots;
         }
     };
-
-    std::wstring ToString(FunctionPtr f)
-    {
-        return L"( " + f->Name() + L": " + f->Uid() + L")";
-    }
-
-    bool IsStepFunction(FunctionPtr f)
-    {
-        return f->OpName() == L"PastValue" || f->OpName() == L"FutureValue";
-    }
 
     void AddScanOutputVariable(std::vector<Variable>& scanoutput, Variable output)
     {
@@ -277,15 +292,18 @@ namespace CNTK
                 }
             }, nestedSearchInsideBlockFunction);
 
-            // a corner case: if root src is in the loop body, it shall be an output as well. 
+            // corner case: 
+            // if root src is in the loop body, it shall be an output as well. 
             for (int l = 0; l < loops.size(); l++)
             {
                 const StrongComponent<FunctionPtr> &loop = loops[l];
                 if (std::find(loop.Nodes().begin(), loop.Nodes().end(), root) != loop.Nodes().end())
                     for (auto output : root->Outputs())
-                        if (std::find(scanoutputs[l].begin(), scanoutputs[l].end(), output) == scanoutputs[l].end())
+                        if (std::find(loopoutputs[l].begin(), loopoutputs[l].end(), output) == loopoutputs[l].end())
                         {
-                            AddScanOutputVariable(scanoutputs[l], output);
+                            loopoutputs[l].push_back(output);
+                            if (output.HasSequenceAxis())
+                                AddScanOutputVariable(scanoutputs[l], output);
                         }
             }
         }
