@@ -34,7 +34,8 @@ class SimpleOutputWriter
 {
     struct Sequence
     {
-        shared_ptr<Matrix<ElemType>> LabelMatrix;
+        //shared_ptr<Matrix<ElemType>> LabelMatrix;
+        std::vector<size_t> labelseq;
         double logP;
         size_t length;
         size_t processlength;
@@ -144,7 +145,7 @@ public:
         StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
         //get merged input
-       /* ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
+        /* ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
         ComputationNodeBasePtr PlusTransNode = m_net->GetNodeFromName(outputNodeNames[3]);
         //StreamMinibatchInputs PlusinputMatrices =
         std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
@@ -274,17 +275,25 @@ public:
 
     Sequence newSeq(size_t numRow, size_t numCol, DEVICEID_TYPE deviceId)
     {
-        Sequence oneSeq = {make_shared<Matrix<ElemType>>(numRow, numCol, deviceId), 0.0, 0, 0, make_shared<Matrix<ElemType>>(numRow, (size_t) 1, deviceId)};
-        oneSeq.LabelMatrix->SetValue(0.0);
+        Sequence oneSeq = {std::vector<size_t>(), 0.0, 0, 0, make_shared<Matrix<ElemType>>(numRow, (size_t) 1, deviceId)};
         return oneSeq;
     }
     Sequence newSeq(Sequence a)
     {
-        Sequence oneSeq = {make_shared<Matrix<ElemType>>(a.LabelMatrix->GetNumRows(), (size_t) 50, a.LabelMatrix->GetDeviceId()), a.logP, a.length, a.processlength, make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId())};
-        oneSeq.LabelMatrix->SetValue(*(a.LabelMatrix));
+        Sequence oneSeq;
+        oneSeq.labelseq = a.labelseq;
+        oneSeq.logP = a.logP;
+        oneSeq.length = a.length;
+        oneSeq.processlength = a.processlength;
+        oneSeq.decodeoutput = make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId());
         oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
 
         return oneSeq;
+    }
+    void deleteSeq(Sequence oneSeq)
+    {
+        oneSeq.decodeoutput->ReleaseMemory();
+        vector<size_t>().swap(oneSeq.labelseq);
     }
     iterator getMaxSeq(vector<Sequence> seqs)
     {
@@ -299,26 +308,13 @@ public:
     }
     void extendSeq(Sequence& insequence, size_t labelId, double logP)
     {
-        ElemType* ftemp;
-        size_t vocabSize = insequence.LabelMatrix->GetNumRows();
-        
-        size_t stepNum = insequence.LabelMatrix->GetNumCols();
-        if (insequence.length == stepNum)
-        {
-            shared_ptr<Matrix<ElemType>> tempMatrix = make_shared<Matrix<ElemType>>(vocabSize, stepNum + 20, insequence.LabelMatrix->GetDeviceId());
-            tempMatrix->SetColumnSlice(*insequence.LabelMatrix, 0, stepNum);
-            insequence.LabelMatrix = tempMatrix;
-        }
-        ftemp = new ElemType[vocabSize];
-        memset(ftemp, 0, sizeof(ElemType) * vocabSize);
-        ftemp[labelId] = 1.0;
-        insequence.LabelMatrix->SetColumn(ftemp, insequence.length);
-        insequence.length++;
+        insequence.labelseq.push_back(labelId);
         insequence.logP = logP;
-        delete[] ftemp;
+        insequence.length++;
     }
 
-    void forward_decode(Sequence oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes, std::vector<ComputationNodeBasePtr> decodeinputNodes)
+    void forward_decode(Sequence oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
+                        std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize)
     {
         size_t labelLength = oneSeq.length;
         if (labelLength > oneSeq.processlength)
@@ -327,10 +323,16 @@ public:
             Matrix<ElemType> lmin(deviceID);
 
             //greedyOutput.SetValue(greedyOutputMax.ColumnSlice(0, lmt));
-            lmin.SetValue(oneSeq.LabelMatrix->ColumnSlice(0, labelLength));
+            lmin.Resize(vocabSize, labelLength);
+            lmin.SetValue(0.0);
+            for (size_t n = 0; n < labelLength; n++)
+            {
+                lmin(oneSeq.labelseq[n], n) = 1.0;
+            }
             auto lminput = decodeinputMatrices.begin();
             lminput->second.pMBLayout->Init(1, labelLength);
-            std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
+            //std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
+            lminput->second.GetMatrix<ElemType>().SetValue(lmin);
             lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, labelLength);
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
@@ -338,6 +340,7 @@ public:
             //Matrix<ElemType> tempMatrix = *(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value());
             oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())).ColumnSlice(labelLength - 1, 1));
             oneSeq.processlength = labelLength;
+            lmin.ReleaseMemory();
         }
     }
     bool compareseq(Sequence a, Sequence b)
@@ -357,6 +360,7 @@ public:
         nth_element(datapair.begin(), datapair.begin() + N, datapair.end(), [](ValueType const& x, ValueType const& y) -> bool {
             return y.second < x.second;
         });
+        delete probdata;
         return datapair;
     }
 
@@ -443,8 +447,15 @@ public:
             // loop for each t
             for (size_t t = 0; t < encodeOutput.GetNumCols(); t++)
             {
+                for (size_t n = 0; n < CurSequences.size(); n++)
+                {
+                    deleteSeq(CurSequences[n]);
+                }
+                vector<Sequence>().swap(CurSequences);
                 CurSequences = nextSequences;
-                nextSequences.clear();
+                
+                vector<Sequence>().swap(nextSequences);
+                //nextSequences.clear();
                 while (true)
                 {
                     //auto maxSeq = getMaxSeq(CurSequences);
@@ -452,8 +463,10 @@ public:
                     //std::max_element()
                     //auto pos = std::find(CurSequences.begin(), CurSequences.end(), maxSeq);
                     Sequence tempSeq = newSeq(*maxSeq);
+                    deleteSeq(*maxSeq);
                     CurSequences.erase(maxSeq);
-                    forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes);
+                    forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize);
+
                     //decodeOutput.SetValue(*(tempSeq.decodeoutput));
                     //decodeOutput.Print("decode output");
                     sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(tempSeq.decodeoutput));
@@ -513,23 +526,41 @@ public:
                         extendSeq(seqK, topN[iLabel].first, newlogP);
                         CurSequences.push_back(seqK);
                     }
+                    vector<pair<size_t, ElemType>>().swap(topN);
+                    //delete topN;
+                    deleteSeq(tempSeq);
+
                     if (CurSequences.size() == 0)
                         break;
                     auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
                     auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
-                    if (nextSequences.size() > beamSize && yb->logP > ya->logP)
+                    if (nextSequences.size() > beamSize  && yb->logP > ya->logP)
                         break;
                     //std::nth_element(logP, logP + beamSize, )
                 }
                 std::sort(nextSequences.begin(), nextSequences.end());
                 std::reverse(nextSequences.begin(), nextSequences.end());
+                if (nextSequences.size() > beamSize)
+                {
+                    for (size_t n = beamSize; n < nextSequences.size() ; n++)
+                    {
+                        deleteSeq(nextSequences[n]);
+                    }
+                }
                 for (size_t iseq = nextSequences.size(); iseq > beamSize; iseq--)
                     nextSequences.pop_back();
                 //break;
             }
+            
             auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
             size_t lmt = yb->length;
-            greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
+            greedyOutput.Resize(vocabSize, lmt);
+            greedyOutput.SetValue(0.0);
+            for (size_t n = 0; n < lmt; n++)
+            {
+                greedyOutput(yb->labelseq[n], n) = 1.0;
+            }
+            //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
             //greedyOutput.Print("greedy output");
             outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
             if (lmt == 0)
@@ -541,6 +572,16 @@ public:
                 greedyOutput.SetColumn(lmin, 0);
                 lmt = 1;
             }
+            for (size_t n = 0; n < CurSequences.size(); n++)
+            {
+                deleteSeq(CurSequences[n]);
+            }
+            vector<Sequence>().swap(CurSequences);
+            for (size_t n = 0; n < nextSequences.size(); n++)
+            {
+                deleteSeq(nextSequences[n]);
+            }
+            vector<Sequence>().swap(nextSequences);
             dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
             //break;
         }
