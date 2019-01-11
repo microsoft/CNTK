@@ -1400,8 +1400,8 @@ def clip(x, min_value, max_value, name=''):
     '''
     from cntk.cntk_py import clip
     x = sanitize_input(x, get_data_type(x))
-    min_value = sanitize_input(min_value, get_data_type(min_value))
-    max_value = sanitize_input(max_value, get_data_type(max_value))
+    min_value = sanitize_input(min_value, get_data_type(x))
+    max_value = sanitize_input(max_value, get_data_type(x))
     return clip(x, min_value, max_value, name)
 
 

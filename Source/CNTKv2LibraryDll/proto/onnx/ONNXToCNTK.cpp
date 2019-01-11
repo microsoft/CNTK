@@ -1988,8 +1988,8 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     {
         double minValue = GetNamedAttributeAsFloat(node, "min");
         double maxValue = GetNamedAttributeAsFloat(node, "max");
-        Constant minVariable = Constant::Scalar(CNTK::DataType::Float, minValue);
-        Constant maxVariable = Constant::Scalar(CNTK::DataType::Float, maxValue);
+        Constant minVariable = Constant::Scalar(inputs[0].GetDataType(), minValue);
+        Constant maxVariable = Constant::Scalar(inputs[0].GetDataType(), maxValue);
         FunctionPtr cntkFunction = Clip(inputs[0], minVariable, maxVariable, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
