@@ -2851,8 +2851,12 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Squeeze")
     {
-        std::vector<Axis> axes = GetNamedAttributeAsAxes(node, "axes");
-        return Squeeze(inputs[0], axes, ToFixedWStringFromMultiByte(node->Name()));
+        if (HasNamedAttribute(node, "axes"))
+        {
+            std::vector<Axis> axes = GetNamedAttributeAsAxes(node, "axes");
+            return Squeeze(inputs[0], axes, ToFixedWStringFromMultiByte(node->Name()));
+        }
+        return Squeeze(inputs[0], ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "ImageScaler")
     {

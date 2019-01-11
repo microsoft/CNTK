@@ -6252,10 +6252,18 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             {
                 axes.push_back((Axis)(src->Attributes()[L"axis"].Value<Axis>()));
             }
-            if (axes.size() > 0)
+            // if axes is empty, i.e. not provided, axes of dimension 1 has to be explicitly discovered and exported.
+            // Otherwise batch axis might be squeezed away.
+            if (axes.size() == 0)
             {
-                node->AddAttribute("axes", ConvertAxesToOnnx(axes, src->Inputs()[0]));
+                const NDShape& inputShape = src->Inputs()[0].Shape();
+                for (size_t i = 0; i < inputShape.Rank(); ++i)
+                {
+                    if (inputShape[i] == 1)
+                        axes.push_back(Axis(i));
+                }
             }
+            node->AddAttribute("axes", ConvertAxesToOnnx(axes, src->Inputs()[0]));
         }
         else if (src->OpName() == L"Gather")
         {
