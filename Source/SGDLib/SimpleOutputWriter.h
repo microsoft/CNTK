@@ -145,12 +145,12 @@ public:
         StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
         //get merged input
-        /* ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
+        ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
         ComputationNodeBasePtr PlusTransNode = m_net->GetNodeFromName(outputNodeNames[3]);
         //StreamMinibatchInputs PlusinputMatrices =
         std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
         Plusnodes.push_back(PlusNode);
-        Plustransnodes.push_back(PlusTransNode);*/
+        Plustransnodes.push_back(PlusTransNode);
         //start decode network
         m_net->StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
         auto lminput = decodeinputMatrices.begin();
@@ -180,7 +180,7 @@ public:
             dataReader.DataEnd();
 
             //decode forward prop step by step
-            size_t vocabSize = encodeOutput.GetNumRows();
+            size_t vocabSize = PlusTransNode->GetSampleMatrixNumRows();
             size_t blankId = vocabSize - 1;
 
             /*lmin.Resize(vocabSize, 12);
@@ -218,7 +218,7 @@ public:
                 sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput);
                 //sumofENandDE.Print("sum");
 
-                /*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
+                (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
                 //SumMatrix.SetValue(sumofENandDE);
                 ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
                 auto PlusMBlayout = PlusNode->GetMBLayout();
@@ -226,8 +226,7 @@ public:
                 PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
                 m_net->ForwardProp(PlusTransNode);
                 decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
-                decodeOutput.VectorMax(maxIdx, maxVal, true);*/
-                sumofENandDE.VectorMax(maxIdx, maxVal, true);
+                decodeOutput.VectorMax(maxIdx, maxVal, true);
                 size_t maxId = (size_t)(maxIdx.Get00Element());
                 if (maxId != blankId)
                 {
@@ -397,12 +396,12 @@ public:
         StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
         //get merged input
-        /*ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
+        ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
         ComputationNodeBasePtr PlusTransNode = m_net->GetNodeFromName(outputNodeNames[3]);
         //StreamMinibatchInputs PlusinputMatrices =
         std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
         Plusnodes.push_back(PlusNode);
-        Plustransnodes.push_back(PlusTransNode);*/
+        Plustransnodes.push_back(PlusTransNode);
 
         //start decode network
         m_net->StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
@@ -434,7 +433,7 @@ public:
             dataReader.DataEnd();
 
             //decode forward prop step by step
-            size_t vocabSize = encodeOutput.GetNumRows();
+            size_t vocabSize = PlusTransNode->GetSampleMatrixNumRows();
             size_t blankId = vocabSize - 1;
 
             nextSequences.clear();
@@ -470,10 +469,10 @@ public:
                     //decodeOutput.SetValue(*(tempSeq.decodeoutput));
                     //decodeOutput.Print("decode output");
                     sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(tempSeq.decodeoutput));
-                    sumofENandDE.InplaceLogSoftmax(true);
+                    //sumofENandDE.InplaceLogSoftmax(true);
 
                     //plus broadcast
-                    /*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
+                    (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
                     //SumMatrix.SetValue(sumofENandDE);
                     ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
                     auto PlusMBlayout = PlusNode->GetMBLayout();
@@ -482,10 +481,10 @@ public:
                     m_net->ForwardProp(PlusTransNode);
                     decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
                     //decodeOutput.VectorMax(maxIdx, maxVal, true);
-                    decodeOutput.InplaceLogSoftmax(true);*/
+                    decodeOutput.InplaceLogSoftmax(true);
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
-                    vector<pair<size_t, ElemType>> topN = getTopN(sumofENandDE, expandBeam);
+                    vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam);
                     /*ElemType* logP = decodeOutput.CopyToArray();
                     std::priority_queue<std::pair<double, int>> q;
                     int iLabel;
