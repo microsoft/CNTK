@@ -496,8 +496,8 @@ def test_Ceil(tmpdir, dtype):
 #Clip
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Clip(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
+    # if (dtype == np.float16):
+    #     pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
         data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], dtype)
         min_v = 2
@@ -597,8 +597,8 @@ def test_Conv_SpecialCase(tmpdir, dtype, device_id):
 def test_Conv_SpecialCase_Autopad(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
-    elif dtype == np.float16:
-        pytest.skip('Test is skipped on GPU with float16 data: asymmetric padding not supported by cuDnn')
+    # elif dtype == np.float16:
+    #     pytest.skip('Test is skipped on GPU with float16 data: asymmetric padding not supported by cuDnn')
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype):
         # special case where for one axis CNTK pads upper, for other lower.
@@ -763,8 +763,8 @@ def test_Floor(tmpdir, dtype):
 #Gather
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Gather(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
+    # if (dtype == np.float16):
+    #     pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
         c = np.asarray([[0],[1]]).astype(dtype) 
         x = C.input_variable((2,1))
@@ -780,8 +780,8 @@ def test_Gather(tmpdir, dtype):
 #Gather
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Gather_With_Axis(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
+    # if (dtype == np.float16):
+    #     pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
         data = np.asarray( [[ [111, 112], [121, 122], [131, 132], ],[ [211, 212], [221, 222], [231, 232], ]]).astype(dtype)
         indices = np.asarray([[0, 1, 1], [1, 1, 1]])
@@ -954,8 +954,8 @@ def test_LeakyRelu(tmpdir, dtype):
 #Less
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Less(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
+    # if (dtype == np.float16):
+    #     pytest.skip("TO BE FIXED")
 
     with C.default_options(dtype = dtype):
         data0 = np.asarray([41., 42., 43.], dtype=dtype)
@@ -1302,7 +1302,7 @@ def test_MaxPool(tmpdir, dtype, device_id):
 #MaxRoiPool
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_MaxRoiPool(tmpdir, dtype):
-    pytest.skip('MaxRoiPool is failing with ONNX shape inference (input rois). RuntimeError: [ShapeInferenceError] RoIs tensor must have 2 dimensions')
+    # pytest.skip('MaxRoiPool is failing with ONNX shape inference (input rois). RuntimeError: [ShapeInferenceError] RoIs tensor must have 2 dimensions')
     with C.default_options(dtype = dtype):
         input_map = [[[1., 2., 3.],       # (1, 3, 3) input operand (conv feature map)
                [4., 5., 6.],
@@ -1345,8 +1345,11 @@ def test_Mean(tmpdir, dtype):
     
 #MeanVarianceNormalization
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_MeanVarianceNormalization(tmpdir, dtype):
-    pytest.skip('test_MeanVarianceNormalization is skipped. Work is needed to make CNTK MVN compatible with ONNX Ver 9.')
+def test_MeanVarianceNormalization(tmpdir, dtype, device_id):
+    # pytest.skip('test_MeanVarianceNormalization is skipped. Work is needed to make CNTK MVN compatible with ONNX Ver 9.')
+    device = cntk_device(device_id)
+    # if dtype == np.float16:
+    #     pytest.skip("onnxruntime::FunctionImpl::FunctionImpl status.IsOK() was false")
     with C.default_options(dtype = dtype):
         shape = (3, 5, 7)
         data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
@@ -1354,20 +1357,20 @@ def test_MeanVarianceNormalization(tmpdir, dtype):
         input_operand = C.input_variable(shape=shape)
 
         model0 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=True)
-        verify_one_input(model0, data, tmpdir, 'MVN_0')
+        verify_one_input(model0, data, tmpdir, 'MVN_0', device)
 
         model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
-        verify_one_input(model1, data, tmpdir, 'MVN_1')
+        verify_one_input(model1, data, tmpdir, 'MVN_1', device)
 
         model2 = C.mean_variance_normalization(input_operand, use_stats_across_channels=True, do_variance_scaling=True)
-        verify_one_input(model2, data, tmpdir, 'MVN_2')
+        verify_one_input(model2, data, tmpdir, 'MVN_2', device)
 
         # The test below tests the round trip with epsilon. We loose always the epsilon value when exporting to ONNX
         # (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back from ONNX, CNTK
         # always uses the default eposilon value (0.00001). That's why test below has the default epsilon value. It is 
         # not expected to pass with any other epsilon value until something changes.
         model3 = C.mean_variance_normalization(input_operand, epsilon=0.00001, use_stats_across_channels=False, do_variance_scaling=True)
-        verify_one_input(model3, data, tmpdir, 'MVN_3')
+        verify_one_input(model3, data, tmpdir, 'MVN_3', device)
 
 #Min
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1409,7 +1412,7 @@ OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
 def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id):
     if device_id == -1:
         pytest.skip('Test only runs on GPU')
-    pytest.skip('test_OptimizedRNNStack is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
+    # pytest.skip('test_OptimizedRNNStack is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
     dev = cntk_device(device_id)
     from _cntk_py import constant_initializer
     model_filename = 'optimized_rnn_stack_' + ('bi' if bidirectional else 'uni') + '_layers' + str(num_layers) + '_inp' + str(input_size) + '_hid' + str(hidden_size)
@@ -1646,7 +1649,7 @@ def test_Reshape(tmpdir, dtype):
 #RNN
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_RNN(tmpdir, dtype):
-    pytest.skip('test_RNN is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
+    # pytest.skip('test_RNN is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
     with C.default_options(dtype = dtype):
         def CreatRNN(cell_dim, 
                      activation, 
@@ -1859,14 +1862,14 @@ def test_Softsign(tmpdir, dtype):
 
 #Squeeze
 def test_Squeeze(tmpdir):
-    pytest.skip('TODO: need to bump ONNX CI version. ')
-    x0 = np.arange(6).reshape((1, 2, 1, 3)).astype('f')
+    # pytest.skip('TODO: need to bump ONNX CI version. ')
+    x0 = np.arange(6).reshape((2, 1, 3)).astype('f')
     x = C.input_variable((2, 1, 3))
     model = C.squeeze(x, [1])
     verify_one_input(model, x0, tmpdir, 'Squeeze_0')
 
 def test_Squeeze_without_axes(tmpdir):
-    pytest.skip('ONNX should update attribute axes to be optional.')
+    # pytest.skip('ONNX should update attribute axes to be optional.')
     x0 = np.arange(6).reshape((1, 2, 1, 3)).astype('f')
     x = C.input_variable((2, 1, 3))
     model = C.squeeze(x)

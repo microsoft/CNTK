@@ -9,28 +9,28 @@ import os, re, sys, subprocess
 windows = os.getenv("OS")=="Windows_NT"
 
 known_issues = [
-    'BatchNormalization_float160',
-    'SpatialBatchNormalization_float160',
-    'RNN.reverse.one_layer.relu',
-    'RNN.bidirectional.two_layer.tanh',
-    'test_sequence_slice_-1.0',
-    'test_sequence_slice_0.-1',
-    'test_sequence_slice_0.1',
-    'test_sequence_slice_1.-1',
-    'test_sequence_slice_1.0',
-    'test_sequence_slice_1.2',
-    'test_sequence_slice_-2.-1',
-    'test_sequence_slice_-4.2',
-    'SequenceSoftmax',
-    'top_k',
+    # 'BatchNormalization_float160',
+    # 'SpatialBatchNormalization_float160',
+    # 'RNN.reverse.one_layer.relu',
+    # 'RNN.bidirectional.two_layer.tanh',
+    # 'test_sequence_slice_-1.0',
+    # 'test_sequence_slice_0.-1',
+    # 'test_sequence_slice_0.1',
+    # 'test_sequence_slice_1.-1',
+    # 'test_sequence_slice_1.0',
+    # 'test_sequence_slice_1.2',
+    # 'test_sequence_slice_-2.-1',
+    # 'test_sequence_slice_-4.2',
+    # 'SequenceSoftmax',
+    # 'top_k',
 
     # Not in onnxruntime
-    'LayerNorm_0',
-    'MVN_0',
-    'MVN_1',
-    'MVN_2',
-    'MVN_3',
-    'Eye_Like_0',
+    # 'LayerNorm_0',
+    # 'MVN_0',
+    # 'MVN_1',
+    # 'MVN_2',
+    # 'MVN_3',
+    # 'Eye_Like_0',
 ]
 
 def parse_single_result_case(case_str):
