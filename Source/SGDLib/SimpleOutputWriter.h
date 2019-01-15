@@ -36,7 +36,7 @@ class SimpleOutputWriter
     {
         //shared_ptr<Matrix<ElemType>> LabelMatrix;
         std::vector<size_t> labelseq;
-        double logP;
+        ElemType logP;
         size_t length;
         size_t processlength;
         shared_ptr<Matrix<ElemType>> decodeoutput;
@@ -305,7 +305,7 @@ public:
         }
         return maxIt;
     }
-    void extendSeq(Sequence& insequence, size_t labelId, double logP)
+    void extendSeq(Sequence& insequence, size_t labelId, ElemType logP)
     {
         insequence.labelseq.push_back(labelId);
         insequence.logP = logP;
@@ -313,32 +313,32 @@ public:
     }
 
     void forward_decode(Sequence oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
-                        std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize)
+                        std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize, size_t plength)
     {
-        size_t labelLength = oneSeq.length;
-        if (labelLength > oneSeq.processlength)
+//        size_t labelLength = oneSeq.length;
+        if (plength > oneSeq.processlength)
         {
 
             Matrix<ElemType> lmin(deviceID);
 
             //greedyOutput.SetValue(greedyOutputMax.ColumnSlice(0, lmt));
-            lmin.Resize(vocabSize, labelLength);
+            lmin.Resize(vocabSize, plength);
             lmin.SetValue(0.0);
-            for (size_t n = 0; n < labelLength; n++)
+            for (size_t n = 0; n < plength; n++)
             {
                 lmin(oneSeq.labelseq[n], n) = 1.0;
             }
             auto lminput = decodeinputMatrices.begin();
-            lminput->second.pMBLayout->Init(1, labelLength);
+            lminput->second.pMBLayout->Init(1, plength);
             //std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
             lminput->second.GetMatrix<ElemType>().SetValue(lmin);
-            lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, labelLength);
+            lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, plength);
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
             m_net->ForwardProp(decodeOutputNodes[0]);
             //Matrix<ElemType> tempMatrix = *(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value());
-            oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())).ColumnSlice(labelLength - 1, 1));
-            oneSeq.processlength = labelLength;
+            oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())).ColumnSlice(plength - 1, 1));
+            oneSeq.processlength = plength;
             lmin.ReleaseMemory();
         }
     }
@@ -362,7 +362,18 @@ public:
         delete probdata;
         return datapair;
     }
-
+    //check whether a is the prefix of b
+    bool isPrefix(Sequence a, Sequence b)
+    {
+        if (a.labelseq == b.labelseq || a.labelseq.size() >= b.labelseq.size())
+            return false;
+        for (size_t n = 0; n < a.labelseq.size(); n++)
+        {
+            if (a.labelseq[n] != b.labelseq[n])
+                return false;
+        }
+        return true;
+    }
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
                           size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20)
     {
@@ -452,11 +463,72 @@ public:
                 }
                 vector<Sequence>().swap(CurSequences);
                 CurSequences = nextSequences;
-                
+
                 vector<Sequence>().swap(nextSequences);
+                //deal with the same prefix
+                sort(CurSequences.begin(), CurSequences.end(),
+                     [](const Sequence& a, const Sequence& b) -> bool {
+                         return a.labelseq.size() > b.labelseq.size();
+                     });
+                for (size_t n = 0; n < CurSequences.size() - 1; n++)
+                {
+                    for (size_t h = n+1; h < CurSequences.size(); h++)
+                    {
+                        if (isPrefix(CurSequences[h], CurSequences[n]))
+                        {
+                            //forward_prop the prefix
+                            forward_decode(CurSequences[h], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, CurSequences[h].labelseq.size());
+
+                            //decodeOutput.SetValue(*(tempSeq.decodeoutput));
+                            //decodeOutput.Print("decode output");
+                            sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(CurSequences[h].decodeoutput));
+                            //sumofENandDE.InplaceLogSoftmax(true);
+
+                            //plus broadcast
+                            (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
+                            //SumMatrix.SetValue(sumofENandDE);
+                            ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
+                            auto PlusMBlayout = PlusNode->GetMBLayout();
+                            PlusMBlayout->Init(1, 1);
+                            PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+                            m_net->ForwardProp(PlusTransNode);
+                            decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+                            //decodeOutput.VectorMax(maxIdx, maxVal, true);
+                            decodeOutput.InplaceLogSoftmax(true);
+                            size_t idx = CurSequences[h].labelseq.size();
+                            ElemType curlogp = CurSequences[h].logP + decodeOutput(CurSequences[n].labelseq[idx], 0);
+                            for (size_t k = idx; k < CurSequences[n].labelseq.size()-1; k++)
+                            {
+                                forward_decode(CurSequences[n], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, k+1);
+
+                                //decodeOutput.SetValue(*(tempSeq.decodeoutput));
+                                //decodeOutput.Print("decode output");
+                                sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(CurSequences[n].decodeoutput));
+                                //sumofENandDE.InplaceLogSoftmax(true);
+
+                                //plus broadcast
+                                (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
+                                //SumMatrix.SetValue(sumofENandDE);
+                                ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
+                                PlusMBlayout = PlusNode->GetMBLayout();
+                                PlusMBlayout->Init(1, 1);
+                                PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+                                m_net->ForwardProp(PlusTransNode);
+                                decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+                                //decodeOutput.VectorMax(maxIdx, maxVal, true);
+                                decodeOutput.InplaceLogSoftmax(true);
+
+                                curlogp += decodeOutput(CurSequences[n].labelseq[k + 1], 0);
+                            }
+                            CurSequences[n].logP = decodeOutput.LogAdd(curlogp, CurSequences[n].logP);
+                        }
+                    }
+                }
                 //nextSequences.clear();
                 while (true)
                 {
+                    
+                    
                     //auto maxSeq = getMaxSeq(CurSequences);
                     auto maxSeq = std::max_element(CurSequences.begin(), CurSequences.end());
                     //std::max_element()
@@ -464,7 +536,7 @@ public:
                     Sequence tempSeq = newSeq(*maxSeq);
                     deleteSeq(*maxSeq);
                     CurSequences.erase(maxSeq);
-                    forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize);
+                    forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
 
                     //decodeOutput.SetValue(*(tempSeq.decodeoutput));
                     //decodeOutput.Print("decode output");
@@ -514,7 +586,7 @@ public:
                     {
 
                         Sequence seqK = newSeq(tempSeq);
-                        double newlogP = topN[iLabel].second + tempSeq.logP;
+                        ElemType newlogP = topN[iLabel].second + tempSeq.logP;
                         seqK.logP = newlogP;
 
                         if (topN[iLabel].first == blankId)
@@ -533,7 +605,7 @@ public:
                         break;
                     auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
                     auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
-                    if (nextSequences.size() > beamSize  && yb->logP > ya->logP)
+                    if (nextSequences.size() > beamSize && yb->logP > ya->logP)
                         break;
                     //std::nth_element(logP, logP + beamSize, )
                 }
@@ -541,7 +613,7 @@ public:
                 std::reverse(nextSequences.begin(), nextSequences.end());
                 if (nextSequences.size() > beamSize)
                 {
-                    for (size_t n = beamSize; n < nextSequences.size() ; n++)
+                    for (size_t n = beamSize; n < nextSequences.size(); n++)
                     {
                         deleteSeq(nextSequences[n]);
                     }
@@ -550,7 +622,7 @@ public:
                     nextSequences.pop_back();
                 //break;
             }
-            
+
             auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
             size_t lmt = yb->length;
             greedyOutput.Resize(vocabSize, lmt);
