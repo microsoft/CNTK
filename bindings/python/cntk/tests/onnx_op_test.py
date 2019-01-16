@@ -90,7 +90,7 @@ def verify_no_input(model, tmpdir, name):
     verify_node_names(model, loaded_model)
     return loaded_model
 
-def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08):
+def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08, bypass_load_into_cntk = False):
     # TODO: eventually we want this test method to be more general to suport 
     # models with multiple inputs instead of just one input.
     assert len(model.arguments) == 1
@@ -104,7 +104,10 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
     # outputs share the same owner
     opname = model.outputs[0].owner.op_name
 
-    loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
+    if bypass_load_into_cntk:
+        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, model, bypass_load_into_cntk=True)
+    else:
+        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
 
     # TODO: it is better to compare data.shape with model.arguments[0] and
     # to pad batch dimension as needed.
@@ -112,7 +115,8 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
     if model.arguments[0].has_batch_axis() and type(data)!=list:
         data.shape = (1, ) + data.shape
 
-    assert len(model.outputs) == len(loaded_model.outputs)
+    if not bypass_load_into_cntk:
+        assert len(model.outputs) == len(loaded_model.outputs)
 
     dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
     for i in range(0, len(model.outputs)):
@@ -121,7 +125,8 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
         if opname not in set_of_batch_irrelevant_ops:
             if model.outputs[i].has_batch_axis():
                 output_shape = (dim_denotation, ) + output_shape
-        assert output_shape == loaded_model.outputs[i].shape
+        if not bypass_load_into_cntk:
+            assert output_shape == loaded_model.outputs[i].shape
 
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
@@ -763,8 +768,6 @@ def test_Floor(tmpdir, dtype):
 #Gather
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Gather(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
         c = np.asarray([[0],[1]]).astype(dtype) 
         x = C.input_variable((2,1))
@@ -780,12 +783,9 @@ def test_Gather(tmpdir, dtype):
 #Gather
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Gather_With_Axis(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
         data = np.asarray( [[ [111, 112], [121, 122], [131, 132], ],[ [211, 212], [221, 222], [231, 232], ]]).astype(dtype)
         indices = np.asarray([[0, 1, 1], [1, 1, 1]])
-        x = C.input_variable(np.shape(data))
         y = C.input_variable(np.shape(indices))
         axis = 1
 
@@ -916,21 +916,21 @@ def test_LayerNormalization(tmpdir, dtype, device_id):
     if dtype == np.float16:
         pytest.skip('Test is skipped on float16 to pass build test')
 
-    # This test point tests the LayerNormalization round trip with defaultepsilon. We loose always the epsilon value when 
-    # exporting to ONNX (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back 
-    # from ONNX, CNTK always uses the default eposilon value (0.00001). That's why test below has the default epsilon 
+    # This test point tests the LayerNormalization round trip with defaultepsilon. We loose always the epsilon value when
+    # exporting to ONNX (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back
+    # from ONNX, CNTK always uses the default eposilon value (0.00000001). That's why test below has the default epsilon
     # value. It is not expected to pass with any other epsilon value until something changes.
     with C.default_options(dtype = dtype):
         test_shapes = [(3, 5, 7), (10, ), (20, 31)]
         for shape in test_shapes:
             data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
             input_operand = C.input_variable(shape=shape)
-            model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.00001)(input_operand)
-            verify_one_input(model0, data, tmpdir, 'LayerNorm_0' + str(shape).replace(',', '_'))
+            model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.000000001)(input_operand)
+            verify_one_input(model0, data, tmpdir, 'LayerNorm_0' + str(shape).replace(',', '_'), rtol = 1e-04, atol=1e-08)
 
-        # This test point tests especially with epsilon = 0, because that creates a graph with 
+        # This test point tests especially with epsilon = 0, because that creates a graph with
         # different number of ops. However, we don't expect the numbers to match in round trip
-        # because we only support default epislon (0.00001) when loading from ONNX. Therefore,
+        # because we only support default epislon (0.00000001) when loading from ONNX. Therefore,
         # this is just a load/save test.
         model1 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
         filename = os.path.join(str(tmpdir), R'LayerNorm_1.onnx')
@@ -1346,7 +1346,8 @@ def test_Mean(tmpdir, dtype):
 #MeanVarianceNormalization
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_MeanVarianceNormalization(tmpdir, dtype):
-    pytest.skip('test_MeanVarianceNormalization is skipped. Work is needed to make CNTK MVN compatible with ONNX Ver 9.')
+    if dtype == np.float16:
+        pytest.skip('Mean Variance Normalization with datatype float16 is not supported in ONNX.')
     with C.default_options(dtype = dtype):
         shape = (3, 5, 7)
         data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
@@ -1356,8 +1357,9 @@ def test_MeanVarianceNormalization(tmpdir, dtype):
         model0 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=True)
         verify_one_input(model0, data, tmpdir, 'MVN_0')
 
-        model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
-        verify_one_input(model1, data, tmpdir, 'MVN_1')
+        # do_variance_scaling = False is no longer supported in onnx.
+        # model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
+        # verify_one_input(model1, data, tmpdir, 'MVN_1')
 
         model2 = C.mean_variance_normalization(input_operand, use_stats_across_channels=True, do_variance_scaling=True)
         verify_one_input(model2, data, tmpdir, 'MVN_2')
@@ -1409,7 +1411,6 @@ OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
 def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id):
     if device_id == -1:
         pytest.skip('Test only runs on GPU')
-    pytest.skip('test_OptimizedRNNStack is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
     dev = cntk_device(device_id)
     from _cntk_py import constant_initializer
     model_filename = 'optimized_rnn_stack_' + ('bi' if bidirectional else 'uni') + '_layers' + str(num_layers) + '_inp' + str(input_size) + '_hid' + str(hidden_size)
@@ -1759,15 +1760,18 @@ def test_Slice(tmpdir, dtype):
     (-2, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-4, 2), (0, 1), (1, 2)))
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SequenceSlice(tmpdir, dtype, beginIndex, endIndex):
-    batch_size = 1
-    sequence_length = 5
-    input_size = 3
-    feature_shape = (input_size,)
-    shape = (batch_size, sequence_length, input_size)
-    data = np.reshape(range(0, np.prod(shape)), shape).astype(dtype)
-    testName = "test_sequence_slice_{0}.{1}".format(beginIndex, endIndex)
-    model = C.sequence.slice(C.sequence.input_variable((feature_shape)), beginIndex, endIndex)
-    verify_sequence_model(model, data, tmpdir, testName)
+    with C.default_options(dtype = dtype):
+        if dtype == np.float16:
+            pytest.skip('Float16 is not supported in CNTK for sequence slice.')
+        batch_size = 1
+        sequence_length = 5
+        input_size = 3
+        feature_shape = (input_size,)
+        shape = (batch_size, sequence_length, input_size)
+        data = np.reshape(range(0, np.prod(shape)), shape).astype(dtype)
+        testName = "test_sequence_slice_{0}.{1}".format(beginIndex, endIndex)
+        model = C.sequence.slice(C.sequence.input_variable(feature_shape), beginIndex, endIndex)
+        verify_sequence_model(model, data, tmpdir, testName)
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SequenceFirst(tmpdir, dtype):
@@ -1928,9 +1932,11 @@ def test_Tanh(tmpdir, dtype):
 #TopK
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_TopK(tmpdir, dtype):
-    input_size = 10
-    data = (np.arange(input_size,dtype=dtype)*0.1).reshape(1, input_size)
-    x = C.input_variable(input_size)
+    if dtype == np.float16:
+        pytest.skip("TopK of float16 not supported in cntk: Unsupported template argument(half) in SortPairsDescending.")
+    input_size = 9
+    data = (np.arange(input_size,dtype=dtype)*0.1 + 0.1).reshape(input_size)
+    x = C.input_variable(input_size, dtype=dtype)
     model = C.top_k(-x * C.log(x), 3)
     verify_one_input(model, data, tmpdir, "top_k")
 
@@ -2081,7 +2087,8 @@ def test_Zeros_Like(tmpdir, dtype):
     x = C.input_variable((3, 4), dynamic_axes=[], dtype=dtype, name='feature')
     model = C.zeros_like(x, name='zeros_like_op')
     data = np.asarray(range(3*4), dtype=dtype).reshape((3,4))
-    verify_one_input(model, data, tmpdir, "Zeros_Like_0")
+    # TODO: import not yet implemented.
+    verify_one_input(model, data, tmpdir, "Zeros_Like_0", bypass_load_into_cntk=True)
 
 # ones_like
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -2089,4 +2096,18 @@ def test_Ones_Like(tmpdir, dtype):
     x = C.input_variable((3, 4), dynamic_axes=[], dtype=dtype, name='feature')
     model = C.ones_like(x, name='ones_like_op')
     data = np.asarray(range(3*4), dtype=dtype).reshape((3,4))
-    verify_one_input(model, data, tmpdir, "Ones_Like_0")
+    # TODO: import not yet implemented.
+    verify_one_input(model, data, tmpdir, "Ones_Like_0", bypass_load_into_cntk=True)
+
+# one hot
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_One_Hot(tmpdir, dtype):
+    if dtype == np.float16:
+        pytest.skip('float16 not supported in onnxruntime.')
+    data = np.asarray([1, 5], dtype=dtype)
+    x = C.input_variable((2), dtype=dtype)
+    model = C.one_hot(x, 6, False, name='one_hot_op')
+    verify_one_input(model, data, tmpdir, "One_Hot_0", bypass_load_into_cntk=True)
+
+    model = C.one_hot(x, 6, False, axis = 0, name='one_hot_op')
+    verify_one_input(model, data, tmpdir, "One_Hot_1", bypass_load_into_cntk=True)

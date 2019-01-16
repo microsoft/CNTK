@@ -2826,16 +2826,22 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Gather")
     {
+        FunctionPtr indices = [&](DataType referenceDataType, DataType indicesDataType) -> FunctionPtr {
+            if (referenceDataType == indicesDataType)
+                return inputs[1];
+            return Cast(inputs[1], referenceDataType, inputs[1].Name() + L"_cast");
+        }(inputs[0].GetDataType(), inputs[1].GetDataType());
+
         if (HasNamedAttribute(node, "axis"))
         {
             int64_t axisIndex = GetNamedAttributeAsInt64(node, "axis", 0);
             Axis axis = ConvertONNXAxisToCNTKCppApi(axisIndex, inputs[0]);
-            FunctionPtr cntkFunction = GatherOp(inputs[1], inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
+            FunctionPtr cntkFunction = GatherOp(indices, inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
             return cntkFunction;
         }
         else
         {
-            FunctionPtr cntkFunction = GatherOp(inputs[1], inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+            FunctionPtr cntkFunction = GatherOp(indices, inputs[0], ToFixedWStringFromMultiByte(node->Name()));
             return cntkFunction;
         }
     }
@@ -2865,9 +2871,23 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         // REVIEW: ONNX MeanVarianceNormalization spec does not have an 'epsilon' attribute.
         // But corresponding CNTK node does. We construct the CNTK node with default value of epsilon
         // when loading the ONNX MeanVarianceNormalization node in CNTK.
-        size_t acrossChannels = GetNamedAttributeAsInt64(node, "across_channels", 0);
-        size_t normalizeVariance = GetNamedAttributeAsInt64(node, "normalize_variance", 1);
-        return MeanVarianceNormalization(inputOperand0, !!acrossChannels, !!normalizeVariance, ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<int64_t> axes = GetNamedAttributeAsInt64Vec(node, "axes");
+        auto rank = inputOperand0.Shape().Rank();
+        bool acrossChannels = true;
+        bool supported = true;
+        for (size_t i = 0; i < axes.size(); ++i)
+        {
+            if (i == 1 && axes[i] == 2) acrossChannels = false;
+            if (static_cast<int64_t>(i) != (!acrossChannels ? axes[i] - 1 : axes[i]))
+            {
+                supported = false;
+                break;
+            }
+        }
+        if (!(axes.size() == rank || axes.size() == rank + 1) || !supported)
+            LogicError("MeanVarianceNormalization: cntk supports only computing mean/variance over all tensor, or over channel axis. Other axes combinations are not supported");
+
+        return MeanVarianceNormalization(inputOperand0, acrossChannels, /*normalizeVariance=*/ true, ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "Identity")
     {
@@ -2935,14 +2955,10 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         FunctionPtr cntkFunction = EyeLike(inputs[0], false, ToFixedWStringFromMultiByte(node->Name()));
         return cntkFunction;
     }
-    else if (onnxOpName == "ConstantLike")
+    else if (onnxOpName == "ConstantOfShape")
     {
-        // Limited import support implemented. 'shape' attribute 
-        // node syntax not supported. Only syntax with input tensor
-        // for shape and 'value' attribute for value is supported.
-        float value = GetNamedAttributeAsFloat(node, "value", 0.0f);
-        FunctionPtr cntkFunction = ConstantLike(inputOperand0, static_cast<double>(value), ToFixedWStringFromMultiByte(node->Name()));
-        return cntkFunction;
+        LogicError("Importing ONNX (ConstantOfShape) is not yet supported in CNTK");
+        return nullptr;
     }
     else if (onnxOpName == "Crop")
     {

@@ -278,7 +278,6 @@
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorutils.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\function.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\graph.cc" />
-    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\graph_transformer_mgr.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\graph_viewer.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\model.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\op.cc" />
