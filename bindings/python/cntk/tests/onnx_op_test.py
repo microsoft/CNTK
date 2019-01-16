@@ -90,7 +90,7 @@ def verify_no_input(model, tmpdir, name):
     verify_node_names(model, loaded_model)
     return loaded_model
 
-def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08):
+def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08, bypass_load_into_cntk = False):
     # TODO: eventually we want this test method to be more general to suport 
     # models with multiple inputs instead of just one input.
     assert len(model.arguments) == 1
@@ -104,24 +104,27 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
     # outputs share the same owner
     opname = model.outputs[0].owner.op_name
 
-    loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
+    if bypass_load_into_cntk:
+        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, model, bypass_load_into_cntk=True)
+    else:
+        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
 
-    # TODO: it is better to compare data.shape with model.arguments[0] and
-    # to pad batch dimension as needed.
-    # Some tests have already expanded batch axis to data (i.e. reduction test) 
-    if model.arguments[0].has_batch_axis() and type(data)!=list:
-        data.shape = (1, ) + data.shape
+        # TODO: it is better to compare data.shape with model.arguments[0] and
+        # to pad batch dimension as needed.
+        # Some tests have already expanded batch axis to data (i.e. reduction test) 
+        if model.arguments[0].has_batch_axis() and type(data)!=list:
+            data.shape = (1, ) + data.shape
 
-    assert len(model.outputs) == len(loaded_model.outputs)
+        assert len(model.outputs) == len(loaded_model.outputs)
 
-    dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-    for i in range(0, len(model.outputs)):
-        assert not model.outputs[i].has_sequence_axis()
-        output_shape = model.outputs[i].shape
-        if opname not in set_of_batch_irrelevant_ops:
-            if model.outputs[i].has_batch_axis():
-                output_shape = (dim_denotation, ) + output_shape
-        assert output_shape == loaded_model.outputs[i].shape
+        dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
+        for i in range(0, len(model.outputs)):
+            assert not model.outputs[i].has_sequence_axis()
+            output_shape = model.outputs[i].shape
+            if opname not in set_of_batch_irrelevant_ops:
+                if model.outputs[i].has_batch_axis():
+                    output_shape = (dim_denotation, ) + output_shape
+            assert output_shape == loaded_model.outputs[i].shape
 
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
@@ -2082,7 +2085,8 @@ def test_Zeros_Like(tmpdir, dtype):
     x = C.input_variable((3, 4), dynamic_axes=[], dtype=dtype, name='feature')
     model = C.zeros_like(x, name='zeros_like_op')
     data = np.asarray(range(3*4), dtype=dtype).reshape((3,4))
-    verify_one_input(model, data, tmpdir, "Zeros_Like_0")
+    # TODO: import not yet implemented.
+    verify_one_input(model, data, tmpdir, "Zeros_Like_0", bypass_load_into_cntk=True)
 
 # ones_like
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -2090,4 +2094,16 @@ def test_Ones_Like(tmpdir, dtype):
     x = C.input_variable((3, 4), dynamic_axes=[], dtype=dtype, name='feature')
     model = C.ones_like(x, name='ones_like_op')
     data = np.asarray(range(3*4), dtype=dtype).reshape((3,4))
-    verify_one_input(model, data, tmpdir, "Ones_Like_0")
+    # TODO: import not yet implemented.
+    verify_one_input(model, data, tmpdir, "Ones_Like_0", bypass_load_into_cntk=True)
+
+# one hot
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_One_Hot(tmpdir, dtype):
+    data = np.asarray([[1, 5]], dtype=dtype)
+    x = C.input_variable((2), dtype=dtype)
+    model = C.one_hot(x, 6, False, name='one_hot_op')
+    verify_one_input(model, data, tmpdir, "One_Hot_0", bypass_load_into_cntk=True)
+
+    model = C.one_hot(x, 6, False, axis = 0, name='one_hot_op')
+    verify_one_input(model, data, tmpdir, "One_Hot_1", bypass_load_into_cntk=True)
