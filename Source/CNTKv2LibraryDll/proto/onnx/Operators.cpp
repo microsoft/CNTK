@@ -489,7 +489,7 @@ namespace ONNX
             { L"EyeLikeOp", "EyeLike" },
         } } },
         { L"ConstantOp",{ {
-            { L"ConstantOp", "ConstantLike" },
+            { L"ConstantOp", "ConstantOfShape" },
         } } },
     };
 
