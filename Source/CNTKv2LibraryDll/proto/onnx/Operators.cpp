@@ -483,13 +483,13 @@ namespace ONNX
             { L"offset", "border"},
         } } },
         { L"OneHotOp", { {
-            { L"OneHotOp", "OneHotEncoder"},
+            { L"OneHotOp", "OneHot"},
         } } },
         { L"EyeLikeOp",{ {
             { L"EyeLikeOp", "EyeLike" },
         } } },
         { L"ConstantOp",{ {
-            { L"ConstantOp", "ConstantLike" },
+            { L"ConstantOp", "ConstantOfShape" },
         } } },
     };
 

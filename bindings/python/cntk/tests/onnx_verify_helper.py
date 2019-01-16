@@ -33,6 +33,16 @@ known_issues = [
     'MVN_2',
     'MVN_3',
     'Eye_Like_0',
+
+    # ConstantOfShape not in onnxruntime
+    'SequenceIsFirst',
+    'SequenceIsLast',
+    'Zeros_Like_0',
+    'Ones_Like_0',
+
+    # OneHot not in onnxruntime
+    'One_Hot_0',
+    'One_Hot_1',
 ]
 
 def parse_single_result_case(case_str):
