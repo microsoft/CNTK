@@ -109,22 +109,22 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
     else:
         loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
 
-    # TODO: it is better to compare data.shape with model.arguments[0] and
-    # to pad batch dimension as needed.
-    # Some tests have already expanded batch axis to data (i.e. reduction test) 
-    if model.arguments[0].has_batch_axis() and type(data)!=list:
-        data.shape = (1, ) + data.shape
+        # TODO: it is better to compare data.shape with model.arguments[0] and
+        # to pad batch dimension as needed.
+        # Some tests have already expanded batch axis to data (i.e. reduction test) 
+        if model.arguments[0].has_batch_axis() and type(data)!=list:
+            data.shape = (1, ) + data.shape
 
-    assert len(model.outputs) == len(loaded_model.outputs)
+        assert len(model.outputs) == len(loaded_model.outputs)
 
-    dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-    for i in range(0, len(model.outputs)):
-        assert not model.outputs[i].has_sequence_axis()
-        output_shape = model.outputs[i].shape
-        if opname not in set_of_batch_irrelevant_ops:
-            if model.outputs[i].has_batch_axis():
-                output_shape = (dim_denotation, ) + output_shape
-        assert output_shape == loaded_model.outputs[i].shape
+        dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
+        for i in range(0, len(model.outputs)):
+            assert not model.outputs[i].has_sequence_axis()
+            output_shape = model.outputs[i].shape
+            if opname not in set_of_batch_irrelevant_ops:
+                if model.outputs[i].has_batch_axis():
+                    output_shape = (dim_denotation, ) + output_shape
+            assert output_shape == loaded_model.outputs[i].shape
 
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
@@ -2099,3 +2099,13 @@ def test_Ones_Like(tmpdir, dtype):
     data = np.asarray(range(3*4), dtype=dtype).reshape((3,4))
     # TODO: import not yet implemented.
     verify_one_input(model, data, tmpdir, "Ones_Like_0", bypass_load_into_cntk=True)
+
+# one hot
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_One_Hot(tmpdir, dtype):
+    if dtype == np.float16:
+        pytest.skip('Float16 is not supported by onnx.ml.OneHotEncoder')
+    data = np.asarray([[1, 5]], dtype=dtype)
+    x = C.input_variable((2), dtype=dtype)
+    model = C.one_hot(x, 6, False, name='one_hot_op')
+    verify_one_input(model, data, tmpdir, "One_Hot_0", bypass_load_into_cntk=True)
