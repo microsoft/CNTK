@@ -427,6 +427,8 @@ private:
                                              const std::string &outArgName, onnxruntime::Graph* graph);
     static onnxruntime::Node *AddSqueezeNode(onnxruntime::NodeArg &inputArg, const std::vector<int64_t> &axes,
                                              const std::string &outArgName, onnxruntime::Graph* graph);
+    static onnxruntime::Node* AddShapeNode(onnxruntime::NodeArg& inputArg,
+                                           const std::string &outArgName, onnxruntime::Graph* graph);
     static onnxruntime::Node* AddConstantOfShapeNode(onnxruntime::NodeArg& inputArg, onnxruntime::NodeArg& outputArg, const std::string& outArgName,
                                                      onnxruntime::Graph* graph, const float value, const google::protobuf::int32 type);
     static onnxruntime::Node* AddConstantOfShapeNode(onnxruntime::NodeArg& inputArg, const std::string& outArgName, onnxruntime::Graph* graph,
@@ -1586,6 +1588,10 @@ void CNTKToONNXHelper::CopyTensor(const NDArrayViewPtr src, onnx::TensorProto& d
                 break;
             case onnx::TensorProto_DataType_INT64:
                 *(dst.mutable_int64_data()->Add()) = static_cast<int64_t>(data[index]);
+                break;
+            case onnx::TensorProto_DataType_FLOAT16:
+                float16 value = static_cast<float16>(data[index]);
+                *(dst.mutable_int32_data()->Add()) = reinterpret_cast<uint16_t&>(value);
                 break;
             }
         break;
@@ -3289,35 +3295,41 @@ onnxruntime::Node *CNTKToONNXHelper::AddSliceNode(onnxruntime::NodeArg &inputArg
 {
     const TypeProto &inputTypeProto = *inputArg.TypeAsProto();
     google::protobuf::int32 elemType = inputTypeProto.tensor_type().elem_type();
-    onnx::TypeProto outputTypeProto = MakeTypeProtoWithShape();
-    outputTypeProto.mutable_tensor_type()->set_elem_type(elemType);
-    for (int i = 0, j = 0; i < inputTypeProto.tensor_type().shape().dim_size(); ++i)
+    onnx::TypeProto outputTypeProto;
+
+    if (inputTypeProto.tensor_type().has_shape())
     {
-        auto* newdim = outputTypeProto.mutable_tensor_type()->mutable_shape()->add_dim();
-        if (j < axes.size() && axes[j] == i)
+        outputTypeProto = MakeTypeProtoWithShape();
+
+        for (int i = 0, j = 0; i < inputTypeProto.tensor_type().shape().dim_size(); ++i)
         {
-            if (inputTypeProto.tensor_type().shape().dim(i).has_dim_value() && starts[j] >= 0 && ends[j] >= 0)
+            auto* newdim = outputTypeProto.mutable_tensor_type()->mutable_shape()->add_dim();
+            if (j < axes.size() && axes[j] == i)
             {
-                auto newval = std::min(
-                                  inputTypeProto.tensor_type().shape().dim(i).dim_value(),
-                                  ends[j]) - starts[j];
-                if (newval >= 0)
+                if (inputTypeProto.tensor_type().shape().dim(i).has_dim_value() && starts[j] >= 0 && ends[j] >= 0)
                 {
-                    newdim->set_dim_value(newval);
+                    auto newval = std::min(
+                        inputTypeProto.tensor_type().shape().dim(i).dim_value(),
+                        ends[j]) - starts[j];
+                    if (newval >= 0)
+                    {
+                        newdim->set_dim_value(newval);
+                    }
                 }
+                else if (inputTypeProto.tensor_type().shape().dim(i).has_dim_param())
+                {
+                    newdim->set_dim_param(inputTypeProto.tensor_type().shape().dim(i).dim_param());
+                }
+                ++j;
             }
-            else if (inputTypeProto.tensor_type().shape().dim(i).has_dim_param())
+            else
             {
-                newdim->set_dim_param(inputTypeProto.tensor_type().shape().dim(i).dim_param());
+                *newdim = inputTypeProto.tensor_type().shape().dim((int)i);
             }
-            ++j;
-        }
-        else
-        {
-            *newdim = inputTypeProto.tensor_type().shape().dim((int)i);
         }
     }
 
+    outputTypeProto.mutable_tensor_type()->set_elem_type(elemType);
     onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
     onnxruntime::Node* sliceNode = &graph->AddNode(
         outArgName + string("_slice"), "Slice", "", {&inputArg}, {&outputNodeArg});
@@ -3339,17 +3351,30 @@ onnxruntime::Node *CNTKToONNXHelper::AddEyeLikeNode(onnxruntime::NodeArg &inputA
     return eyeLikeNode;
 }
 
+// add Shape node
+onnxruntime::Node* CNTKToONNXHelper::AddShapeNode(onnxruntime::NodeArg& inputArg,
+                                                  const std::string &outArgName, onnxruntime::Graph* graph)
+{
+    onnx::TypeProto outputTypeProto;
+    outputTypeProto.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
+    onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
+    onnxruntime::Node* shapeNode = &graph->AddNode(outArgName + string("_shape_output"), "Shape", "", { &inputArg }, { &outputNodeArg });
+    return shapeNode;
+}
+
 // add ConstantOfShape node
 onnxruntime::Node* CNTKToONNXHelper::AddConstantOfShapeNode(onnxruntime::NodeArg& inputArg, onnxruntime::NodeArg& outputArg,
                                                             const std::string& outArgName, onnxruntime::Graph* graph,
                                                             const float value = 0.0, const google::protobuf::int32 type = onnx::TensorProto_DataType_FLOAT)
 {
-    std::vector<float> constantShape = INTSToVecFloat(ToINTS(*outputArg.TypeAsProto()));
-    onnxruntime::NodeArg& shapeInputArg = AddConstantNodeArg(graph, outArgName + string("_constant_of_shape_input"),
-                                                             constantShape, onnx::TensorProto_DataType_INT64);
+    //std::vector<float> constantShape = INTSToVecFloat(ToINTS(*outputArg.TypeAsProto()));
+    //onnxruntime::NodeArg& shapeInputArg = AddConstantNodeArg(graph, outArgName + string("_constant_of_shape_input"),
+    //                                                         constantShape, onnx::TensorProto_DataType_INT64);
+
+    onnxruntime::Node* shapeNode = AddShapeNode(inputArg, outArgName + string("_shape"), graph);
 
     onnxruntime::Node* constantOfShapeNode = &graph->AddNode(
-        outArgName + string("_constant_of_shape"), "ConstantOfShape", "", { &shapeInputArg }, { &outputArg });
+        outArgName + string("_constant_of_shape"), "ConstantOfShape", "", { const_cast<NodeArg*>(shapeNode->OutputDefs()[0]) }, { &outputArg });
 
     onnx::TypeProto valueTypeProto;
     valueTypeProto.mutable_tensor_type()->set_elem_type(type);
@@ -3368,8 +3393,11 @@ onnxruntime::Node* CNTKToONNXHelper::AddConstantOfShapeNode(onnxruntime::NodeArg
                                                             const std::string& outArgName, onnxruntime::Graph* graph,
                                                             const float value = 0.0, const google::protobuf::int32 type = onnx::TensorProto_DataType_FLOAT)
 {
-    const TypeProto* inputTypeProto = inputArg.TypeAsProto();
-    onnx::TypeProto outputTypeProto(*inputTypeProto);
+    //const TypeProto* inputTypeProto = inputArg.TypeAsProto();
+    //onnx::TypeProto outputTypeProto(*inputTypeProto);
+    //outputTypeProto.mutable_tensor_type()->set_elem_type(type);
+    //outputTypeProto.mutable_tensor_type()->mutable_shape()->CopyFrom(inputArg.TypeAsProto()->tensor_type().shape());
+    onnx::TypeProto outputTypeProto;
     outputTypeProto.mutable_tensor_type()->set_elem_type(type);
 
     onnxruntime::NodeArg& outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
