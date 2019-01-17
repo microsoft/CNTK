@@ -1873,7 +1873,7 @@ def test_Squeeze(tmpdir):
 
 def test_Squeeze_without_axes(tmpdir):
     # pytest.skip('ONNX should update attribute axes to be optional.')
-    x0 = np.arange(6).reshape((1, 2, 1, 3)).astype('f')
+    x0 = np.arange(6).reshape((2, 1, 3)).astype('f')
     x = C.input_variable((2, 1, 3))
     model = C.squeeze(x)
     verify_one_input(model, x0, tmpdir, 'Squeeze_without_axes_0')
