@@ -6684,7 +6684,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             std::vector<int64_t> axes;
             for (size_t i = 0; i < src->Inputs()[1].Shape().Rank() + 1; ++i)
             {
-                if (useStatsAcrossChannels && i == 1) continue;
+                if (!useStatsAcrossChannels && i == 1) continue;
                 axes.push_back(static_cast<int64_t>(i));
             }
             node->AddAttribute("axes", axes);
@@ -7166,8 +7166,10 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
             onnxruntime::NodeArg &mvnTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_mvn_output0"), &input0ArgType);
             onnxruntime::Node* mvnNode = &graph->AddNode(nodeName + string("_MVN"), "MeanVarianceNormalization",
                                                          "", {input0}, {&mvnTensorOutputArg});
-            mvnNode->AddAttribute("across_channels", static_cast<int64_t>(1));
-            mvnNode->AddAttribute("normalize_variance", static_cast<int64_t>(1));
+            std::vector<int64_t> axes;
+            size_t input0Rank = ToINTS(input0ArgType).size();
+            for (size_t i = 0; i < input0Rank; ++i) axes.push_back(static_cast<int64_t>(i));
+            mvnNode->AddAttribute("axes", axes);
 
             auto input1 = inputs[scaleIndexInOnnxInputs];
             onnxruntime::NodeArg &mulTensorOutputArg = graph->GetOrCreateNodeArg(nodeName + string("_mul_output0"), &input0ArgType);

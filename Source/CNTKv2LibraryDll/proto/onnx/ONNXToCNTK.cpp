@@ -2865,9 +2865,23 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
         // REVIEW: ONNX MeanVarianceNormalization spec does not have an 'epsilon' attribute.
         // But corresponding CNTK node does. We construct the CNTK node with default value of epsilon
         // when loading the ONNX MeanVarianceNormalization node in CNTK.
-        size_t acrossChannels = GetNamedAttributeAsInt64(node, "across_channels", 0);
-        size_t normalizeVariance = GetNamedAttributeAsInt64(node, "normalize_variance", 1);
-        return MeanVarianceNormalization(inputOperand0, !!acrossChannels, !!normalizeVariance, ToFixedWStringFromMultiByte(node->Name()));
+        std::vector<int64_t> axes = GetNamedAttributeAsInt64Vec(node, "axes");
+        auto rank = inputOperand0.Shape().Rank();
+        bool acrossChannels = true;
+        bool supported = true;
+        for (size_t i = 0; i < axes.size(); ++i)
+        {
+            if (i == 1 && axes[i] == 2) acrossChannels = false;
+            if (static_cast<int64_t>(i) != (!acrossChannels ? axes[i] - 1 : axes[i]))
+            {
+                supported = false;
+                break;
+            }
+        }
+        if (!(axes.size() == rank || axes.size() == rank + 1) || !supported)
+            LogicError("MeanVarianceNormalization: cntk supports only computing mean/variance over all tensor, or over channel axis. Other axes combinations are not supported");
+
+        return MeanVarianceNormalization(inputOperand0, acrossChannels, /*normalizeVariance=*/ true, ToFixedWStringFromMultiByte(node->Name()));
     }
     else if (onnxOpName == "Identity")
     {

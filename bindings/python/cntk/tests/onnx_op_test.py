@@ -919,21 +919,21 @@ def test_LayerNormalization(tmpdir, dtype, device_id):
     if dtype == np.float16:
         pytest.skip('Test is skipped on float16 to pass build test')
 
-    # This test point tests the LayerNormalization round trip with defaultepsilon. We loose always the epsilon value when 
-    # exporting to ONNX (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back 
-    # from ONNX, CNTK always uses the default eposilon value (0.00001). That's why test below has the default epsilon 
+    # This test point tests the LayerNormalization round trip with defaultepsilon. We loose always the epsilon value when
+    # exporting to ONNX (because ONNX MeanVarianceNormalization does not have an epsilon attribute). When loading back
+    # from ONNX, CNTK always uses the default eposilon value (0.00000001). That's why test below has the default epsilon
     # value. It is not expected to pass with any other epsilon value until something changes.
     with C.default_options(dtype = dtype):
         test_shapes = [(3, 5, 7), (10, ), (20, 31)]
         for shape in test_shapes:
             data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
             input_operand = C.input_variable(shape=shape)
-            model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.00001)(input_operand)
-            verify_one_input(model0, data, tmpdir, 'LayerNorm_0' + str(shape).replace(',', '_'))
+            model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.000000001)(input_operand)
+            verify_one_input(model0, data, tmpdir, 'LayerNorm_0' + str(shape).replace(',', '_'), rtol = 1e-04, atol=1e-08)
 
-        # This test point tests especially with epsilon = 0, because that creates a graph with 
+        # This test point tests especially with epsilon = 0, because that creates a graph with
         # different number of ops. However, we don't expect the numbers to match in round trip
-        # because we only support default epislon (0.00001) when loading from ONNX. Therefore,
+        # because we only support default epislon (0.00000001) when loading from ONNX. Therefore,
         # this is just a load/save test.
         model1 = C.layers.LayerNormalization(epsilon=0.0)(input_operand)
         filename = os.path.join(str(tmpdir), R'LayerNorm_1.onnx')
