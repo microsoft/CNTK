@@ -22,7 +22,6 @@ known_issues = [
     'test_sequence_slice_-2.-1',
     'test_sequence_slice_-4.2',
     'SequenceSoftmax',
-    'top_k',
 
     # Not in onnxruntime
     'LayerNorm_0',
