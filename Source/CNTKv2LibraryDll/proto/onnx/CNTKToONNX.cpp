@@ -6666,13 +6666,28 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
         }
         else if (src->OpName() == L"MeanVarianceNormalization")
         {
-            auto useStatsAcrossChannels = (int64_t)(src->Attributes()[L"useStatsAcrossChannels"].Value<bool>());
-            auto doVarianceScaling = (int64_t)(src->Attributes()[L"doVarianceScaling"].Value<bool>());
+            auto useStatsAcrossChannels = src->Attributes()[L"useStatsAcrossChannels"].Value<bool>();
+            auto doVarianceScaling = src->Attributes()[L"doVarianceScaling"].Value<bool>();
+            if (src->Attributes().Contains(L"epsilon"))
+            {
+                fprintf(stderr, "Warning: epsilon in MeanVarianceNormalization is not supported for ONNX export, a default value of 1e-9 will be used.");
+            }
             // REVIEW: MeanVarianceNormalization attribute 'epsilon' is not exported to ONNX because
             // ONNX MeanVarianceNormalization does not have a corresponding attribute. This should be
             // added if and when the attribute is added to MeanVarianceNormalization node's ONNX spec.
-            node->AddAttribute(attributesMap[L"useStatsAcrossChannels"], useStatsAcrossChannels);
-            node->AddAttribute(attributesMap[L"doVarianceScaling"], doVarianceScaling);
+
+            if (!doVarianceScaling)
+            {
+                LogicError("MeanVarianceNormalization: doVarianceScaling = False is not supported for ONNX export.");
+            }
+
+            std::vector<int64_t> axes;
+            for (size_t i = 0; i < src->Inputs()[1].Shape().Rank() + 1; ++i)
+            {
+                if (useStatsAcrossChannels && i == 1) continue;
+                axes.push_back(static_cast<int64_t>(i));
+            }
+            node->AddAttribute("axes", axes);
         }
         else if (src->OpName() == L"Gemm")
         {

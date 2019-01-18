@@ -1349,7 +1349,8 @@ def test_Mean(tmpdir, dtype):
 #MeanVarianceNormalization
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_MeanVarianceNormalization(tmpdir, dtype):
-    pytest.skip('test_MeanVarianceNormalization is skipped. Work is needed to make CNTK MVN compatible with ONNX Ver 9.')
+    if dtype == np.float16:
+        pytest.skip('Mean Variance Normalization with datatype float16 is not supported in ONNX.')
     with C.default_options(dtype = dtype):
         shape = (3, 5, 7)
         data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
@@ -1359,8 +1360,9 @@ def test_MeanVarianceNormalization(tmpdir, dtype):
         model0 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=True)
         verify_one_input(model0, data, tmpdir, 'MVN_0')
 
-        model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
-        verify_one_input(model1, data, tmpdir, 'MVN_1')
+        # do_variance_scaling = False is no longer supported in onnx.
+        # model1 = C.mean_variance_normalization(input_operand, use_stats_across_channels=False, do_variance_scaling=False)
+        # verify_one_input(model1, data, tmpdir, 'MVN_1')
 
         model2 = C.mean_variance_normalization(input_operand, use_stats_across_channels=True, do_variance_scaling=True)
         verify_one_input(model2, data, tmpdir, 'MVN_2')
