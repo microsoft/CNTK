@@ -1931,9 +1931,11 @@ def test_Tanh(tmpdir, dtype):
 #TopK
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_TopK(tmpdir, dtype):
-    input_size = 10
-    data = (np.arange(input_size,dtype=dtype)*0.1).reshape(1, input_size)
-    x = C.input_variable(input_size)
+    if dtype == np.float16:
+        pytest.skip("TopK of float16 not supported in cntk: Unsupported template argument(half) in SortPairsDescending.")
+    input_size = 9
+    data = (np.arange(input_size,dtype=dtype)*0.1 + 0.1).reshape(input_size)
+    x = C.input_variable(input_size, dtype=dtype)
     model = C.top_k(-x * C.log(x), 3)
     verify_one_input(model, data, tmpdir, "top_k")
 
