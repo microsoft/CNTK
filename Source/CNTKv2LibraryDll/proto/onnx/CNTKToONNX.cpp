@@ -1010,7 +1010,7 @@ onnxruntime::Graph* CNTKToONNXHelper::globalGraph = nullptr;
 
 std::unique_ptr<onnxruntime::Model> CNTKToONNX::CreateModel(const FunctionPtr& src)
 {
-    std::unique_ptr<onnxruntime::Model> model(new onnxruntime::Model("CNTKGraph", false));
+    std::unique_ptr<onnxruntime::Model> model(new onnxruntime::Model("CNTKGraph", true));
     auto &dstGraph = model->MainGraph();
     CNTKToONNXHelper::Copy(src, &dstGraph);
     onnxruntime::common::Status status = dstGraph.Resolve();
@@ -7194,7 +7194,8 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOneHotOp(const FunctionPt
         fprintf(stderr, "Warning: OneHotOp - 'oneHotOutputSparse' is set to true, but it will be exported as false in ONNX because ONNX does have sparse support.");
 
     auto inputRank = src->Inputs()[0].Shape().Rank();
-    int64_t onehotAxis = src->Attributes().Contains(L"onehotAxis") ? inputRank - ((Axis)(src->Attributes()[L"onehotAxis"].Value<Axis>())).StaticAxisIndex() : -1;
+    // The "+ 1" here is due to the axes being reversed, inserting at i becomes inserting at (rank - i - 1) + 1.
+    int64_t onehotAxis = src->Attributes().Contains(L"onehotAxis") ? ConvertAxisToOnnx((Axis)(src->Attributes()[L"onehotAxis"].Value<Axis>()), src->Inputs()[0]) + 1 : -1;
 
     std::vector<onnxruntime::NodeArg*> inputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs,
@@ -7206,41 +7207,15 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOneHotOp(const FunctionPt
     // Create names for onnx nodes base on node name in CNTK.
     const std::string& nodeName = UniqueNodeNameStorage::GetUniqueNodeName(src);
 
-    bool needsTransposeNode = !(onehotAxis == -1 || onehotAxis == static_cast<int64_t>(inputRank));
-    onnxruntime::NodeArg* oneHotOutputArg = needsTransposeNode ? &graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_onehot_out"),
-                                                                                            nullptr)
-                                                               : outputs[0];
-    onnxruntime::Node* oneHotNode = &graph->AddNode(nodeName, ToOPName(src), "", {inputs[0]}, {oneHotOutputArg}, nullptr, "ai.onnx.ml");
+    onnxruntime::NodeArg& depthNodeArg = AddConstantNodeArg(graph, nodeName + string("_depth"), vector<float>({static_cast<float>(numClass)}), onnx::TensorProto_DataType_INT64);
+    onnxruntime::NodeArg& valuesNodeArg = AddConstantNodeArg(graph, nodeName + string("_values"), vector<float>({ 0.0, 1.0 }), outputs[0]->TypeAsProto()->tensor_type().elem_type());
 
-    std::vector<int64_t> catsVector(numClass);
-    std::iota(catsVector.begin(), catsVector.end(), 0);
-    oneHotNode->AddAttribute("cats_int64s", catsVector);
-    oneHotNode->AddAttribute("zeros", static_cast<int64_t>(1)); // CNTK produces zeros for labels that are outside the range of numClass.
+    onnxruntime::Node* oneHotNode = &graph->AddNode(nodeName, ToOPName(src), "", {/*indices:*/inputs[0], /*depth:*/&depthNodeArg, /*values:*/&valuesNodeArg }, { outputs[0] });
 
-    // If the deafult value for 'axis` attribute is not used,
-    // then insert a transpose node to achieve the effect, because
-    // ai.onnx.ml.OneHotEncoder does not support 'axis' yet.
-    onnxruntime::Node* outputNode;
-    if (needsTransposeNode)
-    {
-        auto onnxInputRank = inputRank + src->Inputs()[0].DynamicAxes().size(); // Total rank including the dynamic axes
-        // CNTK op's 'axis' canot be used for dynamic axes and does not take them into account.
-        // So, we need to offset the 'axis' value by the number of dynamic axes.
-        auto onnxAxis = onehotAxis + src->Inputs()[0].DynamicAxes().size();
-        auto onnxOutputRank = onnxInputRank + 1;
-        //Create the 'perm' vector for transpose node.
-        std::vector<int64_t> permVector(onnxOutputRank - 1);
-        std::iota(permVector.begin(), permVector.end(), 0);
-        permVector.insert(permVector.begin() + onnxAxis, onnxOutputRank - 1);
-        onnxruntime::NodeArg &transposeOutputArg = graph->GetOrCreateNodeArg(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_transpose_out"), nullptr);
-        outputNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(nodeName + "_Transpose"), "Transpose", "", {oneHotOutputArg}, {outputs[0]});
-        outputNode->AddAttribute("perm", permVector);
-    }
-    else
-        outputNode = oneHotNode;
+    oneHotNode->AddAttribute("axis", onehotAxis);
 
-    functionNodes.emplace(src, outputNode);
-    return outputNode;
+    functionNodes.emplace(src, oneHotNode);
+    return oneHotNode;
 }
 
 onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForStraightThrough(const FunctionPtr &src,

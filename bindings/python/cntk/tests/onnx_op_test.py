@@ -2103,9 +2103,10 @@ def test_Ones_Like(tmpdir, dtype):
 # one hot
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_One_Hot(tmpdir, dtype):
-    if dtype == np.float16:
-        pytest.skip('Float16 is not supported by onnx.ml.OneHotEncoder')
     data = np.asarray([[1, 5]], dtype=dtype)
     x = C.input_variable((2), dtype=dtype)
     model = C.one_hot(x, 6, False, name='one_hot_op')
     verify_one_input(model, data, tmpdir, "One_Hot_0", bypass_load_into_cntk=True)
+
+    model = C.one_hot(x, 6, False, axis = 0, name='one_hot_op')
+    verify_one_input(model, data, tmpdir, "One_Hot_1", bypass_load_into_cntk=True)
