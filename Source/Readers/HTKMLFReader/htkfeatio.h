@@ -939,7 +939,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
         vector<ENTRY>& entries = (*this)[key].first; // this creates a new entry
         if (!entries.empty())
             // do not want to die immediately
-		    fprintf(stderr,
+            fprintf(stderr,
             "Warning: duplicate entry: %ls \n",
             key.c_str());
         entries.resize(e - s);
@@ -968,7 +968,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                     {
                         for(size_t j = 0; j < strlen(toks[6]); j++)
                         {
-						    if(toks[6][j] >= 'a' && toks[6][j] <= 'z')      
+                            if(toks[6][j] >= 'a' && toks[6][j] <= 'z')      
                                 toks[6][j] = toks[6][j] + 'A' - 'a';
                         }
                     }
