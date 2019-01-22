@@ -1097,7 +1097,7 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
             if (statelistmap.size() == 0)
                 entries[i - s].parse(toks, htkTimeToFrame);
             else
-                entries[i - s].parsewithstatelist(toks, statelistmap, htkTimeToFrame, symmap);
+                entries[i - s].parsewithstatelist(toks, statelistmap, htkTimeToFrame);
             // if we also read word entries, do it here
             if (wordidmap.size() != 0)
             {

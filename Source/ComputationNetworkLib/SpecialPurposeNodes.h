@@ -646,7 +646,7 @@ public:
     void SetFrameDropThresh(double frameDropThresh) { m_frameDropThreshold = frameDropThresh; }
     void SetReferenceAlign(const bool doreferencealign) { m_doReferenceAlignment = doreferencealign; }
 
-    void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR,
+    void SetGammarCalculationParamEMBR(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR, const bool& EMBR, const string& EMBRUnit, const size_t& numPathsEMBR,
         const bool& enforceValidPathEMBR, const string& getPathMethodEMBR, const string& showWERMode, const bool& excludeSpecialWords, const bool& wordNbest, const bool& useAccInNbest, const float& accWeightInNbest, const size_t& numRawPathsEMBR)
     {
         msra::lattices::SeqGammarCalParam param;
@@ -667,9 +667,18 @@ public:
         param.useAccInNbest = useAccInNbest;
         param.accWeightInNbest = accWeightInNbest;
         param.numRawPathsEMBR = numRawPathsEMBR;
+        m_gammaCalculator.SetGammarCalculationParamsEMBR(param);
+    }
+    void SetGammarCalculationParam(const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR)
+    {
+        msra::lattices::SeqGammarCalParam param;
+        param.amf = amf;
+        param.lmf = lmf;
+        param.wp = wp;
+        param.bMMIfactor = bMMIfactor;
+        param.sMBRmode = sMBR;
         m_gammaCalculator.SetGammarCalculationParams(param);
     }
-
     void gettime(unsigned long long& gammatime, unsigned long long& partialtime)
     {
         gammatime = m_gammatime;
@@ -828,7 +837,7 @@ public:
                 const char* buffer = bufferStart + latticeMBNumTimeSteps * sizeof(float) * currentLatticeSeq.s + currentLatticeSeq.tBegin;
         
                 
-                latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back(), specialwordids());
+                latticePair->second.ReadFromBuffer(buffer, m_idmap, m_idmap.back());
                 assert((currentLabelSeq.tEnd - currentLabelSeq.tBegin) == latticePair->second.info.numframes);
                 // The size of the vector is small -- the number of sequences in the minibatch. 
                 // Iteration likely will be faster than the overhead with unordered_map

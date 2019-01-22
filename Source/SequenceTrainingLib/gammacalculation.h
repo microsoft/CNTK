@@ -104,6 +104,14 @@ public:
         wp = (float) gammarParam.wp;
         seqsMBRmode = gammarParam.sMBRmode;
         boostmmifactor = (float) gammarParam.bMMIfactor;
+    }
+    void SetGammarCalculationParamsEMBR(const SeqGammarCalParam& gammarParam)
+    {
+        lmf = (float) gammarParam.lmf;
+        amf = (float) gammarParam.amf;
+        wp = (float) gammarParam.wp;
+        seqsMBRmode = gammarParam.sMBRmode;
+        boostmmifactor = (float) gammarParam.bMMIfactor;
         EMBR = gammarParam.EMBR;
         EMBRUnit = gammarParam.EMBRUnit;
         numPathsEMBR = gammarParam.numPathsEMBR;

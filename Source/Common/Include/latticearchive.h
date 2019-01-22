@@ -67,7 +67,6 @@ enum mbrclassdefinition // used to identify definition of class in minimum bayes
 // ===========================================================================
 class lattice
 {
-    mutable int verbosity;
 
     // definie structure for nbest EMBR
     struct TokenInfo
@@ -821,132 +820,6 @@ public:
     void frommlf(const std::wstring& key, const std::unordered_map<std::string, size_t>& unitmap, const msra::asr::htkmlfreader<msra::asr::htkmlfentry, lattice::htkmlfwordsequence>& labels,
                  const msra::lm::CMGramLM& lm, const msra::lm::CSymbolSet& unigramsymbols);
 
-    // the function fread is moved from latticearchive.cpp to .h, it requires template definition and delcaration are both in .h file
-    template <class IDMAP>
-    void fread(FILE* f, const IDMAP& idmap, size_t spunit, std::set<int>& specialwordids)
-    {
-        size_t version = freadtag(f, "LAT ");
-        if (version == 1)
-        {
-            freadOrDie(&info, sizeof(info), 1, f);
-            freadvector(f, "NODE", nodes, info.numnodes);
-            if (nodes.back().t != info.numframes)
-            {
-                // sometimes, the data is corrputed, let's try to live with it
-                fprintf(stderr, "fread: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", int(nodes.back().t), int(info.numframes));
-            }
-            freadvector(f, "EDGE", edges, info.numedges);
-            freadvector(f, "ALIG", align);
-            fcheckTag(f, "END ");
-            // map align ids to user's symmap  --the lattice gets updated in place here
-            foreach_index(k, align)
-                align[k].updateunit(idmap); // updates itself
-        }
-        else if (version == 2)
-        {
-            freadOrDie(&info, sizeof(info), 1, f);
-            freadvector(f, "NODS", nodes, info.numnodes);
-            if (nodes.back().t != info.numframes)
-            {
-                // sometimes, the data is corrputed, let's try to live with it
-                fprintf(stderr, "fread: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", int(nodes.back().t), int(info.numframes));
-            }
-            freadvector(f, "EDGS", edges2, info.numedges); // uniqued edges
-            freadvector(f, "ALNS", uniquededgedatatokens); // uniqued alignments
-            fcheckTag(f, "END ");
-
-            vt_node_out_edge_indices.resize(info.numnodes);
-            for (size_t j = 0; j < info.numedges; j++)
-            {
-                // an edge with !NULL pointing to not <s>
-                // this code make sure if you always start from <s> in the sampled path. 
-                // mask here: we delay the processing in EMBRsamplepaths controlled by flag: enforceValidPathEMBR
-                // if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
-
-                vt_node_out_edge_indices[edges2[j].S].push_back(j);
-
-            }
-
-            is_special_words.resize(info.numnodes);
-            for (size_t i = 0; i < info.numnodes; i++)
-            {
-                if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
-                else is_special_words[i] = false;
-            }
-
-            // check if we need to map
-    #if 1                                                                                     // post-bugfix for incorrect inference of spunit
-            if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size()) // we have buggy lattices like that--what do they mean??
-            {
-                fprintf(stderr, "fread: detected buggy spunit id %d which is out of range (%d entries in map)\n", (int)info.impliedspunitid, (int)idmap.size());
-                RuntimeError("fread: out of bounds spunitid");
-            }
-    #endif
-            // This is critical--we have a buggy lattice set that requires no mapping where mapping would fail
-            bool needsmapping = false;
-            foreach_index(k, idmap)
-            {
-                if (idmap[k] != (size_t)k
-    #if 1
-                    && (k != (int)idmap.size() - 1 || idmap[k] != spunit) // that HACK that we add one more /sp/ entry at the end...
-    #endif
-                    )
-                {
-                    needsmapping = true;
-                    break;
-                }
-            }
-            // map align ids to user's symmap  --the lattice gets updated in place here
-            if (needsmapping)
-            {
-                if (info.impliedspunitid != SIZE_MAX)
-                    info.impliedspunitid = idmap[info.impliedspunitid];
-
-                // deal with broken (zero-token) edges
-                std::vector<bool> isendworkaround;
-                if (info.impliedspunitid != spunit)
-                {
-                    fprintf(stderr, "fread: lattice with broken spunit, using workaround to handle potentially broken zero-token edges\n");
-                    inferends(isendworkaround);
-                }
-
-                size_t uniquealignments = 1;
-                const size_t skipscoretokens = info.hasacscores ? 2 : 1;
-                for (size_t k = skipscoretokens; k < uniquededgedatatokens.size(); k++)
-                {
-                    if (!isendworkaround.empty() && isendworkaround[k]) // secondary criterion to detect ends in broken lattices
-                    {
-                        k--; // don't advance, since nothing to advance over
-                    }
-                    else
-                    {
-                        // this is a regular token: update it in-place
-                        auto& ai = uniquededgedatatokens[k];
-                        if (ai.unit >= idmap.size())
-                            RuntimeError("fread: broken-file heuristics failed");
-                        ai.updateunit(idmap); // updates itself
-                        if (!ai.last)
-                            continue;
-                    }
-                    // if last then skip over the lm and ac scores
-                    k += skipscoretokens;
-                    uniquealignments++;
-                }
-                fprintf(stderr, "fread: mapped %d unique alignments\n", (int)uniquealignments);
-            }
-            if (info.impliedspunitid != spunit)
-            {
-                // fprintf (stderr, "fread: inconsistent spunit id in file %d vs. expected %d; due to erroneous heuristic\n", info.impliedspunitid, spunit);    // [v-hansu] comment out becaues it takes up most of the log
-                // it's actually OK, we can live with this, since we only decompress and then move on without any assumptions
-                // RuntimeError("fread: mismatching /sp/ units");
-            }
-            // reconstruct old lattice format from this   --TODO: remove once we change to new data representation
-            rebuildedges(info.impliedspunitid != spunit /*to be able to read somewhat broken V2 lattice archives*/);
-        }
-        else
-            RuntimeError("fread: unsupported lattice format version");
-    }
-
     // check consistency
     //  - only one end node
     //  - only forward edges
@@ -1211,7 +1084,7 @@ public:
             freadvector(f, "EDGS", edges2, info.numedges); // uniqued edges
             freadvector(f, "ALNS", uniquededgedatatokens); // uniqued alignments
             fcheckTag(f, "END ");
-            ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap, specialwordids);
+            ProcessV2EMBRLattice(spunit, info, uniquededgedatatokens, idmap, specialwordids);
         }
         else
             RuntimeError("fread: unsupported lattice format version");
@@ -1238,26 +1111,8 @@ public:
 
     // Helper method to process v2 Lattice format
     template <class IDMAP>
-    void ProcessV2Lattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap, std::set<int>& specialwordids = {} ) 
+    void ProcessV2Lattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap) 
     {
-        vt_node_out_edge_indices.resize(info.numnodes);
-        for (size_t j = 0; j < info.numedges; j++)
-        {
-            // an edge with !NULL pointing to not <s>
-            // this code make sure if you always start from <s> in the sampled path. 
-            // mask here: we delay the processing in EMBRsamplepaths controlled by flag: enforceValidPathEMBR
-            // if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
-
-            vt_node_out_edge_indices[edges2[j].S].push_back(j);
-
-        }
-
-        is_special_words.resize(info.numnodes);
-        for (size_t i = 0; i < info.numnodes; i++)
-        {
-            if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
-            else is_special_words[i] = false;
-        }
         // check if we need to map
         if (info.impliedspunitid != SIZE_MAX && info.impliedspunitid >= idmap.size()) // we have buggy lattices like that--what do they mean??
         {
@@ -1325,7 +1180,27 @@ public:
         rebuildedges(info.impliedspunitid != spunit /*to be able to read somewhat broken V2 lattice archives*/);
 
     }
-
+    
+    template <class IDMAP>
+    void ProcessV2EMBRLattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap, std::set<int>& specialwordids) 
+    {
+        vt_node_out_edge_indices.resize(info.numnodes);
+        for (size_t j = 0; j < info.numedges; j++)
+        {
+            // an edge with !NULL pointing to not <s>
+            // this code make sure if you always start from <s> in the sampled path. 
+            // mask here: we delay the processing in EMBRsamplepaths controlled by flag: enforceValidPathEMBR
+            // if (edges2[j].S == 0 && nodes[edges2[j].E].wid != 1) continue;
+            vt_node_out_edge_indices[edges2[j].S].push_back(j);
+        }
+        is_special_words.resize(info.numnodes);
+        for (size_t i = 0; i < info.numnodes; i++)
+        {
+            if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
+            else is_special_words[i] = false;
+        }
+        ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap); 
+    }
     
     // parallel versions (defined in parallelforwardbackward.cpp)
     class parallelstate
