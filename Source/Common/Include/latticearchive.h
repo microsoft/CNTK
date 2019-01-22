@@ -67,7 +67,7 @@ enum mbrclassdefinition // used to identify definition of class in minimum bayes
 // ===========================================================================
 class lattice
 {
-
+public:
     // definie structure for nbest EMBR
     struct TokenInfo
     {
