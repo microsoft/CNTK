@@ -1027,14 +1027,14 @@ public:
         if (m_step > 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1 - m_pMBLayout->RightSplice()), -1);
     }
     FrameRangeIterator end() const
     {
         if (m_step < 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t) -1), 0 /*dummy*/);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - m_pMBLayout->RightSplice()), 0);
     }
     // iterators for iterating in reverse order (as needed for gradient update)
     FrameRangeIterator rbegin() const
@@ -1042,14 +1042,14 @@ public:
         if (m_step < 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1 - m_pMBLayout->RightSplice()), -1);
     }
     FrameRangeIterator rend() const
     {
         if (m_step > 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t) -1), 0);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - m_pMBLayout->RightSplice()), 0);
     }
 };
 
