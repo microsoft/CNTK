@@ -168,6 +168,7 @@ void TruncatedBPTTPacker::SetConfiguration(const ReaderConfiguration& config, co
     auto oldMinibatchSize = m_config.m_minibatchSizeInSamples;
     auto oldTruncationSize = m_config.m_truncationSize;
     m_config.m_rightSplice = config.m_rightSplice;
+    m_config.m_rightLookAhead = config.m_rightLookAhead;
 
     PackerBase::SetConfiguration(config, memoryProviders);
 
@@ -228,7 +229,7 @@ Minibatch TruncatedBPTTPacker::ReadMinibatch()
         // all mblayouts should  match anyway.
         mbSeqIdToCorpusSeqId.clear();
 
-        m_currentLayouts[streamIndex]->Init(m_numParallelSequences, m_config.m_truncationSize, m_config.m_rightSplice); 
+        m_currentLayouts[streamIndex]->Init(m_numParallelSequences, m_config.m_truncationSize, m_config.m_rightSplice, m_config.m_rightLookAhead);
         size_t sequenceId = 0;
         for (size_t slotIndex = 0; slotIndex < m_numParallelSequences; ++slotIndex)
         {

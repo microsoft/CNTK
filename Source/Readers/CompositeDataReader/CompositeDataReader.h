@@ -96,6 +96,9 @@ private:
 
     // rightSplice(nr) for LC-BLSTM
     size_t m_rightSplice;
+
+    // look ahead window in truncated BPTT chunk
+    size_t m_rightLookAhead;
 };
 
 }
