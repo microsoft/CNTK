@@ -88,6 +88,10 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     if (m_rightSplice > m_truncationLength)
         InvalidArgument("rightSplice should not be greater than truncation length");
 
+    m_rightLookAhead = config(L"rightLookAhead", 0);
+    if (m_rightLookAhead > m_truncationLength)
+        InvalidArgument("rightLookAhead should not be greater than truncation length");
+
     m_precision = config("precision", "float");
 
     // Creating deserializers.
@@ -361,6 +365,7 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg, const std::m
     {
         config.m_truncationSize = m_truncationLength;
         config.m_rightSplice = m_rightSplice;
+        config.m_rightLookAhead = m_rightLookAhead;
     }
 
     ReaderBase::StartEpoch(config, inputDescriptions);

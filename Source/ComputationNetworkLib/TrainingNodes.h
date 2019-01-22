@@ -132,9 +132,18 @@ public:
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         FrameRange fr(InputRef(0).GetMBLayout());
+        auto input0 = InputRef(0).ValueFor(fr);
+        vector<ElemType> zeros(m_logSoftmaxOfRight->GetNumRows(), 0.0);
+        for (size_t colIndex = m_logSoftmaxOfRight->GetNumCols() - fr.m_pMBLayout->GetNumParallelSequences() * fr.m_pMBLayout->RightLookAhead(); colIndex < m_logSoftmaxOfRight->GetNumCols(); colIndex++)
+        {
+            m_softmaxOfRight->SetColumn(&zeros[0], colIndex);
+            input0.SetColumn(&zeros[0], colIndex);
+        }
+
         // left input is scalar
         if (inputIndex == 0) // left derivative
         {
+            Gradient().Print("CrossEntropyWithSoftmax LEFT-gradientValues");
 #if DUMPOUTPUT
             m_logSoftmaxOfRight->Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
@@ -150,20 +159,25 @@ public:
 
         else if (inputIndex == 1) // right derivative
         {
+           // Gradient().Print("CrossEntropyWithSoftmax Right-gradientValues");
 #if DUMPOUTPUT
             m_softmaxOfRight->Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
             InputRef(0).ValueFor(fr).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
-            Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
+            
             InputRef(1).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
 #endif
+            /*m_softmaxOfRight->Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
+            input0.Print("CrossEntropyWithSoftmax input0");*/
+            
 
             auto gradient = InputRef(1).GradientFor(fr);
-            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, InputRef(0).ValueFor(fr), gradient);
+            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, input0, gradient);
+            gradient.Print("CrossEntropyWithSoftmax gradient");
 #if DUMPOUTPUT
             InputRef(1).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
 #ifdef _DEBUG
-            InputRef(1).InvalidateMissingGradientColumns(fr); // TODO: This should not be necessary.
+            //InputRef(1).InvalidateMissingGradientColumns(fr); // TODO: This should not be necessary.
 #endif
         }
     }
@@ -188,6 +202,7 @@ public:
         // BUGBUG: No need to compute m_softmaxOfRight in ForwardProp, should be moved to BackpropTo().
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
+
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
         MaskMissingColumnsToZero(*m_logSoftmaxOfRight, InputRef(1).GetMBLayout(), fr);
         // reduce over all frames

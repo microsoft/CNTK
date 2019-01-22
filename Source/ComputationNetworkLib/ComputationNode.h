@@ -1630,11 +1630,11 @@ public:
 
     // function to access any input and output, value and gradient, whole batch or single frame
     // Note: This returns a reference into 'data' in the form of a column slice, i.e. a small matrix object that just points into 'data'.
-    Matrix<ElemType> DataFor(Matrix<ElemType>& data, const FrameRange& fr /*select frame or entire batch*/)
+    Matrix<ElemType> DataFor(Matrix<ElemType>& data, const FrameRange& fr /*select frame or entire batch*/, bool applyLookAhead = false)
     {
         try
         {
-            return DataWithMBLayoutFor(data, fr, m_pMBLayout);
+            return DataWithMBLayoutFor(data, fr, m_pMBLayout, applyLookAhead);
         }
         catch (const std::exception& e) // catch the error and rethrow it with the node name attached
         {
@@ -1648,17 +1648,17 @@ public:
     }
 #endif
 
-    Matrix<ElemType> ValueFor   (const FrameRange& fr /*select frame or entire batch*/)       { return DataFor(Value(),    fr); }
-    Matrix<ElemType> GradientFor(const FrameRange& fr /*select frame or entire batch*/)       { return DataFor(Gradient(), fr); }
+    Matrix<ElemType> ValueFor   (const FrameRange& fr /*select frame or entire batch*/, bool applyLookAhead = false)       { return DataFor(Value(), fr, applyLookAhead); }
+    Matrix<ElemType> GradientFor(const FrameRange& fr /*select frame or entire batch*/, bool applyLookAhead = false)       { return DataFor(Gradient(), fr, applyLookAhead); }
 #if 0 // causes grief with gcc
     Matrix<ElemType> ValueFor   (const FrameRange& fr /*select frame or entire batch*/) const { return DataFor(Value(),    fr); }
     Matrix<ElemType> GradientFor(const FrameRange& fr /*select frame or entire batch*/) const { return DataFor(Gradient(), fr); }
 #endif
     // use the following two versions if you assume the inputs may contain gaps that must be set to zero because you want to reduce over frames with a BLAS operation
-    Matrix<ElemType> MaskedValueFor(const FrameRange& fr /*select frame or entire batch*/)
+    Matrix<ElemType> MaskedValueFor(const FrameRange& fr /*select frame or entire batch*/, bool applyLookAhead = false)
     {
         MaskMissingValueColumnsToZero(fr);
-        return ValueFor(fr);
+        return ValueFor(fr, applyLookAhead);
     }
     Matrix<ElemType> MaskedGradientFor(const FrameRange& fr /*select frame or entire batch*/)
     {
