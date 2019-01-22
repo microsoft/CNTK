@@ -976,7 +976,6 @@ class htkmlfreader : public map<wstring, std::pair<vector<ENTRY>, vector<unsigne
                     // For some alignment MLF the sentence start and end are both represented by <s>, we change sentence end <s> to be </s>
                     if (i > s && strcmp(w, "<s>") == 0)
                         w = "</s>";
-                    }
                     /* skip the words that are not used in WER computation */
                     /* ugly hard code, will improve later */
                     if (strcmp(w, "<s>") != 0 
