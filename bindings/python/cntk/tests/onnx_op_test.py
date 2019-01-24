@@ -1764,15 +1764,18 @@ def test_Slice(tmpdir, dtype):
     (-2, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-4, 2), (0, 1), (1, 2)))
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SequenceSlice(tmpdir, dtype, beginIndex, endIndex):
-    batch_size = 1
-    sequence_length = 5
-    input_size = 3
-    feature_shape = (input_size,)
-    shape = (batch_size, sequence_length, input_size)
-    data = np.reshape(range(0, np.prod(shape)), shape).astype(dtype)
-    testName = "test_sequence_slice_{0}.{1}".format(beginIndex, endIndex)
-    model = C.sequence.slice(C.sequence.input_variable((feature_shape)), beginIndex, endIndex)
-    verify_sequence_model(model, data, tmpdir, testName)
+    with C.default_options(dtype = dtype):
+        if dtype == np.float16:
+            pytest.skip('Float16 is not supported in CNTK for sequence slice.')
+        batch_size = 1
+        sequence_length = 5
+        input_size = 3
+        feature_shape = (input_size,)
+        shape = (batch_size, sequence_length, input_size)
+        data = np.reshape(range(0, np.prod(shape)), shape).astype(dtype)
+        testName = "test_sequence_slice_{0}.{1}".format(beginIndex, endIndex)
+        model = C.sequence.slice(C.sequence.input_variable(feature_shape), beginIndex, endIndex)
+        verify_sequence_model(model, data, tmpdir, testName)
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SequenceFirst(tmpdir, dtype):

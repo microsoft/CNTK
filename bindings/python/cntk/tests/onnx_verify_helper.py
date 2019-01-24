@@ -15,14 +15,6 @@ known_issues = [
     'SpatialBatchNormalization_float160',
     'RNN.reverse.one_layer.relu',
     'RNN.bidirectional.two_layer.tanh',
-    'test_sequence_slice_-1.0',
-    'test_sequence_slice_0.-1',
-    'test_sequence_slice_0.1',
-    'test_sequence_slice_1.-1',
-    'test_sequence_slice_1.0',
-    'test_sequence_slice_1.2',
-    'test_sequence_slice_-2.-1',
-    'test_sequence_slice_-4.2',
     'SequenceSoftmax',
 
     # Not in onnxruntime
