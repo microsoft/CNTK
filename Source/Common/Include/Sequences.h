@@ -109,7 +109,7 @@ struct MBLayout
     // -------------------------------------------------------------------
 
     MBLayout(size_t numParallelSequences, size_t numTimeSteps, const std::wstring &name)
-        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE), m_rightSplice(0)
+        : m_distanceToStart(CPUDEVICE), m_distanceToEnd(CPUDEVICE), m_columnsValidityMask(CPUDEVICE), m_rightSplice(0), m_rightLookAhead(0)
     {
         Init(numParallelSequences, numTimeSteps);
         SetUniqueAxisName(name != L"" ? name : L"DynamicAxis");
@@ -142,6 +142,7 @@ struct MBLayout
         m_columnsValidityMask.SetValue(other->m_columnsValidityMask);
         m_writable = other->m_writable;
         m_rightSplice = other->m_rightSplice;
+        m_rightLookAhead = other->m_rightLookAhead;
 
         if (!keepName)
             m_axisName = other->m_axisName;
@@ -169,6 +170,7 @@ struct MBLayout
         m_columnsValidityMask = std::move(other->m_columnsValidityMask);
         m_writable = other->m_writable;
         m_rightSplice = other->m_rightSplice;
+        m_rightLookAhead = other->m_rightLookAhead;
 
         m_axisName = std::move(other->m_axisName);
     }
@@ -199,12 +201,14 @@ public:
         m_writable = true;
     }
 
-    void Init(size_t numParallelSequences, size_t numTimeSteps, size_t rightSplice)
+    void Init(size_t numParallelSequences, size_t numTimeSteps, size_t rightSplice, size_t rightLookAhead)
     {
         Init(numParallelSequences, numTimeSteps);
         m_rightSplice = rightSplice;
         if (numTimeSteps < rightSplice)
             m_rightSplice = 0;
+
+        m_rightLookAhead = rightLookAhead;
     }
 
     // packing algorithm
@@ -508,6 +512,11 @@ public:
         return m_rightSplice;
     }
 
+    size_t RightLookAhead() const
+    {
+        return m_rightLookAhead;
+    }
+
     // test boundary flags for a specific condition
     bool IsBeyondStartOrEnd(const FrameRange& fr) const;
     bool IsGap(const FrameRange& fr) const;
@@ -603,6 +612,7 @@ private:
     vector<SequenceInfo> m_sequences;
     // right splice for latency control blstm
     size_t m_rightSplice;
+    size_t m_rightLookAhead;
 
 private:
     // -------------------------------------------------------------------
@@ -1027,14 +1037,14 @@ public:
         if (m_step > 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1 - m_pMBLayout->RightSplice()), -1);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1 - m_pMBLayout->RightLookAhead()), -1);
     }
     FrameRangeIterator end() const
     {
         if (m_step < 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t) -1), 0 /*dummy*/);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - m_pMBLayout->RightSplice()), 0);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - m_pMBLayout->RightLookAhead()), 0);
     }
     // iterators for iterating in reverse order (as needed for gradient update)
     FrameRangeIterator rbegin() const
@@ -1042,14 +1052,14 @@ public:
         if (m_step < 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1 - m_pMBLayout->RightSplice()), -1);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1 - m_pMBLayout->RightLookAhead()), -1);
     }
     FrameRangeIterator rend() const
     {
         if (m_step > 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t) -1), 0);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - m_pMBLayout->RightSplice()), 0);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - m_pMBLayout->RightLookAhead()), 0);
     }
 };
 
