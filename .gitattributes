@@ -166,3 +166,4 @@ Source/CNTKv2LibraryDll/proto/onnx/onnx_repo text
 Source/CNTKv2LibraryDll/proto/onnx/onnxruntime text
 #certificates
 *.pfx binary
+*.exe binary

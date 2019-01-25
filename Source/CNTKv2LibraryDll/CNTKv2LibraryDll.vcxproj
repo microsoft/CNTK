@@ -179,6 +179,8 @@
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
     <ClInclude Include="proto\onnx\CNTKToONNX.h" />
+    <ClInclude Include="proto\onnx\onnx-ml.pb.h" />
+    <ClInclude Include="proto\onnx\onnx-operators-ml.pb.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\common\profiler.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\common\task_thread_pool.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorutils.h" />
