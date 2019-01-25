@@ -348,7 +348,7 @@
   </ItemGroup>
   <Target Name="ProtoONNXGen" Inputs="@(ProtoONNX)" Outputs="@(ProtoONNX->'%(RelativeDir)%(Filename).pb.cc')">
     <Message Text="Compiling %(ProtoONNX.Identity)" />
-    <Exec Command="$(PROTOBUF_PATH)\bin\protoc --proto_path=$(ProjectDir)proto\onnx\onnxruntime\onnxruntime\core\protobuf\ --cpp_out=$(ProjectDir)proto\onnx\onnx_repo\onnx %(ProtoONNX.FullPath)" WorkingDirectory="$(ProjectDir)" />
+    <Exec Command="$(PROTOBUF_PATH)\bin\protoc --proto_path=$(ProjectDir)proto\onnx\onnxruntime\onnxruntime\core\protobuf --cpp_out=$(ProjectDir)proto\onnx\onnxruntime\onnxruntime\core\protobuf %(ProtoONNX.FullPath)" WorkingDirectory="$(ProjectDir)" />
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasProtobuf)" Outputs="$(TargetPath)" DependsOnTargets="ProtoGen;ProtoONNXGen;$(BuildDependsOn)" />
