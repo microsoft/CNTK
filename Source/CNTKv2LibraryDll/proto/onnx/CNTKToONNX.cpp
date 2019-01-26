@@ -8133,9 +8133,8 @@ onnxruntime::Node* ApplyActivationToSequenceConvolution(Node* convNode, const Fu
     }
     else
     {
-        std::string warningMessage("Warning: activation in SequenceConvolution is not supported. ");
-        warningMessage += ToLegacyString(ToUTF8(src->OpName())).c_str();
-        fprintf(stderr, warningMessage.c_str());
+        fprintf(stderr, "Warning: activation %s in SequenceConvolution is not supported.",
+            ToLegacyString(ToUTF8(src->OpName())).c_str());
         return convNode;
     }
 

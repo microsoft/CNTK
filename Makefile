@@ -1707,13 +1707,13 @@ ONNXRUNTIME_PROTO_PATH=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnx
 	@echo $(SEPARATOR)
 	@echo compiling protobuf from $(ONNXRUNTIME_PROTO_PATH)
 	# protoc is confused if --proto_path is not set to an absolute path in below usage
-	$(PROTOC) --proto_path=$(ONNXRUNTIME_PROTO_PATH)/ --cpp_out=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/ $(ONNXRUNTIME_PROTO_PATH)/onnx-ml.proto
+	$(PROTOC) --proto_path=$(ONNXRUNTIME_PROTO_PATH)/ --cpp_out=$(ONNXRUNTIME_PROTO_PATH)/ $(ONNXRUNTIME_PROTO_PATH)/onnx-ml.proto
 
 %onnx-operators-ml.pb.cc : %onnx-operators-ml.proto $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
 	@echo compiling protobuf from $(ONNXRUNTIME_PROTO_PATH)
 	# protoc is confused if --proto_path is not set to an absolute path in below usage
-	$(PROTOC) --proto_path=$(ONNXRUNTIME_PROTO_PATH)/ --cpp_out=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/ $(ONNXRUNTIME_PROTO_PATH)/onnx-operators-ml.proto
+	$(PROTOC) --proto_path=$(ONNXRUNTIME_PROTO_PATH)/ --cpp_out=$(ONNXRUNTIME_PROTO_PATH)/ $(ONNXRUNTIME_PROTO_PATH)/onnx-operators-ml.proto
 
 %.pb.cc : %.proto $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
