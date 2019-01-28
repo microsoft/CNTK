@@ -406,6 +406,12 @@
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\platform\env.h">
       <Filter>proto\onnx\onnxruntime\platform</Filter>
     </ClInclude>
+    <ClInclude Include="proto\onnx\onnx-ml.pb.h">
+      <Filter>proto\onnx</Filter>
+    </ClInclude>
+    <ClInclude Include="proto\onnx\onnx-operators-ml.pb.h">
+      <Filter>proto\onnx</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

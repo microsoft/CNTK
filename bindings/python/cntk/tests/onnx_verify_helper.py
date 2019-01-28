@@ -57,12 +57,21 @@ def parse_verify_out_str(content):
 
     return total_failed_cases
 
+def get_onnx_test_runner_path_str():
+    # find onnx_test_runner.exe from repo source in default. 
+    # in case not found (in the build environment), look for based on environment variables. 
+    onnx_test_runner_path_str = os.path.join(os.path.dirname(__file__), 'onnx_test_runner') + R'/onnx_test_runner.exe';
+    if not os.path.exists(onnx_test_runner_path_str):
+        assert ('BUILD_REPOSITORY_LOCALPATH' in os.environ, 'BUILD_REPOSITORY_LOCALPATH no set in os.environ')
+        onnx_test_runner_path_str = os.environ['BUILD_REPOSITORY_LOCALPATH'] + R'/bindings/python/cntk/tests/onnx_test_runner/onnx_test_runner.exe';
+
+    assert(os.path.exists(onnx_test_runner_path_str), onnx_test_runner_path_str + ' does not exist.')
+    return onnx_test_runner_path_str
+
 def verify_results_with_onnxruntime(model_name, model_dir):
-    path_prefix = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'], 'ONNXRuntime') if 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ else ''
-    onnx_test_runner_path_str = str(os.path.join(path_prefix, 'onnx_test_runner.exe'))
-    # run only on windows. 
-    if not os.path.exists(onnx_test_runner_path_str) or not windows:
+    if not windows:
         return 0
+    onnx_test_runner_path_str = get_onnx_test_runner_path_str()
     callargs = [onnx_test_runner_path_str, '-n', model_name, str(model_dir)]
     process = subprocess.run(callargs, stdout=subprocess.PIPE)
     return parse_verify_out_str(process.stdout.decode('utf-8'))
