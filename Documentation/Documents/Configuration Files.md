@@ -873,7 +873,7 @@ A subsection is for input label information.
 
 -   lableIn – the section for input label. It contains the following setups
 
-    -   usewordmap – \[Ture, False\] specifies if using word map to map input words to other input words.
+    -   usewordmap – \[True, False\] specifies if using word map to map input words to other input words.
 
     -   beginSequence – the sentence beginning symbol
 
