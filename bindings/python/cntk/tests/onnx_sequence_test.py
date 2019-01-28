@@ -28,7 +28,7 @@ from onnx import numpy_helper
 
 from .onnx_test_helper import find_onnx_value_info_proto_with_matching_name, save_cntk_data_as_onnx_tensor, save_test_data
 from .onnx_test_helper import get_onnx_test_runner_callscript
-from .onnx_verify_helper import parse_verify_out_str
+from .onnx_verify_helper import get_onnx_test_runner_path_str, parse_verify_out_str
 
 ###############################
 # Helpers
@@ -57,9 +57,9 @@ def save_onnx_model_with_validation_data(tmpdir, model, data, name, device=None)
 
     os.mkdir(test_data_path)
     save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
-    test_cmd = get_onnx_test_runner_callscript(name, tmpdir)
 
-    callargs = [os.path.join(os.path.dirname(__file__), 'onnx_test_runner') + R'/onnx_test_runner.exe', '-n', name, str(tmpdir)]
+    onnx_test_runner_path_str = get_onnx_test_runner_path_str()    
+    callargs = [onnx_test_runner_path_str, '-n', name, str(tmpdir)]
     process = subprocess.run(callargs, stdout=subprocess.PIPE)
 
     failures = parse_verify_out_str(process.stdout.decode('utf-8'))
