@@ -571,8 +571,8 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/data_type_utils.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/defs/schema.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/shape_inference/implementation.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-ml.pb.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/onnx-operators-ml.pb.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/protobuf/onnx-ml.pb.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/protobuf/onnx-operators-ml.pb.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/Operators.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/RNNHelper.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/CNTKToONNX.cpp \
