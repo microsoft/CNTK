@@ -2906,8 +2906,10 @@ def gather(reference, indices, axis=None, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import gather_op
-    indices = sanitize_input(indices)
-    reference = sanitize_input(reference)
+    dtype = get_data_type(reference)
+    indices = sanitize_input(indices, dtype)
+    reference = sanitize_input(reference, dtype)
+
     if axis is None:
         return gather_op(indices, reference, name)
     else:

@@ -1603,9 +1603,28 @@ void CNTKToONNXHelper::CopyTensor(const NDArrayViewPtr src, onnx::TensorProto& d
         else
             dst.set_data_type(inputArgType->tensor_type().elem_type());
 
-        auto data = reinterpret_cast<const uint16_t*>(srcTemp->DataBuffer<float16>());
+        auto uint16_t_data = reinterpret_cast<const uint16_t*>(srcTemp->DataBuffer<float16>());
+        auto float16_data = srcTemp->DataBuffer<float16>();
         for (size_t index = 0; index < totalSize; index++)
-            *(dst.mutable_int32_data()->Add()) = data[index];
+            switch (inputArgType->tensor_type().elem_type())
+            {
+            case onnx::TensorProto_DataType_FLOAT16:
+                *(dst.mutable_int32_data()->Add()) = uint16_t_data[index];
+                break;
+            case onnx::TensorProto_DataType_BOOL:
+            case onnx::TensorProto_DataType_INT32:
+                *(dst.mutable_int32_data()->Add()) = static_cast<int32_t>(float16_data[index]);
+                break;
+            case onnx::TensorProto_DataType_INT64:
+                *(dst.mutable_int64_data()->Add()) = static_cast<int64_t>(float16_data[index]);
+                break;
+            case onnx::TensorProto_DataType_FLOAT:
+                *(dst.mutable_float_data()->Add()) = static_cast<float>(float16_data[index]);
+                break;
+            case onnx::TensorProto_DataType_DOUBLE:
+                *(dst.mutable_double_data()->Add()) = static_cast<double>(float16_data[index]);
+                break;
+            }
         break;
     }
     case CNTK::DataType::Double:

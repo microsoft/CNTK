@@ -2826,16 +2826,22 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
     }
     else if (onnxOpName == "Gather")
     {
+        FunctionPtr indices = [&](DataType referenceDataType, DataType indicesDataType) -> FunctionPtr {
+            if (referenceDataType == indicesDataType)
+                return inputs[1];
+            return Cast(inputs[1], referenceDataType, inputs[1].Name() + L"_cast");
+        }(inputs[0].GetDataType(), inputs[1].GetDataType());
+
         if (HasNamedAttribute(node, "axis"))
         {
             int64_t axisIndex = GetNamedAttributeAsInt64(node, "axis", 0);
             Axis axis = ConvertONNXAxisToCNTKCppApi(axisIndex, inputs[0]);
-            FunctionPtr cntkFunction = GatherOp(inputs[1], inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
+            FunctionPtr cntkFunction = GatherOp(indices, inputs[0], axis, ToFixedWStringFromMultiByte(node->Name()));
             return cntkFunction;
         }
         else
         {
-            FunctionPtr cntkFunction = GatherOp(inputs[1], inputs[0], ToFixedWStringFromMultiByte(node->Name()));
+            FunctionPtr cntkFunction = GatherOp(indices, inputs[0], ToFixedWStringFromMultiByte(node->Name()));
             return cntkFunction;
         }
     }

@@ -109,21 +109,23 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
     else:
         loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
 
-        # TODO: it is better to compare data.shape with model.arguments[0] and
-        # to pad batch dimension as needed.
-        # Some tests have already expanded batch axis to data (i.e. reduction test) 
-        if model.arguments[0].has_batch_axis() and type(data)!=list:
-            data.shape = (1, ) + data.shape
+    # TODO: it is better to compare data.shape with model.arguments[0] and
+    # to pad batch dimension as needed.
+    # Some tests have already expanded batch axis to data (i.e. reduction test) 
+    if model.arguments[0].has_batch_axis() and type(data)!=list:
+        data.shape = (1, ) + data.shape
 
+    if not bypass_load_into_cntk:
         assert len(model.outputs) == len(loaded_model.outputs)
 
-        dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
-        for i in range(0, len(model.outputs)):
-            assert not model.outputs[i].has_sequence_axis()
-            output_shape = model.outputs[i].shape
-            if opname not in set_of_batch_irrelevant_ops:
-                if model.outputs[i].has_batch_axis():
-                    output_shape = (dim_denotation, ) + output_shape
+    dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
+    for i in range(0, len(model.outputs)):
+        assert not model.outputs[i].has_sequence_axis()
+        output_shape = model.outputs[i].shape
+        if opname not in set_of_batch_irrelevant_ops:
+            if model.outputs[i].has_batch_axis():
+                output_shape = (dim_denotation, ) + output_shape
+        if not bypass_load_into_cntk:
             assert output_shape == loaded_model.outputs[i].shape
 
     if device:
@@ -766,8 +768,6 @@ def test_Floor(tmpdir, dtype):
 #Gather
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Gather(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
         c = np.asarray([[0],[1]]).astype(dtype) 
         x = C.input_variable((2,1))
@@ -783,12 +783,10 @@ def test_Gather(tmpdir, dtype):
 #Gather
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Gather_With_Axis(tmpdir, dtype):
-    if (dtype == np.float16):
-        pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
         data = np.asarray( [[ [111, 112], [121, 122], [131, 132], ],[ [211, 212], [221, 222], [231, 232], ]]).astype(dtype)
         indices = np.asarray([[0, 1, 1], [1, 1, 1]])
-        x = C.input_variable(np.shape(data))
+        # x = C.input_variable(np.shape(data))
         y = C.input_variable(np.shape(indices))
         axis = 1
 
