@@ -41,6 +41,7 @@ public:
     // baseName - base name for all symbols at this level
     // pass - NDLPass through the evaluation (0-initial, 1-resolve variables, 2-final)
     virtual void Evaluate(NDLNode<ElemType>* node, const wstring& baseName, const NDLPass pass);
+    ElemType GetElementValue(ConfigValue &inValue);
 
 #ifdef LATER
     // EvaluateDotName - Evaluate a dot name and resolve to target node
@@ -269,10 +270,10 @@ public:
     }
 
     // ProcessOptionalParameters - Process the optional parameters of a node
-    virtual void ProcessOptionalParameters(NDLNode<ElemType>* node)
+    virtual void ProcessOptionalParameters(NDLNode<ElemType>* node, std::wstring& name)
     {
         vector<NDLNode<ElemType>*> params = node->GetParameters(true); // get all the optional parameters only
-        auto compNode = ComputationNode<ElemType>::FromVoidPtr(node->GetEvalValue());
+        ComputationNodeBasePtr compNode = m_net->GetNodeFromName(name);;
         std::string empty;
 
         // loop through all the optional parameters processing them as necessary
@@ -580,6 +581,7 @@ private:
     DEVICEID_TYPE m_deviceId;
 };
 
+template class NDLBuilder<half>;
 template class NDLBuilder<float>;
 template class NDLBuilder<double>;
 

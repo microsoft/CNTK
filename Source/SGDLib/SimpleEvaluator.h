@@ -53,6 +53,14 @@ public:
     {
     }
 
+    void InitDistGradAgg()
+    {
+        if (Globals::UseV2Aggregator())
+            m_distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/, ::CNTK::MPICommunicator());
+        else
+            m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/);
+    }
+
     // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
     vector<EpochCriterion> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
     {
@@ -167,10 +175,7 @@ public:
                         DistGradHeader::Destroy(ptr);
                     });
 
-                    if (Globals::UseV2Aggregator())
-                        m_distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/, ::CNTK::MPICommunicator());
-                    else 
-                        m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/);
+                    InitDistGradAgg();
                 }
 
                 m_gradHeader->numEvalNode = evalNodes.size();
@@ -339,5 +344,14 @@ protected:
     int m_traceLevel;
     void operator=(const SimpleEvaluator&); // (not assignable)
 };
+
+template<>
+void SimpleEvaluator<half>::InitDistGradAgg()
+{
+    if (Globals::UseV2Aggregator())
+        m_distGradAgg = make_shared<V2SimpleDistGradAggregator<half>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/, ::CNTK::MPICommunicator());
+    else
+        RuntimeError("SimpleEvaluator - half not supported when useV2Aggregator is false.");
+}
 
 }}}

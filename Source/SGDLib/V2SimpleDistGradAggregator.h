@@ -109,7 +109,7 @@ public:
 
                 // Synchronize the Quantization compute stream with the completion of
                 // compute of the gradient matrices on the main compute stream
-                mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<ElemType>();
+                mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
                 delete mainStreamSyncEvent;
 
                 AggregateGradientsImpl(newGradients, newGradHeader, showSyncPerfStats);
@@ -185,7 +185,7 @@ private:
             if (m_useAsyncAggregation)
             {
                 std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(deviceId));
-                mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<ElemType>();
+                mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
             }
         }
 

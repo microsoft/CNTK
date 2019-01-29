@@ -21,6 +21,40 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template<typename ElemType>
+bool AggregateAccumulatorSums(
+    MPIWrapperPtr &mpi,
+    ComputationNetworkPtr &net,
+    size_t &packThresholdSizeInBytes,
+    std::vector<Matrix<ElemType> *> &accumulatorValues,
+    std::shared_ptr<DistGradHeader> &gradHeader)
+{
+    bool samplesProcessed = false;
+
+    // Prepare aggregator.
+    std::shared_ptr<IDistGradAggregator<ElemType>> distGradAgg;
+    if (Globals::UseV2Aggregator())
+        distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(
+            mpi,
+            false /*useAsyncAggregation*/,
+            net->GetDeviceId(),
+            0 /*syncStatsTrace*/,
+            ::CNTK::MPICommunicator(packThresholdSizeInBytes));
+    else
+        distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(
+            mpi,
+            false /*useAsyncAggregation*/,
+            net->GetDeviceId(),
+            0 /*syncStatsTrace*/,
+            packThresholdSizeInBytes);
+
+    // Aggregate accumulator sums.
+    samplesProcessed = distGradAgg->AggregateGradients(accumulatorValues, gradHeader.get(), /*resetState =*/false);
+
+    return samplesProcessed;
+}
+
+
 template <typename ElemType>
 void AggregateAccumulatorValuesAndUpdateEvaluation(
     std::shared_ptr<ComputationNetwork> net,
@@ -45,23 +79,6 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
         accumulatorValues.emplace_back(&accumulator);
     }
 
-    // Prepare aggregator.
-    std::shared_ptr<IDistGradAggregator<ElemType>> distGradAgg;
-    if (Globals::UseV2Aggregator())
-        distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(
-            mpi,
-            false /*useAsyncAggregation*/,
-            net->GetDeviceId(),
-            0 /*syncStatsTrace*/,
-            ::CNTK::MPICommunicator(packThresholdSizeInBytes));
-    else
-        distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(
-            mpi,
-            false /*useAsyncAggregation*/,
-            net->GetDeviceId(),
-            0 /*syncStatsTrace*/,
-            packThresholdSizeInBytes);
-
     // Prepare header.
     const size_t c_evalNodes = 1;
     if (gradHeader == nullptr)
@@ -76,7 +93,7 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
         gradHeader->evalErrors[i] = std::make_pair<double, size_t>(0.0, 0);
 
     // Aggregate accumulator sums.
-    bool samplesProcessed = distGradAgg->AggregateGradients(accumulatorValues, gradHeader.get(), /*resetState =*/false);
+    bool samplesProcessed = AggregateAccumulatorSums(mpi, net, packThresholdSizeInBytes, accumulatorValues, gradHeader);
     if (!samplesProcessed)
         RuntimeError("Couldn't aggregate accumulator values.");
 

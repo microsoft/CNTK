@@ -48,7 +48,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 
     std::wstring cnNodeType = Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(node->GetValue());
 
-    ComputationNodePtr nodePtr;
+    ComputationNodeBasePtr nodePtr;
 
     // get the node pointer for the node, should be stored in the EvalValue;
     if (pass > ndlPassInitial)
@@ -56,7 +56,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         nodePtr = ComputationNode<ElemType>::FromVoidPtr(node->GetEvalValue());
         if (!nodePtr)
         {
-            nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
+            nodePtr = m_net->GetNodeFromName(name);
             node->SetEvalValue(nodePtr.get());
         }
     }
@@ -75,15 +75,47 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             auto tensorShape = ProcessTensorShapeParameters(node, params, i, /*isImage=*/false, cnNodeType);
 
             wstring dynamicAxis = node->GetOptionalParameter("dynamicAxis", "");
+            wstring precision = node->GetOptionalParameter("precision", "");
             // TODO: Map dynamicAxis from name to node at this point, where that node is memoized inside NDL.
             // first look for this node already existing in the network
             // BUGBUG: How does this set the dimensions then?
             if (m_net->NodeNameExists(name))
-                nodePtr = dynamic_pointer_cast<ComputationNode<ElemType>>(m_net->GetNodeFromName(name));
-            else if (isSparse)
-                nodePtr = builder.CreateSparseInputNode(name, tensorShape, dynamicAxis);
+                nodePtr = m_net->GetNodeFromName(name);
             else
-                nodePtr = builder.CreateInputNode(name, tensorShape, dynamicAxis);
+            {
+                if (precision == L"")
+                {
+                    if (isSparse)
+                        nodePtr = builder.CreateSparseInputNode(name, tensorShape, dynamicAxis);
+                    else
+                        nodePtr = builder.CreateInputNode(name, tensorShape, dynamicAxis);
+                }
+                else if (EqualCI(precision, L"float"))
+                {
+                    if (isSparse)
+                        nodePtr = builder.TypedCreateSparseInputNode<float>(name, tensorShape, dynamicAxis);
+                    else
+                        nodePtr = builder.TypedCreateInputNode<float>(name, tensorShape, dynamicAxis);
+                }
+                else if (EqualCI(precision, L"double"))
+                {
+                    if (isSparse)
+                        nodePtr = builder.TypedCreateSparseInputNode<double>(name, tensorShape, dynamicAxis);
+                    else
+                        nodePtr = builder.TypedCreateInputNode<double>(name, tensorShape, dynamicAxis);
+                }
+                else if (EqualCI(precision, L"float16"))
+                {
+                    if (isSparse)
+                        nodePtr = builder.TypedCreateSparseInputNode<half>(name, tensorShape, dynamicAxis);
+                    else
+                        nodePtr = builder.TypedCreateInputNode<half>(name, tensorShape, dynamicAxis);
+                }
+                else
+                {
+                    RuntimeError("NDLNetworkBuilder: Input: the 'precision' parameter if specified, must be 'float', 'double' or 'float16'.");
+                }
+            }
         }
     }
     else if (cnNodeType == L"ImageInput" || cnNodeType == L"SparseImageInput")
@@ -144,8 +176,10 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         {
             static int randomSeed = 1;
             wstring initString = node->GetOptionalParameter("init", "uniform");
-            ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
-            ElemType value = node->GetOptionalParameter("value", "0");
+            ConfigValue s = node->GetOptionalParameter("initValueScale", "1");
+            ElemType initValueScale = GetElementValue(s);
+            ConfigValue v = node->GetOptionalParameter("value", "0");
+            ElemType value = GetElementValue(v);
             bool initOnCPUOnly = node->GetOptionalParameter("initOnCPUOnly", "false");
             int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1" /*disabled*/);
 
@@ -193,9 +227,10 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.CreateLearnableParameter(name, rows, cols);
             nodePtr->SetLearningRateMultiplier(0);
         }
-        else if (pass == ndlPassFinal || nodePtr->Value().GetNumElements() != 0)
+        else if (pass == ndlPassFinal || (dynamic_pointer_cast<ComputationNode<ElemType>> (nodePtr))->Value().GetNumElements() != 0)
         {
-            ElemType val = parameter[0]->GetScalar();
+            ConfigValue v = parameter[0]->GetScalar();
+            ElemType val = GetElementValue(v);
             m_net->InitLearnableParameters(nodePtr, L"fixedValue", val);
         }
     }
@@ -607,6 +642,57 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodeParamCount = nodePtr->GetNumInputs();
         }
     }
+    else if (cnNodeType == OperationName2Of(CastNode))
+    {
+        if (parameter.size() < 1)
+            RuntimeError("%ls should have 1 or more parameters (node and cast precision).", cnNodeType.c_str());
+
+        // setup the parameter position of children so we can hook them up later
+        nodeParamCount = 1;
+        nodeParamStart = 0;
+
+        if (pass == ndlPassInitial)
+        {
+            // evaluate only scalar parameters
+            vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+            auto sourceNode = (NDLNode<ElemType>*) params[0];
+            wstring sourcePrecision = sourceNode->GetOptionalParameter("precision", "");
+            wstring targetPrecision = node->GetOptionalParameter("precision", "");
+#define ISPRECISION(str, precision, type) EqualCI(str, precision) || ((str == L"") && std::is_same<ElemType, type>())
+            if (EqualCI(targetPrecision, L"float16"))
+            {
+                ComputationNetworkBuilder<half> builder2(*m_net);
+                if (ISPRECISION(sourcePrecision, L"float", float))
+                    nodePtr = builder2.CreateCastNode<float>(name);
+                else if (ISPRECISION(sourcePrecision, L"double", double))
+                    nodePtr = builder2.CreateCastNode<double>(name);
+                else
+                    RuntimeError("NDLNetworkBuilder: for CastNode to cast to half, input must be  'float' or 'double'");
+            }
+            else if (EqualCI(targetPrecision, L"float"))
+            {
+                ComputationNetworkBuilder<float> builder2(*m_net);
+                if (ISPRECISION(sourcePrecision, L"float16", half))
+                    nodePtr = builder2.CreateCastNode<half>(name);
+                else if (ISPRECISION(sourcePrecision, L"double", double))
+                    nodePtr = builder2.CreateCastNode<double>(name);
+                else
+                    RuntimeError("NDLNetworkBuilder: for CastNode to cast to float, input must be  'float16' or 'double'");
+            }
+            else if (EqualCI(targetPrecision, L"double"))
+            {
+                ComputationNetworkBuilder<double> builder2(*m_net);
+                if (ISPRECISION(sourcePrecision, L"float", float))
+                    nodePtr = builder2.CreateCastNode<float>(name);
+                else if (ISPRECISION(sourcePrecision, L"float16", half))
+                    nodePtr = builder2.CreateCastNode<half>(name);
+                else
+                    RuntimeError("NDLNetworkBuilder: for CastNode to cast to double, input must be  'float' or 'float16'");
+            }
+            else
+                RuntimeError("NDLNetworkBuilder: CastNode - need to specify 'precision' parameter: 'float', 'double' or 'float16'.");
+        }
+    }
     else
     {
 
@@ -645,7 +731,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 #if 1
             vector<ComputationNodeBasePtr> inputNodes;
             for (let& in : inputs)
-                inputNodes.push_back(ComputationNode<ElemType>::FromVoidPtr(in));
+                inputNodes.push_back(((ComputationNodeBase *)in)->shared_from_this());
 
             nodePtr->AttachInputs(inputNodes);
 #else       // TODO: delete this
@@ -714,7 +800,26 @@ TensorShape NDLNodeEvaluatorImpl<ElemType>::ProcessTensorShapeParameters(const N
     return TensorShape(dims);
 }
 
+template class NDLBuilderImpl<half>;
 template class NDLBuilderImpl<float>;
 template class NDLBuilderImpl<double>;
 
+template <>
+half NDLNodeEvaluatorImpl<half>::GetElementValue(ConfigValue &inValue)
+{
+    half outValue = (float)inValue;
+    return outValue;
+}
+template <>
+float NDLNodeEvaluatorImpl<float>::GetElementValue(ConfigValue &inValue)
+{
+    float outValue = inValue;
+    return outValue;
+}
+template <>
+double NDLNodeEvaluatorImpl<double>::GetElementValue(ConfigValue &inValue)
+{
+    double outValue = inValue;
+    return outValue;
+}
 }}}

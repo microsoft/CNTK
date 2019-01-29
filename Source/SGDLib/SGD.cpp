@@ -47,8 +47,10 @@ using namespace std;
 // class SGD
 // =======================================================================
 
+template SGD<half>::SGD(const ConfigParameters&);
 template SGD<float>::SGD(const ConfigParameters&);
 template SGD<double>::SGD(const ConfigParameters&);
+template SGD<half>::SGD(const ScriptableObjects::IConfigRecord&);
 template SGD<float>::SGD(const ScriptableObjects::IConfigRecord&);
 template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
 
@@ -2264,6 +2266,69 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
     }
 }
 
+template<>
+bool AggregateAccumulatorSums<half>(
+    MPIWrapperPtr &mpi,
+    ComputationNetworkPtr &net,
+    size_t &packThresholdSizeInBytes,
+    std::vector<Matrix<half> *> &accumulatorValues,
+    std::shared_ptr<DistGradHeader> &gradHeader)
+{
+    bool samplesProcessed = false;
+
+    // Prepare aggregator.
+    std::shared_ptr<IDistGradAggregator<half>> distGradAgg;
+    if (Globals::UseV2Aggregator())
+        distGradAgg = make_shared<V2SimpleDistGradAggregator<half>>(
+            mpi,
+            false /*useAsyncAggregation*/,
+            net->GetDeviceId(),
+            0 /*syncStatsTrace*/,
+            ::CNTK::MPICommunicator(packThresholdSizeInBytes));
+    else
+        RuntimeError("AggregateAccumulatorSums - half not supported if useV2Aggregator is false.");
+
+    // Aggregate accumulator sums.
+    samplesProcessed = distGradAgg->AggregateGradients(accumulatorValues, gradHeader.get(), /*resetState =*/false);
+
+    return samplesProcessed;
+}
+
+
+template<>
+void SGD<half>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel)
+{
+    assert(GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD);
+    if (!Globals::UseV2Aggregator())
+    {
+        RuntimeError("SGD - half not supported when useV2Aggregator is false!");
+    }
+
+    if (numGradientBits != (8 * sizeof(half)))
+    {
+        // TODO, enable this
+        RuntimeError("SGD - half not supported for quantization!");
+        //if (traceLevel > 0)
+            //fprintf(stderr, "Initializing dataParallelSGD for %d-bit quantization.\n", numGradientBits);
+#ifdef CNTK_PARALLEL_TRAINING_SUPPORT
+        //fprintf(stderr, "UseV2Aggregator - V2AllReduceDistGradAggregator");
+        //auto communicator = ::CNTK::QuantizedMPICommunicator(m_zeroThresholdFor1Bit, true, numGradientBits);
+        //m_distGradAgg = std::make_shared<V2AllReduceDistGradAggregator<half>>(communicator, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+#else
+        RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
+#endif // !CNTK_PARALLEL_TRAINING_SUPPORT
+    }
+    else
+    {
+        if (traceLevel > 0)
+            fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation.\n", numGradientBits);
+        fprintf(stderr, "UseV2Aggregator - V2SimpleDistGradAggregator");
+        m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<half>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes));
+    }
+
+    m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });
+}
+
 template <class ElemType>
 void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel)
 {
@@ -2300,6 +2365,45 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
     }
 
     m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });
+}
+
+template <>
+void SGD<half>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID)
+{
+    if (m_pMASGDHelper)
+    {
+        return; // no need to do anything if already initialized. TODO: make it singleton 
+    }
+    if (GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD)
+    {
+        RuntimeError("SGD - half not supported for modelAveragingSGD!");
+    }
+    else if (GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD)
+    {
+#ifndef CNTK_PARALLEL_TRAINING_SUPPORT
+        RuntimeError("Block Momentum is not supported in the main CNTK repo. You need to enable 1bit submodule.");
+#else
+        if (Globals::UseV2Aggregator())
+        {
+            fprintf(stderr, "UseV2Aggregator - V2BlockMomentumSGD");
+            auto communicator = ::CNTK::MPICommunicator();
+            m_pMASGDHelper = make_shared<V2BlockMomentumSGD<half>>(
+                m_mpi,
+                communicator,
+                traceLevel,
+                devID,
+                m_useNesterovBlockMomentum,
+                m_resetSGDMomentum,
+                m_blockLearningRate,
+                m_blockMomentumAsTimeConstant,
+                m_modelAggregationBlockSize);
+        }
+        else
+        {
+            RuntimeError("SGD - half not supported when useV2Aggregator is false!");
+        }
+#endif 
+    }
 }
 
 template <class ElemType>
@@ -2824,6 +2928,7 @@ void SGD<ElemType>::MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNet
         nodeIter->SetEvalTimeStampOutdatedWrtAll();
 }
 
+template class SGD<half>;
 template class SGD<float>;
 template class SGD<double>;
 
@@ -3297,12 +3402,14 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 static size_t GetSizeOfPrecision(const ScriptableObjects::IConfigRecordPtr configp)
 {
     wstring precision = configp->Get(L"precision");
-    if (precision == L"float")
+    if (precision == L"float16")
+        return sizeof(half);
+    else if (precision == L"float")
         return sizeof(float);
     else if (precision == L"double")
         return sizeof(double);
     else
-        RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
+        RuntimeError("invalid value '%ls' for 'precision', must be 'float16' or 'float' or 'double'", precision.c_str());
 }
 
 SGDParams::SGDParams(const ScriptableObjects::IConfigRecordPtr configp)

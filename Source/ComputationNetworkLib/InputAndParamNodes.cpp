@@ -403,6 +403,16 @@ void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
 }
 
 // initialize by reading a matrix from a text file
+template <>
+void LearnableParameter<half>::InitFromFile(const wstring& initFromFilePath)
+{
+    size_t numRows, numCols;
+    auto array = File::LoadMatrixFromTextFile<float>(initFromFilePath, numRows, numCols);
+    vector<half> halfArray;
+    std::copy(array.begin(), array.end(), std::back_inserter(halfArray));
+    InitFromArray(halfArray, numRows, numCols);
+}
+
 template <class ElemType>
 void LearnableParameter<ElemType>::InitFromArray(const vector<ElemType>& array, size_t numRows, size_t numCols)
 {

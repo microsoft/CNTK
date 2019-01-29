@@ -111,6 +111,7 @@ struct /*interface*/ IComputationNode
     // TODO: OperationName calls static TypeName which does not match the actual type names in that the 'Node' is missing.
     virtual const std::wstring OperationName() const = 0;
 #define OperationNameOf(T) (T<float>::TypeName()) // convenience macro
+#define OperationName2Of(T) (T<double,float>::TypeName()) // convenience macro
 
     virtual void UpdateFunctionMBSize() = 0; // recalculate our column dimensions from MBLayout. Override to update temps.
 
