@@ -260,7 +260,7 @@ void DoWriteOutput(const ConfigParameters& config)
         else if (decodeType == 1)
             writer.WriteOutput_greedy(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         else if (decodeType == 2)
-            writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest,decodeBeam, decodeExpandBeam);
+            writer. WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest,decodeBeam, decodeExpandBeam);
         //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         
     }

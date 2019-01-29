@@ -221,10 +221,13 @@ public:
                 (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
                 //SumMatrix.SetValue(sumofENandDE);
                 ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
+                //ComputationNetwork::ResetEvalTimeStamps();
+                //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, Plusnodes);
                 auto PlusMBlayout = PlusNode->GetMBLayout();
                 PlusMBlayout->Init(1, 1);
                 PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
-                m_net->ForwardProp(PlusTransNode);
+                //m_net->ForwardProp(PlusTransNode);
+                m_net->ForwardPropFromTo(Plusnodes, Plustransnodes);
                 decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
                 decodeOutput.VectorMax(maxIdx, maxVal, true);
                 size_t maxId = (size_t)(maxIdx.Get00Element());
@@ -315,7 +318,7 @@ public:
     void forward_decode(Sequence oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
                         std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize, size_t plength)
     {
-//        size_t labelLength = oneSeq.length;
+        //        size_t labelLength = oneSeq.length;
         if (plength > oneSeq.processlength)
         {
 
@@ -373,6 +376,24 @@ public:
                 return false;
         }
         return true;
+    }
+
+    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode, ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes)
+    {
+        sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(a.decodeoutput));
+        //sumofENandDE.InplaceLogSoftmax(true);
+
+        //plus broadcast
+        (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
+        //SumMatrix.SetValue(sumofENandDE);
+        ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
+        auto PlusMBlayout = PlusNode->GetMBLayout();
+        PlusMBlayout->Init(1, 1);
+        PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+        m_net->ForwardPropFromTo(Plusnodes, Plustransnodes);
+        decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+        //decodeOutput.VectorMax(maxIdx, maxVal, true);
+        decodeOutput.InplaceLogSoftmax(true);
     }
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
                           size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20)
@@ -472,51 +493,22 @@ public:
                      });
                 for (size_t n = 0; n < CurSequences.size() - 1; n++)
                 {
-                    for (size_t h = n+1; h < CurSequences.size(); h++)
+                    for (size_t h = n + 1; h < CurSequences.size(); h++)
                     {
                         if (isPrefix(CurSequences[h], CurSequences[n]))
                         {
                             //forward_prop the prefix
                             forward_decode(CurSequences[h], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, CurSequences[h].labelseq.size());
 
-                            //decodeOutput.SetValue(*(tempSeq.decodeoutput));
-                            //decodeOutput.Print("decode output");
-                            sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(CurSequences[h].decodeoutput));
-                            //sumofENandDE.InplaceLogSoftmax(true);
-
-                            //plus broadcast
-                            (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
-                            //SumMatrix.SetValue(sumofENandDE);
-                            ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
-                            auto PlusMBlayout = PlusNode->GetMBLayout();
-                            PlusMBlayout->Init(1, 1);
-                            PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
-                            m_net->ForwardProp(PlusTransNode);
-                            decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
-                            //decodeOutput.VectorMax(maxIdx, maxVal, true);
-                            decodeOutput.InplaceLogSoftmax(true);
+                            forwardmerged(CurSequences[h], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
+                            
                             size_t idx = CurSequences[h].labelseq.size();
                             ElemType curlogp = CurSequences[h].logP + decodeOutput(CurSequences[n].labelseq[idx], 0);
-                            for (size_t k = idx; k < CurSequences[n].labelseq.size()-1; k++)
+                            for (size_t k = idx; k < CurSequences[n].labelseq.size() - 1; k++)
                             {
-                                forward_decode(CurSequences[n], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, k+1);
-
-                                //decodeOutput.SetValue(*(tempSeq.decodeoutput));
-                                //decodeOutput.Print("decode output");
-                                sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(CurSequences[n].decodeoutput));
-                                //sumofENandDE.InplaceLogSoftmax(true);
-
-                                //plus broadcast
-                                (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
-                                //SumMatrix.SetValue(sumofENandDE);
-                                ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
-                                PlusMBlayout = PlusNode->GetMBLayout();
-                                PlusMBlayout->Init(1, 1);
-                                PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
-                                m_net->ForwardProp(PlusTransNode);
-                                decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
-                                //decodeOutput.VectorMax(maxIdx, maxVal, true);
-                                decodeOutput.InplaceLogSoftmax(true);
+                                forward_decode(CurSequences[n], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, k + 1);
+                                forwardmerged(CurSequences[n], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
+                                
 
                                 curlogp += decodeOutput(CurSequences[n].labelseq[k + 1], 0);
                             }
@@ -527,8 +519,7 @@ public:
                 //nextSequences.clear();
                 while (true)
                 {
-                    
-                    
+
                     //auto maxSeq = getMaxSeq(CurSequences);
                     auto maxSeq = std::max_element(CurSequences.begin(), CurSequences.end());
                     //std::max_element()
@@ -537,23 +528,8 @@ public:
                     deleteSeq(*maxSeq);
                     CurSequences.erase(maxSeq);
                     forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
-
-                    //decodeOutput.SetValue(*(tempSeq.decodeoutput));
-                    //decodeOutput.Print("decode output");
-                    sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(tempSeq.decodeoutput));
-                    //sumofENandDE.InplaceLogSoftmax(true);
-
-                    //plus broadcast
-                    (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
-                    //SumMatrix.SetValue(sumofENandDE);
-                    ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
-                    auto PlusMBlayout = PlusNode->GetMBLayout();
-                    PlusMBlayout->Init(1, 1);
-                    PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
-                    m_net->ForwardProp(PlusTransNode);
-                    decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
-                    //decodeOutput.VectorMax(maxIdx, maxVal, true);
-                    decodeOutput.InplaceLogSoftmax(true);
+                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
+                    
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
                     vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam);
@@ -604,9 +580,17 @@ public:
                     if (CurSequences.size() == 0)
                         break;
                     auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
-                    auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
-                    if (nextSequences.size() > beamSize && yb->logP > ya->logP)
-                        break;
+                    //auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
+                    if (nextSequences.size() > beamSize) //                        && yb->logP > ya->logP)
+                    {
+                        nth_element(nextSequences.begin(), nextSequences.begin() + beamSize, nextSequences.end(),
+                            [](const Sequence& a, const Sequence& b)->bool {
+                            return a.logP > b.logP;
+                        });
+                        if (nextSequences[beamSize].logP > ya->logP)
+                            break;
+                    }
+                    //break;
                     //std::nth_element(logP, logP + beamSize, )
                 }
                 std::sort(nextSequences.begin(), nextSequences.end());
