@@ -120,9 +120,9 @@ RUN BOOST_UNDERSCORE_VERSION=$(echo $BOOST_VERSION | tr . _) && \
     rm -rf boost_${BOOST_UNDERSCORE_VERSION}
 
 # Install Protobuf
-ARG PROTOBUF_VERSION=3.1.0
+ARG PROTOBUF_VERSION=3.6.0
 RUN PROTOBUF_STRING=protobuf-$PROTOBUF_VERSION && \
-    wget -O - --no-verbose https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/protobuf/$PROTOBUF_VERSION/protobuf-$PROTOBUF_VERSION.tar.gz | tar -xzf - && \
+    wget -O - --no-verbose https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/protobuf/$PROTOBUF_VERSION/protobuf-all-$PROTOBUF_VERSION.tar.gz | tar -xzf - && \
     cd $PROTOBUF_STRING && \
     ./autogen.sh && \
     ./configure CFLAGS=-fPIC CXXFLAGS=-fPIC --disable-shared --prefix=/usr/local/$PROTOBUF_STRING && \
