@@ -319,7 +319,7 @@ public:
                         std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize, size_t plength)
     {
         //        size_t labelLength = oneSeq.length;
-        if (plength > oneSeq.processlength)
+        if (plength != oneSeq.processlength)
         {
 
             Matrix<ElemType> lmin(deviceID);
@@ -487,7 +487,7 @@ public:
 
                 vector<Sequence>().swap(nextSequences);
                 //deal with the same prefix
-                sort(CurSequences.begin(), CurSequences.end(),
+                /*sort(CurSequences.begin(), CurSequences.end(),
                      [](const Sequence& a, const Sequence& b) -> bool {
                          return a.labelseq.size() > b.labelseq.size();
                      });
@@ -501,21 +501,20 @@ public:
                             forward_decode(CurSequences[h], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, CurSequences[h].labelseq.size());
 
                             forwardmerged(CurSequences[h], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
-                            
+
                             size_t idx = CurSequences[h].labelseq.size();
                             ElemType curlogp = CurSequences[h].logP + decodeOutput(CurSequences[n].labelseq[idx], 0);
                             for (size_t k = idx; k < CurSequences[n].labelseq.size() - 1; k++)
                             {
                                 forward_decode(CurSequences[n], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, k + 1);
                                 forwardmerged(CurSequences[n], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
-                                
 
                                 curlogp += decodeOutput(CurSequences[n].labelseq[k + 1], 0);
                             }
                             CurSequences[n].logP = decodeOutput.LogAdd(curlogp, CurSequences[n].logP);
                         }
                     }
-                }
+                }*/
                 //nextSequences.clear();
                 while (true)
                 {
@@ -529,7 +528,7 @@ public:
                     CurSequences.erase(maxSeq);
                     forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
                     forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
-                    
+
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
                     vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam);
@@ -580,16 +579,18 @@ public:
                     if (CurSequences.size() == 0)
                         break;
                     auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
-                    //auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
-                    if (nextSequences.size() > beamSize) //                        && yb->logP > ya->logP)
-                    {
-                        nth_element(nextSequences.begin(), nextSequences.begin() + beamSize, nextSequences.end(),
-                            [](const Sequence& a, const Sequence& b)->bool {
-                            return a.logP > b.logP;
-                        });
-                        if (nextSequences[beamSize].logP > ya->logP)
-                            break;
-                    }
+                    auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
+                    if (nextSequences.size() > beamSize && yb->logP > ya->logP)
+                        break;
+                    /*if (nextSequences.size() > beamSize) //                        && yb->logP > ya->logP)
+                        {
+                            nth_element(nextSequences.begin(), nextSequences.begin() + beamSize, nextSequences.end(),
+                                        [](const Sequence& a, const Sequence& b) -> bool {
+                                            return a.logP > b.logP;
+                                        });
+                            if (nextSequences[beamSize - 1].logP > ya->logP)
+                                break;
+                        }*/
                     //break;
                     //std::nth_element(logP, logP + beamSize, )
                 }
@@ -607,26 +608,61 @@ public:
                 //break;
             }
 
-            auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
-            size_t lmt = yb->length;
+            //nbest output
+            nth_element(nextSequences.begin(), nextSequences.begin() + beamSize, nextSequences.end(),
+                        [](const Sequence& a, const Sequence& b) -> bool {
+                            return a.logP > b.logP;
+                        });
+            for (size_t k = 1; k < beamSize; k++)
+            {
+                Sequence yb = nextSequences[k];
+                size_t lmt = yb.length;
+                ElemType score = -yb.logP;
+                greedyOutput.Resize(vocabSize, lmt);
+                greedyOutput.SetValue(0.0);
+                for (size_t n = 0; n < lmt; n++)
+                {
+                    greedyOutput(yb.labelseq[n], n) = score;
+                }
+                if (lmt == 0)
+                {
+                    greedyOutput.Resize(vocabSize, 1);
+                    lmin.Resize(vocabSize, 1);
+                    lmin.SetValue(0.0);
+                    lmin(blankId, 0) = score;
+                    greedyOutput.SetColumn(lmin, 0);
+                    lmt = 1;
+                }
+                //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
+                //greedyOutput.Print("greedy output");
+                outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
+                dataWriter.SaveData(k, outputMatrices, lmt, lmt, 0);
+            }
+
+            //the first candidates, file no ++
+            Sequence yb = nextSequences[0];
+            size_t lmt = yb.length;
+            ElemType score = -yb.logP;
             greedyOutput.Resize(vocabSize, lmt);
             greedyOutput.SetValue(0.0);
             for (size_t n = 0; n < lmt; n++)
             {
-                greedyOutput(yb->labelseq[n], n) = 1.0;
+                greedyOutput(yb.labelseq[n], n) = score;
             }
-            //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
-            //greedyOutput.Print("greedy output");
-            outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
             if (lmt == 0)
             {
                 greedyOutput.Resize(vocabSize, 1);
                 lmin.Resize(vocabSize, 1);
                 lmin.SetValue(0.0);
-                lmin(blankId, 0) = 1;
+                lmin(blankId, 0) = score;
                 greedyOutput.SetColumn(lmin, 0);
                 lmt = 1;
             }
+            //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
+            //greedyOutput.Print("greedy output");
+            outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
+            dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
+
             for (size_t n = 0; n < CurSequences.size(); n++)
             {
                 deleteSeq(CurSequences[n]);
@@ -637,7 +673,7 @@ public:
                 deleteSeq(nextSequences[n]);
             }
             vector<Sequence>().swap(nextSequences);
-            dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
+
             //break;
         }
 
