@@ -93,23 +93,23 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 else if (EqualCI(precision, L"float"))
                 {
                     if (isSparse)
-                        nodePtr = builder.TypedCreateSparseInputNode<float>(name, tensorShape, dynamicAxis);
+                        nodePtr = builder.template TypedCreateSparseInputNode<float>(name, tensorShape, dynamicAxis);
                     else
-                        nodePtr = builder.TypedCreateInputNode<float>(name, tensorShape, dynamicAxis);
+                        nodePtr = builder.template TypedCreateInputNode<float>(name, tensorShape, dynamicAxis);
                 }
                 else if (EqualCI(precision, L"double"))
                 {
                     if (isSparse)
-                        nodePtr = builder.TypedCreateSparseInputNode<double>(name, tensorShape, dynamicAxis);
+                        nodePtr = builder.template TypedCreateSparseInputNode<double>(name, tensorShape, dynamicAxis);
                     else
-                        nodePtr = builder.TypedCreateInputNode<double>(name, tensorShape, dynamicAxis);
+                        nodePtr = builder.template TypedCreateInputNode<double>(name, tensorShape, dynamicAxis);
                 }
                 else if (EqualCI(precision, L"float16"))
                 {
                     if (isSparse)
-                        nodePtr = builder.TypedCreateSparseInputNode<half>(name, tensorShape, dynamicAxis);
+                        nodePtr = builder.template TypedCreateSparseInputNode<half>(name, tensorShape, dynamicAxis);
                     else
-                        nodePtr = builder.TypedCreateInputNode<half>(name, tensorShape, dynamicAxis);
+                        nodePtr = builder.template TypedCreateInputNode<half>(name, tensorShape, dynamicAxis);
                 }
                 else
                 {
