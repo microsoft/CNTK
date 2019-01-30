@@ -68,4 +68,16 @@ bool AggregateAccumulatorSums<half>(
     return samplesProcessed;
 }
 
+template bool AggregateAccumulatorSums<float>(
+    MPIWrapperPtr &mpi,
+    ComputationNetworkPtr &net,
+    size_t &packThresholdSizeInBytes,
+    std::vector<Matrix<float> *> &accumulatorValues,
+    std::shared_ptr<DistGradHeader> &gradHeader);
+template bool AggregateAccumulatorSums<double>(
+    MPIWrapperPtr &mpi,
+    ComputationNetworkPtr &net,
+    size_t &packThresholdSizeInBytes,
+    std::vector<Matrix<double> *> &accumulatorValues,
+    std::shared_ptr<DistGradHeader> &gradHeader);
 }}}

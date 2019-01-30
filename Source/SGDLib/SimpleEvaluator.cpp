@@ -26,4 +26,6 @@ void SimpleEvaluator<half>::InitDistGradAgg()
         RuntimeError("SimpleEvaluator - half not supported when useV2Aggregator is false.");
 }
 
+template void SimpleEvaluator<float>::InitDistGradAgg();
+template void SimpleEvaluator<double>::InitDistGradAgg();
 }}}
