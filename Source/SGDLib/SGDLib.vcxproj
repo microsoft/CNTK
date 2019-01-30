@@ -145,10 +145,12 @@
     <ClInclude Include="V2SimpleDistGradAggregator.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AccumulatorAggregation.cpp" />
     <ClCompile Include="ASGDHelper.cpp" />
     <ClCompile Include="PostComputingActions.cpp" />
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="SGD.cpp" />
+    <ClCompile Include="SimpleEvaluator.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

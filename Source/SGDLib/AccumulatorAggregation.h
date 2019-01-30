@@ -27,33 +27,7 @@ bool AggregateAccumulatorSums(
     ComputationNetworkPtr &net,
     size_t &packThresholdSizeInBytes,
     std::vector<Matrix<ElemType> *> &accumulatorValues,
-    std::shared_ptr<DistGradHeader> &gradHeader)
-{
-    bool samplesProcessed = false;
-
-    // Prepare aggregator.
-    std::shared_ptr<IDistGradAggregator<ElemType>> distGradAgg;
-    if (Globals::UseV2Aggregator())
-        distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(
-            mpi,
-            false /*useAsyncAggregation*/,
-            net->GetDeviceId(),
-            0 /*syncStatsTrace*/,
-            ::CNTK::MPICommunicator(packThresholdSizeInBytes));
-    else
-        distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(
-            mpi,
-            false /*useAsyncAggregation*/,
-            net->GetDeviceId(),
-            0 /*syncStatsTrace*/,
-            packThresholdSizeInBytes);
-
-    // Aggregate accumulator sums.
-    samplesProcessed = distGradAgg->AggregateGradients(accumulatorValues, gradHeader.get(), /*resetState =*/false);
-
-    return samplesProcessed;
-}
-
+    std::shared_ptr<DistGradHeader> &gradHeader);
 
 template <typename ElemType>
 void AggregateAccumulatorValuesAndUpdateEvaluation(
