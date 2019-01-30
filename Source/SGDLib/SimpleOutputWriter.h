@@ -409,6 +409,8 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
+        //vector "hey cortana"
+        //vector<size_t> keywords {}
         //get encode input matrix
         std::vector<std::wstring> encodeOutputNodeNames(outputNodeNames.begin(), outputNodeNames.begin() + 1);
         std::vector<ComputationNodeBasePtr> encodeOutputNodes = m_net->OutputNodesByName(encodeOutputNodeNames);
@@ -609,59 +611,34 @@ public:
             }
 
             //nbest output
-            nth_element(nextSequences.begin(), nextSequences.begin() + beamSize, nextSequences.end(),
-                        [](const Sequence& a, const Sequence& b) -> bool {
-                            return a.logP > b.logP;
-                        });
-            for (size_t k = 1; k < beamSize; k++)
+            for (size_t n = 0; n < nextSequences.size(); n++)
             {
-                Sequence yb = nextSequences[k];
-                size_t lmt = yb.length;
-                ElemType score = -yb.logP;
-                greedyOutput.Resize(vocabSize, lmt);
-                greedyOutput.SetValue(0.0);
-                for (size_t n = 0; n < lmt; n++)
-                {
-                    greedyOutput(yb.labelseq[n], n) = score;
-                }
-                if (lmt == 0)
-                {
-                    greedyOutput.Resize(vocabSize, 1);
-                    lmin.Resize(vocabSize, 1);
-                    lmin.SetValue(0.0);
-                    lmin(blankId, 0) = score;
-                    greedyOutput.SetColumn(lmin, 0);
-                    lmt = 1;
-                }
-                //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
-                //greedyOutput.Print("greedy output");
-                outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
-                dataWriter.SaveData(k, outputMatrices, lmt, lmt, 0);
+                nextSequences[n].logP /= nextSequences[n].labelseq.size();
             }
-
-            //the first candidates, file no ++
-            Sequence yb = nextSequences[0];
-            size_t lmt = yb.length;
-            ElemType score = -yb.logP;
+            auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
+            size_t lmt = yb->length;
             greedyOutput.Resize(vocabSize, lmt);
             greedyOutput.SetValue(0.0);
             for (size_t n = 0; n < lmt; n++)
             {
-                greedyOutput(yb.labelseq[n], n) = score;
+                greedyOutput(yb->labelseq[n], n) = 1.0;
             }
+            //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
+            //greedyOutput.Print("greedy output");
+            outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
+
+            //the first candidates, file no ++
             if (lmt == 0)
             {
                 greedyOutput.Resize(vocabSize, 1);
                 lmin.Resize(vocabSize, 1);
                 lmin.SetValue(0.0);
-                lmin(blankId, 0) = score;
+                lmin(blankId, 0) = 1;
                 greedyOutput.SetColumn(lmin, 0);
                 lmt = 1;
             }
             //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
             //greedyOutput.Print("greedy output");
-            outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
-            dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
 
             for (size_t n = 0; n < CurSequences.size(); n++)
             {
@@ -673,7 +650,7 @@ public:
                 deleteSeq(nextSequences[n]);
             }
             vector<Sequence>().swap(nextSequences);
-
+            dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
             //break;
         }
 
