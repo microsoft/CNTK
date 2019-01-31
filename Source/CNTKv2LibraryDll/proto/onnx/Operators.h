@@ -88,7 +88,10 @@ public:
 
     static inline bool IsBlockFnNotConvertedThroughBlockRoot(FunctionPtr blkF)
     {
-        return blkF->OpName() == L"Sequence::BroadcastAs";
+        return 
+            blkF->OpName() == L"Sequence::BroadcastAs" || 
+            blkF->OpName() == L"ElementMax" || 
+            blkF->OpName() == L"Convolution";
     }
 
     //

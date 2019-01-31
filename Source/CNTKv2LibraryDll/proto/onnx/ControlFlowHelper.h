@@ -99,6 +99,19 @@ namespace CNTK
             }
         }
 
+        bool IsOuterScopeInput(Variable v) const
+        {
+            if (std::find(this->m_inputs.cbegin(), this->m_inputs.cend(), v) == this->m_inputs.cend())
+                return false;
+            if (std::find(this->m_scanInputs.cbegin(), this->m_scanInputs.cend(), v) != this->m_scanInputs.cend())
+                return false;
+
+            for (auto a : this->scanLoopStates)
+                if (a.m_initialState == v)
+                    return false;
+            return true;
+        }
+
         bool IsInBody(const FunctionPtr src)
         {
             if (std::find(this->m_body.begin(), this->m_body.end(), src) != this->m_body.end())

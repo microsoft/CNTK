@@ -197,6 +197,7 @@ namespace CNTK
                                      const std::unordered_set<Variable>& inputsExcludedFromGradientComputation,
                                      bool useMangledNamesForComputationNodes);
 
+        const std::unordered_set<FunctionPtr> AllPrimaryFunctions() const { return m_allPrimitiveFunctions; }
     private:
         // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
         // should have been replaced before performing any Forward compute of 'this' Function.

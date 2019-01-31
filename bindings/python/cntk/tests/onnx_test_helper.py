@@ -58,7 +58,7 @@ def compare_model_for_output_data_transpose(model_output, loaded_model_output):
 
 # find index to the sequence axis in an ONNX tensor
 def get_onnx_free_dimension_index(onnx_value_info_proto):
-    indices = [onnx_free_dim_index for onnx_free_dim_index, d in enumerate(onnx_value_info_proto.type.tensor_type.shape.dim) if d.dim_param == "Sequence"]
+    indices = [onnx_free_dim_index for onnx_free_dim_index, d in enumerate(onnx_value_info_proto.type.tensor_type.shape.dim) if d.dim_param.startswith("Sequence")]
     # TODO: a model output may have more than one sequence axes. 
     # in such cases, we swap the first seqence with the batch axis. however this may not be correct in general.
     if len(indices) == 0:

@@ -13,6 +13,7 @@
 #include "Operators.h"
 #include "PrimitiveFunctionAttribute.h"
 #include "BlockFunction.h"
+#include "CompositeFunction.h"
 #include <vector>
 #include <tuple>
 #include <numeric>
@@ -96,6 +97,9 @@ private:
         //
         static std::string GetUniqueOutputNodeName(const Variable& output)
         {
+            std::unordered_map<Variable, Variable>::iterator it = UniqueNodeNameStorage::compositeOutputsMap.find(output);
+            if (it != UniqueNodeNameStorage::compositeOutputsMap.end())
+                return GetUniqueNodeName(it->second.Name(), it->second.Owner() == nullptr ? L"Input" : L"Output", it->second.Uid());
             return GetUniqueNodeName(output.Name(), L"Output", output.Uid());
         }
 
@@ -288,7 +292,12 @@ private:
                                                               const std::unordered_map<Variable, Variable>& compositeOutputsMap,
                                                               std::vector<ScanLoop> &scanLoops, int createLoopIndex,
                                                               bool isFirst);
-
+    static onnxruntime::Node* CreateToSequenceLikeNode(const FunctionPtr& src,
+                                              onnxruntime::Graph* graph,
+                                              std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+                                              std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+                                              const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+                                              std::vector<ScanLoop> &scanLoops, int createLoopIndex);
     static onnxruntime::Node* CreateWhereNode(const FunctionPtr& src,
                                               onnxruntime::Graph* graph,
                                               std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
@@ -338,6 +347,8 @@ private:
                                                              const std::unordered_map<Variable, Variable>& compositeOutputsMap,
                                                              std::vector<ScanLoop> &scanLoops, int createLoopIndex);
 
+    static onnxruntime::NodeArg* CheckAndUnsqueezeWithStaticAxes(onnxruntime::NodeArg* inputNodeArg, int staticShapeRank,
+        const std::string &nodeName, onnxruntime::Graph* graph);
     static onnxruntime::Node* CreateSequenceBroadcastAsNode(const FunctionPtr& src,
                                                             onnxruntime::Graph* graph,
                                                             std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
@@ -480,9 +491,13 @@ private:
                                             std::vector<ScanLoop> &scanLoops, int createLoopIndex);
 
     static void PrepareRNNInput(const Variable &X, Graph *graph, std::vector<onnxruntime::NodeArg*> &nodeInputs);
-    static void PrepareLSTMInitialStateNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
-                                            const std::vector<Variable> &initialVariables, int batchSize, int cellSize,
-                                            const std::string &uid, std::vector<onnxruntime::NodeArg*> &nodeInputs);
+    static void PrepareLSTMInitialStateNode(onnxruntime::Graph* graph, 
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+        std::vector<ScanLoop> &scanLoops, int createLoopIndex, 
+        const std::vector<Variable> &initialVariables, int batchSize, int cellSize, 
+        const std::string &uid, std::vector<onnxruntime::NodeArg*> &nodeInputs);
 
     static void PrepareRNNWeightNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
                                      const std::vector<Variable> &Ws, std::vector<onnxruntime::NodeArg *> &nodeInputs,
@@ -515,7 +530,7 @@ private:
     static void PostProcessGraph(onnxruntime::Graph* graph);
 
     static bool IsSameIntVecAttributes(const NodeAttributes& attr1, const NodeAttributes& attr2, const std::vector<std::string>& attributeNames);
-
+    static void AssignConvAttributes(const FunctionPtr src, Node* node);
     static void SetTensorType(onnx::TensorProto& dst, CNTK::DataType dataType);
 
     //
@@ -805,7 +820,13 @@ private:
         std::unordered_map<Variable, onnxruntime::Node*>& variableNodes, 
         const std::unordered_map<Variable, Variable>& compositeOutputsMap, 
         std::vector<ScanLoop>& scanLoops, int createLoopIndex);
-
+    
+    static onnxruntime::Node* CreateConvolutionBlockNode(const FunctionPtr& src,
+        onnxruntime::Graph* graph, 
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes, 
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes, 
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap, 
+        std::vector<ScanLoop>& scanLoops, int createLoopIndex);
     //
     // Method to create ONNX nodes that have an explicit batch axis from their CNTK
     // counterparts.
@@ -1792,8 +1813,13 @@ std::vector<int64_t> CNTKToONNXHelper::ToINTS(const onnx::TypeProto& shape)
     std::vector<int64_t> newShape;
 
     for (int i = 0; i < shape.tensor_type().shape().dim_size(); i++)
-        newShape.push_back((int64_t)shape.tensor_type().shape().dim(i).dim_value());
-
+    {
+        if (shape.tensor_type().shape().dim(i).has_dim_value())
+            newShape.push_back((int64_t)shape.tensor_type().shape().dim(i).dim_value());
+        else
+            // TODO: for now all param cases are for free dimension
+            newShape.push_back(NDShape::FreeDimension);
+    }
     return newShape;
 }
 
@@ -2124,6 +2150,19 @@ bool CNTKToONNXHelper::FilterInput(const FunctionPtr& src, const CNTK::Variable&
     //  For example, in v1 model Sequence::Gather op is decomposed into a subgraph of GatherPacked, PackedIndex, and Where.
     //  inputs to the composed Sequence::Gather op is GatherPacked's inputs[0] and Where's inputs[0]. These are the
     //  inputs we need to process. Other inputs to ops in the subgraph are treated as invalid so they are not processed.
+    // 0: old SequentialConvolution (Convolution with sequential = True) also needs to be handled specially.
+
+    // here we want to avoid needed constant input to SequentialConvolution get skipped in ProcessInputs. 
+    if (input.IsConstant())
+        if (src->OpName() == L"Convolution" && src->Outputs()[0].HasSequenceAxis())
+            if (src->Inputs().size() > 6)
+                return inputIndex != 6 && inputIndex != (src->Inputs().size() - 1);
+            else if (src->Inputs().size() > 2)
+                // W, x,.,, b, input
+                return inputIndex != 0 && inputIndex != (src->Inputs().size() - 2) && inputIndex != (src->Inputs().size() - 1);
+            else // W, input 
+                return inputIndex != 0 && inputIndex != (src->Inputs().size() - 1);
+
     if (input.IsConstant() ||
         src->OpName() == L"GatherPacked")
         return !Operators::IsValidInputs(src->OpName(), inputIndex);
@@ -2261,33 +2300,63 @@ void CNTKToONNXHelper::PrepareRNNInput(const Variable &X, Graph *graph, std::vec
     nodeInputs.push_back(&inputArg);
 }
 
-void CNTKToONNXHelper::PrepareLSTMInitialStateNode(onnxruntime::Graph* graph, std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
-                                                   const std::vector<Variable> &initialVariables, int batchSize, int cellSize,
-                                                   const std::string &uid, std::vector<onnxruntime::NodeArg *> &nodeInputs)
+void CNTKToONNXHelper::PrepareLSTMInitialStateNode(onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+    std::vector<ScanLoop> &scanLoops, int createLoopIndex, 
+    const std::vector<Variable> &initialVariables, int batchSize, int cellSize, 
+    const std::string &uid, std::vector<onnxruntime::NodeArg *> &nodeInputs)
 {
-    std::vector<int64_t> shape({(int64_t)initialVariables.size(), batchSize, cellSize});
-    bool doReverseVec = false;
-    onnx::TypeProto inputArgType = ToTypeProto(shape, doReverseVec);
-    UpdateONNXType(initialVariables[0].GetDataType(), inputArgType);
-    onnxruntime::NodeArg& inputArg = graph->GetOrCreateNodeArg(uid, &inputArgType);
-    std::vector<onnxruntime::NodeArg *> varOutputs({ &inputArg });
-    std::vector<onnxruntime::NodeArg *> varInputs;
-    std::string inputName = inputArg.Name();
+    bool initialAllAreConstant = std::all_of(initialVariables.cbegin(), initialVariables.cend(), [](Variable variable) 
+    {return variable.IsParameter() || variable.IsConstant(); });
+    bool initialAllAreNotConstant = std::all_of(initialVariables.cbegin(), initialVariables.cend(), [](Variable variable)
+    {return !variable.IsParameter() || !variable.IsConstant(); });
+    if (!initialAllAreConstant && !initialAllAreNotConstant)
+        LogicError("PrepareLSTMInitialStateNode: RNN initial states shall be either all constant or all input.");
 
-    std::vector<NDArrayViewPtr> srcTensors;
-    for (int i = 0; i < initialVariables.size(); i++)
+    if (initialAllAreConstant)
     {
-        const Variable &variable = initialVariables[i];
-        auto srcTensor = variable.IsParameter() ? Parameter(variable).Value() : Constant(variable).Value();
-        srcTensors.push_back(srcTensor);
+        std::vector<int64_t> shape({ (int64_t)initialVariables.size(), batchSize, cellSize });
+        bool doReverseVec = false;
+        onnx::TypeProto inputArgType = ToTypeProto(shape, doReverseVec);
+        UpdateONNXType(initialVariables[0].GetDataType(), inputArgType);
+        onnxruntime::NodeArg& inputArg = graph->GetOrCreateNodeArg(uid, &inputArgType);
+        std::vector<onnxruntime::NodeArg *> varOutputs({ &inputArg });
+        std::vector<onnxruntime::NodeArg *> varInputs;
+        std::string inputName = inputArg.Name();
+
+        std::vector<NDArrayViewPtr> srcTensors;
+        for (int i = 0; i < initialVariables.size(); i++)
+        {
+            const Variable &variable = initialVariables[i];
+            auto srcTensor = initialVariables[i].IsParameter() ? 
+                Parameter(initialVariables[i]).Value() : Constant(initialVariables[i]).Value();
+            srcTensors.push_back(srcTensor);
+        }
+
+        onnx::TensorProto dstTensor;
+        dstTensor.set_name(inputName);
+        FillTensorWithScalar(srcTensors, dstTensor, shape);
+
+        graph->AddInitializedTensor(dstTensor);
+        nodeInputs.push_back(&inputArg);
     }
-
-    onnx::TensorProto dstTensor;
-    dstTensor.set_name(inputName);
-    FillTensorWithScalar(srcTensors, dstTensor, shape);
-
-    graph->AddInitializedTensor(dstTensor);
-    nodeInputs.push_back(&inputArg);
+    else
+    {
+        // initialAllAreNotConstant == true
+        if (initialVariables[0].Owner())
+        {
+            Node *initialiStateNode = CreateNode(initialVariables[0].Owner(),
+                graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
+            nodeInputs.push_back(const_cast<NodeArg *>(initialiStateNode->OutputDefs()[0]));
+        }
+        else
+        {
+            NodeArg *nodeArg = &CreateNodeArg(initialVariables[0], graph, true);
+            nodeInputs.push_back(nodeArg);
+        }
+    }
 }
 
 void CNTKToONNXHelper::PrepareLSTMPeepholeNode(onnxruntime::Graph* graph,
@@ -2607,8 +2676,8 @@ onnxruntime::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
         if (has_initial_h)
         {
             std::string hiddenUid = ToLegacyString(ToUTF8(Yhs[0].Uid())) + "_initial_h";
-            PrepareLSTMInitialStateNode(graph, variableNodes, initialHs, BatchSizeProcessor::FreeBatchSize(),
-                                        hidden_size, hiddenUid, nodeInputs);
+            PrepareLSTMInitialStateNode(graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex, 
+                initialHs, BatchSizeProcessor::FreeBatchSize(), hidden_size, hiddenUid, nodeInputs);
         }
         else
         {
@@ -2619,7 +2688,8 @@ onnxruntime::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
         if (has_initial_c)
         {
             std::string cellUid = ToLegacyString(ToUTF8(Ycs[0].Uid())) + "_initial_c";
-            PrepareLSTMInitialStateNode(graph, variableNodes, initialCs, BatchSizeProcessor::FreeBatchSize(), hidden_size, cellUid, nodeInputs);
+            PrepareLSTMInitialStateNode(graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex, 
+                initialCs, BatchSizeProcessor::FreeBatchSize(), hidden_size, cellUid, nodeInputs);
         }
         else
         {
@@ -2892,7 +2962,8 @@ onnxruntime::Node *CNTKToONNXHelper::CreateGRUNode(const FunctionPtr &src,
         if (has_initial_h)
         {
             std::string hiddenUid = ToLegacyString(ToUTF8(Yhs[0].Uid())) + "_initial_h";
-            PrepareLSTMInitialStateNode(graph, variableNodes, initialHs, BatchSizeProcessor::FreeBatchSize(), hidden_size, hiddenUid, nodeInputs);
+            PrepareLSTMInitialStateNode(graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex, 
+                initialHs, BatchSizeProcessor::FreeBatchSize(), hidden_size, hiddenUid, nodeInputs);
         }
         else
         {
@@ -3099,7 +3170,8 @@ onnxruntime::Node *CNTKToONNXHelper::CreateRNNNode(const FunctionPtr &src,
         if (has_initial_h)
         {
             std::string hiddenUid = ToLegacyString(ToUTF8(Yhs[0].Uid())) + "_initial_h";
-            PrepareLSTMInitialStateNode(graph, variableNodes, initialHs, BatchSizeProcessor::FreeBatchSize(), hidden_size, hiddenUid, nodeInputs);
+            PrepareLSTMInitialStateNode(graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex, 
+                initialHs, BatchSizeProcessor::FreeBatchSize(), hidden_size, hiddenUid, nodeInputs);
         }
         else
         {
@@ -3260,19 +3332,52 @@ onnxruntime::Node *CNTKToONNXHelper::AddSliceNode(onnxruntime::NodeArg &inputArg
         auto* newdim = outputTypeProto.mutable_tensor_type()->mutable_shape()->add_dim();
         if (j < axes.size() && axes[j] == i)
         {
-            if (inputTypeProto.tensor_type().shape().dim(i).has_dim_value() && starts[j] >= 0 && ends[j] >= 0)
+            const ::onnx::TensorShapeProto_Dimension& inputDim = inputTypeProto.tensor_type().shape().dim(i);
+            if (inputDim.has_dim_value())
             {
-                auto newval = std::min(
-                                  inputTypeProto.tensor_type().shape().dim(i).dim_value(),
-                                  ends[j]) - starts[j];
+                int64_t start = starts[j] >= 0 ? starts[j] : inputDim.dim_value() + starts[j];
+                start = std::max<int64_t>(start, 0);
+                int64_t end = ends[j] >= 0 ? ends[j] : inputDim.dim_value() + ends[j];
+                end = std::min<int64_t>(std::max<int64_t>(end, 0), inputDim.dim_value());
+
+                auto newval = end - start;
                 if (newval >= 0)
                 {
                     newdim->set_dim_value(newval);
                 }
             }
-            else if (inputTypeProto.tensor_type().shape().dim(i).has_dim_param())
+            else if (inputDim.has_dim_param())
             {
-                newdim->set_dim_param(inputTypeProto.tensor_type().shape().dim(i).dim_param());
+                bool WorkAroundONNXSliceShapeInferencing = true;
+                // ONNX shape inferencing does not handle param case. to avoid shape checking failure, we need to skip as well.
+                if (WorkAroundONNXSliceShapeInferencing)
+                {
+                    newdim->set_dim_param(inputDim.dim_param() + "_sliced");
+                }
+                else
+                {
+                    if (ends[j] == std::numeric_limits<int64_t>::max())
+                    {
+                        if (starts[j] == 0)
+                            // dimension not changed
+                            newdim->set_dim_param(inputDim.dim_param());
+                        else if (starts[j] > 0)
+                            newdim->set_dim_param(inputDim.dim_param() + "_sliced");
+                        else
+                            // -starts[j] is the new dim value
+                            newdim->set_dim_value(-starts[j]);
+                    }
+                    else if ((starts[j] >= 0 && ends[j] >= 0) || (starts[j] < 0 && ends[j] < 0))
+                    {
+                        auto newval = ends[j] - starts[j];
+                        if (newval >= 0)
+                        {
+                            newdim->set_dim_value(newval);
+                        }
+                    }
+                    else
+                        newdim->set_dim_param(inputDim.dim_param() + "_sliced");
+                }
             }
             ++j;
         }
@@ -3480,12 +3585,14 @@ NodeArg& CNTKToONNXHelper::AddTransposeBatchSequenceAxesNode(onnxruntime::NodeAr
 }
 
 onnxruntime::Node *CNTKToONNXHelper::AddTransposeNode(onnxruntime::NodeArg &nodeArg, onnxruntime::Graph* graph,
-                                                      const std::vector<int64_t> &perm, onnx::TypeProto& transposeOutputArgType, const std::string &outputNodeArgName)
+                                                      const std::vector<int64_t> &perm, onnx::TypeProto& transposeOutputArgType, 
+    const std::string &outputNodeArgName)
 {
     onnxruntime::NodeArg &outputArg = graph->GetOrCreateNodeArg(outputNodeArgName, &transposeOutputArgType);
     google::protobuf::int32 elementType = nodeArg.TypeAsProto()->tensor_type().elem_type();
     const_cast<TypeProto*>(outputArg.TypeAsProto())->mutable_tensor_type()->set_elem_type(elementType);
-    onnxruntime::Node* transposeNode = &graph->AddNode(nodeArg.Name() + string("_transpose"), "Transpose", "", {&nodeArg}, {&outputArg});
+    onnxruntime::Node* transposeNode = &graph->AddNode(nodeArg.Name() + string("_transpose") + outputNodeArgName, 
+        "Transpose", "", {&nodeArg}, {&outputArg});
     transposeNode->AddAttribute("perm", perm);
     return transposeNode;
 }
@@ -3643,13 +3750,38 @@ onnxruntime::Node* CNTKToONNXHelper::CreatePastFutureValueNode(const FunctionPtr
                                                                const std::unordered_map<Variable, Variable>& compositeOutputsMap,
                                                                std::vector<ScanLoop> &scanLoops, int createLoopIndex)
 {
+    if (src->OpName() == L"Delay")
+    {
+        FunctionPtr br = src->BlockRoot();
+        if (br->OpName() == L"Combine")
+        {
+            // "Combine" variable mapping: src->input ===> BlockRoot()->output 
+            std::vector<onnxruntime::NodeArg *> inputs, outputs;
+            ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs, scanLoops, createLoopIndex);
+            ProcessOutputs(br, inputs, outputs, graph);
 
-    bool past = src->OpName() == L"PastValue";
-    size_t offset = src->Attributes()[L"offset"].Value<size_t>();
+            Node *identicalNode = &graph->AddNode(
+                UniqueNodeNameStorage::GetUniqueNodeName(src) + "_identical", "Identity", "", inputs, outputs);
+            functionNodes.emplace(src, identicalNode);
+            return identicalNode;
+        }
+        else
+        {
+            Node* delayNode = CreateNode(src->BlockRoot(), graph, functionNodes, variableNodes, compositeOutputsMap,
+                scanLoops, createLoopIndex);
+            functionNodes.emplace(src, delayNode);
+            return delayNode;
+
+        }
+    }
+
     std::vector<onnxruntime::NodeArg *> inputs, outputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs, scanLoops, createLoopIndex);
 
     ProcessOutputs(src, inputs, outputs, graph);
+
+    bool past = src->OpName() == L"PastValue";
+    size_t offset = src->Attributes()[L"offset"].Value<size_t>();
 
     // 1. slice off first or last timeframe from input[0] -> input_sliced_node
     // 2. expand initial value input[1] to the shape of input[0] without sequence axis (the first axis) -> init_value_expanded
@@ -3684,23 +3816,58 @@ onnxruntime::Node* CNTKToONNXHelper::CreatePastFutureValueNode(const FunctionPtr
     std::string outputNodeArgName = UniqueNodeNameStorage::GetUniqueOutputNodeName(src->Outputs()[0]);
 
     Node* concatNode;
+    // there are cases where input is a scaler and step function turns output to a dim 1 vector [#, *]() -> [#, *](1)
+    // in this case, Concat shall output with original shape (#, *) and followed by an expand to get the matching shape [*, #](1).
+    bool pastFutureValueOutputDoesNotMatchInputByOne = 
+        sliceNode->OutputDefs()[0]->Shape()->dim_size() == 2 && 
+        outputs[0]->Shape()->dim_size() == 3 && 
+        outputs[0]->Shape()->dim(2).dim_value() == 1;
+    std::vector<onnxruntime::NodeArg *> concatOutputs;
+    if (pastFutureValueOutputDoesNotMatchInputByOne)
+    {
+        TypeProto typeProto;
+        for (int i = 0; i < 2; i++)
+        {
+            if (outputs[0]->Shape()->dim(i).has_dim_param())
+                typeProto.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_param(outputs[0]->Shape()->dim(i).dim_param());
+            else
+                typeProto.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(outputs[0]->Shape()->dim(i).dim_value());
+        }
+        UpdateONNXType(src->Output().GetDataType(), typeProto);
+        NodeArg *arg = &graph->GetOrCreateNodeArg(outputNodeArgName + "_before_expand", &typeProto);
+        concatOutputs.push_back(arg);
+    }
+    else
+        concatOutputs = outputs;
+
     if (past)
     {
-        concatNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Concat", "",
-                                     {const_cast<NodeArg*>(initValueExpand->OutputDefs()[0]), const_cast<NodeArg*>(sliceNode->OutputDefs()[0])},
-                                     outputs);
+        concatNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Concat", "", 
+            {const_cast<NodeArg*>(initValueExpand->OutputDefs()[0]), const_cast<NodeArg*>(sliceNode->OutputDefs()[0])},
+            concatOutputs);
     }
     else
     {
-        concatNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Concat", "",
-                                     {const_cast<NodeArg*>(sliceNode->OutputDefs()[0]), const_cast<NodeArg*>(initValueExpand->OutputDefs()[0])},
-                                     outputs);
+        concatNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Concat", "", 
+            {const_cast<NodeArg*>(sliceNode->OutputDefs()[0]), const_cast<NodeArg*>(initValueExpand->OutputDefs()[0])}, 
+            concatOutputs);
     }
-
     // concat on sequence axis
     concatNode->AddAttribute("axis", (int64_t)0);
-    functionNodes.emplace(src, concatNode);
-    return concatNode;
+
+    if (pastFutureValueOutputDoesNotMatchInputByOne)
+    {
+        std::vector<int64_t> newShape = ToINTS(*outputs[0]->TypeAsProto()); 
+        Node* expandNode = AddReshapeNode(const_cast<NodeArg &>(*concatNode->OutputDefs()[0]), 
+            newShape, outputs[0]->Name(), graph);
+        functionNodes.emplace(src, expandNode);
+        return expandNode;
+    }
+    else
+    {
+        functionNodes.emplace(src, concatNode);
+        return concatNode;
+    }
 }
 
 // the idea is to create an EyeLike node and slice the first slice for IsFirst, the last slice for IsLast op.
@@ -3792,6 +3959,32 @@ onnxruntime::Node* CNTKToONNXHelper::CreateReconcileDynamicAxisNode(const Functi
                                          scanLoops, createLoopIndex);
 }
 
+onnxruntime::NodeArg* CNTKToONNXHelper::CheckAndUnsqueezeWithStaticAxes(onnxruntime::NodeArg* inputNodeArg, int staticShapeRank,
+    const std::string &nodeName, onnxruntime::Graph* graph)
+{
+    //broadcastAsSqueezed has shape [sequence, batch], append 1s to get to the same rank as the input before broadcasting
+    if (staticShapeRank == 0)
+        return inputNodeArg;
+
+    TypeProto typeProto = *inputNodeArg->TypeAsProto();
+    TensorShapeProto* tensorShapeProto = typeProto.mutable_tensor_type()->mutable_shape();
+    std::vector<int64_t> unsqueezeAxis;
+    for (int i = 0; i < staticShapeRank; i++)
+    {
+        tensorShapeProto->add_dim()->set_dim_value(1);
+        unsqueezeAxis.push_back(i + inputNodeArg->Shape()->dim_size());
+    }
+
+    std::string broadcastUnsqueezeNodeName = nodeName + "_broadcast_as_unsqueeze";
+    std::string broadcastUnsqueezeOutputNodeArgName = broadcastUnsqueezeNodeName + "_output";
+    NodeArg *broadcastUnsqueezeOutputNodeArg = &graph->GetOrCreateNodeArg(broadcastUnsqueezeOutputNodeArgName, &typeProto);
+
+    Node *unsqueezeNode = &graph->AddNode(broadcastUnsqueezeNodeName, "Unsqueeze", "",
+        { inputNodeArg }, { broadcastUnsqueezeOutputNodeArg });
+    unsqueezeNode->AddAttribute("axes", unsqueezeAxis);
+    onnxruntime::NodeArg *unsqueezedNodeArg = const_cast<onnxruntime::NodeArg *>(unsqueezeNode->OutputDefs()[0]);
+    return unsqueezedNodeArg;
+}
 //
 onnxruntime::Node* CNTKToONNXHelper::CreateSequenceBroadcastAsNode(const FunctionPtr& src,
                                                                    onnxruntime::Graph* graph,
@@ -3817,26 +4010,8 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceBroadcastAsNode(const Functio
 
     NodeArg *broadcastNodeArg = const_cast<onnxruntime::NodeArg *>(broadcastAsSqueezed->OutputDefs()[0]);
     //broadcastAsSqueezed has shape [sequence, batch], append 1s to get to the same rank as the input before broadcasting
-    if (input.Shape().Rank() != 0)
-    {
-        TypeProto typeProto = *broadcastAsSqueezed->OutputDefs()[0]->TypeAsProto();
-        TensorShapeProto* tensorShapeProto = typeProto.mutable_tensor_type()->mutable_shape();
-        std::vector<int64_t> unsqueezeAxis;
-        for (int i = 0; i < input.Shape().Rank(); i++)
-        {
-            tensorShapeProto->add_dim()->set_dim_value(1);
-            unsqueezeAxis.push_back(i + broadcastNodeArg->Shape()->dim_size());
-        }
-
-        std::string broadcastUnsqueezeNodeName = nodeName + "_broadcast_as_unsqueeze";
-        std::string broadcastUnsqueezeOutputNodeArgName = broadcastUnsqueezeNodeName + "_output";
-        NodeArg *broadcastUnsqueezeOutputNodeArg = &graph->GetOrCreateNodeArg(broadcastUnsqueezeOutputNodeArgName, &typeProto);
-
-        Node *unsqueezeNode = &graph->AddNode(broadcastUnsqueezeNodeName, "Unsqueeze", "", 
-            { broadcastNodeArg }, { broadcastUnsqueezeOutputNodeArg });
-        unsqueezeNode->AddAttribute("axes", unsqueezeAxis);
-        broadcastNodeArg = const_cast<onnxruntime::NodeArg *>(unsqueezeNode->OutputDefs()[0]);
-    }
+    std::string unsqueezeNodeName = nodeName + "_input_unsqueeze";
+    broadcastNodeArg = CheckAndUnsqueezeWithStaticAxes(broadcastNodeArg, input.Shape().Rank(), unsqueezeNodeName, graph);
 
     NodeArg *inputNodeArg = nullptr;
     if (input.DynamicAxes().size() == 1 && createLoopIndex < 0)
@@ -3888,8 +4063,36 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceGatherNode(const FunctionPtr&
     if (CNTKToONNXHelper::isProcessingScan)
         LogicError("SequenceGather cannot be in a scan loop");
 
+    bool outputSqueezeSequenceAxis = false;
+    {
+        // check for contained where op for possible unsupported cases
+        // this is for sequence.gather with new_sequence_axis_typeinfo. 
+        // only new_sequence_axis_typeinfo=(0, 1) can be handled. In this case sequence axis needs to be removed.
+        if (!src->Outputs()[0].BlockFunctionVariableMapping().Owner() ||
+            src->Outputs()[0].BlockFunctionVariableMapping().Owner()->Inputs().size() < 2 ||
+            !src->Outputs()[0].BlockFunctionVariableMapping().Owner()->Inputs()[1].Owner() ||
+            src->Outputs()[0].BlockFunctionVariableMapping().Owner()->Inputs()[1].Owner()->Inputs().size() < 2 || 
+            !src->Outputs()[0].BlockFunctionVariableMapping().Owner()->Inputs()[1].Owner()->Inputs()[1].Owner())
+            fprintf(stderr, "Warning: Cannot locate 'Where' op within Sequence::Gather op.");
+        else
+        {
+            FunctionPtr whereOp = src->Outputs()[0].BlockFunctionVariableMapping().Owner()->Inputs()[1].Owner()->Inputs()[1].Owner();
+            if (whereOp->Attributes().Contains(PrimitiveFunctionAttribute::AttributeNameNewSequenceAxisLengthScalingFactor) &&
+                whereOp->Attributes().Contains(PrimitiveFunctionAttribute::AttributeNameNewSequenceAxisLengthAdditiveFactor))
+            {
+                size_t newSequenceAxisLengthScalingFactorbeginIndex = static_cast<int64_t>(whereOp->Attributes()
+                    [PrimitiveFunctionAttribute::AttributeNameNewSequenceAxisLengthScalingFactor].Value<size_t>());
+                int newSequenceAxisLengthAdditiveFactor = static_cast<int64_t>(whereOp->Attributes()
+                    [PrimitiveFunctionAttribute::AttributeNameNewSequenceAxisLengthAdditiveFactor].Value<int>());
+                if (newSequenceAxisLengthScalingFactorbeginIndex == 0 && newSequenceAxisLengthAdditiveFactor == 1)
+                    outputSqueezeSequenceAxis = true;
+                else 
+                    fprintf(stderr, "Warning: 'Where' op within Sequence::Gather has attributes that may not be handled correctly with ONNX spec.");
+            }
+        }
+    }
+
     const std::string nodeName = UniqueNodeNameStorage::GetUniqueNodeName(src);
-    const std::string onnxOpName = "Compress";
 
     std::vector<onnxruntime::NodeArg *> inputs;
     ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs, scanLoops, createLoopIndex);
@@ -3913,16 +4116,50 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceGatherNode(const FunctionPtr&
 
     Node *castScreezeNode = AddSqueezeNode(const_cast<NodeArg &>(*castNode->OutputDefs()[0]),
                                            squeezeAxes, castNode->Name() + "_squeezed", graph);
-    inputs[1] = const_cast<NodeArg *>(castScreezeNode->OutputDefs()[0]);
 
-    NodeArg& compressOutputNodeArg = CreateNodeArg(src->Outputs()[0], graph, false);
+    NodeArg& gatherOutputNodeArg = CreateNodeArg(src->Outputs()[0], graph, false);
 
-    Node *compressNode = &graph->AddNode(nodeName, onnxOpName, "", inputs, {&compressOutputNodeArg});
+    if (!outputSqueezeSequenceAxis)
+    {
 
-    int64_t sequenceAxis = 0;
-    compressNode->AddAttribute("axis", sequenceAxis);
-    functionNodes.emplace(src, compressNode);
-    return compressNode;
+        Node *compressNode = &graph->AddNode(nodeName, "Compress", "", 
+            { inputs[0], const_cast<NodeArg *>(castScreezeNode->OutputDefs()[0]) }, { &gatherOutputNodeArg });
+
+        int64_t sequenceAxis = 0;
+        compressNode->AddAttribute("axis", sequenceAxis);
+        functionNodes.emplace(src, compressNode);
+        return compressNode;
+    }
+    else
+    {
+        // need to slice and squeeze sequence axis 
+        // gatherOutputNodeArg's shape has no sequence axis. 
+        // compressOutputNodeArg's shape has sequence axis, which is the same as inputs[0]'s shape
+        TypeProto compressOutputNodeArgTypeProto = *inputs[0]->TypeAsProto();
+
+        NodeArg &compressOutputNodeArg = graph->GetOrCreateNodeArg(nodeName + "_compressed_output", &compressOutputNodeArgTypeProto);
+        Node *compressNode = &graph->AddNode(nodeName, "Compress", "",
+            { inputs[0], const_cast<NodeArg *>(castScreezeNode->OutputDefs()[0]) }, { &compressOutputNodeArg });
+        int64_t sequenceAxis = 0;
+        compressNode->AddAttribute("axis", sequenceAxis);
+
+        // slice and squeeze
+        std::string sliceNodeName = nodeName + "_slice_sequence_axis";
+        Node* sliceNode = AddSliceNode(const_cast<onnxruntime::NodeArg &>(*compressNode->OutputDefs()[0]),
+            std::vector<int64_t>({ 0 }),    // sequence axis is at index 0 in ONNX
+            std::vector<int64_t>({ 0 }),    // slice begin
+            std::vector<int64_t>({ 1 }),    // slice end
+            sliceNodeName, graph);
+
+        // squeeze
+        std::string squeezeNodeName = sliceNodeName + "_squeeze";
+        onnxruntime::Node* squeezeNode = &graph->AddNode(squeezeNodeName, "Squeeze", "", 
+            { const_cast<onnxruntime::NodeArg *>(sliceNode->OutputDefs()[0]) }, { &gatherOutputNodeArg });
+        squeezeNode->AddAttribute("axes", std::vector<int64_t>({0}));
+
+        functionNodes.emplace(src, squeezeNode);
+        return squeezeNode;
+    }
 }
 
 onnxruntime::Node* CNTKToONNXHelper::CreateSequenceReduceElementsNode(const FunctionPtr& src,
@@ -3953,6 +4190,44 @@ onnxruntime::Node* CNTKToONNXHelper::CreateSequenceReduceElementsNode(const Func
     functionNodes.emplace(src, node);
 
     return node;
+}
+
+// ToSequenceLike([#](-3, 2), [#, *](5,6,7)) ==> [#, *](2,)
+// as an example data feed:
+// batch = 1, free-dim (-3) == seq (*) = 4
+// (1, 4, 2) ToSequenceLike (1, 4, 5, 6, 7) ==> (1, 4, 2)
+onnxruntime::Node* CNTKToONNXHelper::CreateToSequenceLikeNode(const FunctionPtr& src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+    std::vector<ScanLoop> &scanLoops, int createLoopIndex)
+{
+    std::vector<onnxruntime::NodeArg *> inputs;
+    ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs, scanLoops, createLoopIndex);
+    std::vector<onnxruntime::NodeArg *> outputs;
+    ProcessOutputs(src, inputs, outputs, graph);
+
+    bool inLoop = createLoopIndex != -1;
+    std::string extractedSequenceLikeNodeName = UniqueNodeNameStorage::GetUniqueNodeName(src) + "_extractedSequenceLikeNode";
+    onnxruntime::Node* extractedSequenceLikeNode = ExtractShapeWithDynamicAxes(graph,
+        src->Inputs()[1], inputs[1], extractedSequenceLikeNodeName, inLoop);
+
+    NodeArg *inputNodeArg = inputs[0];
+    NodeArg *broadcastNodeArg = const_cast<onnxruntime::NodeArg *>(extractedSequenceLikeNode->OutputDefs()[0]);
+    if (src->Inputs()[0].Shape().Rank() - 1 > 0)
+    {
+        std::string unsqueezeNodeName = UniqueNodeNameStorage::GetUniqueNodeName(src) + "_input_unsqueeze";
+
+        // [#](-3, 2)
+        broadcastNodeArg = CheckAndUnsqueezeWithStaticAxes(broadcastNodeArg, src->Inputs()[0].Shape().Rank() - 1, unsqueezeNodeName, graph);
+    }
+
+    onnxruntime::Node* elementWiseNode = &graph->AddNode(extractedSequenceLikeNodeName + "_add", "Add", "",
+        { inputNodeArg, broadcastNodeArg }, outputs);
+
+    functionNodes.emplace(src, elementWiseNode);
+    return elementWiseNode;
 }
 
 onnxruntime::Node* CNTKToONNXHelper::CreateWhereNode(const FunctionPtr& src,
@@ -4051,7 +4326,9 @@ onnxruntime::Node* CNTKToONNXHelper::ExtractShapeWithDynamicAxes(onnxruntime::Gr
         // need to slice off static axes and squeeze to get [*, #]
         std::vector<int64_t> sliceStarts, sliceEnds;
         std::vector<Axis> axes;
-        for (int i = 0; i < input.Shape().Rank(); i++)
+        // take in to account that CNTK static axes are in reverse order 
+        // (CNTKToONNXHelper::ConvertAxesToOnnx does this trick)
+        for (int i = input.Shape().Rank() - 1; i >= 0; i--)
         {
             axes.push_back(Axis(i));
             sliceStarts.push_back(0);
@@ -4367,7 +4644,7 @@ void ResolveGraphAndSaveModel(onnxruntime::Model *model)
     model->SetProducerName(CNTK_ONNX_PRODUCER_NAME);
 
     // Uncomment below code for debugging and trouble shooting.
-    //std::string savePath = "C:/Temp";
+    //std::string savePath = "C:/Temp/TestOps";
     //onnxruntime::Model::Save(*model, savePath + "/" + dstGraph.GetOutputs()[0]->Name() + "_subgraph.onnx");
 }
 
@@ -4473,7 +4750,10 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     std::vector<FunctionPtr> inputOps = ProcessLoopStepInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap,
                                                                               inputs, scanLoops, createLoopIndex);
                     for (auto f : inputOps)
-                        CreateNode(f, graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
+                    {
+                        if (std::find(currentLoop.m_visited.begin(), currentLoop.m_visited.end(), f) == currentLoop.m_visited.end())
+                            CreateNode(f, graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
+                    }
 
                     // ProcessOutputs(src, outputs, graph);
                     // This is for the final state output - ONNX requires graph output being a pure output that
@@ -4508,7 +4788,11 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                     if (loopBodyInput.IsOutput())
                         CreateNode(loopBodyInput.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap,
                                    scanLoops, createLoopIndex);
+
+                    // std::cout << UniqueNodeNameStorage::GetUniqueInputNodeName(loopBodyInput) << std::endl;
                     // else input variable shall be processed when body is processed
+                    if (scanLoops[loopIndex].IsOuterScopeInput(loopBodyInput))
+                        scanGraph.AddOuterScopeNodeArg(UniqueNodeNameStorage::GetUniqueInputNodeName(loopBodyInput));
                 }
 
                 // now we have subgraph, inputs and outputs created for this scan.
@@ -4771,7 +5055,16 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     //        return CreateLSTMNode(src, graph, functionNodes, variableNodes, compositeOutputsMap);
     //}
     //else
-    if (cntkOpName == "Where")
+    if (cntkOpName == "ToSequenceLikeOp")
+    {
+        return CreateToSequenceLikeNode(src,
+            graph,
+            functionNodes,
+            variableNodes,
+            compositeOutputsMap,
+            scanLoops, createLoopIndex);
+    }
+    else if (cntkOpName == "Where")
     {
         return CreateWhereNode(src,
                                graph,
@@ -4852,7 +5145,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
                                                compositeOutputsMap,
                                                scanLoops, createLoopIndex, false);
     }
-    else if (cntkOpName == "PastValue" || cntkOpName == "FutureValue")
+    else if (cntkOpName == "PastValue" || cntkOpName == "FutureValue" || cntkOpName == "Delay")
     {
         if (createLoopIndex != -1)
             // ProcessLoopsAndCheckCNTKNodeContinueCreate shall have already handled
@@ -4970,6 +5263,10 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     else if (cntkOpName == "Flatten")
     {
         return CreateONNXNodesForFlatten(src, graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
+    }
+    else if (cntkOpName == "Convolution" && src->IsBlock())
+    {
+        return CreateConvolutionBlockNode(src, graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
     }
 
     //
@@ -5303,10 +5600,10 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
     {
         auto input = src->Inputs()[inputIndex];
 
-        if (input.IsPlaceholder())
+        while (input.IsPlaceholder())
         {
             input = input.BlockFunctionVariableMapping();
-            if (input.IsPlaceholder())
+            if (!input.IsInitialized())
                 LogicError("Node '%S': Placeholder isn't supported currently.", src->AsString().c_str());
         }
 
@@ -5329,10 +5626,10 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         //    input = SkipBatchAndSequenceAxisInput(input);
 
         // Input might be a placeholder after skipping.
-        if (input.IsPlaceholder())
+        while (input.IsPlaceholder())
         {
             input = input.BlockFunctionVariableMapping();
-            if (input.IsPlaceholder())
+            if (!input.IsInitialized())
                 LogicError("Node '%S': Placeholder isn't supported currently.", src->AsString().c_str());
         }
 
@@ -5373,8 +5670,10 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                 return UniqueNodeNameStorage::GetUniqueInputNodeName(input);
         }();
 
-        bool isConstant = (input.IsParameter() || input.IsConstant()) &&
-                          !Operators::IgnoreConstantAndParameter(src->OpName(), inputIndex);
+        bool isConstant = (input.IsParameter() || input.IsConstant());
+        // sequence convolution has different indexing which cannot be handled by IgnoreConstantAndParameter
+        if (src->OpName() != L"Convolution" || !src->Outputs()[0].HasSequenceAxis())
+            isConstant &= !Operators::IgnoreConstantAndParameter(src->OpName(), inputIndex);
 
         bool isInSubGraph = createLoopIndex >= 0 && createLoopIndex < scanLoops.size();
 
@@ -5403,7 +5702,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             }
         }
         else if (input.Owner() && ONNX::Operators::IsRNNOp(ToLegacyString(ToUTF8(input.Owner()->OpName()))) &&
-                 createLoopIndex >= 0 && createLoopIndex < scanLoops.size())
+            isInSubGraph)
         {
             // we are processing subgraph and hit LSTM block.
             // Because LSTM is constructed as a whole compositeOutputsMap does not have map for LSTM block.
@@ -5504,7 +5803,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
                     // we already completed preparation of this input and can proceed to the next input.
                     continue;
                 }
-                else if (createLoopIndex >= 0 && createLoopIndex < scanLoops.size())
+                else if (isInSubGraph)
                 {
                     //
                     UpdateONNXType(input.GetDataType(), inputArgType);
@@ -5589,7 +5888,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             // If output has batch axis, then create an output shape (which goes in as input to the
             // ONNX node) with an additional axis for batch axis (1).
             // ONNX dimensions are left aligned
-            if (src->Output().HasSequenceAxis())
+            if (src->Output().HasSequenceAxis() && !isInSubGraph)
                 newShapeVec.push_back(NDShape::FreeDimension);
             if (src->Output().HasBatchAxis())
                 newShapeVec.push_back(BatchSizeProcessor::FreeBatchSize());
@@ -5867,6 +6166,64 @@ bool CNTKToONNXHelper::IsSameIntVecAttributes(const NodeAttributes& attributes1,
             return false;
     }
     return true;
+}
+
+void CNTKToONNXHelper::AssignConvAttributes(const FunctionPtr src, Node* node)
+{
+    auto kernelShape = (NDShape)src->Attributes()[L"kernelShape"].Value<NDShape>();
+    auto strides = (NDShape)src->Attributes()[L"strides"].Value<NDShape>();
+    auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
+    auto dilations = (NDShape)src->Attributes()[L"dilation"].Value<NDShape>();
+    auto transpose = (bool)src->Attributes()[L"transpose"].Value<bool>();
+    size_t groups = (src->Attributes().Contains(L"groups")) ? (size_t)src->Attributes()[L"groups"].Value<size_t>() : 1u;
+    bool ceilOutDim = (src->Attributes().Contains(L"ceilOutDim")) ? (bool)src->Attributes()[L"ceilOutDim"].Value<bool>() : false;
+
+    //
+    // Remove the channel part for ONNX. This is because ONNX, unlike CNTK, does
+    // not support padding (pads), dilation, or strides for channel dimension.
+    kernelShape = kernelShape.SubShape(0, kernelShape.Rank() - 1);
+    strides = strides.SubShape(0, strides.Rank() - 1);
+    autoPadding.pop_back();
+    dilations = dilations.SubShape(0, dilations.Rank() - 1);
+
+    node->AddAttribute("kernel_shape", ToINTS(kernelShape));
+    node->AddAttribute("strides", ToINTS(strides));
+    node->AddAttribute("dilations", ToINTS(dilations));
+    node->AddAttribute("group", (int64_t)groups);
+
+    const NDShape& inputShape = src->Inputs()[1].Shape();
+
+    auto lowerPadShape = (NDShape)src->Attributes()[L"lowerPad"].Value<NDShape>();
+    auto upperPadShape = (NDShape)src->Attributes()[L"upperPad"].Value<NDShape>();
+
+    if (lowerPadShape.Rank() > kernelShape.Rank())
+        lowerPadShape = lowerPadShape.SubShape(0, lowerPadShape.Rank() - 1);
+    if (upperPadShape.Rank() > kernelShape.Rank())
+        upperPadShape = upperPadShape.SubShape(0, upperPadShape.Rank() - 1);
+
+    auto lowerPad = ToINTS(lowerPadShape);
+    auto upperPad = ToINTS(upperPadShape);
+
+    if (IsPadValueValid(lowerPad, upperPad, autoPadding, transpose))
+    {
+        if (ceilOutDim)
+            ValidatePadValueForCeilOutDim(lowerPad, upperPad, autoPadding, kernelShape, inputShape, strides,
+                /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1), transpose);
+        lowerPad.insert(lowerPad.end(), upperPad.cbegin(), upperPad.cend());
+        node->AddAttribute("pads", lowerPad);
+    }
+    else
+    {
+        if (transpose && src->Attributes().Contains(L"outputShape"))
+        {
+            auto outputShape = (NDShape)src->Attributes()[L"outputShape"].Value<NDShape>();
+            PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, dilations, outputShape, ceilOutDim, transpose);
+        }
+        else
+        {
+            PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, dilations, ceilOutDim, transpose);
+        }
+    }
 }
 
 void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node* node)
@@ -6304,60 +6661,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
         // Some nodes map one to many.
         if (src->OpName() == L"Convolution")
         {
-            auto kernelShape = (NDShape)src->Attributes()[L"kernelShape"].Value<NDShape>();
-            auto strides = (NDShape)src->Attributes()[L"strides"].Value<NDShape>();
-            auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
-            auto dilations = (NDShape)src->Attributes()[L"dilation"].Value<NDShape>();
-            auto transpose = (bool)src->Attributes()[L"transpose"].Value<bool>();
-            size_t groups = (src->Attributes().Contains(L"groups")) ? (size_t)src->Attributes()[L"groups"].Value<size_t>() : 1u;
-            bool ceilOutDim = (src->Attributes().Contains(L"ceilOutDim")) ? (bool)src->Attributes()[L"ceilOutDim"].Value<bool>() : false;
-
-            //
-            // Remove the channel part for ONNX. This is because ONNX, unlike CNTK, does
-            // not support padding (pads), dilation, or strides for channel dimension.
-            kernelShape = kernelShape.SubShape(0, kernelShape.Rank() - 1);
-            strides = strides.SubShape(0, strides.Rank() - 1);
-            autoPadding.pop_back();
-            dilations = dilations.SubShape(0, dilations.Rank() - 1);
-
-            node->AddAttribute("kernel_shape", ToINTS(kernelShape));
-            node->AddAttribute("strides", ToINTS(strides));
-            node->AddAttribute("dilations", ToINTS(dilations));
-            node->AddAttribute("group", (int64_t)groups);
-
-            const NDShape& inputShape = src->Inputs()[1].Shape();
-
-            auto lowerPadShape = (NDShape)src->Attributes()[L"lowerPad"].Value<NDShape>();
-            auto upperPadShape = (NDShape)src->Attributes()[L"upperPad"].Value<NDShape>();
-
-            if (lowerPadShape.Rank() > kernelShape.Rank())
-                lowerPadShape = lowerPadShape.SubShape(0, lowerPadShape.Rank() - 1);
-            if (upperPadShape.Rank() > kernelShape.Rank())
-                upperPadShape = upperPadShape.SubShape(0, upperPadShape.Rank() - 1);
-
-            auto lowerPad = ToINTS(lowerPadShape);
-            auto upperPad = ToINTS(upperPadShape);
-
-            if (IsPadValueValid(lowerPad, upperPad, autoPadding, transpose))
-            {
-                if (ceilOutDim)
-                    ValidatePadValueForCeilOutDim(lowerPad, upperPad, autoPadding, kernelShape, inputShape, strides,
-                                                  /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1), transpose);
-                lowerPad.insert(lowerPad.end(), upperPad.cbegin(), upperPad.cend());
-                node->AddAttribute("pads", lowerPad);
-            }
-            else
-            {
-                if (transpose && src->Attributes().Contains(L"outputShape"))
-                {
-                    auto outputShape = (NDShape)src->Attributes()[L"outputShape"].Value<NDShape>();
-                    PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, dilations, outputShape, ceilOutDim, transpose);
-                }
-                else
-                {
-                    PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, dilations, ceilOutDim, transpose);
-                }
-            }
+            AssignConvAttributes(src, node);
         }
         else if (src->OpName() == L"Pooling" || src->OpName() == L"Unpooling")
         {
@@ -7805,6 +8109,279 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForFlatten(const FunctionPtr
 
     functionNodes.emplace(src, functionNode);
     return functionNode;
+}
+
+onnxruntime::Node* ApplyActivationToSequenceConvolution(Node* convNode, const FunctionPtr &src, onnxruntime::Graph* graph)
+{
+    std::string onnxOpName;
+    if (src->OpName() == L"ReLU")
+    {
+        onnxOpName = "Relu";
+    }
+    else if (src->OpName() == L"Tanh")
+    {
+        onnxOpName = "Tanh";
+    }
+    else if (src->OpName() == L"Sigmoid")
+    {
+        onnxOpName = "Sigmoid";
+    }
+    else if (src->OpName() == L"Reshape" || src->OpName() == L"Plus" || src->OpName() == L"ToSequenceOp")
+    {
+        // if there is no activation, the last op of the convolution block shall be one of above. 
+        return convNode;
+    }
+    else
+    {
+        fprintf(stderr, "Warning: activation %s in SequenceConvolution is not supported.",
+            ToLegacyString(ToUTF8(src->OpName())).c_str());
+        return convNode;
+    }
+
+    NodeArg* activationInputNodeArg = const_cast<NodeArg*>(convNode->OutputDefs()[0]);
+    // activation output has the same typeproto as its input.
+    NodeArg* activationOutputNodeArg = &graph->GetOrCreateNodeArg(activationInputNodeArg->Name() + "_activation",
+        activationInputNodeArg->TypeAsProto());
+    onnxruntime::Node* activationNode = &graph->AddNode(convNode->Name() + "_activation", onnxOpName, "",
+        { activationInputNodeArg }, { activationOutputNodeArg });
+
+    return activationNode;
+}
+
+onnxruntime::Node* CNTKToONNXHelper::CreateConvolutionBlockNode(const FunctionPtr &src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+    const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+    std::vector<ScanLoop> &scanLoops, int createLoopIndex)
+{
+    const BlockFunction &bf = dynamic_cast<const BlockFunction &>(*src);
+    const CompositeFunction &cf = dynamic_cast<const CompositeFunction &>(*bf.Composite());
+    const std::unordered_set<FunctionPtr> allPris = cf.AllPrimaryFunctions();
+    const std::unordered_set<FunctionPtr>::const_iterator convIt = std::find_if(allPris.cbegin(), allPris.cend(), [](const FunctionPtr &f)
+    {
+        return f->OpName() == L"Convolution";
+    });
+    const FunctionPtr conv = *convIt;
+    // bool sequentialConvolutionNew = conv->Attributes().Contains(L"sequential") && conv->Attributes()[L"sequential"].Value<bool>();
+    bool sequentialConvolutionNew = std::any_of(allPris.cbegin(), allPris.cend(), [](const FunctionPtr &f)
+    {
+        return f->OpName() == L"ConvolutionSequenceShape";
+
+    }); 
+    bool sequentialConvolutionOld = std::any_of(allPris.cbegin(), allPris.cend(), [](const FunctionPtr &f)
+    {
+        return f->OpName() == L"PastValue" || f->OpName() == L"FutureValue";
+
+    });
+
+    bool padAndConvolutionOld = sequentialConvolutionOld && !std::any_of(allPris.cbegin(), allPris.cend(), [sequentialConvolutionOld](const FunctionPtr &f)
+    {
+        return f->OpName() == L"Sequence::Slice";
+    });
+
+
+    if (sequentialConvolutionOld || sequentialConvolutionNew)
+    {
+        std::vector<onnxruntime::NodeArg *> inputs, outputs;
+        ProcessInputs(src, graph, functionNodes, variableNodes, compositeOutputsMap, inputs, scanLoops, createLoopIndex);
+        ProcessOutputs(src, inputs, outputs, graph);
+
+        auto Transpose2Indices = [](NodeArg *inputNodeArg, int index1, int index2, Graph* graph, const FunctionPtr conv)
+        {
+            int inputOnnxRank = inputNodeArg->Shape()->dim_size();
+            std::vector<int64_t> perm(inputOnnxRank);
+            std::generate(perm.begin(), perm.end(), [axis = 0]() mutable { return axis++; });
+            std::swap(perm[index1], perm[index2]);
+            TypeProto transposeOutputArgType = *inputNodeArg->TypeAsProto();
+            *transposeOutputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim(index1) = inputNodeArg->Shape()->dim(index2);
+            *transposeOutputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim(index2) = inputNodeArg->Shape()->dim(index1);
+            Node* inputTransposeNode = AddTransposeNode(*inputNodeArg, graph, perm, transposeOutputArgType,
+                inputNodeArg->Name() + "_" + UniqueNodeNameStorage::GetUniqueNodeName(conv) + "_transposed");
+
+            return inputTransposeNode;
+        };
+
+        auto UnsqueezeAxis = [](NodeArg *inputNodeArg, int expandIndex, Graph* graph)
+        {
+            std::vector<int64_t> unsqueezedShape = ToINTS(*inputNodeArg->TypeAsProto());
+            unsqueezedShape.insert(unsqueezedShape.begin() + expandIndex, 1);
+            TypeProto outputTypeProto = ToTypeProto(unsqueezedShape, false);
+            outputTypeProto.mutable_tensor_type()->set_elem_type(inputNodeArg->TypeAsProto()->tensor_type().elem_type());
+
+            NodeArg *unsqueezeOutputArg = &graph->GetOrCreateNodeArg(inputNodeArg->Name() + "_unsqueeze", &outputTypeProto);
+            onnxruntime::Node* unsqueezeNode = &graph->AddNode(inputNodeArg->Name() + string("_Unsqueeze"), "Unsqueeze", "", 
+                { inputNodeArg }, { unsqueezeOutputArg });
+            unsqueezeNode->AddAttribute("axes", std::vector<int64_t>(1, expandIndex));
+
+            return unsqueezeNode;
+        };
+
+        auto SqueezeAxis = [](NodeArg *inputNodeArg, int expandIndex, Graph* graph)
+        {
+            TypeProto transposeOutputArgType = *inputNodeArg->TypeAsProto();
+            transposeOutputArgType.mutable_tensor_type()->mutable_shape()->mutable_dim()->DeleteSubrange(expandIndex, 1);
+            NodeArg *outputnode = &graph->GetOrCreateNodeArg(inputNodeArg->Name() + "_squeeze_output", &transposeOutputArgType);
+            Node* squeezeNode = &graph->AddNode(inputNodeArg->Name() + "_squeeze", "Squeeze", "",
+                { inputNodeArg }, { outputnode });
+            squeezeNode->AddAttribute("axes", std::vector<int64_t>({ expandIndex }));
+            return squeezeNode;
+        };
+
+        if (true) // sequentialConvolutionNew)
+        {
+            Variable input = *src->Inputs().rbegin();
+            NodeArg *inputNodeArg = inputs[inputs.size() - 1];
+            NodeArg* weightNodeArg = &CreateNodeArg(conv->Inputs()[0], graph, true, "");
+            int kernelRank = weightNodeArg->Shape()->dim_size() - 2;   // Co, Ci, d1, d2,...
+
+            // 1. (expand and) transpose (*, #, [Ci], d1, d2) => (#, Ci, *, d1, d2) 
+            //  in case Ci==1, its dimension may not exist in the input, in which case we need to unsqueeze Ci
+            //  W: (Co, Ci, filter_shape[0], filter_shape[1]...)
+            // const std::vector<int64_t> &perm, onnx::TypeProto& transposeOutputArgType, const std::string &outputNodeArgName
+            Node* inputBatchSequenceTransposed = Transpose2Indices(inputNodeArg, 0, 1, graph, conv);
+
+            Node* inputToInternalConv = nullptr;
+            bool needUnsqueezeChannelAxis = inputNodeArg->Shape()->dim_size() < kernelRank + 1 + 1;    // batch, channel
+
+            if (needUnsqueezeChannelAxis)
+            {
+                // insert a channel axis                
+                inputToInternalConv = UnsqueezeAxis(const_cast<NodeArg*>(inputBatchSequenceTransposed->OutputDefs()[0]),
+                    1, graph);
+            }
+            else
+            {
+                // already has the same rank for convolution. the 3rd dim is for channel.
+                // transpose sequence axis (already in the 2nd position) with the channel dimension.
+                inputToInternalConv = Transpose2Indices(
+                    const_cast<NodeArg *>(inputBatchSequenceTransposed->OutputDefs()[0]), 1, 2, graph, conv);
+            }
+
+            // 2. Convolution (#, Ci = 1, *, d1, d2) => (#, Co, *_, d1_, d2_)
+            onnxruntime::NodeArg *internalConvOutputNodeArg = &CreateNodeArg(conv->Outputs()[0], graph, true, "");
+            if (conv->Outputs()[0].HasSequenceAxis())
+            {
+                const_cast<TensorShapeProto*>(internalConvOutputNodeArg->Shape())->mutable_dim()->DeleteSubrange(0, 1);
+                const_cast<TensorShapeProto*>(internalConvOutputNodeArg->Shape())->mutable_dim(2)->set_dim_value(0);
+                const_cast<TensorShapeProto*>(internalConvOutputNodeArg->Shape())->mutable_dim(2)->set_dim_param(FreeSequenceDimParam);
+            }
+            if (internalConvOutputNodeArg->Shape()->dim_size() > inputToInternalConv->OutputDefs()[0]->Shape()->dim_size())
+            {
+                // force input and output to have to same rank
+                int indexToDeleteFrom = inputToInternalConv->OutputDefs()[0]->Shape()->dim_size();
+                int deletionCount = internalConvOutputNodeArg->Shape()->dim_size() > inputToInternalConv->OutputDefs()[0]->Shape()->dim_size();
+                const_cast<TensorShapeProto*>(internalConvOutputNodeArg->Shape())->mutable_dim()->DeleteSubrange(indexToDeleteFrom, deletionCount);
+            }
+
+            Node* convNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Conv", "",
+                { const_cast<NodeArg *>(inputToInternalConv->OutputDefs()[0]), weightNodeArg }, { internalConvOutputNodeArg });
+            
+
+            AssignConvAttributes(conv, convNode);
+            NodeAttributes& attributes = const_cast<NodeAttributes&>(convNode->GetAttributes());
+
+            auto SqueezeAttribute = [&attributes, kernelRank](const std::string attributeName, int factor)
+            {
+                if (attributes.find(attributeName) != attributes.end())
+                {
+                    auto* kernel_shape = attributes[attributeName].mutable_ints();
+                    while (kernel_shape->size() > kernelRank * factor)
+                        for (int i = 0; i < factor; i++)
+                            kernel_shape->erase(kernel_shape->begin());
+                }
+            };
+
+            // CNTK got extra 1 set of attributes. remove it. 
+            SqueezeAttribute("kernel_shape", 1);
+            SqueezeAttribute("strides", 1);
+            SqueezeAttribute("dilations", 1);
+            SqueezeAttribute("pads", 2);
+
+            NDShape upperPad = (NDShape)(conv->Attributes()[L"upperPad"].Value<NDShape>());
+            NDShape lowerPad = (NDShape)(conv->Attributes()[L"lowerPad"].Value<NDShape>());
+
+            //
+            // auto autoPadding = AsVector<bool>(src->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
+            auto autoPadding = AsVector<bool>(conv->Attributes()[L"autoPadding"].Value<std::vector<DictionaryValue>>());
+            //
+
+            if (padAndConvolutionOld || autoPadding[0])
+            {
+                // need to fix AssignConvPadding for sequence padding
+                // CNTK does same_upper 
+                auto* pads = attributes["pads"].mutable_ints();
+                auto* kernel_shape = attributes["kernel_shape"].mutable_ints();
+                
+                int64_t pad = (*kernel_shape)[0] - 1;  //so input and output has the same length
+                int64_t pad0 = pad / 2;
+                int64_t pad1 = pad - pad0;
+                (*pads)[0] = pad0;
+                (*pads)[(*pads).size() / 2] = pad1;
+            }
+
+            if (needUnsqueezeChannelAxis)
+                convNode = SqueezeAxis(const_cast<NodeArg*>(convNode->OutputDefs()[0]), 1, graph);
+            else 
+                convNode = Transpose2Indices(const_cast<NodeArg*>(convNode->OutputDefs()[0]), 1, 2, graph, conv);
+
+            // 4. transpose (#, Co, *_, d1_, d2_) -> (#, *_, Co, d1_, d2_)
+            convNode = Transpose2Indices(const_cast<NodeArg*>(convNode->OutputDefs()[0]), 0, 1, graph, conv);
+
+            if (inputs.size() > 2)
+            {
+                // 3. Bias and activation if needed
+                // TODO: bias is at src->Inputs()[1] (inputs[1]) for New Conv case.
+                //  find out in what case bias is at inputs[2]
+                NodeArg* biasNodeArg;
+                if (inputs.size() == 3)
+                    biasNodeArg = inputs[1];
+                else
+                    biasNodeArg = inputs[2];
+
+
+                TypeProto biasAddOutputTypoProto = *convNode->OutputDefs()[0]->TypeAsProto();
+                NodeArg* biasAddOutputNodeArg = &graph->GetOrCreateNodeArg(
+                    UniqueNodeNameStorage::GetUniqueInputNodeName(conv->Outputs()[0]) + "_bias_added", &biasAddOutputTypoProto);
+                
+                // biasNodeArg's shape shall match biasAddOutputTypoProto's taking away #, *
+                // however, CNTK py code sometimes attaches 1' to bias' shape. these 1' shall be removed.
+                if (biasNodeArg->Shape()->dim_size() > biasAddOutputNodeArg->Shape()->dim_size() - 2)
+                {
+                    int dimToRemove = biasNodeArg->Shape()->dim_size() - (biasAddOutputNodeArg->Shape()->dim_size() - 2);
+                    int dimToRemoveStart = biasNodeArg->Shape()->dim_size() - dimToRemove;
+                    auto biasShape = const_cast<TensorShapeProto*>(biasNodeArg->Shape())->mutable_dim();
+                    biasShape->DeleteSubrange(dimToRemoveStart, dimToRemove);
+
+                    const TensorProto* biasTensor;
+                    graph->GetInitializedTensor(biasNodeArg->Name(), biasTensor);
+                    auto initDims = (const_cast<TensorProto*>(biasTensor))->mutable_dims();
+                    initDims->erase(initDims->begin() + dimToRemoveStart);
+                }
+
+                convNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(conv) + "_add_bias", "Add", "",
+                    {const_cast<NodeArg *>(convNode->OutputDefs()[0]), biasNodeArg }, { biasAddOutputNodeArg });
+            }
+
+            FunctionPtr br = src->BlockRoot();
+            convNode = ApplyActivationToSequenceConvolution(convNode, br, graph);
+
+            std::vector<int64_t> newShape = ToINTS(*outputs[0]->TypeAsProto());
+            convNode = AddReshapeNode(const_cast<NodeArg &>(*convNode->OutputDefs()[0]),
+                newShape, outputs[0]->Name(), graph);
+
+
+            functionNodes.emplace(src, convNode);
+            return convNode;
+        }
+    }
+    {
+        onnxruntime::Node* functionNode = CreateNode(src->BlockRoot(), graph, functionNodes, variableNodes, compositeOutputsMap,
+            scanLoops, createLoopIndex);
+
+        functionNodes.emplace(src, functionNode);
+        return functionNode;
+    }
 }
 
 onnxruntime::Node* CNTKToONNXHelper::CreateSpliceNode(const FunctionPtr &src,
