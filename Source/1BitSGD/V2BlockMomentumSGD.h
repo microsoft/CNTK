@@ -108,7 +108,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         bool OnArrivingAtSyncPoint(
             const std::list<ComputationNodeBasePtr>& learnableNodes,        /* input/output: */
-            std::list<Matrix<ElemType>>& smoothedGradient,                  /* input/output: under some setup, it will reset to zero*/
+            std::list<MatrixBasePtr>& smoothedGradients,                    /* input/output: under some setup, it will reset to zero*/
             size_t  samplesSinceLastSync                                    /* input:  samples processed since last sync on this worker only */
             ) override
         {
@@ -130,12 +130,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // Otherwise let update the weights.
             float secondsOnCommunication = 0.0f;
             size_t totalSamples = 0;
-            ModelAggregationProcessing(samplesSinceLastSync, learnableNodes, smoothedGradient, totalSamples, secondsOnCommunication);
+            ModelAggregationProcessing(samplesSinceLastSync, learnableNodes, smoothedGradients, totalSamples, secondsOnCommunication);
             return true;
         }
 
         /*virtual*/ void OnEpochEnd(const std::list<ComputationNodeBasePtr>& learnableNodes,
-            std::list<Matrix<ElemType>>& smoothedGradient,
+            std::list<MatrixBasePtr>& smoothedGradients,
             size_t samplesSinceLastSync) override
         {
             if (!m_someWorkerHasFinished)
@@ -152,13 +152,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // Let's update our weights no matter what.
             float secondsOnCommunication = 0.0f;
             size_t totalSamples = 0;
-            ModelAggregationProcessing(samplesSinceLastSync, learnableNodes, smoothedGradient, totalSamples, secondsOnCommunication);
+            ModelAggregationProcessing(samplesSinceLastSync, learnableNodes, smoothedGradients, totalSamples, secondsOnCommunication);
         }
 
         /*virtual*/ void ModelAggregationProcessing(
             size_t /*samplesSinceLastSync*/,
             const std::list<ComputationNodeBasePtr>& learnableNodes,
-            std::list<Matrix<ElemType>>& smoothedGradient,
+            std::list<MatrixBasePtr>& smoothedGradients,
             size_t&                                   /*totalSamplesProcessed*/,   /* out */
             float&                                    secondsOnCommunication   /* out */
             ) override
@@ -241,9 +241,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //----------------------------------------
             if (m_resetSGDMomentumAfterAggregation)
             {
-                for (Matrix<ElemType>& x : smoothedGradient)
+                for (auto smoothedGradient : smoothedGradients)
                 {
-                    x.SetValue((ElemType)0);
+                    // For half, we use full precision smoothed gradients
+                    if (std::is_same<ElemType, half>())
+                    {
+                        auto compoundMatrixPtr = dynamic_pointer_cast<Matrix<float>> (smoothedGradient);
+                        size_t numCols = compoundMatrixPtr->GetNumCols() / 3;
+
+                        // Only reset smoothed gradients
+                        auto smoothedGradientMatrix = compoundMatrixPtr->ColumnSlice(0, numCols);
+                        smoothedGradientMatrix.SetValue(0.0f);
+                    }
+                    else
+                    {
+                        auto x = dynamic_pointer_cast<Matrix<ElemType>> (smoothedGradient);
+                        x->SetValue((ElemType)0);
+                    }
                 }
             }
         }

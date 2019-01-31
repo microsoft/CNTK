@@ -94,15 +94,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 );
         }
         /*virtual*/ void OnEpochEnd(const std::list<ComputationNodeBasePtr>& LearnableNodes, 
-            std::list<Matrix<ElemType>>&                smoothedGradient,
+            std::list<MatrixBasePtr>&                   smoothedGradients,
             size_t                                      samplesSinceLastSync) override
         {
-            Base::OnEpochEnd(LearnableNodes, smoothedGradient, samplesSinceLastSync);
+            Base::OnEpochEnd(LearnableNodes, smoothedGradients, samplesSinceLastSync);
         }
         /*virtual*/ void ModelAggregationProcessing(
             size_t samplesSinceLastSync,
             const std::list<ComputationNodeBasePtr>& learnableNodes,
-            std::list<Matrix<ElemType>>& smoothedGradient,
+            std::list<MatrixBasePtr>& smoothedGradients,
             size_t& totalSamplesProcessed,
             float& secondsOnCommunication
             ) override
@@ -181,9 +181,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             //----------------------------------------
             if (m_resetSGDMomentumAfterAggregation)
             {
-                for (Matrix<ElemType>& x : smoothedGradient)
+                for (auto smoothedGradient : smoothedGradients)
                 {
-                    x.SetValue((ElemType)0);
+                    // For half, we use full precision smoothed gradients
+                    if (std::is_same<ElemType, half>())
+                    {
+                        auto compoundMatrixPtr = dynamic_pointer_cast<Matrix<float>> (smoothedGradient);
+                        size_t numCols = compoundMatrixPtr->GetNumCols() / 3;
+
+                        // Only reset smoothed gradients
+                        auto smoothedGradientMatrix = compoundMatrixPtr->ColumnSlice(0, numCols);
+                        smoothedGradientMatrix.SetValue(0.0f);
+                    }
+                    else
+                    {
+                        auto x = dynamic_pointer_cast<Matrix<ElemType>> (smoothedGradient);
+                        x->SetValue((ElemType)0);
+                    }
                 }
             }
         }

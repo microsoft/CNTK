@@ -335,7 +335,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // initializing weights and gradient holder
     // only one criterion so far TODO: support multiple ones?
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
-    list<Matrix<ElemType>> smoothedGradients;
+    list<MatrixBasePtr> smoothedGradients;
     vector<double> smoothedCounts; // currently used by FSAdaGradUpdate()
     size_t numParameters = 0;
 
@@ -346,9 +346,28 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // Note: We don't actually need the smoothedGradients if !IsParameterUpdateRequired().
         // However, this is hard to fix since lots of code assumes smoothedGradients to be in the same order as learnableNodes.
         // V2 API fixes this.
-        smoothedGradients.push_back(Matrix<ElemType>(node->Value().GetNumRows(),
-                                                     node->Value().GetNumCols(),
-                                                     net->GetDeviceId()));
+        MatrixBasePtr smoothedGradientPtr;
+        size_t numRows = node->Value().GetNumRows();
+        size_t numCols = node->Value().GetNumCols();
+        if (std::is_same<ElemType, half>())
+        {
+            // For half parameters, we use float smoothed gradients
+            shared_ptr<Matrix<float>> compoundMatrixPtr = std::make_shared<Matrix<float>>(numRows,
+                numCols * 3, // Allocate 3 times the size for casting parameter and gradients to float
+                net->GetDeviceId());
+            // Initialize float parameters
+            auto parameterMatrix = compoundMatrixPtr->ColumnSlice(2 * numCols, numCols);
+            parameterMatrix.CastAssignValuesOf(node->Value());
+
+            smoothedGradientPtr = compoundMatrixPtr;
+        }
+        else
+        {
+            smoothedGradientPtr = std::make_shared<Matrix<ElemType>>(numRows,
+                numCols,
+                net->GetDeviceId());
+        }
+        smoothedGradients.push_back(smoothedGradientPtr);
         smoothedCounts.push_back(0);
         if (node->IsParameterUpdateRequired())
         {
@@ -989,7 +1008,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                     StreamMinibatchInputs* inputMatrices, // TODO: why is this a pointer?
                                     const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                    std::list<Matrix<ElemType>>& smoothedGradients, vector<double>& smoothedCounts,
+                                    std::list<MatrixBasePtr>& smoothedGradients, vector<double>& smoothedCounts,
                                     /*out*/ EpochCriterion& epochCriterion,
                                     /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                     const std::string& prefixMsg,
@@ -1813,7 +1832,7 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
                                              const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                              StreamMinibatchInputs* inputMatrices,
                                              const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                             std::list<Matrix<ElemType>>& smoothedGradients, vector<double> smoothedCounts,
+                                             std::list<MatrixBasePtr>& smoothedGradients, vector<double> smoothedCounts,
                                              const bool learnRateInitialized,
                                              const double largestPrevLearnRatePerSample)
 {
@@ -1987,7 +2006,7 @@ size_t SGD<ElemType>::AdaptiveMinibatchSizing(ComputationNetworkPtr net,
                                               const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                               StreamMinibatchInputs* inputMatrices,
                                               const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                              std::list<Matrix<ElemType>>& smoothedGradients, vector<double> smoothedCounts,
+                                              std::list<MatrixBasePtr>& smoothedGradients, vector<double> smoothedCounts,
                                               const double learningRateAdjustmentFactor)
 {
     size_t minMinibatchSize = initialMinibatchSize;
@@ -2088,7 +2107,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
                                                  const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                                  StreamMinibatchInputs* inputMatrices,
                                                  const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                                 std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
+                                                 std::list<MatrixBasePtr>& smoothedGradients, std::vector<double> smoothedCounts,
                                                  const size_t minMinibatchSize, const size_t maxMinibatchSize)
 {
     // may happen for automatically reduced learning rates
@@ -2192,7 +2211,7 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                                                     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
                                                     StreamMinibatchInputs* inputMatrices,
                                                     const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                                    std::list<Matrix<ElemType>>& smoothedGradients, vector<double> smoothedCounts,
+                                                    std::list<MatrixBasePtr>& smoothedGradients, vector<double> smoothedCounts,
                                                     /*out*/ EpochCriterion& epochCriterion,
                                                     /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                                     std::string prefixMsg,
@@ -2421,6 +2440,46 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
 // UpdateWeights() - actual weight update, implementing various update rules
 template <class ElemType>
 void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
+    MatrixBasePtr& smoothedGradientValues, double& smoothedCount,
+    const double learnRatePerSample, const double momentumPerSample,
+    size_t actualMBSize,
+    const double L2RegWeight, const double L1RegWeight,
+    const bool needAveMultiplier,
+    const bool useNesterovMomentum) const
+{
+    if (std::is_same<ElemType, half>())
+    {
+        // Get metrix from compound metrix
+        auto compoundMatrixPtr = dynamic_pointer_cast<Matrix<float>> (smoothedGradientValues);
+        size_t numCols = functionValues.GetNumCols();
+
+        auto smoothedGradientMatrix = compoundMatrixPtr->ColumnSlice(0, numCols);
+        auto tempGradientMatrix = compoundMatrixPtr->ColumnSlice(numCols, numCols);
+        auto parameterMatrix = compoundMatrixPtr->ColumnSlice(2 * numCols, numCols);
+
+        // Cast gradients to float
+        tempGradientMatrix.CastAssignValuesOf(gradientValues);
+
+        // Update
+        TypedUpdateWeights<float>(parameterMatrix, tempGradientMatrix, smoothedGradientMatrix, smoothedCount,
+            learnRatePerSample, momentumPerSample, actualMBSize, L2RegWeight, L1RegWeight,
+            needAveMultiplier, useNesterovMomentum);
+
+        // Cast parameter back to half
+        functionValues.CastAssignValuesOf(parameterMatrix);
+
+    }
+    else
+    {
+        auto sgv = dynamic_pointer_cast<Matrix<ElemType>> (smoothedGradientValues);
+        TypedUpdateWeights<>(functionValues, gradientValues, *sgv, smoothedCount,
+            learnRatePerSample, momentumPerSample, actualMBSize, L2RegWeight, L1RegWeight,
+            needAveMultiplier, useNesterovMomentum);
+    }
+}
+template <class ElemType1>
+template <class ElemType>
+void SGD<ElemType1>::TypedUpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
                                   Matrix<ElemType>& smoothedGradientValues, double& smoothedCount,
                                   const double learnRatePerSample, const double momentumPerSample,
                                               size_t actualMBSize,
@@ -2443,7 +2502,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     assert(actualMBSize > 0);
 
     // clipping gradients to prevent outliers
-    ClipGradient(gradientValues, actualMBSize);
+    ClipGradient<ElemType>(gradientValues, actualMBSize);
 
     GradientsUpdateType adpType = GradUpdateType();
     double noiseStd = GradientUpdateNoiseStd();
@@ -2528,8 +2587,9 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 }
 
 // protected:
+template <class ElemType1>
 template <class ElemType>
-void SGD<ElemType>::ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const
+void SGD<ElemType1>::ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const
 {
     if (m_clippingThresholdPerSample != std::numeric_limits<double>::infinity())
     {
@@ -2552,7 +2612,7 @@ void SGD<ElemType>::ClipGradient(Matrix<ElemType>& gradient, const size_t actual
 template <class ElemType>
 void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
                                        const double learnRatePerSample,
-                                       const std::list<Matrix<ElemType>>& smoothedGradients,
+                                       const std::list<MatrixBasePtr>& smoothedGradients,
                                        const std::vector<double>& smoothedCounts,
                                        const double prevCriterion,
                                        const size_t minibatchSize)
@@ -2585,10 +2645,20 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
-            for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
+            for (auto smoothedGradient : smoothedGradients)
             {
-                const Matrix<ElemType>& smoothedGradientValues = *smoothedGradientIter;
-                fstream << smoothedGradientValues;
+                if (std::is_same<ElemType, half>())
+                {
+                    auto smoothedGradientPtr = dynamic_pointer_cast<Matrix<float>> (smoothedGradient);
+                    const Matrix<float>& smoothedGradientValues = *smoothedGradientPtr;
+                    fstream << smoothedGradientValues;
+                }
+                else
+                {
+                    auto smoothedGradientPtr = dynamic_pointer_cast<Matrix<ElemType>> (smoothedGradient);
+                    const Matrix<ElemType>& smoothedGradientValues = *smoothedGradientPtr;
+                    fstream << smoothedGradientValues;
+                }
             }
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -2628,7 +2698,7 @@ template <class ElemType>
 bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
                                           /*out*/ size_t& totalSamplesSeen,
                                           /*out*/ double& learnRatePerSample,
-                                          std::list<Matrix<ElemType>>& smoothedGradients,
+                                          std::list<MatrixBasePtr>& smoothedGradients,
                                           std::vector<double>& smoothedCounts,
                                           /*out*/ double& prevCriterion,
                                           /*out*/ size_t& minibatchSize)
@@ -2657,7 +2727,7 @@ template <class ElemType>
 void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
                                        /*out*/ size_t& totalSamplesSeen,
                                        /*out*/ double& learnRatePerSample,
-                                       std::list<Matrix<ElemType>>& smoothedGradients,
+                                       std::list<MatrixBasePtr>& smoothedGradients,
                                        std::vector<double>& smoothedCounts,
                                        /*out*/ double& prevCriterion,
                                        /*out*/ size_t& minibatchSize)
@@ -2674,6 +2744,9 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
         fstream >> ckpVersion; 
         fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
     }
+
+    if (ckpVersion > CURRENT_CNTK_CHECKPOINT_VERSION)
+        RuntimeError("The checkpoint file has a newer format version (%d) than this CNTK version can handle (%d).", ckpVersion, CURRENT_CNTK_CHECKPOINT_VERSION);
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
 
@@ -2693,10 +2766,20 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BGradient");
 
-    for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
+    for (auto smoothedGradient : smoothedGradients)
     {
-        Matrix<ElemType>& smoothedGradientValues = *smoothedGradientIter;
-        fstream >> smoothedGradientValues;
+        if (std::is_same<ElemType, half>())
+        {
+            auto smoothedGradientPtr = dynamic_pointer_cast<Matrix<float>> (smoothedGradient);
+            Matrix<float>& smoothedGradientValues = *smoothedGradientPtr;
+            fstream >> smoothedGradientValues;
+        }
+        else
+        {
+            auto smoothedGradientPtr = dynamic_pointer_cast<Matrix<ElemType>> (smoothedGradient);
+            Matrix<ElemType>& smoothedGradientValues = *smoothedGradientPtr;
+            fstream >> smoothedGradientValues;
+        }
     }
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
 
