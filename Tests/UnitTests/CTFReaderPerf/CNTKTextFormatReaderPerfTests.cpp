@@ -43,7 +43,7 @@ namespace CNTK {
             m_parser(std::make_shared<CorpusDescriptor>(true), wstring(filename.begin(), filename.end()), streams, true)
         {
             m_parser.SetMaxAllowedErrors(maxErrors);
-            m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);
+            m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Error);
             m_parser.SetChunkSize(SIZE_MAX);
             m_parser.SetNumRetries(0);
             m_parser.Initialize();
@@ -57,37 +57,37 @@ namespace CNTK {
 }
 
 int main (int argc, char* argv[]) {
-#if 0
-    std::vector<::CNTK::StreamDescriptor> streams(3);
-    streams[0].m_alias = "F0";
-    streams[0].m_name = L"F0";
+#if 1
+    // Dense data
+    std::vector<::CNTK::StreamDescriptor> streams(2);
+    streams[0].m_alias = "a";
+    streams[0].m_name = L"a";
     streams[0].m_storageFormat = ::CNTK::StorageFormat::Dense;
-    streams[0].m_sampleDimension = 10;
+    streams[0].m_sampleDimension = 3;
 
-    streams[1].m_alias = "F1";
-    streams[1].m_name = L"F1";
+    streams[1].m_alias = "b";
+    streams[1].m_name = L"b";
     streams[1].m_storageFormat = ::CNTK::StorageFormat::Dense;
-    streams[1].m_sampleDimension = 50;
+    streams[1].m_sampleDimension = 2;
 
-    streams[2].m_alias = "F2";
-    streams[2].m_name = L"F2";
-    streams[2].m_storageFormat = ::CNTK::StorageFormat::Dense;
-    streams[2].m_sampleDimension = 100;
-
-    ::CNTK::CNTKTextFormatReaderTestRunner<float> testRunner("100x100x3_jagged_sequences_dense.txt", streams, 99999);
+    // ::CNTK::CNTKTextFormatReaderTestRunner<float> testRunner("/HOST/home/thiagofc/sample_generic.ctf", streams, 99999);
+    ::CNTK::CNTKTextFormatReaderTestRunner<float> testRunner("/HOST/home/thiagofc/dense.ctf", streams, 99999);
 #endif
 
+#if 0
     std::vector<::CNTK::StreamDescriptor> streams(2);
     streams[0].m_alias = "M";
     streams[0].m_name = L"M";
     streams[0].m_storageFormat = ::CNTK::StorageFormat::SparseCSC;
-    // streams[0].m_sampleDimension = 165393;
+    streams[0].m_sampleDimension = 165393;
 
     streams[1].m_alias = "R";
     streams[1].m_name = L"R";
     streams[1].m_storageFormat = ::CNTK::StorageFormat::SparseCSC;
-    // streams[1].m_sampleDimension = 165393;
-    ::CNTK::CNTKTextFormatReaderTestRunner<float> testRunner("/HOST/home/thiagofc/train.2GB.ctf", streams, 999999);
+    streams[1].m_sampleDimension = 165393;
+    // ::CNTK::CNTKTextFormatReaderTestRunner<float> testRunner("/HOST/home/thiagofc/multiple_ctf/ctf/small_sparse.ctf", streams, 999999);
+    ::CNTK::CNTKTextFormatReaderTestRunner<float> testRunner("/HOST/home/thiagofc/multiple_ctf/ctf/top_50.ctf", streams, 999999);
+#endif
 
 
     testRunner.LoadChunk();
