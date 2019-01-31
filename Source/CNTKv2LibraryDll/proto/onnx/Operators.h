@@ -20,6 +20,9 @@ const int64_t ReshapeInferredDim = -1;
 // ONNX reshape spec: the actual dimension value is unchanged(i.e.taken from the input tensor).
 const int64_t ReshapeKeepInputDim = 0;
 const std::string FreeSequenceDimParam = "Sequence";
+const std::string FreeBatchDimParam = "Batch";
+// we use magic number to indicate batch and sequence dimensions. for sequence NDShape::FreeDimension is used. 
+const int64_t FreeBatchDimension = -4;
 const size_t numBiasInOnnxLstm = 2; // bias for W, and bias for R (also called H in CNTK).
                                     // TODO: support cases where batch size is not 1.
 
