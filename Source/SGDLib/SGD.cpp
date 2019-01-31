@@ -2267,35 +2267,6 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
 }
 
 template<>
-bool AggregateAccumulatorSums<half>(
-    MPIWrapperPtr &mpi,
-    ComputationNetworkPtr &net,
-    size_t &packThresholdSizeInBytes,
-    std::vector<Matrix<half> *> &accumulatorValues,
-    std::shared_ptr<DistGradHeader> &gradHeader)
-{
-    bool samplesProcessed = false;
-
-    // Prepare aggregator.
-    std::shared_ptr<IDistGradAggregator<half>> distGradAgg;
-    if (Globals::UseV2Aggregator())
-        distGradAgg = make_shared<V2SimpleDistGradAggregator<half>>(
-            mpi,
-            false /*useAsyncAggregation*/,
-            net->GetDeviceId(),
-            0 /*syncStatsTrace*/,
-            ::CNTK::MPICommunicator(packThresholdSizeInBytes));
-    else
-        RuntimeError("AggregateAccumulatorSums - half not supported if useV2Aggregator is false.");
-
-    // Aggregate accumulator sums.
-    samplesProcessed = distGradAgg->AggregateGradients(accumulatorValues, gradHeader.get(), /*resetState =*/false);
-
-    return samplesProcessed;
-}
-
-
-template<>
 void SGD<half>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel)
 {
     assert(GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD);
