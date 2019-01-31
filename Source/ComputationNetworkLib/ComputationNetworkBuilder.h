@@ -38,6 +38,8 @@ public:
     // TODO: move into a separate header/class, to decouple from this class which would then be only used by old NDL and SimpleNetworkBuilder.
     static ComputationNodePtr NewStandardNode(const std::wstring& nodeType, DEVICEID_TYPE deviceId, const wstring& name);
     static ComputationNodePtr NewNode(const std::wstring& nodeType, DEVICEID_TYPE deviceId, const wstring& name);
+    template <class ElemType2>
+    static ComputationNodePtr NewNode2(const std::wstring& nodeType, DEVICEID_TYPE deviceId, const wstring& name);
 
     // The following functions create nodes and add them to the net, but don't attach inputs (some don't have inputs).
     // There are special versions for nodes with custom constructors, and a catch-all, CreateComputationNode(), for all others.

@@ -175,6 +175,13 @@ static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& node
     else return CreateStandardNode<ElemType>(nodeType, forward<_Types>(_Args)...);
 }
 
+template <class ElemType, class ElemType2, class... _Types>
+static shared_ptr<ComputationNode<ElemType>> CreateNode2(const std::wstring& nodeType, _Types&&... _Args)
+{
+    // check more types
+    if (nodeType == OperationName2Of(CastNode))       return New<CastNode<ElemType, ElemType2>>(forward<_Types>(_Args)...);
+    else RuntimeError("CreateNode2: unsupported nodeType - %S", nodeType.c_str());
+}
 // this function is called from SimpleNetworkBuilder and old NDL
 template <class ElemType>
 /*static*/ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::NewStandardNode(const std::wstring& nodeType, DEVICEID_TYPE deviceId, const wstring& name)
@@ -187,6 +194,13 @@ template <class ElemType>
 /*static*/ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::NewNode(const std::wstring& nodeType, DEVICEID_TYPE deviceId, const wstring& name)
 {
     return CreateNode<ElemType>(nodeType, deviceId, name);
+}
+
+template <class ElemType>
+template <class ElemType2>
+/*static*/ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::NewNode2(const std::wstring& nodeType, DEVICEID_TYPE deviceId, const wstring& name)
+{
+    return CreateNode2<ElemType, ElemType2>(nodeType, deviceId, name);
 }
 
 shared_ptr<ComputationNodeBase> NewComputationNodeFromConfig(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp)
@@ -1031,4 +1045,11 @@ template shared_ptr<ComputationNode<double>> ComputationNetworkBuilder<double>::
 template shared_ptr<ComputationNode<double>> ComputationNetworkBuilder<double>::CreateCastNode<float>(const std::wstring& nodeName);
 template shared_ptr<ComputationNode<half>> ComputationNetworkBuilder<half>::CreateCastNode<float>(const std::wstring& nodeName);
 template shared_ptr<ComputationNode<half>> ComputationNetworkBuilder<half>::CreateCastNode<double>(const std::wstring& nodeName);
+
+template shared_ptr<ComputationNode<float>> ComputationNetworkBuilder<float>::NewNode2<half>(const std::wstring& nodeName, DEVICEID_TYPE deviceId, const wstring& name);
+template shared_ptr<ComputationNode<float>> ComputationNetworkBuilder<float>::NewNode2<double>(const std::wstring& nodeName, DEVICEID_TYPE deviceId, const wstring& name);
+template shared_ptr<ComputationNode<double>> ComputationNetworkBuilder<double>::NewNode2<half>(const std::wstring& nodeName, DEVICEID_TYPE deviceId, const wstring& name);
+template shared_ptr<ComputationNode<double>> ComputationNetworkBuilder<double>::NewNode2<float>(const std::wstring& nodeName, DEVICEID_TYPE deviceId, const wstring& name);
+template shared_ptr<ComputationNode<half>> ComputationNetworkBuilder<half>::NewNode2<float>(const std::wstring& nodeName, DEVICEID_TYPE deviceId, const wstring& name);
+template shared_ptr<ComputationNode<half>> ComputationNetworkBuilder<half>::NewNode2<double>(const std::wstring& nodeName, DEVICEID_TYPE deviceId, const wstring& name);
 }}}
