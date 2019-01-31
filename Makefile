@@ -1551,7 +1551,7 @@ python: $(PYTHON_LIBS)
                         --dist-dir $$PYTHONDIR || exit $$?; \
             done'
 
-ALL += python
+#ALL += python
 
 endif
 
