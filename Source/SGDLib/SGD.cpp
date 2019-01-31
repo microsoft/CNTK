@@ -2477,6 +2477,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
             needAveMultiplier, useNesterovMomentum);
     }
 }
+
 template <class ElemType1>
 template <class ElemType>
 void SGD<ElemType1>::TypedUpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
@@ -2746,7 +2747,7 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
     }
 
     if (ckpVersion > CURRENT_CNTK_CHECKPOINT_VERSION)
-        RuntimeError("The checkpoint file has a newer format version (%d) than this CNTK version can handle (%d).", ckpVersion, CURRENT_CNTK_CHECKPOINT_VERSION);
+        RuntimeError("The checkpoint file has a newer format version (%d) than this CNTK version can handle (%d).", (int)ckpVersion, (int)CURRENT_CNTK_CHECKPOINT_VERSION);
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
 
