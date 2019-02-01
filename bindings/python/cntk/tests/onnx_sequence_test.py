@@ -793,8 +793,8 @@ def test_SimpleLoopWithLSTM(tmpdir):
     save_onnx_model_with_validation_data(tmpdir, yr, [x_total_data, r_data], model_name, device=None)
 
 def test_SeqeunceGather(tmpdir):
-    batch_size, sequence_length, feature_shape = 1, 3, (2,2)
-    x0 = generate_sequential_data((batch_size, sequence_length, *feature_shape))
+    batch_size, sequence_length = 1, 3
+    x0 = generate_sequential_data((batch_size, sequence_length, 2, 2))
     np.shape(x0)
 
     cond = np.array([[0,1,1]]).astype(np.float32)
