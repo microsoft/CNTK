@@ -211,7 +211,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
     }
-    if (criterionNodes[0]->Is<ComputationNode<half>>())
+    if (criterionNodes.front()->Is<ComputationNode<half>>())
     {
         InvalidArgument("TrainOrAdaptModel: using Float16 for loss function may cause overflow, please cast to float.");
     }
