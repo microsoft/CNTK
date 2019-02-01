@@ -66,7 +66,6 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
         // Not used here, but at least one is required by aggregation.
         gradHeader->evalErrors[i] = std::make_pair<double, size_t>(0.0, 0);
 
-    // Aggregate accumulator sums.
     bool samplesProcessed = AggregateAccumulatorSums(mpi, net, packThresholdSizeInBytes, accumulatorValues, gradHeader);
     if (!samplesProcessed)
         RuntimeError("Couldn't aggregate accumulator values.");
@@ -94,7 +93,7 @@ template <typename ElemType>
 void UpdateEpochEvaluationForAccumulatedResult(
     std::vector<EpochCriterion>& epochEvalErrors,
     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-    CriterionAccumulator<ElemType> localEpochEvalErrors,
+    CriterionAccumulatorBase& localEpochEvalErrors,
     std::function<bool(ComputationNodeBasePtr)> containsAccumulatedResult
     )
 {
@@ -119,7 +118,7 @@ void AggregateAccumulatorValuesAndUpdateEpochEvaluation(
     std::shared_ptr<MPIWrapper> mpi,
     std::vector<EpochCriterion>& epochEvalErrors,
     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-    CriterionAccumulator<ElemType> localEpochEvalErrors,
+    CriterionAccumulatorBase& localEpochEvalErrors,
     std::function<bool(ComputationNodeBasePtr)> containsAccumulatedResult,
     size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
 {
