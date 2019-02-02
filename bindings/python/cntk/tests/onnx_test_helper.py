@@ -208,6 +208,7 @@ def save_test_data(model, onnx_model, test_data_path, input_data, output_data, n
     # onnx model description (of cntk exported model) is in this format:
     # <<<Uid, ONNXNodeName>>> pair: <<<uid_0, name_0>>> <<<uid_1, name_1>>> ... <<<uid_n, name_n>>>
     uid_name_map = dict(tuple(x[3:-3].split(', ')) for x in re.findall(r'<<<[^>]*>>>', onnx_model_description)[1:])
+    # input names are mapped from uid to names (requested by skype team)
     input_names = [x.uid if not x.name else x.name for x in model.arguments]
 
     # handle block outputs
