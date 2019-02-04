@@ -1418,7 +1418,7 @@ def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, r
     s = np.asarray(np.random.uniform(-1, 1, (1, 5, input_size)), dtype=np.float32)
     f = C.optimized_rnnstack(x, W, hidden_size, num_layers, bidirectional=bidirectional, recurrent_op=recurrent_op, name='MyRnnStack')
     f.parameters[0].value = np.reshape(np.arange(np.prod(f.parameters[0].value.shape), dtype=np.float32), f.parameters[0].value.shape)
-    verify_sequence_model(f, s, tmpdir, model_filename)
+    verify_sequence_model(f, s, tmpdir, model_filename, resave = False)
 
 #Pad
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1646,7 +1646,6 @@ def test_Reshape(tmpdir, dtype):
 #RNN
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_RNN(tmpdir, dtype):
-    pytest.skip('test_RNN is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
     with C.default_options(dtype = dtype):
         def CreatRNN(cell_dim, 
                      activation, 
@@ -1718,7 +1717,7 @@ def test_RNN(tmpdir, dtype):
                 direction, 
                 num_layers)(x)
             data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype(dtype)
-            verify_sequence_model(RNNModel, data, tmpdir, model_filename)
+            verify_sequence_model(RNNModel, data, tmpdir, model_filename, resave = False)
 
 #Selu
 @pytest.mark.parametrize("dtype", DType_Config)

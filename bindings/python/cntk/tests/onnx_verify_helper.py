@@ -62,8 +62,16 @@ def get_onnx_test_runner_path_str():
     # in case not found (in the build environment), look for based on environment variables. 
     onnx_test_runner_path_str = os.path.join(os.path.dirname(__file__), 'onnx_test_runner') + R'/onnx_test_runner.exe';
     if not os.path.exists(onnx_test_runner_path_str):
-        assert ('BUILD_REPOSITORY_LOCALPATH' in os.environ, 'BUILD_REPOSITORY_LOCALPATH no set in os.environ')
-        onnx_test_runner_path_str = os.environ['BUILD_REPOSITORY_LOCALPATH'] + R'/bindings/python/cntk/tests/onnx_test_runner/onnx_test_runner.exe';
+        workspace_path = None
+        if 'BUILD_REPOSITORY_LOCALPATH' in os.environ:
+            workspace_path = os.environ['BUILD_REPOSITORY_LOCALPATH']
+        elif 'WORKSPACE' in os.environ:
+            workspace_path = os.environ['WORKSPACE']
+        elif 'WINDOWS_WORKSPACE' in os.environ:
+            workspace_path = os.environ['WINDOWS_WORKSPACE']
+
+        assert (workspace_path, 'None of BUILD_REPOSITORY_LOCALPATH, WORKSPACE, or WINDOWS_WORKSPACE is set in os.environ')
+        onnx_test_runner_path_str = workspace_path + R'/bindings/python/cntk/tests/onnx_test_runner/onnx_test_runner.exe';
 
     assert(os.path.exists(onnx_test_runner_path_str), onnx_test_runner_path_str + ' does not exist.')
     return onnx_test_runner_path_str

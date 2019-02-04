@@ -229,7 +229,8 @@ def Save(dir, func, inputs, outputs, batch_size=1):
     onnx_model = onnx.load(model_file_path)
     onnx_model_description = onnx_model.graph.doc_string
     uid_name_map = dict(tuple(x[3:-3].split(', ')) for x in re.findall(r'<<<[^>]*>>>', onnx_model_description)[1:])
-    input_names = [uid_name_map[x.uid] for x in func.arguments]
+    # input names are mapped from uid to names (requested by skype team)
+    input_names = [x.uid if not x.name else x.name for x in func.arguments]
     # handle block outputs
     output_names = []
     block_uid_count = {}

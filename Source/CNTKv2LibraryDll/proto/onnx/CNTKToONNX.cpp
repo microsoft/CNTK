@@ -70,8 +70,13 @@ private:
         //
         // Initialize node name storage.
         //
-        static void InitializeUidNodeNameMap(const std::unordered_map<Variable, Variable> &outputsMap)
+        static void InitializeUidNodeNameMap(const FunctionPtr& src, const std::unordered_map<Variable, Variable> &outputsMap)
         {
+            for (int i = 0; i < src->Outputs().size(); i++)
+            {
+                outputUidNameMap.insert(std::make_pair(ToLegacyString(ToUTF8(src->Outputs()[i].Uid())), 
+                    ToLegacyString(ToUTF8(src->Outputs()[i].Name()))));
+            }
             uidNodeNameMap.clear();
             nodeNameSet.clear();
             nodeNameCountMap.clear();
@@ -83,6 +88,9 @@ private:
         //
         static std::string GetUniqueInputNodeName(const Variable& input)
         {
+            if (input.IsInput() && input.Owner() == nullptr && !input.Name().empty())
+                return ToLegacyString(ToUTF8(input.Name()));
+
             // Input variable often inherit the name of its owner when it is an output of a another node.
             // To avoid it taking up the name of its owner, we treat it as an output node and generate name accordingly.
             std::unordered_map<Variable, Variable>::iterator it = UniqueNodeNameStorage::compositeOutputsMap.find(input);
@@ -100,7 +108,12 @@ private:
             std::unordered_map<Variable, Variable>::iterator it = UniqueNodeNameStorage::compositeOutputsMap.find(output);
             if (it != UniqueNodeNameStorage::compositeOutputsMap.end())
                 return GetUniqueNodeName(it->second.Name(), it->second.Owner() == nullptr ? L"Input" : L"Output", it->second.Uid());
-            return GetUniqueNodeName(output.Name(), L"Output", output.Uid());
+            std::string outputName = GetUniqueNodeName(output.Name(), L"Output", output.Uid());
+
+            // try to use name for model outputs
+            if (outputUidNameMap.find(outputName) != outputUidNameMap.end() && !outputUidNameMap[outputName].empty())
+                outputName = outputUidNameMap[outputName];
+            return outputName;
         }
 
         //
@@ -226,6 +239,8 @@ private:
         // One-to-one mapping from uid to generated node name.
         //
         static std::unordered_map<std::string, std::string> uidNodeNameMap;
+
+        static std::unordered_map<std::string, std::string> outputUidNameMap;
 
         //
         // Set of node name, basically the set of values in uidNodeNameMap.
@@ -1051,7 +1066,7 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, onnxruntime::Graph* dst)
     //
     TraverseGraph(src, visited, compositeOutputsMap);
 
-    UniqueNodeNameStorage::InitializeUidNodeNameMap(compositeOutputsMap);
+    UniqueNodeNameStorage::InitializeUidNodeNameMap(src, compositeOutputsMap);
 
     // this is in case the last node is wrapped with batch and sequence pack/unpack plus transpose axis ops (via importing).
     // in this case, the (un)packing op sequence will not get skipped in ProcessInputs.
@@ -8650,6 +8665,7 @@ void CNTKToONNXHelper::ProcessOutputsForBatchAxisOp(const FunctionPtr& rootNode,
 
 std::unordered_map<std::string, size_t> CNTKToONNXHelper::UniqueNodeNameStorage::nodeNameCountMap;
 std::unordered_map<std::string, std::string> CNTKToONNXHelper::UniqueNodeNameStorage::uidNodeNameMap;
+std::unordered_map<std::string, std::string> CNTKToONNXHelper::UniqueNodeNameStorage::outputUidNameMap;
 std::unordered_set<std::string> CNTKToONNXHelper::UniqueNodeNameStorage::nodeNameSet;
 std::unordered_map<Variable, Variable> CNTKToONNXHelper::UniqueNodeNameStorage::compositeOutputsMap;
 std::unordered_set<CNTKToONNXHelper::PostProcessFlag, CNTKToONNXHelper::PostProcessFlagHash> CNTKToONNXHelper::postProcessFlags;
