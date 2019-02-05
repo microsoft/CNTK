@@ -170,8 +170,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // 1. Let's aggregate weights
             std::map<std::wstring, std::shared_ptr<Matrix<ElemType>>> aggregatedWeights;
             std::vector<::CNTK::NDArrayViewPtr> aggregatedWeightsPrepared;
-            for (auto& pBaseNode : learnableNodes)
+            auto smoothedGradientIter = smoothedGradients.begin();
+            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
             {
+                ComputationNodeBasePtr pBaseNode = *nodeIter;
                 if (!pBaseNode->IsParameterUpdateRequired())
                     continue;
 
@@ -234,6 +236,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     // 2.2.4 update bookkeeping
                     prevWeight.SetValue(currentWeight);
+                    // For half, we keep a copy of float weights, update that too
+                    if (std::is_same<ElemType, half>())
+                    {
+                        auto compoundMatrixPtr = dynamic_pointer_cast<Matrix<float>> (*smoothedGradientIter);
+                        size_t numCols = compoundMatrixPtr->GetNumCols() / 3;
+
+                        auto parameterMatrix = compoundMatrixPtr->ColumnSlice(2 * numCols, numCols);
+                        parameterMatrix.CastAssignValuesOf(currentWeight);
+                    }
                 }
             }
             //----------------------------------------

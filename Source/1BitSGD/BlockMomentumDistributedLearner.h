@@ -487,6 +487,8 @@ namespace CNTK
 
             m_numSamplesSeenInCurrentBlock = 0;
 
+            // For half, we keep a copy of float weights in local learner
+            // Set the flag so that will be updated / copied from half parameters
             m_learner->SetNeedToUpdateMasterParameter();
 
             if (m_resetSGDMomentumAfterAggregation)
