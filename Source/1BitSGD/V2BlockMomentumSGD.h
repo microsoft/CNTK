@@ -170,10 +170,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // 1. Let's aggregate weights
             std::map<std::wstring, std::shared_ptr<Matrix<ElemType>>> aggregatedWeights;
             std::vector<::CNTK::NDArrayViewPtr> aggregatedWeightsPrepared;
-            auto smoothedGradientIter = smoothedGradients.begin();
-            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
+            for (auto& pBaseNode : learnableNodes)
             {
-                ComputationNodeBasePtr pBaseNode = *nodeIter;
                 if (!pBaseNode->IsParameterUpdateRequired())
                     continue;
 
@@ -198,8 +196,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             m_communicator->AggregateInPlace(aggregatedWeightsPrepared, m_communicator->Workers());
 
             // 2. Let's update the model
-            for (auto& pBaseNode : learnableNodes)
+            auto smoothedGradientIter = smoothedGradients.begin();
+            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++)
             {
+                ComputationNodeBasePtr pBaseNode = *nodeIter;
                 if (!pBaseNode->IsParameterUpdateRequired())
                     continue;
 
