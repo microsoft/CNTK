@@ -46,6 +46,7 @@ namespace CNTK {
             m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Error);
             m_parser.SetChunkSize(SIZE_MAX);
             m_parser.SetNumRetries(0);
+            // m_parser.SetSkipSequenceIds(true);
             m_parser.Initialize();
         }
         // Retrieves a chunk of data.
