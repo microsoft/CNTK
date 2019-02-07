@@ -215,7 +215,7 @@ if [ -d "$CNTK_PY_ENV_PREFIX" ]; then
   "$CONDA" env update --file "$CNTK_PY_ENV_FILE" --name "$CNTK_PY_ENV_NAME" ||
     die "Updating Anaconda environment failed."
 else
-  "$CONDA" env create --file "$CNTK_PY_ENV_FILE" --prefix "$CNTK_PY_ENV_PREFIX" || {
+  "$CONDA" env create --file "$CNTK_PY_ENV_FILE" --prefix "$CNTK_PY_ENV_PREFIX" --force || {
     rm -rf "$CNTK_PY_ENV_PREFIX"
     die "Creating Anaconda environment failed."
   }
