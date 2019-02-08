@@ -452,7 +452,7 @@ namespace CNTK
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
         std::wstring tempCheckpointFile = trainerStateCheckpointFilePath + L".tmp";
 
-        state.Save(tempCheckpointFile);
+        //state.Save(tempCheckpointFile);
 
         // The return value is ignored here.
         _wunlink(modelFilePath.c_str());
