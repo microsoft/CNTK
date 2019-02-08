@@ -5739,7 +5739,7 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
         //
         if (input.IsOutput())
             CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap,
-                       scanLoops, createLoopIndex);
+                scanLoops, createLoopIndex);
 
         if (cntkOpName == "Splice")
         {
@@ -6055,10 +6055,9 @@ void CNTKToONNXHelper::TraverseGraph(const FunctionPtr& src,
         postProcessFlags.insert(PostProcessFlag::MaxUnPooling);
     }
 
-    if (!Operators::IsRNNOp(opName) && !Operators::IsSequenceBlockOp(opName) && opName != "Tuple" &&
-            src->IsBlock() &&
-            (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())) ||
-        IsUnSupportedLayerNormalization(src))
+    if (!Operators::IsSequenceBlockOp(opName) && opName != "Tuple" && 
+        src->IsBlock() && 
+        (!Operators::IsSupportedCNTKOP(src->OpName()) || Operators::IsLayerCNTKOP(src->OpName())) || IsUnSupportedLayerNormalization(src))
     {
         auto blockSrc = dynamic_cast<BlockFunction*>(src.get());
         for (auto map : blockSrc->CompositeOutputsMap())
@@ -7659,7 +7658,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const F
     int hidden = src->Output().Shape().Dimensions()[0] / numDirections;
     std::vector<int64_t> perm({0, 2, 1, 3});
     auto inputArgs = functionNode->OutputDefs();
-    std::vector<int64_t> transposeOutputShape({BatchSizeProcessor::FreeBatchSize(), (int64_t)NDShape::FreeDimension, (int64_t)numDirections, hidden});
+    std::vector<int64_t> transposeOutputShape({ (int64_t)NDShape::FreeDimension, BatchSizeProcessor::FreeBatchSize(), (int64_t)numDirections, hidden});
 
     onnx::TypeProto transposeOutputArgType = ToTypeProto(transposeOutputShape, false);
     UpdateONNXType(src->Output().GetDataType(), transposeOutputArgType);
