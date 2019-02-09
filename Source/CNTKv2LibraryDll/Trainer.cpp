@@ -459,7 +459,7 @@ namespace CNTK
         _wunlink(trainerStateCheckpointFilePath.c_str());
 
         renameOrDie(tempModelFile, modelFilePath);
-        renameOrDie(tempCheckpointFile, trainerStateCheckpointFilePath);
+        //renameOrDie(tempCheckpointFile, trainerStateCheckpointFilePath);
     }
 
     Dictionary Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
