@@ -2,7 +2,7 @@
 
 ## Definition
 
-The Model Editing Language (MEL) of the Computational Network ToolKit (CNTK) provides a means to modify an existing trained network using a set of provided commands. It provides a number of functions to modify the network and can use Network Description Language (NDL) to define new elements. It looks similar to a scripting language in syntax, but is not a programming “language”, but a simple way to modify an existing network. This network must have been defined in a format that CNTK can read, currently only the CNTK computational network disk format is supported. This document assumes some knowledge of NDL, reading the NDL document prior to this document is recommended.
+The Model Editing Language (MEL) of the Computational Network ToolKit (CNTK) provides a means to modify an existing trained network using a set of provided commands i.e. a network that was previously trained could now actually be changed according to one's own requirements. It provides a number of functions to modify the network and can use Network Description Language (NDL) to define new elements. It looks similar to a scripting language in syntax, but is not a programming “language”, but a simple way to modify an existing network. This network must have been defined in a format that CNTK can read, currently only the CNTK computational network disk format is supported. This document assumes some knowledge of NDL, reading the NDL document prior to this document is recommended.
 
 ## Example
 
@@ -321,7 +321,7 @@ Many commands have optional parameters that will change the behavior of the comm
     Copy(L1.\*, L2.\*, copy=all)
 ```
 
-In this example all the nodes starting with "L1." are copied to nodes starting with "L2.", the values of the nodes as well as any links between the nodes (the network structure) are copied. If the destination “L2.\*” nodes already exist, they will be overwritten. The other option is copy=value, which would be used when the network structure desired already exists, and the values contained in the node are all that are required to be copied. This can be used to copy over the values of Parameter() nodes to a new model with identical structure.
+In this example all the nodes starting with "L1." are copied to the nodes starting with "L2.", the values of the nodes as well as any links between the nodes (the network structure) are copied. If the destination “L2.\*” nodes already exist, they will be overwritten. The other option is copy=value, which would be used when the network structure desired already exists, and the values contained in the node are all that are required to be copied. This can be used to copy over the values of Parameter() nodes to a new model with identical structure.
 
 Each command may have optional parameters, look in the Command reference section for details of the optional parameters that are accepted by a command.
 Stringize variables
@@ -405,7 +405,7 @@ This section contains the currently implemented MEL Command functions.
 
 ### CreateModel
 
-Creates a new model which is empty.
+Creates a new and empty model.
 
 `m1=CreateModel()`
 
@@ -415,7 +415,7 @@ none
 
 #### Returns
 
-the new model
+It returns the new model.
 
 #### Notes
 
