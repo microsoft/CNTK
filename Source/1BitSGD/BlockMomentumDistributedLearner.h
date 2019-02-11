@@ -470,6 +470,9 @@ namespace CNTK
 
             m_numSamplesSeenInCurrentBlock = 0;
 
+            // For half, SynchronizeModel will update the parameters (half) in network.
+            // However, the local learner also have a copy of full precision parameters (float), which needs to be updated too.
+            // Set the flag so that the float copy will be updated / copied from half parameters.
             m_learner->SetNeedToUpdateMasterParameter();
 
             if (m_resetSGDMomentumAfterAggregation)
