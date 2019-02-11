@@ -59,17 +59,14 @@ namespace CNTK
             {
                 if (ONNX::Operators::IsRNNOp(ToLegacyString(ToUTF8(f->OpName()))))
                 {
-                    std::vector<FunctionPtr> rnnInternalBody;
-                    CollectInternalNodes(f->BlockRoot(), rnnInternalBody);
-                    m_rnnInternalBodies.insert(std::make_pair(f, rnnInternalBody));
+                    CollectInternalNodes(f, m_rnnInternalBodies, true);
+                    
                 }
                 else if (f->IsBlock())
                 {
                     // RNNs and other block functions that would be traversed into by CreateNode
                     // shall be treated the same at here and below of mapping block outputs to underlying variables.
-                    std::vector<FunctionPtr> blockInternalBody;
-                    CollectInternalNodes(f->BlockRoot(), blockInternalBody);
-                    m_blockInternalBodies.insert(std::make_pair(f, blockInternalBody));
+                    CollectInternalNodes(f, m_blockInternalBodies, true);
                 }
             }
 
@@ -151,11 +148,23 @@ namespace CNTK
             }
         }
 
-        static void CollectInternalNodes(FunctionPtr src, std::vector<FunctionPtr> &rnnInternalBody)
+        static void CollectInternalNodes(FunctionPtr src, 
+            std::unordered_map<FunctionPtr, std::vector<FunctionPtr>> &internalBodies, bool collectRecursively = false)
         {
-            src->PreorderTraverse([&rnnInternalBody](const FunctionPtr& function) {
-                rnnInternalBody.push_back(function);
+            FunctionPtr br = src->BlockRoot();
+            std::vector<FunctionPtr> internalBody;
+            br->PreorderTraverse([&internalBody](const FunctionPtr& function) {
+                internalBody.push_back(function);
             }, false);
+            internalBodies.insert(std::make_pair(src, internalBody));
+            if (collectRecursively)
+            {
+                for (auto f : internalBody)
+                {
+                    if (f->IsBlock())
+                        CollectInternalNodes(f, internalBodies, collectRecursively);
+                }
+            }
         }
 
         std::vector<Variable> m_inputs, m_outputs, m_scanInputs, m_scanOutputs;
