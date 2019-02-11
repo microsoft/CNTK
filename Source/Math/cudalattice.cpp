@@ -204,9 +204,7 @@ private:
         Microsoft::MSR::CNTK::Matrix<float> &dengammas)
     {
         ondevice no(deviceid);
-
         matrixref<float> dengammasMatrixRef = tomatrixref(dengammas);
-        
         latticefunctionsops::EMBRerrorsignal(dynamic_cast<const vectorbaseimpl<ushortvector, vectorref<unsigned short>> &>(alignstateids),
             dynamic_cast<const vectorbaseimpl<uintvector, vectorref<unsigned int>> &>(alignoffsets),
             dynamic_cast<const vectorbaseimpl<edgeinfowithscoresvector, vectorref<msra::lattices::edgeinfowithscores>> &>(edges),
