@@ -44,8 +44,8 @@ class minibatchutterancesourcemulti : public minibatchsource
     // const std::vector<std::unique_ptr<latticesource>> &lattices;
     const latticesource &lattices;
 
-	//linquan
-	std::unordered_map<size_t, std::wstring> id2wordmapping; //keep id-to-real word/character mapping 
+    //linquan
+    std::unordered_map<size_t, std::wstring> id2wordmapping; //keep id-to-real word/character mapping 
 
     // Flag indicating whether to use Mersenne Twister random generator.
     bool m_useMersenneTwister;

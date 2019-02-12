@@ -120,8 +120,8 @@ private:
     std::vector<edgeinfowithscores> edges;
     std::vector<aligninfo> align;
 
-	//linquan
-	const std::unordered_map<size_t, std::wstring>* ptr_id2wordmap4node;
+    //linquan
+    const std::unordered_map<size_t, std::wstring>* ptr_id2wordmap4node;
    
     // V2 lattices  --for a while, we will store both in RAM, until all code is updated
     static int fsgn(float f)
@@ -1205,24 +1205,24 @@ public:
             if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
             else is_special_words[i] = false;
 
-        	//linquan disable wordid mapping
-        	//        if (!id2wordmapping.empty())
-        	//        {
-        	//            wordid = int(nodes[i].wid);
-        	//            maptable_itr = id2wordmapping.find(wordid);
-        	//if (maptable_itr != id2wordmapping.end())
-        	//            {
-        	//                if (id2wordmap4node.find(wordid) == id2wordmap4node.end())
-        	//                {
-        	//                    id2wordmap4node.insert(std::pair<int, std::wstring>(maptable_itr->first, maptable_itr->second));
-        	//                }
-        	//            }
-        	//            else //in theory, never happens
-        	//            {
-        	//                fprintf(stderr, "no mapping id2word for %d \n", wordid);
-        	//                id2wordmap4node.insert(std::pair<int, std::wstring>(wordid, std::to_wstring(wordid)));
-        	//            }
-        	//        }
+            //linquan disable wordid mapping
+            //        if (!id2wordmapping.empty())
+            //        {
+            //            wordid = int(nodes[i].wid);
+            //            maptable_itr = id2wordmapping.find(wordid);
+            //if (maptable_itr != id2wordmapping.end())
+            //            {
+            //                if (id2wordmap4node.find(wordid) == id2wordmap4node.end())
+            //                {
+            //                    id2wordmap4node.insert(std::pair<int, std::wstring>(maptable_itr->first, maptable_itr->second));
+            //                }
+            //            }
+            //            else //in theory, never happens
+            //            {
+            //                fprintf(stderr, "no mapping id2word for %d \n", wordid);
+            //                id2wordmap4node.insert(std::pair<int, std::wstring>(wordid, std::to_wstring(wordid)));
+            //            }
+            //        }
         }
         ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap); 
     }
