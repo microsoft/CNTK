@@ -843,9 +843,9 @@ std::vector<std::wstring> splitword2character(const std::wstring &s)
 
 	for (std::wsregex_iterator it = words_begin; it != words_end; ++it)
 	{
-		std::wsmatch match = *it;
-		std::wstring match_str = match.str();
-		tgt.push_back(match_str);
+        std::wsmatch match = *it;
+        std::wstring match_str = match.str();
+        tgt.push_back(match_str);
 	}
 
 	return tgt;
@@ -857,7 +857,7 @@ bool istagword(const std::wstring &s)
 	std::wsmatch match;
 
 	if (std::regex_match(s.cbegin(), s.cend(), match, words_regex))
-		return true;
+        return true;
 
 	return false;
 }
@@ -867,73 +867,73 @@ float computewerandcer(std::vector<size_t> &wids, std::vector<size_t> &path_ids,
 	float wer;
 	if (ptr_id2wordmap4node->size() > 0)
 	{
-		std::vector<std::wstring> refwords;
-		std::vector<std::wstring> regwords;
-		std::vector<size_t> refid;
-		std::vector<size_t> regid;
-		std::wstring temp_string;
-		std::vector<std::wstring> character_array;
-		std::unordered_map<std::wstring, size_t> idmappingtable;
+        std::vector<std::wstring> refwords;
+        std::vector<std::wstring> regwords;
+        std::vector<size_t> refid;
+        std::vector<size_t> regid;
+        std::wstring temp_string;
+        std::vector<std::wstring> character_array;
+        std::unordered_map<std::wstring, size_t> idmappingtable;
 
-		refwords.clear();
-		regwords.clear();
-		character_array.clear();
-		refid.clear();
-		regid.clear();
-		idmappingtable.clear();
-		std::unordered_map<size_t, std::wstring>::const_iterator maptable_itr;
-		for (std::vector<size_t>::const_iterator it = wids.begin(); it != wids.end(); ++it)
-		{
-			maptable_itr = ptr_id2wordmap4node->find(*it);
-			temp_string = (maptable_itr != ptr_id2wordmap4node->end()) ? maptable_itr->second : std::to_wstring(*it);
-			character_array = splitword2character(temp_string);
+        refwords.clear();
+        regwords.clear();
+        character_array.clear();
+        refid.clear();
+        regid.clear();
+        idmappingtable.clear();
+        std::unordered_map<size_t, std::wstring>::const_iterator maptable_itr;
+        for (std::vector<size_t>::const_iterator it = wids.begin(); it != wids.end(); ++it)
+        {
+        	maptable_itr = ptr_id2wordmap4node->find(*it);
+        	temp_string = (maptable_itr != ptr_id2wordmap4node->end()) ? maptable_itr->second : std::to_wstring(*it);
+        	character_array = splitword2character(temp_string);
 
-			foreach_index(_i, character_array)
-			{
-				refwords.push_back(character_array[_i]);
-				if (idmappingtable.find(character_array[_i]) == idmappingtable.end())
-				{
-					idmappingtable.insert(pair<std::wstring, size_t>(character_array[_i], idmappingtable.size() + 1));
-				}
-			}
-		}
+        	foreach_index(_i, character_array)
+        	{
+                refwords.push_back(character_array[_i]);
+                if (idmappingtable.find(character_array[_i]) == idmappingtable.end())
+                {
+                	idmappingtable.insert(pair<std::wstring, size_t>(character_array[_i], idmappingtable.size() + 1));
+                }
+        	}
+        }
 
-		for (std::vector<size_t>::const_iterator it = path_ids.begin(); it != path_ids.end(); ++it)
-		{
-			maptable_itr = ptr_id2wordmap4node->find(*it);
+        for (std::vector<size_t>::const_iterator it = path_ids.begin(); it != path_ids.end(); ++it)
+        {
+        	maptable_itr = ptr_id2wordmap4node->find(*it);
 
-			temp_string = (maptable_itr != ptr_id2wordmap4node->end()) ? maptable_itr->second : std::to_wstring(*it);
-			character_array = splitword2character(temp_string);
+        	temp_string = (maptable_itr != ptr_id2wordmap4node->end()) ? maptable_itr->second : std::to_wstring(*it);
+        	character_array = splitword2character(temp_string);
 
-			foreach_index(_i, character_array)
-			{
-				regwords.push_back(character_array[_i]);
-				if (idmappingtable.find(character_array[_i]) == idmappingtable.end())
-				{
-					idmappingtable.insert(pair<std::wstring, size_t>(character_array[_i], idmappingtable.size() + 1));
-				}
-			}
-		}
+        	foreach_index(_i, character_array)
+        	{
+                regwords.push_back(character_array[_i]);
+                if (idmappingtable.find(character_array[_i]) == idmappingtable.end())
+                {
+                	idmappingtable.insert(pair<std::wstring, size_t>(character_array[_i], idmappingtable.size() + 1));
+                }
+        	}
+        }
 
-		//map characters to id to be compatiable with egacy code
-		//skip tag words
-		foreach_index(_k, refwords)
-		{
-			if (!istagword(refwords[_k]))
-				refid.push_back(idmappingtable.find(refwords[_k])->second);
-		}
+        //map characters to id to be compatiable with egacy code
+        //skip tag words
+        foreach_index(_k, refwords)
+        {
+        	if (!istagword(refwords[_k]))
+                refid.push_back(idmappingtable.find(refwords[_k])->second);
+        }
 
-		foreach_index(_k, regwords)
-		{
-			if (!istagword(regwords[_k]))
-				regid.push_back(idmappingtable.find(regwords[_k])->second);
-		}
+        foreach_index(_k, regwords)
+        {
+        	if (!istagword(regwords[_k]))
+                regid.push_back(idmappingtable.find(regwords[_k])->second);
+        }
 
-		wer = compute_wer(refid, regid);
+        wer = compute_wer(refid, regid);
 	}
 	else
 	{
-		wer = compute_wer(wids, path_ids);
+        wer = compute_wer(wids, path_ids);
 	}
 
 	return wer;
@@ -1050,9 +1050,9 @@ double lattice::nbestlatticeEMBR(const std::vector<float> &edgeacscores, paralle
                  }
 
                  
-				 //linquan
-				 //float wer = compute_wer(wids, path_ids);
-				 float wer = computewerandcer(wids, path_ids, ptr_id2wordmap4node);
+                 //linquan
+                 //float wer = compute_wer(wids, path_ids);
+                 float wer = computewerandcer(wids, path_ids, ptr_id2wordmap4node);
                  // will favor the path with better WER
                  pathscore -= double(accWeightInNbest*wer);
 
@@ -1771,10 +1771,10 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
             if (!is_special_words[edges[vt_paths[i][j]].E]) path_ids.push_back(nodes[edges[vt_paths[i][j]].E].wid);
             nodes[edges[vt_paths[i][j]].E].wid;
         }
-		        
-		//linquan
-		//vt_path_weights[i] = compute_wer(wids, path_ids);
-		vt_path_weights[i] = computewerandcer(wids, path_ids, ptr_id2wordmap4node);
+                
+        //linquan
+        //vt_path_weights[i] = compute_wer(wids, path_ids);
+        vt_path_weights[i] = computewerandcer(wids, path_ids, ptr_id2wordmap4node);
 
         string pathidstr = "$";
         for (size_t j = 0; j < path_ids.size(); j++) pathidstr += ("_" + std::to_string(path_ids[j]));

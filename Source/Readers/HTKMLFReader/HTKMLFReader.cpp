@@ -136,34 +136,34 @@ void readwordidmap2(const std::wstring& pathname, std::unordered_map<std::wstrin
 
 	while (!feof(f))
 	{
-		buffer = fgetlinew(f);
-		/*  size_t posstart = buffer.find_first_of('\t');
-		if (posstart == std::wstring::npos)
-		{
-		posstart = buffer.find_first_of(' ');
-		}
-		size_t posend = buffer.find_last_of('\t');
-		if (posend == std::wstring::npos)
-		{
-		posend = buffer.find_last_of(' ');
-		}
+        buffer = fgetlinew(f);
+        /*  size_t posstart = buffer.find_first_of('\t');
+        if (posstart == std::wstring::npos)
+        {
+        posstart = buffer.find_first_of(' ');
+        }
+        size_t posend = buffer.find_last_of('\t');
+        if (posend == std::wstring::npos)
+        {
+        posend = buffer.find_last_of(' ');
+        }
 
-		wordid = buffer.substr(0, posstart);
-		word = buffer.substr(posend + 1, buffer.length());*/
+        wordid = buffer.substr(0, posstart);
+        word = buffer.substr(posend + 1, buffer.length());*/
 
-		size_t pos = buffer.find(' ');
-		wordid = buffer.substr(0, pos);
-		word = buffer.substr(pos + 1, buffer.length());
+        size_t pos = buffer.find(' ');
+        wordid = buffer.substr(0, pos);
+        word = buffer.substr(pos + 1, buffer.length());
 
-		if (wordid == L"" || word == L"")
-			continue;
+        if (wordid == L"" || word == L"")
+        	continue;
 
-		//if (wordidmap.find(std::wstring(wordid)) == wordidmap.end())
-		{
-			wordidmap.insert(std::pair<std::wstring, std::wstring>(std::wstring(wordid), std::wstring(word)));
-		}
+        //if (wordidmap.find(std::wstring(wordid)) == wordidmap.end())
+        {
+        	wordidmap.insert(std::pair<std::wstring, std::wstring>(std::wstring(wordid), std::wstring(word)));
+        }
 
-		buffer.clear();
+        buffer.clear();
 	}
 
 	fclose(f);
@@ -180,14 +180,14 @@ std::unordered_map<size_t, std::wstring> CombineMappingTable(const std::unordere
 
 	for (idmap_itr = trainwordidmap.begin(); idmap_itr != trainwordidmap.end(); ++idmap_itr)
 	{
-		maptable_itr = wordidmap.find(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(idmap_itr->first));
-		if (maptable_itr != wordidmap.end())
-			combinedmapping.insert(std::pair<size_t, std::wstring>(idmap_itr->second, maptable_itr->second));
-		else
-		{
-			//fprintf(stderr, "no mapping id for %ls %d \n", s2ws(idmap_itr->first).c_str(), (int) idmap_itr->second);
-			combinedmapping.insert(std::pair<size_t, std::wstring>(idmap_itr->second, to_wstring(idmap_itr->second) /*s2ws(idmap_itr->first)*/));
-		}
+        maptable_itr = wordidmap.find(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(idmap_itr->first));
+        if (maptable_itr != wordidmap.end())
+        	combinedmapping.insert(std::pair<size_t, std::wstring>(idmap_itr->second, maptable_itr->second));
+        else
+        {
+        	//fprintf(stderr, "no mapping id for %ls %d \n", s2ws(idmap_itr->first).c_str(), (int) idmap_itr->second);
+        	combinedmapping.insert(std::pair<size_t, std::wstring>(idmap_itr->second, to_wstring(idmap_itr->second) /*s2ws(idmap_itr->first)*/));
+        }
 	}
 
 	return combinedmapping;
@@ -543,7 +543,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (readerConfig.Exists(L"wordidmap"))
         wordidmappath = (const wstring&)readerConfig(L"wordidmap");
 	if (readerConfig.Exists(L"word2widmap"))
-		word2widmappath = (const wstring&)readerConfig(L"word2widmap");
+        word2widmappath = (const wstring&)readerConfig(L"word2widmap");
 
     // load a unigram if needed (this is used for MMI training)
     msra::lm::CSymbolSet unigramsymbols;
@@ -617,16 +617,16 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         int start_id = 6;
         readwordidmap(wordidmappath, wordidmap, start_id);
-		//const std::wstring mappingTable = L"D:\\Development\\TAMER\\eMBR\\CERCriteria\\Data2\\word2wid.dict.mapping.dict";
-		//optional id--> word string mapping
-		/*changed by Linquan*/
-		if (word2widmappath != L"")
-		{
-			readwordidmap2(word2widmappath, wordidmap2);
-			id2wordmapping = CombineMappingTable(wordidmap, wordidmap2);
-		}
-		else
-			id2wordmapping.clear();
+        //const std::wstring mappingTable = L"D:\\Development\\TAMER\\eMBR\\CERCriteria\\Data2\\word2wid.dict.mapping.dict";
+        //optional id--> word string mapping
+        /*changed by Linquan*/
+        if (word2widmappath != L"")
+        {
+        	readwordidmap2(word2widmappath, wordidmap2);
+        	id2wordmapping = CombineMappingTable(wordidmap, wordidmap2);
+        }
+        else
+        	id2wordmapping.clear();
 
         specialwordids.clear();
         specialwords.clear();

@@ -1186,7 +1186,7 @@ public:
     
     template <class IDMAP>
     void ProcessV2EMBRLattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap, 
-		std::unordered_map<size_t, std::wstring>& id2wordmapping, std::unordered_set<int>& specialwordids)
+        std::unordered_map<size_t, std::wstring>& id2wordmapping, std::unordered_set<int>& specialwordids)
     {
         vt_node_out_edge_indices.resize(info.numnodes);
         for (size_t j = 0; j < info.numedges; j++)
@@ -1198,31 +1198,31 @@ public:
             vt_node_out_edge_indices[edges2[j].S].push_back(j);
         }
         is_special_words.resize(info.numnodes);
-		ptr_id2wordmap4node = &id2wordmapping;
+        ptr_id2wordmap4node = &id2wordmapping;
 
         for (size_t i = 0; i < info.numnodes; i++)
         {
             if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
             else is_special_words[i] = false;
 
-			//linquan disable wordid mapping
-			//        if (!id2wordmapping.empty())
-			//        {
-			//            wordid = int(nodes[i].wid);
-			//            maptable_itr = id2wordmapping.find(wordid);
-			//if (maptable_itr != id2wordmapping.end())
-			//            {
-			//                if (id2wordmap4node.find(wordid) == id2wordmap4node.end())
-			//                {
-			//                    id2wordmap4node.insert(std::pair<int, std::wstring>(maptable_itr->first, maptable_itr->second));
-			//                }
-			//            }
-			//            else //in theory, never happens
-			//            {
-			//                fprintf(stderr, "no mapping id2word for %d \n", wordid);
-			//                id2wordmap4node.insert(std::pair<int, std::wstring>(wordid, std::to_wstring(wordid)));
-			//            }
-			//        }
+        	//linquan disable wordid mapping
+        	//        if (!id2wordmapping.empty())
+        	//        {
+        	//            wordid = int(nodes[i].wid);
+        	//            maptable_itr = id2wordmapping.find(wordid);
+        	//if (maptable_itr != id2wordmapping.end())
+        	//            {
+        	//                if (id2wordmap4node.find(wordid) == id2wordmap4node.end())
+        	//                {
+        	//                    id2wordmap4node.insert(std::pair<int, std::wstring>(maptable_itr->first, maptable_itr->second));
+        	//                }
+        	//            }
+        	//            else //in theory, never happens
+        	//            {
+        	//                fprintf(stderr, "no mapping id2word for %d \n", wordid);
+        	//                id2wordmap4node.insert(std::pair<int, std::wstring>(wordid, std::to_wstring(wordid)));
+        	//            }
+        	//        }
         }
         ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap); 
     }
@@ -1502,7 +1502,7 @@ public:
     // Lattices will have unit ids updated according to the modelsymmap.
     // V1 lattices will be converted. 'spsenoneid' is used in the conversion for optimizing storing 0-frame /sp/ aligns.
     void getlattice(const std::wstring& key, lattice& L, 
-		std::unordered_map<size_t, std::wstring>& id2wordmapping, std::unordered_set<int>& specialwordids, size_t expectedframes = SIZE_MAX) const
+        std::unordered_map<size_t, std::wstring>& id2wordmapping, std::unordered_set<int>& specialwordids, size_t expectedframes = SIZE_MAX) const
     {
         auto iter = toc.find(key);
         if (iter == toc.end())

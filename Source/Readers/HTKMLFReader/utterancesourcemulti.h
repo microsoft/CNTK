@@ -936,7 +936,7 @@ public:
     // This mode requires utterances with time stamps.
 
     minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::pair<std::vector<msra::asr::htkmlfentry>, std::vector<unsigned int>>>> &labels,
-								  std::unordered_map<size_t, std::wstring> &id2wordmapping, std::unordered_set<int>& specialwordids,
+                                  std::unordered_map<size_t, std::wstring> &id2wordmapping, std::unordered_set<int>& specialwordids,
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
                                   const latticesource &lattices, const std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, std::vector<bool> expandToUtt,
                                   const size_t maxUtteranceLength, const bool truncated)
