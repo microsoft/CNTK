@@ -1771,8 +1771,10 @@ double lattice::get_edge_weights(std::vector<size_t>& wids, std::vector<std::vec
             if (!is_special_words[edges[vt_paths[i][j]].E]) path_ids.push_back(nodes[edges[vt_paths[i][j]].E].wid);
             nodes[edges[vt_paths[i][j]].E].wid;
         }
-
-        vt_path_weights[i] = compute_wer(wids, path_ids);
+		        
+		//linquan
+		//vt_path_weights[i] = compute_wer(wids, path_ids);
+		vt_path_weights[i] = computewerandcer(wids, path_ids, ptr_id2wordmap4node);
 
         string pathidstr = "$";
         for (size_t j = 0; j < path_ids.size(); j++) pathidstr += ("_" + std::to_string(path_ids[j]));
