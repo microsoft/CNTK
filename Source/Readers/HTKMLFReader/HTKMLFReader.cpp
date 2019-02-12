@@ -169,10 +169,10 @@ void readwordidmap2(const std::wstring& pathname, std::unordered_map<std::wstrin
 	fclose(f);
 }
 
-std::unordered_map<size_t, std::wstring> CombineMappingTable(const std::unordered_map<std::string, size_t> trainwordidmap, const std::unordered_map<std::wstring, std::wstring>& wordidmap)
+std::unordered_map<size_t, std::wstring> CombineMappingTable(const std::unordered_map<std::string, int> trainwordidmap, const std::unordered_map<std::wstring, std::wstring>& wordidmap)
 {
 	std::unordered_map<size_t, std::wstring> combinedmapping;
-	std::unordered_map<std::string, size_t>::const_iterator idmap_itr;
+	std::unordered_map<std::string, int>::const_iterator idmap_itr;
 	std::unordered_map<std::wstring, std::wstring>::const_iterator maptable_itr;
 	std::wstring id;
 	std::wstring wid;
@@ -180,7 +180,7 @@ std::unordered_map<size_t, std::wstring> CombineMappingTable(const std::unordere
 
 	for (idmap_itr = trainwordidmap.begin(); idmap_itr != trainwordidmap.end(); ++idmap_itr)
 	{
-		maptable_itr = wordidmap.find(s2ws(idmap_itr->first));
+		maptable_itr = wordidmap.find(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(idmap_itr->first));
 		if (maptable_itr != wordidmap.end())
 			combinedmapping.insert(std::pair<size_t, std::wstring>(idmap_itr->second, maptable_itr->second));
 		else

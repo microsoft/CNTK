@@ -405,7 +405,7 @@ void lattice::dedup()
 //  - empty ("") -> don't output, just check the format
 //  - dash ("-") -> dump lattice to stdout instead
 /*static*/ void archive::convert(const std::wstring &intocpath, const std::wstring &intocpath2, const std::wstring &outpath,
-                                 const msra::asr::simplesenonehmm &hset, std::unordered_set<int>& specialwordids)
+                                 const msra::asr::simplesenonehmm &hset, std::unordered_map<size_t, std::wstring>& id2wordmapping, std::unordered_set<int>& specialwordids)
                                  {
     const auto &modelsymmap = hset.getsymmap();
 
@@ -457,7 +457,7 @@ void lattice::dedup()
 
         // fetch lattice  --this performs any necessary format conversions already
         lattice L;
-        archive.getlattice(key, L, specialwordids);
+        archive.getlattice(key, L, id2wordmapping, specialwordids);
         lattice L2;
         if (mergemode)
         {
@@ -467,7 +467,7 @@ void lattice::dedup()
                 skippedmerges++;
                 continue;
             }
-            archive2.getlattice(key, L2, specialwordids);
+            archive2.getlattice(key, L2, id2wordmapping, specialwordids);
             // merge it in
             // This will connect each node with matching 1-phone context conditions; aimed at merging numer lattices.
             L.removefinalnull(); // get rid of that final !NULL headache

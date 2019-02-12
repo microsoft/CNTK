@@ -119,6 +119,9 @@ private:
     std::vector<bool> is_special_words; // true if it is special words that do not count to WER computation, false if it is not
     std::vector<edgeinfowithscores> edges;
     std::vector<aligninfo> align;
+
+	//linquan
+	const std::unordered_map<size_t, std::wstring>* ptr_id2wordmap4node;
    
     // V2 lattices  --for a while, we will store both in RAM, until all code is updated
     static int fsgn(float f)
@@ -1053,7 +1056,7 @@ public:
     // This will also map the aligninfo entries to the new symbol table, through idmap.
     // V1 lattices will be converted. 'spsenoneid' is used in that process.
     template <class IDMAP>
-    void fread(FILE* f, const IDMAP& idmap, size_t spunit, std::unordered_set<int>& specialwordids)
+    void fread(FILE* f, const IDMAP& idmap, size_t spunit, std::unordered_map<size_t, std::wstring>& id2wordmapping, std::unordered_set<int>& specialwordids)
     {
         size_t version = freadtag(f, "LAT ");
         if (version == 1)
@@ -1084,7 +1087,7 @@ public:
             freadvector(f, "EDGS", edges2, info.numedges); // uniqued edges
             freadvector(f, "ALNS", uniquededgedatatokens); // uniqued alignments
             fcheckTag(f, "END ");
-            ProcessV2EMBRLattice(spunit, info, uniquededgedatatokens, idmap, specialwordids);
+            ProcessV2EMBRLattice(spunit, info, uniquededgedatatokens, idmap, id2wordmapping, specialwordids);
         }
         else
             RuntimeError("fread: unsupported lattice format version");
@@ -1182,7 +1185,8 @@ public:
     }
     
     template <class IDMAP>
-    void ProcessV2EMBRLattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap, std::unordered_set<int>& specialwordids) 
+    void ProcessV2EMBRLattice(size_t spunit, header_v1_v2& info, std::vector<aligninfo>& uniquededgedatatokens, const IDMAP& idmap, 
+		std::unordered_map<size_t, std::wstring>& id2wordmapping, std::unordered_set<int>& specialwordids)
     {
         vt_node_out_edge_indices.resize(info.numnodes);
         for (size_t j = 0; j < info.numedges; j++)
@@ -1194,10 +1198,31 @@ public:
             vt_node_out_edge_indices[edges2[j].S].push_back(j);
         }
         is_special_words.resize(info.numnodes);
+		ptr_id2wordmap4node = &id2wordmapping;
+
         for (size_t i = 0; i < info.numnodes; i++)
         {
             if (specialwordids.find(int(nodes[i].wid)) != specialwordids.end())    is_special_words[i] = true;
             else is_special_words[i] = false;
+
+			//linquan disable wordid mapping
+			//        if (!id2wordmapping.empty())
+			//        {
+			//            wordid = int(nodes[i].wid);
+			//            maptable_itr = id2wordmapping.find(wordid);
+			//if (maptable_itr != id2wordmapping.end())
+			//            {
+			//                if (id2wordmap4node.find(wordid) == id2wordmap4node.end())
+			//                {
+			//                    id2wordmap4node.insert(std::pair<int, std::wstring>(maptable_itr->first, maptable_itr->second));
+			//                }
+			//            }
+			//            else //in theory, never happens
+			//            {
+			//                fprintf(stderr, "no mapping id2word for %d \n", wordid);
+			//                id2wordmap4node.insert(std::pair<int, std::wstring>(wordid, std::to_wstring(wordid)));
+			//            }
+			//        }
         }
         ProcessV2Lattice(spunit, info, uniquededgedatatokens, idmap); 
     }
@@ -1476,8 +1501,8 @@ public:
     // 'key' is supposed to be known to exist. Use haslattice() to ensure. This is because this function is called from a retry loop.
     // Lattices will have unit ids updated according to the modelsymmap.
     // V1 lattices will be converted. 'spsenoneid' is used in the conversion for optimizing storing 0-frame /sp/ aligns.
-    void getlattice(const std::wstring& key, lattice& L,
-        std::unordered_set<int>& specialwordids, size_t expectedframes = SIZE_MAX) const
+    void getlattice(const std::wstring& key, lattice& L, 
+		std::unordered_map<size_t, std::wstring>& id2wordmapping, std::unordered_set<int>& specialwordids, size_t expectedframes = SIZE_MAX) const
     {
         auto iter = toc.find(key);
         if (iter == toc.end())
@@ -1504,7 +1529,7 @@ public:
             // seek to start
             fsetpos(f, offset);
             // get it
-            L.fread(f, idmap, spunit, specialwordids);
+            L.fread(f, idmap, spunit, id2wordmapping, specialwordids);
             L.setverbosity(verbosity);
 #ifdef HACK_IN_SILENCE // hack to simulate DEL in the lattice
             const size_t silunit = getid(modelsymmap, "sil");
@@ -1538,7 +1563,7 @@ public:
     //  - dump to stdout
     //  - merge two lattices (for merging numer into denom lattices)
     static void convert(const std::wstring& intocpath, const std::wstring& intocpath2, const std::wstring& outpath,
-        const msra::asr::simplesenonehmm& hset, std::unordered_set<int>& specialwordids);
+        const msra::asr::simplesenonehmm& hset, std::unordered_map<size_t, std::wstring>& id2wordmapping, std::unordered_set<int>& specialwordids);
 };
 };
 };

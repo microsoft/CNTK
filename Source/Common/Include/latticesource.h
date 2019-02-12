@@ -62,10 +62,10 @@ public:
 #endif
     }
 
-    void getlattices(const std::wstring& key, std::shared_ptr<const latticepair>& L, size_t expectedframes, std::unordered_set<int>& specialwordids) const
+    void getlattices(const std::wstring& key, std::shared_ptr<const latticepair>& L, size_t expectedframes, std::unordered_map<size_t, std::wstring>& id2wordmapping, std::unordered_set<int>& specialwordids) const
     {
         std::shared_ptr<latticepair> LP(new latticepair);
-        denlattices.getlattice(key, LP->second, specialwordids, expectedframes); // this loads the lattice from disk, using the existing L.second object
+        denlattices.getlattice(key, LP->second, id2wordmapping, specialwordids, expectedframes); // this loads the lattice from disk, using the existing L.second object
         L = LP;
     }
 
