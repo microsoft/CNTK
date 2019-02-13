@@ -843,6 +843,13 @@ private:
         const std::unordered_map<Variable, Variable>& compositeOutputsMap, 
         std::vector<ScanLoop>& scanLoops, int createLoopIndex);
 
+    static onnxruntime::Node* CreateConvolutionBlockNode(const FunctionPtr& src,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+        const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+        std::vector<ScanLoop>& scanLoops, int createLoopIndex);
+
     static onnxruntime::Node* CreateONNXNodesForConstantOp(const FunctionPtr& src,
         onnxruntime::Graph* graph,
         std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
@@ -3400,66 +3407,63 @@ onnxruntime::Node *CNTKToONNXHelper::AddSliceNode(onnxruntime::NodeArg &inputArg
     if (inputTypeProto.tensor_type().has_shape())
     {
         outputTypeProto = MakeTypeProtoWithShape();
-
         for (int i = 0, j = 0; i < inputTypeProto.tensor_type().shape().dim_size(); ++i)
         {
-            const ::onnx::TensorShapeProto_Dimension& inputDim = inputTypeProto.tensor_type().shape().dim(i);
-            if (inputDim.has_dim_value())
+            auto* newdim = outputTypeProto.mutable_tensor_type()->mutable_shape()->add_dim();
+            if (j < axes.size() && axes[j] == i)
             {
-                int64_t start = starts[j] >= 0 ? starts[j] : inputDim.dim_value() + starts[j];
-                start = std::max<int64_t>(start, 0);
-                int64_t end = ends[j] >= 0 ? ends[j] : inputDim.dim_value() + ends[j];
-                end = std::min<int64_t>(std::max<int64_t>(end, 0), inputDim.dim_value());
-
-                auto newval = end - start;
-                if (newval >= 0)
+                const ::onnx::TensorShapeProto_Dimension& inputDim = inputTypeProto.tensor_type().shape().dim(i);
+                if (inputDim.has_dim_value())
                 {
-                    auto newval = std::min(
-                        inputTypeProto.tensor_type().shape().dim(i).dim_value(),
-                        ends[j]) - starts[j];
+                    int64_t start = starts[j] >= 0 ? starts[j] : inputDim.dim_value() + starts[j];
+                    start = std::max<int64_t>(start, 0);
+                    int64_t end = ends[j] >= 0 ? ends[j] : inputDim.dim_value() + ends[j];
+                    end = std::min<int64_t>(std::max<int64_t>(end, 0), inputDim.dim_value());
+
+                    auto newval = end - start;
                     if (newval >= 0)
                     {
                         newdim->set_dim_value(newval);
                     }
                 }
-                else if (inputTypeProto.tensor_type().shape().dim(i).has_dim_param())
+                else if (inputDim.has_dim_param())
                 {
-                    newdim->set_dim_param(inputTypeProto.tensor_type().shape().dim(i).dim_param());
+                    bool WorkAroundONNXSliceShapeInferencing = true;
+                    // ONNX shape inferencing does not handle param case. to avoid shape checking failure, we need to skip as well.
+                    if (WorkAroundONNXSliceShapeInferencing)
+                    {
+                        newdim->set_dim_param(inputDim.dim_param() + "_sliced");
+                    }
+                    else
+                    {
+                        if (ends[j] == std::numeric_limits<int64_t>::max())
+                        {
+                            if (starts[j] == 0)
+                                // dimension not changed
+                                newdim->set_dim_param(inputDim.dim_param());
+                            else if (starts[j] > 0)
+                                newdim->set_dim_param(inputDim.dim_param() + "_sliced");
+                            else
+                                // -starts[j] is the new dim value
+                                newdim->set_dim_value(-starts[j]);
+                        }
+                        else if ((starts[j] >= 0 && ends[j] >= 0) || (starts[j] < 0 && ends[j] < 0))
+                        {
+                            auto newval = ends[j] - starts[j];
+                            if (newval >= 0)
+                            {
+                                newdim->set_dim_value(newval);
+                            }
+                        }
+                        else
+                            newdim->set_dim_param(inputDim.dim_param() + "_sliced");
+                    }
                 }
                 ++j;
             }
-            else if (inputDim.has_dim_param())
+            else
             {
-                bool WorkAroundONNXSliceShapeInferencing = true;
-                // ONNX shape inferencing does not handle param case. to avoid shape checking failure, we need to skip as well.
-                if (WorkAroundONNXSliceShapeInferencing)
-                {
-                    newdim->set_dim_param(inputDim.dim_param() + "_sliced");
-                }
-                else
-                {
-                    if (ends[j] == std::numeric_limits<int64_t>::max())
-                    {
-                        if (starts[j] == 0)
-                            // dimension not changed
-                            newdim->set_dim_param(inputDim.dim_param());
-                        else if (starts[j] > 0)
-                            newdim->set_dim_param(inputDim.dim_param() + "_sliced");
-                        else
-                            // -starts[j] is the new dim value
-                            newdim->set_dim_value(-starts[j]);
-                    }
-                    else if ((starts[j] >= 0 && ends[j] >= 0) || (starts[j] < 0 && ends[j] < 0))
-                    {
-                        auto newval = ends[j] - starts[j];
-                        if (newval >= 0)
-                        {
-                            newdim->set_dim_value(newval);
-                        }
-                    }
-                    else
-                        newdim->set_dim_param(inputDim.dim_param() + "_sliced");
-                }
+                *newdim = inputTypeProto.tensor_type().shape().dim((int)i);
             }
         }
     }
@@ -3467,7 +3471,7 @@ onnxruntime::Node *CNTKToONNXHelper::AddSliceNode(onnxruntime::NodeArg &inputArg
     outputTypeProto.mutable_tensor_type()->set_elem_type(elemType);
     onnxruntime::NodeArg &outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
     onnxruntime::Node* sliceNode = &graph->AddNode(
-        outArgName + string("_slice"), "Slice", "", {&inputArg}, {&outputNodeArg});
+        outArgName + string("_slice"), "Slice", "", { &inputArg }, { &outputNodeArg });
     sliceNode->AddAttribute("axes", axes);
     sliceNode->AddAttribute("starts", starts);
     sliceNode->AddAttribute("ends", ends);
