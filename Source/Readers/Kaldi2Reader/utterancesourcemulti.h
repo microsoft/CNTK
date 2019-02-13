@@ -165,6 +165,8 @@ class minibatchutterancesourcemulti : public minibatchsource
                     {
                         std::unordered_set<int> specialwordids;
                         specialwordids.clear();
+                        std::unordered_map<size_t, std::wstring> id2wordmapping;
+                        id2wordmapping.clear(); //make the compiler happy 
                         latticesource.getlattices(utteranceset[i].key(), lattices[i], uttframes.cols(), id2wordmapping, specialwordids);
                     }
                 }
