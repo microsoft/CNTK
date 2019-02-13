@@ -23,7 +23,7 @@ namespace CNTK
     class MPICommunicatorImpl : public DistributedCommunicator, public std::enable_shared_from_this<MPICommunicatorImpl>
     {
     public:
-        MPICommunicatorImpl(size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
+        MPICommunicatorImpl(size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES, bool useFP16AllReduce = false);
 
         virtual const std::unordered_set<DistributedWorkerDescriptor>& Workers() const override;
 
@@ -93,7 +93,7 @@ namespace CNTK
         std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> m_aggregationBufferFloat;
         std::unique_ptr<Microsoft::MSR::CNTK::Matrix<double>> m_aggregationBufferDouble;
         std::vector<std::shared_ptr<Microsoft::MSR::CNTK::Matrix<half>>> m_intermediateGPUBuffers;
-        bool m_useFP16;
+        bool m_useFP16AllReduce;
 
         // NcclComm
         std::unique_ptr<Microsoft::MSR::CNTK::NcclComm> m_nccl;
@@ -107,7 +107,7 @@ namespace CNTK
             return values.end() == device ? DeviceDescriptor::CPUDevice() : (*device)->Device();
         }
 
-        bool ShouldUseFP16(const NDArrayViewPtr& viewPtr);
+        bool ShouldUseFP16AllReduce(const NDArrayViewPtr& viewPtr);
 
         size_t GetBufferSize(const NDArrayViewPtr& viewPtr)
         {

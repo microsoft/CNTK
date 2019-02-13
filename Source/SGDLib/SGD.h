@@ -328,6 +328,8 @@ protected:
     // true: disable Regularization
     // false: enable Regularization (default)
     bool m_disableRegInBatchNormalization;
+
+    bool m_useFP16AllReduce;
 };
 
 template <class ElemType>

@@ -30,9 +30,13 @@ namespace CNTK
         }
     }
 
-    DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes)
+    DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes, bool useFP16AllReduce)
     {
-        return std::make_shared<MPICommunicatorImpl>(packThresholdSizeInBytes);
+        return std::make_shared<MPICommunicatorImpl>(packThresholdSizeInBytes, useFP16AllReduce);
+    }
+    DistributedCommunicatorPtr MPICommunicator(bool useFP16AllReduce)
+    {
+        return MPICommunicator(Internal::GetMPIPackThreshold(), useFP16AllReduce);
     }
 
     void DistributedCommunicator::Finalize()
@@ -72,7 +76,7 @@ namespace CNTK
         return nullptr; // Make compiler happy.
     }
 
-    MPICommunicatorImpl::MPICommunicatorImpl(size_t packThresholdSizeInBytes)
+    MPICommunicatorImpl::MPICommunicatorImpl(size_t packThresholdSizeInBytes, bool useFP16AllReduce)
     {
         m_mpi = MPIWrapper::GetInstance();
         if (m_mpi == nullptr)
@@ -90,7 +94,7 @@ namespace CNTK
                 m_workers.insert({ i,  L"" });
         }
         m_packThresholdSizeInBytes = packThresholdSizeInBytes;
-        m_useFP16 = false; // TODO - plumb with config
+        m_useFP16AllReduce = useFP16AllReduce;
     }
 
     void MPICommunicatorImpl::Initialize(const std::vector<NDArrayViewPtr>& values)
@@ -99,7 +103,7 @@ namespace CNTK
         DeviceDescriptor lastGpuDevice = DeviceDescriptor::CPUDevice();
         m_gpuDataTransferers.resize(values.size());
         m_intermediateCPUBuffers.resize(values.size());
-        if (m_useFP16)
+        if (m_useFP16AllReduce)
             m_intermediateGPUBuffers.resize(values.size());
 
         for (auto i = 0; i < values.size(); ++i)
@@ -129,7 +133,7 @@ namespace CNTK
                 if (m_intermediateCPUBuffers[i].totalSize < requiredSize)
                     m_intermediateCPUBuffers[i] = AllocateIntermediateBuffer(device.Id(), requiredSize);
 
-                if (ShouldUseFP16(view))
+                if (ShouldUseFP16AllReduce(view))
                 {
                     // For sure we're float
                     size_t rows = view->GetMatrix<float>()->GetNumRows();
@@ -411,7 +415,7 @@ namespace CNTK
 
             if (dataType == DataType::Float)
             {
-                if (ShouldUseFP16(inputValue))
+                if (ShouldUseFP16AllReduce(inputValue))
                 {
                     // We know we're On GPU
 
@@ -657,10 +661,10 @@ namespace CNTK
 
         return true;
     }
-    bool MPICommunicatorImpl::ShouldUseFP16(const NDArrayViewPtr& viewPtr)
+    bool MPICommunicatorImpl::ShouldUseFP16AllReduce(const NDArrayViewPtr& viewPtr)
     {
         // currenly AllReduceDataHalf only supports NCCL/ and on GPU data
-        return (m_useFP16 &&
+        return (m_useFP16AllReduce &&
             m_nccl->IsSupported() &&
             (DeviceKind::GPU == viewPtr->Device().Type()) &&
             (DataType::Float == viewPtr->GetDataType()));

@@ -2333,7 +2333,7 @@ void SGD<half>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int devic
         if (traceLevel > 0)
             fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation.\n", numGradientBits);
         fprintf(stderr, "UseV2Aggregator - V2SimpleDistGradAggregator");
-        m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<half>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes));
+        m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<half>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes, m_useFP16AllReduce));
     }
 
     m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });
@@ -2368,7 +2368,7 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
         if (Globals::UseV2Aggregator()) // Currently used to check V2 against baselines.
         {
             fprintf(stderr, "UseV2Aggregator - V2SimpleDistGradAggregator");
-            m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes));
+            m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes, m_useFP16AllReduce));
         }
         else
             m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, m_packThresholdSizeInBytes);
@@ -2396,7 +2396,7 @@ void SGD<half>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID)
         if (Globals::UseV2Aggregator())
         {
             fprintf(stderr, "UseV2Aggregator - V2BlockMomentumSGD");
-            auto communicator = ::CNTK::MPICommunicator();
+            auto communicator = ::CNTK::MPICommunicator(m_useFP16AllReduce);
             m_pMASGDHelper = make_shared<V2BlockMomentumSGD<half>>(
                 m_mpi,
                 communicator,
@@ -2435,7 +2435,7 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
         if (Globals::UseV2Aggregator())
         {
             fprintf(stderr, "UseV2Aggregator - V2BlockMomentumSGD");
-            auto communicator = ::CNTK::MPICommunicator();
+            auto communicator = ::CNTK::MPICommunicator(m_useFP16AllReduce);
             m_pMASGDHelper = make_shared<V2BlockMomentumSGD<ElemType>>(
                 m_mpi,
                 communicator,
@@ -3342,6 +3342,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             bool useV2Aggregator = configParallelTrain(L"useV2Aggregator", false);
             if (useV2Aggregator)
                 Globals::SetUseV2Aggregator();
+            m_useFP16AllReduce = configParallelTrain(L"useFp16AllReduce", false);
+            if (m_useFP16AllReduce && !useV2Aggregator)
+                InvalidArgument("To set useFp16AllReduce to true, please also set useV2Aggregator to true!");
 
         if (configParallelTrain.Exists(L"DataParallelSGD"))
         {
