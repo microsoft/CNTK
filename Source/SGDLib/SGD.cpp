@@ -2276,6 +2276,7 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
         if (Globals::UseV2Aggregator())
         {
+            fprintf(stderr, "UseV2Aggregator - V2AllReduceDistGradAggregator");
             auto communicator = ::CNTK::QuantizedMPICommunicator(m_zeroThresholdFor1Bit, true, numGradientBits);
             m_distGradAgg = std::make_shared<V2AllReduceDistGradAggregator<ElemType>>(communicator, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
         }
@@ -2290,7 +2291,10 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
         if (traceLevel > 0)
             fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation.\n", numGradientBits);
         if (Globals::UseV2Aggregator()) // Currently used to check V2 against baselines.
+        {
+            fprintf(stderr, "UseV2Aggregator - V2SimpleDistGradAggregator");
             m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes));
+        }
         else
             m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, m_packThresholdSizeInBytes);
     }
@@ -2316,6 +2320,7 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
 #else
         if (Globals::UseV2Aggregator())
         {
+            fprintf(stderr, "UseV2Aggregator - V2BlockMomentumSGD");
             auto communicator = ::CNTK::MPICommunicator();
             m_pMASGDHelper = make_shared<V2BlockMomentumSGD<ElemType>>(
                 m_mpi,
@@ -3165,6 +3170,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             m_enableDistributedMBReadingNotSpecified = !configParallelTrain.Exists(L"distributedMBReading");
             m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
             m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int)0);
+            bool useV2Aggregator = configParallelTrain(L"useV2Aggregator", false);
+            if (useV2Aggregator)
+                Globals::SetUseV2Aggregator();
 
         if (configParallelTrain.Exists(L"DataParallelSGD"))
         {
