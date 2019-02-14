@@ -3531,6 +3531,18 @@ onnxruntime::Node* CNTKToONNXHelper::AddConstantOfShapeNode(onnxruntime::NodeArg
     onnx::TypeProto outputTypeProto;
     outputTypeProto.mutable_tensor_type()->set_elem_type(type);
 
+    auto inputTensorType = inputArg.TypeAsProto()->tensor_type();
+    if (inputTensorType.has_shape())
+    {
+        for (size_t idx = 0; idx < inputTensorType.shape().dim_size(); ++idx)
+        {
+            if (inputTensorType.shape().dim(idx).has_dim_param())
+                outputTypeProto.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_param(inputTensorType.shape().dim(idx).dim_param());
+            else
+                outputTypeProto.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(inputTensorType.shape().dim(idx).dim_value());
+        }
+    }
+
     onnxruntime::NodeArg& outputNodeArg = graph->GetOrCreateNodeArg(outArgName, &outputTypeProto);
     return AddConstantOfShapeNode(inputArg, outputNodeArg, outArgName, graph, value, type);
 }
@@ -6371,6 +6383,10 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
         if (src->OpName() == L"BatchNormalization")
         {
             auto spatial = (int64_t)((bool)src->Attributes()[L"spatial"].Value<bool>() ? 1 : 0);
+            if (spatial != 1)
+            {
+                LogicError("BatchNormalization spatial should be true.");
+            }
             auto normalizationTimeConstant = (float)src->Attributes()[L"normalizationTimeConstant"].Value<double>();
             auto epsilon = (float)src->Attributes()[L"epsilon"].Value<double>();
 
@@ -6384,7 +6400,6 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             else if (normalizationTimeConstant > 0)
                 momentum = 1.0f + expm1(-48.0f / normalizationTimeConstant);
 
-            node->AddAttribute(attributesMap[L"spatial"], spatial);
             node->AddAttribute(attributesMap[L"epsilon"], epsilon);
             node->AddAttribute("momentum", momentum);
         }
@@ -8118,7 +8133,6 @@ onnxruntime::Node* CNTKToONNXHelper::CreateBatchNormalization(const FunctionPtr 
     else if (normalizationTimeConstant > 0)
         momentum = 1.0f + expm1(-48.0f / normalizationTimeConstant);
 
-    node->AddAttribute("spatial", (int64_t)1);
     node->AddAttribute("epsilon", epsilon);
     node->AddAttribute("momentum", momentum);
     functionNodes.emplace(src, node);
