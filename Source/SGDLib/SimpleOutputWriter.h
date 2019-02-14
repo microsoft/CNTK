@@ -42,7 +42,7 @@ class SimpleOutputWriter
         shared_ptr<Matrix<ElemType>> decodeoutput;
         bool operator<(const Sequence& rhs) const
         {
-            return logP < rhs.logP;
+            return logP < rhs.logP ;
         }
     };
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
@@ -378,6 +378,18 @@ public:
         return true;
     }
 
+    bool comparekeyword(Sequence a, vector<size_t> keyword)
+    {
+        if (a.labelseq == keyword || a.labelseq.size() >= keyword.size())
+            return false; //finish key word
+        for (size_t n = 0; n < a.labelseq.size(); n++)
+        {
+            if (a.labelseq[n] != keyword[n])
+                return false;
+        }
+        return true;
+    }
+
     void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode, ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes)
     {
         sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(a.decodeoutput));
@@ -396,7 +408,7 @@ public:
         decodeOutput.InplaceLogSoftmax(true);
     }
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
-                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20)
+                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"")
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -408,9 +420,48 @@ public:
 
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+        vector<size_t> keyword;
+        vector<vector<size_t>> keywords;
+        size_t minKeywordLen = 200;
+        //read dict for kws
+        if (!dictfile.empty())
+        {
+            ifstream indictfile;
+            std::string delimiter = ",";
+            std::string token;
+            size_t pos;
+            indictfile.open(dictfile.c_str());
+            string line;
+            while (getline(indictfile, line))
+            {
 
-        //vector "hey cortana"
-        //vector<size_t> keywords {}
+                keyword.clear();
+                pos = 0;
+
+                while ((pos = line.find(delimiter)) != std::string::npos)
+                {
+                    token = line.substr(0, pos);
+                    keyword.push_back(stoi(token));
+                    line.erase(0, pos + delimiter.length());
+                }
+                keyword.push_back(stoi(line));
+                keywords.push_back(keyword);
+                if (keyword.size() < minKeywordLen)
+                    minKeywordLen = keyword.size();
+            }
+        }
+        /*    //vector "hey cortana"
+            vector<size_t> keyword1{130, 129, 21, 8, 129, 28, 6, 34, 16, 3, 31, 11, 129};
+        vector<size_t> keyword2{130, 129, 21, 8, 129, 28, 6, 34, 16, 0, 31, 11, 129};
+        vector<size_t> keyword3{130, 129, 21, 8, 129, 28, 6, 34, 16, 0, 31, 0, 129};
+        vector<size_t> keyword4{130, 129, 21, 8, 129, 28, 6, 16, 0, 31, 11, 129};
+
+        
+        keywords.push_back(keyword1);
+        keywords.push_back(keyword2);
+        keywords.push_back(keyword3);
+        keywords.push_back(keyword4);*/
+
         //get encode input matrix
         std::vector<std::wstring> encodeOutputNodeNames(outputNodeNames.begin(), outputNodeNames.begin() + 1);
         std::vector<ComputationNodeBasePtr> encodeOutputNodes = m_net->OutputNodesByName(encodeOutputNodeNames);
@@ -456,7 +507,8 @@ public:
         const size_t numIterationsBeforePrintingProgress = 100;
         //size_t numItersSinceLastPrintOfProgress = 0;
         size_t actualMBSize;
-        vector<Sequence> CurSequences, nextSequences;
+        vector<Sequence> CurSequences, nextSequences, keyCurSequences, keyNextSequences;
+
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
         {
             //encode forward prop for whole utterance
@@ -471,11 +523,16 @@ public:
             size_t blankId = vocabSize - 1;
 
             nextSequences.clear();
+            keyNextSequences.clear();
 
             //initialize with blank ID
             Sequence oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
             extendSeq(oneSeq, blankId, 0.0);
             nextSequences.push_back(oneSeq);
+
+            oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
+            extendSeq(oneSeq, blankId, 0.0);
+            keyNextSequences.push_back(oneSeq);
 
             // loop for each t
             for (size_t t = 0; t < encodeOutput.GetNumCols(); t++)
@@ -485,9 +542,12 @@ public:
                     deleteSeq(CurSequences[n]);
                 }
                 vector<Sequence>().swap(CurSequences);
+
                 CurSequences = nextSequences;
+                keyCurSequences = keyNextSequences;
 
                 vector<Sequence>().swap(nextSequences);
+                vector<Sequence>().swap(keyNextSequences);
                 //deal with the same prefix
                 /*sort(CurSequences.begin(), CurSequences.end(),
                      [](const Sequence& a, const Sequence& b) -> bool {
@@ -568,7 +628,19 @@ public:
 
                         if (topN[iLabel].first == blankId)
                         {
-                            nextSequences.push_back(seqK);
+                            bool existseq = false;
+                            for (Sequence seqP : nextSequences)
+                            {
+                                if (seqK.labelseq == seqP.labelseq)
+                                {
+                                    existseq = true;
+                                    seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
+                                    break;
+                                }
+                            }
+                            if (!existseq)
+                                nextSequences.push_back(seqK);
+                            //nextSequences.push_back(seqK);
                             continue;
                         }
                         extendSeq(seqK, topN[iLabel].first, newlogP);
@@ -596,6 +668,123 @@ public:
                     //break;
                     //std::nth_element(logP, logP + beamSize, )
                 }
+                //key words
+                while (true)
+                {
+
+                    //auto maxSeq = getMaxSeq(CurSequences);
+                    auto maxSeq = std::max_element(keyCurSequences.begin(), keyCurSequences.end());
+                    //std::max_element()
+                    //auto pos = std::find(CurSequences.begin(), CurSequences.end(), maxSeq);
+                    Sequence tempSeq = newSeq(*maxSeq);
+                    deleteSeq(*maxSeq);
+                    keyCurSequences.erase(maxSeq);
+                    forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
+                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
+
+                    Sequence seqK;
+
+                    ElemType newlogP;
+
+                    std::map<size_t, size_t> labelmaps;
+                    bool prefix = false;
+                    for (size_t ikey = 0; ikey < keywords.size(); ikey++)
+                    {
+                        if (comparekeyword(tempSeq, keywords[ikey]))
+                        {
+                            if (tempSeq.labelseq.size() > 13)
+                                prefix = prefix;
+                            prefix = true;
+                            // add blankid
+                            auto mapit = labelmaps.find(blankId);
+                            if (mapit == labelmaps.end())
+                            {
+                                seqK = newSeq(tempSeq);
+                                newlogP = decodeOutput(blankId, 0) + tempSeq.logP;
+                                seqK.logP = newlogP;
+                                bool existseq = false;
+                                for (Sequence seqP : keyNextSequences)
+                                {
+                                    if (seqK.labelseq == seqP.labelseq)
+                                    {
+                                        existseq = true;
+                                        seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
+                                        break;
+                                    }
+                                }
+                                if (!existseq)
+                                    keyNextSequences.push_back(seqK);
+                                labelmaps[blankId] = 1;
+                            }
+
+                            //next keyword label
+                            size_t nextlabel = keywords[ikey][tempSeq.labelseq.size()];
+                            mapit = labelmaps.find(nextlabel);
+                            if (mapit == labelmaps.end())
+                            {
+                                seqK = newSeq(tempSeq);
+                                newlogP = decodeOutput(nextlabel, 0) + tempSeq.logP;
+                                extendSeq(seqK, nextlabel, newlogP);
+
+                                keyCurSequences.push_back(seqK);
+                                labelmaps[nextlabel] = 1;
+                            }
+                        }
+                    }
+
+                    if (prefix == false)
+                    {
+                        vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam);
+
+                        int iLabel;
+                        for (iLabel = 0; iLabel < expandBeam; iLabel++)
+                        {
+
+                            seqK = newSeq(tempSeq);
+                            newlogP = topN[iLabel].second + tempSeq.logP;
+                            seqK.logP = newlogP;
+
+                            if (topN[iLabel].first == blankId)
+                            {
+                                bool existseq = false;
+                                for (Sequence seqP : keyNextSequences)
+                                {
+                                    if (seqK.labelseq == seqP.labelseq)
+                                    {
+                                        existseq = true;
+                                        seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
+                                        break;
+                                    }
+                                }
+                                if (!existseq)
+                                    keyNextSequences.push_back(seqK);
+                                //keyNextSequences.push_back(seqK);
+                                continue;
+                            }
+                            extendSeq(seqK, topN[iLabel].first, newlogP);
+                            keyCurSequences.push_back(seqK);
+                        }
+                    }
+                    deleteSeq(tempSeq);
+
+                    if (keyCurSequences.size() == 0)
+                        break;
+                    auto ya = std::max_element(keyCurSequences.begin(), keyCurSequences.end());
+                    auto yb = std::max_element(keyNextSequences.begin(), keyNextSequences.end());
+                    if (keyNextSequences.size() > beamSize && yb->logP > ya->logP)
+                        break;
+                    /*if (nextSequences.size() > beamSize) //                        && yb->logP > ya->logP)
+                        {
+                            nth_element(nextSequences.begin(), nextSequences.begin() + beamSize, nextSequences.end(),
+                                        [](const Sequence& a, const Sequence& b) -> bool {
+                                            return a.logP > b.logP;
+                                        });
+                            if (nextSequences[beamSize - 1].logP > ya->logP)
+                                break;
+                        }*/
+                    //break;
+                    //std::nth_element(logP, logP + beamSize, )
+                }
                 std::sort(nextSequences.begin(), nextSequences.end());
                 std::reverse(nextSequences.begin(), nextSequences.end());
                 if (nextSequences.size() > beamSize)
@@ -607,13 +796,45 @@ public:
                 }
                 for (size_t iseq = nextSequences.size(); iseq > beamSize; iseq--)
                     nextSequences.pop_back();
+                if (keyNextSequences.size() > beamSize)
+                {
+
+                    std::sort(keyNextSequences.begin(), keyNextSequences.end());
+                    std::reverse(keyNextSequences.begin(), keyNextSequences.end());
+                    if (keyNextSequences.size() > beamSize)
+                    {
+                        /*bool keepFullSeq = false;
+                        for (size_t n = beamSize; n < keyNextSequences.size(); n++)
+                        {
+                            if (keepFullSeq == false)
+                            {
+                                bool find = false;
+                                for (size_t keyNo = 0; keyNo < keywords.size(); keyNo++)
+                                {
+                                    if (keyNextSequences[n].labelseq == keywords[keyNo])
+                                        find = true;
+                                }
+                                if (find)
+                                {
+                                    keepFullSeq = true;
+                                }
+                                else
+                                    keyNextSequences.erase(keyNextSequences.begin() + n);
+                            }
+                            else
+                                keyNextSequences.erase(keyNextSequences.begin() + n);
+                        }*/
+                        for (size_t iseq = keyNextSequences.size(); iseq > beamSize; iseq--)
+                            keyNextSequences.pop_back();
+                    }
+                }
                 //break;
             }
 
-            //nbest output
+            //normal output
             for (size_t n = 0; n < nextSequences.size(); n++)
             {
-                nextSequences[n].logP /= nextSequences[n].labelseq.size();
+                nextSequences[n].logP /= (nextSequences[n].labelseq.size()-1);
             }
             auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
             size_t lmt = yb->length;
@@ -621,7 +842,7 @@ public:
             greedyOutput.SetValue(0.0);
             for (size_t n = 0; n < lmt; n++)
             {
-                greedyOutput(yb->labelseq[n], n) = 1.0;
+                greedyOutput(yb->labelseq[n], n) = -yb->logP;
             }
             //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
             //greedyOutput.Print("greedy output");
@@ -633,7 +854,7 @@ public:
                 greedyOutput.Resize(vocabSize, 1);
                 lmin.Resize(vocabSize, 1);
                 lmin.SetValue(0.0);
-                lmin(blankId, 0) = 1;
+                lmin(blankId, 0) = -yb->logP ;
                 greedyOutput.SetColumn(lmin, 0);
                 lmt = 1;
             }
@@ -650,6 +871,58 @@ public:
                 deleteSeq(nextSequences[n]);
             }
             vector<Sequence>().swap(nextSequences);
+            dataWriter.SaveData(1, outputMatrices, lmt, lmt, 0);
+
+            //keyword output
+            for (size_t n = 0; n < keyNextSequences.size(); n++)
+            {
+                if (keyNextSequences[n].labelseq.size() < minKeywordLen)
+                    keyNextSequences[n].logP = -1000000;
+                else
+                {
+                    bool find = false;
+                    for (size_t keyNo = 0; keyNo < keywords.size(); keyNo++)
+                    {
+                        size_t maxL = min(keywords[keyNo].size(), keyNextSequences[n].labelseq.size());
+                        vector<size_t> subseq(keyNextSequences[n].labelseq.begin(), keyNextSequences[n].labelseq.begin() + maxL);
+                        if (subseq == keywords[keyNo])
+                        {
+
+                            find = true;
+                            break;
+                        }
+                    }
+                    if (find)
+                        keyNextSequences[n].logP /= (keyNextSequences[n].labelseq.size()-1);
+                    else
+                        keyNextSequences[n].logP = -1000000;
+                    /*if (!find)
+                        keyNextSequences[n].logP = -1000000;*/
+                   
+                }
+            }
+            yb = std::max_element(keyNextSequences.begin(), keyNextSequences.end());
+            lmt = yb->length;
+            greedyOutput.Resize(vocabSize, lmt);
+            greedyOutput.SetValue(0.0);
+            for (size_t n = 0; n < lmt; n++)
+            {
+                greedyOutput(yb->labelseq[n], n) = -yb->logP;
+            }
+            //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
+            //greedyOutput.Print("greedy output");
+            outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
+
+            //the first candidates, file no ++
+            if (lmt == 0)
+            {
+                greedyOutput.Resize(vocabSize, 1);
+                lmin.Resize(vocabSize, 1);
+                lmin.SetValue(0.0);
+                lmin(blankId, 0) = 1000000;
+                greedyOutput.SetColumn(lmin, 0);
+                lmt = 1;
+            }
             dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
             //break;
         }
