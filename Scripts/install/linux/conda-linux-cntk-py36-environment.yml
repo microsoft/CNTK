@@ -24,7 +24,7 @@ dependencies:
 - setuptools=27.2.0=py36_0
 - six=1.10.0=py36_0
 - wheel=0.29.0=py36_0
-- protobuf=3.6.0
+- protobuf=3.6.1
 - pip:
   - easydict==1.6.0
   - gym[atari]==0.8.1
