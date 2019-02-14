@@ -786,7 +786,6 @@ def test_Gather_With_Axis(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.asarray( [[ [111, 112], [121, 122], [131, 132], ],[ [211, 212], [221, 222], [231, 232], ]]).astype(dtype)
         indices = np.asarray([[0, 1, 1], [1, 1, 1]])
-        # x = C.input_variable(np.shape(data))
         y = C.input_variable(np.shape(indices))
         axis = 1
 
@@ -2104,7 +2103,9 @@ def test_Ones_Like(tmpdir, dtype):
 # one hot
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_One_Hot(tmpdir, dtype):
-    data = np.asarray([[1, 5]], dtype=dtype)
+    if dtype == np.float16:
+        pytest.skip('float16 not supported in onnxruntime.')
+    data = np.asarray([1, 5], dtype=dtype)
     x = C.input_variable((2), dtype=dtype)
     model = C.one_hot(x, 6, False, name='one_hot_op')
     verify_one_input(model, data, tmpdir, "One_Hot_0", bypass_load_into_cntk=True)

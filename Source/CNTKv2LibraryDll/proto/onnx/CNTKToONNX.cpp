@@ -7561,7 +7561,8 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOneHotOp(const FunctionPt
     // Create names for onnx nodes base on node name in CNTK.
     const std::string& nodeName = UniqueNodeNameStorage::GetUniqueNodeName(src);
 
-    onnxruntime::NodeArg& depthNodeArg = AddConstantNodeArg(graph, nodeName + string("_depth"), vector<float>({static_cast<float>(numClass)}), onnx::TensorProto_DataType_INT64);
+    // Note: types supported in ort is limited for the moment.
+    onnxruntime::NodeArg& depthNodeArg = AddConstantNodeArg(graph, nodeName + string("_depth"), vector<float>({static_cast<float>(numClass)}), onnx::TensorProto_DataType_FLOAT);
     onnxruntime::NodeArg& valuesNodeArg = AddConstantNodeArg(graph, nodeName + string("_values"), vector<float>({ 0.0, 1.0 }), outputs[0]->TypeAsProto()->tensor_type().elem_type());
 
     onnxruntime::Node* oneHotNode = &graph->AddNode(nodeName, ToOPName(src), "", {/*indices:*/inputs[0], /*depth:*/&depthNodeArg, /*values:*/&valuesNodeArg }, { outputs[0] });
