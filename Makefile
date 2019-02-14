@@ -547,6 +547,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/platform/posix/env.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/platform/posix/env_time.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/platform/posix/stacktrace.cc \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/platform/posix/ort_mutex.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/checker.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/common/assertions.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx/common/model_helpers.cc \
