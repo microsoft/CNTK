@@ -1411,7 +1411,6 @@ OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
 def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id):
     if device_id == -1:
         pytest.skip('Test only runs on GPU')
-    pytest.skip('test_OptimizedRNNStack is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
     dev = cntk_device(device_id)
     from _cntk_py import constant_initializer
     model_filename = 'optimized_rnn_stack_' + ('bi' if bidirectional else 'uni') + '_layers' + str(num_layers) + '_inp' + str(input_size) + '_hid' + str(hidden_size)
