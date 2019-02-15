@@ -16,7 +16,6 @@
 #include "MatrixQuantizerImpl.h"
 #include "InputAndParamNodes.h"
 #include "AccumulatorAggregation.h"
-#include "CNTKLibraryInternals.h"
 
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
@@ -31,6 +30,7 @@
 
 #include "ASGDHelper.h"
 
+#include "CNTKLibraryInternals.h"
 #include "SimpleDistGradAggregatorHelper.h"
 #include "SimpleDistGradAggregator.h"
 #include "V2SimpleDistGradAggregator.h"

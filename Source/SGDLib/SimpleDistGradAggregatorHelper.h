@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "Constants.h"
 #include "IDistGradAggregator.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {

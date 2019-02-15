@@ -16,6 +16,8 @@
 #include "LinearAlgebraNodes.h"
 #include "MPIWrapper.h"
 #include "Matrix.h"
+#include "SimpleDistGradAggregator.h"
+#include "V2SimpleDistGradAggregator.h"
 #include "SimpleDistGradAggregatorHelper.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {

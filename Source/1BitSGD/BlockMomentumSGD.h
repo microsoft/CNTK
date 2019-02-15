@@ -105,7 +105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<MatrixBasePtr>& smoothedGradient,
             size_t& totalSamplesProcessed,
             float& secondsOnCommunication
-        ) override
+            ) override
         {
             //----------------------------------------
             // 1. communicate with other nodes to negotiate contribution weights
