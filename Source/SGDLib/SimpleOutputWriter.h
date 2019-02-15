@@ -537,16 +537,8 @@ public:
             // loop for each t
             for (size_t t = 0; t < encodeOutput.GetNumCols(); t++)
             {
-                for (size_t n = 0; n < CurSequences.size(); n++)
-                {
-                    deleteSeq(CurSequences[n]);
-                }
-                vector<Sequence>().swap(CurSequences);
-
-                CurSequences = nextSequences;
                 keyCurSequences = keyNextSequences;
 
-                vector<Sequence>().swap(nextSequences);
                 vector<Sequence>().swap(keyNextSequences);
                 //deal with the same prefix
                 /*sort(CurSequences.begin(), CurSequences.end(),
@@ -578,96 +570,6 @@ public:
                     }
                 }*/
                 //nextSequences.clear();
-                while (true)
-                {
-
-                    //auto maxSeq = getMaxSeq(CurSequences);
-                    auto maxSeq = std::max_element(CurSequences.begin(), CurSequences.end());
-                    //std::max_element()
-                    //auto pos = std::find(CurSequences.begin(), CurSequences.end(), maxSeq);
-                    Sequence tempSeq = newSeq(*maxSeq);
-                    deleteSeq(*maxSeq);
-                    CurSequences.erase(maxSeq);
-                    forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
-                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
-
-                    //sumofENandDE.Print("sum");
-                    //sort log posterior and get best N labels
-                    vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam);
-                    /*ElemType* logP = decodeOutput.CopyToArray();
-                    std::priority_queue<std::pair<double, int>> q;
-                    int iLabel;
-                    for (iLabel = 0; iLabel < vocabSize; iLabel++)
-                    {
-                        q.push(std::pair<double, int>((double) logP[iLabel], iLabel));
-                    }
-                    for (iLabel = 0; iLabel < beamSize; iLabel++)
-                    {
-                        auto Elem = q.top();
-                        Sequence seqK = newSeq(tempSeq);
-                        double newlogP = Elem.first + tempSeq.logP;
-                        seqK.logP = newlogP;
-
-                        if (Elem.second == blankId)
-                        {
-                            nextSequences.push_back(seqK);
-                            q.pop();
-                            continue;
-                        }
-                        extendSeq(seqK, Elem.second, newlogP);
-                        CurSequences.push_back(seqK);
-                        q.pop();
-                    }*/
-                    int iLabel;
-                    for (iLabel = 0; iLabel < expandBeam; iLabel++)
-                    {
-
-                        Sequence seqK = newSeq(tempSeq);
-                        ElemType newlogP = topN[iLabel].second + tempSeq.logP;
-                        seqK.logP = newlogP;
-
-                        if (topN[iLabel].first == blankId)
-                        {
-                            bool existseq = false;
-                            for (Sequence seqP : nextSequences)
-                            {
-                                if (seqK.labelseq == seqP.labelseq)
-                                {
-                                    existseq = true;
-                                    seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
-                                    break;
-                                }
-                            }
-                            if (!existseq)
-                                nextSequences.push_back(seqK);
-                            //nextSequences.push_back(seqK);
-                            continue;
-                        }
-                        extendSeq(seqK, topN[iLabel].first, newlogP);
-                        CurSequences.push_back(seqK);
-                    }
-                    vector<pair<size_t, ElemType>>().swap(topN);
-                    //delete topN;
-                    deleteSeq(tempSeq);
-
-                    if (CurSequences.size() == 0)
-                        break;
-                    auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
-                    auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
-                    if (nextSequences.size() > beamSize && yb->logP > ya->logP)
-                        break;
-                    /*if (nextSequences.size() > beamSize) //                        && yb->logP > ya->logP)
-                        {
-                            nth_element(nextSequences.begin(), nextSequences.begin() + beamSize, nextSequences.end(),
-                                        [](const Sequence& a, const Sequence& b) -> bool {
-                                            return a.logP > b.logP;
-                                        });
-                            if (nextSequences[beamSize - 1].logP > ya->logP)
-                                break;
-                        }*/
-                    //break;
-                    //std::nth_element(logP, logP + beamSize, )
-                }
                 //key words
                 while (true)
                 {
@@ -785,17 +687,6 @@ public:
                     //break;
                     //std::nth_element(logP, logP + beamSize, )
                 }
-                std::sort(nextSequences.begin(), nextSequences.end());
-                std::reverse(nextSequences.begin(), nextSequences.end());
-                if (nextSequences.size() > beamSize)
-                {
-                    for (size_t n = beamSize; n < nextSequences.size(); n++)
-                    {
-                        deleteSeq(nextSequences[n]);
-                    }
-                }
-                for (size_t iseq = nextSequences.size(); iseq > beamSize; iseq--)
-                    nextSequences.pop_back();
                 if (keyNextSequences.size() > beamSize)
                 {
 
@@ -803,27 +694,7 @@ public:
                     std::reverse(keyNextSequences.begin(), keyNextSequences.end());
                     if (keyNextSequences.size() > beamSize)
                     {
-                        /*bool keepFullSeq = false;
-                        for (size_t n = beamSize; n < keyNextSequences.size(); n++)
-                        {
-                            if (keepFullSeq == false)
-                            {
-                                bool find = false;
-                                for (size_t keyNo = 0; keyNo < keywords.size(); keyNo++)
-                                {
-                                    if (keyNextSequences[n].labelseq == keywords[keyNo])
-                                        find = true;
-                                }
-                                if (find)
-                                {
-                                    keepFullSeq = true;
-                                }
-                                else
-                                    keyNextSequences.erase(keyNextSequences.begin() + n);
-                            }
-                            else
-                                keyNextSequences.erase(keyNextSequences.begin() + n);
-                        }*/
+                       
                         for (size_t iseq = keyNextSequences.size(); iseq > beamSize; iseq--)
                             keyNextSequences.pop_back();
                     }
@@ -832,48 +703,7 @@ public:
             }
 
             //normal output
-            for (size_t n = 0; n < nextSequences.size(); n++)
-            {
-                nextSequences[n].logP /= (nextSequences[n].labelseq.size()-1);
-            }
-            auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
-            size_t lmt = yb->length;
-            greedyOutput.Resize(vocabSize, lmt);
-            greedyOutput.SetValue(0.0);
-            for (size_t n = 0; n < lmt; n++)
-            {
-                greedyOutput(yb->labelseq[n], n) = -yb->logP;
-            }
-            //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
-            //greedyOutput.Print("greedy output");
-            outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
-
-            //the first candidates, file no ++
-            if (lmt == 0)
-            {
-                greedyOutput.Resize(vocabSize, 1);
-                lmin.Resize(vocabSize, 1);
-                lmin.SetValue(0.0);
-                lmin(blankId, 0) = -yb->logP ;
-                greedyOutput.SetColumn(lmin, 0);
-                lmt = 1;
-            }
-            //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
-            //greedyOutput.Print("greedy output");
-
-            for (size_t n = 0; n < CurSequences.size(); n++)
-            {
-                deleteSeq(CurSequences[n]);
-            }
-            vector<Sequence>().swap(CurSequences);
-            for (size_t n = 0; n < nextSequences.size(); n++)
-            {
-                deleteSeq(nextSequences[n]);
-            }
-            vector<Sequence>().swap(nextSequences);
-            dataWriter.SaveData(1, outputMatrices, lmt, lmt, 0);
-
-            //keyword output
+            
             for (size_t n = 0; n < keyNextSequences.size(); n++)
             {
                 if (keyNextSequences[n].labelseq.size() < minKeywordLen)
@@ -901,8 +731,8 @@ public:
                    
                 }
             }
-            yb = std::max_element(keyNextSequences.begin(), keyNextSequences.end());
-            lmt = yb->length;
+            auto yb = std::max_element(keyNextSequences.begin(), keyNextSequences.end());
+            size_t lmt = yb->length;
             greedyOutput.Resize(vocabSize, lmt);
             greedyOutput.SetValue(0.0);
             for (size_t n = 0; n < lmt; n++)
