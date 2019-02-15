@@ -16,18 +16,9 @@
 #include "LinearAlgebraNodes.h"
 #include "MPIWrapper.h"
 #include "Matrix.h"
-#include "SimpleDistGradAggregator.h"
-#include "V2SimpleDistGradAggregator.h"
+#include "SimpleDistGradAggregatorHelper.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
-template<typename ElemType>
-bool AggregateAccumulatorSums(
-    MPIWrapperPtr &mpi,
-    ComputationNetworkPtr &net,
-    size_t &packThresholdSizeInBytes,
-    std::vector<Matrix<ElemType> *> &accumulatorValues,
-    std::shared_ptr<DistGradHeader> &gradHeader);
 
 template <typename ElemType>
 void AggregateAccumulatorValuesAndUpdateEvaluation(
@@ -53,6 +44,14 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
         accumulatorValues.emplace_back(&accumulator);
     }
 
+    // Prepare aggregator.
+    std::shared_ptr<IDistGradAggregator<ElemType>> distGradAgg = GetSimpleDistGradAggregator<ElemType>(
+        mpi,
+        false /*useAsyncAggregation*/,
+        net->GetDeviceId(),
+        0 /*syncStatsTrace*/,
+        packThresholdSizeInBytes);
+
     // Prepare header.
     const size_t c_evalNodes = 1;
     if (gradHeader == nullptr)
@@ -66,7 +65,8 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
         // Not used here, but at least one is required by aggregation.
         gradHeader->evalErrors[i] = std::make_pair<double, size_t>(0.0, 0);
 
-    bool samplesProcessed = AggregateAccumulatorSums(mpi, net, packThresholdSizeInBytes, accumulatorValues, gradHeader);
+    // Aggregate accumulator sums.
+    bool samplesProcessed = distGradAgg->AggregateGradients(accumulatorValues, gradHeader.get(), /*resetState =*/false);
     if (!samplesProcessed)
         RuntimeError("Couldn't aggregate accumulator values.");
 

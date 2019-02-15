@@ -77,6 +77,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     // initialization
     wstring initString = configp->Get(L"init");
     wstring initFromFilePath = configp->Get(L"initFromFilePath");
+    wstring initFromFilePrecision = configp->Get(L"initFromFilePrecision");
     let& initValue = configp->Get(L"initValue");   // may be empty string, scalar, or array
     // infer the type of the initial value from what other optional args are given
     if (initString.empty())
@@ -134,7 +135,8 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     {
         if (initFromFilePath.empty())
             RuntimeError("initFromFilePath parameter must be provided when using \"fromFile\" initialization method");
-        InitFromFile(initFromFilePath);
+        
+        InitFromFile(initFromFilePath, initFromFilePrecision);
         m_initString.clear();
     }
     // legacy
@@ -395,22 +397,28 @@ std::tuple<size_t, size_t, short> LearnableParameter<short>::InitRandom(Matrix<s
 
 // initialize by reading a matrix from a text file
 template <class ElemType>
+void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath, const wstring& initFromFilePrecision)
+{
+    if (initFromFilePrecision == L"double")
+        InitFromFile<double>(initFromFilePath);
+    else if (initFromFilePrecision == L"float")
+        InitFromFile<float>(initFromFilePath);
+    else if (initFromFilePrecision == L"float16")
+        InitFromFile<half>(initFromFilePath);
+    else
+        InitFromFile(initFromFilePath);
+}
+
+template <class ElemType>
+template <class FileElemType>
 void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
 {
     size_t numRows, numCols;
-    auto array = File::LoadMatrixFromTextFile<ElemType>(initFromFilePath, numRows, numCols);
-    InitFromArray(array, numRows, numCols);
-}
-
-// initialize by reading a matrix from a text file
-template <>
-void LearnableParameter<half>::InitFromFile(const wstring& initFromFilePath)
-{
-    size_t numRows, numCols;
-    auto array = File::LoadMatrixFromTextFile<float>(initFromFilePath, numRows, numCols);
-    vector<half> halfArray;
-    std::copy(array.begin(), array.end(), std::back_inserter(halfArray));
-    InitFromArray(halfArray, numRows, numCols);
+    vector<FileElemType> fileArray = File::LoadMatrixFromTextFile<FileElemType>(initFromFilePath, numRows, numCols);
+    vector<ElemType> targetArray;
+    targetArray.resize(fileArray.size());
+    std::transform(fileArray.begin(), fileArray.end(), targetArray.begin(), [](FileElemType f) {return static_cast<ElemType>(f);});
+    InitFromArray(targetArray, numRows, numCols);
 }
 
 template <class ElemType>

@@ -5,8 +5,6 @@
 
 #pragma once
 
-#include "V2SimpleDistGradAggregator.h"
-
 #include "AccumulatorAggregation.h"
 #include "Basics.h"
 #include "DataReader.h"
@@ -18,7 +16,7 @@
 #include "ProgressTracing.h"
 #include "DistGradHeader.h"
 #include "IDistGradAggregator.h"
-#include "SimpleDistGradAggregator.h"
+#include "SimpleDistGradAggregatorHelper.h"
 #include "Criterion.h"
 #include "Globals.h"
 
@@ -52,8 +50,6 @@ public:
         m_enableDistributedMBReading(enableDistributedMBReading)
     {
     }
-
-    void InitDistGradAgg();
 
     // returns evaluation node values per sample determined by evalNodeNames (which can include both training and eval criterion nodes)
     vector<EpochCriterion> Evaluate(IDataReader* dataReader, const vector<wstring>& evalNodeNames, const size_t mbSize, const size_t testSize = requestDataSize)
@@ -112,9 +108,10 @@ public:
         if (numSubminibatchesNeeded > 1)
             smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes);
 
-        CriterionAccumulator<ElemType> localEpochEvalErrors(
-            evalNodes, m_net->GetDeviceId(),
-            {evalNodesWhichAccumulateResult.begin(), evalNodesWhichAccumulateResult.end()});
+        shared_ptr<CriterionAccumulatorBase> localEpochEvalErrorsPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
+                evalNodes, m_net->GetDeviceId(),
+                { evalNodesWhichAccumulateResult.begin(), evalNodesWhichAccumulateResult.end() });
+        CriterionAccumulatorBase& localEpochEvalErrors = *localEpochEvalErrorsPtr;
 
         const size_t numIterationsBeforePrintingProgress = 100;
         size_t numItersSinceLastPrintOfProgress = 0;
@@ -169,7 +166,7 @@ public:
                         DistGradHeader::Destroy(ptr);
                     });
 
-                    InitDistGradAgg();
+                    m_distGradAgg = GetSimpleDistGradAggregator<ElemType>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/);
                 }
 
                 m_gradHeader->numEvalNode = evalNodes.size();

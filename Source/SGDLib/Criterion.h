@@ -203,4 +203,27 @@ private:
     const std::vector<ComputationNodeBasePtr> m_accumulatorCriterionNodes;
 };
 
+class CriterionAccumulatorFactory
+{
+public:
+    static shared_ptr<CriterionAccumulatorBase> CreateCriterionAccumulator(
+        const std::vector<ComputationNodeBasePtr>& criterionNodes, DEVICEID_TYPE deviceId,
+        const std::vector<ComputationNodeBasePtr>& accumulatorCriterionNodesNodes = {})
+    {
+        if (criterionNodes.empty())
+            RuntimeError("CreateCriterionAccumulator: criterionNodes is empty!");
+
+        if (criterionNodes.front()->template Is<ComputationNode<float>>())
+        {
+            return make_shared<CriterionAccumulator<float>>(criterionNodes, deviceId, accumulatorCriterionNodesNodes);
+        }
+        else if (criterionNodes.front()->template Is<ComputationNode<double>>())
+        {
+            return make_shared<CriterionAccumulator<double>>(criterionNodes, deviceId, accumulatorCriterionNodesNodes);
+        }
+        RuntimeError("CreateCriterionAccumulator: unsupported node element type!");
+    }
+
+};
+
 }}}

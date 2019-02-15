@@ -296,29 +296,4 @@ private:
     std::vector<::CNTK::NDArrayViewPtr> m_stripeResiduals;
 };
 
-template<>
-void V2AllReduceDistGradAggregator<half>::ResetState(const std::vector<Matrix<half>*>& gradients)
-{
-    // If we are resetting state, let's clear previous quantization residues
-    // Make sure there is no pending async aggregation
-    if (m_useAsyncAggregation && m_pendingAsyncAggregation.valid())
-        LogicError("Unexpected pending async gradient aggregation found when resetting aggregator state!");
-
-    for (size_t i = 0; i < m_residuals.size(); ++i)
-        m_residuals[i]->SetValue(0.0f);
-
-    for (size_t i = 0; i < m_stripeResiduals.size(); ++i)
-        if (m_stripeResiduals[i])
-            m_stripeResiduals[i]->SetValue(0.0f);
-
-    // Zero out the buffered gradients if resetting state
-    if (m_useAsyncAggregation)
-    {
-        for (size_t i = 0; i < gradients.size(); i++)
-            m_bufferedGradients[gradients[i]]->SetValue(0.0f);
-
-        m_bufferedGradHeader->Clear();
-    }
-}
-
 } } }

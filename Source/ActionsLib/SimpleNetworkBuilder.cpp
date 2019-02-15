@@ -1810,22 +1810,4 @@ EvalCriterion ParseEvalCriterionString(wstring s)
     else LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
 }
 
-template <>
-half SimpleNetworkBuilder<half>::GetElementValue(ConfigValue &inValue)
-{
-    half outValue = (float)inValue;
-    return outValue;
-}
-template <>
-float SimpleNetworkBuilder<float>::GetElementValue(ConfigValue &inValue)
-{
-    float outValue = inValue;
-    return outValue;
-}
-template <>
-double SimpleNetworkBuilder<double>::GetElementValue(ConfigValue &inValue)
-{
-    double outValue = inValue;
-    return outValue;
-}
 }}}

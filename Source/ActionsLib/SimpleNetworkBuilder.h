@@ -159,12 +159,9 @@ public:
         m_constInputGateValue  = config("constInputGateValue",  "false");
         m_constOutputGateValue = config("constOutputGateValue", "false");
 
-        ConfigValue f = config("forgetGateInitVal", "-1");
-        m_forgetGateInitVal = GetElementValue(f);
-        ConfigValue i  = config("inputGateInitVal",  "-1");
-        m_inputGateInitVal  = GetElementValue(i);
-        ConfigValue o = config("outputGateInitVal", "-1");
-        m_outputGateInitVal = GetElementValue(o);
+        m_forgetGateInitVal = config("forgetGateInitVal", "-1").operator ElemType();
+        m_inputGateInitVal = config("inputGateInitVal", "-1").operator ElemType();
+        m_outputGateInitVal = config("outputGateInitVal", "-1").operator ElemType();
 
         m_sparse_input = config("sparseinput", "false");
 
@@ -194,15 +191,13 @@ public:
             InvalidArgument("InitRecurrentConfig: unknown value for rnnType parameter '%ls'", strType[0].c_str());
     }
 
-    ElemType GetElementValue(ConfigValue & configValue);
     // Init - Builder Initialize for multiple data sets
     // config - [in] configuration parameters for the network builder
     virtual void Init(const ConfigParameters& config)
     {
         DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
-        ConfigValue scaleval = config("initValueScale", "1.0");
-        ElemType initValueScale = GetElementValue(scaleval);
+        ElemType initValueScale = config("initValueScale", "1.0");
 
         ConfigArray layerTypes = config("layerTypes", L"Sigmoid"); // TODO: camelCase
         stringargvector nonlinearFunctions = layerTypes;

@@ -236,38 +236,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     }
                     // 2.2.4 update bookkeeping
                     prevWeight.SetValue(currentWeight);
+                }
+
+                //----------------------------------------
+                // 3. reset SGD momentum if necessary 
+                //----------------------------------------
+                {
                     // For half, we keep a copy of float weights, update that too
                     if (std::is_same<ElemType, half>())
                     {
                         auto compoundMatrixPtr = dynamic_pointer_cast<Matrix<float>> (*smoothedGradientIter);
-                        size_t numCols = compoundMatrixPtr->GetNumCols() / 3;
+                        size_t numCols = currentWeight.GetNumCols();
 
                         auto parameterMatrix = compoundMatrixPtr->ColumnSlice(2 * numCols, numCols);
                         parameterMatrix.CastAssignValuesOf(currentWeight);
-                    }
-                }
-            }
-            //----------------------------------------
-            // 3. reset SGD momentum if necessary 
-            //----------------------------------------
-            if (m_resetSGDMomentumAfterAggregation)
-            {
-                for (auto smoothedGradient : smoothedGradients)
-                {
-                    // For half, we use full precision smoothed gradients
-                    if (std::is_same<ElemType, half>())
-                    {
-                        auto compoundMatrixPtr = dynamic_pointer_cast<Matrix<float>> (smoothedGradient);
-                        size_t numCols = compoundMatrixPtr->GetNumCols() / 3;
 
-                        // Only reset smoothed gradients
-                        auto smoothedGradientMatrix = compoundMatrixPtr->ColumnSlice(0, numCols);
-                        smoothedGradientMatrix.SetValue(0.0f);
+                        if (m_resetSGDMomentumAfterAggregation)
+                        {
+                            // Only reset smoothed gradients
+                            auto smoothedGradientMatrix = compoundMatrixPtr->ColumnSlice(0, numCols);
+                            smoothedGradientMatrix.SetValue(0.0f);
+                        }
                     }
                     else
                     {
-                        auto x = dynamic_pointer_cast<Matrix<ElemType>> (smoothedGradient);
-                        x->SetValue((ElemType)0);
+                        if (m_resetSGDMomentumAfterAggregation)
+                        {
+                            auto x = dynamic_pointer_cast<Matrix<ElemType>> (*smoothedGradientIter);
+                            x->SetValue((ElemType)0);
+                        }
                     }
                 }
             }

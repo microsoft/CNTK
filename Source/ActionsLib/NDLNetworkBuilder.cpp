@@ -76,6 +76,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 
             wstring dynamicAxis = node->GetOptionalParameter("dynamicAxis", "");
             wstring precision = node->GetOptionalParameter("precision", "");
+
             // TODO: Map dynamicAxis from name to node at this point, where that node is memoized inside NDL.
             // first look for this node already existing in the network
             // BUGBUG: How does this set the dimensions then?
@@ -176,10 +177,8 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         {
             static int randomSeed = 1;
             wstring initString = node->GetOptionalParameter("init", "uniform");
-            ConfigValue s = node->GetOptionalParameter("initValueScale", "1");
-            ElemType initValueScale = GetElementValue(s);
-            ConfigValue v = node->GetOptionalParameter("value", "0");
-            ElemType value = GetElementValue(v);
+            ElemType initValueScale = node->GetOptionalParameter("initValueScale", "1");
+            ElemType value = node->GetOptionalParameter("value", "0");
             bool initOnCPUOnly = node->GetOptionalParameter("initOnCPUOnly", "false");
             int forcedRandomSeed = node->GetOptionalParameter("randomSeed", "-1" /*disabled*/);
 
@@ -206,7 +205,9 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                     initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size() - 2);
                 if (!fexists(initFromFilePath))
                     RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
-                dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(initFromFilePath));
+
+                std::string initFromFilePrecision = node->GetOptionalParameter("initFromFilePrecision", "");
+                dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(initFromFilePath), Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(initFromFilePrecision));
             }
             else if (EqualCI(initString, L"heNormal"))
                 m_net->InitLearnableParameters(nodePtr, L"heNormal", initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
@@ -229,8 +230,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         }
         else if (pass == ndlPassFinal || (dynamic_pointer_cast<ComputationNode<ElemType>> (nodePtr))->Value().GetNumElements() != 0)
         {
-            ConfigValue v = parameter[0]->GetScalar();
-            ElemType val = GetElementValue(v);
+            ElemType val = parameter[0]->GetScalar();
             m_net->InitLearnableParameters(nodePtr, L"fixedValue", val);
         }
     }
@@ -804,22 +804,4 @@ template class NDLBuilderImpl<half>;
 template class NDLBuilderImpl<float>;
 template class NDLBuilderImpl<double>;
 
-template <>
-half NDLNodeEvaluatorImpl<half>::GetElementValue(ConfigValue &inValue)
-{
-    half outValue = (float)inValue;
-    return outValue;
-}
-template <>
-float NDLNodeEvaluatorImpl<float>::GetElementValue(ConfigValue &inValue)
-{
-    float outValue = inValue;
-    return outValue;
-}
-template <>
-double NDLNodeEvaluatorImpl<double>::GetElementValue(ConfigValue &inValue)
-{
-    double outValue = inValue;
-    return outValue;
-}
 }}}

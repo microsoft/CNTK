@@ -8,6 +8,8 @@
 #include <map>
 #include <stdexcept>
 #include <stdint.h>
+#include "File.h"
+#include "half.hpp"
 
 using namespace std;
 
@@ -148,6 +150,11 @@ public:
     operator float() const
     {
         return (float) (double) *this;
+    }
+
+    operator half() const
+    {
+        return (half)(double)*this;
     }
 
 private:

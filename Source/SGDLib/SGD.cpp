@@ -16,6 +16,7 @@
 #include "MatrixQuantizerImpl.h"
 #include "InputAndParamNodes.h"
 #include "AccumulatorAggregation.h"
+#include "CNTKLibraryInternals.h"
 
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
@@ -30,7 +31,7 @@
 
 #include "ASGDHelper.h"
 
-#include "CNTKLibraryInternals.h"
+#include "SimpleDistGradAggregatorHelper.h"
 #include "SimpleDistGradAggregator.h"
 #include "V2SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
@@ -357,8 +358,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         if (std::is_same<ElemType, half>())
         {
             // For half parameters, we use float smoothed gradients
+            // Allocate 3 times the size for casting parameter and gradients to float
+#define SGD_SMOOTHED_GRADIENTS_FACTOR 3
             shared_ptr<Matrix<float>> compoundMatrixPtr = std::make_shared<Matrix<float>>(numRows,
-                numCols * 3, // Allocate 3 times the size for casting parameter and gradients to float
+                numCols * SGD_SMOOTHED_GRADIENTS_FACTOR,
                 net->GetDeviceId());
             // Initialize float parameters
             auto parameterMatrix = compoundMatrixPtr->ColumnSlice(2 * numCols, numCols);
@@ -1145,23 +1148,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // NOTE: the following two local matrices are not used in distGradAgg path
     // assume only one training criterion node for each epoch.
     // The criterion values are accumulated here over the minibatches (without having to pull them off the GPU).
-    shared_ptr<CriterionAccumulatorBase> localEpochCriterionPtr;
-    shared_ptr<CriterionAccumulatorBase> localEpochEvalErrorsPtr;
-    if (std::is_same<ElemType, half>())
-    {
-        // Use float
-        localEpochCriterionPtr = make_shared<CriterionAccumulator<float>>(criterionNodes, net->GetDeviceId());
-        localEpochEvalErrorsPtr = make_shared<CriterionAccumulator<float>>(CriterionAccumulator<float>(
-            evaluationNodes, net->GetDeviceId(),
-            { evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end() }));
-    }
-    else
-    {
-        localEpochCriterionPtr = make_shared<CriterionAccumulator<ElemType>>(criterionNodes, net->GetDeviceId());
-        localEpochEvalErrorsPtr = make_shared<CriterionAccumulator<ElemType>>(CriterionAccumulator<ElemType>(
-            evaluationNodes, net->GetDeviceId(),
-            { evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end() }));
-    }
+    shared_ptr<CriterionAccumulatorBase> localEpochCriterionPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
+        criterionNodes, net->GetDeviceId());
+    shared_ptr<CriterionAccumulatorBase> localEpochEvalErrorsPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
+        criterionNodes, net->GetDeviceId(),
+        { evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end() });
     CriterionAccumulatorBase& localEpochCriterion = *localEpochCriterionPtr;
     CriterionAccumulatorBase& localEpochEvalErrors = *localEpochEvalErrorsPtr;
 
@@ -2305,38 +2296,22 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
     }
 }
 
-template<>
-void SGD<half>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel)
+template <class ElemType>
+std::shared_ptr<IDistGradAggregator<ElemType>> _GetAllReduceDistGradAggregator(const MPIWrapperPtr& mpi, int nBits, bool zeroThresholdFor1Bit, bool useAsyncAggregation, int traceLevel, int syncStatsTrace)
 {
-    assert(GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD);
-    if (!Globals::UseV2Aggregator())
+    if (Globals::UseV2Aggregator())
     {
-        RuntimeError("SGD - half not supported when useV2Aggregator is false!");
-    }
-
-    if (numGradientBits != (8 * sizeof(half)))
-    {
-        // TODO, enable this
-        RuntimeError("SGD - half not supported for quantization!");
-        //if (traceLevel > 0)
-            //fprintf(stderr, "Initializing dataParallelSGD for %d-bit quantization.\n", numGradientBits);
-#ifdef CNTK_PARALLEL_TRAINING_SUPPORT
-        //fprintf(stderr, "UseV2Aggregator - V2AllReduceDistGradAggregator");
-        //auto communicator = ::CNTK::QuantizedMPICommunicator(m_zeroThresholdFor1Bit, true, numGradientBits);
-        //m_distGradAgg = std::make_shared<V2AllReduceDistGradAggregator<half>>(communicator, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
-#else
-        RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
-#endif // !CNTK_PARALLEL_TRAINING_SUPPORT
+        auto communicator = ::CNTK::QuantizedMPICommunicator(zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, nBits);
+        return std::make_shared<V2AllReduceDistGradAggregator<ElemType>>(communicator, useAsyncAggregation, traceLevel, syncStatsTrace);
     }
     else
-    {
-        if (traceLevel > 0)
-            fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation.\n", numGradientBits);
-        fprintf(stderr, "UseV2Aggregator - V2SimpleDistGradAggregator");
-        m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<half>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes, m_useFP16AllReduce));
-    }
+        return std::make_shared<AllReduceDistGradAggregator<ElemType>>(mpi, nBits, zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, useAsyncAggregation, traceLevel, syncStatsTrace);
+}
 
-    m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });
+template <>
+std::shared_ptr<IDistGradAggregator<half>> _GetAllReduceDistGradAggregator<half>(const MPIWrapperPtr& mpi, int nBits, bool zeroThresholdFor1Bit, bool useAsyncAggregation, int traceLevel, int syncStatsTrace)
+{
+    RuntimeError("SGD - half not supported for quantization!");
 }
 
 template <class ElemType>
@@ -2349,14 +2324,7 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
         if (traceLevel > 0)
             fprintf(stderr, "Initializing dataParallelSGD for %d-bit quantization.\n", numGradientBits);
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
-        if (Globals::UseV2Aggregator())
-        {
-            fprintf(stderr, "UseV2Aggregator - V2AllReduceDistGradAggregator");
-            auto communicator = ::CNTK::QuantizedMPICommunicator(m_zeroThresholdFor1Bit, true, numGradientBits);
-            m_distGradAgg = std::make_shared<V2AllReduceDistGradAggregator<ElemType>>(communicator, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
-        }
-        else
-            m_distGradAgg = std::make_shared<AllReduceDistGradAggregator<ElemType>>(m_mpi, numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+        m_distGradAgg = _GetAllReduceDistGradAggregator<ElemType>(m_mpi, numGradientBits, m_zeroThresholdFor1Bit, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
 #else
         RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
 #endif // !CNTK_PARALLEL_TRAINING_SUPPORT
@@ -2365,55 +2333,36 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
     {
         if (traceLevel > 0)
             fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation.\n", numGradientBits);
-        if (Globals::UseV2Aggregator()) // Currently used to check V2 against baselines.
-        {
-            fprintf(stderr, "UseV2Aggregator - V2SimpleDistGradAggregator");
-            m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes, m_useFP16AllReduce));
-        }
-        else
-            m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, m_packThresholdSizeInBytes);
+        m_distGradAgg = GetSimpleDistGradAggregator<ElemType>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, m_packThresholdSizeInBytes, m_useFP16AllReduce);
     }
 
     m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });
 }
 
-template <>
-void SGD<half>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID)
+template <class ElemType>
+shared_ptr<IMASGD<ElemType>> _GetBlockMomentumSGD(const MPIWrapperPtr& mpi, size_t traceLevel, DEVICEID_TYPE devID, bool useNesterovBlockMomentum, bool resetSGDMomentum, double blockLearningRate, double blockMomentumAsTimeConstant, size_t modelAggregationBlockSize)
 {
-    if (m_pMASGDHelper)
-    {
-        return; // no need to do anything if already initialized. TODO: make it singleton 
-    }
-    if (GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD)
-    {
-        RuntimeError("SGD - half not supported for modelAveragingSGD!");
-    }
-    else if (GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD)
-    {
-#ifndef CNTK_PARALLEL_TRAINING_SUPPORT
-        RuntimeError("Block Momentum is not supported in the main CNTK repo. You need to enable 1bit submodule.");
-#else
-        if (Globals::UseV2Aggregator())
-        {
-            fprintf(stderr, "UseV2Aggregator - V2BlockMomentumSGD");
-            auto communicator = ::CNTK::MPICommunicator(m_useFP16AllReduce);
-            m_pMASGDHelper = make_shared<V2BlockMomentumSGD<half>>(
-                m_mpi,
-                communicator,
-                traceLevel,
-                devID,
-                m_useNesterovBlockMomentum,
-                m_resetSGDMomentum,
-                m_blockLearningRate,
-                m_blockMomentumAsTimeConstant,
-                m_modelAggregationBlockSize);
-        }
-        else
-        {
-            RuntimeError("SGD - half not supported when useV2Aggregator is false!");
-        }
-#endif 
-    }
+    assert(!Globals::UseV2Aggregator());
+    return make_shared<BlockMomentumSGD<ElemType>>(mpi, traceLevel, devID, useNesterovBlockMomentum, resetSGDMomentum, blockLearningRate, blockMomentumAsTimeConstant, modelAggregationBlockSize);
+}
+
+template <>
+shared_ptr<IMASGD<half>> _GetBlockMomentumSGD<half>(const MPIWrapperPtr& mpi, size_t traceLevel, DEVICEID_TYPE devID, bool useNesterovBlockMomentum, bool resetSGDMomentum, double blockLearningRate, double blockMomentumAsTimeConstant, size_t modelAggregationBlockSize)
+{
+    assert(!Globals::UseV2Aggregator());
+    RuntimeError("SGD - half not supported when useV2Aggregator is false!");
+}
+
+template <class ElemType>
+shared_ptr<IMASGD<ElemType>> _GetBasicModelAveragingSGD(const MPIWrapperPtr& mpi, size_t traceLevel, DEVICEID_TYPE devID)
+{
+    return make_shared<BasicModelAveragingSGD<ElemType>>(mpi, traceLevel, devID);
+}
+
+template <>
+shared_ptr<IMASGD<half>> _GetBasicModelAveragingSGD<half>(const MPIWrapperPtr& mpi, size_t traceLevel, DEVICEID_TYPE devID)
+{
+    RuntimeError("SGD - half not supported for modelAveragingSGD");
 }
 
 template <class ElemType>
@@ -2425,7 +2374,7 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
     }
     if (GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD)
     {
-        m_pMASGDHelper = make_shared<BasicModelAveragingSGD<ElemType>>(m_mpi, traceLevel, devID);
+        m_pMASGDHelper = _GetBasicModelAveragingSGD<ElemType>(m_mpi, traceLevel, devID);
     }
     else if (GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD)
     {
@@ -2434,7 +2383,6 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
 #else
         if (Globals::UseV2Aggregator())
         {
-            fprintf(stderr, "UseV2Aggregator - V2BlockMomentumSGD");
             auto communicator = ::CNTK::MPICommunicator(m_useFP16AllReduce);
             m_pMASGDHelper = make_shared<V2BlockMomentumSGD<ElemType>>(
                 m_mpi,
@@ -2448,7 +2396,7 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
                 m_modelAggregationBlockSize);
         }
         else
-            m_pMASGDHelper = make_shared<BlockMomentumSGD<ElemType>>(m_mpi, traceLevel, devID, 
+            m_pMASGDHelper = _GetBlockMomentumSGD<ElemType>(m_mpi, traceLevel, devID,
                                                                  m_useNesterovBlockMomentum, m_resetSGDMomentum, 
                                                                  m_blockLearningRate, m_blockMomentumAsTimeConstant, 
                                                                  m_modelAggregationBlockSize);
@@ -3060,7 +3008,7 @@ static AdjustLearningRateAtBeginning AdjustLearningRateAtBeginningType(const wst
     else InvalidArgument("AdjustLearningRateatBeginningType: Invalid Type. Valid values are (None | Linearly | Staircase)");
 }
 #endif
-  
+
 template<class ConfigRecordType>
 SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 {
