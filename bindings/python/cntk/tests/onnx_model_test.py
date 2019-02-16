@@ -387,7 +387,7 @@ def test_cntk_rnn_models(model_name):
     np.random.seed(0)
     sequence_length = 10
 
-    if model_name == 'SmartReply.Base_BiLSTM_Exported_input_replaced_with_gather_for_indice_input.cntk.model':
+    if model_name == 'SmartReply.Base_BiLSTM_gather_indice_input.model':
         feature_size = 99466
         data.append(generate_sequence_data(1, sequence_length, feature_size, input_as_index = True))
     elif model_name == 'SmartReply.SelfAtt.infer_model.cnt.model':
