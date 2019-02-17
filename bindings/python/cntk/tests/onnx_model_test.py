@@ -398,9 +398,9 @@ def test_cntk_rnn_models(model_name):
         batch_size, seq_len = 1, 17
         for arg in model.arguments[:-1]:
             # data = [*data, generate_sparse_data_no_batch(seq_len, arg.shape[0])]
-            data = [*data, generate_sparse_data(batch_size, seq_len, arg.shape[0])]
+            data.append(generate_sparse_data(batch_size, seq_len, arg.shape[0]))
         # the last argument is a sequence of booleans of length 8
-        data = [*data, np.array([[[1],[0],[1],[0],[1],[1],[0],[1]]]).astype(np.float32)]
+        data.append(np.array([[[1],[0],[1],[0],[1],[1],[0],[1]]]).astype(np.float32))
     elif model_name == 'Speech.lstm_pit.cntk48.ElementTimes3117.model':
         batch_size, seq_len, feature_size, feature_size2, feature_size3 = 1, 17, 257, 1542, 257
         data1 = np.random.rand(batch_size, seq_len, feature_size).astype(np.float32)
