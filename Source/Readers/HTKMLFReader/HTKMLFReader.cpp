@@ -602,7 +602,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         specialwordids.insert(0xfffff);        
     }
 
-    else if (wordidmappath != L"")
+    else if (wordidmappath != L"" && fexists(wordidmappath))
     {
         wordidmap.insert(pair<std::string, int>("!NULL", 0));
         wordidmap.insert(pair<std::string, int>("<s>", 1));
@@ -617,10 +617,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         int start_id = 6;
         readwordidmap(wordidmappath, wordidmap, start_id);
-        //const std::wstring mappingTable = L"D:\\Development\\TAMER\\eMBR\\CERCriteria\\Data2\\word2wid.dict.mapping.dict";
-        //optional id--> word string mapping
         /*changed by Linquan*/
-        if (word2widmappath != L"")
+        if (word2widmappath != L"" && fexists(word2widmappath))
         {
             readwordidmap2(word2widmappath, wordidmap2);
             id2wordmapping = CombineMappingTable(wordidmap, wordidmap2);
