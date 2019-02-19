@@ -322,14 +322,14 @@ rnn_model_names = [dir for dir in os.listdir(rnn_base_dir)
                     if os.path.isfile(os.path.join(rnn_base_dir, dir)) and dir.rfind('.model') + len('.model') == len(dir)] if os.path.exists(rnn_base_dir) else []
 
 skip_rnn_model_names = [
-    'SmartReply.Base_BiLSTM_Exported_input_replaced_with_gather_for_indice_input.cntk.model',
+    # ORT has a different random generator than CNTK. It will not create the same outputs.
     'SmartReply.cvae_input_replaced_with_gather_for_indice_input.cntk.model', 
-    'SmartReply.SelfAtt.infer_model.cnt.model',
-	'Speech.lstm_pit.cntk48.ElementTimes3117.model',
+    # SmartReply.SelfAtt.infer_model.cnt.model test requires GPU. However this test failed with both GPU and CPU test.
+    # skip it for now to unblock night build
+    'SmartReply.SelfAtt.infer_model.cnt.model'
 ]
 
 verify_with_resave = [
-    'SmartReply.Base_BiLSTM_Exported_input_replaced_with_gather_for_indice_input.cntk.model',
     'SmartReply.cvae_input_replaced_with_gather_for_indice_input.cntk.model',
     'SmartReply.3outputs.Trained.cnt_replaced_embedding_with_gather.model',
     'SmartReply.3outputs.Untrained.model'
@@ -390,15 +390,42 @@ def test_cntk_rnn_models(model_name):
     np.random.seed(0)
     sequence_length = 10
 
-    for arg in model.arguments:
-        if model_name in models_with_sequential_data:
-            data.append(generate_sequential_data((1,sequence_length) + arg.shape))
-        elif model_name in seq_models_with_sparse_data:
-            data.append(generate_sparse_data(1, sequence_length, arg.shape[0]))
-        elif model_name in non_seq_models_with_sparse_data:
-            data.append(generate_sparse_data_non_seq(1, arg.shape[0]))
-        else:
-            data.append(generate_sequence_data(1, sequence_length, arg.shape[0]))
+    if model_name == 'SmartReply.Base_BiLSTM_gather_indice_input.model':
+        feature_size = 99466
+        data.append(generate_sequence_data(1, sequence_length, feature_size, input_as_index = True))
+    elif model_name == 'SmartReply.SelfAtt.infer_model.cnt.model':
+        data = []
+        batch_size, seq_len = 1, 17
+        for arg in model.arguments[:-1]:
+            # data = [*data, generate_sparse_data_no_batch(seq_len, arg.shape[0])]
+            data.append(generate_sparse_data(batch_size, seq_len, arg.shape[0]))
+        # the last argument is a sequence of booleans of length 8
+        data.append(np.array([[[1],[0],[1],[0],[1],[1],[0],[1]]]).astype(np.float32))
+    elif model_name == 'Speech.lstm_pit.cntk48.ElementTimes3117.model':
+        batch_size, seq_len, feature_size, feature_size2, feature_size3 = 1, 17, 257, 1542, 257
+        data1 = np.random.rand(batch_size, seq_len, feature_size).astype(np.float32)
+        data2 = np.random.rand(batch_size, seq_len, feature_size2).astype(np.float32)
+        data3 = np.random.rand(batch_size, seq_len, feature_size3).astype(np.float32)
+        data = [data1, data2, data3]
+    elif model_name == 'LocalIntent.reduced.model':
+        batch_size, seq_len = 1, 3
+        f1, f2, f3, f4, f5 = 300, 1119, 9, 10, 12
+        data1 = np.random.rand(batch_size, seq_len, f1).astype(np.float32)
+        data2 = generate_sparse_data(batch_size, seq_len, f2)
+        data3 = np.random.rand(batch_size, seq_len, f3).astype(np.float32)
+        data4 = np.random.rand(batch_size, seq_len, f4).astype(np.float32)
+        data5 = np.random.rand(batch_size, seq_len, f5).astype(np.float32)
+        data = [data1, data2, data3, data4, data5]
+    else:
+        for arg in model.arguments:
+            if model_name in models_with_sequential_data:
+                data.append(generate_sequential_data((1,sequence_length) + arg.shape))
+            elif model_name in seq_models_with_sparse_data:
+                data.append(generate_sparse_data(1, sequence_length, arg.shape[0]))
+            elif model_name in non_seq_models_with_sparse_data:
+                data.append(generate_sparse_data_non_seq(1, arg.shape[0]))
+            else:
+                data.append(generate_sequence_data(1, sequence_length, arg.shape[0]))
             
     # Validate model results
     if(model_name in verify_with_resave):
