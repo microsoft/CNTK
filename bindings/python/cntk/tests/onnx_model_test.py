@@ -407,6 +407,15 @@ def test_cntk_rnn_models(model_name):
         data2 = np.random.rand(batch_size, seq_len, feature_size2).astype(np.float32)
         data3 = np.random.rand(batch_size, seq_len, feature_size3).astype(np.float32)
         data = [data1, data2, data3]
+    elif model_name == 'LocalIntent.reduced.model':
+        batch_size, seq_len = 1, 3
+        f1, f2, f3, f4, f5 = 300, 1119, 9, 10, 12
+        data1 = np.random.rand(batch_size, seq_len, f1).astype(np.float32)
+        data2 = generate_sparse_data(batch_size, seq_len, f2)
+        data3 = np.random.rand(batch_size, seq_len, f3).astype(np.float32)
+        data4 = np.random.rand(batch_size, seq_len, f4).astype(np.float32)
+        data5 = np.random.rand(batch_size, seq_len, f5).astype(np.float32)
+        data = [data1, data2, data3, data4, data5]
     else:
         for arg in model.arguments:
             if model_name in models_with_sequential_data:
