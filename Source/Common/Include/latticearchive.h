@@ -1105,7 +1105,11 @@ public:
 
         ReadVectorFromBuffer(buffer, "NODS", nodes, info.numnodes);
         if (nodes.back().t != info.numframes)
-            RuntimeError("ReadFromBuffer: mismatch between info.numframes and last node's time");
+        {
+            //RuntimeError("ReadFromBuffer: mismatch between info.numframes and last node's time");
+            //Sometimes, the data is corrputed, let's try to live with it, why Corrupted?? need more investigation
+            fprintf(stderr, "ReadFromBuffer: mismatch between info.numframes and last node's time: nodes.back().t = %d vs. info.numframes = %d \n", int(nodes.back().t), int(info.numframes));
+        }
         ReadVectorFromBuffer(buffer, "EDGS", edges2, info.numedges); // uniqued edges
         ReadVectorFromBuffer(buffer, "ALNS", uniquededgedatatokens); // uniqued alignments
         CheckTag(buffer, "END ");
