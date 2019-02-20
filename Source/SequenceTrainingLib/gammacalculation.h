@@ -541,7 +541,9 @@ public:
         //log softmax of f+g
         //mergedinput.InplaceLogSoftmax(true);
         Microsoft::MSR::CNTK::Matrix<ElemType> logsoftmax(m_deviceid_gpu);
-        logsoftmax.AssignLogSoftmaxOf(mergedinput,true);
+        logsoftmax.SetValue(mergedinput);
+
+        logsoftmax.InplaceLogSoftmax(true);
         //matrixOutputDistribution.Print("prob");
         // forward backward to compute alpha, beta derivaitves
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid_gpu);
