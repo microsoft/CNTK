@@ -39,10 +39,11 @@ class SimpleOutputWriter
         ElemType logP;
         size_t length;
         size_t processlength;
+        size_t lengthwithblank;
         shared_ptr<Matrix<ElemType>> decodeoutput;
         bool operator<(const Sequence& rhs) const
         {
-            return logP < rhs.logP ;
+            return logP < rhs.logP;
         }
     };
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
@@ -277,7 +278,7 @@ public:
 
     Sequence newSeq(size_t numRow, size_t numCol, DEVICEID_TYPE deviceId)
     {
-        Sequence oneSeq = {std::vector<size_t>(), 0.0, 0, 0, make_shared<Matrix<ElemType>>(numRow, (size_t) 1, deviceId)};
+        Sequence oneSeq = {std::vector<size_t>(), 0.0, 0, 0, 0, make_shared<Matrix<ElemType>>(numRow, (size_t) 1, deviceId)};
         return oneSeq;
     }
     Sequence newSeq(Sequence a)
@@ -286,6 +287,7 @@ public:
         oneSeq.labelseq = a.labelseq;
         oneSeq.logP = a.logP;
         oneSeq.length = a.length;
+        oneSeq.lengthwithblank = a.lengthwithblank;
         oneSeq.processlength = a.processlength;
         oneSeq.decodeoutput = make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId());
         oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
@@ -313,6 +315,7 @@ public:
         insequence.labelseq.push_back(labelId);
         insequence.logP = logP;
         insequence.length++;
+        insequence.lengthwithblank++;
     }
 
     void forward_decode(Sequence oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
@@ -605,17 +608,21 @@ public:
                                 newlogP = decodeOutput(blankId, 0) + tempSeq.logP;
                                 seqK.logP = newlogP;
                                 bool existseq = false;
+                                seqK.lengthwithblank++;
                                 for (Sequence seqP : keyNextSequences)
                                 {
                                     if (seqK.labelseq == seqP.labelseq)
                                     {
                                         existseq = true;
                                         seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
+                                        seqK.lengthwithblank = (seqK.lengthwithblank + seqP.lengthwithblank) / 2;
                                         break;
                                     }
                                 }
                                 if (!existseq)
+                                {                                    
                                     keyNextSequences.push_back(seqK);
+                                }
                                 labelmaps[blankId] = 1;
                             }
 
@@ -648,6 +655,7 @@ public:
 
                             if (topN[iLabel].first == blankId)
                             {
+                                seqK.lengthwithblank++;
                                 bool existseq = false;
                                 for (Sequence seqP : keyNextSequences)
                                 {
@@ -655,6 +663,7 @@ public:
                                     {
                                         existseq = true;
                                         seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
+                                        seqK.lengthwithblank = (seqK.lengthwithblank + seqP.lengthwithblank) / 2;
                                         break;
                                     }
                                 }
@@ -694,7 +703,7 @@ public:
                     std::reverse(keyNextSequences.begin(), keyNextSequences.end());
                     if (keyNextSequences.size() > beamSize)
                     {
-                       
+
                         for (size_t iseq = keyNextSequences.size(); iseq > beamSize; iseq--)
                             keyNextSequences.pop_back();
                     }
@@ -703,7 +712,7 @@ public:
             }
 
             //normal output
-            
+
             for (size_t n = 0; n < keyNextSequences.size(); n++)
             {
                 if (keyNextSequences[n].labelseq.size() < minKeywordLen)
@@ -723,12 +732,11 @@ public:
                         }
                     }
                     if (find)
-                        keyNextSequences[n].logP /= (keyNextSequences[n].labelseq.size()-1);
+                        keyNextSequences[n].logP /= (keyNextSequences[n].lengthwithblank - 1);
                     else
                         keyNextSequences[n].logP = -1000000;
                     /*if (!find)
                         keyNextSequences[n].logP = -1000000;*/
-                   
                 }
             }
             auto yb = std::max_element(keyNextSequences.begin(), keyNextSequences.end());
