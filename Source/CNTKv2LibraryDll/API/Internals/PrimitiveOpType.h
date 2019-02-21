@@ -110,6 +110,7 @@ namespace CNTK
         RNNT = 98,
         PlusBroadcast = 99,
         RNNTError = 100,
+        Getbias = 101,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

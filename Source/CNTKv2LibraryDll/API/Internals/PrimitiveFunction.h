@@ -67,6 +67,7 @@ namespace CNTK
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
         {PrimitiveOpType::RNNTError, L"RNNTError"},
+        {PrimitiveOpType::RNNTError, L"Getbias"},
         {PrimitiveOpType::ForwardBackward, L"ForwardBackward" },
         {PrimitiveOpType::RNNT, L"RNNT"},
         {PrimitiveOpType::LabelsToGraph, L"LabelsToGraph" },

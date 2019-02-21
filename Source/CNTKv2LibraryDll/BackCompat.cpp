@@ -510,6 +510,13 @@ namespace CNTK
 
                     opType = PrimitiveOpType::RNNTError;
                 }
+                else if (node->OperationName() == OperationNameOf(GetbiasNode))
+                {
+                    auto edNode = node->As<GetbiasNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameSpaceTokens] = AsDictionaryValueVector(edNode->SpaceTokens());
+
+                    opType = PrimitiveOpType::Getbias;
+                }
                 else if (node->OperationName() == OperationNameOf(StopGradientNode))
                 {
                     opType = PrimitiveOpType::StopGradient;

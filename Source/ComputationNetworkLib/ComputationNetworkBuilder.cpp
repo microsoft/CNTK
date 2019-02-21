@@ -59,6 +59,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(DummyCriterionNode))                   return New<DummyCriterionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DynamicAxisNode))                      return New<DynamicAxisNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(EditDistanceErrorNode))                return New<EditDistanceErrorNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(GetbiasNode))                          return New<GetbiasNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RNNTErrorNode))                        return New<RNNTErrorNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(StopGradientNode))                     return New<StopGradientNode <ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ElementTimesNode))                     return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
@@ -453,6 +454,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RNNTError(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, vector<size_t> tokensToIgnore, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<RNNTErrorNode<ElemType>>(net.GetDeviceId(), nodeName,  tokensToIgnore), {a, b, c});
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Getbias(const ComputationNodePtr a, const ComputationNodePtr b, vector<size_t> spaceTokens, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<GetbiasNode<ElemType>>(net.GetDeviceId(), nodeName, spaceTokens), {a, b});
 }
 
 template <class ElemType>

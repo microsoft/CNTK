@@ -19,6 +19,8 @@
 #include <memory>
 #include <locale>
 #include <codecvt>
+#include <random>
+#include "RandomOrdering.h"
 
 namespace Microsoft
 {
@@ -33,7 +35,8 @@ namespace CNTK
 // TraceNode (input, say='', enabled=true, gradient=false, showFrequency=10, showFirst=10, format=[]) -- trace a node's value
 // Traces a node's value using WriteMinibatchWithFormatting().
 // -----------------------------------------------------------------------
-
+static constexpr int MIN_RAND = std::numeric_limits<int>::max() / 1000;
+static constexpr int MAX_RAND = MIN_RAND + 10000;
 template <class ElemType>
 class TraceNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
@@ -1602,14 +1605,13 @@ public:
         {
             BackpropToLeft(*m_derivative, InputRef(inputIndex).Gradient(), Gradient());
         }
-        else if (inputIndex == 1 || inputIndex == 2)  //backprop to transcription f
+        else if (inputIndex == 1 || inputIndex == 2) //backprop to transcription f
         {
-            InputRef(inputIndex).Gradient().SetValue(0.0);            
-        }        
+            InputRef(inputIndex).Gradient().SetValue(0.0);
+        }
         else if (inputIndex == 3)
         {
             BackpropToMerge(InputRef(inputIndex).Gradient(), Gradient(), *m_derivative);
-            
         }
         else
             RuntimeError("RNNTNode criterion expects only two inputs: labels and network output.");
@@ -1633,7 +1635,7 @@ public:
     }
 
     void BackpropToMerge(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-                     Matrix<ElemType>& RNNTDerivative)
+                         Matrix<ElemType>& RNNTDerivative)
     {
 #if DUMPOUTPUT
         inputFunctionValues.Print("RNNTNode Partial-inputFunctionValues");
@@ -1651,7 +1653,7 @@ public:
 #if DUMPOUTPUT
         inputGradientValues.Print("RNNTNode Partial-Right");
 #endif
-    }    
+    }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
     {
@@ -1704,7 +1706,7 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
         // compute CTC score
-        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), InputRef(3).Value(), *m_maxIndexes, *m_derivative,  InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId);
+        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), InputRef(3).Value(), *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId);
 
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
@@ -1831,6 +1833,149 @@ protected:
 
 template class RNNTNode<float>;
 template class RNNTNode<double>;
+
+// -----------------------------------------------------------------------
+// GetbiasNode (prediction, transcription )
+// Getbias node, get input bias based on the labels. used of KWS training
+// spaceTokens: space token to split word
+//
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class GetbiasNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"Getbias";
+    }
+
+public:
+    GetbiasNode(DEVICEID_TYPE deviceId, const wstring& name, vector<size_t> spaceTokens = {})
+        : Base(deviceId, name), m_spaceTokens(spaceTokens)
+    {
+    }
+
+    GetbiasNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : GetbiasNode(configp->Get(L"deviceId"), L"<placeholder>", {})
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        m_spaceTokens = ScriptableObjects::ConfigArray::FlattenedVectorFrom<size_t>(configp->Get(L"spaceTokens"));
+    }
+
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        size_t rand1, rand2;
+        for (size_t n = 0; n < 10; n++)
+        {
+            rand1 = RandMT(0, 1, m_m1);
+            rand2 = RandMT(0, 1, m_m2);
+            printf("%zu, %zu ", rand1, rand2);
+        }
+
+#if NANCHECK
+        functionValues.HasNan("GetbiasNode");
+#endif
+#if DUMPOUTPUT
+        functionValues.Print("GetbiasNode");
+#endif
+    }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+
+        Base::Validate(isFinalValidationPass);
+
+        //m_pMBLayout = nullptr; // no layout
+        //InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        if (isFinalValidationPass)
+        {
+            if (m_pMBLayout == InputRef(0).GetMBLayout())
+            {
+                m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+                m_pMBLayout->SetUniqueAxisName(L"GetbiasAxis");
+            }
+        }
+        //m_pMBLayout->Init(1, totalcol);
+        //m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
+        //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+    }
+
+    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<GetbiasNode<ElemType>>(nodeP);
+
+            node->m_spaceTokens = m_spaceTokens;
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        //RequestMatrixFromPool(m_derivativeForG, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        //ReleaseMatrixToPool(m_derivativeForG, matrixPool);
+    }
+
+    std::vector<size_t> SpaceTokens() const
+    {
+        return m_spaceTokens;
+    }
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_spaceTokens;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_spaceTokens;
+    }
+    virtual void UpdateFunctionMBSize() override
+    {
+        Base::UpdateFunctionMBSize();
+    }
+
+protected:
+    virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking()
+    {
+        return true;
+    }
+    //shared_ptr<Matrix<ElemType>> m_outputDensity;
+    // shared_ptr<Matrix<ElemType>> m_outputDistribution;
+    vector<size_t> m_spaceTokens;
+    std::uniform_int<int> m_distr;
+    //std::uniform_int_distribution<int> m_distr(1, 11);
+    std::mt19937_64 m_m1;
+    std::mt19937_64 m_m2;
+};
+
+template class GetbiasNode<float>;
+template class GetbiasNode<double>;
 
 } // namespace CNTK
 } // namespace MSR

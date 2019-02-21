@@ -91,6 +91,7 @@ namespace CNTK
         CNTK_API static const std::wstring AttributeNameInsertionPenalty;
         CNTK_API static const std::wstring AttributeNameSquashInputs;
         CNTK_API static const std::wstring AttributeNameTokensToIgnore;
+        CNTK_API static const std::wstring AttributeNameSpaceTokens;
         CNTK_API static const std::wstring AttributeNameDelayConstraint;
         CNTK_API static const std::wstring AttributeNameBlankTokenId;
         CNTK_API static const std::wstring AttributeNamePhonePath;

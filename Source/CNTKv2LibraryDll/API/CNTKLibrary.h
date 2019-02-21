@@ -4366,6 +4366,11 @@ namespace CNTK
     CNTK_API FunctionPtr RNNTError(const Variable& prediction, const Variable& labels, const Variable& mergedinput, const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in operation for extracting bias for specified operands.
+    ///
+    CNTK_API FunctionPtr Getbias(const Variable& labels, const Variable& bias, const std::vector<size_t>& spaceTokens, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operation for sequence with lattice training (typically for speech).
     ///
     CNTK_API FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symbolListPath, 

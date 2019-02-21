@@ -1174,6 +1174,12 @@ namespace CNTK
                     ASSIGN_NEW_NODE(RNNTErrorNode, network->GetDeviceId(), internalNodeName, tokensToIgnore);
                     break;
                 }
+                case PrimitiveOpType::Getbias:
+                {
+                    auto spaceTokens = AsVector<size_t>(functionConfig[PrimitiveFunctionAttribute::AttributeNameSpaceTokens].Value<std::vector<DictionaryValue>>());
+                    ASSIGN_NEW_NODE(GetbiasNode, network->GetDeviceId(), internalNodeName, spaceTokens);
+                    break;
+                }
                 case PrimitiveOpType::LatticeSequenceWithSoftmax:
                 {
                     auto symListPath = functionConfig[PrimitiveFunctionAttribute::AttributeNameSymListPath].Value<wstring>();
