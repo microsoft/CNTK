@@ -1598,12 +1598,11 @@ void GPUSparseMatrix<ElemType>::Adam(
     GPUMatrix<ElemType>& c,
     GPUMatrix<ElemType>& functionValues,
     ElemType learnRatePerSample,
-    ElemType momentum,
-    ElemType adaWeight,
+    ElemType firstMomentDecayRate,
+    ElemType secondMomentDecayRate,
     ElemType adaMul,
     ElemType epsilon,
-    ElemType unitGainFactor,
-    bool adamax)
+    ElemType unitGainFactor)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -1624,8 +1623,41 @@ void GPUSparseMatrix<ElemType>::Adam(
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _adam4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         n, Data(), ColOrRow2BlockId(), GetNumRows(),
-        c.Data(), c.Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainFactor, adamax);
+        c.Data() + n, c.Data(), functionValues.Data(),
+        learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, epsilon, unitGainFactor);
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::AdaMax(
+	GPUMatrix<ElemType>& c,
+	GPUMatrix<ElemType>& functionValues,
+	ElemType learnRatePerSample,
+	ElemType firstMomentDecayRate,
+	ElemType secondMomentDecayRate,
+	ElemType adaMul,
+	ElemType unitGainFactor)
+{
+	if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
+	{
+		NOT_IMPLEMENTED;
+	}
+
+	size_t numColsNeeded = 2 * GetNumCols();
+
+	if (c.IsEmpty() || (c.GetNumCols() < numColsNeeded))
+	{
+		c.RequireSize(GetNumRows(), numColsNeeded);
+		c.SetValue(0.0);
+	}
+
+	assert((c.GetNumRows() == GetNumRows()) && (c.GetNumCols() == numColsNeeded));
+
+	size_t n = GetNumElements();
+	int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+	_adaMax4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (
+		n, Data(), ColOrRow2BlockId(), GetNumRows(),
+		c.Data() + n, c.Data(), functionValues.Data(),
+		learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, unitGainFactor);
 }
 
 template <class ElemType>

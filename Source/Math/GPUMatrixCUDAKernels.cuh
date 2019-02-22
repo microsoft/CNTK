@@ -5277,8 +5277,8 @@ __global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LON
 }
 
 template <class ElemType>
-__global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType typedUnitGainFactor, bool adamax)
+__global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* firstMoment, ElemType* secondMoment, ElemType* val,
+    ElemType lr, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType epsilon, ElemType typedUnitGainFactor)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     const comp_t unitGainFactor = (comp_t)typedUnitGainFactor;
@@ -5287,60 +5287,82 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemT
     for (; idx < size; idx += stride)
     {
         comp_t g = grad[idx];
-        comp_t w;
-        if (!adamax)
-        {
-            comp_t adaSqr = (comp_t)adaWeight * (comp_t)smoothAda[idx] + (1.0f - (comp_t)adaWeight) * g * g;
-            smoothAda[idx] = adaSqr;
-            w = (comp_t)adaMul * 1.0 / (sqrt_(adaSqr) + (comp_t)epsilon);
-        }
-        else
-        {
-            comp_t gAbs;
-            gAbs = fabs_(g);
-            smoothAda[idx] = max((comp_t)adaWeight * (comp_t)smoothAda[idx], gAbs);
-            w = (comp_t)adaMul / (comp_t)smoothAda[idx];
-        }
+		
+		// g <- m_t = beta_1 * m_{t-1} + unitGainFactor * g, copy to global memory.
+		g = (comp_t)firstMomentDecayRate * (comp_t)firstMoment[idx] + unitGainFactor * g;
+		firstMoment[idx] = g;
 
-        g = (comp_t)mom * (comp_t)smoothMom[idx] + unitGainFactor * g;
-        smoothMom[idx] = g;
-        g = (comp_t)lr*g*w;
-        val[idx] = (comp_t)val[idx] - g;
+		// w <- v_t = beta_2 * v_{t-1} + (1-beta_2) * g * g, copy to global memory.
+		comp_t w = (comp_t)secondMomentDecayRate * (comp_t)secondMoment[idx] + (1.0f - (comp_t)secondMomentDecayRate) * g * g;
+		secondMoment[idx] = w;
+
+		val[idx] = (comp_t)val[idx] - (comp_t)lr * (comp_t)adaMul * g / (sqrt_(w) + (comp_t)epsilon);
     }
 }
 
 template <class ElemType>
 __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
-    ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
+    ElemType* firstMoment, ElemType* secondMoment, ElemType* val,
+    ElemType lr, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor)
 {
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
     {
         ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
-        ElemType w;
-        if (!adamax)
-        {
-            ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
-            smoothAda[idx] = adaSqr;
+		g = firstMomentDecayRate * firstMoment[idx] + unitGainFactor * g;
+		firstMoment[idx] = g;
 
-            w = adaMul * (ElemType)1.0 / (sqrt_(adaSqr) + epsilon);
-        }
-        else
-        {
-            ElemType gAbs;
-            gAbs = fabs_(g);
-            smoothAda[idx] = max(adaWeight * smoothAda[idx], gAbs);
-            w = adaMul / smoothAda[idx];
-        }
+        ElemType w = secondMomentDecayRate * secondMoment[idx] + (1.0f - secondMomentDecayRate) * g * g;
+		secondMoment[idx] = w;
 
-        g = mom * smoothMom[idx] + unitGainFactor * g;
-        smoothMom[idx] = g;
-        g = lr*g*w;
-        val[idx] -= g;
+		val[idx] -= lr * adaMul * g / (sqrt_(w) + epsilon);
     }
+}
+
+template <class ElemType>
+__global__ void _adaMax(CUDA_LONG size, ElemType* grad, ElemType* firstMoment, ElemType* secondMoment, ElemType* val,
+	ElemType lr, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType typedUnitGainFactor)
+{
+	typedef typename TypeSelector<ElemType>::comp_t comp_t;
+	const comp_t unitGainFactor = (comp_t)typedUnitGainFactor;
+	const comp_t floor = 1e-5f;
+	CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+	CUDA_LONG stride = blockDim.x * gridDim.x;
+	for (; idx < size; idx += stride)
+	{
+		comp_t g = grad[idx];
+		comp_t w = max((comp_t)secondMomentDecayRate * (comp_t)secondMoment[idx], fabs_(g));				// w = u_t = max(beta_2 * u_{t-1}, |g_t|), use w as a cache
+		secondMoment[idx] = w;																				// copy to global memory
+		w = (comp_t)adaMul / (w + floor);																	// w = 1 / [(1 - pow(beta_1, t)) * u_t]
+		g = (comp_t)firstMomentDecayRate * (comp_t)firstMoment[idx] + unitGainFactor * g;					// g <- m_t = beta_1 * m_{t-1} + unitGainFactor * g
+		firstMoment[idx] = g;																				// copy to global memory
+		w = (comp_t)lr * g * w;																				// w = m_t * lr / [(1 - pow(beta_1, t)) * u_t]
+		val[idx] = (comp_t)val[idx] - w;
+	}
+}
+
+template <class ElemType>
+__global__ void _adaMax4BlockSparseCol(CUDA_LONG size,
+	ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+	ElemType* firstMoment, ElemType* secondMoment, ElemType* val,
+	ElemType lr, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor)
+{
+	CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+	CUDA_LONG stride = blockDim.x * gridDim.x;
+	const ElemType floor = 1e-5f;
+	for (; idx < size; idx += stride)
+	{
+		ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
+		ElemType w = max(secondMomentDecayRate * secondMoment[idx], fabs_(g));			// w = u_t = max(beta_2 * u_{t-1}, |g_t|), use w as a cache
+		secondMoment[idx] = w;															// copy to global memory
+		w = adaMul / (w + floor);														// w = 1 / [(1 - pow(beta_1, t)) * u_t]
+		g = firstMomentDecayRate * firstMoment[idx] + unitGainFactor * g;				// g <- m_t = beta_1 * m_{t-1} + unitGainFactor * g
+		firstMoment[idx] = g;															// copy to global memory
+		w = lr * g * w;																	// w = m_t * lr / [(1 - pow(beta_1, t)) * u_t]
+		val[idx] -= w;
+	}
 }
 
 template <class ElemType, class GradType>

@@ -1538,12 +1538,11 @@ template <class ElemType>
 void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     GPUMatrix<ElemType>& functionValues,
     ElemType learnRatePerSample,
-    ElemType momentum,
-    ElemType adaWeight,
+    ElemType firstMomentDecayRate,
+    ElemType secondMomentDecayRate,
     ElemType adaMul,
     ElemType epsilon,
-    ElemType unitGainFactor,
-    bool adamax)
+    ElemType unitGainFactor)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1557,8 +1556,38 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
 
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
-    _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul, epsilon, unitGainFactor, adamax);
+    _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data() + n, Data(), functionValues.Data(),
+        learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, epsilon, unitGainFactor);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AdaMax(GPUMatrix<ElemType>& gradients,
+	GPUMatrix<ElemType>& functionValues,
+	ElemType learnRatePerSample,
+	ElemType firstMomentDecayRate, 
+	ElemType secondMomentDecayRate, 
+	ElemType adaMul, 
+	ElemType unitGainFactor)
+{
+	// see https://arxiv.org/pdf/1412.6980.pdf
+	// firstMomentDecayRate:	beta_1
+	// secondMomentDecayRate:	beta_2
+	// adaMul:					sqrt(1 - pow(beta_2, t)) / (1 - pow(beta_1, t))
+	// unitGainFactor:			1 - beta_1, set 1 if disable unit gain.
+	size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+	if (IsEmpty() || (GetNumCols() < numColsNeeded))
+	{
+		RequireSize(gradients.GetNumRows(), numColsNeeded);
+		SetValue(0.0);
+	}
+
+	assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+	size_t n = gradients.GetNumElements();
+	int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+	_adaMax<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (n, gradients.Data(), Data() + n, Data(), functionValues.Data(),
+		learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, unitGainFactor);
 }
 
 template <class ElemType>

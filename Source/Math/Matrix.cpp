@@ -1832,29 +1832,72 @@ template <class ElemType>
 void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
     const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax)
 {
+	// learnRatePerSample here should be learnRatePerMB if we use mean_gradients
     // Bias correction
-    let biasCorrection = adamax? (ElemType)(1. / (1- pow(meanMomentum, smoothedCount))) : (ElemType)(sqrt(1- pow(varMomentum, smoothedCount))/(1- pow(meanMomentum, smoothedCount)));
+    let biasCorrection = (ElemType) (sqrt(1 - pow(varMomentum, smoothedCount)) / (1 - pow(meanMomentum, smoothedCount)));
+    let epsilonTimesBiasCorrection = (ElemType) (sqrt(1 - pow(varMomentum, smoothedCount)) * epsilon);
+
+	// for python API
+	if (adamax) 
+	{
+		AdaMaxUpdate(gradients, functionValues, smoothedCount, learnRatePerSample, meanMomentum, varMomentum, unitGainFactor);
+		return;
+	}
+
+	DecideAndMoveToRightDevice(*this, gradients, functionValues);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
     {
         m_CPUMatrix->Adam(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix,
         (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
-        biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
+        biasCorrection, epsilonTimesBiasCorrection, unitGainFactor);
         SetDataLocation(CPU);
     },
     {
         m_GPUMatrix->Adam(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix,
         (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
-        biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
+        biasCorrection, epsilonTimesBiasCorrection, unitGainFactor);
         SetDataLocation(GPU);
     },
     { NOT_IMPLEMENTED; },
     { gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *functionValues.m_GPUMatrix,
         (ElemType)learnRatePerSample, (ElemType)meanMomentum,
-        (ElemType)varMomentum, biasCorrection, (ElemType)epsilon, unitGainFactor, adamax);
+        (ElemType)varMomentum, biasCorrection, epsilonTimesBiasCorrection, unitGainFactor);
         SetDataLocation(GPU); });
 
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
+}
+
+template <class ElemType>
+void Matrix<ElemType>::AdaMaxUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
+	const double learnRatePerSample, const double meanMomentum, const double varMomentum, ElemType unitGainFactor)
+{
+	// learnRatePerSample here should be learnRatePerMB if we use mean_gradients
+	// Bias correction
+	let biasCorrection = (ElemType)(1.0f / (1 - pow(meanMomentum, smoothedCount)));
+
+	DecideAndMoveToRightDevice(*this, gradients, functionValues);
+
+	DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
+		{
+			m_CPUMatrix->AdaMax(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix,
+			(ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+			biasCorrection, unitGainFactor);
+			SetDataLocation(CPU);
+		},
+	{
+		m_GPUMatrix->AdaMax(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix,
+		(ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+		biasCorrection, unitGainFactor);
+		SetDataLocation(GPU);
+	},
+	{ NOT_IMPLEMENTED; },
+	{ gradients.m_GPUSparseMatrix->AdaMax(*m_GPUMatrix, *functionValues.m_GPUMatrix,
+		(ElemType)learnRatePerSample, (ElemType)meanMomentum,
+		(ElemType)varMomentum, biasCorrection, unitGainFactor);
+		SetDataLocation(GPU); });
+
+	// Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
 template <class ElemType>

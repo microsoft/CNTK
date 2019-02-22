@@ -55,7 +55,9 @@ enum class GradientsUpdateType : int
     None,
     AdaGrad,
     RmsProp,
-    FSAdaGrad
+    FSAdaGrad,
+    Adam,
+	AdaMax
 };
 
 // modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD 
@@ -100,6 +102,34 @@ struct RMSPropInfo
         max = 10.0;
         min = 0.1;
     }
+};
+
+// configuration parameters associated with Adam learning algorithm
+struct AdamInfo
+{
+    double beta1;
+    double beta2;
+    double epsilon;
+
+    AdamInfo()
+    {
+        beta1 = 0.9;
+        beta2 = 0.999;
+        epsilon = pow(10, -8);
+    }
+};
+
+// configuration parameters associated with AdaMax learning algorithm
+struct AdaMaxInfo
+{
+	double beta1;
+	double beta2;
+	
+	AdaMaxInfo()
+	{
+		beta1 = 0.9;
+		beta2 = 0.999;
+	}
 };
 
 struct GradientUpdateInfo
@@ -286,6 +316,8 @@ protected:
 
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
+    AdamInfo m_adamInfo;
+	AdaMaxInfo m_adaMaxInfo;
 
     size_t m_numMBsToShowResult = 0;
     size_t m_firstMBsToShowResult = 0;
