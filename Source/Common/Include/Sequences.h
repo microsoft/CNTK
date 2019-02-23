@@ -1037,29 +1037,64 @@ public:
         if (m_step > 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1 - m_pMBLayout->RightLookAhead()), -1);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
     }
+
+    FrameRangeIterator beginWithContext() const
+    {
+        if (m_step > 0)
+            return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
+        else
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
+    }
+
     FrameRangeIterator end() const
     {
         if (m_step < 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t) -1), 0 /*dummy*/);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - m_pMBLayout->RightLookAhead()), 0);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
     }
+
+    FrameRangeIterator endWithContext() const
+    {
+        if (m_step < 0)
+            return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t)-1), 0 /*dummy*/);
+        else
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
+    }
+
     // iterators for iterating in reverse order (as needed for gradient update)
     FrameRangeIterator rbegin() const
     {
         if (m_step < 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1 - m_pMBLayout->RightLookAhead()), -1);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
     }
+
+    FrameRangeIterator rbeginWithContext() const
+    {
+        if (m_step < 0)
+            return FrameRangeIterator(FrameRange(m_pMBLayout, 0), +1);
+        else
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - 1), -1);
+    }
+
     FrameRangeIterator rend() const
     {
         if (m_step > 0)
             return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t) -1), 0);
         else
-            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps() - m_pMBLayout->RightLookAhead()), 0);
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
+    }
+
+    FrameRangeIterator rendWithContext() const
+    {
+        if (m_step > 0)
+            return FrameRangeIterator(FrameRange(m_pMBLayout, (size_t)-1), 0);
+        else
+            return FrameRangeIterator(FrameRange(m_pMBLayout, m_pMBLayout->GetNumTimeSteps()), 0);
     }
 };
 
@@ -1133,9 +1168,12 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
 template <class ElemType>
 static inline Matrix<ElemType> DataWithMBLayoutFor(const Matrix<ElemType> &data,
                                                    const FrameRange &fr /*select frame or entire batch*/,
-                                                   const MBLayoutPtr &pMBLayout /*the MB layout of 'data'*/)
+                                                   const MBLayoutPtr &pMBLayout /*the MB layout of 'data'*/,
+                                                   bool applyLookAhead = false)
 {
     auto columnRange = ColumnRangeWithMBLayoutFor(data.GetNumCols(), fr, pMBLayout);
+    if (applyLookAhead)
+        columnRange.second = columnRange.second - fr.m_pMBLayout->RightLookAhead();
     return data.ColumnSlice(columnRange.first, columnRange.second);
 }
 
