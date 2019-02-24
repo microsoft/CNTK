@@ -1173,7 +1173,7 @@ static inline Matrix<ElemType> DataWithMBLayoutFor(const Matrix<ElemType> &data,
 {
     auto columnRange = ColumnRangeWithMBLayoutFor(data.GetNumCols(), fr, pMBLayout);
     if (applyLookAhead)
-        columnRange.second = columnRange.second - fr.m_pMBLayout->RightLookAhead();
+        columnRange.second = columnRange.second - fr.m_pMBLayout->RightLookAhead() * fr.m_pMBLayout->GetNumParallelSequences();
     return data.ColumnSlice(columnRange.first, columnRange.second);
 }
 
@@ -1291,7 +1291,10 @@ static inline void MaskMissingColumnsTo(Matrix<ElemType>& matrixToMask, const MB
 
         auto matrixSliceToMask = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
         if ((matrixSliceToMask.GetNumCols() % maskSlice.GetNumCols()) != 0)
+        {
+            fprintf(stderr, "matrixSliceToMask %zu maskSlice %zu", matrixSliceToMask.GetNumCols(), maskSlice.GetNumCols());
             LogicError("MaskMissingColumnsTo: The number of columns of the matrix slice to be masked is not a multiple of the number of columns of the mask slice.");
+        }
 
         matrixSliceToMask.MaskColumnsValue(maskSlice, val, matrixSliceToMask.GetNumCols() / maskSlice.GetNumCols());
     }

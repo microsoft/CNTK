@@ -190,6 +190,8 @@ public:
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
         m_logSoftmaxOfRightTruncated->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr, true), true);
+        fprintf(stderr, "m_logSoftmaxOfRight %zu m_logSoftmaxOfRightTruncated %zu GetNumSequences %zu", m_logSoftmaxOfRight->GetNumCols(), m_logSoftmaxOfRightTruncated->GetNumCols(), fr.m_pMBLayout->GetNumParallelSequences());
+
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
         MaskMissingColumnsToZero(*m_logSoftmaxOfRightTruncated, InputRef(1).GetMBLayout(), fr);
         MaskMissingColumnsToZero(*m_logSoftmaxOfRight, InputRef(1).GetMBLayout(), fr);
