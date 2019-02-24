@@ -189,14 +189,15 @@ public:
         // BUGBUG: No need to compute m_softmaxOfRight in ForwardProp, should be moved to BackpropTo().
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
-        m_logSoftmaxOfRightTruncated->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr, true), true);
-        fprintf(stderr, "m_logSoftmaxOfRight %zu m_logSoftmaxOfRightTruncated %zu GetNumSequences %zu", m_logSoftmaxOfRight->GetNumCols(), m_logSoftmaxOfRightTruncated->GetNumCols(), fr.m_pMBLayout->GetNumParallelSequences());
+        //m_logSoftmaxOfRightTruncated->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr, true), true);
+        fprintf(stderr, "m_logSoftmaxOfRight %zu m_logSoftmaxOfRightTruncated %zu GetNumParallelSequences %zu timeIdxInSeq %zu seqIndex %zu GetActualNumSamples %zu GetNumSequences %zu GetNumTimeSteps %zu \n", m_logSoftmaxOfRight->GetNumCols(), m_logSoftmaxOfRightTruncated->GetNumCols(), fr.m_pMBLayout->GetNumParallelSequences(), fr.timeIdxInSeq, fr.seqIndex, fr.m_pMBLayout->GetActualNumSamples(), fr.m_pMBLayout->GetNumSequences(), fr.m_pMBLayout->GetNumTimeSteps());
 
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
-        MaskMissingColumnsToZero(*m_logSoftmaxOfRightTruncated, InputRef(1).GetMBLayout(), fr);
+        //MaskMissingColumnsToZero(*m_logSoftmaxOfRightTruncated, InputRef(1).GetMBLayout(), fr);
         MaskMissingColumnsToZero(*m_logSoftmaxOfRight, InputRef(1).GetMBLayout(), fr);
+        Matrix<ElemType> logSoftmaxOfRightTruncated = m_logSoftmaxOfRight->ColumnSlice(0, m_logSoftmaxOfRight->GetNumCols() - fr.m_pMBLayout->GetNumParallelSequences() * fr.m_pMBLayout->RightLookAhead());
         // reduce over all frames
-        Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr, true), *m_logSoftmaxOfRightTruncated);
+        Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr, true), logSoftmaxOfRightTruncated);
         Value() *= -1;
 #if NANCHECK
         Value().HasNan("CrossEntropyWithSoftmax");
