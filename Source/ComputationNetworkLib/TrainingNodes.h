@@ -177,6 +177,7 @@ public:
     {
         m_logSoftmaxOfRight->Resize(Input(1)->Value());
         m_softmaxOfRight->Resize(*m_logSoftmaxOfRight);
+        m_logSoftmaxOfRightTruncated->Resize(Input(1)->Value());
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
@@ -184,14 +185,16 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         // first compute the softmax (column-wise)
         // Note that we need both log and non-log for gradient computation.
-        m_logSoftmaxOfRight->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr, true), true);
+        m_logSoftmaxOfRight->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr), true);
         // BUGBUG: No need to compute m_softmaxOfRight in ForwardProp, should be moved to BackpropTo().
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
+        m_logSoftmaxOfRightTruncated->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr, true), true);
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
+        MaskMissingColumnsToZero(*m_logSoftmaxOfRightTruncated, InputRef(1).GetMBLayout(), fr);
         MaskMissingColumnsToZero(*m_logSoftmaxOfRight, InputRef(1).GetMBLayout(), fr);
         // reduce over all frames
-        Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr, true), *m_logSoftmaxOfRight);
+        Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr, true), *m_logSoftmaxOfRightTruncated);
         Value() *= -1;
 #if NANCHECK
         Value().HasNan("CrossEntropyWithSoftmax");
@@ -222,6 +225,7 @@ public:
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_logSoftmaxOfRightTruncated, matrixPool);
         RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
     }
 
@@ -230,11 +234,13 @@ public:
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_logSoftmaxOfRightTruncated, matrixPool);
         ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
     }
 
 protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRightTruncated;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
 };
 
