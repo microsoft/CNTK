@@ -141,7 +141,7 @@ public:
             InputRef(0).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
 
-            auto gradient = InputRef(0).GradientFor(fr, true);
+            auto gradient = InputRef(0).GradientFor(fr);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, Gradient() /*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
 #if DUMPOUTPUT
             InputRef(0).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
@@ -157,7 +157,7 @@ public:
             InputRef(1).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
 #endif
 
-            auto gradient = InputRef(1).GradientFor(fr, true);
+            auto gradient = InputRef(1).GradientFor(fr);
             Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, InputRef(0).ValueFor(fr), gradient);
 #if DUMPOUTPUT
             InputRef(1).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right");
