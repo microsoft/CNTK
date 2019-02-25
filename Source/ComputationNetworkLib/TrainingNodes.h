@@ -190,7 +190,7 @@ public:
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
         //m_logSoftmaxOfRightTruncated->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr, true), true);
-        fprintf(stderr, "m_logSoftmaxOfRight %zu m_logSoftmaxOfRightTruncated %zu GetNumParallelSequences %zu timeIdxInSeq %zu seqIndex %zu GetActualNumSamples %zu GetNumSequences %zu GetNumTimeSteps %zu \n", m_logSoftmaxOfRight->GetNumCols(), m_logSoftmaxOfRightTruncated->GetNumCols(), fr.m_pMBLayout->GetNumParallelSequences(), fr.timeIdxInSeq, fr.seqIndex, fr.m_pMBLayout->GetActualNumSamples(), fr.m_pMBLayout->GetNumSequences(), fr.m_pMBLayout->GetNumTimeSteps());
+        //fprintf(stderr, "m_logSoftmaxOfRight %zu m_logSoftmaxOfRightTruncated %zu GetNumParallelSequences %zu timeIdxInSeq %zu seqIndex %zu GetActualNumSamples %zu GetNumSequences %zu GetNumTimeSteps %zu \n", m_logSoftmaxOfRight->GetNumCols(), m_logSoftmaxOfRightTruncated->GetNumCols(), fr.m_pMBLayout->GetNumParallelSequences(), fr.timeIdxInSeq, fr.seqIndex, fr.m_pMBLayout->GetActualNumSamples(), fr.m_pMBLayout->GetNumSequences(), fr.m_pMBLayout->GetNumTimeSteps());
 
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
         //MaskMissingColumnsToZero(*m_logSoftmaxOfRightTruncated, InputRef(1).GetMBLayout(), fr);
