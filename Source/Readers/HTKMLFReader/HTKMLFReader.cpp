@@ -113,7 +113,7 @@ void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string,
         fgetline(f, buf);
         if (sscanf(buf, "%s %d", word, &dumid) != 2)
         {
-            fprintf(stderr, "readwordidmap: reaching the end of line, with content = %s", buf);
+            fprintf(stderr, "readwordidmap: reaching the end of line, with content = %s \n", buf);
             break;
         }
         if (wordidmap.find(std::string(word)) == wordidmap.end())
@@ -128,8 +128,11 @@ void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string,
 void readwordidmap2(const std::wstring& pathname, std::unordered_map<std::wstring, std::wstring>& wordidmap)
 {
     std::unordered_map<std::wstring, int>::iterator mp_itr;
+#ifdef __unix__
+    fprintf(stderr, "Locale is: %s\n", setlocale(LC_ALL, ""));
+#endif
     auto_file_ptr f(fopenOrDie(pathname, L"rtS, ccs=UTF-8"));
-    fprintf(stderr, "readwordidmap: reading %ls \n", pathname.c_str());
+    fprintf(stderr, "readwordidmap2 (wid2character mapping): reading %ls \n", pathname.c_str());
     std::wstring buffer;
     std::wstring wordid;
     std::wstring word;
