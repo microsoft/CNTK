@@ -128,9 +128,15 @@ void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string,
 void readwordidmap2(const std::wstring& pathname, std::unordered_map<std::wstring, std::wstring>& wordidmap)
 {
     std::unordered_map<std::wstring, int>::iterator mp_itr;
+    
 #ifdef __unix__
-    fprintf(stderr, "Locale is: %s\n", setlocale(LC_ALL, ""));
+    //fprintf(stderr, "Locale is: %s\n", setlocale(LC_ALL, ""));
+    if (setlocale(LC_ALL, "C.UTF-8") == nullptr)
+    {
+        fprintf(stderr, "Set UTF-8 Locale is: %s\n", setlocale(LC_ALL, "en_US.UTF-8"));
+    }
 #endif
+    
     auto_file_ptr f(fopenOrDie(pathname, L"rtS, ccs=UTF-8"));
     fprintf(stderr, "readwordidmap2 (wid2character mapping): reading %ls \n", pathname.c_str());
     std::wstring buffer;
@@ -170,6 +176,10 @@ void readwordidmap2(const std::wstring& pathname, std::unordered_map<std::wstrin
     }
 
     fclose(f);
+
+#ifdef __unix__
+    setlocale(LC_ALL, "");
+#endif
 }
 
 std::unordered_map<size_t, std::wstring> CombineMappingTable(const std::unordered_map<std::string, int> trainwordidmap, const std::unordered_map<std::wstring, std::wstring>& wordidmap)
