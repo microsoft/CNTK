@@ -2121,7 +2121,6 @@ void CNTKToONNXHelper::UpdateONNXType(CNTK::DataType dataType, onnx::TypeProto &
 std::string CNTKToONNXHelper::ToOPName(const FunctionPtr& src)
 {
     auto lookup = Operators::CntkToONNXLookup();
-    assert(lookup.count(src->OpName()) != 0);
 
     std::string opName = ToLegacyString(ToUTF8(src->OpName()));
     if (lookup.count(src->OpName()) == 1)
@@ -7111,6 +7110,53 @@ std::vector<int64_t> CNTKToONNXHelper::BroadcastInputs(std::vector<onnxruntime::
     return broadcast_shape;
 }
 
+// Valid DictionaryValues that can be converted to string:
+// Bool, Int, SzieT, Float, Double and String.
+static void ScalarDictionaryValuesToString(std::string& str, Dictionary& dict)
+{
+    bool first = true;
+    for (const auto& kv : dict)
+    {
+        auto value_type = kv.second.ValueType();
+        auto key = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(kv.first));
+        std::string s;
+        switch (value_type)
+        {
+        case DictionaryValue::Type::Bool:
+            s = key + ":" + (kv.second.Value<bool>() ? "true" : "false");
+            break;
+        case DictionaryValue::Type::Int:
+            s = key + ":" + std::to_string(kv.second.Value<int>());
+            break;
+        case DictionaryValue::Type::SizeT:
+            s = key + ":" + std::to_string(kv.second.Value<size_t>());
+            break;
+        case DictionaryValue::Type::Float:
+            s = key + ":" + std::to_string(kv.second.Value<float>());
+            break;
+        case DictionaryValue::Type::Double:
+            s = key + ":" + std::to_string(kv.second.Value<double>());
+            break;
+        case DictionaryValue::Type::String:
+            s = key + ":" + Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(kv.second.Value<std::wstring>()));
+            break;
+        default:
+            // skip all other cases
+            break;
+        }
+
+        if (first)
+        {
+          first = false;
+          str += s;
+        }
+        else
+        {
+          str += "," + s;
+        }
+    }
+}
+
 onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime::Graph* graph, const std::vector<onnxruntime::NodeArg *>& inputs, const std::vector<onnxruntime::NodeArg *>& outputs)
 {
     onnxruntime::Node* node = nullptr;
@@ -7147,6 +7193,9 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
             bool input1HasBatchAxis = (input1Rank - reductionRank) == 2;
             bool input2HasBatchAxis = (input2Rank - reductionRank) == 2;
 
+            std::string customAttrsStr;
+            ScalarDictionaryValuesToString(customAttrsStr, src->GetCustomAttributes());
+
             if (reductionRank > 1 || py_api_output_rank_argument > 1) // We need to insert reshape.
             {
                 onnx::TypeProto matMulInput1Reshape, matMulInput2Reshape, matMulOutputShape;
@@ -7171,17 +7220,17 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
                     // these dimensions were reduced in ReduceRank
                     onnxruntime::NodeArg &matMulOutputNodeArg =
                         graph->GetOrCreateNodeArg(nodeName + string("_reshape"), &matMulOutputShape);
-                    graph->AddNode(nodeName, "MatMul", "", {&inputOutput1Arg, &inputOutput2Arg}, {&matMulOutputNodeArg});
+                    graph->AddNode(nodeName, "MatMul", customAttrsStr, {&inputOutput1Arg, &inputOutput2Arg}, {&matMulOutputNodeArg});
                     // node = graph->AddNode(nodeName + "_reshape", "Reshape", "", { input, &shapeInputArg }, { output });
                     std::vector<int64_t> finalOutputShape = ToINTS(*outputs[0]->TypeAsProto());
                     node = AddReshapeNodeImpl(graph, nodeName + "_output_reshape", &matMulOutputNodeArg, outputs[0], finalOutputShape);
                 }
                 else
-                    node = &graph->AddNode(nodeName, ToOPName(src), "", {&inputOutput1Arg, &inputOutput2Arg}, outputs);
+                    node = &graph->AddNode(nodeName, ToOPName(src), customAttrsStr, {&inputOutput1Arg, &inputOutput2Arg}, outputs);
             }
             else
             {
-                node = &graph->AddNode(nodeName, ToOPName(src), "", orderedInputs, outputs);
+                node = &graph->AddNode(nodeName, ToOPName(src), customAttrsStr, orderedInputs, outputs);
             }
         }
         else if (src->OpName() == L"LayerNormalization")
