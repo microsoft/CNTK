@@ -310,6 +310,17 @@ public:
         }
         return maxIt;
     }
+    iterator getMatchSeq(vector<Sequence> seqs, vector<size_t> labelseq)
+    {
+        iterator it;
+        for (it = seqs.begin(); it != seqs.end(); it++)
+        {
+            if (it->labelseq == labelseq)
+                break;
+        }
+        return it;
+    }
+
     void extendSeq(Sequence& insequence, size_t labelId, ElemType logP)
     {
         insequence.labelseq.push_back(labelId);
@@ -511,6 +522,44 @@ public:
         //size_t numItersSinceLastPrintOfProgress = 0;
         size_t actualMBSize;
         vector<Sequence> CurSequences, nextSequences, keyCurSequences, keyNextSequences;
+        size_t vocabSize = 131;
+        size_t blankId = vocabSize - 1;
+
+        //precompute decoder for keyword
+        vector<Sequence> preComputeSequence;
+        //add sequence "blank <space>" and "blank"
+        Sequence oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
+        extendSeq(oneSeq, blankId, 0.0);        
+        forward_decode(oneSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, oneSeq.labelseq.size());
+        preComputeSequence.push_back(oneSeq);
+
+        Sequence anotherSeq = newSeq(oneSeq);
+        extendSeq(anotherSeq, keywords[0][1], 0.0);
+        forward_decode(anotherSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, anotherSeq.labelseq.size());
+        preComputeSequence.push_back(anotherSeq);
+        //add all keyword seq
+        for (size_t ikey = 0; ikey < keywords.size(); ikey++)
+        {
+            for (size_t labelId = 2; labelId < keywords[ikey].size(); labelId++)
+            {
+                vector<size_t> partlabel(keywords[ikey].begin(), keywords[ikey].begin() + labelId);
+                iterator it;
+                for (it = preComputeSequence.begin(); it != preComputeSequence.end(); it++)
+                {
+                    if (it->labelseq == partlabel)
+                        break;
+                }
+                if ( it == preComputeSequence.end())
+                {
+                    Sequence tmpseq = newSeq(vocabSize, (size_t) 50, deviceid);
+                    tmpseq.labelseq = partlabel;
+                    tmpseq.length = tmpseq.labelseq.size();
+
+                    forward_decode(tmpseq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tmpseq.labelseq.size());
+                    preComputeSequence.push_back(tmpseq);
+                }
+            }
+        }
 
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
         {
@@ -522,14 +571,14 @@ public:
             dataReader.DataEnd();
 
             //decode forward prop step by step
-            size_t vocabSize = PlusTransNode->GetSampleMatrixNumRows();
-            size_t blankId = vocabSize - 1;
+            //size_t vocabSize = PlusTransNode->GetSampleMatrixNumRows();
+            //size_t blankId = vocabSize - 1;
 
             nextSequences.clear();
             keyNextSequences.clear();
 
             //initialize with blank ID
-            Sequence oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
+            oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
             extendSeq(oneSeq, blankId, 0.0);
             nextSequences.push_back(oneSeq);
 
@@ -584,7 +633,19 @@ public:
                     Sequence tempSeq = newSeq(*maxSeq);
                     deleteSeq(*maxSeq);
                     keyCurSequences.erase(maxSeq);
-                    forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
+                    //precomputed seq
+                    iterator itseq;
+                    for (itseq = preComputeSequence.begin(); itseq != preComputeSequence.end(); itseq++)
+                    {
+                        if (itseq->labelseq == tempSeq.labelseq)
+                            break;
+                    }
+                    if (itseq != preComputeSequence.end())
+                    {
+                        tempSeq.decodeoutput->SetValue(*(itseq->decodeoutput));
+                    }
+                    else
+                        forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
                     forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
 
                     Sequence seqK;
@@ -620,7 +681,7 @@ public:
                                     }
                                 }
                                 if (!existseq)
-                                {                                    
+                                {
                                     keyNextSequences.push_back(seqK);
                                 }
                                 labelmaps[blankId] = 1;
@@ -732,7 +793,7 @@ public:
                         }
                     }
                     if (find)
-                        keyNextSequences[n].logP /= (keyNextSequences[n].lengthwithblank - 1);
+                        keyNextSequences[n].logP /= (keyNextSequences[n].labelseq.size()-1);
                     else
                         keyNextSequences[n].logP = -1000000;
                     /*if (!find)
