@@ -153,16 +153,16 @@ def create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name
     os.mkdir(test_model_path)
     test_data_path = os.path.join(str(test_model_path), R'test_data_set_0')
     os.mkdir(test_data_path)
-    if not loaded_model:
+    filename = os.path.join(str(test_model_path), name + R'.onnx')
+    model.save(filename, format=C.ModelFormat.ONNX)
+    onnx_model = onnx.load(filename)
+    if not bypass_load_into_cntk:
         ## leave this line for debugging when needed
         ## plot original model
         #C.logging.graph.plot(model, os.path.join(str(test_model_path), name + ".pdf"))
 
-        filename = os.path.join(str(test_model_path), name + R'.onnx')
-        model.save(filename, format=C.ModelFormat.ONNX)
-
-        loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
-        onnx_model = onnx.load(filename)
+        if not loaded_model:
+            loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
 
         ## leave this line for debugging when needed
         # plot loaded model
@@ -171,11 +171,9 @@ def create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name
         if resave:
             filename_resave = os.path.join(str(tmpdir), name + R'_resave.onnx')
             loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
-    elif bypass_load_into_cntk:
-        filename = os.path.join(str(test_model_path), name + R'.onnx')
-        model.save(filename, format=C.ModelFormat.ONNX)
-        onnx_model = onnx.load(filename)
-        
+    if not loaded_model:
+        loaded_model = model
+
     return loaded_model, onnx_model, test_model_path, test_data_path
 
 # onnx model outputs are not necessarily in the same order as the original CNTK model.

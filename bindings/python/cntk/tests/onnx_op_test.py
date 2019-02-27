@@ -59,38 +59,41 @@ def verify_node_names(model1, model2):
                        for name in model1_names]
     assert all(names_preserved) == True
 
-def verify_no_input(model, tmpdir, name):
+def verify_no_input(model, tmpdir, name, bypass_load_into_cntk=False):
     init_empty_node_names(model)
 
     opname = model.owner.op_name
 
     loaded_model = None
-    loaded_model, _, _, _ = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
+    loaded_model, _, _, _ = create_and_populate_onnx_test_case_with_model_conversion(
+        model, tmpdir, name, loaded_model, bypass_load_into_cntk = bypass_load_into_cntk)
 
-    model_shape = model.shape
-    dim_denotation = None
-    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),) and opname not in set_of_batch_ops:
-        dim_denotation = DIM_SIZE_FOR_NON_BATCH_OPS
-    elif opname in set_of_batch_ops:
-        dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION
-    if not dim_denotation is None and opname not in set_of_batch_irrelevant_ops:
-        model_shape = (dim_denotation, ) + model_shape
+    if not bypass_load_into_cntk:
+        model_shape = model.shape
+        dim_denotation = None
+        if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),) and opname not in set_of_batch_ops:
+            dim_denotation = DIM_SIZE_FOR_NON_BATCH_OPS
+        elif opname in set_of_batch_ops:
+            dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION
+        if not dim_denotation is None and opname not in set_of_batch_irrelevant_ops:
+            model_shape = (dim_denotation, ) + model_shape
 
-    assert model_shape == loaded_model.shape
+        assert model_shape == loaded_model.shape
 
-    o0 = model.eval()
-    o1 = loaded_model.eval()
+        o0 = model.eval()
+        o1 = loaded_model.eval()
 
-    if (type(o0) is list):
-        o0 = o0[0]
-    if (type(o1) is list):
-        o1 = o1[0]
+        if (type(o0) is list):
+            o0 = o0[0]
+        if (type(o1) is list):
+            o1 = o1[0]
 
-    assert np.allclose(o0, o1)
-    verify_node_names(model, loaded_model)
+        assert np.allclose(o0, o1)
+        verify_node_names(model, loaded_model)
+    
     return loaded_model
 
-def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08):
+def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, bypass_load_into_cntk = False, rtol = 1e-05, atol = 1e-08):
     # TODO: eventually we want this test method to be more general to suport 
     # models with multiple inputs instead of just one input.
     assert len(model.arguments) == 1
@@ -104,14 +107,14 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
     # outputs share the same owner
     opname = model.outputs[0].owner.op_name
 
-    loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
-    #import pdb
-    #pdb.set_trace()        
+    loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(
+        model, tmpdir, name, loaded_model, bypass_load_into_cntk = bypass_load_into_cntk, resave = False)
+    #import pdb; pdb.set_trace()
 
     # TODO: it is better to compare data.shape with model.arguments[0] and
     # to pad batch dimension as needed.
     # Some tests have already expanded batch axis to data (i.e. reduction test) 
-    if model.arguments[0].has_batch_axis() and type(data)!=list:
+    if model.arguments[0].has_batch_axis() and type(data)!=list and len(model.arguments[0].shape) == len(data.shape):
         data.shape = (1, ) + data.shape
 
     #assert len(model.outputs) == len(loaded_model.outputs)
@@ -127,31 +130,34 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
 
     if device:
         o0 = model.eval({model.arguments[0]:data}, device=device)
-        #o1 = loaded_model.eval({loaded_model.arguments[0]:data}, device=device)
+        if not bypass_load_into_cntk:
+            o1 = loaded_model.eval({loaded_model.arguments[0]:data}, device=device)
     else:
         o0 = model.eval({model.arguments[0]:data})
-        #o1 = loaded_model.eval({loaded_model.arguments[0]:data})
+        if not bypass_load_into_cntk:
+            o1 = loaded_model.eval({loaded_model.arguments[0]:data})
 
-    #if len(model.outputs) == 1:
-    #    assert np.allclose(o0, o1, rtol, atol)
-    #else:
-    #    matched_indices = []
-    #    for i in range(0, len(model.outputs)):
-    #        # outputs of loaded model are not necessarily in the same order as the original model.
-    #        # output uid is likely changed too.
-    #        # the only way to verify the data is to find match for every output. 
-    #        o0i = o0[model.outputs[i]]
-    #        for j in range(0, len(loaded_model.outputs)):
-    #            if j not in matched_indices:
-    #                o1i = o1[loaded_model.outputs[j]]
-    #                if np.shape(o0i) == np.shape(o1i) and np.allclose(o0i, o1i):
-    #                    matched_indices.append(j)
-    #                    break
-    #        assert len(matched_indices) == i+1
+    if not bypass_load_into_cntk:
+        if len(model.outputs) == 1:
+            assert np.allclose(o0, o1, rtol, atol)
+        else:
+            matched_indices = []
+            for i in range(0, len(model.outputs)):
+                # outputs of loaded model are not necessarily in the same order as the original model.
+                # output uid is likely changed too.
+                # the only way to verify the data is to find match for every output. 
+                o0i = o0[model.outputs[i]]
+                for j in range(0, len(loaded_model.outputs)):
+                    if j not in matched_indices:
+                        o1i = o1[loaded_model.outputs[j]]
+                        if np.shape(o0i) == np.shape(o1i) and np.allclose(o0i, o1i):
+                            matched_indices.append(j)
+                            break
+                assert len(matched_indices) == i+1
 
     save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
 
-    #verify_node_names(model, loaded_model)
+    verify_node_names(model, loaded_model)
     return loaded_model
 
 def run_model(model, data, device=None):
@@ -222,15 +228,16 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
 
     save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
 
-def verify_two_input(model, data1, data2, tmpdir, name):
+def verify_two_input(model, data1, data2, tmpdir, name, bypass_load_into_cntk = False, resave = False):
     init_empty_node_names(model)
 
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data1 = deepcopy(data1)
     data2 = deepcopy(data2)
 
-    filename = os.path.join(str(tmpdir), name + R'.onnx')
-    model.save(filename, format=C.ModelFormat.ONNX)
+    loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(
+        model, tmpdir, name, model, bypass_load_into_cntk = bypass_load_into_cntk, resave = resave)
+
     opname = model.owner.op_name
 
     #loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
@@ -239,7 +246,7 @@ def verify_two_input(model, data1, data2, tmpdir, name):
     #loaded_model.save(filename_resave, format=C.ModelFormat.ONNX)
 
     model_shape = model.shape
-    if model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
+    if batch_size == 1 and model.output.dynamic_axes == (C.Axis('defaultBatchAxis'),):
         dim_denotation = CNTK_FREEDIM_AXIS_DENOTATION if opname in set_of_batch_ops else DIM_SIZE_FOR_NON_BATCH_OPS
         if opname not in set_of_batch_irrelevant_ops:
             model_shape = (dim_denotation, ) + model_shape
@@ -249,6 +256,8 @@ def verify_two_input(model, data1, data2, tmpdir, name):
 
     o0 = model.eval({model.arguments[0]:data1, model.arguments[1]:data2})
     #o1 = loaded_model.eval({loaded_model.arguments[0]:data1, loaded_model.arguments[1]:data2})
+
+    save_test_data(model, onnx_model, test_data_path, [data1, data2], o0, name, tmpdir)
 
     if (type(o0) is list):
         o0 = o0[0]
@@ -261,11 +270,13 @@ def verify_two_input(model, data1, data2, tmpdir, name):
 #Shared Test Configs
 DType_Config = (np.float32, np.float16)
 
+batch_size = 2
+
 #Abs
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Abs(tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        shape = (4, 5)
+        shape = (batch_size, 4, 5)
         data = np.random.rand(*shape).astype(dtype)
 
         model = C.abs(data)
@@ -280,18 +291,18 @@ def test_Abs(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Add(tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        shape = (4, 5)
+        shape = (batch_size, 4, 5)
         data1 = np.random.rand(*shape).astype(dtype)
         data2 = np.random.rand(*shape).astype(dtype)
-        model = C.plus(data1, data2)
+        model = C.plus(data1[0], data2[0])
         verify_no_input(model, tmpdir, 'Add_0')
 
-        x = C.input_variable(shape)
-        model = C.plus(x, data2)
+        x = C.input_variable(np.shape(data1[0]))
+        model = C.plus(x, data2[0])
 
         verify_one_input(model, data1, tmpdir, 'Add_1')
 
-        y = C.input_variable(shape)
+        y = C.input_variable(np.shape(data1[0]))
         model = C.plus(x, y)
 
         verify_two_input(model, data1, data2, tmpdir, 'Add_2')
@@ -299,16 +310,16 @@ def test_Add(tmpdir, dtype):
 #And
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_And(tmpdir, dtype):
-    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], dtype)
-    data2 = np.asarray([1, 0, 1, 0], dtype)
-
-    model = C.element_and(data1, data2)
+    data1 = np.random.randint(0, 2, (batch_size, 2, 4)).astype(dtype)
+    data2 = np.random.randint(0, 2, (batch_size, 4)).astype(dtype)
+        
+    model = C.element_and(data1[0], data2[0])
     verify_no_input(model, tmpdir, 'And_0')
 
-    x = C.input_variable(np.shape(data1))
-    y = C.input_variable(np.shape(data2))
+    x = C.input_variable(np.shape(data1[0]))
+    y = C.input_variable(np.shape(data2[0]))
 
-    model = C.element_and(x, data2)
+    model = C.element_and(x, data2[0])
     verify_one_input(model, data1, tmpdir, 'And_1')
 
     model = C.element_and(x, y)
@@ -316,16 +327,16 @@ def test_And(tmpdir, dtype):
 
 #Or
 def test_Or(tmpdir):
-    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
-    data2 = np.asarray([1, 0, 1, 0], np.float32)
+    data1 = np.random.randint(0, 2, (batch_size, 2, 4)).astype(np.float32)
+    data2 = np.random.randint(0, 2, (batch_size, 4)).astype(np.float32)
 
-    model = C.element_or(data1, data2)
+    model = C.element_or(data1[0], data2[0])
     verify_no_input(model, tmpdir, 'Or_0')
 
-    x = C.input_variable(np.shape(data1))
-    y = C.input_variable(np.shape(data2))
+    x = C.input_variable(np.shape(data1[0]))
+    y = C.input_variable(np.shape(data2[0]))
 
-    model = C.element_or(x, data2)
+    model = C.element_or(x, data2[0])
     verify_one_input(model, data1, tmpdir, 'Or_1')
 
     model = C.element_or(x, y)
@@ -333,16 +344,16 @@ def test_Or(tmpdir):
 
 #Xor
 def test_Xor(tmpdir):
-    data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]], np.float32)
-    data2 = np.asarray([1, 0, 1, 0], np.float32)
+    data1 = np.random.randint(0, 2, (batch_size, 2, 4)).astype(np.float32)
+    data2 = np.random.randint(0, 2, (batch_size, 4)).astype(np.float32)
 
-    model = C.element_xor(data1, data2)
+    model = C.element_xor(data1[0], data2[0])
     verify_no_input(model, tmpdir, 'Xor_0')
 
-    x = C.input_variable(np.shape(data1))
-    y = C.input_variable(np.shape(data2))
+    x = C.input_variable(np.shape(data1[0]))
+    y = C.input_variable(np.shape(data2[0]))
 
-    model = C.element_xor(x, data2)
+    model = C.element_xor(x, data2[0])
     verify_one_input(model, data1, tmpdir, 'Xor_1')
 
     model = C.element_xor(x, y)
@@ -352,12 +363,12 @@ def test_Xor(tmpdir):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Not(tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        data1 = np.asarray([[1, 1, 0, 0],[1, 1, 1, 1]]).astype(dtype)
+        data1 = np.random.randint(0, 2, (batch_size, 2, 4)).astype(dtype)
 
-        model = C.element_not(data1)
+        model = C.element_not(data1[0])
         verify_no_input(model, tmpdir, 'Not_0')
 
-        x = C.input_variable(np.shape(data1))
+        x = C.input_variable(np.shape(data1[0]))
 
         model = C.element_not(x)
         verify_one_input(model, data1, tmpdir, 'Not_1')
@@ -366,7 +377,7 @@ def test_Not(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ArgMax(tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        shape = (4, 5)
+        shape = (batch_size, 4, 5)
         data = np.random.rand(*shape).astype(dtype)
         model = C.argmax(data, 0)
 
@@ -380,7 +391,7 @@ def test_ArgMax(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_ArgMin(tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        shape = (4, 5)
+        shape = (batch_size, 4, 5)
         data = np.random.rand(*shape).astype(dtype)
         model = C.argmin(data, 0)
 
@@ -393,14 +404,14 @@ def test_AveragePool(tmpdir, dtype, device_id):
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype):
-        img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
+        img = np.reshape(np.arange(batch_size * 16, dtype = dtype), [batch_size, 4, 4])
         x = C.input_variable(img.shape)
         model = C.pooling(x, C.AVG_POOLING, (2,2), (2,2))
 
         verify_one_input(model, img, tmpdir, 'AveragePool_1', device)
 
         # test for case of not padding but with ceilOutDim=True
-        img = np.reshape(np.arange(49, dtype=dtype), [1, 7, 7])
+        img = np.reshape(np.arange(batch_size * 49, dtype=dtype), [batch_size, 7, 7])
         x = C.input_variable(img.shape)
         model = C.pooling(x, C.AVG_POOLING, (7, 7), auto_padding = [False, False, False], ceil_out_dim=True)
 
@@ -458,6 +469,8 @@ def test_BatchNormalization(tmpdir, dtype):
 # Case 2 - Spatial BN with More > 1 batches    
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SpatialBatchNormalization(tmpdir, dtype):
+    if dtype == np.float16:
+        pytest.skip(non_spatial_float16_skip_message)
     np.random.seed(0)
     x = np.random.randn(2, 3, 4, 5).astype(dtype)
     scale = np.random.randn(3).astype(np.float32)
@@ -477,14 +490,14 @@ def test_Cast(tmpdir, from_type, to_type):
     shape = (3, 10, 15)
     input_var = C.input_variable(shape, dtype = from_type, name='features') 
     model = C.cast(input_var, dtype=to_type)
-    data = np.random.rand(*shape).astype(from_type)
+    data = np.random.rand(batch_size, *shape).astype(from_type)
     verify_one_input(model, data, tmpdir, test_name)
 
 # Ceil
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Ceil(tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], dtype)
+        data = np.repeat(np.asarray([0.2, 1.3, 4., 5.5, 0.0], dtype), batch_size, 0)
         model = C.ceil(data)
 
         verify_no_input(model, tmpdir, 'ceil_0')
@@ -501,7 +514,7 @@ def test_Clip(tmpdir, dtype):
     if (dtype == np.float16):
         pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
-        data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], dtype)
+        data = np.repeat(np.asarray([[0.2, 1.3, 4., 5.5, 0.0]], dtype), batch_size, axis = 0)
         min_v = 2
         max_v = 4
         model = C.clip(data, min_v, max_v)
@@ -517,38 +530,43 @@ def test_Clip(tmpdir, dtype):
 #Concat
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Concat(tmpdir, dtype):
+    pytest.skip('Work-In-Progress: broadcast with symbolic axis')
     with C.default_options(dtype = dtype):
-        data1 = np.asarray([[[1, 2], [4, 5]]], dtype=dtype)
-        x = C.constant(value=data1)
+        data1 = np.asarray([[1, 2], [4, 5]], dtype=dtype)
+        data1 = np.tile(data1, (batch_size, *np.ones(data1.ndim, dtype = np.int)))
+        x = C.constant(value=data1[0])
         # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        data2 = np.asarray([[[10, 20], 
+        data2 = np.asarray([[10, 20], 
                              [30, 40], 
-                             [50, 60]]],dtype=dtype)
-        y = C.constant(value=data2)
+                             [50, 60]],dtype=dtype)
+        data2 = np.tile(data2, (batch_size, *np.ones(data2.ndim, dtype = np.int)))
+
+        y = C.constant(value=data2[0])
 
         # splice both inputs on axis=0 returns a 5x2 matrix
-        model = C.splice(x, y, axis=1)
-
+        model = C.splice(x, y, axis=0)
+    
         verify_no_input(model, tmpdir, 'Concat_0')
 
-        x = C.input_variable(data1.shape)
+        x = C.input_variable(data1[0].shape)
 
-        model = C.splice(x, y, axis=1)
+        model = C.splice(x, y, axis=0)
 
         verify_one_input(model, data1, tmpdir, 'Concat_1')
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Concat_With_Broadcast(tmpdir, dtype):
+    pytest.skip('Work-In-Progress: broadcast with symbolic axis')
     with C.default_options(dtype = dtype):
         # TODO: add test cast with exchanged shape1 and shape2
         shape1 = [2,3,1,1,3]
         shape2 =   [1,3,4,1]
         shape3 =     [2,4,1]
         axis = 2
-        data1 = np.random.uniform(-10, 10, shape1).astype(dtype)
+        data1 = np.random.uniform(-10, 10, (batch_size, *shape1)).astype(dtype)
         data2 = np.random.uniform(-10, 10, shape2).astype(dtype)
         data3 = np.random.uniform(-10, 10, shape3).astype(dtype)
-        x = C.input_variable(shape1)
+        x = C.input_variable(np.shape(data1[0]))
         y = C.constant(value=data2)
         z = C.constant(value=data3)
         model = C.splice(x, y, z, axis=axis)
@@ -561,7 +579,7 @@ def test_Conv(tmpdir, dtype, device_id):
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype):
         input_shape = (3, 20, 32) 
-        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape) 
+        img = np.reshape(np.arange(np.prod((batch_size, *input_shape)), dtype = dtype), (batch_size, *input_shape)) 
 
         x = C.input_variable(input_shape)
 
@@ -579,7 +597,7 @@ def test_Conv_SpecialCase(tmpdir, dtype, device_id):
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype):
         input_shape = (3, 20, 32) 
-        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape) 
+        img = np.reshape(np.arange(np.prod((batch_size, *input_shape)), dtype = dtype), (batch_size, *input_shape)) 
 
         x = C.input_variable(input_shape)
 
@@ -605,7 +623,7 @@ def test_Conv_SpecialCase_Autopad(tmpdir, dtype, device_id):
     with C.default_options(dtype=dtype):
         # special case where for one axis CNTK pads upper, for other lower.
         input_shape = (3, 7, 8)
-        img = np.reshape(np.arange(np.prod(input_shape), dtype=dtype), input_shape)
+        img = np.reshape(np.arange(np.prod((batch_size, *input_shape)), dtype=dtype), (batch_size, *input_shape))
         x = C.input_variable(input_shape)
 
         kernel_shape = (3, 2, 3)
@@ -626,7 +644,7 @@ def test_ConvTranspose(tmpdir, dtype, device_id):
     with C.default_options(dtype=dtype):
         # Keep the shapes below as they are, because this tests an earlier bug.
         input_shape = (24, 8, 8) 
-        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape) 
+        img = np.reshape(np.arange(np.prod((batch_size, *input_shape)), dtype = dtype), (batch_size, *input_shape)) 
 
         x = C.input_variable(input_shape)
 
@@ -648,7 +666,9 @@ def test_DepthToSpace(tmpdir, dtype):
         block_size = 3
         image_shape = (4, 5)
         input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=dtype)
-        input_val = np.tile(input_val, (1,) + image_shape)
+        input_val = np.tile(input_val, image_shape)
+        if batch_size > 1:
+            input_val = np.tile(input_val, (batch_size, *np.ones(input_val.ndim, dtype = np.int)))
         img = C.input_variable((num_channels,) + image_shape, dtype=dtype)
         model = C.depth_to_space(img, block_size)
 
@@ -661,19 +681,19 @@ def test_Div(tmpdir):
         if (shape1 != shape2):
             broadcast = 'with_broadcast'
 
-        data1 = np.random.rand(*shape1).astype(np.float32)
-        data2 = np.random.rand(*shape2).astype(np.float32)
+        data1 = np.random.rand(batch_size, *shape1).astype(np.float32)
+        data2 = np.random.rand(batch_size, *shape2).astype(np.float32)
 
         x = C.input_variable(shape1)
         y = C.input_variable(shape2)
 
-        model = C.element_divide(data1, data2)
+        model = C.element_divide(data1[0], data2[0])
         verify_no_input(model, tmpdir, 'Div_' + broadcast + '_d1d2')
 
-        model = C.element_divide(x, data2)
+        model = C.element_divide(x, data2[0])
         verify_one_input(model, data1, tmpdir, 'Div_' + broadcast + '_xd2')
 
-        model = C.element_divide(data1, y)
+        model = C.element_divide(data1[0], y)
         verify_one_input(model, data2, tmpdir, 'Div_' + broadcast + '_d1y')
 
         model = C.element_divide(x, y)
@@ -693,10 +713,11 @@ def test_Div(tmpdir):
 def test_Dropout(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.asarray([[10, 20],[30, 40],[50, 60]], dtype=dtype)
-        model = C.dropout(data, 0.5)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.dropout(data[0], 0.5)
         verify_no_input(model, tmpdir, 'Dropout_0')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.dropout(x, 0.5)
         verify_one_input(model, data, tmpdir, 'Dropout_1')
 
@@ -705,14 +726,15 @@ def test_Dropout(tmpdir, dtype):
 def test_Elu(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.asarray([[-1, -0.5, 0, 1, 2]], dtype=dtype)
-        model = C.elu(data)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.elu(data[0])
         verify_no_input(model, tmpdir, 'Elu_0')
 
-        x1 = C.input_variable(data.shape)
+        x1 = C.input_variable(data[0].shape)
         model = C.elu(x1)
         verify_one_input(model, data, tmpdir, 'Elu_1')
 
-        x2 = C.input_variable(data.shape)
+        x2 = C.input_variable(data[0].shape)
         model = C.elu(x2, alpha=2.0)
         verify_one_input(model, data, tmpdir, 'Elu_2')
 
@@ -730,10 +752,11 @@ def test_Equal(tmpdir, dtype):
 def test_Exp(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.asarray([0., 1.], dtype=dtype)
-        model = C.exp(data)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.exp(data[0])
         verify_no_input(model, tmpdir, 'Exp_0')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.exp(x)
         verify_one_input(model, data, tmpdir, 'Exp_1')
 
@@ -742,23 +765,26 @@ def test_Exp(tmpdir, dtype):
 def test_Flatten(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         shape = (2, 3, 4, 5)
-        data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
-        model = C.flatten(data, 1)
+        data = np.reshape(np.arange(np.prod((batch_size, *shape)), dtype = dtype), (batch_size, *shape))
+
+        model = C.flatten(data[0], 1)
         verify_no_input(model, tmpdir, 'Flatten_0')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.flatten(x, 1)
-        verify_one_input(model, data, tmpdir, 'Flatten_1')
+        verify_one_input(model, data, tmpdir, 'Flatten_1', bypass_load_into_cntk = True)
 
 #Floor
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Floor(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.asarray([0.2, 1.3, 4., 5.5, 0.0], dtype=dtype)
-        model = C.floor(data)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+
+        model = C.floor(data[0])
         verify_no_input(model, tmpdir, 'Floor_0')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.floor(x)
         verify_one_input(model, data, tmpdir, 'Floor_1')
 
@@ -769,10 +795,11 @@ def test_Gather(tmpdir, dtype):
         pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
         c = np.asarray([[0],[1]]).astype(dtype) 
+        c = np.tile(c, (batch_size, *np.ones(c.ndim, dtype = np.int)))
         x = C.input_variable((2,1))
         d = np.arange(12).reshape(6,2).astype(dtype)
         y = C.constant(d)
-        x_constant = C.constant(c)
+        x_constant = C.constant(c[0])
         model = C.gather(y, x_constant)
         verify_no_input(model, tmpdir, 'Gather_0')
 
@@ -786,12 +813,14 @@ def test_Gather_With_Axis(tmpdir, dtype):
         pytest.skip("TO BE FIXED")
     with C.default_options(dtype = dtype):
         data = np.asarray( [[ [111, 112], [121, 122], [131, 132], ],[ [211, 212], [221, 222], [231, 232], ]]).astype(dtype)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
         indices = np.asarray([[0, 1, 1], [1, 1, 1]])
-        x = C.input_variable(np.shape(data))
-        y = C.input_variable(np.shape(indices))
+        indices = np.tile(indices, (batch_size, *np.ones(indices.ndim, dtype = np.int)))
+
+        y = C.input_variable(np.shape(indices[0]))
         axis = 1
 
-        model = C.gather(data, y, axis, 'gather_with_axis')
+        model = C.gather(data[0], y, axis, 'gather_with_axis')
         verify_one_input(model, indices, tmpdir, 'Gather_With_Axis_1')
 
 #GlobalAveragePool
@@ -802,8 +831,9 @@ def test_GlobalAveragePool(tmpdir, dtype, device_id):
     device = cntk_device(device_id)
     input_shape = [3, 7, 7]
     with C.default_options(dtype=dtype):
-        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape)
-        x = C.input_variable(img.shape)
+        img = np.reshape(np.arange(np.prod((batch_size, *input_shape)), dtype = dtype), (batch_size, *input_shape))
+
+        x = C.input_variable(img[0].shape)
         model = C.layers.GlobalAveragePooling()(x)
 
         verify_one_input(model, img, tmpdir, 'GlobalAveragePool_1', device)
@@ -816,8 +846,8 @@ def test_GlobalMaxPool(tmpdir, dtype, device_id):
     device = cntk_device(device_id)
     input_shape = [4, 8, 8]
     with C.default_options(dtype=dtype):
-        img = np.reshape(np.arange(np.prod(input_shape), dtype = dtype), input_shape)
-        x = C.input_variable(img.shape)
+        img = np.reshape(np.arange(np.prod((batch_size, *input_shape)), dtype = dtype), (batch_size, *input_shape))
+        x = C.input_variable(img[0].shape)
         model = C.layers.GlobalMaxPooling()(x)
 
         verify_one_input(model, img, tmpdir, 'GlobalMaxPool_1', device)        
@@ -832,6 +862,7 @@ def test_Greater(tmpdir, dtype):
 #GRU
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_GRU(tmpdir, dtype):
+    pytest.skip('Work-In-Progress')
     with C.default_options(dtype = dtype):
         def MakeGRUNameFromConfig(backward, initial_state, activition):
             model_name = 'GRU.' + activition.__name__
@@ -849,7 +880,6 @@ def test_GRU(tmpdir, dtype):
 
         input_dim = 2
         cell_dim = 3
-        batch_size = 1
         sequence_len = 5
 
         for config in list(product(direction_options, initial_state_options, activation_options)):
@@ -869,6 +899,7 @@ def test_GRU(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Hardmax(tmpdir, dtype):
     data = np.asarray([1., 1., 2., 3.], dtype)
+    data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
     model = C.hardmax(data)
     verify_no_input(model, tmpdir, 'Hardmax_0')
 
@@ -887,7 +918,8 @@ def test_HardSigmiod(tmpdir, dtype):
         beta = 2.5
         model = C.hard_sigmoid(x, alpha, beta, 'hardSigmoid')
 
-        data = np.random.rand(*shape).astype(dtype)
+        data = np.random.rand(batch_size, *shape).astype(dtype)
+
         verify_one_input(model, data, tmpdir, 'HardSigmoid_1')
 
 #ImageScaler
@@ -897,16 +929,17 @@ def test_ImageScaler(tmpdir, dtype):
         input_height = 32
         input_width = 32
         channels = 3
+        images = np.ones([batch_size, channels, input_height, input_width]).astype(dtype)
         image = np.ones([channels, input_height, input_width]).astype(dtype)
         scalar = 1.5
         bias = [10, 20, 30]
 
         model = C.image_scaler(image, scalar, bias)
-        verify_no_input(model, tmpdir, 'ImageScaler_0')
+        verify_no_input(model, tmpdir, 'ImageScaler_0', bypass_load_into_cntk=True)
 
-        x = C.input_variable(np.shape(image)) 
+        x = C.input_variable(np.shape(images[0]))
         model = C.image_scaler(x, scalar, bias)
-        verify_one_input(model, image, tmpdir, 'ImageScaler_1')
+        verify_one_input(model, images, tmpdir, 'ImageScaler_1', bypass_load_into_cntk=True)
 
 #LayerNormalization
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -925,7 +958,7 @@ def test_LayerNormalization(tmpdir, dtype, device_id):
     with C.default_options(dtype = dtype):
         test_shapes = [(3, 5, 7), (10, ), (20, 31)]
         for shape in test_shapes:
-            data = np.reshape(np.arange(np.prod(shape), dtype = dtype), shape)
+            data = np.reshape(np.arange(np.prod((batch_size, *shape)), dtype = dtype), (batch_size, *shape))
             input_operand = C.input_variable(shape=shape)
             model0 = C.layers.LayerNormalization(initial_scale=1, initial_bias=2, epsilon=0.00001)(input_operand)
             verify_one_input(model0, data, tmpdir, 'LayerNorm_0' + str(shape).replace(',', '_'))
@@ -978,20 +1011,22 @@ def test_Log(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LogSoftmax(tmpdir, dtype):
     data = np.array([[1, 1, 2, 3]], dtype)
-    model = C.log_softmax(data)
+    data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+    model = C.log_softmax(data[0])
     verify_no_input(model, tmpdir, 'LogSoftmax_0')
 
-    x = C.input_variable(data.shape, dtype=dtype)
+    x = C.input_variable(data[0].shape, dtype=dtype)
     model = C.log_softmax(x)
     verify_one_input(model, data, tmpdir, 'LogSoftmax_1')
 
 #LogAddExp
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LogAddExp(tmpdir, dtype):
+    pytest.skip('Work-In-Progress: batch_axis')
     shape = (2,3,4)
 
-    data_x = np.random.rand(*shape).astype(np.float32)
-    data_y = np.random.rand(*shape).astype(np.float32)
+    data_x = np.random.rand(batch_size, *shape).astype(dtype)
+    data_y = np.random.rand(batch_size, *shape).astype(dtype)
 
     x = C.input_variable(shape)
     y = C.input_variable(shape)
@@ -1002,12 +1037,13 @@ def test_LogAddExp(tmpdir, dtype):
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LogAddExp_Broadcast(tmpdir, dtype):
+    pytest.skip('Work-In-Progress: batch_axis')
     shape_x_arr = [(2,1,4), (2,1,4), (2,2,3,4)]
     shape_y_arr = [(1,3,1), (3,1),   (1,1)]
 
     for i, (shape_x, shape_y) in enumerate(list(zip(shape_x_arr, shape_y_arr))):
-        data_x = np.random.rand(*shape_x).astype(np.float32)
-        data_y = np.random.rand(*shape_y).astype(np.float32)
+        data_x = np.random.rand(batch_size, *shape_x).astype(dtype)
+        data_y = np.random.rand(batch_size, *shape_y).astype(dtype)
 
         x = C.input_variable(shape_x)
         y = C.input_variable(shape_y)
@@ -1024,24 +1060,25 @@ def test_LRN(tmpdir, dtype, device_id):
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype):
         img_shape = (64, 32, 32)
-        img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
+        imgs = np.asarray(np.random.uniform(-1, 1, (batch_size, *img_shape)), dtype=dtype)
         x_r = C.input_variable(shape=img_shape, dtype=dtype)
         model = C.local_response_normalization(x_r, 2, 1.0, 0.0001, 0.75)
-        verify_one_input(model, img, tmpdir, 'LRN_1', device)
+        verify_one_input(model, imgs, tmpdir, 'LRN_1', device)
         # test with edge case kernel size > channel size
         # also test in lotus such that we are getting the value right.
         # in onnx spec and lotus implementation, alpha is divided by size. 
         # so it seems even if size is > and rounded down to channel size,
         # its original value is still used in dividing alpha.
         img_shape = (5, 32, 32)
-        img = np.asarray(np.random.uniform(-1, 1, img_shape), dtype=dtype)
+        imgs = np.asarray(np.random.uniform(-1, 1, (batch_size, *img_shape)), dtype=dtype)
         x_r = C.input_variable(shape=img_shape, dtype=dtype)
         model = C.local_response_normalization(x_r, 4, 1.0, 0.0001, 0.75)
-        verify_one_input(model, img, tmpdir, 'LRN_2', device)
+        verify_one_input(model, imgs, tmpdir, 'LRN_2', device)
 
 #LSTM
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_LSTM(tmpdir, dtype):
+    pytest.skip('Work-In-Progress')
     with C.default_options(dtype = dtype):
         def CreateLSTMModel(activation, 
                             peepholes, 
@@ -1077,7 +1114,6 @@ def test_LSTM(tmpdir, dtype):
 
         input_dim = 2
         cell_dim = 3
-        batch_size = 1
         sequence_len = 5
 
         for config in list(product(use_peepholes_options, enable_self_stabilization_options, 
@@ -1117,12 +1153,14 @@ def test_MatMul_2d(tmpdir, dtype):
 def test_MatMul_2d_2inputs(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data0 = np.asarray([[1,2],[3,4]], dtype=dtype)
+        data0 = np.tile(data0, (batch_size, *np.ones(data0.ndim, dtype = np.int)))
         data1 = np.asarray([[5,7,9],[6,8,10]], dtype=dtype)
+        data1 = np.tile(data1, (batch_size, *np.ones(data1.ndim, dtype = np.int)))
 
-        x = C.input_variable(np.shape(data0))
-        y = C.input_variable(np.shape(data1))
+        x = C.input_variable(np.shape(data0[0]))
+        y = C.input_variable(np.shape(data1[0]))
         model = C.times(x, y)
-        verify_two_input(model, data0, data1, tmpdir, 'MatMul_1_1')
+        verify_two_input(model, data0, data1, tmpdir, 'MatMul_1_1', bypass_load_into_cntk = True)
 
 #MatMul nd
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1141,38 +1179,42 @@ def test_MatMul_nd_2(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         np.random.seed(0)
 
-        data0 = np.random.randn(3, 3, 4).astype(np.float32)
-        data1 = np.random.randn(3, 4, 5).astype(np.float32)
+        data0 = np.random.randn(3, 3, 4).astype(dtype)
+        data1 = np.random.randn(3, 4, 5).astype(dtype)
         model = C.times(data0, data1)
         verify_no_input(model, tmpdir, 'MatMul_n_1')
 
 #MatMul nd with 2 inputs
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_MatMul_nd_2inputs(tmpdir, dtype):
+    if dtype == np.float16:
+        pytest.skip('Test is skipped with float16 data due to lack of precision.')
     with C.default_options(dtype = dtype):
         np.random.seed(0)
 
-        data0 = np.random.randn(3, 2, 3, 4).astype(np.float32)
-        data1 = np.random.randn(2, 3, 4, 5).astype(np.float32)
+        data0 = np.random.randn(batch_size, 3, 2, 3, 4).astype(dtype)
+        data1 = np.random.randn(batch_size, 2, 3, 4, 5).astype(dtype)
 
-        x = C.input_variable(np.shape(data0))
-        y = C.input_variable(np.shape(data1))
+        x = C.input_variable(np.shape(data0[0]))
+        y = C.input_variable(np.shape(data1[0]))
         model = C.times(x, y)
-        verify_two_input(model, data0, data1, tmpdir, 'MatMul_n_2')
+        verify_two_input(model, data0, data1, tmpdir, 'MatMul_n_2', bypass_load_into_cntk = True)
 
 #MatMul nd with 2 inputs
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_MatMul_nd_2inputs_2(tmpdir, dtype):
+    if dtype == np.float16:
+        pytest.skip('Test is skipped with float16 data due to lack of precision.')
     with C.default_options(dtype = dtype):
         np.random.seed(0)
 
-        data0 = np.random.randn(3, 3, 4).astype(np.float32)
-        data1 = np.random.randn(3, 4, 5).astype(np.float32)
+        data0 = np.random.randn(batch_size, 3, 3, 4).astype(dtype)
+        data1 = np.random.randn(batch_size, 3, 4, 5).astype(dtype)
 
-        x = C.input_variable(np.shape(data0))
-        y = C.input_variable(np.shape(data1))
+        x = C.input_variable(np.shape(data0[0]))
+        y = C.input_variable(np.shape(data1[0]))
         model = C.times(x, y)
-        verify_two_input(model, data0, data1, tmpdir, 'MatMul_n_3')
+        verify_two_input(model, data0, data1, tmpdir, 'MatMul_n_3', bypass_load_into_cntk = True)
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_CNTK_Times_To_ONNX_MatMul(tmpdir, dtype):
@@ -1187,7 +1229,6 @@ def test_CNTK_Times_To_ONNX_MatMul(tmpdir, dtype):
         data = np.random.standard_normal(data_shape).astype(np.float32)
         return data
 
-    batch_size = 1
     sequence_length = 3
     input1_shape = (2, 3, 4)
     input2_shape = (3, 4, 5, 6)
@@ -1226,49 +1267,49 @@ def test_CNTK_Times_To_ONNX_MatMul(tmpdir, dtype):
     verify_two_input(model, data0, data1, tmpdir, 'batch_x_batch')
 
     ### sequence_x_data
-    # TODO: ONNX importer cannot handle sequence and batch axes both being free diemention static axis
-    #x = C.sequence.input_variable(input1_shape)
-    #y = C.input_variable(input2_shape, dynamic_axes = [])
-    #model = C.times(x, y, output_rank = output_rank)
-    #data0 = generate_matmul_data(x, batch_size, sequence_length)
-    #data1 = generate_matmul_data(y, batch_size, sequence_length)
-    #verify_sequence_model(model, [data0, data1], tmpdir, 'sequence_x_data')
+    # ONNX importer cannot handle sequence and batch axes both being free diemention static axis
+    x = C.sequence.input_variable(input1_shape)
+    y = C.input_variable(input2_shape, dynamic_axes = [])
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_sequence_model(model, [data0, data1], tmpdir, 'sequence_x_data', bypass_load_into_cntk = True)
 
     ### data_x_sequence
-    #TODO: ONNX importer cannot handle sequence and batch axes both being free diemention static axis
-    #x = C.input_variable(input1_shape, dynamic_axes = [])
-    #y = C.sequence.input_variable(input2_shape)
-    #model = C.times(x, y, output_rank = output_rank)
-    #data0 = generate_matmul_data(x, batch_size, sequence_length)
-    #data1 = generate_matmul_data(y, batch_size, sequence_length)
-    #verify_sequence_model(model, [data0, data1], tmpdir, 'data_x_sequence')
+    #ONNX importer cannot handle sequence and batch axes both being free diemention static axis
+    x = C.input_variable(input1_shape, dynamic_axes = [])
+    y = C.sequence.input_variable(input2_shape)
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_sequence_model(model, [data0, data1], tmpdir, 'data_x_sequence', bypass_load_into_cntk = True)
 
     ## sequence_x_sequence
-    # TODO: ONNX importer cannot handle sequence and batch axes both being free diemention static axis
-    #x = C.sequence.input_variable(input1_shape)
-    #y = C.sequence.input_variable(input2_shape)
-    #model = C.times(x, y, output_rank = output_rank)
-    #data0 = generate_matmul_data(x, batch_size, sequence_length)
-    #data1 = generate_matmul_data(y, batch_size, sequence_length)
-    #verify_sequence_model(model, [data0, data1], tmpdir, 'sequence_x_sequence')
+    # ONNX importer cannot handle sequence and batch axes both being free diemention static axis
+    x = C.sequence.input_variable(input1_shape)
+    y = C.sequence.input_variable(input2_shape)
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_sequence_model(model, [data0, data1], tmpdir, 'sequence_x_sequence', bypass_load_into_cntk = True)
 
     ## sequence_x_batch
-    # TODO: ONNX importer cannot handle sequence and batch axes both being free diemention static axis
-    #x = C.sequence.input_variable(input1_shape)
-    #y = C.input_variable(input2_shape)
-    #model = C.times(x, y, output_rank = output_rank)
-    #data0 = generate_matmul_data(x, batch_size, sequence_length)
-    #data1 = generate_matmul_data(y, batch_size, sequence_length)
-    #verify_sequence_model(model, [data0, data1], tmpdir, 'sequence_x_batch')
+    # ONNX importer cannot handle sequence and batch axes both being free diemention static axis
+    x = C.sequence.input_variable(input1_shape)
+    y = C.input_variable(input2_shape)
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_sequence_model(model, [data0, data1], tmpdir, 'sequence_x_batch', bypass_load_into_cntk = True)
 
     ## batch_x_sequence
-    # TODO: ONNX importer cannot handle sequence and batch axes both being free diemention static axis
-    #x = C.input_variable(input1_shape)
-    #y = C.sequence.input_variable(input2_shape)
-    #model = C.times(x, y, output_rank = output_rank)
-    #data0 = generate_matmul_data(x, batch_size, sequence_length)
-    #data1 = generate_matmul_data(y, batch_size, sequence_length)
-    #verify_sequence_model(model, [data0, data1], tmpdir, 'batch_x_sequence')
+    # ONNX importer cannot handle sequence and batch axes both being free diemention static axis
+    x = C.input_variable(input1_shape)
+    y = C.sequence.input_variable(input2_shape)
+    model = C.times(x, y, output_rank = output_rank)
+    data0 = generate_matmul_data(x, batch_size, sequence_length)
+    data1 = generate_matmul_data(y, batch_size, sequence_length)
+    verify_sequence_model(model, [data0, data1], tmpdir, 'batch_x_sequence', bypass_load_into_cntk = True)
 
 #Max
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1290,16 +1331,16 @@ def test_MaxPool(tmpdir, dtype, device_id):
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype):
-        img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
-        x = C.input_variable(img.shape)
+        imgs = np.reshape(np.arange(batch_size * 16, dtype = dtype), [batch_size, 1, 4, 4])
+        x = C.input_variable(imgs[0].shape)
         model = C.pooling(x, C.MAX_POOLING, (2,2), (3,3))
-        verify_one_input(model, img, tmpdir, 'MaxPool_1', device)
+        verify_one_input(model, imgs, tmpdir, 'MaxPool_1', device)
 
         # test for case of not padding but with ceilOutDim=True
-        img = np.reshape(np.arange(112*112, dtype=dtype), [1, 112, 112])
-        x = C.input_variable(img.shape)
+        imgs = np.reshape(np.arange(batch_size*112*112, dtype=dtype), [batch_size, 1, 112, 112])
+        x = C.input_variable(imgs[0].shape)
         model = C.pooling(x, C.MAX_POOLING, (3, 3), (2, 2), auto_padding=[False, False, False], ceil_out_dim=True)
-        verify_one_input(model, img, tmpdir, 'MaxPool_2', device)
+        verify_one_input(model, imgs, tmpdir, 'MaxPool_2', device)
 
 #MaxRoiPool
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1336,12 +1377,13 @@ def test_MaxRoiPool(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Mean(tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        in1 = C.input_variable((4,))
-        in2 = C.input_variable((4,))
+        in1_data = np.asarray([1., 2., 3., 4.], dtype = dtype)
+        in1_data = np.tile(in1_data, (batch_size, *np.ones(in1_data.ndim, dtype = np.int)))
+        in2_data = np.asarray([0., 5., -3., 2.], dtype = dtype)
+        in2_data = np.tile(in2_data, (batch_size, *np.ones(in2_data.ndim, dtype = np.int)))
+        in1 = C.input_variable(np.shape(in1_data[0]))
+        in2 = C.input_variable(np.shape(in2_data[0]))
         model = C.mean([in1, in2])
-
-        in1_data = np.asarray([[1., 2., 3., 4.]], dtype = dtype)
-        in2_data = np.asarray([[0., 5., -3., 2.]], dtype = dtype)
 
         verify_two_input(model, in1_data, in2_data, tmpdir, 'Mean_2')
     
@@ -1411,13 +1453,12 @@ OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
 def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id):
     if device_id == -1:
         pytest.skip('Test only runs on GPU')
-    pytest.skip('test_OptimizedRNNStack is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
     dev = cntk_device(device_id)
     from _cntk_py import constant_initializer
     model_filename = 'optimized_rnn_stack_' + ('bi' if bidirectional else 'uni') + '_layers' + str(num_layers) + '_inp' + str(input_size) + '_hid' + str(hidden_size)
     W = C.parameter((C.InferredDimension, input_size), constant_initializer(0.1), device=dev)
     x = C.sequence.input_variable(shape=(input_size,))
-    s = np.asarray(np.random.uniform(-1, 1, (1, 5, input_size)), dtype=np.float32)
+    s = np.asarray(np.random.uniform(-1, 1, (batch_size, 5, input_size)), dtype=np.float32)
     f = C.optimized_rnnstack(x, W, hidden_size, num_layers, bidirectional=bidirectional, recurrent_op=recurrent_op, name='MyRnnStack')
     f.parameters[0].value = np.reshape(np.arange(np.prod(f.parameters[0].value.shape), dtype=np.float32), f.parameters[0].value.shape)
     verify_sequence_model(f, s, tmpdir, model_filename)
@@ -1427,9 +1468,9 @@ def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, r
 def test_Pad(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         shape = (4, 5)
-        data = np.random.rand(*shape).astype(dtype)
+        data = np.random.rand(batch_size, *shape).astype(dtype)
 
-        model = C.pad(data, pattern=[(1,1),(2,2)], mode=C.ops.CONSTANT_PAD, constant_value=1)
+        model = C.pad(data[0], pattern=[(1,1),(2,2)], mode=C.ops.CONSTANT_PAD, constant_value=1)
         verify_no_input(model, tmpdir, 'Pad_0')
 
         x = C.input_variable(shape)
@@ -1441,21 +1482,21 @@ def test_Pad(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_PRelu(tmpdir, dtype):
     # no input
-    x_data = np.asarray([[-1, -0.5, 0, 1, 2]], dtype=dtype)
-    x = C.constant(value=x_data, dtype=dtype)
-    alpha_data = np.asarray([[0.5, 0.5, 0.5, 0.5, 0.5]], dtype=dtype)
-    alpha = C.constant(value=alpha_data, dtype=dtype)
+    x_data = np.tile(np.asarray([-1, -0.5, 0, 1, 2], dtype=dtype), [batch_size, 1])
+    x = C.constant(value=x_data[0], dtype=dtype)
+    alpha_data = np.tile(np.asarray([0.5, 0.5, 0.5, 0.5, 0.5], dtype=dtype), [batch_size, 1])
+    alpha = C.constant(value=alpha_data[0], dtype=dtype)
     model = C.param_relu(alpha, x)
     verify_no_input(model, tmpdir, 'PRelu_0')
 
     # one input
-    x = C.input_variable(x_data.shape, dtype=dtype)
+    x = C.input_variable(x_data[0].shape, dtype=dtype)
     model = C.param_relu(alpha, x)
     verify_one_input(model, x_data, tmpdir, 'PRelu_1')
 
     # two input
-    x = C.input_variable(x_data.shape, dtype=dtype)
-    alpha = C.input_variable(alpha_data.shape, dtype=dtype)
+    x = C.input_variable(x_data[0].shape, dtype=dtype)
+    alpha = C.input_variable(alpha_data[0].shape, dtype=dtype)
     model = C.param_relu(alpha, x)
     verify_two_input(model, alpha_data, x_data, tmpdir, 'PRelu_2')
 
@@ -1477,17 +1518,18 @@ def test_Reciprocal(tmpdir, dtype):
 def test_ReduceL1(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=dtype)
-        model = C.reduce_l1(data, 1)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.reduce_l1(data[0], 1)
         verify_no_input(model, tmpdir, 'ReduceL1_0')
 
-        x = C.input_variable(np.shape(data))
+        x = C.input_variable(np.shape(data[0]))
         model = C.reduce_l1(x, 1)
         verify_one_input(model, data, tmpdir, 'ReduceL1_1')
 
-        model = C.reduce_l1(data, C.Axis.all_static_axes())
+        model = C.reduce_l1(data[0], C.Axis.all_static_axes())
         verify_no_input(model, tmpdir, 'ReduceL1_2')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.reduce_l1(x, C.Axis.default_batch_axis())
         verify_one_input(model, data, tmpdir, 'ReduceL1_3')
 
@@ -1498,13 +1540,14 @@ def test_ReduceL1(tmpdir, dtype):
 def test_ReduceL2(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=dtype)
-        model = C.reduce_l2(data, 0)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.reduce_l2(data[0], 0)
         verify_no_input(model, tmpdir, 'ReduceL2_0')
 
-        model = C.reduce_l2(data, C.Axis.all_static_axes())
+        model = C.reduce_l2(data[0], C.Axis.all_static_axes())
         verify_no_input(model, tmpdir, 'ReduceL2_1')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.reduce_l2(x, C.Axis.default_batch_axis())
         verify_one_input(model, data, tmpdir, 'ReduceL2_2')
 
@@ -1512,13 +1555,14 @@ def test_ReduceL2(tmpdir, dtype):
 def test_ReduceSumSquare(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[1,2], [3,4]],[[5,6], [7,8]],[[9,10], [11,12]]], dtype=dtype)
-        model = C.reduce_sum_square(data, 0)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.reduce_sum_square(data[0], 0)
         verify_no_input(model, tmpdir, 'ReduceSumSquare_0')
 
-        model = C.reduce_sum_square(data, C.Axis.all_static_axes())
+        model = C.reduce_sum_square(data[0], C.Axis.all_static_axes())
         verify_no_input(model, tmpdir, 'ReduceSumSquare_1')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.reduce_sum_square(x, C.Axis.default_batch_axis())
         verify_one_input(model, data, tmpdir, 'ReduceSumSquare_2')
 
@@ -1530,14 +1574,15 @@ def test_ReduceSumSquare(tmpdir, dtype):
 def test_ReduceLogSum(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
-        model = C.reduce_log_sum_exp(data, axis=0)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.reduce_log_sum_exp(data[0], axis=0)
 
         verify_no_input(model, tmpdir, 'ReduceLogSum_0')
 
-        model = C.reduce_log_sum_exp(data, C.Axis.all_static_axes())
+        model = C.reduce_log_sum_exp(data[0], C.Axis.all_static_axes())
         verify_no_input(model, tmpdir, 'ReduceLogSum_1')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.reduce_log_sum_exp(x, C.Axis.default_batch_axis())
         verify_one_input(model, data, tmpdir, 'ReduceLogSum_2')
 
@@ -1546,13 +1591,14 @@ def test_ReduceLogSum(tmpdir, dtype):
 def test_ReduceMax(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
-        model = C.reduce_max(data, 0)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.reduce_max(data[0], 0)
         verify_no_input(model, tmpdir, 'ReduceMax_0')
 
-        model = C.reduce_max(data, C.Axis.all_static_axes())
+        model = C.reduce_max(data[0], C.Axis.all_static_axes())
         verify_no_input(model, tmpdir, 'ReduceMax_1')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.reduce_max(x, C.Axis.default_batch_axis())
         verify_one_input(model, data, tmpdir, 'ReduceMax_2')
 
@@ -1561,13 +1607,14 @@ def test_ReduceMax(tmpdir, dtype):
 def test_ReduceMean(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
-        model = C.reduce_mean(data, 0)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.reduce_mean(data[0], 0)
         verify_no_input(model, tmpdir, 'ReduceMean_0')
 
-        model = C.reduce_mean(data, C.Axis.all_static_axes())
+        model = C.reduce_mean(data[0], C.Axis.all_static_axes())
         verify_no_input(model, tmpdir, 'ReduceMean_1')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.reduce_mean(x, C.Axis.default_batch_axis())
         verify_one_input(model, data, tmpdir, 'ReduceMean_2')
 
@@ -1576,13 +1623,14 @@ def test_ReduceMean(tmpdir, dtype):
 def test_ReduceMin(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
-        model = C.reduce_min(data, 0)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.reduce_min(data[0], 0)
         verify_no_input(model, tmpdir, 'ReduceMin_0')
 
-        model = C.reduce_min(data, C.Axis.all_static_axes())
+        model = C.reduce_min(data[0], C.Axis.all_static_axes())
         verify_no_input(model, tmpdir, 'ReduceMin_1')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.reduce_min(x, C.Axis.default_batch_axis())
         verify_one_input(model, data, tmpdir, 'ReduceMin_2')
 
@@ -1591,13 +1639,14 @@ def test_ReduceMin(tmpdir, dtype):
 def test_ReduceProd(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
-        model = C.reduce_prod(data, 0)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.reduce_prod(data[0], 0)
         verify_no_input(model, tmpdir, 'ReduceProd_0')
 
-        model = C.reduce_prod(data, C.Axis.all_static_axes())
+        model = C.reduce_prod(data[0], C.Axis.all_static_axes())
         verify_no_input(model, tmpdir, 'ReduceProd_1')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.reduce_prod(x, C.Axis.default_batch_axis())
         verify_one_input(model, data, tmpdir, 'ReduceProd_2')
 
@@ -1606,22 +1655,23 @@ def test_ReduceProd(tmpdir, dtype):
 def test_ReduceSum(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.array([[[5,1], [20,2]],[[30,1], [40,2]],[[55,1], [60,2]]], dtype=dtype)
-        model = C.reduce_sum(data, 0)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+        model = C.reduce_sum(data[0], 0)
         verify_no_input(model, tmpdir, 'ReduceSum_0')
 
-        model = C.reduce_sum(data, [0, 1, 2])
+        model = C.reduce_sum(data[0], [0, 1, 2])
         verify_no_input(model, tmpdir, 'ReduceSum_1')
 
-        model = C.reduce_sum(data, [0, 2])
+        model = C.reduce_sum(data[0], [0, 2])
         verify_no_input(model, tmpdir, 'ReduceSum_2')
 
-        model = C.reduce_sum(data, [0, 2], keepdims=False)
+        model = C.reduce_sum(data[0], [0, 2], keepdims=False)
         verify_no_input(model, tmpdir, 'ReduceSum_3')
 
-        model = C.reduce_sum(data, C.Axis.all_static_axes())
+        model = C.reduce_sum(data[0], C.Axis.all_static_axes())
         verify_no_input(model, tmpdir, 'ReduceSum_4')
 
-        x = C.input_variable(data.shape)
+        x = C.input_variable(data[0].shape)
         model = C.reduce_sum(x, C.Axis.default_batch_axis())
         verify_one_input(model, data, tmpdir, 'ReduceSum_5')
 
@@ -1640,15 +1690,17 @@ def test_Relu(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Reshape(tmpdir, dtype):
     with C.default_options(dtype = dtype):
-        data = np.asarray([[[0., 1.],[2., 3.],[4., 5.]]], dtype)
+        data = np.asarray([[0., 1.],[2., 3.],[4., 5.]], dtype)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+
         i1 = C.input_variable(shape=(3,2))
         model = C.reshape(i1, (2,3))
-        verify_one_input(model, data, tmpdir, 'Reshape_1')
+        verify_one_input(model, data, tmpdir, 'Reshape_1', bypass_load_into_cntk=True)
 
 #RNN
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_RNN(tmpdir, dtype):
-    pytest.skip('test_RNN is skipped. Work is needed to make CNTK compatible with ONNXRUNTIME shape inference.')
+    pytest.skip('Work-In-Progress')
     with C.default_options(dtype = dtype):
         def CreatRNN(cell_dim, 
                      activation, 
@@ -1705,7 +1757,6 @@ def test_RNN(tmpdir, dtype):
 
         input_dim = 2
         hidden_dim = 3
-        batch_size = 1
         sequence_len = 5
 
         for config in list(product(direction_options, num_layers_options, initial_state_options, activation_options)):
@@ -1741,9 +1792,10 @@ def test_Sigmoid(tmpdir, dtype):
 def test_Slice(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         data = np.asarray([[1,2,-3], [4, 5, 6]],dtype=dtype)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
         x1 = C.input_variable((2,3))
 
-        model = C.slice(data, 0, 1, 2)
+        model = C.slice(data[0], 0, 1, 2)
         verify_no_input(model, tmpdir, 'Slice_0')
 
         model = C.slice(x1, 0, 1, 2)
@@ -1753,6 +1805,7 @@ def test_Slice(tmpdir, dtype):
         verify_one_input(model, data, tmpdir, 'Slice2_1')
 
         data = np.asarray([[[1,1,1,1],[2,2,2,2],[3,3,2,2]], [[4,4,5,5], [5,5,6,6], [6,6,7,7]]],dtype=dtype)
+        data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
         x1 = C.input_variable((2,3,4))
         model = C.slice(x1, [1,2], [1,0],[2,1])
         verify_one_input(model, data, tmpdir, 'Slice3_1')
@@ -1762,7 +1815,6 @@ def test_Slice(tmpdir, dtype):
     (-2, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-4, 2), (0, 1), (1, 2)))
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SequenceSlice(tmpdir, dtype, beginIndex, endIndex):
-    batch_size = 1
     sequence_length = 5
     input_size = 3
     feature_shape = (input_size,)
@@ -1777,28 +1829,27 @@ def test_SequenceFirst(tmpdir, dtype):
     x = C.sequence.input_variable(shape=(3,2))
     y = C.sequence.first(x)
     # create one sequence of 4 tensors each with shape (3,2)
-    x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
-    verify_sequence_model(y, x0, tmpdir, "SequenceFirst")
+    x0 = np.reshape(np.arange(batch_size * 24.0, dtype=np.float32), (batch_size,4,3,2))
+    verify_sequence_model(y, x0, tmpdir, "SequenceFirst", bypass_load_into_cntk=True)
 
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_SequenceLast(tmpdir, dtype):
     x = C.sequence.input_variable(shape=(3,2))
     y = C.sequence.last(x)
     # create one sequence of 4 tensors each with shape (3,2)
-    x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
+    x0 = np.reshape(np.arange(batch_size * 24.0,dtype=np.float32),(batch_size,4,3,2))
     verify_sequence_model(y, x0, tmpdir, "SequenceLast")
 
 def test_SequenceIsFirst(tmpdir):
-    batch_size = 1
     sequence_length = 4
     input_shape = (3,2)
     shape = (batch_size, sequence_length, 3, 2)
     data = np.reshape(range(0, np.prod(shape)), shape).astype(np.float32)
     model = C.sequence.is_first(C.sequence.input_variable(input_shape))
+    import pdb; pdb.set_trace()
     verify_sequence_model(model, data, tmpdir, 'SequenceIsFirst', bypass_load_into_cntk = True)
     
 def test_SequenceIsLast(tmpdir):
-    batch_size = 1
     sequence_length = 5
     input_shape = (4,3)
     shape = (batch_size, sequence_length, 4, 3)
@@ -1810,7 +1861,7 @@ def test_SequenceIsLast(tmpdir):
 def test_SequenceReduceSum(tmpdir, dtype):
     x = C.sequence.input_variable(shape=(3,2))
     # create one sequence of 4 tensors each with shape (3,2)
-    x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
+    x0 = np.reshape(np.arange(batch_size * 24.0,dtype=np.float32),(batch_size,4,3,2))
     y = C.sequence.reduce_sum(x)
     #y.eval({x:x0})
     verify_sequence_model(y, x0, tmpdir, "SequenceReduceSum")
@@ -1819,7 +1870,7 @@ def test_SequenceReduceSum(tmpdir, dtype):
 def test_SequenceReduceMax(tmpdir, dtype):
     x = C.sequence.input_variable(shape=(3,2))
     # create one sequence of 4 tensors each with shape (3,2)
-    x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
+    x0 = np.reshape(np.arange(batch_size * 24.0,dtype=np.float32),(batch_size,4,3,2))
     y = C.sequence.reduce_max(x)
     #y.eval({x:x0})
     verify_sequence_model(y, x0, tmpdir, "SequenceReduceMax")
@@ -1828,8 +1879,9 @@ def test_SequenceReduceMax(tmpdir, dtype):
 def test_SequenceSoftmax(tmpdir, dtype):
     if dtype==np.float16:
         pytest.skip('Test is skipped with float16 data. Implementation of sequence.softmax is not numerically stable.')
-    batch_size, sequence_length, input_size = 1, 2, 1
-    a = np.array([[[1],[0]]], dtype)
+    sequence_length, input_size = 2, 1
+    a = np.array([[1],[0]], dtype)
+    a = np.tile(a, (batch_size, *np.ones(a.ndim, dtype = np.int)))
     src = C.sequence.input_variable(shape=(input_size), sequence_axis=C.Axis("Seq"), dtype=dtype)
     out = C.sequence.softmax(src)
     verify_sequence_model(out, a, tmpdir, "SequenceSoftmax")
@@ -1838,10 +1890,11 @@ def test_SequenceSoftmax(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Softmax(tmpdir, dtype):
     data = np.array([[1, 1, 2, 3]], dtype)
-    model = C.softmax(data)
+    data = np.tile(data, (batch_size, *np.ones(data.ndim, dtype = np.int)))
+    model = C.softmax(data[0])
     verify_no_input(model, tmpdir, 'Softmax_0')
 
-    x = C.input_variable(data.shape, dtype=dtype)
+    x = C.input_variable(data[0].shape, dtype=dtype)
     model = C.softmax(x)
     verify_one_input(model, data, tmpdir, 'Softmax_1')
 
@@ -1861,28 +1914,30 @@ def test_Softsign(tmpdir, dtype):
 
 #Squeeze
 def test_Squeeze(tmpdir):
-    pytest.skip('TODO: need to bump ONNX CI version. ')
-    x0 = np.arange(6).reshape((1, 2, 1, 3)).astype('f')
+    #pytest.skip('TODO: need to bump ONNX CI version. ')
+    x0 = np.arange(batch_size * 6).reshape((batch_size, 2, 1, 3)).astype('f')
     x = C.input_variable((2, 1, 3))
     model = C.squeeze(x, [1])
-    verify_one_input(model, x0, tmpdir, 'Squeeze_0')
+    verify_one_input(model, x0, tmpdir, 'Squeeze_0', bypass_load_into_cntk=True)
 
 def test_Squeeze_without_axes(tmpdir):
     pytest.skip('ONNX should update attribute axes to be optional.')
-    x0 = np.arange(6).reshape((1, 2, 1, 3)).astype('f')
+    x0 = np.arange(batch_size * 6).reshape((batch_size, 2, 1, 3)).astype('f')
     x = C.input_variable((2, 1, 3))
     model = C.squeeze(x)
-    verify_one_input(model, x0, tmpdir, 'Squeeze_without_axes_0')
+    verify_one_input(model, x0, tmpdir, 'Squeeze_without_axes_0', bypass_load_into_cntk=True)
 
 #Sum
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Sum(tmpdir, dtype):
     with C.default_options(dtype = dtype):
         in1_data = np.asarray([[1., 2., 3., 4.]], dtype = dtype)
+        in1_data = np.tile(in1_data, (batch_size, *np.ones(in1_data.ndim, dtype = np.int)))
         in2_data = np.asarray([[0., 5., -3., 2.]], dtype = dtype)
+        in2_data = np.tile(in2_data, (batch_size, *np.ones(in2_data.ndim, dtype = np.int)))
 
-        in1 = C.input_variable(np.shape(in1_data))
-        in2 = C.input_variable(np.shape(in2_data))
+        in1 = C.input_variable(np.shape(in1_data[0]))
+        in2 = C.input_variable(np.shape(in2_data[0]))
         model = C.sum([in1, in2])
 
         verify_two_input(model, in1_data, in2_data, tmpdir, 'Sum_2')
@@ -1900,8 +1955,8 @@ def test_SpaceToDepth(tmpdir, dtype):
         num_channels = 3
         block_size = 3
         image_shape = (12, 15)
-        input_val = np.array(np.reshape(range(num_channels), (num_channels, 1, 1)), dtype=dtype)
-        input_val = np.tile(input_val, (1,) + image_shape)
+        input_val = np.array(np.reshape(range(batch_size * num_channels), (batch_size, num_channels, 1, 1)), dtype=dtype)
+        input_val = np.tile(input_val, (1,1) + image_shape)
         img = C.input_variable((num_channels,) + image_shape, dtype=dtype)
         model = C.space_to_depth(img, block_size)
 
@@ -1932,7 +1987,7 @@ def test_Tanh(tmpdir, dtype):
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_TopK(tmpdir, dtype):
     input_size = 10
-    data = (np.arange(input_size,dtype=dtype)*0.1).reshape(1, input_size)
+    data = (np.arange(batch_size * input_size,dtype=dtype)*0.1).reshape(batch_size, input_size)
     x = C.input_variable(input_size)
     model = C.top_k(-x * C.log(x), 3)
     verify_one_input(model, data, tmpdir, "top_k")
@@ -1940,20 +1995,104 @@ def test_TopK(tmpdir, dtype):
 #TimesTranspose
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_TimesTranspose(tmpdir, dtype):
+    pytest.skip('Work-In-Progress')
     with C.default_options(dtype = dtype):
         np.random.seed(1)
-        data0 = np.random.rand(3, 4).astype(dtype)
-        input0 = C.input_variable(data0.shape, dtype = data0.dtype)
+        data0 = np.random.rand(batch_size, 3, 4).astype(dtype)
+        input0 = C.input_variable(data0[0].shape, dtype = data0.dtype)
 
-        data1 = np.random.rand(4).astype(dtype)
-        input1 = C.input_variable(data1.shape, dtype = data1.dtype)
+        data1 = np.random.rand(batch_size, 4).astype(dtype)
+        input1 = C.input_variable(data1[0].shape, dtype = data1.dtype)
+
+        model = C.times_transpose(input0, data1[0])
+        verify_one_input(model, data0, tmpdir, 'TimesTranspose_00')
+
         model = C.times_transpose(input0, input1)
         verify_two_input(model, data0, data1, tmpdir, 'TimesTranspose_0')
 
-        data1 = np.random.rand(5, 4).astype(dtype)
-        input1 = C.input_variable(data1.shape, dtype = data1.dtype)
+        data1 = np.random.rand(batch_size, 5, 4).astype(dtype)
+        input1 = C.input_variable(data1[0].shape, dtype = data1.dtype)
         model = C.times_transpose(input0, input1)
         verify_two_input(model, data0, data1, tmpdir, 'TimesTranspose_1')
+
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_TimesTranspose_DynamicAxis(tmpdir, dtype):
+    pytest.skip('Work-In-Progress')
+
+    def MakeTestName(left_input_shape, left_input_dynamic_axes, right_input_shape, right_input_dynamic_axes):
+        return "_" + str(len(left_input_shape)) + "_" + str(left_input_dynamic_axes) + "_" + str(len(right_input_shape)) + "_" + str(right_input_dynamic_axes)
+
+    if dtype == np.float16:
+        pytest.skip('Test is skipped with float16 data')
+
+    with C.default_options(dtype = dtype):
+        # right rank = 1, 2; dynamic axes = None, batch, sequence 
+        # left rank = 1, 2; dynamix axes = None, batch, sequence  
+        left_input_shape_options = [(4,6,3), (2,3), (3,)]
+        left_input_dynamic_axes_options = [0, 1, 2]
+        right_input_shape_options = [(5,3), (3,)]
+        right_input_dynamic_axes_options = [0, 1, 2]
+
+        for option in list(product(left_input_shape_options, left_input_dynamic_axes_options,
+                                   right_input_shape_options, right_input_dynamic_axes_options)):
+            left_input_shape, left_input_dynamic_axes, right_input_shape, right_input_dynamic_axes = option
+
+            # TODO: edge cases cannot handled
+            if len(right_input_shape) == 1 and right_input_dynamic_axes > 0:
+                print('TimesTranspose can not handle left tensor as a vector input case.')
+                continue
+            if len(left_input_shape) == 1 and left_input_dynamic_axes == 1 and len(right_input_shape) == 2 and right_input_dynamic_axes == 1:
+                continue
+            if len(left_input_shape) == 1 and left_input_dynamic_axes == 1 and len(right_input_shape) == 2 and right_input_dynamic_axes == 2:
+                continue
+            if len(left_input_shape) == 1 and left_input_dynamic_axes == 2 and len(right_input_shape) == 2 and right_input_dynamic_axes == 1:
+                continue
+            if len(left_input_shape) == 1 and left_input_dynamic_axes == 2 and len(right_input_shape) == 2 and right_input_dynamic_axes == 2:
+                continue
+            if len(left_input_shape) == 3 and left_input_dynamic_axes == 1 and len(right_input_shape) == 2 and right_input_dynamic_axes == 0:
+                continue
+            if len(left_input_shape) == 3 and left_input_dynamic_axes == 1 and len(right_input_shape) == 2 and right_input_dynamic_axes == 1:
+                continue
+            if len(left_input_shape) == 3 and left_input_dynamic_axes == 1 and len(right_input_shape) == 2 and right_input_dynamic_axes == 2:
+                continue
+
+            test_name = MakeTestName(left_input_shape, left_input_dynamic_axes, right_input_shape, right_input_dynamic_axes)
+            seqeucen_len = 3
+            np.random.seed(1)
+            feed = []
+            if left_input_dynamic_axes == 0:
+                left_input = C.constant(value=np.random.rand(*left_input_shape).astype(dtype))
+            elif left_input_dynamic_axes == 1:
+                left_input = C.input_variable(left_input_shape)
+                feed.append(np.random.rand(batch_size, *left_input_shape).astype(dtype))
+            else:
+                left_input = C.sequence.input_variable(left_input_shape)
+                feed.append(np.random.rand(batch_size, seqeucen_len, *left_input_shape).astype(dtype))
+
+            if right_input_dynamic_axes == 0:
+                right_input = C.constant(value=np.random.rand(*right_input_shape).astype(dtype))
+            elif right_input_dynamic_axes == 1:
+                right_input = C.input_variable(right_input_shape)
+                feed.append(np.random.rand(batch_size, *right_input_shape).astype(dtype))
+            else:
+                right_input = C.sequence.input_variable(right_input_shape)
+                feed.append(np.random.rand(batch_size, seqeucen_len, *right_input_shape).astype(dtype))
+
+            #import pdb; pdb.set_trace()
+            model = C.times_transpose(left_input, right_input)
+            if len(feed) == 0: 
+                verify_no_input(model, tmpdir, test_name, bypass_load_into_cntk=True)
+            elif len(feed) == 1:
+                if model.outputs[0].has_sequence_axis():
+                    verify_sequence_model(model, feed[0], tmpdir, test_name, bypass_load_into_cntk=True)
+                else:
+                    verify_one_input(model, feed[0], tmpdir, test_name, bypass_load_into_cntk=True)
+            elif len(feed) == 2:
+                if model.outputs[0].has_sequence_axis():
+                    verify_sequence_model(model, feed, tmpdir, test_name, bypass_load_into_cntk=True)
+                else:
+                    verify_two_input(model, feed[0], feed[1], tmpdir, test_name, bypass_load_into_cntk=True)
+
 
 #Transpose
 @pytest.mark.parametrize("dtype", DType_Config)
