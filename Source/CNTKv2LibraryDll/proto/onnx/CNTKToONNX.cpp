@@ -173,7 +173,7 @@ private:
                         description += " ";
                     else
                         first = false;
-                    description += ("<<<" + iter->second + ", " + cntk_name + ">>>");
+                    description += ("<<<" + uid_iter->second + ", " + cntk_name + ">>>");
                 }
             }
             return description;
