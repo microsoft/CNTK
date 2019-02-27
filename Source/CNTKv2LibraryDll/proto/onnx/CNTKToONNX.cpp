@@ -7110,51 +7110,78 @@ std::vector<int64_t> CNTKToONNXHelper::BroadcastInputs(std::vector<onnxruntime::
     return broadcast_shape;
 }
 
-// Valid DictionaryValues that can be converted to string:
-// Bool, Int, SzieT, Float, Double and String.
-static void ScalarDictionaryValuesToString(std::string& str, Dictionary& dict)
+// Forward declaration
+static std::string SerializeDictionaryValueToString(const DictionaryValue& val);
+
+static std::string SerializeVectorToString(const std::vector<DictionaryValue>& vals)
 {
     bool first = true;
-    for (const auto& kv : dict)
+    std::string str = "[";
+    for (const auto& v : vals)
     {
-        auto value_type = kv.second.ValueType();
-        auto key = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(kv.first));
-        std::string s;
-        switch (value_type)
-        {
-        case DictionaryValue::Type::Bool:
-            s = key + ":" + (kv.second.Value<bool>() ? "true" : "false");
-            break;
-        case DictionaryValue::Type::Int:
-            s = key + ":" + std::to_string(kv.second.Value<int>());
-            break;
-        case DictionaryValue::Type::SizeT:
-            s = key + ":" + std::to_string(kv.second.Value<size_t>());
-            break;
-        case DictionaryValue::Type::Float:
-            s = key + ":" + std::to_string(kv.second.Value<float>());
-            break;
-        case DictionaryValue::Type::Double:
-            s = key + ":" + std::to_string(kv.second.Value<double>());
-            break;
-        case DictionaryValue::Type::String:
-            s = key + ":" + Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(kv.second.Value<std::wstring>()));
-            break;
-        default:
-            // skip all other cases
-            break;
-        }
-
         if (first)
         {
-          first = false;
-          str += s;
+            first = false;
         }
         else
         {
-          str += "," + s;
+            str += ",";
         }
+        str += SerializeDictionaryValueToString(v);
     }
+    str += "]";
+    return str;
+}
+
+static std::string SerializeDictionaryToString(const Dictionary& dict)
+{
+    bool first = true;
+    std::string str = "{";
+    for (const auto& kv : dict)
+    {
+        auto key = Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(kv.first));
+        if (first)
+        {
+          first = false;
+        }
+        else
+        {
+          str += ",";
+        }
+        str += key + ":" + SerializeDictionaryValueToString(kv.second);
+    }
+    str += "}";
+    return str;
+}
+
+// Valid DictionaryValues that can be converted to string:
+// Bool, Int, SzieT, Float, Double, String, and Vector or Dictionary of aforementioned types.
+static std::string SerializeDictionaryValueToString(const DictionaryValue& val)
+{
+    auto value_type = val.ValueType();
+    switch (value_type)
+    {
+    case DictionaryValue::Type::Bool:
+        return val.Value<bool>() ? "true" : "false";
+    case DictionaryValue::Type::Int:
+        return std::to_string(val.Value<int>());
+    case DictionaryValue::Type::SizeT:
+        return std::to_string(val.Value<size_t>());
+    case DictionaryValue::Type::Float:
+        return std::to_string(val.Value<float>());
+    case DictionaryValue::Type::Double:
+        return std::to_string(val.Value<double>());
+    case DictionaryValue::Type::String:
+        return "\"" + Microsoft::MSR::CNTK::ToLegacyString(Microsoft::MSR::CNTK::ToUTF8(val.Value<std::wstring>())) + "\"";
+    case DictionaryValue::Type::Dictionary:
+        return SerializeDictionaryToString(val.Value<Dictionary>());
+    case DictionaryValue::Type::Vector:
+        return SerializeVectorToString(val.Value<std::vector<DictionaryValue>>());
+    default:
+        // skip all other cases;
+        return "";
+    }
+    return "";
 }
 
 onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime::Graph* graph, const std::vector<onnxruntime::NodeArg *>& inputs, const std::vector<onnxruntime::NodeArg *>& outputs)
@@ -7193,8 +7220,7 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
             bool input1HasBatchAxis = (input1Rank - reductionRank) == 2;
             bool input2HasBatchAxis = (input2Rank - reductionRank) == 2;
 
-            std::string customAttrsStr;
-            ScalarDictionaryValuesToString(customAttrsStr, src->GetCustomAttributes());
+            std::string customAttrsStr = "{custom_attributes:" + SerializeDictionaryToString(src->GetCustomAttributes()) + "}";
 
             if (reductionRank > 1 || py_api_output_rank_argument > 1) // We need to insert reshape.
             {
