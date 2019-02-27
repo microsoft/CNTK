@@ -739,7 +739,7 @@ This node will often be tagged as an “Eval” node to allow the CNTK to print 
 
 ### Dropout
 
-Compute a new matrix with *dropoutRate* perecent set to zero. The values that are set to zero are randomly chosen. This is commonly used to prevent overfitting during the training process.
+Compute a new matrix with *dropoutRate* percent set to zero. The values that are set to zero are randomly chosen. This is commonly used to prevent overfitting during the training process.
 
 `Dropout(matrix)`
 
