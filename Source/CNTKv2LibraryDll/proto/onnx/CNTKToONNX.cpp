@@ -154,6 +154,32 @@ private:
         }
 
         //
+        // ONNX model description (of CNTK exported model) is in this format:
+        // <<<ONNXModelOutputName, CNTKModelOutputName>>> pair: <<<onnx_name_0, cntk_name_0>>> <<<onnx_name_0, cntk_name_1>>>
+        //
+        static std::string GetModelOutputNamePairDescription()
+        {
+            std::string description = "<<<ONNXOutputName, CNTKNodeName>>> pair: ";
+            bool first = true;
+            for (auto iter = outputUidNameMap.begin(); iter != outputUidNameMap.end(); ++iter)
+            {
+                std::string cntk_name = iter->second;
+                if (cntk_name == "")
+                    continue;
+                auto uid_iter = uidNodeNameMap.find(iter->first);
+                if (uid_iter != uidNodeNameMap.end())
+                {
+                    if (first)
+                        description += " ";
+                    else
+                        first = false;
+                    description += ("<<<" + iter->second + ", " + cntk_name + ">>>");
+                }
+            }
+            return description;
+        }
+
+        //
         // Generate unique name based on nodeName, opName and uid.
         //
         static std::string GetUniqueNodeName(const std::wstring& nodeName, const std::wstring& opName, const std::wstring& uid)
@@ -1107,7 +1133,8 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, onnxruntime::Graph* dst)
     //
     // Save (Uid, ONNXNodeName) pair for all nodes to graph description.
     //
-    dst->SetDescription(UniqueNodeNameStorage::GetUidNodeNamePairDescription());
+    dst->SetDescription(UniqueNodeNameStorage::GetUidNodeNamePairDescription() + "\n" +
+                        UniqueNodeNameStorage::GetModelOutputNamePairDescription());
 }
 
 void CNTKToONNXHelper::HandleRootCombineOp(const FunctionPtr& src, onnxruntime::Graph* dst)
