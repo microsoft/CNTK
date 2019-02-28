@@ -22,7 +22,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void SetGradientAccumulationOptimization(bool enable) { m_optimizeGradientAccumulation = enable; }
         static bool ShouldOptimizeGradientAccumulation() { return m_optimizeGradientAccumulation; }
 
-        // TODO: Currently the flag is set to false. Should be switched to true after more rigorous testing.
         static void SetUseV2Aggregator() { m_useV2Aggregator = true; }
         static bool UseV2Aggregator() { return m_useV2Aggregator; }
 
