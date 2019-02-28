@@ -464,16 +464,18 @@ namespace CNTK
             else if (parameters.front()->GetDataType() == DataType::Float)
                 SynchronizeModel<float>(parameters);
             else if (parameters.front()->GetDataType() == DataType::Float16)
+            {
                 SynchronizeModel<half>(parameters);
+
+                // For half, SynchronizeModel will update the parameters (half) in network.
+                // However, the local learner also have a copy of full precision parameters (float), which needs to be updated too.
+                // Set the flag so that the float copy will be updated / copied from half parameters.
+                m_learner->SetNeedToUpdateMasterParameter();
+            }
             else
                 RuntimeError("Unsupported type.");
 
             m_numSamplesSeenInCurrentBlock = 0;
-
-            // For half, SynchronizeModel will update the parameters (half) in network.
-            // However, the local learner also have a copy of full precision parameters (float), which needs to be updated too.
-            // Set the flag so that the float copy will be updated / copied from half parameters.
-            m_learner->SetNeedToUpdateMasterParameter();
 
             if (m_resetSGDMomentumAfterAggregation)
                 m_learner->ResetSmoothedGradients();
