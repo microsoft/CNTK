@@ -141,7 +141,7 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 - Major overhaul to `ConvolutionTranspose` export and import. Attributes such as `output_shape`, `output_padding`, and `pads` are fully supported.
 - Added support for CNTK's `StopGradient` as a no-op.
 - Added ONNX support for TopK op.
-- Added ONNX support for sequence ops: sequence.slice, sequence.first, sequence.last, sequence.reduce_sum, sequence.reduce_max, sequence.softmax. For these ops, there is no need to expand ONNX spec. CNTK ONNX exporter just builds computation equavalent graphs for these sequence ops.
+- Added ONNX support for sequence ops: sequence.slice, sequence.first, sequence.last, sequence.reduce_sum, sequence.reduce_max, sequence.softmax. For these ops, there is no need to expand ONNX spec. CNTK ONNX exporter just builds computation equivalent graphs for these sequence ops.
 - Added full support for Softmax op.
 - Made CNTK broadcast ops compatible with ONNX specification.
 - Handle to_batch, to_sequence, unpack_batch, sequence.unpack ops in CNTK ONNX exporter.
