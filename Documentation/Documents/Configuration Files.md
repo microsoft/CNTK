@@ -465,7 +465,7 @@ This section is intended as a reference to all the possible configuration settin
 
 ### Parameter Search
 
-Config files are hierarchal organizations of Configuration Parameter Sets, a collection of name-value pairs. Any value that is expected to occur in a parameter set can alternately be defined at a higher level. The search for a parameter name will continue through parent parameter sets until it is resolved, or not found.
+Config files are hierarchical organizations of Configuration Parameter Sets, a collection of name-value pairs. Any value that is expected to occur in a parameter set can alternately be defined at a higher level. The search for a parameter name will continue through parent parameter sets until it is resolved, or not found.
 
 Default values are often assigned to parameters, these values will be used should the search for the parameter fail. If no default is available, the parameter is a required parameter, and an error will occur if it is not provided.
 
@@ -787,7 +787,7 @@ For dataset processing the following parameters are used:
 
     -   **path** – output file path
 
-    -   **ext** – {mfc} file extention to use for output files
+    -   **ext** – {mfc} file extension to use for output files
 
     -   **type** – (optional) if type=scaledLogLikelihood output will be scaled by Prior
 
@@ -871,7 +871,7 @@ The LUSequenceReader has some unique setups as follows:
 
 A subsection is for input label information.
 
--   lableIn – the section for input label. It contains the following setups
+-   labelIn – the section for input label. It contains the following setups
 
     -   usewordmap – \[True, False\] specifies if using word map to map input words to other input words.
 
@@ -887,7 +887,7 @@ A subsection is for input label information.
 
 #### BinaryReader
 
-BinaryReader is a reader that uses a hierarchal file format to store potentially multiple datasets in an efficient way. It uses memory mapped files with a moving window of viewable data to support files larger than can be held in memory at once. More details about the file format are in the BinaryWriter Section.
+BinaryReader is a reader that uses a hierarchical file format to store potentially multiple datasets in an efficient way. It uses memory mapped files with a moving window of viewable data to support files larger than can be held in memory at once. More details about the file format are in the BinaryWriter Section.
 
 The parameters used for the binary reader are quite simple as most of the required information concerning the file is contained in the file headers. The binary reader will also be called when a configuration is setup to cache UCIFastReader if the binary cached file exists.
 
@@ -907,7 +907,7 @@ writerType=BinaryReader # NOTE: BinaryReader.dll also implements BinaryWriter
 
 #### BinaryWriter
 
-BinaryWriter is an implementation of a hierarchal file format the mirrors the configuration file. I uses memory mapped files to enable large files that do not fit in memory to be written and read using a moving window into the file. The binary writer is also used as a Cache mechanism for UCIFastReader to allow for much faster access to data after the dataset has been read once.
+BinaryWriter is an implementation of a hierarchical file format the mirrors the configuration file. I uses memory mapped files to enable large files that do not fit in memory to be written and read using a moving window into the file. The binary writer is also used as a Cache mechanism for UCIFastReader to allow for much faster access to data after the dataset has been read once.
 
 The following is an example of a BinaryWriter definition. Since it is most commonly used as a cache for UCIFastReader, this definition is show as a UCIFastReader cache. The parameters needed for BinaryWriter are in bold type below:
 
@@ -925,7 +925,7 @@ The following is an example of a BinaryWriter definition. Since it is most commo
 
       #### write definition
       wfile=c:\data\mnist\mnist_train.bin
-      #wsize - inital size of the file in MB
+      #wsize - initial size of the file in MB
       # if calculated size would be bigger, that is used instead
       wsize=256
 
@@ -1268,7 +1268,7 @@ void DoTrain(const ConfigParameters& config)
 }
 ```
 
-The code above is very easy to code, you simply delare a config, or basic type variable on the stack and assign something from a ConfigParameters class to that variable (i.e. int i = config(”setting”,”default”). Both parameters with defaults and those that don’t are used in the sample code above. The ConfigValue class takes care of parsing the value to be the correct type, and is returned by config() references above.
+The code above is very easy to code, you simply declare a config, or basic type variable on the stack and assign something from a ConfigParameters class to that variable (i.e. int i = config(”setting”,”default”). Both parameters with defaults and those that don’t are used in the sample code above. The ConfigValue class takes care of parsing the value to be the correct type, and is returned by config() references above.
 
 The Config classes are meant to be used on the stack as shown in this example. Storing them in member variables or allocating using ‘new’ or other methods is not supported. The reason for this is an internal pointer is used to link to parent instances of config classes. This allows us to trace “up the stack” and look at all the config parameters that exist at a higher level. Since our search traverses up the stack, we need to ensure that all the parent configuration classes still exist, which is guaranteed if all config parameters are stack allocated and have lifetimes that extend past any children.
 
@@ -1620,7 +1620,7 @@ Validation multiple purposes:
 
 #### Evaluation Process
 
-Now that the entire has been explained, a little more detail on how each Evaluation pass occurs seems relavant.
+Now that the entire has been explained, a little more detail on how each Evaluation pass occurs seems relevant.
 
 -   First the NDLScript::Evaluate() method is called. This take a few parameters the nodeEvaluator (which creates the actual Computation Nodes), and a baseName, and which pass we are on.
 
