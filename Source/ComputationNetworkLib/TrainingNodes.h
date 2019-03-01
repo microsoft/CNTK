@@ -133,10 +133,11 @@ public:
     {
         FrameRange fr(InputRef(0).GetMBLayout());
         auto input0 = InputRef(0).ValueFor(fr);
+        vector<ElemType> zeros(m_logSoftmaxOfRight->GetNumRows(), 0.0);
         for (size_t colIndex = m_logSoftmaxOfRight->GetNumCols() - fr.m_pMBLayout->GetNumParallelSequences() * fr.m_pMBLayout->RightLookAhead(); colIndex < m_logSoftmaxOfRight->GetNumCols(); colIndex++)
         {
-            m_logSoftmaxOfRight->SetColumn((ElemType)0.0, colIndex);
-            input0.SetColumn((ElemType)0.0, colIndex);
+            m_logSoftmaxOfRight->SetColumn(&zeros[0], colIndex);
+            input0.SetColumn(&zeros[0], colIndex);
         }
 
         // left input is scalar
