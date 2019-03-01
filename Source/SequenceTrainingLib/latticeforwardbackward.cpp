@@ -2192,9 +2192,11 @@ double lattice::forwardbackward(parallelstate &parallelstate, const msra::math::
     {
         if (nodes[i].wid == 2)
         {
-            if (nodes[nodes.size() - 1].wid == 2)
+            if (nodes[nodes.size() - 1].wid == 2 && (i != nodes.size() - 1))
             {
-                RuntimeError("The  node %d wid is  2 (i.e.) </s>, but it is not the last node, total number of node is %d \n", int(i), int(nodes.size()));
+                //RuntimeError("The  node %d wid is  2 (i.e.) </s>, but it is not the last node, total number of node is %d \n", int(i), int(nodes.size()));
+                fprintf(stderr, "The  node %d wid is  2 (i.e.) </s>, but it is not the last node, total number of node is %d \n", int(i), int(nodes.size()));
+                return LOGZERO; // bad data, do not use resulting matrix
             }
             sent_end_count++;
         }
