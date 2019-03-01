@@ -20,7 +20,7 @@
 #include <locale>
 #include <codecvt>
 #include <random>
-#include "RandomOrdering.h"
+//#include "RandomOrdering.h"
 
 namespace Microsoft
 {
@@ -1880,12 +1880,105 @@ public:
 
     virtual void ForwardPropNonLooping() override
     {
-        size_t rand1, rand2;
-        for (size_t n = 0; n < 10; n++)
+        std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout = InputRef(0).GetMBLayout();
+        const auto numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
+        const auto numSequences = phoneMBLayout->GetNumSequences();
+
+        //get label sequence
+        InputRef(0).Value().VectorMax(*m_maxIndexes, *m_maxValues, true);
+        size_t rowNum = m_maxIndexes->GetNumRows();
+
+        //get infor for each utterances
+        std::vector<size_t> uttPhoneNum, uttPhoneBeginIdx, uttPhoneToChanInd;
+        size_t seqId = 0; //phone
+        size_t totalUttNum = 0;
+        for (const auto& seq : phoneMBLayout->GetAllSequences())
         {
-            rand1 = RandMT(0, 1, m_m1);
-            rand2 = RandMT(0, 1, m_m2);
-            printf("%zu, %zu ", rand1, rand2);
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttPhoneToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttPhoneBeginIdx.push_back(seq.tBegin);
+            uttPhoneNum.push_back(numFrames);
+            //totalphonenum += numFrames;
+        }
+        totalUttNum = seqId;
+        //get word for each utt
+        vector<vector<vector<size_t>>> words;
+        vector<size_t> word;
+        for (size_t seqid = 0; seqid < numSequences; seqid++)
+        {
+            words.push_back({});
+            for (size_t n = 1; n < uttPhoneNum[seqid]; n++)
+            {
+                size_t phoneid = (n + uttPhoneBeginIdx[seqid]) * numPhoneParallelSequences + uttPhoneToChanInd[seqid];
+                size_t phoneVal = (size_t)((*m_maxIndexes)(0, phoneid));
+                if (phoneVal == m_spaceTokens[0]) //space
+                {
+                    if (word.size() > 0)
+                    {
+                        word.push_back(phoneVal);
+                        words[seqid].push_back(word);
+                        word.clear();
+                    }
+                }
+                word.push_back(phoneVal);
+            }
+        }
+
+        vector<vector<size_t>> words_bias;
+        //deal with each utt
+        size_t totalbiaswordlen = 0, maxbiaswordlen = 0;
+        size_t rand1, rand2, rand3;
+        size_t wordlen = 0;
+        for (size_t seqid = 0; seqid < numSequences; seqid++)
+        {
+            rand1 = m_m1() % 100;
+            rand2 = m_m2();
+            if (rand1 > 50) //get the word from utt
+            {
+                size_t wordNum = words[seqid].size();
+                rand2 = rand2 % wordNum;
+                words_bias.push_back(words[seqid][rand2]);
+                wordlen = words[seqid][rand2].size();
+            }
+            else //get the word from other utt
+            {
+                while (rand2 % totalUttNum == seqid)
+                    rand2 = m_m2();
+                rand2 = rand2 % totalUttNum;
+                rand3 = m_m2() % words[seqid].size();
+                words_bias.push_back(words[rand2][rand3]);
+                wordlen = words[rand2][rand3].size();
+            }
+            if (wordlen > maxbiaswordlen)
+                maxbiaswordlen = wordlen;
+            totalbiaswordlen += wordlen;
+        }
+
+        //write output
+        m_pMBLayout->Init(totalUttNum, maxbiaswordlen);
+        //Matrix<ElemType> outputMatrix = Value();
+        Value().Resize(rowNum, maxbiaswordlen * totalUttNum);
+        Value().SetValue(0.0);
+        size_t colNo = 0;
+        seqId = 0;
+        for (auto it = words_bias.begin(); it != words_bias.end(); it++)
+        {
+            for (auto wit = it->begin(); wit != it->end(); wit++)
+            {
+                Value().SetValue(*wit, colNo, 1.0);
+                colNo++;
+            }
+            m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, seqId, 0, it->size());
+            // and the gap behind if any
+            if (it->size() < maxbiaswordlen)
+                m_pMBLayout->AddGap(seqId, it->size(), maxbiaswordlen);
+            seqId++;
         }
 
 #if NANCHECK
@@ -1924,6 +2017,8 @@ public:
             auto node = dynamic_pointer_cast<GetbiasNode<ElemType>>(nodeP);
 
             node->m_spaceTokens = m_spaceTokens;
+            node->m_maxIndexes->SetValue(*m_maxIndexes);
+            node->m_maxValues->SetValue(*m_maxValues);
         }
     }
 
@@ -1931,12 +2026,16 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_maxIndexes, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
         //RequestMatrixFromPool(m_derivativeForG, matrixPool);
     }
 
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes, matrixPool);
+        ReleaseMatrixToPool(m_maxValues, matrixPool);
         //ReleaseMatrixToPool(m_derivativeForG, matrixPool);
     }
 
@@ -1965,12 +2064,15 @@ protected:
     {
         return true;
     }
+    shared_ptr<Matrix<ElemType>> m_maxIndexes;
+    shared_ptr<Matrix<ElemType>> m_maxValues;
     //shared_ptr<Matrix<ElemType>> m_outputDensity;
     // shared_ptr<Matrix<ElemType>> m_outputDistribution;
     vector<size_t> m_spaceTokens;
     std::uniform_int<int> m_distr;
     //std::uniform_int_distribution<int> m_distr(1, 11);
-    std::mt19937_64 m_m1;
+    std::random_device rd;
+    std::mt19937_64 m_m1{rd()};
     std::mt19937_64 m_m2;
 };
 
