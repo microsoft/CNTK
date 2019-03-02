@@ -701,8 +701,30 @@ public:
                             }
                         }
                     }
-
                     if (prefix == false)
+                    {
+                        seqK = newSeq(tempSeq);
+                        newlogP = decodeOutput(blankId, 0) + tempSeq.logP;
+                        seqK.logP = newlogP;
+                        bool existseq = false;
+                        seqK.lengthwithblank++;
+                        for (Sequence seqP : keyNextSequences)
+                        {
+                            if (seqK.labelseq == seqP.labelseq)
+                            {
+                                existseq = true;
+                                seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
+                                seqK.lengthwithblank = (seqK.lengthwithblank + seqP.lengthwithblank) / 2;
+                                break;
+                            }
+                        }
+                        if (!existseq)
+                        {
+                            keyNextSequences.push_back(seqK);
+                        }
+
+                    }
+                    /*if (prefix == false)
                     {
                         vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam);
 
@@ -736,7 +758,7 @@ public:
                             extendSeq(seqK, topN[iLabel].first, newlogP);
                             keyCurSequences.push_back(seqK);
                         }
-                    }
+                    }*/
                     deleteSeq(tempSeq);
 
                     if (keyCurSequences.size() == 0)
