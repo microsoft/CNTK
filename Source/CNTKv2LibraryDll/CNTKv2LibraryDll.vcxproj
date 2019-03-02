@@ -183,7 +183,6 @@
     <ClInclude Include="proto\onnx\onnx-operators-ml.pb.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\common\profiler.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\common\task_thread_pool.h" />
-    <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorutils.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\graph\function.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\graph\function_container.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\graph\function_impl.h" />
@@ -275,7 +274,19 @@
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\common\logging\logging.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\common\profiler.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\common\status.cc" />
-    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorutils.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\common\str_helper.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\allocator.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\data_types.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\environment.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\error_code.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\onnxruntime_typeinfo.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorprotoutils.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_shape.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_type_and_shape.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\contrib_ops\attn_lstm_schema_defs.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\contrib_ops\contrib_defs.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\contrib_ops\range_schema_defs.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\function.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\graph.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\graph_viewer.cc" />
@@ -284,6 +295,7 @@
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\schema_registry.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\platform\env.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\platform\env_time.cc" />
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\common\logging\ostream_sink.cc" />
     <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\env.cc" />
     <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\env_time.cc" />
     <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\stacktrace.cc" />
@@ -319,6 +331,7 @@
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\traditionalml\old.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\shape_inference\implementation.cc" />
     <ClCompile Include="proto\onnx\Operators.cpp" />
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\session\onnxruntime_c_api.cc" />
     <ClCompile Include="proto\onnx\RNNHelper.cpp" />
     <ClCompile Include="Serialization.cpp" />
     <ClCompile Include="stdafx.cpp">

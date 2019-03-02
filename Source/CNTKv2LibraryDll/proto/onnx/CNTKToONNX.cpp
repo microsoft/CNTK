@@ -1045,7 +1045,99 @@ onnxruntime::Graph* CNTKToONNXHelper::globalGraph = nullptr;
 
 } // namespace CNTK
 
-std::unique_ptr<onnxruntime::Model> CNTKToONNX::CreateModel(const FunctionPtr& src)
+std::string GetRootPath(std::string& rootPath)
+{
+    // first make slash consistent (sorry for Linux users:this is not necessary for you)
+    std::replace(rootPath.begin(), rootPath.end(), '\\', '/');
+
+    // second, remove trailing slash if there is any
+    std::regex trailer("/+$");
+    std::string root = std::regex_replace(rootPath, trailer, string());
+
+    std::string folder = root.substr(0, root.find_last_of('/'));
+
+    return folder;
+}
+
+void SaveTensorData(const std::string& filename, TensorProto* tensor)
+{    
+    FILE* fp;
+    _wfopen_s(&fp, ToFixedWString(filename).c_str(), L"wb");
+    std::string errMsg = "tensor data type not supported for external localtion storage";
+    switch (tensor->data_type())
+    {
+    case TensorProto_DataType_FLOAT:
+        fwrite(tensor->float_data().data(), sizeof(float), tensor->float_data_size(), fp);
+        tensor->clear_float_data();
+        break;
+    case TensorProto_DataType_UINT8:
+    case TensorProto_DataType_INT8:
+    case TensorProto_DataType_UINT16:
+    case TensorProto_DataType_INT16:
+        CNTK::LogicError(errMsg.c_str());
+    case TensorProto_DataType_INT32:
+        fwrite(tensor->int32_data().data(), sizeof(int32_t), tensor->int32_data_size(), fp);
+        tensor->clear_int32_data();
+        break;
+    case TensorProto_DataType_INT64:
+        fwrite(tensor->int64_data().data(), sizeof(int64_t), tensor->int64_data_size(), fp);
+        tensor->clear_int64_data();
+        break;
+    case TensorProto_DataType_STRING:
+        CNTK::LogicError(errMsg.c_str());
+    case TensorProto_DataType_BOOL:
+        fwrite(tensor->int32_data().data(), sizeof(int32_t), tensor->int32_data_size(), fp);
+        tensor->clear_int32_data();
+        break;
+    case TensorProto_DataType_FLOAT16:
+    {
+        std::vector<uint16_t> h(tensor->int32_data_size());
+        for (int i = 0; i < tensor->int32_data_size(); i++)
+            h[i] = static_cast<uint16_t>(tensor->int32_data(i));
+        fwrite(&h[0], sizeof(uint16_t), tensor->int32_data_size(), fp);
+        tensor->clear_int32_data();
+    }
+        break;
+    case TensorProto_DataType_DOUBLE:
+        fwrite(tensor->double_data().data(), sizeof(double), tensor->double_data_size(), fp);
+        tensor->clear_double_data();
+        break;
+    case TensorProto_DataType_UINT32:
+    case TensorProto_DataType_UINT64:
+    case TensorProto_DataType_COMPLEX64:
+    case TensorProto_DataType_COMPLEX128:
+    case TensorProto_DataType_BFLOAT16:
+        CNTK::LogicError(errMsg.c_str());
+    }
+    fclose(fp);
+}
+
+#include <filesystem>
+
+void LocalTensors(Graph *graph, const std::wstring& wFilepath)
+{
+    std::string filepath = ToLegacyString(ToUTF8(wFilepath));
+    std::string folder = GetRootPath(filepath);
+    InitializedTensorSet& initializedTensorSet = const_cast<InitializedTensorSet&>(graph->GetAllInitializedTensors());
+    for (InitializedTensorSet::iterator it = initializedTensorSet.begin(); it != initializedTensorSet.end(); ++it)
+    {
+        std::string tensorName = it->first;
+        std::string tensorPath = folder + "/" + tensorName;
+        TensorProto* tensor = const_cast<TensorProto*>(it->second);
+        int64_t dataSize = 1;
+        for (int i = 0; i < tensor->dims_size(); i++)
+            dataSize *= tensor->dims(i);
+        if (dataSize < 100)
+            continue;
+        SaveTensorData(tensorPath, tensor);
+        onnx::StringStringEntryProto* location = tensor->mutable_external_data()->Add();
+        location->set_key("location");
+        location->set_value(ToMBString(tensorPath));
+        tensor->set_data_location(onnx::TensorProto_DataLocation_EXTERNAL);
+    }
+}
+
+std::unique_ptr<onnxruntime::Model> CNTKToONNX::CreateModel(const FunctionPtr& src, const std::wstring& filepath)
 {
     std::unique_ptr<onnxruntime::Model> model(new onnxruntime::Model("CNTKGraph", true));
     auto &dstGraph = model->MainGraph();
@@ -1053,6 +1145,8 @@ std::unique_ptr<onnxruntime::Model> CNTKToONNX::CreateModel(const FunctionPtr& s
     onnxruntime::common::Status status = dstGraph.Resolve();
     if (!status.IsOK())
         LogicError("%s", status.ErrorMessage().c_str());
+
+    LocalTensors(&dstGraph, filepath);
 
     model->SetModelversion(static_cast<onnxruntime::Version>(CNTK_ONNX_MODEL_VERSION)); // REVIEW sptiwari: This is the default. This and doc_string should be surfaced as graph's 'save' API input.
     model->SetDomain(CNTK_ONNX_MODEL_DOMAIN);

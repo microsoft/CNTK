@@ -4,7 +4,7 @@
 //
 
 #include "core/graph/graph.h"
-#include "core/framework/tensorutils.h"
+#include "core/framework/tensorprotoutils.h"
 
 #include "Utils.h"
 #include "Operators.h"
@@ -445,6 +445,30 @@ Constant ONNXToCNTKHelper::CreateConstant(const Node *node, const DeviceDescript
     return CreateConstant(valueProto, node->Name(), computeDevice);
 }
 
+void LoadRawData(onnx::TensorProto &tensor_proto)
+{
+    if (tensor_proto.data_location() == TensorProto_DataLocation_EXTERNAL)
+    {
+        ::google::protobuf::RepeatedPtrField<::onnx::StringStringEntryProto> external_data = tensor_proto.external_data();
+        ::google::protobuf::RepeatedPtrField<::onnx::StringStringEntryProto>::iterator it =
+            std::find_if(external_data.begin(), external_data.end(), [](const ::onnx::StringStringEntryProto& StringStringEntryProto)
+        {
+            return StringStringEntryProto.has_key() && StringStringEntryProto.key() == "location";
+        });
+        if (it != external_data.end())
+        {
+            std::string filename = it->value();
+            FILE* fp;
+            _wfopen_s(&fp, ToFixedWString(filename).c_str(), L"rb");
+            std::string raw_data_from_file;
+            Env::Default().ReadFileAsString(ToFixedWString(filename).c_str(), &raw_data_from_file);
+            const void* raw_data = raw_data_from_file.data();
+            size_t raw_data_len = raw_data_from_file.size();
+            tensor_proto.set_raw_data(raw_data, raw_data_len);
+        }
+    }
+}
+
 Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, const std::string &nodeName,
                                           const DeviceDescriptor &computeDevice)
 {
@@ -461,7 +485,14 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     {
         // It does not work using vector<bool> because resulted memory layout is not what we expect.
         bool *srcData = new bool[shape.TotalSize()];
-        onnxruntime::utils::TensorUtils::UnpackTensor(valueProto, srcData, shape.TotalSize());
+        if (valueProto.int32_data_size() == shape.TotalSize())
+        {
+            std::copy(valueProto.int32_data().begin(), valueProto.int32_data().end(), srcData);
+        }
+        else
+        {
+            onnxruntime::utils::UnpackTensor(valueProto, valueProto.raw_data().data(), valueProto.raw_data().size(), srcData, shape.TotalSize());
+        }
 
         // CNTK does not support bool. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -476,7 +507,14 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     case TensorProto_DataType_INT32:
     {
         std::vector<int32_t> srcData(shape.TotalSize());
-        onnxruntime::utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
+        if (valueProto.int32_data_size() == shape.TotalSize())
+        {
+            std::copy(valueProto.int32_data().begin(), valueProto.int32_data().end(), srcData.begin());
+        }
+        else
+        {
+            onnxruntime::utils::UnpackTensor(valueProto, valueProto.raw_data().data(), valueProto.raw_data().size(), &srcData[0], shape.TotalSize());
+        }
 
         // CNTK does not support int. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -490,7 +528,15 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     case TensorProto_DataType_INT64:
     {
         std::vector<int64_t> srcData(shape.TotalSize());
-        onnxruntime::utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
+        if (valueProto.int64_data_size() == shape.TotalSize())
+        {
+            std::copy(valueProto.int64_data().begin(), valueProto.int64_data().end(), srcData.begin());
+        }
+        else
+        {
+            onnxruntime::utils::UnpackTensor(
+                valueProto, valueProto.raw_data().data(), valueProto.raw_data().size(), &srcData[0], shape.TotalSize());
+        }
 
         // CNTK does not support int64_t. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -505,9 +551,10 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     {
         if (valueProto.float_data().empty())
         {
+            if (valueProto.raw_data().empty())
+                LoadRawData(const_cast<onnx::TensorProto &>(valueProto));
             RetrieveRawDataAsFloat(valueProto);
         }
-
         return CreateConstantWithTensorData<float, float>(shape, tensorProtoDataType, CNTK::DataType::Float,
                                                           &(valueProto.float_data()[0]), reversedShape, computeDevice, nodeName);
     }
@@ -516,6 +563,8 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     {
         if (valueProto.int32_data().empty())
         {
+            if (valueProto.raw_data().empty())
+                LoadRawData(const_cast<onnx::TensorProto &>(valueProto));
             RetrieveRawDataAsFloat16(valueProto);
         }
 
@@ -528,6 +577,8 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
         // TODO: refactore commom code for float and double
         if (valueProto.double_data().empty())
         {
+            if (valueProto.raw_data().empty())
+                LoadRawData(const_cast<onnx::TensorProto &>(valueProto));
             RetrieveRawDataAsDouble(valueProto);
         }
 
@@ -1447,7 +1498,14 @@ std::vector<int64_t> ONNXToCNTKHelper::GetShapeFromInput(const NodeArg *shapeInp
 
     auto shapeSize = valueProto->dims(0);
     std::vector<int64_t> dimData(shapeSize);
-    onnxruntime::utils::TensorUtils::UnpackTensor(*valueProto, &dimData[0], shapeSize);
+    if (valueProto->int64_data_size() == shapeSize)
+    {
+        std::copy(valueProto->int64_data().begin(), valueProto->int64_data().end(), dimData.begin());
+    }
+    else
+    {
+        onnxruntime::utils::UnpackTensor(*valueProto, valueProto->raw_data().data(), valueProto->raw_data().size(), &dimData[0], shapeSize);
+    }
 
     return dimData;
 }
