@@ -25,6 +25,10 @@ namespace CNTK
     public:
         MPICommunicatorImpl(size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
 
+        static DistributedCommunicatorPtr GetInstance(size_t packThresholdSizeInBytes);
+
+        static void Finalize();
+
         virtual const std::unordered_set<DistributedWorkerDescriptor>& Workers() const override;
 
         virtual const DistributedWorkerDescriptor& CurrentWorker() const override;
@@ -66,6 +70,9 @@ namespace CNTK
         virtual ~MPICommunicatorImpl() {}
 
     private:
+
+        static DistributedCommunicatorPtr s_comm;
+
         void Initialize(const std::vector<NDArrayViewPtr>& values);
 
         void AggregateImpl(
