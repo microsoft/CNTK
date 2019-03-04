@@ -1565,8 +1565,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             if (m_traceLevel > 0)
                 fflush(stderr);
 
-            if (epochCriterion.IsNan())
-                RuntimeError("The training criterion is not a number (NAN).");
+            /*if (epochCriterion.IsNan())
+                RuntimeError("The training criterion is not a number (NAN).");*/
 
             // reset statistics for differential logging
             epochCriterionLastLogged = epochCriterion;

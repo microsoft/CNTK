@@ -380,6 +380,17 @@ public:
         // Normalize the CTC scores
         CTCPosterior.VectorSum(CTCPosterior, rowSum, /*isColWise=*/true);
         CTCPosterior.RowElementDivideBy(rowSum);
+
+        ElemType finalscore = 0;
+        //m_derivative.Print("RNNT");
+        finalscore = totalScore.Get00Element();
+        //fprintf(stderr, "finalscore:%f\n", finalscore);
+        
+        if (isnan(finalscore)) //
+        {
+            CTCPosterior.SetValue(0.0);
+            totalScore.SetValue(0.0);
+        }
     }
 
 
@@ -555,7 +566,7 @@ public:
         //m_derivative.Print("RNNT");
         finalscore =  totalScore.Get00Element();
         //fprintf(stderr, "finalscore:%f\n", finalscore);
-        if (finalscore > 50 || finalscore < 0)
+        if (finalscore > 5000 || finalscore < 0)
         {
             for (size_t i = 0; i < uttFrameNum.size(); i++)
             {
@@ -563,6 +574,11 @@ public:
             }
             matrixPhoneSeqs.Print("phone seq");
             //matrixPhoneBounds.Print("phone bound");
+        }
+        if (isnan(finalscore))   //
+        {
+            m_derivative.SetValue(0.0);
+            totalScore.SetValue(0.0);
         }
         /*alpha.Print("alpha");
         beta.Print("beta");
