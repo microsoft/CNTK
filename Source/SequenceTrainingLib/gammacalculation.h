@@ -386,7 +386,7 @@ public:
         finalscore = totalScore.Get00Element();
         //fprintf(stderr, "finalscore:%f\n", finalscore);
         
-        if (isnan(finalscore)) //
+        if (std::isnan(finalscore)) //
         {
             CTCPosterior.SetValue(0.0);
             totalScore.SetValue(0.0);

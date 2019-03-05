@@ -1144,7 +1144,7 @@ public:
             finalscore = Value().Get00Element();
             //fprintf(stderr, "finalscore:%f\n", finalscore);
 
-            if (isnan(finalscore)) //
+            if (std::isnan(finalscore)) //
             {
                 InputRef(inputIndex).Gradient().SetValue(0.0);
                 //totalScore.SetValue(0.0);
