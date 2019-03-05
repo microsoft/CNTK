@@ -290,6 +290,8 @@ os.mkdir(tmpdir)
 def test_cntk_model(model_name):
     if model_name in skip_cntk_model_names:
         pytest.skip('Skip cntk model test. ')
+    cntk_base_dir = get_base_dir('PretrainedModelsV2')
+
     model_dir = os.path.join(cntk_base_dir, model_name)
     model = C.Function.load(model_dir, format=C.ModelFormat.CNTKv2)
 
@@ -352,7 +354,8 @@ non_seq_models_with_sparse_data = [
     'Speech.Polyphony.DNN.FinalModel.cmf.model'
 ]
 
-def verify_model(cntk_model, node_name, tmpdir, model_name, image = None, skip_round_trip_test = True):
+def verify_model(cntk_model, node_name, tmpdir, model_name, image = None, skip_round_trip_test = True,
+                 use_external_files_to_store_parameters = False):
     if (node_name is not None):
         cntk_node = cntk_model.find_by_name(node_name)
         if not cntk_node:
@@ -371,13 +374,15 @@ def verify_model(cntk_model, node_name, tmpdir, model_name, image = None, skip_r
     if os.path.exists(test_model_path):
         shutil.rmtree(test_model_path, ignore_errors=True)
     
-    verify_sequence_model(cntk_node_model, image, tmpdir, sanitized_node_name, resave = not skip_round_trip_test)
+    verify_sequence_model(cntk_node_model, image, tmpdir, sanitized_node_name, resave = not skip_round_trip_test,
+                          use_external_files_to_store_parameters = use_external_files_to_store_parameters)
 
 
+@pytest.mark.parametrize("use_external_files_to_store_parameters", (False, True))
 @pytest.mark.parametrize('model_name',
     [model_name for model_name in rnn_model_names],
     ids=[model_name for model_name in rnn_model_names])
-def test_cntk_rnn_models(model_name):
+def test_cntk_rnn_models(model_name, use_external_files_to_store_parameters):
 
     if model_name in skip_rnn_model_names:
         pytest.skip('Skip cntk rnn model test. ')
@@ -428,8 +433,11 @@ def test_cntk_rnn_models(model_name):
                 data.append(generate_sequence_data(1, sequence_length, arg.shape[0]))
             
     # Validate model results
+    test_name = model_name + "_ext_" if use_external_files_to_store_parameters else model_name;
     if(model_name in verify_with_resave):
-        verify_model(model, None, tmpdir, model_name, data[0] if len(data) == 1 else data , True)
+        verify_model(model, None, tmpdir, test_name, data[0] if len(data) == 1 else data , True,
+                     use_external_files_to_store_parameters = use_external_files_to_store_parameters)
     else:
-        save_onnx_model_with_validation_data(tmpdir, model, data[0] if len(data) == 1 else data, model_name, device=None)
-        verify_results_with_onnxruntime(model_name, str(os.path.abspath(tmpdir)))
+        save_onnx_model_with_validation_data(tmpdir, model, data[0] if len(data) == 1 else data, test_name, device=None,
+                                             use_external_files_to_store_parameters = use_external_files_to_store_parameters)
+        verify_results_with_onnxruntime(test_name, str(os.path.abspath(tmpdir)))

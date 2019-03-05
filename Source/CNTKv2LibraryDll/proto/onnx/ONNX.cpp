@@ -93,10 +93,12 @@ void ONNXFormat::InitializeLotusIR()
 }
 
 void ONNXFormat::Save(const FunctionPtr& src, const std::wstring& filepath)
+// void ONNXFormat::Save(const FunctionPtr& src, const std::wstring& filepath, bool useExternalFilesToStoreParameters)
 {
     InitializeLotusIR();
 
-    auto model = CNTKToONNX::CreateModel(src, filepath);
+    auto model = CNTKToONNX::CreateModel(src, filepath); 
+    //auto model = CNTKToONNX::CreateModel(src, filepath, useExternalFilesToStoreParameters);
 #ifdef _WIN32
     onnxruntime::Model::Save(*model, filepath);
 #else

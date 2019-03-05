@@ -3595,6 +3595,8 @@ namespace CNTK
         ///
         /// Save this Function graph into a model file.
         ///
+        //CNTK_API void Save(const std::wstring& filepath, ModelFormat format = ModelFormat::CNTKv2,
+        //    bool useExternalFilesToStoreParameters = false);
         CNTK_API void Save(const std::wstring& filepath, ModelFormat format = ModelFormat::CNTKv2);
 
         ///

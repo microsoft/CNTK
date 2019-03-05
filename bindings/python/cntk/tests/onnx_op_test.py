@@ -59,13 +59,15 @@ def verify_node_names(model1, model2):
                        for name in model1_names]
     assert all(names_preserved) == True
 
-def verify_no_input(model, tmpdir, name):
+def verify_no_input(model, tmpdir, name, use_external_files_to_store_parameters = False):
     init_empty_node_names(model)
 
     opname = model.owner.op_name
 
     loaded_model = None
-    loaded_model, _, _, _ = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
+    loaded_model, _, _, _ = create_and_populate_onnx_test_case_with_model_conversion(
+        model, tmpdir, name, loaded_model, 
+        use_external_files_to_store_parameters = use_external_files_to_store_parameters)
 
     model_shape = model.shape
     dim_denotation = None
@@ -90,7 +92,8 @@ def verify_no_input(model, tmpdir, name):
     verify_node_names(model, loaded_model)
     return loaded_model
 
-def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08, bypass_load_into_cntk = False):
+def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, rtol = 1e-05, atol = 1e-08, 
+                     bypass_load_into_cntk = False, use_external_files_to_store_parameters = False):
     # TODO: eventually we want this test method to be more general to suport 
     # models with multiple inputs instead of just one input.
     assert len(model.arguments) == 1
@@ -105,9 +108,13 @@ def verify_one_input(model, data, tmpdir, name, device=None, loaded_model=None, 
     opname = model.outputs[0].owner.op_name
 
     if bypass_load_into_cntk:
-        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, model, bypass_load_into_cntk=True)
+        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(
+            model, tmpdir, name, model, bypass_load_into_cntk=True,
+            use_external_files_to_store_parameters = use_external_files_to_store_parameters)
     else:
-        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model)
+        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(
+            model, tmpdir, name, loaded_model, 
+            use_external_files_to_store_parameters = use_external_files_to_store_parameters)
 
     # TODO: it is better to compare data.shape with model.arguments[0] and
     # to pad batch dimension as needed.
@@ -169,14 +176,17 @@ def run_model(model, data, device=None):
     o = model.eval(feed, device=device)
     return o
 
-def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None, resave = True, bypass_load_into_cntk = False):
+def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=None, resave = True, bypass_load_into_cntk = False,
+                          use_external_files_to_store_parameters = False):
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
     data = deepcopy(data)
 
     # onnx does not specify sparse tensor. to run imported model, a sparse matrix needs to be converted to a dense matrix 
     if bypass_load_into_cntk:
         dataOnnx = data
-        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, model, resave, True)
+        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(
+            model, tmpdir, name, model, resave, True, 
+            use_external_files_to_store_parameters = use_external_files_to_store_parameters)
     else:
         dataOnnx = None
         if is_list_of_sparse(data):
@@ -192,7 +202,9 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
             else:
                 dataOnnx = transpose_dynamic_axis(data)
 
-        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(model, tmpdir, name, loaded_model, resave)
+        loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(
+            model, tmpdir, name, loaded_model, resave,
+            use_external_files_to_store_parameters = use_external_files_to_store_parameters)
 
     o0 = run_model(model, data, device=device)
     o1 = run_model(loaded_model, dataOnnx, device=device)
@@ -221,11 +233,11 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
                         matched_indices.append(j)
                         break
             assert len(matched_indices) == i+1
-                    
+
 
     save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
 
-def verify_two_input(model, data1, data2, tmpdir, name):
+def verify_two_input(model, data1, data2, tmpdir, name, use_external_files_to_store_parameters=False):
     init_empty_node_names(model)
 
     # data here is reference to the outside data object. create deepcopy to avoid changing the outside data since it might get reused.
@@ -233,7 +245,8 @@ def verify_two_input(model, data1, data2, tmpdir, name):
     data2 = deepcopy(data2)
 
     filename = os.path.join(str(tmpdir), name + R'.onnx')
-    model.save(filename, format=C.ModelFormat.ONNX)
+    model.save(filename, format=C.ModelFormat.ONNX, 
+               use_external_files_to_store_parameters = use_external_files_to_store_parameters)
     opname = model.owner.op_name
 
     loaded_model = C.Function.load(filename, format=C.ModelFormat.ONNX)
@@ -828,8 +841,9 @@ def test_Greater(tmpdir, dtype):
         verify_no_input(model, tmpdir, 'Greater_0')
 
 #GRU
+@pytest.mark.parametrize("use_external_files_to_store_parameters", (False, True))
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_GRU(tmpdir, dtype):
+def test_GRU(tmpdir, dtype, use_external_files_to_store_parameters):
     with C.default_options(dtype = dtype):
         def MakeGRUNameFromConfig(backward, initial_state, activition):
             model_name = 'GRU.' + activition.__name__
@@ -845,8 +859,8 @@ def test_GRU(tmpdir, dtype):
         activation_options = [C.tanh]
         initial_state_options = [0]
 
-        input_dim = 2
-        cell_dim = 3
+        input_dim = 200
+        cell_dim = 30
         batch_size = 1
         sequence_len = 5
 
@@ -860,7 +874,8 @@ def test_GRU(tmpdir, dtype):
                                            initial_state = initial_state,    
                                            go_backwards=backward)(x)
             data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype(dtype)
-            verify_sequence_model(GRUModel, data, tmpdir, model_filename)
+            verify_sequence_model(GRUModel, data, tmpdir, model_filename, 
+                                  use_external_files_to_store_parameters = use_external_files_to_store_parameters)
 
 
 #Hardmax
@@ -1038,8 +1053,9 @@ def test_LRN(tmpdir, dtype, device_id):
         verify_one_input(model, img, tmpdir, 'LRN_2', device)
 
 #LSTM
+@pytest.mark.parametrize("use_external_files_to_store_parameters", (False, True))
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_LSTM(tmpdir, dtype):
+def test_LSTM(tmpdir, dtype, use_external_files_to_store_parameters):
     with C.default_options(dtype = dtype):
         def CreateLSTMModel(activation, 
                             peepholes, 
@@ -1073,8 +1089,8 @@ def test_LSTM(tmpdir, dtype):
         #Recurrence attributes
         initial_state_options = [0, 0.23]
 
-        input_dim = 2
-        cell_dim = 3
+        input_dim = 200
+        cell_dim = 30
         batch_size = 1
         sequence_len = 5
 
@@ -1090,7 +1106,8 @@ def test_LSTM(tmpdir, dtype):
                                         cell_dim = cell_dim,
                                         self_stabilization = enable_self_stabilization)(x)
             data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype(dtype)
-            verify_sequence_model(LSTMmodel, data, tmpdir, model_filename)
+            verify_sequence_model(LSTMmodel, data, tmpdir, model_filename, 
+                                  use_external_files_to_store_parameters = use_external_files_to_store_parameters)
 
 #MatMul
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1402,13 +1419,15 @@ def test_Neg(tmpdir, dtype):
         verify_no_input(model, tmpdir, 'Neg_0')
 
 #OptimizedRNNStack
-OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
-                           (True, 2, 2, 3, 'lstm'), (True, 2, 4, 8, 'lstm'), (True, 2, 6, 8, 'lstm'), 
-                           (True, 4, 2, 3, 'lstm'), (False, 2, 2, 3, 'lstm'), (False, 2, 6, 8, 'lstm'), (False, 4, 4, 8, 'lstm'),
-                           (True, 1, 2, 3, 'rnnReLU'), (True, 4, 4, 8, 'rnnReLU'), (False, 2, 6, 8, 'rnnReLU'), 
-                           (True, 4, 2, 3, 'rnnTanh'), (False, 2, 2, 3, 'rnnTanh'), (True, 1, 2, 3, 'rnnTanh'))
+OPTIM_RNN_STACK_CONFIGS = ((True, 1, 200, 30, 'lstm'), (False, 1, 4, 8, 'lstm'),
+                           (True, 2, 200, 30, 'lstm'), (True, 2, 4, 8, 'lstm'), (True, 2, 6, 8, 'lstm'), 
+                           (True, 4, 200, 30, 'lstm'), (False, 2, 2, 3, 'lstm'), (False, 2, 6, 8, 'lstm'), (False, 4, 4, 8, 'lstm'),
+                           (True, 1, 200, 30, 'rnnReLU'), (True, 4, 4, 8, 'rnnReLU'), (False, 2, 6, 8, 'rnnReLU'), 
+                           (True, 4, 200, 30, 'rnnTanh'), (False, 2, 2, 3, 'rnnTanh'), (True, 1, 2, 3, 'rnnTanh'))
 @pytest.mark.parametrize("bidirectional, num_layers, input_size, hidden_size, recurrent_op", OPTIM_RNN_STACK_CONFIGS)
-def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id):
+@pytest.mark.parametrize("use_external_files_to_store_parameters", (False, True))
+def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id,
+                           use_external_files_to_store_parameters):
     if device_id == -1:
         pytest.skip('Test only runs on GPU')
     dev = cntk_device(device_id)
@@ -1419,7 +1438,8 @@ def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, r
     s = np.asarray(np.random.uniform(-1, 1, (1, 5, input_size)), dtype=np.float32)
     f = C.optimized_rnnstack(x, W, hidden_size, num_layers, bidirectional=bidirectional, recurrent_op=recurrent_op, name='MyRnnStack')
     f.parameters[0].value = np.reshape(np.arange(np.prod(f.parameters[0].value.shape), dtype=np.float32), f.parameters[0].value.shape)
-    verify_sequence_model(f, s, tmpdir, model_filename, resave = False)
+    verify_sequence_model(f, s, tmpdir, model_filename, resave = False,
+                          use_external_files_to_store_parameters = use_external_files_to_store_parameters)
 
 #Pad
 @pytest.mark.parametrize("dtype", DType_Config)
@@ -1645,8 +1665,9 @@ def test_Reshape(tmpdir, dtype):
         verify_one_input(model, data, tmpdir, 'Reshape_1')
 
 #RNN
+@pytest.mark.parametrize("use_external_files_to_store_parameters", (False, True))
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_RNN(tmpdir, dtype):
+def test_RNN(tmpdir, dtype, use_external_files_to_store_parameters):
     with C.default_options(dtype = dtype):
         def CreatRNN(cell_dim, 
                      activation, 
@@ -1701,8 +1722,8 @@ def test_RNN(tmpdir, dtype):
         initial_state_options = [0]
         activation_options = [C.tanh, C.relu, C.sigmoid]
 
-        input_dim = 2
-        hidden_dim = 3
+        input_dim = 200
+        hidden_dim = 30
         batch_size = 1
         sequence_len = 5
 
@@ -1718,7 +1739,8 @@ def test_RNN(tmpdir, dtype):
                 direction, 
                 num_layers)(x)
             data = np.random.uniform(low=0.0, high=1.0, size=(batch_size, sequence_len, input_dim)).astype(dtype)
-            verify_sequence_model(RNNModel, data, tmpdir, model_filename, resave = False)
+            verify_sequence_model(RNNModel, data, tmpdir, model_filename, resave = False,
+                                  use_external_files_to_store_parameters = use_external_files_to_store_parameters)
 
 #Selu
 @pytest.mark.parametrize("dtype", DType_Config)
