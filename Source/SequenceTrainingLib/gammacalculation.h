@@ -575,7 +575,7 @@ public:
             matrixPhoneSeqs.Print("phone seq");
             //matrixPhoneBounds.Print("phone bound");
         }
-        if (isnan(finalscore))   //
+        if (std::isnan(finalscore))   //
         {
             m_derivative.SetValue(0.0);
             totalScore.SetValue(0.0);
