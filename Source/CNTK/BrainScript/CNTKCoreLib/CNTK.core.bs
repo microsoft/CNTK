@@ -30,7 +30,7 @@
 
 # LinearLayer -- create a fully-connected linear projection layer
 # Note: outDim may describe a tensor as well.
-LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} =
+LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0, disableReg=false} =
 {
     # inputRank given: number of zeroes to add to W (mapRank must not be given)
     # mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
@@ -39,8 +39,8 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
         if       BS.Constants.IsNone (inputRank) then Inferred  # not given: one Inferred, which will get expanded
         else if !BS.Constants.IsNone (mapRank)   then Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
         else Repeat (inputRank, Inferred)
-    W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale}
-    b = ParameterTensor {outDim, initValue=initBias}
+    W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale, disableReg=disableReg}
+    b = ParameterTensor {outDim, initValue=initBias, disableReg=disableReg}
     outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
     inferInputRankToMap =
         if      !BS.Constants.IsNone (inputRank) then -1  # means not specified
@@ -87,7 +87,7 @@ GlobalConcatLayer {blockIndex, growthRate, segmentIndex, segmentNum} =
 
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
-DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank, initBias=initBias} : activation )
+DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0, disableReg=false} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank, initBias=initBias, disableReg=disableReg} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
@@ -119,14 +119,15 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     stride = 1, pad = false,
                     lowerPad = 0, upperPad = 0,
                     dilation = 1,
-                    maxTempMemSizeInSamples = 0} =
+                    maxTempMemSizeInSamples = 0,
+					disableReg = false} =
 {
     reductionRank = 1 # TODO: shall become an optional parameter
     outputChannelsShape = _AsArray (numOutputChannels)
     filterRank = Length (filterShape)
     kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, Inferred)) # kernel := filter plus reductionDims
-    W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1}  # [ W x H x C x K ]
-    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)                                                       # [ 1 x 1 x     K ]
+    W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1, disableReg = disableReg}  # [ W x H x C x K ]
+    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias, disableReg = disableReg)                                                       # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     apply (x) = {
         c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, dilation = dilation, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
@@ -148,13 +149,14 @@ GroupConvolutionalLayer {numInputChannels,
                          stride = 1, pad = false,
                          lowerPad = 0, upperPad = 0,
                          dilation = 1,
-                         maxTempMemSizeInSamples = 0} =
+                         maxTempMemSizeInSamples = 0,
+						 disableReg = false} =
 {
     outputChannelsShape = _AsArray (numOutputChannels)
     filterRank = Length (filterShape)
     kernelShape = _ConcatArrays (filterShape, numInputChannels / groups) # kernel := filter plus reductionDims
-    W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1}  # [ W x H x C x K ]
-    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)                                                       # [ 1 x 1 x     K ]
+    W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1, disableReg = disableReg}  # [ W x H x C x K ]
+    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias, disableReg = disableReg)                                                       # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     apply (x) = {
         c = GroupConvolution (W, x, kernelShape , mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, dilation = dilation, maxTempMemSizeInSamples = maxTempMemSizeInSamples, numGroups = groups)
@@ -673,7 +675,7 @@ Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|unifor
 LearnableParameter = Parameter  // deprecated
 
 # TODO: make Parameter take tensor dims?
-ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='', disableReg = false} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
 # TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
