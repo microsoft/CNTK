@@ -388,7 +388,7 @@ public:
         
         if (std::isnan(finalscore)) //
         {
-            CTCPosterior.SetValue(0.0);
+            //CTCPosterior.SetValue(0.0);
             totalScore.SetValue(0.0);
         }
     }
@@ -577,7 +577,7 @@ public:
         }
         if (std::isnan(finalscore))   //
         {
-            m_derivative.SetValue(0.0);
+            //m_derivative.SetValue(0.0);
             totalScore.SetValue(0.0);
         }
         /*alpha.Print("alpha");

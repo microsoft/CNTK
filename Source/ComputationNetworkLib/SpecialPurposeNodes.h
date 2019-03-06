@@ -1139,7 +1139,7 @@ public:
             FrameRange frameRange(InputRef(0).GetMBLayout());
             BackpropToRight(*m_softmaxOfRight, InputRef(inputIndex).Gradient(), Gradient(), *m_CTCposterior);
             InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
-            ElemType finalscore = 0;
+            /*ElemType finalscore = 0;
             //m_derivative.Print("RNNT");
             finalscore = Value().Get00Element();
             //fprintf(stderr, "finalscore:%f\n", finalscore);
@@ -1148,7 +1148,7 @@ public:
             {
                 InputRef(inputIndex).Gradient().SetValue(0.0);
                 //totalScore.SetValue(0.0);
-            }
+            }*/
             //InputRef(inputIndex).Gradient().Print("gradient for 2");
         }
         else
