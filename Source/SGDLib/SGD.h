@@ -79,7 +79,11 @@ enum class AdjustType : int
     Poly,
     Inv,
     Exp,
-    Step
+    Step,
+	Cosine,
+	Cosine_Restart,
+	Liner_Cosine,
+	Noisy_Liner_Cosine
 };
 
 
@@ -123,6 +127,13 @@ struct LRAPIInfo
     double base_;
     double gamma;
     double power;
+	double beta;	//
+	double num_periods;
+	double first_decay_steps;	//Number of steps to decay over
+	double t_mul;	//Used to derive the number of iterations in the i-th period
+	double m_mul;	//Used to derive the initial learning rate of the i-th period:
+	double initial_variance;
+	double variance_decay;
     size_t numItersToShowLR;
     size_t numItersToSaveModel;
     bool reachMaxIter = false;
