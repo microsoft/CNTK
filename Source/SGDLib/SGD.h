@@ -79,7 +79,10 @@ enum class AdjustType : int
     Poly,
     Inv,
     Exp,
-    Step
+    Step,
+	Cosine,
+	Linear_Cosine,
+	Noisy_Linear_Cosine
 };
 
 
@@ -123,6 +126,10 @@ struct LRAPIInfo
     double base_;
     double gamma;
     double power;
+	double beta;
+	double num_periods;
+	double initial_variance;
+	double variance_decay;
     size_t numItersToShowLR;
     size_t numItersToSaveModel;
     bool reachMaxIter = false;
