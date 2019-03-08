@@ -307,6 +307,12 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
 {
     size_t fileOffset = sequenceDsc.OffsetInChunk() + chunkOffsetInFile;
 
+	auto cachedSequencePos = m_fileOffsetToSequenceBuffer.find(fileOffset);
+	if (cachedSequencePos != m_fileOffsetToSequenceBuffer.end())
+	{
+        return cachedSequencePos->second;
+	}
+
     m_fileReader->SetFileOffset(fileOffset);
 
     size_t bytesToRead = sequenceDsc.SizeInBytes();
@@ -430,6 +436,8 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
     }
 
     FillSequenceMetadata(sequence, { sequenceDsc.m_key, 0 });
+
+    m_fileOffsetToSequenceBuffer[fileOffset] = sequence;
     return sequence;
 }
 

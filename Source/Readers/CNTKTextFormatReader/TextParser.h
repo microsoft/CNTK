@@ -10,6 +10,7 @@
 #include "TextConfigHelper.h"
 #include "Index.h"
 #include "CorpusDescriptor.h"
+#include <unordered_map>
 
 namespace CNTK {
 
@@ -135,6 +136,7 @@ private:
     bool m_cacheIndex;
     unsigned int m_numRetries; // specifies the number of times an unsuccessful
                                // file operation should be repeated (default value is 5).
+    std::unordered_map<size_t, SequenceBuffer> m_fileOffsetToSequenceBuffer;
 
     // Corpus descriptor.
     CorpusDescriptorPtr m_corpus;
