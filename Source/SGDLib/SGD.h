@@ -80,9 +80,10 @@ enum class AdjustType : int
     Inv,
     Exp,
     Step,
-	Cosine,
-	Linear_Cosine,
-	Noisy_Linear_Cosine
+    Cosine,
+    Linear_Cosine,
+    Noisy_Linear_Cosine,
+    Sigmoid
 };
 
 
@@ -123,15 +124,16 @@ struct LRAPIInfo
     size_t iter = 0;
     size_t maxIter;
     size_t step;
-    double base_;
+    double baseLR;
     double gamma;
     double power;
-	double beta;
-	double num_periods;
-	double initial_variance;
-	double variance_decay;
+    double beta;
+    double numPeriods;
+    double initialVariance;
+    double varianceDecay;
     size_t numItersToShowLR;
     size_t numItersToSaveModel;
+    size_t stepSize;
     bool reachMaxIter = false;
     size_t sgdTraceLevel;
 
