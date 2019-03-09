@@ -2202,6 +2202,11 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::RNNTError, operands, std::move(additionalProperties), name), name);
     }
 
+    FunctionPtr BiasAttention(const Variable& bias, const Variable& hidden, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::BiasAttention, bias, hidden, Dictionary(), name);
+    }
+
     FunctionPtr Getbias(const Variable& labels, const Variable& bias, const vector<size_t>& spaceTokens, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();

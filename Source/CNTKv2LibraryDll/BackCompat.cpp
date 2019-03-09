@@ -255,6 +255,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Plus;
                 else if (node->OperationName() == OperationNameOf(PlusBroadcastNode))
                     opType = PrimitiveOpType::PlusBroadcast;
+                else if (node->OperationName() == OperationNameOf(BiasAttentionNode))
+                    opType = PrimitiveOpType::BiasAttention;
                 else if (node->OperationName() == OperationNameOf(LogPlusNode))
                     opType = PrimitiveOpType::LogPlus;
                 else if (node->OperationName() == OperationNameOf(MinusNode))

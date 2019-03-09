@@ -103,6 +103,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(LabelsToGraphNode))                    return New<LabelsToGraphNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PlusNode))                             return New<PlusNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PlusBroadcastNode))                    return New<PlusBroadcastNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(BiasAttentionNode))                    return New<BiasAttentionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RandomSampleNode))                     return New<RandomSampleNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RandomSampleInclusionFrequencyNode))   return New<RandomSampleInclusionFrequencyNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ReconcileDynamicAxisNode))             return New<ReconcileDynamicAxisNode<ElemType>>(forward<_Types>(_Args)...);
@@ -853,6 +854,13 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PlusB
 {
     return net.AddNodeToNetAndAttachInputs(New<PlusBroadcastNode<ElemType>>(net.GetDeviceId(), nodeName), {a, b});
 }
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BiasAttention(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<BiasAttentionNode<ElemType>>(net.GetDeviceId(), nodeName), {a, b});
+}
+
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LogPlus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {

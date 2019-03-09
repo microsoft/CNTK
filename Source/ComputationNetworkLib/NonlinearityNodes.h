@@ -8,6 +8,7 @@
 #include "ComputationNode.h"
 #include "Matrix.h"
 #include "TensorView.h"
+#include "Sequences.h"
 
 #include <unordered_set>
 #include <map>
@@ -20,7 +21,12 @@
 #include <numeric>
 #include <assert.h>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 // -----------------------------------------------------------------------
 // UnaryElementWiseWithOpCodeNodeBase (input) -- base for elementwise unary op
@@ -28,7 +34,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // only inputs (but not // function values) are used.
 // -----------------------------------------------------------------------
 
-enum GradientOperationType 
+enum GradientOperationType
 {
     noGradient,
     unaryGradient,
@@ -51,8 +57,8 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorFor(rank, fr);
-        auto input  = InputRef(0).ValueTensorFor(rank, fr);
+        auto result = ValueTensorFor(rank, fr);
+        auto input = InputRef(0).ValueTensorFor(rank, fr);
         result.DoUnaryOpOf(0, input, 1, opForward, opSum);
     }
 
@@ -62,10 +68,10 @@ public:
 
         // get the args
         size_t rank = DetermineElementwiseTensorRank();
-        auto sliceOutputGrad =             GradientTensorFor(rank, fr); // propagate from this one...
-        auto sliceInputGrad  = InputRef(0).GradientTensorFor(rank, fr); // ...to this one
+        auto sliceOutputGrad = GradientTensorFor(rank, fr);            // propagate from this one...
+        auto sliceInputGrad = InputRef(0).GradientTensorFor(rank, fr); // ...to this one
 
-        GradientOperationType opTypeHolder = opType;  // preventing pragma warning C4127
+        GradientOperationType opTypeHolder = opType; // preventing pragma warning C4127
 
         if (opTypeHolder == noGradient)
         {
@@ -75,12 +81,12 @@ public:
         {
             sliceInputGrad.DoUnaryOpOf(Input(inputIndex)->IsGradientInitializedBy(this) ? 0.0f : 1.0f, sliceOutputGrad, 1, opBackward, opSum);
         }
-        else 
+        else
         {
             // If gradient can be compute from output rather than input, then that's better for mem sharing (and faster in most cases).
             // Not possible for Cos().
             auto sliceValue = (opType == binaryWithOutputGradient) ? ValueTensorFor(rank, fr) : // using input or output value
-                InputRef(0).ValueTensorFor(rank, fr);
+                                  InputRef(0).ValueTensorFor(rank, fr);
             sliceInputGrad.DoBinaryOpOf(Input(inputIndex)->IsGradientInitializedBy(this) ? 0.0f : 1.0f, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
         }
     }
@@ -100,7 +106,10 @@ public:
         return opType == binaryWithInputGradient;
     }
 
-    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override { return (opType != noGradient) ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        return (opType != noGradient) ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None;
+    }
 };
 
 #define UnaryElementWiseWithOpCodeNodeBaseMembers UsingComputationNodeMembersBoilerplate;
@@ -134,51 +143,50 @@ public:
 // -----------------------------------------------------------------------
 
 #pragma push_macro("DeclareUnaryElementWiseWithOpCodeNode")
-#define DeclareUnaryElementWiseWithOpCodeNode(Name, Forward, Backward, opType)                                                               \
-    template <class ElemType>                                                                                                                \
-    class Name##Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, opType>                                \
-    {                                                                                                                                        \
-        typedef UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, opType> Base;                                        \
-        UnaryElementWiseWithOpCodeNodeBaseMembers;                                                                                           \
-        static const std::wstring TypeName()                                                                                                 \
-        {                                                                                                                                    \
-            return L## #Name;                                                                                                                \
-        }                                                                                                                                    \
-                                                                                                                                             \
-    public:                                                                                                                                  \
-        DeclareConstructorFromConfigWithNumInputs(Name##Node);                                                                               \
-        Name##Node(DEVICEID_TYPE deviceId, const wstring& Name) :                                                                            \
-            Base(deviceId, Name)                                                                                                             \
-        {                                                                                                                                    \
-        }                                                                                                                                    \
+#define DeclareUnaryElementWiseWithOpCodeNode(Name, Forward, Backward, opType)                                \
+    template <class ElemType>                                                                                 \
+    class Name##Node : public UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, opType> \
+    {                                                                                                         \
+        typedef UnaryElementWiseWithOpCodeNodeBase<ElemType, op##Forward, op##Backward, opType> Base;         \
+        UnaryElementWiseWithOpCodeNodeBaseMembers;                                                            \
+        static const std::wstring TypeName()                                                                  \
+        {                                                                                                     \
+            return L## #Name;                                                                                 \
+        }                                                                                                     \
+                                                                                                              \
+    public:                                                                                                   \
+        DeclareConstructorFromConfigWithNumInputs(Name##Node);                                                \
+        Name##Node(DEVICEID_TYPE deviceId, const wstring& Name) : Base(deviceId, Name)                        \
+        {                                                                                                     \
+        }                                                                                                     \
     }
 
 //                                    Name                   Forward and            Backward opcodes                                                 Gradient optype
-DeclareUnaryElementWiseWithOpCodeNode(Abs,                   Abs,                   ElementwiseProductWithAbsDerivative,                             binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Acos,                  Acos,                  ElementwiseProductWithAcosDerivative,                            binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Asin,                  Asin,                  ElementwiseProductWithAsinDerivative,                            binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Asinh,                 Asinh,                 ElementwiseProductWithAsinhDerivative,                           binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Atan,                  Atan,                  ElementwiseProductWithAtanDerivative,                            binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Atanh,                 Atanh,                 ElementwiseProductWithAtanhDerivative,                           binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Cosh,                  Cosh,                  ElementwiseProductWithCoshDerivative,                            binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Cosine,                Cosine,                ElementwiseProductWithCosDerivative,                             binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Exp,                   Exp,                   ElementwiseProduct,                                              binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Floor,                 Floor,                 None,                                                            noGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Log,                   Log,                   ElementwiseProductWithLogDerivativeFromOutput,                   binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Negate,                Negate,                Negate,                                                          unaryGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Pass,                  Copy,                  Copy,                                                            unaryGradient);
-DeclareUnaryElementWiseWithOpCodeNode(LabelsToGraph,         Copy,                  Copy,                                                            unaryGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Reciprocal,            Reciprocal,            ElementwiseProductWithReciprocalDerivative,                      binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear,       LinearRectifier,       ElementwiseProductWithLinearRectifierDerivativeFromOutput,       binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,               Sigmoid,               ElementwiseProductWithSigmoidDerivativeFromOutput,               binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sin,                   Sin,                   ElementwiseProductWithSinDerivative,                             binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sinh,                  Sinh,                  ElementwiseProductWithSinhDerivative,                            binaryWithInputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Sqrt,                  Sqrt,                  ElementwiseProductWithSqrtDerivative,                            binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Tan,                   Tan,                   ElementwiseProductWithTanDerivative,                             binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(Tanh,                  Tanh,                  ElementwiseProductWithTanhDerivativeFromOutput,                  binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Abs, Abs, ElementwiseProductWithAbsDerivative, binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Acos, Acos, ElementwiseProductWithAcosDerivative, binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Asin, Asin, ElementwiseProductWithAsinDerivative, binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Asinh, Asinh, ElementwiseProductWithAsinhDerivative, binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Atan, Atan, ElementwiseProductWithAtanDerivative, binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Atanh, Atanh, ElementwiseProductWithAtanhDerivative, binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Cosh, Cosh, ElementwiseProductWithCoshDerivative, binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Cosine, Cosine, ElementwiseProductWithCosDerivative, binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Exp, Exp, ElementwiseProduct, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Floor, Floor, None, noGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Log, Log, ElementwiseProductWithLogDerivativeFromOutput, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Negate, Negate, Negate, unaryGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Pass, Copy, Copy, unaryGradient);
+DeclareUnaryElementWiseWithOpCodeNode(LabelsToGraph, Copy, Copy, unaryGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Reciprocal, Reciprocal, ElementwiseProductWithReciprocalDerivative, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(RectifiedLinear, LinearRectifier, ElementwiseProductWithLinearRectifierDerivativeFromOutput, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sigmoid, Sigmoid, ElementwiseProductWithSigmoidDerivativeFromOutput, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sin, Sin, ElementwiseProductWithSinDerivative, binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sinh, Sinh, ElementwiseProductWithSinhDerivative, binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Sqrt, Sqrt, ElementwiseProductWithSqrtDerivative, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Tan, Tan, ElementwiseProductWithTanDerivative, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(Tanh, Tanh, ElementwiseProductWithTanhDerivativeFromOutput, binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(ExponentialLinearUnit, ExponentialLinearUnit, ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(StableSigmoid,         StableSigmoid,         ElementwiseProductWithSigmoidDerivativeFromOutput,               binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(StraightThrough,       StraightThrough,       ElementwiseProductWithStraightThroughDerivative,                 binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(StableSigmoid, StableSigmoid, ElementwiseProductWithSigmoidDerivativeFromOutput, binaryWithOutputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(StraightThrough, StraightThrough, ElementwiseProductWithStraightThroughDerivative, binaryWithInputGradient);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 
@@ -210,7 +218,7 @@ public:
 
         // get the args
         // Some do not consume input and/or output values. Don't touch those, pass dummies instead, since memshare may have taken them away already.
-        auto sliceOutputGrad = GradientFor(fr);          // propagate from this one...
+        auto sliceOutputGrad = GradientFor(fr);            // propagate from this one...
         auto sliceInputGrad = InputRef(0).GradientFor(fr); // ...to this one
         auto sliceInputValue = InputUsedInComputingInputNodesGradients(0) ? InputRef(0).ValueFor(fr) : Matrix<ElemType>(sliceInputGrad.GetDeviceId());
         auto sliceOutputValue = OutputUsedInComputingInputNodesGradients() ? ValueFor(fr) : Matrix<ElemType>(sliceInputGrad.GetDeviceId());
@@ -226,7 +234,7 @@ public:
     {
         // move the target matrix to the target device, since below it is accessed as slices which cannot move
         // TODO: once this gets reimplemented using TensorView, then this is no longer needed.
-        InputRef(0).Value().TransferToDeviceIfNotThere(Value().GetDeviceId(), /*isBeingMoved=*/ false);
+        InputRef(0).Value().TransferToDeviceIfNotThere(Value().GetDeviceId(), /*isBeingMoved=*/false);
 
         auto values = ValueFor(fr);
         ForwardPropV(values, InputRef(0).ValueFor(fr));
@@ -295,7 +303,10 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
     {
@@ -363,7 +374,10 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues)
     {
@@ -434,15 +448,24 @@ public:
 
     /*virtual*/ void BackpropToV(Matrix<ElemType>& gradient, const Matrix<ElemType>& inputFunctionValues, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& functionValues) override
     {
-        gradient; inputFunctionValues; inputGradientValues; gradientValues;
+        gradient;
+        inputFunctionValues;
+        inputGradientValues;
+        gradientValues;
         // Hardmax cannot back-propagate a gradient.
         // We must not forbid this function to be called, though, since Hardmax may be running
         // as part of a recurrent decoding loop. Sequence-to-sequence models run the Hardmax
         // node inside the training without back-propagating into them.
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     /*virtual*/ void ForwardPropV(Matrix<ElemType>& functionValues, const Matrix<ElemType>& inputFunctionValues) override
     {
@@ -454,16 +477,19 @@ template class HardmaxNode<float>;
 template class HardmaxNode<double>;
 template class HardmaxNode<half>;
 
-
-
 template <class ElemType>
 class TopKNode : public ComputationNode<ElemType>, public MultiOutputNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"TopK"; }
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"TopK";
+    }
 
 public:
-    TopKNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name), MultiOutputNode<ElemType>(2) {}
+    TopKNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), MultiOutputNode<ElemType>(2) {}
     TopKNode(DEVICEID_TYPE deviceId, const wstring& name, size_t k)
         : Base(deviceId, name), MultiOutputNode<ElemType>(2), m_k(k) {}
 
@@ -481,7 +507,7 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-#ifdef _MSC_VER 
+#ifdef _MSC_VER
         auto& outputValuePtrRef = this->ValuePtrRef();
         auto& inputValuePtrRef = Input(0)->ValuePtrRef();
 #else
@@ -503,7 +529,7 @@ public:
         // Backpropagation works the same way as for other nodes that take top element(s) such as max pooling.
         // The values that are not selected get a gradient of zero, otherwise the gradient is copied to the
         // positions that were responsible for the top values. This is a scatter operation.
-#ifdef _MSC_VER 
+#ifdef _MSC_VER
         auto&& inputGradient = Input(0)->GradientPtrRef();
         auto&& outputGradient = GradientPtrRef();
 #else
@@ -515,7 +541,7 @@ public:
         auto&& reshapedOutputGradient = outputGradient->Reshaped(1, outputGradient->GetNumElements());
 
         // The indices take values between 0 and the dimension of the axis over which we compute the top k
-        // Since the matrix class lacks a scatter that can handle indices arising from gather operations 
+        // Since the matrix class lacks a scatter that can handle indices arising from gather operations
         // over a particular axis of a multidimensional tensor, we patch the indices here so that they look
         // as if they were generated from a gather-like operation over a 1-dimensional tensor.
         auto numCols = m_sortedIndices->GetNumCols();
@@ -533,8 +559,14 @@ public:
         reshapedInputGradient.DoScatterColumnsOf(ElemType(1), m_sortedIndices->Reshaped(1, m_sortedIndices->GetNumElements()), reshapedOutputGradient, ElemType(1), /*idxHaveDups*/ false);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        return false;
+    }
 
     virtual void Validate(bool isFinalValidationPass) override
     {
@@ -560,8 +592,6 @@ private:
 
 template class TopKNode<float>;
 template class TopKNode<double>;
-
-
 
 // -----------------------------------------------------------------------
 // If (flag, ifValue, elseValue)
@@ -601,7 +631,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =           ValueTensorFor(rank, fr);
+        auto result = ValueTensorFor(rank, fr);
         auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input2 = InputRef(2).ValueTensorFor(rank, fr.AllowBroadcast());
@@ -614,8 +644,8 @@ public:
             return;
 
         size_t rank = DetermineElementwiseTensorRank();
-        auto gradient      =                    GradientTensorFor(rank, fr);
-        auto input0        = InputRef(0).            ValueTensorFor(rank, fr.AllowBroadcast());
+        auto gradient = GradientTensorFor(rank, fr);
+        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
         auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
 
         // if reduction then mask the respective input(s) (zero out the gaps)
@@ -632,8 +662,14 @@ public:
         }
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex)  const override { return childIndex == 0; }
-    virtual bool OutputUsedInComputingInputNodesGradients()  const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        return childIndex == 0;
+    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
 };
 
 template class IfNode<float>;
@@ -649,7 +685,7 @@ template class IfNode<double>;
 template <class ElemType>
 class ClipNode : public ComputationNode<ElemType>, public NumInputs<3>
 {
-    typedef ComputationNode<ElemType> Base;    
+    typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
 
     static const std::wstring TypeName()
@@ -667,7 +703,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorFor(rank, fr);
+        auto result = ValueTensorFor(rank, fr);
         auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input2 = InputRef(2).ValueTensorFor(rank, fr.AllowBroadcast());
@@ -681,13 +717,13 @@ public:
         if (inputIndex == 2)
         {
             size_t rank = DetermineElementwiseTensorRank();
-            auto gradient =                           GradientTensorFor(rank, fr);
+            auto gradient = GradientTensorFor(rank, fr);
             auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
-            auto input =         InputRef(inputIndex).ValueTensorFor(rank, fr.AllowBroadcast());
-            auto output =                             ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input = InputRef(inputIndex).ValueTensorFor(rank, fr.AllowBroadcast());
+            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
             inputGradient.AddCopyIfEqualOf(input, output, gradient);
-        }        
+        }
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -699,11 +735,114 @@ public:
 template class ClipNode<float>;
 template class ClipNode<double>;
 
+// -----------------------------------------------------------------------
+// BiasAttentionNode (minValue, maxValue, tensor)
+// -----------------------------------------------------------------------
+// This node clips the values in a tensor elements-wise to ensure they are within minValue <= x >= maxValue
+// The gradient (per element) is (ge(x, minValue) AND le(x, maxValue)), or in other words, 1 if the value has
+// not been clipped, and 0 if the value has been clipped.
+
+template <class ElemType>
+class BiasAttentionNode : public ComputationNode<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+
+    static const std::wstring TypeName()
+    {
+        return L"BiasAttention";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(BiasAttentionNode);
+    BiasAttentionNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        /*size_t rank = DetermineElementwiseTensorRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input2 = InputRef(2).ValueTensorFor(rank, fr.AllowBroadcast());
+
+        result.AssignClipOf(input0, input1, input2);*/
+        auto input0 = OneSampleTensorFor(0, /*gradient=*/false, fr.AllowBroadcast());
+        auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
+        Matrix<ElemType>& hiddenMatrix = input0.GetSOB();
+        Matrix<ElemType>& outMatrix = output.GetSOB();
+        Matrix<ElemType>& biasMatrix = InputRef(1).Value();
+        auto MBLayoutofHidden = InputRef(0).GetMBLayout();
+        auto MBLayoutofBias = InputRef(1).GetMBLayout();
+
+        Matrix<ElemType> betaVector(outMatrix.GetDeviceId()), CMatrix(outMatrix.GetDeviceId());
+        //loop for each parallel sequence
+        //for (size_t nChunk = 0; nChunk < MBLayoutofHidden.)
+        //loop for each seq
+        assert(MBLayoutofHidden->GetNumSequences() == MBLayoutofBias->GetNumSequences());
+        auto BiasSeqs = MBLayoutofBias->GetAllSequences();
+        size_t seqId = 0; //phone
+        for (const auto& seq : MBLayoutofHidden->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            if (seq.tBegin + seq.GetNumTimeSteps() < fr.seqIndex)
+            {
+                auto biasSeq = MBLayoutofBias->FindSequence(seqId);
+                
+                size_t numFramesBias = biasSeq.GetNumTimeSteps();
+                size_t nBegin = biasSeq.tBegin;
+                Matrix<ElemType> wordMatrix = biasMatrix.ColumnSlice(nBegin, numFramesBias);
+                wordMatrix.Multiply(hiddenMatrix, true, wordMatrix, true, betaVector);
+                //betaVector.AssignSoftmaxSum();
+                betaVector.InplaceLogSoftmax(false);
+                betaVector.InplaceExp();
+                CMatrix.Multiply(wordMatrix, true, betaVector, true, CMatrix);
+                outMatrix.SetValue(CMatrix);
+            }
+            seqId++;
+        }
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // there is only a gradient for the input tensor that is to be clipped
+        if (inputIndex == 2)
+        {
+        }
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateNaryZip(isFinalValidationPass, /* allow broadcast */ true, /* num Inputs */ 2);
+    }
+
+    TensorView<ElemType> OneSampleTensorFor(int inputIndex /*-1 for output*/, bool gradient /*instead of value*/, const FrameRange& fr)
+    {
+        auto input = inputIndex < 0 ? this : Input(inputIndex).get();
+        auto data = gradient ? input->GradientPtr() : input->ValuePtr();
+        size_t rank = input->GetSampleLayout().GetRank();
+        if (inputIndex == 0 && rank == 1) // transposing a 1D tensor implies it is really a 2D tensor. Note that m_transpose applies to left operand only.
+            rank = 2;
+        if (!InputRef(0).HasMBLayout()) // left input is no MB data: run normally
+            return input->DataTensorFor(data, rank, fr);
+        auto tensorShape = input->GetOneSampleTensorSliceFor(rank, fr);
+        return TensorView<ElemType>(data, tensorShape);
+    }
+};
+
+template class BiasAttentionNode<float>;
+template class BiasAttentionNode<double>;
 
 // -----------------------------------------------------------------------
 // CompareNode(a,b)
 // -----------------------------------------------------------------------
-// Template parameters compType (-1, 0, 1) and polarity (0, 1) are used selecting one of the six basic comparison operations. 
+// Template parameters compType (-1, 0, 1) and polarity (0, 1) are used selecting one of the six basic comparison operations.
 // Note: parametrizing the 6 comparison operations with the two parameters 'compType' an 'polarity' is motivated by:
 //
 // comp(a, b, compType, polarity) <==> sign(a-b) == compType, if polarity == 0
@@ -712,23 +851,24 @@ template <class ElemType, int compType, int polarity>
 class ComparisonNode : public BinaryElementWiseNode<ElemType>
 {
 private:
-    // Index corresponds to different comparison operations. 
+    // Index corresponds to different comparison operations.
     const static int index = 1 + compType + 3 * polarity;
 
     // The operations are indexed in the same order they appear in enum ElementWiseOperator: "Less", "Equal", "Greater", "GreaterEqual", "NotEqual", "LessEqual".
     // This ordering is checked below:
-    static_assert(1 == ElementWiseOperator::opEqual         - ElementWiseOperator::opLess, "ElementWiseOperator::opEqual has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(2 == ElementWiseOperator::opGreater       - ElementWiseOperator::opLess, "ElementWiseOperator::opGreater has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(3 == ElementWiseOperator::opGreaterEqual  - ElementWiseOperator::opLess, "ElementWiseOperator::opGreaterEqual has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(4 == ElementWiseOperator::opNotEqual      - ElementWiseOperator::opLess, "ElementWiseOperator::opNotEqual has wrong value relative to ElementWiseOperator::opLess");
-    static_assert(5 == ElementWiseOperator::opLessEqual     - ElementWiseOperator::opLess, "ElementWiseOperator::opLessEqual has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(1 == ElementWiseOperator::opEqual - ElementWiseOperator::opLess, "ElementWiseOperator::opEqual has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(2 == ElementWiseOperator::opGreater - ElementWiseOperator::opLess, "ElementWiseOperator::opGreater has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(3 == ElementWiseOperator::opGreaterEqual - ElementWiseOperator::opLess, "ElementWiseOperator::opGreaterEqual has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(4 == ElementWiseOperator::opNotEqual - ElementWiseOperator::opLess, "ElementWiseOperator::opNotEqual has wrong value relative to ElementWiseOperator::opLess");
+    static_assert(5 == ElementWiseOperator::opLessEqual - ElementWiseOperator::opLess, "ElementWiseOperator::opLessEqual has wrong value relative to ElementWiseOperator::opLess");
 
 public:
-    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
 
     static const std::wstring TypeName()
     {
-    const wchar_t* names[] = { L"Less", L"Equal", L"Greater", L"GreaterEqual", L"NotEqual", L"LessEqual" };
+        const wchar_t* names[] = {L"Less", L"Equal", L"Greater", L"GreaterEqual", L"NotEqual", L"LessEqual"};
         return names[index];
     }
 
@@ -738,17 +878,23 @@ public:
     {
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex)  const override { return childIndex == 0; }
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        return childIndex == 0;
+    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorFor(rank, fr);
+        auto result = ValueTensorFor(rank, fr);
         auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
 
-        result.DoBinaryOpOf(0, input0, input1, 1.0f, static_cast<ElementWiseOperator> (ElementWiseOperator::opLess + index), ElementWiseOperator::opSum);
+        result.DoBinaryOpOf(0, input0, input1, 1.0f, static_cast<ElementWiseOperator>(ElementWiseOperator::opLess + index), ElementWiseOperator::opSum);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -759,30 +905,35 @@ public:
 
 // Define macro that defines and instantiates different comparison nodes.
 // Unfortuanately the C++ 11 type alias syntax doesn't work for mpic++ so we use this more ugly way.
-#define DefineComparisonNode(ClassName, compType, polarity)             \
-template <class ElemType>                                               \
-class ClassName : public ComparisonNode<ElemType, compType, polarity>   \
-{                                                                       \
-    typedef ComparisonNode<ElemType, compType, polarity> Base;          \
-    UsingComputationNodeMembersBoilerplate;                             \
-                                                                        \
-public:                                                                 \
-    static const std::wstring TypeName() { return Base::TypeName(); }   \
-    DeclareConstructorFromConfigWithNumInputs(ClassName);               \
-    ClassName(DEVICEID_TYPE deviceId, const wstring& name)              \
-            : Base(deviceId, name)                                      \
-    {                                                                   \
-    }                                                                   \
-};                                                                      \
-                                                                        \
-template class ClassName<float>;                                        \
-template class ClassName<double>;                                       \
-template class ClassName<half>;
+#define DefineComparisonNode(ClassName, compType, polarity)               \
+    template <class ElemType>                                             \
+    class ClassName : public ComparisonNode<ElemType, compType, polarity> \
+    {                                                                     \
+        typedef ComparisonNode<ElemType, compType, polarity> Base;        \
+        UsingComputationNodeMembersBoilerplate;                           \
+                                                                          \
+    public:                                                               \
+        static const std::wstring TypeName()                              \
+        {                                                                 \
+            return Base::TypeName();                                      \
+        }                                                                 \
+        DeclareConstructorFromConfigWithNumInputs(ClassName);             \
+        ClassName(DEVICEID_TYPE deviceId, const wstring& name)            \
+            : Base(deviceId, name)                                        \
+        {                                                                 \
+        }                                                                 \
+    };                                                                    \
+                                                                          \
+    template class ClassName<float>;                                      \
+    template class ClassName<double>;                                     \
+    template class ClassName<half>;
 
-DefineComparisonNode(LessNode,         -1, 0)
-DefineComparisonNode(EqualNode,         0, 0)
-DefineComparisonNode(GreaterNode,       1, 0)
-DefineComparisonNode(GreaterEqualNode, -1, 1)
-DefineComparisonNode(NotEqualNode,      0, 1)
-DefineComparisonNode(LessEqualNode,     1, 1)
-}}}
+DefineComparisonNode(LessNode, -1, 0)
+    DefineComparisonNode(EqualNode, 0, 0)
+        DefineComparisonNode(GreaterNode, 1, 0)
+            DefineComparisonNode(GreaterEqualNode, -1, 1)
+                DefineComparisonNode(NotEqualNode, 0, 1)
+                    DefineComparisonNode(LessEqualNode, 1, 1)
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft
