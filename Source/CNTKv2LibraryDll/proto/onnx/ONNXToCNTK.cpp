@@ -37,6 +37,7 @@ public:
         VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr,
         const DeviceDescriptor &computeDevice);
 
+    static std::string model_location_;
 private:
     static FunctionPtr CreateCNTKNode(const Node *node, const std::vector<Variable> &inputs, const Graph *graph,
         VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr,
@@ -469,10 +470,8 @@ void LoadRawDataAndUnpack(onnx::TensorProto &tensor_proto, bool doUnpack)
         if (it != external_data.end())
         {
             std::string filename = it->value();
-            FILE* fp;
-            _wfopen_s(&fp, ToFixedWString(filename).c_str(), L"rb");
             std::string raw_data_from_file;
-            Env::Default().ReadFileAsString(ToFixedWString(filename).c_str(), &raw_data_from_file);
+            Env::Default().ReadFileAsString(ToFixedWString(ONNXToCNTKHelper::model_location_ + "/" + filename).c_str(), &raw_data_from_file);
             const void* raw_data = raw_data_from_file.data();
             size_t raw_data_len = raw_data_from_file.size();
             tensor_proto.set_raw_data(raw_data, raw_data_len);
@@ -491,8 +490,11 @@ void LoadRawDataAndUnpack(onnx::TensorProto &tensor_proto, bool doUnpack)
         if (tensor_proto.int32_data().empty())
         {
             std::vector<int32_t> srcData(count);
-            onnxruntime::utils::UnpackTensor(tensor_proto, tensor_proto.raw_data().data(), tensor_proto.raw_data().size(), &srcData[0], count);
-            std::copy(srcData.begin(), srcData.end(), tensor_proto.mutable_int32_data()->begin()); 
+#pragma warning (disable: 4238)
+            bool* p_data = (bool*)(&srcData[0]);
+            Status status = onnxruntime::utils::UnpackTensor(tensor_proto, tensor_proto.raw_data().data(), tensor_proto.raw_data().size(), p_data, count * 4);
+            tensor_proto.mutable_int32_data()->Resize(count, 0);
+            std::copy(srcData.begin(), srcData.end(), tensor_proto.mutable_int32_data()->begin());
         } 
     break;
     case TensorProto_DataType_INT64:
@@ -500,6 +502,7 @@ void LoadRawDataAndUnpack(onnx::TensorProto &tensor_proto, bool doUnpack)
         {
             std::vector<int64_t> srcData(count);
             onnxruntime::utils::UnpackTensor(tensor_proto, tensor_proto.raw_data().data(), tensor_proto.raw_data().size(), &srcData[0], count);
+            tensor_proto.mutable_int64_data()->Resize(count, 0);
             std::copy(srcData.begin(), srcData.end(), tensor_proto.mutable_int64_data()->begin()); 
         } 
         break;
@@ -508,6 +511,7 @@ void LoadRawDataAndUnpack(onnx::TensorProto &tensor_proto, bool doUnpack)
         {
             std::vector<int32_t> srcData(count);
             onnxruntime::utils::UnpackTensor(tensor_proto, tensor_proto.raw_data().data(), tensor_proto.raw_data().size(), &srcData[0], count);
+            tensor_proto.mutable_int32_data()->Resize(count, 0);
             std::copy(srcData.begin(), srcData.end(), tensor_proto.mutable_int32_data()->begin());
         }
         break;
@@ -3724,8 +3728,10 @@ void FilterGraphOutputs(std::vector<Variable> &outputVariables)
     }
 }
 
-FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescriptor &computeDevice)
+FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescriptor &computeDevice,
+    const std::string& model_location)
 {
+    ONNXToCNTKHelper::model_location_ = GetRootPath(model_location);
     FunctionPtr cntkModel;
 
     // To use depth-first-traversal, keeps a collection of visited nodes.
@@ -3927,3 +3933,5 @@ std::pair<bool, std::vector<FunctionPtr>> ONNXToCNTKHelper::CheckNodeBelongsToOp
     }
     return std::make_pair(isOptimizedRnnStack, lstmCntkFunction);
 }
+
+std::string CNTK::ONNXToCNTKHelper::model_location_;

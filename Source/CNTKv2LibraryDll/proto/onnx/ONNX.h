@@ -14,8 +14,7 @@ namespace CNTK
     class ONNXFormat
     {
     public:
-        // static void Save(const FunctionPtr& src, const std::wstring& filepath, bool useExternalFilesToStoreParameters = false);
-        static void Save(const FunctionPtr& src, const std::wstring& filepath);
+        static void Save(const FunctionPtr& src, const std::wstring& filepath, bool useExternalFilesToStoreParameters = false);
         static FunctionPtr Load(const std::wstring& filepath, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
     private:
         static void InitializeLotusIR();

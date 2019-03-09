@@ -9,6 +9,7 @@
 #include "CNTKLibrary.h"
 
 #include <set>
+#include <regex>
 
 namespace onnxruntime
 {
@@ -215,5 +216,6 @@ private:
     static std::set<std::string> _onnxSimpleBatchAxisOps;
 };
 
+std::string GetRootPath(const std::string& rootPath);
 } // namespace ONNX
 } // namespace CNTK

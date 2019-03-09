@@ -221,11 +221,11 @@ def SaveData(test_data_dir, prefix, onnx_variables, variables, data_list, names,
         onnx_value_info_proto = find_onnx_value_info_proto_with_matching_name(onnx_variables, n, onnx_variables[0])
         save_cntk_data_as_onnx_tensor(os.path.join(test_data_dir, '{0}_{1}.pb'.format(prefix, i)), v, d, onnx_value_info_proto)
 
-def Save(dir, func, inputs, outputs, batch_size=1):
+def Save(dir, func, inputs, outputs, batch_size=1, use_external_files_to_store_parameters = False):
     if not os.path.exists(dir):
         os.makedirs(dir)
     model_file_path = os.path.join(dir, model_file)
-    func.save(model_file_path, C.ModelFormat.ONNX)
+    func.save(model_file_path, C.ModelFormat.ONNX, use_external_files_to_store_parameters = use_external_files_to_store_parameters)
     onnx_model = onnx.load(model_file_path)
     onnx_model_description = onnx_model.graph.doc_string
     uid_name_map = dict(tuple(x[3:-3].split(', ')) for x in re.findall(r'<<<[^>]*>>>', onnx_model_description)[1:])
@@ -284,10 +284,11 @@ os.mkdir(tmpdir)
 #   |   |   |   +-- output_0.pb
 #   |   +-- test_model2
 #     ...
+@pytest.mark.parametrize("use_external_files_to_store_parameters", (False, True))
 @pytest.mark.parametrize('model_name',
     [model_name for model_name in cntk_model_names],
     ids=[model_name for model_name in cntk_model_names])
-def test_cntk_model(model_name):
+def test_cntk_model(model_name, use_external_files_to_store_parameters):
     if model_name in skip_cntk_model_names:
         pytest.skip('Skip cntk model test. ')
     cntk_base_dir = get_base_dir('PretrainedModelsV2')
@@ -296,6 +297,8 @@ def test_cntk_model(model_name):
     model = C.Function.load(model_dir, format=C.ModelFormat.CNTKv2)
 
     resave_model_dir = os.path.join(tmpdir, 'test_' + model_name)
+    if use_external_files_to_store_parameters:
+        resave_model_dir += "_ext"
     resave_model_path = os.path.join(resave_model_dir, model_file)
 
     np.random.seed(3)
@@ -303,19 +306,22 @@ def test_cntk_model(model_name):
     data_x = np.asarray(np.random.uniform(-1, 1, input_shape), dtype=np.float32)
     data_y = model.eval({model.arguments[0]:data_x})
 
-    Save(resave_model_dir, model, data_x, data_y)
+    Save(resave_model_dir, model, data_x, data_y, 
+         use_external_files_to_store_parameters = use_external_files_to_store_parameters)
 
-    reloaded_model = C.Function.load(resave_model_path, format=C.ModelFormat.ONNX)
-    data_y_ = reloaded_model.eval({reloaded_model.arguments[0]:data_x})
+    # CNTK evaluation fails imported ResNet110 model because of its depth.
+    if model_name != "ResNet110_CIFAR10_CNTK.model":
+        reloaded_model = C.Function.load(resave_model_path, format=C.ModelFormat.ONNX)
+        data_y_ = reloaded_model.eval({reloaded_model.arguments[0]:data_x})
 
-    np.testing.assert_equal(len(data_y), len(data_y_))
-    for i in range(len(data_y)):
-        np.testing.assert_equal(data_y[i].dtype, data_y_[i].dtype)
-        np.testing.assert_allclose(
-            data_y[i],
-            data_y_[i],
-            rtol=1e-3,
-            atol=1e-4)
+        np.testing.assert_equal(len(data_y), len(data_y_))
+        for i in range(len(data_y)):
+            np.testing.assert_equal(data_y[i].dtype, data_y_[i].dtype)
+            np.testing.assert_allclose(
+                data_y[i],
+                data_y_[i],
+                rtol=1e-3,
+                atol=1e-4)
 
     verify_results_with_onnxruntime(model_name, str(os.path.abspath(tmpdir)))
 
@@ -383,10 +389,10 @@ def verify_model(cntk_model, node_name, tmpdir, model_name, image = None, skip_r
     [model_name for model_name in rnn_model_names],
     ids=[model_name for model_name in rnn_model_names])
 def test_cntk_rnn_models(model_name, use_external_files_to_store_parameters):
-
     if model_name in skip_rnn_model_names:
         pytest.skip('Skip cntk rnn model test. ')
 
+    rnn_base_dir = get_base_dir('rnn_models')
     model_dir = os.path.join(rnn_base_dir, model_name)
     model = C.Function.load(model_dir, format=C.ModelFormat.CNTKv2)
 

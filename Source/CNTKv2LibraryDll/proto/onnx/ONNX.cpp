@@ -92,13 +92,11 @@ void ONNXFormat::InitializeLotusIR()
     });
 }
 
-void ONNXFormat::Save(const FunctionPtr& src, const std::wstring& filepath)
-// void ONNXFormat::Save(const FunctionPtr& src, const std::wstring& filepath, bool useExternalFilesToStoreParameters)
+void ONNXFormat::Save(const FunctionPtr& src, const std::wstring& filepath, bool useExternalFilesToStoreParameters)
 {
     InitializeLotusIR();
 
-    auto model = CNTKToONNX::CreateModel(src, filepath); 
-    //auto model = CNTKToONNX::CreateModel(src, filepath, useExternalFilesToStoreParameters);
+    auto model = CNTKToONNX::CreateModel(src, filepath, useExternalFilesToStoreParameters);
 #ifdef _WIN32
     onnxruntime::Model::Save(*model, filepath);
 #else
@@ -120,6 +118,6 @@ FunctionPtr ONNXFormat::Load(const std::wstring& filepath, const DeviceDescripto
     if (!loadStatus.IsOK())
         LogicError("Failed to load model: '%s'", loadStatus.ErrorMessage().c_str());
 
-    FunctionPtr cntkFunction = ONNXToCNTK::CreateGraph(&model->MainGraph(), computeDevice);
+    FunctionPtr cntkFunction = ONNXToCNTK::CreateGraph(&model->MainGraph(), computeDevice, ToLegacyString(ToUTF8(filepath)));
     return cntkFunction;
 }

@@ -1419,15 +1419,13 @@ def test_Neg(tmpdir, dtype):
         verify_no_input(model, tmpdir, 'Neg_0')
 
 #OptimizedRNNStack
-OPTIM_RNN_STACK_CONFIGS = ((True, 1, 200, 30, 'lstm'), (False, 1, 4, 8, 'lstm'),
-                           (True, 2, 200, 30, 'lstm'), (True, 2, 4, 8, 'lstm'), (True, 2, 6, 8, 'lstm'), 
-                           (True, 4, 200, 30, 'lstm'), (False, 2, 2, 3, 'lstm'), (False, 2, 6, 8, 'lstm'), (False, 4, 4, 8, 'lstm'),
-                           (True, 1, 200, 30, 'rnnReLU'), (True, 4, 4, 8, 'rnnReLU'), (False, 2, 6, 8, 'rnnReLU'), 
-                           (True, 4, 200, 30, 'rnnTanh'), (False, 2, 2, 3, 'rnnTanh'), (True, 1, 2, 3, 'rnnTanh'))
+OPTIM_RNN_STACK_CONFIGS = ((True, 1, 2, 3, 'lstm'), (False, 1, 4, 8, 'lstm'),
+                           (True, 2, 2, 3, 'lstm'), (True, 2, 4, 8, 'lstm'), (True, 2, 6, 8, 'lstm'), 
+                           (True, 4, 2, 3, 'lstm'), (False, 2, 2, 3, 'lstm'), (False, 2, 6, 8, 'lstm'), (False, 4, 4, 8, 'lstm'),
+                           (True, 1, 2, 3, 'rnnReLU'), (True, 4, 4, 8, 'rnnReLU'), (False, 2, 6, 8, 'rnnReLU'), 
+                           (True, 4, 2, 3, 'rnnTanh'), (False, 2, 2, 3, 'rnnTanh'), (True, 1, 2, 3, 'rnnTanh'))
 @pytest.mark.parametrize("bidirectional, num_layers, input_size, hidden_size, recurrent_op", OPTIM_RNN_STACK_CONFIGS)
-@pytest.mark.parametrize("use_external_files_to_store_parameters", (False, True))
-def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id,
-                           use_external_files_to_store_parameters):
+def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, recurrent_op, tmpdir, device_id):
     if device_id == -1:
         pytest.skip('Test only runs on GPU')
     dev = cntk_device(device_id)
@@ -1438,8 +1436,7 @@ def test_OptimizedRNNStack(bidirectional, num_layers, input_size, hidden_size, r
     s = np.asarray(np.random.uniform(-1, 1, (1, 5, input_size)), dtype=np.float32)
     f = C.optimized_rnnstack(x, W, hidden_size, num_layers, bidirectional=bidirectional, recurrent_op=recurrent_op, name='MyRnnStack')
     f.parameters[0].value = np.reshape(np.arange(np.prod(f.parameters[0].value.shape), dtype=np.float32), f.parameters[0].value.shape)
-    verify_sequence_model(f, s, tmpdir, model_filename, resave = False,
-                          use_external_files_to_store_parameters = use_external_files_to_store_parameters)
+    verify_sequence_model(f, s, tmpdir, model_filename, resave = False)
 
 #Pad
 @pytest.mark.parametrize("dtype", DType_Config)

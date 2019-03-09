@@ -28,8 +28,7 @@ namespace CNTK
     class CNTKToONNX
     {
     public:
-        static std::unique_ptr<onnxruntime::Model> CreateModel(const FunctionPtr& src, const std::wstring& filepath);
-        //static std::unique_ptr<onnxruntime::Model> CreateModel(
-        //    const FunctionPtr& src, const std::wstring& filepath, bool useExternalFilesToStoreParameters);
+        static std::unique_ptr<onnxruntime::Model> CreateModel(
+            const FunctionPtr& src, const std::wstring& filepath, bool useExternalFilesToStoreParameters);
     };
 }
