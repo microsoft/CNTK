@@ -62,7 +62,8 @@ template SGD<double>::SGD(const ConfigParameters&);
 template SGD<float>::SGD(const ScriptableObjects::IConfigRecord&);
 template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
 
-normal_distribution<double> normalDist(0,1);
+using Params = std::normal_distribution<>::param_type;
+normal_distribution<double> normalDist(0, 1);
 std::default_random_engine generator;
 
 // -----------------------------------------------------------------------
@@ -1297,7 +1298,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 else if (AdjustType::Noisy_Linear_Cosine == m_lrapiInfo.adjustType)
                 {
                     double eps_t_stddev = sqrt(m_lrapiInfo.initialVariance / pow((1 + m_lrapiInfo.iter), m_lrapiInfo.varianceDecay));
-                    double eps_t = normalDist(generator) * eps_t_stddev;
+                    normalDist.param(Params{0.0, eps_t_stddev});
+                    double eps_t = normalDist(generator);
                     learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * ((m_minLearnRate + eps_t + (m_lrapiInfo.maxIter - m_lrapiInfo.iter) / double(m_lrapiInfo.maxIter)) * 0.5 * (1 + cos(Pi * 2 * m_lrapiInfo.numPeriods * m_lrapiInfo.iter / m_lrapiInfo.maxIter)) + m_lrapiInfo.beta);
                 }
                 else if (AdjustType::Sigmoid == m_lrapiInfo.adjustType)
