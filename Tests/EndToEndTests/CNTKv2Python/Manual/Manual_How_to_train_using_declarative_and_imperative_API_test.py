@@ -20,7 +20,7 @@ def test_cntk_how_to_train_no_errors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expectedOutput = 'Minibatch\[ 191- 200\]: loss = '
+expectedOutput = r'Minibatch\[ 191- 200\]: loss = '
 def test_cntk_how_to_train_eval_correct(nb):
     testCells = [cell for cell in nb.cells
                 if cell.cell_type == 'code']

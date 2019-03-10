@@ -515,7 +515,7 @@ void ParityCandCppLSTMModel(DeviceDescriptor device, CNTK_DeviceDescriptor cdevi
 
     // Create the C model from the saved file.
     CNTK_ModelHandle model;
-    auto rc = CNTK_LoadModel(L"test.model", &cdevice, &model);
+    auto rc = CNTK_LoadModel("test.model", &cdevice, &model);
     BOOST_REQUIRE_EQUAL(rc.value, CNTK_SUCCESS);
     if (_wunlink(tempModelPath.c_str()) != 0)
         BOOST_ERROR("Error deleting temp model file 'tempModelPath'");

@@ -5,6 +5,7 @@ channels:
 - conda-forge
 dependencies:
 - h5py=2.6.0=np111py34_2
+- pyqt=5.6.0=py34_2
 - jupyter=1.0.0=py34_3
 - matplotlib=2.0.0=np111py34_0
 - numpy=1.11.2=py34_0

@@ -122,14 +122,14 @@ declare -a opencvFiles=("libopencv_core.so.3.1" "libopencv_imgproc.so.3.1" "libo
 declare -a libzipFiles=("libzip.so.4")
 
 # CUDA
-declare -a cudaFiles=("libcudart.so.9.0" "libcublas.so.9.0" "libcurand.so.9.0" "libcusparse.so.9.0")
+declare -a cudaFiles=("libcudart.so.10.0" "libcublas.so.10.0" "libcurand.so.10.0" "libcusparse.so.10.0")
 
 # cuDNN
 # Note: can be only a single file currently, see copy below.
 declare -a cudnnFiles=("libcudnn.so")
 
 # NCCL
-declare -a ncclFiles=("libnccl.so.2.1.2")
+declare -a ncclFiles=("libnccl.so.2.3.5")
 
 # OpenBLAS (Needed by Kaldi)
 declare -a openblasFiles=("libopenblas.so.0")
@@ -153,7 +153,7 @@ opencvVersion="3.1.0"
 opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnPath="/usr/local/cudnn-7.0/cuda/lib64"
+cudnnPath="/usr/local/cudnn-7.3/cuda/lib64"
 ncclPath="/usr/lib/x86_64-linux-gnu"
 openblasPath="/usr/local/openblas/lib"
 kaldiVersion="c024e8aa"

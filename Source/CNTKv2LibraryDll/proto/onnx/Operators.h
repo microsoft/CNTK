@@ -10,7 +10,7 @@
 
 #include <set>
 
-namespace ONNXIR
+namespace onnxruntime
 {
 class Graph;
 }
@@ -22,7 +22,49 @@ const int64_t ReshapeKeepInputDim = 0;
 const std::string FreeSequenceDimParam = "Sequence";
 const size_t numBiasInOnnxLstm = 2; // bias for W, and bias for R (also called H in CNTK).
                                     // TODO: support cases where batch size is not 1.
-const int FreeBatchSize = 1;
+
+// See comment for BatchSizeOverride
+// we need to object to keep OverridedBatch dimension in case defaultFreeBatchSize is overrided 
+// by broadcast (and possible other ops TO BE FIGURED OUT) ops. 
+class BatchSizeProcessor
+{
+public:
+    static int FreeBatchSize()
+    {
+        return overrideBatchSize;
+    }
+
+    static void OverrideBatchSize(int i_overrideBatchSize)
+    {
+        // TODO: this does not work completely. 
+        // TODO: Waiting Skype smart reply with attention model before enabling the functionality of tracking sequence dimension.
+        // overrideBatchSize = i_overrideBatchSize;
+    }
+
+    static void ResetOverrideBatchSize()
+    {
+        overrideBatchSize = defaultFreeBatchSize;
+    }
+
+    static size_t FreeSequenceSize()
+    {
+        return overrideSequenceSize;
+    }
+    static void OverrideSequenceSize(size_t i_overrideSequenceSize)
+    {
+        overrideSequenceSize = i_overrideSequenceSize;
+    }
+
+    static void ResetOverrideSequenceSize()
+    {
+        overrideSequenceSize = CNTK::NDShape::FreeDimension;
+    }
+private:
+    static const int defaultFreeBatchSize = 1;
+    static int overrideBatchSize;
+
+    static size_t overrideSequenceSize;
+};
 
 namespace CNTK
 {
@@ -42,6 +84,14 @@ public:
     static inline bool IsSupportedCNTKOP(const std::wstring& opName)
     {
         return _cntkToONNXOpName.find(opName) != _cntkToONNXOpName.end();
+    }
+
+    static inline bool IsBlockFnNotConvertedThroughBlockRoot(FunctionPtr blkF)
+    {
+        return 
+            blkF->OpName() == L"Sequence::BroadcastAs" || 
+            blkF->OpName() == L"ElementMax" || 
+            blkF->OpName() == L"Convolution";
     }
 
     //
@@ -152,6 +202,7 @@ public:
 
     static bool IsLoopOp(const std::string &opName);
     static bool IsRNNOp(const std::string &opName);
+    static bool IsSequenceBlockOp(const std::string &opName);
 
 private:
     static std::unordered_multimap<std::wstring, AttributesMapping> _cntkToONNXOpName;

@@ -55,64 +55,69 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ARG CMAKE_DOWNLOAD_VERSION=3.11
 ARG CMAKE_BUILD_VERSION=4
 RUN DEBIAN_FRONTEND=noninteractive && \
-    wget --no-verbose https://cmake.org/files/v$CMAKE_DOWNLOAD_VERSION/cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION.tar.gz && \
-	tar -xzvf cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION.tar.gz && \
+    wget --no-verbose https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/cmake/$CMAKE_DOWNLOAD_VERSION/cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION.tar.gz && \
+    tar -xzvf cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION.tar.gz && \
     cd cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION && \
     ./bootstrap --system-curl -- -DCMAKE_USE_OPENSSL=ON && \
     make -j $(nproc) install && \
-	cd .. && \
+    cd .. && \
     rm -rf cmake-$CMAKE_DOWNLOAD_VERSION.$CMAKE_BUILD_VERSION	
 
-RUN OPENMPI_VERSION=1.10.3 && \
-    wget -q -O - https://www.open-mpi.org/software/ompi/v1.10/downloads/openmpi-${OPENMPI_VERSION}.tar.gz | tar -xzf - && \
+ARG OPENMPI_VERSION=1.10.7
+RUN wget -q -O - https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/openmpi/$OPENMPI_VERSION/openmpi-$OPENMPI_VERSION.tar.gz | tar -xzf - && \
     cd openmpi-${OPENMPI_VERSION} && \
-    ./configure --prefix=/usr/local/mpi && \
-    make -j"$(nproc)" install && \
-    rm -rf /openmpi-${OPENMPI_VERSION}
-
+    apt-get -y update && \
+    apt-get -y -f install && \
+    apt-get -y install libsysfs2 libsysfs-dev && \
+    ./configure --with-verbs --with-cuda=/usr/local/cuda --prefix=/usr/local/mpi && \
+    make -j $(nproc) install && \
+    cd .. && \
+    rm -rf openmpi-${OPENMPI_VERSION}
 ENV PATH /usr/local/mpi/bin:$PATH
 ENV LD_LIBRARY_PATH /usr/local/mpi/lib:$LD_LIBRARY_PATH
 
-RUN LIBZIP_VERSION=1.1.2 && \
-    wget -q -O - https://libzip.org/download/libzip-${LIBZIP_VERSION}.tar.gz | tar -xzf - && \
+ARG LIBZIP_VERSION=1.1.2
+RUN wget -q -O - https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/libzip/$LIBZIP_VERSION/libzip-$LIBZIP_VERSION.tar.gz | tar -xzf - && \
     cd libzip-${LIBZIP_VERSION} && \
     ./configure && \
-    make -j"$(nproc)" install && \
-    rm -rf /libzip-${LIBZIP_VERSION}
-
+    make -j $(nproc) install && \
+    cd .. && \
+    rm -rf libzip-${LIBZIP_VERSION}
 ENV LD_LIBRARY_PATH /usr/local/lib:$LD_LIBRARY_PATH
 
-RUN OPENCV_VERSION=3.1.0 && \
-    wget -q -O - https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.tar.gz | tar -xzf - && \
+ARG OPENCV_VERSION=3.1.0
+RUN wget -q -O - https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/opencv/$OPENCV_VERSION/opencv-$OPENCV_VERSION.tar.gz | tar -xzf - && \
     cd opencv-${OPENCV_VERSION} && \
-    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-${OPENCV_VERSION} . && \
-    make -j"$(nproc)" install && \
-    rm -rf /opencv-${OPENCV_VERSION}
+    cmake -DWITH_CUDA=OFF -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-${OPENCV_VERSION} . && \
+    make -j $(nproc) install && \
+    cd .. && \
+    rm -rf opencv-${OPENCV_VERSION}
 
-RUN OPENBLAS_VERSION=0.2.18 && \
-    wget -q -O - https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.tar.gz | tar -xzf - && \
+ARG OPENBLAS_VERSION=0.2.18
+RUN wget -q -O - https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/openblas/$OPENBLAS_VERSION/OpenBLAS-$OPENBLAS_VERSION.tar.gz | tar -xzf - && \
     cd OpenBLAS-${OPENBLAS_VERSION} && \
-    make -j"$(nproc)" USE_OPENMP=1 | tee make.log && \
+    make -j 2 MAKE_NB_JOBS=0 USE_OPENMP=1 | tee make.log && \
     grep -qF 'OpenBLAS build complete. (BLAS CBLAS LAPACK LAPACKE)' make.log && \
     grep -qF 'Use OpenMP in the multithreading.' make.log && \
     make PREFIX=/usr/local/openblas install && \
-    rm -rf /OpenBLAS-${OPENBLAS_VERSION}
-
+    cd .. && \
+    rm -rf OpenBLAS-${OPENBLAS_VERSION}
 ENV LD_LIBRARY_PATH /usr/local/openblas/lib:$LD_LIBRARY_PATH
 
 # Install Boost
-RUN BOOST_VERSION=1_60_0 && \
-    BOOST_DOTTED_VERSION=$(echo $BOOST_VERSION | tr _ .) && \
-    wget -q -O - https://sourceforge.net/projects/boost/files/boost/${BOOST_DOTTED_VERSION}/boost_${BOOST_VERSION}.tar.gz/download | tar -xzf - && \
-    cd boost_${BOOST_VERSION} && \
-    ./bootstrap.sh --prefix=/usr/local/boost-${BOOST_DOTTED_VERSION} --with-libraries=filesystem,system,test  && \
-    ./b2 -d0 -j"$(nproc)" install  && \
-    rm -rf /boost_${BOOST_VERSION}
+ARG BOOST_VERSION=1.60.0
+RUN BOOST_UNDERSCORE_VERSION=$(echo $BOOST_VERSION | tr . _) && \
+    wget -q -O - https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/boost/$BOOST_VERSION/boost_$BOOST_UNDERSCORE_VERSION.tar.gz | tar -xzf - && \
+    cd boost_${BOOST_UNDERSCORE_VERSION} && \
+    ./bootstrap.sh --prefix=/usr/local/boost-${BOOST_VERSION}  && \
+    ./b2 -d0 -j $(nproc) install && \
+    cd .. && \
+    rm -rf boost_${BOOST_UNDERSCORE_VERSION}
 
 # Install Protobuf
-RUN PROTOBUF_VERSION=3.1.0 \
-    PROTOBUF_STRING=protobuf-$PROTOBUF_VERSION && \
-    wget -O - --no-verbose https://github.com/google/protobuf/archive/v${PROTOBUF_VERSION}.tar.gz | tar -xzf - && \
+ARG PROTOBUF_VERSION=3.1.0
+RUN PROTOBUF_STRING=protobuf-$PROTOBUF_VERSION && \
+    wget -O - --no-verbose https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/protobuf/$PROTOBUF_VERSION/protobuf-$PROTOBUF_VERSION.tar.gz | tar -xzf - && \
     cd $PROTOBUF_STRING && \
     ./autogen.sh && \
     ./configure CFLAGS=-fPIC CXXFLAGS=-fPIC --disable-shared --prefix=/usr/local/$PROTOBUF_STRING && \
@@ -124,10 +129,10 @@ RUN PROTOBUF_VERSION=3.1.0 \
 ARG MKLDNN_VERSION=0.14
 ARG MKLDNN_LONG_VERSION=mklml_lnx_2018.0.3.20180406
 RUN mkdir /usr/local/mklml && \
-    wget --no-verbose -O - https://github.com/01org/mkl-dnn/releases/download/v${MKLDNN_VERSION}/${MKLDNN_LONG_VERSION}.tgz | \
+    wget --no-verbose -O - https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/mkl-dnn/$MKLDNN_VERSION/$MKLDNN_LONG_VERSION.tgz | \
     tar -xzf - -C /usr/local/mklml && \
     MKLDNN_STRING=mkl-dnn-${MKLDNN_VERSION} && \
-    wget --no-verbose -O - https://github.com/01org/mkl-dnn/archive/v${MKLDNN_VERSION}.tar.gz | tar -xzf - && \
+    wget --no-verbose -O - https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/mkl-dnn/$MKLDNN_VERSION/mkl-dnn-$MKLDNN_VERSION.tar.gz | tar -xzf - && \
     cd ${MKLDNN_STRING} && \
     ln -s /usr/local external && \
     mkdir -p build && \
@@ -140,28 +145,27 @@ RUN mkdir /usr/local/mklml && \
     rm -rf ${MKLDNN_STRING}
 
 # Install Kaldi
-ENV KALDI_VERSION=c024e8aa
-ENV KALDI_PATH /usr/local/kaldi-$KALDI_VERSION
-
+ARG KALDI_VERSION=c024e8aa
+ARG KALDI_PATH=/usr/local/kaldi-$KALDI_VERSION
 RUN mv /bin/sh /bin/sh.orig && \
-   ln -s -f /bin/bash /bin/sh && \
-   mkdir $KALDI_PATH && \
-   wget --no-verbose -O - https://github.com/kaldi-asr/kaldi/archive/$KALDI_VERSION.tar.gz | tar -xzf - --strip-components=1 -C $KALDI_PATH && \
-   cd $KALDI_PATH && \
-   cd tools && \
-   perl -pi -e 's/^# (OPENFST_VERSION = 1.4.1)$/\1/' Makefile && \
-   ./extras/check_dependencies.sh && \
-   make -j $(nproc) all && \
-   cd ../src && \
-   # remove Fermi support as CUDA 9 no longer works on it
-   perl -pi -e 's/-gencode arch=compute_20,code=sm_20//' cudamatrix/Makefile && \
-   ./configure --openblas-root=/usr/local/openblas --shared && \
-   make -j $(nproc) depend && \
-   make -j $(nproc) all && \
-# Remove some unneeded stuff in $KALDI_PATH to reduce size
-   find $KALDI_PATH -name '*.o' -print0 | xargs -0 rm && \
-   for dir in $KALDI_PATH/src/*bin; do make -C $dir clean; done && \
-   mv -f /bin/sh.orig /bin/sh
+    ln -s -f /bin/bash /bin/sh && \
+    mkdir $KALDI_PATH && \
+    wget --no-verbose -O - https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/kaldi/$KALDI_VERSION/kaldi-$KALDI_VERSION.tar.gz | tar -xzf - --strip-components=1 -C $KALDI_PATH && \
+    cd $KALDI_PATH && \
+    cd tools && \
+    perl -pi -e 's/^# (OPENFST_VERSION = 1.4.1)$/\1/' Makefile && \
+    ./extras/check_dependencies.sh && \
+    make -j $(nproc) all && \
+    cd ../src && \
+    # remove Fermi support as CUDA 9 no longer works on it
+    perl -pi -e 's/-gencode arch=compute_20,code=sm_20//' cudamatrix/Makefile && \
+    ./configure --openblas-root=/usr/local/openblas --shared && \
+    make -j $(nproc) depend && \
+    make -j $(nproc) all && \
+    # Remove some unneeded stuff in $KALDI_PATH to reduce size
+    find $KALDI_PATH -name '*.o' -print0 | xargs -0 rm && \
+    for dir in $KALDI_PATH/src/*bin; do make -C $dir clean; done && \
+    mv -f /bin/sh.orig /bin/sh
 
 ## PYTHON
 
@@ -169,32 +173,33 @@ RUN mv /bin/sh /bin/sh.orig && \
 ARG COMMIT=master
 
 # Swig
-RUN cd /root && \
-    wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
-    cd swig-3.0.10 && \
+ARG SWIG_VERSION=3.0.10
+ARG CACHEBUST=1
+RUN wget -q https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/swig/$SWIG_VERSION/swig-$SWIG_VERSION.tar.gz -O - | tar xvfz - && \
+    cd swig-$SWIG_VERSION && \
     # Note: we specify --without-alllang to suppress building tests and examples for specific languages.
-    ./configure --without-alllang && \
+    ./configure --prefix=/usr/local/swig-$SWIG_VERSION --without-perl5 --without-alllang && \
     make -j $(nproc) && \
-    make install
-
+    make install && \
+    cd .. && \
+    rm -rf swig-$SWIG_VERSION
 COPY ./Patches /tmp/patches
 RUN /tmp/patches/patch_swig.sh /usr/local/share/swig/3.0.10 && \
 	rm -rfd /tmp/patches
-	
+
 # .NET Core SDK
-RUN cd /tmp && \
-    (wget -q packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb || true) && \
+RUN wget -q https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/packages-microsoft-prod/deb/packages-microsoft-prod.deb && \
     dpkg -i packages-microsoft-prod.deb && \
-    apt-get update && \
-    apt-get --yes install dotnet-sdk-2.1.200 && \
-    rm /tmp/packages-microsoft-prod.deb && \
-    apt-get --yes autoremove && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get -y -f install apt-transport-https && \
+    apt-get -y update && \
+    apt-get -y -f install dotnet-sdk-2.1 && \
+    rm ./packages-microsoft-prod.deb
 
 # Anaconda
-RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh && \
-    bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
-    rm Anaconda3-4.2.0-Linux-x86_64.sh
+ARG ANACONDA_VERSION=4.2.0
+RUN wget -q https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/anaconda3/$ANACONDA_VERSION/Anaconda3-$ANACONDA_VERSION-Linux-x86_64.sh && \
+    bash Anaconda3-$ANACONDA_VERSION-Linux-x86_64.sh -b && \
+    rm Anaconda3-$ANACONDA_VERSION-Linux-x86_64.sh
 
 RUN CONDA_ENV_PATH=/tmp/conda-linux-cntk-py35-environment.yml; \
     wget -q https://raw.githubusercontent.com/Microsoft/CNTK/$COMMIT/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O "$CONDA_ENV_PATH" && \

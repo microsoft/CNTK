@@ -29,5 +29,5 @@ def test_cifar_resnet_distributed(device_id):
     str_out = mpiexec_execute(script_under_test, mpiexec_params, params)
 
     #Training loss of the generator at worker: {0} is: {2.201804}, time taken is: {40} seconds
-    results = re.findall("Training loss of the generator at worker: \{.+?\} is: \{.+?\}", str_out)
+    results = re.findall(r"Training loss of the generator at worker: \{.+?\} is: \{.+?\}", str_out)
     assert(len(results) == 4)

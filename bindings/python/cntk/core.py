@@ -252,7 +252,7 @@ class Value(cntk_py.Value):
           * a pure Python structure (list of lists, ...),
           * a list of NumPy arrays or SciPy sparse CSR matrices
           * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
-        seq_starts (list of `bool`\ s or None): if None, every sequence is
+        seq_starts (list of `bool`\\ s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the sequence in the same slot of the previous
@@ -378,7 +378,7 @@ class Value(cntk_py.Value):
               * a single NumPy array denoting the full minibatch
               * a list of NumPy arrays or SciPy sparse CSR matrices
               * a single NumPy array denoting one parameter or constant
-            seq_starts (list of `bool`\ s or None): if None, every sequence is
+            seq_starts (list of `bool`\\ s or None): if None, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
              continuation of the sequence in the same slot of the previous

@@ -464,7 +464,14 @@ namespace CNTK
             else if (parameters.front()->GetDataType() == DataType::Float)
                 SynchronizeModel<float>(parameters);
             else if (parameters.front()->GetDataType() == DataType::Float16)
+            {
                 SynchronizeModel<half>(parameters);
+
+                // For half, SynchronizeModel will update the parameters (half) in network.
+                // However, the local learner also have a copy of full precision parameters (float), which needs to be updated too.
+                // Set the flag so that the float copy will be updated / copied from half parameters.
+                m_learner->SetNeedToUpdateMasterParameter();
+            }
             else
                 RuntimeError("Unsupported type.");
 
@@ -524,38 +531,40 @@ namespace CNTK
                     ResetBuffer<double>(i, p);
                 else if (p->GetDataType() == DataType::Float)
                     ResetBuffer<float>(i, p);
+                else if (p->GetDataType() == DataType::Float16)
+                    ResetBuffer<half, float16>(i, p);
                 else
                     RuntimeError("Unsupported type.");
             }
         }
 
-        template<class ElemType>
+        template<class ElemTypeV1, class ElemTypeV2=ElemTypeV1>
         void ResetBuffer(size_t index, const NDArrayViewPtr& p)
         {
-            auto data = p->GetMatrix<ElemType>();
+            auto data = p->GetMatrix<ElemTypeV1>();
             if (!m_blockLevelSmoothedGradient[index])
             {
                 // has not been initialized yet
-                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<ElemType>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
-                pSmoothedGrad->SetValue(static_cast<ElemType>(0));
+                auto pSmoothedGrad = std::make_shared<NDArrayView>(AsDataType<ElemTypeV2>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+                pSmoothedGrad->SetValue(static_cast<ElemTypeV2>(0));
                 m_blockLevelSmoothedGradient[index] = pSmoothedGrad;
             }
 
             if (!m_prevParameters[index])
             {
-                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<ElemType>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
-                std::shared_ptr<Matrix<ElemType>> newData = newValue->GetWritableMatrix<ElemType>();
+                NDArrayViewPtr newValue = std::make_shared<NDArrayView>(AsDataType<ElemTypeV2>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+                std::shared_ptr<Matrix<ElemTypeV1>> newData = newValue->GetWritableMatrix<ElemTypeV1>();
                 newData->SetValue(*data);
                 m_prevParameters[index] = newValue;
             }
             else
             {
-                m_prevParameters[index]->GetWritableMatrix<ElemType>()->SetValue(*data);
+                m_prevParameters[index]->GetWritableMatrix<ElemTypeV1>()->SetValue(*data);
             }
 
             if (!m_tempBlockGradient[index])
             {
-                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<ElemType>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
+                m_tempBlockGradient[index] = std::make_shared<NDArrayView>(AsDataType<ElemTypeV2>(), p->Shape(), AsDeviceDescriptor(data->GetDeviceId()));
             }
         }
 

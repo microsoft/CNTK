@@ -30,10 +30,10 @@ class Baseline:
   # Finished Epoch[ 5 of 5]: [Training] ce = 2.32253198 * 1000 err = 0.90000000 * 1000 totalSamplesSeen = 5000 learningRatePerSample = 2e-06 epochTime=0.175781
   # Final Results: Minibatch[1-1]: err = 0.90000000 * 100 ce = 2.32170486 * 100 perplexity = 10.1930372
   def extractResultsInfo(self, baselineContent):
-    trainResults = re.findall('.*(Finished Epoch\[ *\d+ of \d+\]\: \[Training\]) (.*)', baselineContent)
+    trainResults = re.findall(r'.*(Finished Epoch\[ *\d+ of \d+\]\: \[Training\]) (.*)', baselineContent)
     if trainResults:                                       
       self.trainResult = Baseline.formatLastTrainResult(trainResults[-1])[0:-2]
-    testResults = re.findall('.*(Final Results: Minibatch\[1-\d+\]:)(\s+\* \d+)?\s+(.*)', baselineContent)
+    testResults = re.findall(r'.*(Final Results: Minibatch\[1-\d+\]:)(\s+\* \d+)?\s+(.*)', baselineContent)
     if testResults:
       self.testResult = Baseline.formatLastTestResult(testResults[-1])[0:-2]
 
@@ -49,10 +49,10 @@ class Baseline:
   def extractHardwareInfo(self, baselineContent):
     startCpuInfoIndex = baselineContent.find("CPU info:")
     endCpuInfoIndex = baselineContent.find("----------", startCpuInfoIndex)
-    cpuInfo = re.search("^CPU info:\s+"
-                       "CPU Model (Name:\s*.*)\s+"                        
-                       "(Hardware threads: \d+)\s+"
-                       "Total (Memory:\s*.*)\s+", baselineContent[startCpuInfoIndex:endCpuInfoIndex], re.MULTILINE)
+    cpuInfo = re.search(r"^CPU info:\s+"
+                        r"CPU Model (Name:\s*.*)\s+"
+                        r"(Hardware threads: \d+)\s+"
+                        r"Total (Memory:\s*.*)\s+", baselineContent[startCpuInfoIndex:endCpuInfoIndex], re.MULTILINE)
     if cpuInfo is None:
       return
     self.cpuInfo = "\n".join(cpuInfo.groups())
@@ -61,7 +61,7 @@ class Baseline:
     endGpuInfoIndex = baselineContent.find("----------", startGpuInfoIndex)
     gpuInfoSnippet = baselineContent[startGpuInfoIndex:endGpuInfoIndex]
 
-    gpuDevices = re.findall("\t\t(Device\[\d+\]: cores = \d+; computeCapability = \d\.\d; type = .*; memory = \d+ MB)[\r\n]?", gpuInfoSnippet)
+    gpuDevices = re.findall(r"\t\t(Device\[\d+\]: cores = \d+; computeCapability = \d\.\d; type = .*; memory = \d+ MB)[\r\n]?", gpuInfoSnippet)
     if not gpuDevices:
       return
     gpuInfo = [ device for device in gpuDevices ]
@@ -135,7 +135,7 @@ def getExamplesMetrics():
     for baseline in baselineListForExample:        
       with open(baseline.fullPath, "r") as f:
         baselineContent = f.read()
-        gitHash = re.search('.*Build SHA1:\s([a-z0-9]{40})[\r\n]+', baselineContent, re.MULTILINE)
+        gitHash = re.search(r'.*Build SHA1:\s([a-z0-9]{40})[\r\n]+', baselineContent, re.MULTILINE)
         if gitHash is None:
           continue
         example.gitHash = gitHash.group(1) 

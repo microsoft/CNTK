@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using CNTK.CNTKLibraryCSTrainingTest;
 
 namespace CNTK.CSTrainingExamples
 {

@@ -55,7 +55,8 @@ enum class GradientsUpdateType : int
     None,
     AdaGrad,
     RmsProp,
-    FSAdaGrad
+    FSAdaGrad,
+    Adam
 };
 
 // modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD 
@@ -90,6 +91,21 @@ struct RMSPropInfo
         min = 0.1;
     }
 };
+
+struct AdamInfo
+{
+    double meanMomentum; //beta_1
+    double varMomentum;  //beta_2
+    double epsilon;
+
+    AdamInfo()
+    {
+        meanMomentum = 0.9;
+        varMomentum = 0.999;
+        epsilon = pow(10, -8);
+    }
+};
+
 
 struct GradientUpdateInfo
 {
@@ -254,6 +270,7 @@ protected:
 
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
+    AdamInfo m_adam;
 
     size_t m_numMBsToShowResult = 0;
     size_t m_firstMBsToShowResult = 0;

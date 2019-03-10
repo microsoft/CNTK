@@ -25,9 +25,8 @@ namespace
     static CNTK_StatusCode StatusCode(int32_t code, const string& message)
     {
         CNTK_StatusCode result{ code, {0} };
-        wstring value(message.begin(), message.end());
-        auto size = min((uint32_t)(value.size() + 1), CNTK_STATUSCODE_DescriptionSize - 1);
-        copy(value.c_str(), value.c_str() + size, result.description);
+        auto size = min((uint32_t)(message.size() + 1), CNTK_STATUSCODE_DescriptionSize - 1);
+        copy(message.c_str(), message.c_str() + size, result.description);
         return result;
     }
 
@@ -93,7 +92,7 @@ CNTK_StatusCode CNTK_AllDevices(CNTK_DeviceDescriptor** devices, uint32_t* size)
     });
 }
 
-CNTK_StatusCode CNTK_LoadModel(const wchar_t* modelFilePath, const CNTK_DeviceDescriptor* device, CNTK_ModelHandle* handle)
+CNTK_StatusCode CNTK_LoadModel(const char* modelFilePath, const CNTK_DeviceDescriptor* device, CNTK_ModelHandle* handle)
 {
     if (!handle)
         return StatusCode(CNTK_ERROR_NULL_POINTER, "'handle' parameter is not allowed to be null");

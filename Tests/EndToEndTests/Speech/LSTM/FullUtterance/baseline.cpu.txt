@@ -1521,8 +1521,8 @@ minibatchiterator: epoch 0: frames [0..2560] (first utterance at frame 0), data 
 12/15/2016 08:46:23:  Epoch[ 1 of 2]-Minibatch[   1-   1, 0.78%]: ce = 4.88277172 * 886; err = 0.99548533 * 886; time = 4.1250s; samplesPerSecond = 214.8
 12/15/2016 08:46:24:  Epoch[ 1 of 2]-Minibatch[   2-   2, 1.56%]: ce = 4.06417226 * 226; err = 0.76106195 * 226; time = 1.2433s; samplesPerSecond = 181.8
 12/15/2016 08:46:27:  Epoch[ 1 of 2]-Minibatch[   3-   3, 2.34%]: ce = 3.97176231 * 526; err = 0.82889734 * 526; time = 2.4236s; samplesPerSecond = 217.0
-12/15/2016 08:46:33:  Epoch[ 1 of 2]-Minibatch[   4-   4, 3.13%]: ce = 4.82720986 * 946; err = 0.91014799 * 946; time = 6.1612s; samplesPerSecond = 153.5
-12/15/2016 08:46:33: Finished Epoch[ 1 of 2]: [Training] ce = 4.60538939 * 2584; err = 0.90982972 * 2584; totalSamplesSeen = 2584; learningRatePerSample = 0.025; epochTime=13.9556s
+12/15/2016 08:46:33:  Epoch[ 1 of 2]-Minibatch[   4-   4, 3.13%]: ce = 4.82879600 * 946; err = 0.90697674 * 946; time = 6.1612s; samplesPerSecond = 153.5
+12/15/2016 08:46:33: Finished Epoch[ 1 of 2]: [Training] ce = 4.60596459 * 2584; err = 0.90866873 * 2584; totalSamplesSeen = 2584; learningRatePerSample = 0.025; epochTime=13.9556s
 12/15/2016 08:46:33: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtterance@release_cpu/models/cntkSpeech.dnn.1'
 
 12/15/2016 08:46:33: Starting Epoch 2: learning rate per sample = 0.025000  effective momentum = 0.899988  momentum as time constant = 189.8 samples

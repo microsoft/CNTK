@@ -36,10 +36,10 @@ def test_cntk_fastrcnn_eval_evalCorrect(nb):
                  if cell.cell_type == 'code' and
                      len(cell.outputs) > 0 and
                      'text' in cell.outputs[0] and
-                     re.search('Number of detections: (\d+)',  get_output_stream_from_cell(cell))]
+                     re.search(r'Number of detections: (\d+)',  get_output_stream_from_cell(cell))]
     assert len(detectionCells) == 1
     
-    number_of_detections = int(re.search('Number of detections: (\d+)', get_output_stream_from_cell(detectionCells[0])).group(1))
+    number_of_detections = int(re.search(r'Number of detections: (\d+)', get_output_stream_from_cell(detectionCells[0])).group(1))
     assert(number_of_detections > 0)
 
 

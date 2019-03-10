@@ -223,7 +223,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
     }
 
-    // This code is only relevant for the new (V2) readers. It exist because of
+    // This code is only relevant for the new (V2) readers. It exists because of
     // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs 
     // in the same minibatch have different layouts, which is something only V2 readers can
     // produce. 
@@ -420,7 +420,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             m_mpi->WaitAll();
         }
 
-        // In case of parallel training only the main node should we saving the model to prevent
+        // In case of parallel training only the main node should be saving the model to prevent
         // the parallel training nodes from colliding to write the same file
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
             net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
@@ -578,7 +578,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                       i + 1, learnRatePerSample, m_minLearnRate);
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
-                // In case of parallel training only the main node should we saving the model to prevent
+                // In case of parallel training only the main node should be saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
                     net->Save(m_modelPath);
@@ -622,7 +622,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         // For legacy readers, in BPTT mode the minibatch size was not the real minibatch size but truncation.
         // Because of that we have to fix up the real minibatch size multiplying the number of parallel sequences by the truncation length.
-        // This is not require any more for the new readers.
+        // This is not required any more for the new readers.
         if (trainSetDataReader->IsLegacyReader())
             actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
         else
@@ -807,7 +807,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     }
                     else
                     {
-                        // In case of parallel training only the main node should we saving the model to prevent
+                        // In case of parallel training only the main node should be saving the model to prevent
                         // the parallel training nodes from colliding to write the same file
                         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
                             net->Save(GetModelNameForEpoch(i, true));
@@ -1193,7 +1193,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         nSamplesSinceLastModelSync += actualMBSize;
 
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
-        // This mask is regerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
+        // This mask is regenerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
         // w.r.t. inputs to force evaluation in each minibatch
         MarkDropoutNodesEvalTimeStampAsOutdated(net, criterionNodes[0]);
 
@@ -2429,6 +2429,11 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
                                                         (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier, true);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
     }
+    else if (adpType == GradientsUpdateType::Adam)
+    {
+        smoothedGradientValues.AdamUpdate(gradientValues, functionValues, smoothedCount + 1, learnRatePerSample,
+            m_adam.meanMomentum, m_adam.varMomentum, m_adam.epsilon, (ElemType)(1 - m_adam.meanMomentum), false);
+    }
 
     if (noiseStd > 0)
     {
@@ -2477,7 +2482,7 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
                                        const double prevCriterion,
                                        const size_t minibatchSize)
 {
-    // In case of parallel training only the main node should we saving the checkpoint to prevent
+    // In case of parallel training only the main node should be saving the checkpoint to prevent
     // the parallel training nodes from colliding to write the same file
     if ((m_mpi == nullptr) || m_mpi->IsMainNode())
     {
@@ -2840,6 +2845,7 @@ static GradientsUpdateType ParseGradUpdateType(const wstring& s)
     else if (EqualCI(s, L"adagrad"))                 return GradientsUpdateType::AdaGrad;
     else if (EqualCI(s, L"rmsProp"))                 return GradientsUpdateType::RmsProp;
     else if (EqualCI(s, L"fsAdagrad"))               return GradientsUpdateType::FSAdaGrad;
+    else if (EqualCI(s, L"adam"))                    return GradientsUpdateType::Adam;
     // legacy, deprecated
     else if (EqualCI(s, L"normal") || EqualCI(s, L"simple")) return GradientsUpdateType::None;
     else InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
@@ -3006,6 +3012,11 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_rpi.max = configSGD(L"rms_wgt_max", 10.0);
     m_rpi.gamma = configSGD(L"rms_gamma", 0.99);
 
+    // Adam settings
+    m_adam.meanMomentum = configSGD(L"adam_meanMomentum", 0.9);
+    m_adam.varMomentum = configSGD(L"adam_varMomentum", 0.999);
+    m_adam.epsilon = configSGD(L"adam_epsilon", pow(10, -8));
+
     m_needAveMultiplier = configSGD(L"normWithAveMultiplier", true);
     m_L2RegWeight = configSGD(L"L2RegWeight", 0.0);
     m_L1RegWeight = configSGD(L"L1RegWeight", 0.0);
@@ -3154,6 +3165,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             m_enableDistributedMBReadingNotSpecified = !configParallelTrain.Exists(L"distributedMBReading");
             m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
             m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int)0);
+            bool useV2Aggregator = configParallelTrain(L"useV2Aggregator", false);
+            if (useV2Aggregator)
+                Globals::SetUseV2Aggregator();
 
         if (configParallelTrain.Exists(L"DataParallelSGD"))
         {

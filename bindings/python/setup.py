@@ -102,14 +102,14 @@ CNTK_EXTRA_LIBRARIES = []
 EXCLUDE_LIBS = []
 EXCLUDE_LIBS_SUFFIX = ""
 if IS_WINDOWS:
-    EXCLUDE_LIBS_SUFFIX = "[a-z0-9_\-\.]*\.dll$" # Match specific DLLs listed below
+    EXCLUDE_LIBS_SUFFIX = r"[a-z0-9_\-\.]*\.dll$" # Match specific DLLs listed below
     EXCLUDE_LIBS += ["cublas", "cudart", "curand", "cusparse"] # Cuda
     EXCLUDE_LIBS += ["cudnn"] # CUDNN
     EXCLUDE_LIBS += ["opencv_world"] # OpenCV
     EXCLUDE_LIBS += ["mkldnn", "mklml", "libiomp5md"] # MKL + MKL-DNN
     EXCLUDE_LIBS += ["nvml"] # NVML (Nvidia driver)
 else:
-    EXCLUDE_LIBS_SUFFIX = "[a-z0-9_\-\.]*.so[0-9\.]*"
+    EXCLUDE_LIBS_SUFFIX = r"[a-z0-9_\-\.]*.so[0-9\.]*"
     EXCLUDE_LIBS += ["libcudart", "libcublas", "libcurand", "libcusparse", "libcuda", "libnvidia-ml"] # CUDA
     EXCLUDE_LIBS += ["libcudnn"] # CUDNN
     EXCLUDE_LIBS += ["libopencv_core", "libopencv_imgproc", "libopencv_imgcodecs"] # OpenCV

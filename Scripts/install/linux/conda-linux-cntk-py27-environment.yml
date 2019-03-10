@@ -25,6 +25,7 @@ dependencies:
 - setuptools=27.2.0=py27_0
 - six=1.10.0=py27_0
 - wheel=0.29.0=py27_0
+- protobuf=3.6.0
 - pip:
   - gym[atari]==0.8.1
   - keras==2.0.6
@@ -35,4 +36,4 @@ dependencies:
   - sphinx==1.5.4
   - nbsphinx==0.2.14
   - twine==1.8.1
-  - protobuf==3.2.0
+  - onnx==1.2.2

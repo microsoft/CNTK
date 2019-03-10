@@ -500,7 +500,9 @@ public:
             }
         }
 
-        Init(executionEngine, networkConfig, newConfig, dumpFileName, deviceId);
+        // workaround for VS2017 15.9.2 Debug Win32 Access Violation error.
+        wstring networkConfigWstring = networkConfig;
+        Init(executionEngine, networkConfigWstring, newConfig, dumpFileName, deviceId);
     }
 
     virtual ~NDLBuilder()
