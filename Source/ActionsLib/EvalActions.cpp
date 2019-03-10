@@ -254,6 +254,7 @@ void DoWriteOutput(const ConfigParameters& config)
         size_t decodeBeam = writerConfig(L"decode_beam", 10);
         size_t decodeExpandBeam = writerConfig(L"decode_expand_beam", 20);
         string indictfile = writerConfig(L"DictFile", L"");
+        ElemType thresh = writerConfig(L"Thresh", 0.68f);
         DataWriter testDataWriter(writerConfig);
        // ConfigParameters
         if (decodeType == 0)
@@ -261,7 +262,7 @@ void DoWriteOutput(const ConfigParameters& config)
         else if (decodeType == 1)
             writer.WriteOutput_greedy(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         else if (decodeType == 2)
-            writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile);
+            writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile,thresh);
         //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         
     }

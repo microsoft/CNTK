@@ -422,7 +422,7 @@ public:
         decodeOutput.InplaceLogSoftmax(true);
     }
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
-                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"")
+                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -529,7 +529,7 @@ public:
         vector<Sequence> preComputeSequence;
         //add sequence "blank <space>" and "blank"
         Sequence oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
-        extendSeq(oneSeq, blankId, 0.0);        
+        extendSeq(oneSeq, blankId, 0.0);
         forward_decode(oneSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, oneSeq.labelseq.size());
         preComputeSequence.push_back(oneSeq);
 
@@ -549,7 +549,7 @@ public:
                     if (it->labelseq == partlabel)
                         break;
                 }
-                if ( it == preComputeSequence.end())
+                if (it == preComputeSequence.end())
                 {
                     Sequence tmpseq = newSeq(vocabSize, (size_t) 50, deviceid);
                     tmpseq.labelseq = partlabel;
@@ -722,7 +722,6 @@ public:
                         {
                             keyNextSequences.push_back(seqK);
                         }
-
                     }
                     /*if (prefix == false)
                     {
@@ -791,6 +790,36 @@ public:
                             keyNextSequences.pop_back();
                     }
                 }
+
+                //check whether detect keywords
+                bool find = false;
+                for (size_t n = 0; n < keyNextSequences.size(); n++)
+                {
+                    if (keyNextSequences[n].labelseq.size() >= minKeywordLen)
+                    {
+
+                        for (size_t keyNo = 0; keyNo < keywords.size(); keyNo++)
+                        {
+                            size_t maxL = min(keywords[keyNo].size(), keyNextSequences[n].labelseq.size());
+                            vector<size_t> subseq(keyNextSequences[n].labelseq.begin(), keyNextSequences[n].labelseq.begin() + maxL);
+                            if (subseq == keywords[keyNo])
+                            {
+                                ElemType score = exp(keyNextSequences[n].logP / (keyNextSequences[n].labelseq.size() - 1)) * 3;
+                                if (score >= thresh)
+                                {
+                                    find = true;
+                                    break;
+                                }
+                                
+                            }
+                        }
+                    }
+                    if (find)
+                        break;
+                }
+
+                if (find && t >= 15)
+                    break;
                 //break;
             }
 
@@ -815,7 +844,7 @@ public:
                         }
                     }
                     if (find)
-                        keyNextSequences[n].logP /= (keyNextSequences[n].labelseq.size()-1);
+                        keyNextSequences[n].logP /= (keyNextSequences[n].labelseq.size() - 1);
                     else
                         keyNextSequences[n].logP = -1000000;
                     /*if (!find)
