@@ -5352,7 +5352,8 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
         for (size_t inputIndex = 0; inputIndex < src->Inputs().size(); ++inputIndex)
         {
             auto input = src->Inputs()[inputIndex];
-            CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
+            if (input.Owner())
+                CreateNode(input.Owner(), graph, functionNodes, variableNodes, compositeOutputsMap, scanLoops, createLoopIndex);
         }
 
         // not a single node,
@@ -5548,7 +5549,7 @@ NodeArg* CNTKToONNXHelper::GetInputAdjustmentForBroadcast(onnxruntime::Graph* gr
                 newShape.push_back(1);
             else
             {
-                int indexToInputShape = staticIndex - (staticShapeRankMax - input.Shape().Rank());
+                int indexToInputShape = staticShapeRankMax - staticIndex - 1;
                 newShape.push_back(input.Shape()[indexToInputShape]);
             }
         }
