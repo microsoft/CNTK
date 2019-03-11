@@ -307,11 +307,11 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
 {
     size_t fileOffset = sequenceDsc.OffsetInChunk() + chunkOffsetInFile;
 
-	auto cachedSequencePos = m_fileOffsetToSequenceBuffer.find(fileOffset);
-	if (cachedSequencePos != m_fileOffsetToSequenceBuffer.end())
-	{
+    auto cachedSequencePos = m_fileOffsetToSequenceBuffer.find(fileOffset);
+    if (cachedSequencePos != m_fileOffsetToSequenceBuffer.end())
+    {
         return cachedSequencePos->second;
-	}
+    }
 
     m_fileReader->SetFileOffset(fileOffset);
 
