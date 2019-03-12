@@ -17,6 +17,7 @@
 #include "core/framework/tensor.h"
 #include "core/framework/ml_value.h"
 #include "core/framework/environment.h"
+#include "core/framework/callback.h"
 #include "core/framework/tensorprotoutils.h"
 #include "core/framework/onnxruntime_typeinfo.h"
 #include "core/session/inference_session.h"
@@ -336,18 +337,50 @@ ORT_API_STATUS_IMPL(OrtCreateTensorAsOrtValue, _Inout_ OrtAllocator* allocator,
   API_IMPL_END
 }
 
-template <typename T>
-static OrtStatus* CreateSessionImpl(_In_ OrtEnv* env, _In_ T model_path,
-                                    _In_ const OrtSessionOptions* options,
-                                    _Out_ OrtSession** out) {
+ORT_API(OrtCustomOpDomain*, OrtCreateCustomOpDomain, _In_ const char* domain, int op_version_start, int op_version_end) {
+  auto custom_op_domain = std::make_unique<OrtCustomOpDomain>();
+  custom_op_domain->domain_ = domain;
+  custom_op_domain->op_version_start_ = op_version_start;
+  custom_op_domain->op_version_end_ = op_version_end;
+  return custom_op_domain.release();
+}
+
+ORT_API(void, OrtReleaseCustomOpDomain, OrtCustomOpDomain* ptr) {
+  delete ptr;
+}
+
+ORT_API_STATUS_IMPL(OrtCustomOpDomain_Add, _In_ OrtCustomOpDomain* custom_op_domain, OrtCustomOp* op) {
+  API_IMPL_BEGIN
+  custom_op_domain->custom_ops_.emplace_back(op);
+  return nullptr;
+  API_IMPL_END
+}
+
+ORT_API_STATUS_IMPL(OrtAddCustomOpDomain, _In_ OrtSessionOptions* options, OrtCustomOpDomain* custom_op_domain) {
+  API_IMPL_BEGIN
+  options->custom_op_domains_.emplace_back(custom_op_domain);
+  return nullptr;
+  API_IMPL_END
+}
+
+ORT_API_STATUS_IMPL(OrtCreateSession, _In_ OrtEnv* env, _In_ const ORTCHAR_T* model_path,
+                    _In_ const OrtSessionOptions* options, _Out_ OrtSession** out) {
   API_IMPL_BEGIN
   //auto sess = std::make_unique<::onnxruntime::InferenceSession>(options == nullptr ? onnxruntime::SessionOptions() : options->value, env->loggingManager);
   //Status status;
-  //if (options != nullptr && !options->custom_op_paths.empty()) {
-  //  status = sess->LoadCustomOps(options->custom_op_paths);
-  //  if (!status.IsOK())
-  //    return ToOrtStatus(status);
+  //if (options != nullptr) {
+  //  if (!options->custom_op_paths.empty()) {
+  //    status = sess->LoadCustomOps(options->custom_op_paths);
+  //    if (!status.IsOK())
+  //      return ToOrtStatus(status);
+  //  }
+  //  if (!options->custom_op_domains_.empty()) {
+  //    status = sess->AddCustomOpDomains(options->custom_op_domains_);
+  //    if (!status.IsOK())
+  //      return ToOrtStatus(status);
+  //  }
   //}
+
   //if (options != nullptr)
   //  for (auto& factory : options->provider_factories) {
   //    auto provider = factory->CreateProvider();
@@ -364,22 +397,6 @@ static OrtStatus* CreateSessionImpl(_In_ OrtEnv* env, _In_ T model_path,
   return nullptr;
   API_IMPL_END
 }
-
-#ifdef _WIN32
-ORT_API_STATUS_IMPL(OrtCreateSession, _In_ OrtEnv* env, _In_ const wchar_t* model_path,
-                    _In_ const OrtSessionOptions* options, _Out_ OrtSession** out) {
-  API_IMPL_BEGIN
-  return CreateSessionImpl(env, model_path, options, out);
-  API_IMPL_END
-}
-#else
-ORT_API_STATUS_IMPL(OrtCreateSession, _In_ OrtEnv* env, _In_ const char* model_path,
-                    _In_ const OrtSessionOptions* options, _Out_ OrtSession** out) {
-  API_IMPL_BEGIN
-  return CreateSessionImpl(env, model_path, options, out);
-  API_IMPL_END
-}
-#endif
 
 ORT_API_STATUS_IMPL(OrtRun, _In_ OrtSession* sess,
                     _In_ OrtRunOptions* run_options,
@@ -489,7 +506,7 @@ ORT_API_STATUS_IMPL(OrtGetStringTensorContent, _In_ const OrtValue* value,
 
 ORT_API_STATUS_IMPL(OrtTensorProtoToOrtValue, _In_ const void* input, int input_len,
                     _In_opt_ const ORTCHAR_T* input_file_path, _Inout_ void* preallocated, size_t preallocated_size,
-                    _Out_ OrtValue** out, _Out_ OrtDeleter** deleter) {
+                    _Out_ OrtValue** out, _Out_ OrtCallback** deleter) {
   API_IMPL_BEGIN
   OrtAllocatorInfo* cpuAllocatorInfo;
   auto st = OrtCreateAllocatorInfo("Cpu", OrtDeviceAllocator, 0, OrtMemTypeDefault, &cpuAllocatorInfo);
@@ -499,7 +516,7 @@ ORT_API_STATUS_IMPL(OrtTensorProtoToOrtValue, _In_ const void* input, int input_
     return OrtCreateStatus(ORT_FAIL, "parse input tensor proto failed");
   }
   std::unique_ptr<MLValue> value = std::make_unique<MLValue>();
-  std::unique_ptr<OrtDeleter> del = std::make_unique<OrtDeleter>();
+  std::unique_ptr<OrtCallback> del = std::make_unique<OrtCallback>();
   auto status =
       utils::TensorProtoToMLValue(Env::Default(), input_file_path, proto,
                                   MemBuffer(preallocated, preallocated_size, *cpuAllocatorInfo), *value, *del);
@@ -531,7 +548,7 @@ ORT_API_STATUS_IMPL(OrtGetTensorMemSizeInBytesFromTensorProto, _In_ const void* 
       ORT_C_API_RETURN_IF_ERROR(utils::GetSizeInBytesFromTensorProto<256>(proto, out));
       break;
     default:
-      return OrtCreateStatus(ORT_INVALID_ARGUMENT, "invalid alignment");
+      return OrtCreateStatus(ORT_INVALID_ARGUMENT, "Invalid alignment, which can only be 0 or 256");
   }
   return nullptr;
   API_IMPL_END

@@ -704,6 +704,16 @@ def test_Div(tmpdir):
     shape2 = (1, 3, 1, 1)
     run_div_test(shape1, shape2, tmpdir)
 
+def test_Div_WithBraodcast(tmpdir):
+    batch_size, sequence_len = 1, 3
+    shape1, shape2 = (1, 2), (2, 1, 1)
+    x1 = C.input_variable(shape1, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')])
+    x2 = C.input_variable(shape2, dynamic_axes=[])
+    model = C.element_divide(x1, x2)
+    data1 = np.random.uniform(low=1.0, high=2.0, size=(batch_size, sequence_len, *shape1)).astype(np.float32)
+    data2 = np.random.uniform(low=1.0, high=2.0, size=shape2).astype(np.float32)
+    verify_sequence_model(model, [data1, data2], tmpdir, 'test_Div_WithBraodcast', bypass_load_into_cntk = True)
+
 #Dropout
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_Dropout(tmpdir, dtype):

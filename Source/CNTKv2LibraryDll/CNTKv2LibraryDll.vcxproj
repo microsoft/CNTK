@@ -280,8 +280,10 @@
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\environment.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\error_code.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\onnxruntime_typeinfo.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\path_lib.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorprotoutils.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_external_data_info.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_shape.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_type_and_shape.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\contrib_ops\attn_lstm_schema_defs.cc" />
