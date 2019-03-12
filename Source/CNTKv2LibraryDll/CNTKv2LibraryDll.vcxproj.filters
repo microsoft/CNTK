@@ -233,8 +233,8 @@
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_external_data_info.cc">
       <Filter>proto\onnx\onnxruntime\framework</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\path_lib.cc">
-      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\framework\path_lib.cc">
+      <Filter>proto\onnx\patch</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
