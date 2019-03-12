@@ -1054,7 +1054,7 @@ void ConvertTensorToRawDataAndSave(std::string folder, TensorProto* tensor, bool
     case TensorProto_DataType_INT8:
     case TensorProto_DataType_UINT16:
     case TensorProto_DataType_INT16:
-        CNTK::LogicError(errMsg.c_str());
+        CNTK::LogicError("%s", errMsg.c_str());
     case TensorProto_DataType_INT32:
         if (fp)
             fwrite(tensor->int32_data().data(), sizeof(int32_t), tensor->int32_data_size(), fp);
@@ -1071,7 +1071,7 @@ void ConvertTensorToRawDataAndSave(std::string folder, TensorProto* tensor, bool
         break;
     case TensorProto_DataType_STRING:
     case TensorProto_DataType_BOOL:
-        CNTK::LogicError(errMsg.c_str());
+        CNTK::LogicError("%s", errMsg.c_str());
         break;
     case TensorProto_DataType_FLOAT16:
     {
@@ -1097,7 +1097,7 @@ void ConvertTensorToRawDataAndSave(std::string folder, TensorProto* tensor, bool
     case TensorProto_DataType_COMPLEX64:
     case TensorProto_DataType_COMPLEX128:
     case TensorProto_DataType_BFLOAT16:
-        CNTK::LogicError(errMsg.c_str());
+        CNTK::LogicError("%s", errMsg.c_str());
     }
 
     if (useDataLocationExternal)

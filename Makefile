@@ -99,6 +99,7 @@ ONNX_REPO_PATH:=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo
 ONNX_REPO_PATH+=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnx_repo/onnx
 ONNX_REPO_PATH+=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime
 ONNX_REPO_PATH+=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/include/onnxruntime
+ONNX_REPO_PATH+=$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/patch/onnxruntime/platform_specifics/linux
 INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/API/Internals CNTKv2LibraryDll/Generated/Linux CNTKv2LibraryDll/proto ../Examples/Extensibility/CPP Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 INCLUDEPATH+=$(GSL_PATH)/include
