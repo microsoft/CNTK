@@ -30,6 +30,10 @@ using namespace CNTK;
 using namespace onnxruntime;
 using namespace onnx;
 
+// parameters in an ONNX model can be saved in external files. 
+// use this limit so that small parameters are not saved into
+// external files to avoid too many external files for a model.
+// update related code once parameters can be saved into a single external file.
 const size_t ParameterSizeForExternalLocation = 1024;
 namespace CNTK
 {
@@ -407,12 +411,6 @@ private:
                                                           std::vector<ScanLoop> &scanLoops, int createLoopIndex);
 
     // Processes inputs of a src CNTK op, creating ONNX nodes needed for the inputs.
-    static std::vector<FunctionPtr> ProcessInputsInternal(const FunctionPtr& src,
-        onnxruntime::Graph* graph,
-        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
-        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
-        std::vector<onnxruntime::NodeArg *>& inputs,
-        std::vector<ScanLoop> &scanLoops, int createLoopIndex);
     static void ProcessInputs(const FunctionPtr& src,
                               onnxruntime::Graph* graph,
                               std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
@@ -1020,8 +1018,11 @@ onnxruntime::Graph* CNTKToONNXHelper::globalGraph = nullptr;
 
 } // namespace CNTK
 
-void SaveTensorData(std::string folder, TensorProto* tensor, bool useDataLocationExternal)
+// convert tensor to raw data and save to an external file if required.
+void ConvertTensorToRawDataAndSave(std::string folder, TensorProto* tensor, bool useDataLocationExternal)
 {
+    // tensor of bools are stored as int32. however it could be treated as either 1, 8, or 32 bits in raw format.
+    // to avoid this uncertainty, tensor of boolean type is not to be converted to raw data. 
     if (tensor->data_type() == TensorProto_DataType_BOOL)
         return;
 
@@ -1069,13 +1070,8 @@ void SaveTensorData(std::string folder, TensorProto* tensor, bool useDataLocatio
         tensor->clear_int64_data();
         break;
     case TensorProto_DataType_STRING:
-        CNTK::LogicError(errMsg.c_str());
     case TensorProto_DataType_BOOL:
-        if (fp)
-            fwrite(tensor->int32_data().data(), sizeof(int32_t), tensor->int32_data_size(), fp);
-        else
-            tensor->set_raw_data(tensor->int32_data().data(), sizeof(int32_t) * tensor->int32_data_size());
-        tensor->clear_int32_data();
+        CNTK::LogicError(errMsg.c_str());
         break;
     case TensorProto_DataType_FLOAT16:
     {
@@ -1115,11 +1111,11 @@ void SaveTensorData(std::string folder, TensorProto* tensor, bool useDataLocatio
     }
 }
 
-void MoveInitializerTensorsToExternalFiles(Graph *graph, const std::wstring& wFilepath, 
+void ConvertInitializerTensorsToRawDataAndSaveExternalFiles(Graph *graph, const std::wstring& wFilepath, 
     bool useExternalFilesToStoreParameters)
 {
     std::string filepath = ToLegacyString(ToUTF8(wFilepath));
-    std::string folder = GetRootPath(filepath);
+    std::string folder = useExternalFilesToStoreParameters ? GetRootPath(filepath) : "";
     InitializedTensorSet& initializedTensorSet = const_cast<InitializedTensorSet&>(graph->GetAllInitializedTensors());
     for (InitializedTensorSet::iterator it = initializedTensorSet.begin(); it != initializedTensorSet.end(); ++it)
     {
@@ -1128,7 +1124,7 @@ void MoveInitializerTensorsToExternalFiles(Graph *graph, const std::wstring& wFi
         for (int i = 0; i < tensor->dims_size(); i++)
             dataSize *= tensor->dims(i);
         bool useExternalLocationForThisTensor = useExternalFilesToStoreParameters && dataSize > ParameterSizeForExternalLocation;
-        SaveTensorData(folder, tensor, useExternalLocationForThisTensor);
+        ConvertTensorToRawDataAndSave(folder, tensor, useExternalLocationForThisTensor);
     }
 }
 
@@ -1142,7 +1138,7 @@ std::unique_ptr<onnxruntime::Model> CNTKToONNX::CreateModel(const FunctionPtr& s
     if (!status.IsOK())
         LogicError("%s", status.ErrorMessage().c_str());
 
-    MoveInitializerTensorsToExternalFiles(&dstGraph, filepath, useExternalFilesToStoreParameters);
+    ConvertInitializerTensorsToRawDataAndSaveExternalFiles(&dstGraph, filepath, useExternalFilesToStoreParameters);
 
     model->SetModelversion(static_cast<onnxruntime::Version>(CNTK_ONNX_MODEL_VERSION)); // REVIEW sptiwari: This is the default. This and doc_string should be surfaced as graph's 'save' API input.
     model->SetDomain(CNTK_ONNX_MODEL_DOMAIN);
@@ -1223,8 +1219,8 @@ void CNTKToONNXHelper::Copy(const FunctionPtr& src, onnxruntime::Graph* dst)
     int createLoopIndex = -1;
     
     // stack overflows when exporting ResNet110_CIFAR10_CNTK.model and old ResNet152_ImageNet_CNTK.model.
-    // experiment shows that this issue is related to the depth of depth first search of CreateNode call.
-    // we truncate the search patch by 150
+    // experiment shows that this issue is related to the depth of the DFS in CreateNode call.
+    // we truncate the search path by 150 to fix this issue.
     const int DepthSizeLimit = 300, DepthStep = 150;
     std::vector<FunctionPtr> depthFirstPath;
     std::set<std::string> visitedVariables;
@@ -5835,7 +5831,7 @@ std::vector<FunctionPtr> CNTKToONNXHelper::ProcessLoopStepInputs(const FunctionP
     return inputOps;
 }
 
-std::vector<FunctionPtr> CNTKToONNXHelper::ProcessInputsInternal(const FunctionPtr& src,
+void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
     onnxruntime::Graph* graph,
     std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
     std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
@@ -5912,7 +5908,7 @@ std::vector<FunctionPtr> CNTKToONNXHelper::ProcessInputsInternal(const FunctionP
         //
         // Get unique name based on user-defined name if available, otherwise use our internal unique name ID.
         //
-        std::string inputName = [&](){
+        std::string inputName = [&]() {
             auto inputItr = compositeOutputsMap.find(input);
             if (inputItr != compositeOutputsMap.end())
                 return UniqueNodeNameStorage::GetUniqueInputNodeName(inputItr->second);
@@ -5928,11 +5924,11 @@ std::vector<FunctionPtr> CNTKToONNXHelper::ProcessInputsInternal(const FunctionP
         bool isInSubGraph = createLoopIndex >= 0 && createLoopIndex < scanLoops.size();
 
         bool isScanInputInSubgraph = createLoopIndex != -1 &&
-                                     std::find_if(scanLoops[createLoopIndex].m_scanInputs.begin(), scanLoops[createLoopIndex].m_scanInputs.end(),
-                                                  [inputName](Variable v) { return inputName == UniqueNodeNameStorage::GetUniqueInputNodeName(v); }) != scanLoops[createLoopIndex].m_scanInputs.end();
+            std::find_if(scanLoops[createLoopIndex].m_scanInputs.begin(), scanLoops[createLoopIndex].m_scanInputs.end(),
+                [inputName](Variable v) { return inputName == UniqueNodeNameStorage::GetUniqueInputNodeName(v); }) != scanLoops[createLoopIndex].m_scanInputs.end();
 
         bool isOutputOfStepFunction = input.Owner() &&
-                                      (input.Owner()->OpName() == L"PastValue" || input.Owner()->OpName() == L"FutureValue");
+            (input.Owner()->OpName() == L"PastValue" || input.Owner()->OpName() == L"FutureValue");
 
         onnx::TypeProto inputArgType;
 
@@ -5974,7 +5970,7 @@ std::vector<FunctionPtr> CNTKToONNXHelper::ProcessInputsInternal(const FunctionP
         //
         if (input.IsOutput())
             // fs.push_back(input.Owner());
-             CreateNode(input.Owner(), graph, functionNodes, variableNodes,
+            CreateNode(input.Owner(), graph, functionNodes, variableNodes,
                 scanLoops, createLoopIndex);
 
         if (cntkOpName == "Splice")
@@ -6002,7 +5998,7 @@ std::vector<FunctionPtr> CNTKToONNXHelper::ProcessInputsInternal(const FunctionP
                 // Thus insert the emulated out channel axis if needed.
                 const NDShape& operandShape = src->Inputs()[ConvOperandIndex].Shape();
                 if (operandShape.Rank() >= inputShape.Rank())
-                    inputShape = inputShape.AppendShape({1});
+                    inputShape = inputShape.AppendShape({ 1 });
                 assert(inputShape.Rank() == (operandShape.Rank() + 1));
             }
             inputArgType = ToTypeProto(inputShape, input.HasBatchAxis(), input.HasSequenceAxis());
@@ -6156,7 +6152,7 @@ std::vector<FunctionPtr> CNTKToONNXHelper::ProcessInputsInternal(const FunctionP
                         newShapeVec.push_back(ReshapeInferredDim);
                 }
                 else if (axisSize == NDShape::FreeDimension &&
-                         indexToInputShape >= 0 && inputShape[indexToInputShape] != NDShape::FreeDimension)
+                    indexToInputShape >= 0 && inputShape[indexToInputShape] != NDShape::FreeDimension)
                 {
                     numInferredDimensions++;
                     if (numInferredDimensions > 1)
@@ -6168,7 +6164,7 @@ std::vector<FunctionPtr> CNTKToONNXHelper::ProcessInputsInternal(const FunctionP
             }
 
             // std::reverse(newShapeVec.begin(), newShapeVec.end());
-            onnx::TypeProto shapeInputArgType = ToTypeProto(std::vector<int64_t>({(int64_t)newShapeVec.size()}));
+            onnx::TypeProto shapeInputArgType = ToTypeProto(std::vector<int64_t>({ (int64_t)newShapeVec.size() }));
             shapeInputArgType.mutable_tensor_type()->set_elem_type(onnx::TensorProto_DataType_INT64);
 
             onnxruntime::NodeArg &shapeInputArg = graph->GetOrCreateNodeArg(ToLegacyString(ToUTF8(src->Output().Uid())) + "_shape", &shapeInputArgType);
@@ -6176,24 +6172,6 @@ std::vector<FunctionPtr> CNTKToONNXHelper::ProcessInputsInternal(const FunctionP
             AddShapeInitializer(shapeInputArg.Name(), newShapeVec, graph);
         }
     }
-    return fs;
-}
-
-void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
-    onnxruntime::Graph* graph,
-    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
-    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
-    std::vector<onnxruntime::NodeArg *>& inputs,
-    std::vector<ScanLoop> &scanLoops, int createLoopIndex)
-{
-    std::vector<FunctionPtr> fs = ProcessInputsInternal(src, graph, functionNodes, variableNodes, inputs, scanLoops, createLoopIndex);
-    //for (int i = 0; i < fs.size(); i++)
-    //{
-    //    auto f = fs[fs.size() - i - 1];
-    //    // auto f = fs[i];
-    //    CreateNode(f, graph, functionNodes, variableNodes,
-    //        scanLoops, createLoopIndex);
-    //}
 }
 
 void CNTKToONNXHelper::ProcessOutputs(const FunctionPtr& src, 
