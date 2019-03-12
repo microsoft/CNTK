@@ -541,10 +541,10 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/environment.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/error_code.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/onnxruntime_typeinfo.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/path_lib.cc \	
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/path_lib.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/tensor.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/tensorprotoutils.cc \
-	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/tensor_external_data_info.cc \	
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/tensor_external_data_info.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/tensor_shape.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/framework/tensor_type_and_shape.cc \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/onnx/onnxruntime/onnxruntime/core/graph/contrib_ops/attn_lstm_schema_defs.cc \
