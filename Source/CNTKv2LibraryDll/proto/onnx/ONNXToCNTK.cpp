@@ -471,7 +471,11 @@ void LoadRawDataAndUnpack(onnx::TensorProto &tensor_proto, bool doUnpack)
         {
             std::string filename = it->value();
             std::string raw_data_from_file;
+#ifdef _WIN32
             Env::Default().ReadFileAsString(ToFixedWString(ONNXToCNTKHelper::model_location_ + "/" + filename).c_str(), &raw_data_from_file);
+#else
+            Env::Default().ReadFileAsString((ONNXToCNTKHelper::model_location_ + "/" + filename).c_str(), &raw_data_from_file);
+#endif
             const void* raw_data = raw_data_from_file.data();
             size_t raw_data_len = raw_data_from_file.size();
             tensor_proto.set_raw_data(raw_data, raw_data_len);
