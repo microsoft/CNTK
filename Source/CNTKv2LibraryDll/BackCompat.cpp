@@ -446,6 +446,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameTranspose] = convolutionNode->Transpose();
                     primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameOutputShape] = AsNDShape(convolutionNode->OutputShape());
                     primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameMaxTempMemSizeInSamples] = convolutionNode->MaxTempMemSizeInSamples();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameGroups] = convolutionNode->Groups();
 
                     opType = PrimitiveOpType::Convolution;
                 }
