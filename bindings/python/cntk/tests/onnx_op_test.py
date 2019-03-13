@@ -188,6 +188,7 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
             model, tmpdir, name, model, resave, True, 
             use_external_files_to_store_parameters = use_external_files_to_store_parameters)
         o0 = run_model(model, data, device=device)
+        o0 = np.array(o0)
         save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
     else:
         dataOnnx = None
