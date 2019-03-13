@@ -710,7 +710,7 @@ def test_Div_WithBraodcast(tmpdir):
     x1 = C.input_variable(shape1, dynamic_axes=[C.Axis.default_batch_axis(), C.Axis('sequenceAxis')])
     x2 = C.input_variable(shape2, dynamic_axes=[])
     model = C.element_divide(x1, x2)
-    data1 = np.random.uniform(low=1.0, high=2.0, size=(batch_size, sequence_len, *shape1)).astype(np.float32)
+    data1 = np.random.uniform(low=1.0, high=2.0, size=(batch_size, sequence_len, shape1[0], shape1[1])).astype(np.float32)
     data2 = np.random.uniform(low=1.0, high=2.0, size=shape2).astype(np.float32)
     verify_sequence_model(model, [data1, data2], tmpdir, 'test_Div_WithBraodcast', bypass_load_into_cntk = True)
 
