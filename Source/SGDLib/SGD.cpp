@@ -2316,7 +2316,7 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
 #else
         if (Globals::UseV2Aggregator())
         {
-            auto communicator = ::CNTK::MPICommunicator(m_useFP16AllReduce);
+            auto communicator = ::CNTK::MPICommunicator(::CNTK::Internal::GetMPIPackThreshold(), m_useFP16AllReduce);
             m_pMASGDHelper = make_shared<V2BlockMomentumSGD<ElemType>>(
                 m_mpi,
                 communicator,

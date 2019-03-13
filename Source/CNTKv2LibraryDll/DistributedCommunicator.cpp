@@ -33,10 +33,6 @@ namespace CNTK
     {
         return std::make_shared<MPICommunicatorImpl>(packThresholdSizeInBytes, useFP16AllReduce);
     }
-    DistributedCommunicatorPtr MPICommunicator(bool useFP16AllReduce)
-    {
-        return MPICommunicator(Internal::GetMPIPackThreshold(), useFP16AllReduce);
-    }
 
     void DistributedCommunicator::Finalize()
     {

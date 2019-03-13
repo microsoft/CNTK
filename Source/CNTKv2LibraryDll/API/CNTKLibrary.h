@@ -6265,7 +6265,6 @@ namespace CNTK
     /// Built-in MPI-based communicator.
     ///
     CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = Internal::GetMPIPackThreshold(), bool useFP16AllReduce = false);
-    CNTK_API DistributedCommunicatorPtr MPICommunicator(bool useFP16AllReduce);
 
     ///
     /// Distributed communicator that allows quantized aggregations.
