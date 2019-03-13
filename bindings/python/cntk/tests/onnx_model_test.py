@@ -331,15 +331,14 @@ rnn_model_names = [dir for dir in os.listdir(rnn_base_dir)
 
 skip_rnn_model_names = [
     # ORT has a different random generator than CNTK. It will not create the same outputs.
-    'SmartReply.cvae_input_replaced_with_gather_for_indice_input.cntk.model', 
+    'SmartReply.cvae_gather.model', 
     # SmartReply.SelfAtt.infer_model.cnt.model test requires GPU. However this test failed with both GPU and CPU test.
     # skip it for now to unblock night build
     'SmartReply.SelfAtt.infer_model.cnt.model'
 ]
 
 verify_with_resave = [
-    'SmartReply.cvae_input_replaced_with_gather_for_indice_input.cntk.model',
-    'SmartReply.3outputs.Trained.cnt_replaced_embedding_with_gather.model',
+    'SmartReply.3outputs.Trained.gather.model',
     'SmartReply.3outputs.Untrained.model'
 ]
 
@@ -352,7 +351,7 @@ models_with_sequential_data = [
 
 seq_models_with_sparse_data = [
     'Bing.Malta50.proto1_128_gru_normv3_ep3_z.model',
-    'SmartReply.3outputs.Trained.cnt_replaced_embedding_with_gather.model',
+    'SmartReply.3outputs.Trained.gather.model',
     'SmartReply.3outputs.Untrained.model',
 ]
 
