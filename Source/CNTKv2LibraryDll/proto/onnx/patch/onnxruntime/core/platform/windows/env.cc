@@ -94,6 +94,7 @@ namespace onnxruntime {
                 t.f();
             }
             common::Status ReadFileAsString(const wchar_t* fname, std::string* out) const override {
+#ifndef IsUWP
                 if (!fname) return common::Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT, "file name is nullptr");
                 if (!out) {
                     return common::Status(common::ONNXRUNTIME, common::INVALID_ARGUMENT, "'out' cannot be NULL");
@@ -139,6 +140,7 @@ namespace onnxruntime {
                     wptr += readed;
                     length_remain -= readed;
                 } while (length_remain > 0);
+#endif
                 return common::Status::OK();
             }
 
