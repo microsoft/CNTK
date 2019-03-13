@@ -556,11 +556,6 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_magnitude, matrixPool, 1, true, false, false);
         RequestMatrixFromPool(m_temp1, matrixPool, 1, true, false, false);
-    }
-
-    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
-    {
-        Base::RequestMatricesBeforeBackprop(matrixPool);
         RequestMatrixFromPool(m_temp2, matrixPool, m_inputDimension, true, true, false);
     }
 

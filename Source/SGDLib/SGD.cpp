@@ -8,8 +8,12 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 //#define __PROFILE__
+#include <cmath>
+const double Pi = acos(-1.0);
 
 #include "Basics.h"
+#include <math.h>
+#include <random>
 #include "SGD.h"
 #include "NonlinearityNodes.h"   // for DropoutNode
 #include "SpecialPurposeNodes.h" // for SequenceWithSoftmaxNode
@@ -57,6 +61,10 @@ template SGD<float>::SGD(const ConfigParameters&);
 template SGD<double>::SGD(const ConfigParameters&);
 template SGD<float>::SGD(const ScriptableObjects::IConfigRecord&);
 template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
+
+using Params = std::normal_distribution<>::param_type;
+normal_distribution<double> normalDist(0, 1);
+std::default_random_engine generator;
 
 // -----------------------------------------------------------------------
 // Train() -- perform a multi-epoch training end-to-end with checkpointing
@@ -1276,14 +1284,26 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 ++m_lrapiInfo.iter;
                 if (AdjustType::Poly == m_lrapiInfo.adjustType)
-                    learnRatePerSample = m_lrapiInfo.base_ / m_mbSize[epochNumber] * pow(1 - 1.0 * m_lrapiInfo.iter / m_lrapiInfo.maxIter, m_lrapiInfo.power);
+                    learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * pow(1 - 1.0 * m_lrapiInfo.iter / m_lrapiInfo.maxIter, m_lrapiInfo.power);
                 else if (AdjustType::Inv == m_lrapiInfo.adjustType)
-                    learnRatePerSample = m_lrapiInfo.base_ / m_mbSize[epochNumber] * pow(1 + m_lrapiInfo.gamma * m_lrapiInfo.iter, -m_lrapiInfo.power);
+                    learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * pow(1 + m_lrapiInfo.gamma * m_lrapiInfo.iter, -m_lrapiInfo.power);
                 else if (AdjustType::Exp == m_lrapiInfo.adjustType)
-                    learnRatePerSample = m_lrapiInfo.base_ / m_mbSize[epochNumber] * pow(m_lrapiInfo.gamma, m_lrapiInfo.iter);
+                    learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * pow(m_lrapiInfo.gamma, m_lrapiInfo.iter);
                 else if (AdjustType::Step == m_lrapiInfo.adjustType)
-                    learnRatePerSample = m_lrapiInfo.base_ / m_mbSize[epochNumber] * pow(m_lrapiInfo.gamma, floor(1.0 * m_lrapiInfo.iter / m_lrapiInfo.step));
-
+                    learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * pow(m_lrapiInfo.gamma, floor(1.0 * m_lrapiInfo.iter / m_lrapiInfo.step));
+                else if (AdjustType::Cosine == m_lrapiInfo.adjustType)
+                    learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * ((1 - m_minLearnRate) * 0.5 * (1 + cos(Pi * m_lrapiInfo.iter / m_lrapiInfo.maxIter)) + m_minLearnRate);
+                else if (AdjustType::Linear_Cosine == m_lrapiInfo.adjustType)
+                    learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * ((m_minLearnRate + (m_lrapiInfo.maxIter - m_lrapiInfo.iter) / double(m_lrapiInfo.maxIter)) * 0.5 * (1 + cos(Pi * 2 * m_lrapiInfo.numPeriods * m_lrapiInfo.iter / m_lrapiInfo.maxIter)) + m_lrapiInfo.beta);
+                else if (AdjustType::Noisy_Linear_Cosine == m_lrapiInfo.adjustType)
+                {
+                    double eps_t_stddev = sqrt(m_lrapiInfo.initialVariance / pow((1 + m_lrapiInfo.iter), m_lrapiInfo.varianceDecay));
+                    normalDist.param(Params{0.0, eps_t_stddev});
+                    double eps_t = normalDist(generator);
+                    learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * ((m_minLearnRate + eps_t + (m_lrapiInfo.maxIter - m_lrapiInfo.iter) / double(m_lrapiInfo.maxIter)) * 0.5 * (1 + cos(Pi * 2 * m_lrapiInfo.numPeriods * m_lrapiInfo.iter / m_lrapiInfo.maxIter)) + m_lrapiInfo.beta);
+                }
+                else if (AdjustType::Sigmoid == m_lrapiInfo.adjustType)
+                    learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * (1.0 / (1.0 + exp(-m_lrapiInfo.gamma * (m_lrapiInfo.iter - m_lrapiInfo.stepSize))));
                 if (m_lrapiInfo.iter >= m_lrapiInfo.maxIter)
                     m_lrapiInfo.reachMaxIter = true;
 
@@ -2614,7 +2634,7 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCKP");
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
             fstream << totalSamplesSeen << learnRatePerSample << prevCriterion;
-            fstream << m_lrapiInfo.adjustType << m_lrapiInfo.iter << m_lrapiInfo.maxIter << m_lrapiInfo.base_ << m_lrapiInfo.gamma << m_lrapiInfo.power << m_lrapiInfo.numItersToShowLR << m_lrapiInfo.reachMaxIter << m_lrapiInfo.sgdTraceLevel;
+            fstream << m_lrapiInfo.adjustType << m_lrapiInfo.iter << m_lrapiInfo.maxIter << m_lrapiInfo.baseLR << m_lrapiInfo.gamma << m_lrapiInfo.power << m_lrapiInfo.numItersToShowLR << m_lrapiInfo.reachMaxIter << m_lrapiInfo.sgdTraceLevel;
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
 
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize");
@@ -2717,7 +2737,7 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BLearnRate");
     fstream >> totalSamplesSeen >> learnRatePerSample >> prevCriterion;
-    fstream >> m_lrapiInfo.adjustType >> m_lrapiInfo.iter >> m_lrapiInfo.maxIter >> m_lrapiInfo.base_ >> m_lrapiInfo.gamma >> m_lrapiInfo.power >> m_lrapiInfo.numItersToShowLR >> m_lrapiInfo.reachMaxIter >> m_lrapiInfo.sgdTraceLevel;
+    fstream >> m_lrapiInfo.adjustType >> m_lrapiInfo.iter >> m_lrapiInfo.maxIter >> m_lrapiInfo.baseLR >> m_lrapiInfo.gamma >> m_lrapiInfo.power >> m_lrapiInfo.numItersToShowLR >> m_lrapiInfo.reachMaxIter >> m_lrapiInfo.sgdTraceLevel;
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ELearnRate");
 
     if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BMinibatchSize"))
@@ -3063,6 +3083,14 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         m_lrapiInfo.adjustType = AdjustType::Exp;
     else if (EqualCI(adjustType, L"step") || EqualCI(adjustType, L"Step"))
         m_lrapiInfo.adjustType = AdjustType::Step;
+    else if (EqualCI(adjustType, L"cosine") || EqualCI(adjustType, L"Cosine"))
+        m_lrapiInfo.adjustType = AdjustType::Cosine;
+    else if (EqualCI(adjustType, L"linear_cosine") || EqualCI(adjustType, L"Linear_Cosine"))
+        m_lrapiInfo.adjustType = AdjustType::Linear_Cosine;
+    else if (EqualCI(adjustType, L"noisy_linear_cosine") || EqualCI(adjustType, L"Noisy_Linear_Cosine"))
+        m_lrapiInfo.adjustType = AdjustType::Noisy_Linear_Cosine;
+    else if (EqualCI(adjustType, L"sigmoid") || EqualCI(adjustType, L"Sigmoid"))
+        m_lrapiInfo.adjustType = AdjustType::Sigmoid;
     else
         LogicError("Invalid learning rate adjust type.");
 
@@ -3073,9 +3101,15 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         LogicError("maxIteration must be greater than 0.");
     if (AdjustType::Step == m_lrapiInfo.adjustType && m_lrapiInfo.step < 1)
         LogicError("step must be greater than 0.");
-    m_lrapiInfo.base_ = configAALR(L"base", 0.0);
+    m_lrapiInfo.baseLR = configAALR(L"base", 0.0);
     m_lrapiInfo.gamma = configAALR(L"gamma", 0.0);
     m_lrapiInfo.power = configAALR(L"power", 1.0);
+    m_lrapiInfo.beta = configAALR(L"beta", 0.000);
+    m_lrapiInfo.initialVariance = configAALR(L"initialVariance", 1.0);
+    m_lrapiInfo.varianceDecay = configAALR(L"varianceDecay", 0.55);
+    m_lrapiInfo.numPeriods = configAALR(L"numPeriods", 0.5);
+    m_lrapiInfo.stepSize = configAALR(L"stepSize", (size_t) 0);
+
     m_lrapiInfo.numItersToShowLR = configAALR(L"numItersToShowLR", ((size_t) 1) << ((size_t) 60));
     if (m_lrapiInfo.numItersToShowLR < 1)
         LogicError("numItersToShowLR must be greater than 0.");
