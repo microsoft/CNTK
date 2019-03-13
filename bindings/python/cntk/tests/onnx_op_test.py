@@ -187,6 +187,8 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
         loaded_model, onnx_model, test_model_path, test_data_path = create_and_populate_onnx_test_case_with_model_conversion(
             model, tmpdir, name, model, resave, True, 
             use_external_files_to_store_parameters = use_external_files_to_store_parameters)
+        o0 = run_model(model, data, device=device)
+        save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
     else:
         dataOnnx = None
         if is_list_of_sparse(data):
@@ -206,36 +208,34 @@ def verify_sequence_model(model, data, tmpdir, name, device=None, loaded_model=N
             model, tmpdir, name, loaded_model, resave,
             use_external_files_to_store_parameters = use_external_files_to_store_parameters)
 
-    o0 = run_model(model, data, device=device)
-    o1 = run_model(loaded_model, dataOnnx, device=device)
+        o0 = run_model(model, data, device=device)
+        o1 = run_model(loaded_model, dataOnnx, device=device)
 
-    ## if there is a sequence axis in the output, it must be swapped with batch axis 
-    ## to match the original CNTK model's output 
-    if len(model.outputs) == 1:
-        o0 = np.array(o0)
-        o1 = np.array(o1)
-        if compare_model_for_output_data_transpose(model.outputs[0], loaded_model.outputs[0]):
-            o1 = transpose_dynamic_axis(np.array(o1))
-        assert np.allclose(o0, o1)
-    else:
-        matched_indices = []
-        for i in range(0, len(model.outputs)):
-            # outputs of loaded model are not necessarily in the same order as the original model.
-            # output uid is likely changed too.
-            # the only way to verify the data is to find match for every output. 
-            o0i = o0[model.outputs[i]]
-            for j in range(0, len(loaded_model.outputs)):
-                if j not in matched_indices:
-                    o1i = o1[loaded_model.outputs[j]]
-                    if compare_model_for_output_data_transpose(model.outputs[i], loaded_model.outputs[j]):
-                        o1i = transpose_dynamic_axis(o1i)
-                    if np.shape(o0i) == np.shape(o1i) and np.allclose(o0i, o1i):
-                        matched_indices.append(j)
-                        break
-            assert len(matched_indices) == i+1
-
-
-    save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
+        ## if there is a sequence axis in the output, it must be swapped with batch axis 
+        ## to match the original CNTK model's output 
+        if len(model.outputs) == 1:
+            o0 = np.array(o0)
+            o1 = np.array(o1)
+            if compare_model_for_output_data_transpose(model.outputs[0], loaded_model.outputs[0]):
+                o1 = transpose_dynamic_axis(np.array(o1))
+            assert np.allclose(o0, o1)
+        else:
+            matched_indices = []
+            for i in range(0, len(model.outputs)):
+                # outputs of loaded model are not necessarily in the same order as the original model.
+                # output uid is likely changed too.
+                # the only way to verify the data is to find match for every output. 
+                o0i = o0[model.outputs[i]]
+                for j in range(0, len(loaded_model.outputs)):
+                    if j not in matched_indices:
+                        o1i = o1[loaded_model.outputs[j]]
+                        if compare_model_for_output_data_transpose(model.outputs[i], loaded_model.outputs[j]):
+                            o1i = transpose_dynamic_axis(o1i)
+                        if np.shape(o0i) == np.shape(o1i) and np.allclose(o0i, o1i):
+                            matched_indices.append(j)
+                            break
+                assert len(matched_indices) == i+1
+        save_test_data(model, onnx_model, test_data_path, data, o0, name, tmpdir)
 
 def verify_two_input(model, data1, data2, tmpdir, name, use_external_files_to_store_parameters=False):
     init_empty_node_names(model)
