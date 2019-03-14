@@ -5206,6 +5206,7 @@ __global__ void _computeBiVfsmnMemory(
     const CUDA_LONG N, const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG l_order, const CUDA_LONG r_order,
     const CUDA_LONG l_stride, const CUDA_LONG r_stride,
+    const CUDA_LONG padding,
     ElemType* out)             // D x T
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -5217,29 +5218,52 @@ __global__ void _computeBiVfsmnMemory(
     ElemType value = 0.0;
     int shift_index = 0;
     int index = col * rows + row;
+    int valid_shift_index;
 
     // process flags[x] == 0 (GAP sentence)
-    if (flags[col] == 0) // GAP_SEQUENCE_ID
+    if (flags[col] == -1) // GAP_SEQUENCE_ID
     {
         out[index] = 0.0;
         return;
     }
 
     out[index] = in[index];
+    valid_shift_index = col;
     for (int order = 0; order < l_order; order++)
     {
         shift_index = col - order * l_stride * flag_stride;
         if (shift_index >= 0 && flags[shift_index] == flags[col])
         {
             value += in[shift_index * rows + row] * l_filter[order * rows + row];
+            valid_shift_index = shift_index;
+        }
+        else
+        {
+            if (padding == 0)
+                break;
+            else
+            {
+                value += in[valid_shift_index * rows + row] * l_filter[order * rows + row];
+            }
         }
     }
+    valid_shift_index = col;
     for (int order = 1; order <= r_order; order++)
     {
         shift_index = col + order * r_stride * flag_stride;
         if (shift_index < cols && flags[shift_index] == flags[col])
         {
             value += in[shift_index * rows + row] * r_filter[(order-1) * rows + row];
+            valid_shift_index = shift_index;
+        }
+        else
+        {
+            if (padding == 0)
+                break;
+            else
+            {
+                value += in[valid_shift_index * rows + row] * r_filter[(order - 1) * rows + row];
+            }
         }
     }
     out[index] += value;
@@ -5255,6 +5279,7 @@ __global__ void _computeBiVfsmnMemoryGradient(
     const CUDA_LONG N, const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG l_order, const CUDA_LONG r_order,
     const CUDA_LONG l_stride, const CUDA_LONG r_stride,
+    const CUDA_LONG padding,
     ElemType* out)             // D x T, input gradient
 {
     CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -5266,29 +5291,54 @@ __global__ void _computeBiVfsmnMemoryGradient(
     ElemType value = 0.0;
     int shift_index = 0;
     int index = col * rows + row;
-
+    int valid_shift_index;
     // process flags[x] == 0 (GAP sentence)
-    if (flags[col] == 0) // GAP_SEQUENCE_ID
+    if (flags[col] == -1) // GAP_SEQUENCE_ID
     {
         out[index] = 0.0;
         return;
     }
 
+    valid_shift_index = col;
+
     out[index] = in[index];
-    for (int order = -r_order; order < 0; order++)
+    for (int order = -1; order >= -r_order; order--)
     {
         shift_index = col + order * r_stride * flag_stride;
         if (shift_index >= 0 && flags[shift_index] == flags[col])
         {
             value += in[shift_index * rows + row] * r_filter[(-order-1) * rows + row];
+            valid_shift_index = shift_index;
+        }
+        else
+        {
+            if (padding == 0)
+                break;
+            else
+            {
+                value += in[valid_shift_index * rows + row] * r_filter[(-order - 1) * rows + row];
+            }
         }
     }
+
+    valid_shift_index = col;
+
     for (int order = 0; order < l_order; order++)
     {
         shift_index = col + order * l_stride * flag_stride;
         if (shift_index < cols && flags[shift_index] == flags[col])
         {
             value += in[shift_index * rows + row] * l_filter[order * rows + row];
+            valid_shift_index = shift_index;
+        }
+        else
+        {
+            if (padding == 0)
+                break;
+            else
+            {
+                value += in[valid_shift_index * rows + row] * l_filter[order * rows + row];
+            }
         }
     }
     out[index] += value;
@@ -5303,6 +5353,7 @@ __global__ void _computeBiVfsmnLeftFilterGradient(
     const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG l_order,
     const CUDA_LONG l_stride,
+    const CUDA_LONG padding,
     ElemType* out)             // D x T, left filter gradient
 {
     const int CU1DBLOCK = 256;
@@ -5320,40 +5371,61 @@ __global__ void _computeBiVfsmnLeftFilterGradient(
     int index = order*rows + row;
     //copy input to aux
     int col = threadIdx.x - shift;
-
-    if (steps > 1)
+    int valid_col;
+    if (threadIdx.x >= cols || flags[threadIdx.x] == -1)
     {
-        if (col >= 0 && flags[threadIdx.x] == flags[col] && flags[col] >= 0)
+        aux[threadIdx.x] = 0;
+    }
+    else if (col >= 0 && flags[threadIdx.x] == flags[col])
+    {
+        aux[threadIdx.x] = in[row + col * rows] * diff[row + threadIdx.x * rows];
+    }
+    else if (padding == 1)
+    {
+        for (int k = order - 1; k >= 0; k--)
         {
-            aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
+            valid_col = threadIdx.x - k * l_stride * flag_stride;
+            if (valid_col >= 0 && flags[threadIdx.x] == flags[valid_col])
+                break;
         }
-        else
-        {
-            aux[threadIdx.x] = 0;
-        }
-        __syncthreads();
-        for (int i = 1; i<steps; ++i)
-        {
-            int index = threadIdx.x + i*THREADS;
-
-            if (index < cols && flags[index] == flags[index - shift] && flags[index] >= 0)
-                aux[threadIdx.x] += in[(index - shift)*rows + row] * diff[index*rows + row];
-        }
-        __syncthreads();
+        aux[threadIdx.x] = in[row + valid_col * rows] * diff[row + threadIdx.x * rows];
     }
     else
     {
-        if (col >= 0 && threadIdx.x < cols && flags[threadIdx.x] == flags[col] && flags[col] >= 0)
+        aux[threadIdx.x] = 0;
+    }
+    // __syncthreads();
+    for (int i = 1; i < steps; ++i)
+    {
+        int index = threadIdx.x + i * THREADS;
+        if (index >= cols)
         {
-            aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
+            break;
+        }
+        else if (flags[index] == -1)
+        {
+            continue;
+        }
+        else if ((index - shift) >= 0 && flags[index] == flags[index - shift])
+        {
+            aux[threadIdx.x] += in[(index - shift) * rows + row] * diff[index * rows + row];
+        }
+        else if (padding == 1)
+        {
+            for (int k = order - 1; k >= 0; k--)
+            {
+                valid_col = index - k * l_stride * flag_stride;
+                if (valid_col >= 0 && flags[index] == flags[valid_col])
+                    break;
+            }
+                aux[threadIdx.x] += in[valid_col * rows + row] * diff[index * rows + row];
         }
         else
         {
-            aux[threadIdx.x] = 0;
+            continue;
         }
-        __syncthreads();
     }
-
+    //__syncthreads();
     int nTotalThreads = THREADS;
     __syncthreads();
     while (nTotalThreads > 1) {
@@ -5368,7 +5440,7 @@ __global__ void _computeBiVfsmnLeftFilterGradient(
         nTotalThreads = ((1 + nTotalThreads) >> 1);   // divide by two.
     }
     ElemType sum = aux[0];
-    __syncthreads();
+    // __syncthreads();
     out[index] = sum;
 }
 
@@ -5381,6 +5453,7 @@ __global__ void _computeBiVfsmnRightFilterGradient(
     const CUDA_LONG rows, const CUDA_LONG cols,
     const CUDA_LONG r_order,
     const CUDA_LONG r_stride,
+    const CUDA_LONG padding,
     ElemType* out)             // D x T, right filter gradient
 {
     const int CU1DBLOCK = 256;
@@ -5398,40 +5471,61 @@ __global__ void _computeBiVfsmnRightFilterGradient(
     int index = order*rows + row;
     //copy input to aux
     int col = threadIdx.x + shift;
-
-    if (steps > 1)
+    int valid_col;
+    if (threadIdx.x >= cols || flags[threadIdx.x] == -1)
     {
-        if (col < cols && flags[threadIdx.x] == flags[col] && flags[col] >= 0)
+        aux[threadIdx.x] = 0;
+    }
+    else if (col < cols && flags[threadIdx.x] == flags[col])
+    {
+        aux[threadIdx.x] = in[row + col * rows] * diff[row + threadIdx.x * rows];
+    }
+    else if (padding == 1)
+    {
+        for (int k = order; k >= 0; k--)
         {
-            aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
+            valid_col = threadIdx.x + k * r_stride * flag_stride;
+            if (valid_col < cols && flags[threadIdx.x] == flags[valid_col])
+                break;
         }
-        else
-        {
-            aux[threadIdx.x] = 0;
-        }
-        __syncthreads();
-        for (int i = 1; i<steps; ++i)
-        {
-            int index = threadIdx.x + i*THREADS;
-
-            if (index + shift < cols && flags[index] == flags[index + shift] && flags[index] >= 0)
-                aux[threadIdx.x] += in[(index + shift)*rows + row] * diff[index*rows + row];
-        }
-        __syncthreads();
+        aux[threadIdx.x] = in[row + valid_col * rows] * diff[row + threadIdx.x * rows];
     }
     else
     {
-        if (col < cols && threadIdx.x < cols && flags[threadIdx.x] == flags[col] && flags[col] >= 0)
+        aux[threadIdx.x] = 0;
+    }
+    // __syncthreads();
+    for (int i = 1; i < steps; ++i)
+    {
+        int index = threadIdx.x + i * THREADS;
+        if (index >= cols)
         {
-            aux[threadIdx.x] = in[row + col*rows] * diff[row + threadIdx.x*rows];
+            break;
+        }
+        else if (flags[index] == -1)
+        {
+            continue;
+        }
+        else if ((index + shift) < cols && flags[index] == flags[index + shift])
+        {
+            aux[threadIdx.x] += in[(index + shift) * rows + row] * diff[index * rows + row];
+        }
+        else if (padding == 1)
+        {
+            for (int k = order; k >= 0; k--)
+            {
+                valid_col = index + k * r_stride * flag_stride;
+                if (valid_col < cols && flags[index] == flags[valid_col])
+                    break;
+            }
+                aux[threadIdx.x] += in[valid_col * rows + row] * diff[index * rows + row];
         }
         else
         {
-            aux[threadIdx.x] = 0;
+            continue;
         }
-        __syncthreads();
+        //__syncthreads();
     }
-
     int nTotalThreads = THREADS;
     __syncthreads();
     while (nTotalThreads > 1) {
@@ -5446,7 +5540,7 @@ __global__ void _computeBiVfsmnRightFilterGradient(
         nTotalThreads = ((1 + nTotalThreads) >> 1);   // divide by two.
     }
     ElemType sum = aux[0];
-    __syncthreads();
+    // __syncthreads();
     out[index] = sum;
 }
 

@@ -1041,7 +1041,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::BiVfsmn:
                         {
-                            assert(m_inputs.size() == 7);
+                            assert(m_inputs.size() == 8);
                             outputShape = m_inputs[0].Shape();
                             break;
                         }

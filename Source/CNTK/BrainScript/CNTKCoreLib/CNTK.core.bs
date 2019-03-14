@@ -681,7 +681,7 @@ BatchNormalization(input, scale, bias, runMean, runVariance, runCount=None, spat
         else _AsNodes (input : scale : bias : runMean : runVariance : runCount)
     /*plus the function args*/
 }
-BiVfsmn(in, lFilter, rFilter, lOrder, rOrder, lStride, rStride, tag='') = new ComputationNode
+BiVfsmn(in, lFilter, rFilter, lOrder, rOrder, lStride, rStride, padding, tag='') = new ComputationNode
 [
     operation = 'BiVfsmn'
     inputs = _AsNodes(in : lFilter : rFilter)

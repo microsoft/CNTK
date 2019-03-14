@@ -466,6 +466,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameROrder] = biVfsmnNode->ROrder();
                     primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameLStride] = biVfsmnNode->LStride();
                     primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameRStride] = biVfsmnNode->RStride();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNamePadding] = biVfsmnNode->Padding();
                     opType = PrimitiveOpType::BiVfsmn;
                 }
                 else if (node->OperationName() == OperationNameOf(ClipNode))

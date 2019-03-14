@@ -144,5 +144,6 @@ namespace CNTK
         CNTK_API static const std::wstring AttributeNameROrder;
         CNTK_API static const std::wstring AttributeNameLStride;
         CNTK_API static const std::wstring AttributeNameRStride;
+        CNTK_API static const std::wstring AttributeNamePadding;
     };
 }

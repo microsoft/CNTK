@@ -694,7 +694,7 @@ public:
                                      const Matrix<short>& flags,   // 1xT
                                      int flag_stride,
                                      int l_order, int r_order,
-                                     int l_stride, int r_stride,
+                                     int l_stride, int r_stride, int padding,
                                      Matrix<ElemType>& out);
 
     static void ComputeBiVfsmnMemoryGradient(const Matrix<ElemType>& gradientValues,
@@ -703,19 +703,19 @@ public:
                                              const Matrix<short>& flags,
                                              int flag_stride,
                                              int l_order, int r_order,
-                                             int l_stride, int r_stride,
+                                             int l_stride, int r_stride, int padding,
                                              Matrix<ElemType>& inputGradientValues);
     static void ComputeBiVfsmnLeftFilterGradient(const Matrix<ElemType>& gradientValues,
                                                  const Matrix<ElemType>& inputValues,
                                                  const Matrix<short>& flags,
                                                  int flag_stride,
-                                                 int l_order, int l_stride,
+                                                 int l_order, int l_stride, int padding,
                                                  Matrix<ElemType>& leftFilterGradientValues);
     static void ComputeBiVfsmnRightFilterGradient(const Matrix<ElemType>& gradientValues,
                                                   const Matrix<ElemType>& inputValues,
                                                   const Matrix<short>& flags,
                                                   int flag_stride,
-                                                  int r_order, int r_stride,
+                                                  int r_order, int r_stride, int padding,
                                                   Matrix<ElemType>& rightFilterGradientValues);
 
     template <typename T>

@@ -2384,7 +2384,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemory(const GPUMatrix<ElemType>& in,   
                                                const GPUMatrix<short>& flags,   // 1xT
                                                int flag_stride,
                                                int l_order, int r_order,
-                                               int l_stride, int r_stride,
+                                               int l_stride, int r_stride, int padding,
                                                GPUMatrix<ElemType>& out)
 {
 }
@@ -2397,7 +2397,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemoryGradient(
     const GPUMatrix<short>& flags,
     int flag_stride,
     int l_order, int r_order,
-    int l_stride, int r_stride,
+    int l_stride, int r_stride, int padding,
     GPUMatrix<ElemType>& inputGradientValues)
 {
 }
@@ -2408,7 +2408,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
     const GPUMatrix<ElemType>& inputValues,
     const GPUMatrix<short>& flags,
     int flag_stride,
-    int l_order, int l_stride,
+    int l_order, int l_stride, int padding,
     GPUMatrix<ElemType>& leftFilterGradientValues)
 {
 }
@@ -2419,7 +2419,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
     const GPUMatrix<ElemType>& inputValues,
     const GPUMatrix<short>& flags,
     int flag_stride,
-    int r_order, int r_stride,
+    int r_order, int r_stride, int padding,
     GPUMatrix<ElemType>& rightFilterGradientValues)
 {
 }

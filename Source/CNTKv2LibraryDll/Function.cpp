@@ -2804,7 +2804,7 @@ namespace CNTK
     }
 
     FunctionPtr BiVfsmn(const Variable& in, const Variable& lFilter, const Variable& rFilter,
-                        size_t lOrder, size_t rOrder, size_t lStride, size_t rStride,
+                        size_t lOrder, size_t rOrder, size_t lStride, size_t rStride, size_t padding,
                         const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -2812,6 +2812,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameROrder] = rOrder;
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameLStride] = lStride;
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameRStride] = rStride;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNamePadding] = padding;
         std::vector<Variable> operands = { in, lFilter, rFilter };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BiVfsmn,
                                             operands,

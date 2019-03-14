@@ -593,6 +593,7 @@ public:
                                      int flag_stride,
                                      int l_order, int r_order,
                                      int l_stride, int r_stride,
+                                     int padding,
                                      CPUMatrix<ElemType>& out);
 
 protected:

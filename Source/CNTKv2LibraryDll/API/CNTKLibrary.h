@@ -4375,7 +4375,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation for computing FSMN memory
     ///
-    CNTK_API FunctionPtr BiVfsmn(const Variable& in, const Variable& lFilter, const Variable& rFilter, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride, const std::wstring& name = L"");
+    CNTK_API FunctionPtr BiVfsmn(const Variable& in, const Variable& lFilter, const Variable& rFilter, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride, size_t padding, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the labels to graph for input operands.

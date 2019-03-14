@@ -7037,6 +7037,7 @@ void CPUMatrix<ElemType>::ComputeBiVfsmnMemory(
     int flag_stride,
     int l_order, int r_order,
     int l_stride, int r_stride,
+    int padding,
     CPUMatrix<ElemType>& out)
 {
     assert(in.GetNumRows() == l_filter.GetNumRows());
@@ -7052,7 +7053,9 @@ void CPUMatrix<ElemType>::ComputeBiVfsmnMemory(
         {
             ElemType value = 0.0;
             int shift_index = 0;
+            int valid_shift_index;
             value = in(r, c);
+            valid_shift_index = c;
             // lookback
             for (int order = 0; order < l_order; ++order)
             {
@@ -7060,15 +7063,36 @@ void CPUMatrix<ElemType>::ComputeBiVfsmnMemory(
                 if (shift_index >= 0 && flags(0, c) == flags(0, shift_index))
                 {
                     value += in(r, shift_index) * l_filter(r, order);
+                    valid_shift_index = shift_index;
+                }
+                else
+                {
+                    if (padding == 0)
+                        break;
+                    else
+                    {
+                        value += in(r, valid_shift_index) * l_filter(r, order);
+                    }
                 }
             }
             // lookahead
+            valid_shift_index = c;
             for (int order = 1; order <= r_order; ++order)
             {
                 shift_index = c + order * r_stride * flag_stride;
                 if (shift_index < cols && flags(0, c) == flags(0, shift_index))
                 {
                     value += in(r, shift_index) * r_filter(r, order-1);
+                    valid_shift_index = shift_index;
+                }
+                else
+                {
+                    if (padding == 0)
+                        break;
+                    else
+                    {
+                        value += in(r, valid_shift_index) * r_filter(r, order - 1);
+                    }
                 }
             }
             out(r, c) = value;

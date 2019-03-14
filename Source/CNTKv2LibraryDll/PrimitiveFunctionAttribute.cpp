@@ -129,6 +129,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameROrder = L"rOrder";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameLStride = L"lStride";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameRStride = L"rStride";
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNamePadding = L"padding";
 
     /*static*/ const std::vector<std::wstring> PrimitiveFunctionAttribute::s_rngStateAttributes =
                    { PrimitiveFunctionAttribute::AttributeNameRngSeed,

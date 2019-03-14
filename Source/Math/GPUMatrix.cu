@@ -4821,6 +4821,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemory(const GPUMatrix<ElemType>& in,   
                                                int flag_stride,
                                                int l_order, int r_order,
                                                int l_stride, int r_stride,
+                                               int padding,
                                                GPUMatrix<ElemType>& out)
 {
     if (in.GetNumRows() != l_filter.GetNumRows() || in.GetNumRows() != r_filter.GetNumRows() ||
@@ -4837,7 +4838,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemory(const GPUMatrix<ElemType>& in,   
     _computeBiVfsmnMemory<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
         in.Data(), l_filter.Data(), r_filter.Data(), flags.Data(), flag_stride,
         N, (CUDA_LONG) out.GetNumRows(), (CUDA_LONG) out.GetNumCols(),
-        (CUDA_LONG) l_order, (CUDA_LONG) r_order, (CUDA_LONG) l_stride, (CUDA_LONG) r_stride,
+        (CUDA_LONG) l_order, (CUDA_LONG) r_order, (CUDA_LONG) l_stride, (CUDA_LONG) r_stride, (CUDA_LONG) padding,
         out.Data());
 }
 
@@ -4849,7 +4850,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemoryGradient(
     const GPUMatrix<short>& flags,
     int flag_stride,
     int l_order, int r_order,
-    int l_stride, int r_stride,
+    int l_stride, int r_stride, int padding,
     GPUMatrix<ElemType>& inputGradientValues)
 {
     if (gradientValues.GetNumRows() != l_filter.GetNumRows()
@@ -4868,7 +4869,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnMemoryGradient(
     _computeBiVfsmnMemoryGradient<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
         gradientValues.Data(), l_filter.Data(), r_filter.Data(), flags.Data(), flag_stride,
         N, (CUDA_LONG) inputGradientValues.GetNumRows(), (CUDA_LONG) inputGradientValues.GetNumCols(),
-        (CUDA_LONG) l_order, (CUDA_LONG) r_order, (CUDA_LONG) l_stride, (CUDA_LONG) r_stride,
+        (CUDA_LONG) l_order, (CUDA_LONG) r_order, (CUDA_LONG) l_stride, (CUDA_LONG) r_stride, (CUDA_LONG) padding,
         inputGradientValues.Data());
 }
 
@@ -4878,7 +4879,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
     const GPUMatrix<ElemType>& inputValues,
     const GPUMatrix<short>& flags,
     int flag_stride,
-    int l_order, int l_stride,
+    int l_order, int l_stride, int padding,
     GPUMatrix<ElemType>& leftFilterGradientValues)
 {
     if (leftFilterGradientValues.GetNumRows() != gradientValues.GetNumRows()
@@ -4899,7 +4900,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
     _computeBiVfsmnLeftFilterGradient<ElemType><<<dimGrid, dimBlock, 0, t_stream>>>(
         gradientValues.Data(), inputValues.Data(), flags.Data(), flag_stride,
         (CUDA_LONG) rows, (CUDA_LONG) cols,
-        (CUDA_LONG) l_order, (CUDA_LONG) l_stride,
+        (CUDA_LONG) l_order, (CUDA_LONG) l_stride, (CUDA_LONG) padding,
         leftFilterGradientValues.Data());
 }
 
@@ -4909,7 +4910,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
     const GPUMatrix<ElemType>& inputValues,
     const GPUMatrix<short>& flags,
     int flag_stride,
-    int r_order, int r_stride,
+    int r_order, int r_stride, int padding,
     GPUMatrix<ElemType>& rightFilterGradientValues)
 {
     if (rightFilterGradientValues.GetNumRows() != gradientValues.GetNumRows()
@@ -4930,7 +4931,7 @@ void GPUMatrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
     _computeBiVfsmnRightFilterGradient<ElemType><<<dimGrid, dimBlock, 0, t_stream>>>(
         gradientValues.Data(), inputValues.Data(), flags.Data(), flag_stride,
         (CUDA_LONG) rows, (CUDA_LONG) cols,
-        (CUDA_LONG) r_order, (CUDA_LONG) r_stride,
+        (CUDA_LONG) r_order, (CUDA_LONG) r_stride, (CUDA_LONG) padding,
         rightFilterGradientValues.Data());
 }
 

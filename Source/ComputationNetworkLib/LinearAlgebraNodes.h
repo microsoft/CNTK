@@ -55,14 +55,15 @@ public:
         : Base(deviceId, name)
     {
     }
-    BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride)
+    BiVfsmnNode(DEVICEID_TYPE deviceId, const wstring& name, size_t lOrder, size_t rOrder, size_t lStride, size_t rStride, size_t padding)
         : Base(deviceId, name),
           m_lOrder(lOrder), m_rOrder(rOrder),
-          m_lStride(lStride), m_rStride(rStride)
+          m_lStride(lStride), m_rStride(rStride),
+          m_padding(padding)
     {
     }
     BiVfsmnNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : BiVfsmnNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"lOrder"), configp->Get(L"rOrder"), configp->Get(L"lStride"), configp->Get(L"rStride"))
+        : BiVfsmnNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"lOrder"), configp->Get(L"rOrder"), configp->Get(L"lStride"), configp->Get(L"rStride"), configp->Get(L"padding"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -103,7 +104,7 @@ public:
         const auto& flags = GetMBLayout()->GetColumnsSeqIndex(GetDeviceId());
         auto flagStride = GetMBLayout()->GetNumParallelSequences();
         Matrix<ElemType>::ComputeBiVfsmnMemory(Input(0)->Value(), Input(1)->Value(), Input(2)->Value(),
-                                               flags, flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                                               flags, flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride, m_padding,
                                                Value());
     }
 
@@ -115,21 +116,21 @@ public:
         {
             Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
                 Gradient(), Input(1)->Value(), Input(2)->Value(),
-                flags, flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride,
+                flags, flagStride, m_lOrder, m_rOrder, m_lStride, m_rStride, m_padding,
                 Input(0)->Gradient());
         }
         else if (inputIndex == 1)
         {
             Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
                 Gradient(), Input(0)->Value(),
-                flags, flagStride, m_lOrder, m_lStride,
+                flags, flagStride, m_lOrder, m_lStride, m_padding,
                 Input(1)->Gradient());
         }
         else if (inputIndex == 2)
         {
             Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
                 Gradient(), Input(0)->Value(),
-                flags, flagStride, m_rOrder, m_rStride,
+                flags, flagStride, m_rOrder, m_rStride, m_padding,
                 Input(2)->Gradient());
         }
         else
@@ -153,6 +154,7 @@ public:
         fstream << m_rOrder;
         fstream << m_lStride;
         fstream << m_rStride;
+        fstream << m_padding;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -162,6 +164,7 @@ public:
         fstream >> m_rOrder;
         fstream >> m_lStride;
         fstream >> m_rStride;
+        fstream >> m_padding;
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -175,6 +178,7 @@ public:
             node->m_rOrder  = m_rOrder;
             node->m_lStride = m_lStride;
             node->m_rStride = m_rStride;
+            node->m_padding = m_padding;
         }
     }
 
@@ -187,12 +191,14 @@ public:
     size_t ROrder() const { return m_rOrder; }
     size_t LStride() const { return m_lStride; }
     size_t RStride() const { return m_rStride; }
+    size_t Padding() const { return m_padding; }
 
 protected:
     size_t m_lOrder;
     size_t m_rOrder;
     size_t m_lStride;
     size_t m_rStride;
+    size_t m_padding;
 };
 
 template class BiVfsmnNode<float>;

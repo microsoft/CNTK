@@ -570,9 +570,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BiVfs
                                                                                    const ComputationNodePtr rFilter,
                                                                                    size_t lOrder, size_t rOrder,
                                                                                    size_t lStride, size_t rStride,
+                                                                                   size_t padding,
                                                                                    const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<BiVfsmnNode<ElemType>>(net.GetDeviceId(), nodeName, lOrder, rOrder, lStride, rStride), { in, lFilter, rFilter });
+    return net.AddNodeToNetAndAttachInputs(New<BiVfsmnNode<ElemType>>(net.GetDeviceId(), nodeName, lOrder, rOrder, lStride, rStride, padding), { in, lFilter, rFilter });
 }
 
 template <class ElemType>

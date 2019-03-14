@@ -6195,7 +6195,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // 
                                             const Matrix<short>& flags,   // 1xT
                                             int flag_stride,
                                             int l_order, int r_order,
-                                            int l_stride, int r_stride,
+                                            int l_stride, int r_stride, int padding,
                                             Matrix<ElemType>& out)
 {
     // std::cout << "In begining of ComputeBiVfsmnMemory()" << std::endl;
@@ -6221,6 +6221,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // 
                 flag_stride,
                 l_order, r_order,
                 l_stride, r_stride,
+                padding,
                 *out.m_CPUMatrix);
             out.SetDataLocation(CPU, DENSE);
         }
@@ -6237,6 +6238,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemory(const Matrix<ElemType>& in,      // 
                 flag_stride,
                 l_order, r_order,
                 l_stride, r_stride,
+                padding,
                 *out.m_GPUMatrix);
             out.SetDataLocation(GPU, DENSE);
         }
@@ -6262,6 +6264,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
     int flag_stride,
     int l_order, int r_order,
     int l_stride, int r_stride,
+    int padding,
     Matrix<ElemType>& inputGradientValues)
 {
     // std::cout << "In begining of ComputeBiVfsmnMemoryGradient()" << std::endl;
@@ -6290,7 +6293,7 @@ void Matrix<ElemType>::ComputeBiVfsmnMemoryGradient(
                 *flags.m_GPUMatrix,
                 flag_stride,
                 l_order, r_order,
-                l_stride, r_stride,
+                l_stride, r_stride, padding,
                 *inputGradientValues.m_GPUMatrix);
             inputGradientValues.SetDataLocation(GPU, DENSE);
         }
@@ -6310,6 +6313,7 @@ void Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
     const Matrix<short>& flags,
     int flag_stride,
     int l_order, int l_stride,
+    int padding,
     Matrix<ElemType>& leftFilterGradientValues)
 {
     // std::cout << "In begining of ComputeBiVfsmnLeftFilterGradient()" << std::endl;
@@ -6335,7 +6339,7 @@ void Matrix<ElemType>::ComputeBiVfsmnLeftFilterGradient(
                 *flags.m_GPUMatrix,
                 flag_stride,
                 l_order,
-                l_stride,
+                l_stride, padding,
                 *leftFilterGradientValues.m_GPUMatrix);
             leftFilterGradientValues.SetDataLocation(GPU, DENSE);
         }
@@ -6355,6 +6359,7 @@ void Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
     const Matrix<short>& flags,
     int flag_stride,
     int r_order, int r_stride,
+    int padding,
     Matrix<ElemType>& rightFilterGradientValues)
 {
     // std::cout << "In begining of ComputeBiVfsmnRightFilterGradient()" << std::endl;
@@ -6381,7 +6386,7 @@ void Matrix<ElemType>::ComputeBiVfsmnRightFilterGradient(
                 *flags.m_GPUMatrix,
                 flag_stride,
                 r_order,
-                r_stride,
+                r_stride, padding,
                 *rightFilterGradientValues.m_GPUMatrix);
             rightFilterGradientValues.SetDataLocation(GPU, DENSE);
         }

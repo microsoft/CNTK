@@ -512,8 +512,8 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     else if (cnNodeType == OperationNameOf(BiVfsmnNode))
     {
         // std::cout << "parameter.size(): " << parameter.size() << std::endl;
-        if (parameter.size() != 7)
-            RuntimeError("%ls should have 7 fix parameters[inputValueNodeName, lFilter, rFilter, lOrder, rOrder, lStride, rStride]", cnNodeType.c_str());
+        if (parameter.size() != 8)
+            RuntimeError("%ls should have 8 fix parameters[inputValueNodeName, lFilter, rFilter, lOrder, rOrder, lStride, rStride padding]", cnNodeType.c_str());
 
         nodeParamCount = 3;
         nodeParamStart = 0;
@@ -528,9 +528,10 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             size_t rOrder = ((NDLNode<ElemType>*) params[id++])->GetScalar();
             size_t lStride = ((NDLNode<ElemType>*) params[id++])->GetScalar();
             size_t rStride = ((NDLNode<ElemType>*) params[id++])->GetScalar();
+            size_t padding = ((NDLNode<ElemType>*) params[id++])->GetScalar();
             // std::cout << lOrder << " " << rOrder << " " << lStride << " " << rStride << std::endl;
-            assert(id == 4);
-            nodePtr = builder.BiVfsmn(NULL, NULL, NULL, lOrder, rOrder, lStride, rStride, name);
+            assert(id == 5);
+            nodePtr = builder.BiVfsmn(NULL, NULL, NULL, lOrder, rOrder, lStride, rStride, padding,  name);
         }
     }
     else if (cnNodeType == OperationNameOf(BatchNormalizationNode))
