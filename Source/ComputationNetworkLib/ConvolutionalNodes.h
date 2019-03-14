@@ -637,7 +637,7 @@ public:
                     // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
                     const size_t DEAFULT_NUM_GROUPS = 1;
                     outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                      m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), m_groups,
+                                                                      m_sharing, m_autoPad, m_lowerPad, m_upperPad, TensorShape(1), DEAFULT_NUM_GROUPS,
                                                                        false, Base::NeedsDynamicValidation(), isFinalValidationPass);
                 }
                 else
