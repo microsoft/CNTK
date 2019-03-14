@@ -1421,7 +1421,25 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 if (node->IsParameterUpdateRequired())
                 {
 #ifdef _DEBUG
-                    if (smoothedGradientIter->HasNan("TrainOneEpoch/UpdateWeights(): "))
+                    bool hasNan = false;
+                    if (std::is_same<ElemType, half>())
+                    {
+                        // Get metrix from compound metrix
+                        auto compoundMatrixPtr = dynamic_pointer_cast<Matrix<float>> (*smoothedGradientIter);
+                        if (compoundMatrixPtr)
+                        {
+                            size_t numCols = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().GetNumCols();
+
+                            auto smoothedGradient = compoundMatrixPtr->ColumnSlice(0, numCols);
+                            hasNan = smoothedGradient.HasNan("TrainOneEpoch/UpdateWeights(): ");
+                        }
+                    }
+                    else
+                    {
+                        auto smoothedGradient = dynamic_pointer_cast<Matrix<ElemType>> (*smoothedGradientIter);
+                        hasNan = smoothedGradient && smoothedGradient->HasNan("TrainOneEpoch/UpdateWeights(): ");
+                    }
+                    if (hasNan)
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
                     double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
