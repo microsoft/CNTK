@@ -1544,7 +1544,7 @@ class Function(cntk_py.Function):
         return collector.test_summaries[-1]
 
     @typemap
-    def save(self, filename, format=ModelFormat.CNTKv2):
+    def save(self, filename, format=ModelFormat.CNTKv2, use_external_files_to_store_parameters=False):
         '''
         Save this function graph into a model file using the specified format.
 
@@ -1553,8 +1553,10 @@ class Function(cntk_py.Function):
 
         Args:
             filename (str): model path
+            use_external_files_to_store_parameters (bool, optional): whether to save model parameters 
+             to external files. This is for models larger than 2GB. Defaults to False.
         '''
-        return super(Function, self).save(filename, format.value)
+        return super(Function, self).save(filename, format.value, use_external_files_to_store_parameters)
 
     @typemap
     def restore(self, filename):

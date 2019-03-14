@@ -33,6 +33,7 @@ namespace CNTK
         // Create a CNTK graph (Function) given an ONNX graph. The function is created to use the 
         // specified computing device.
         //
-        static FunctionPtr CreateGraph(onnxruntime::Graph* src, const DeviceDescriptor& computeDevice);
+        static FunctionPtr CreateGraph(onnxruntime::Graph* src, const DeviceDescriptor& computeDevice,
+            const std::string& model_location="");
     };
 }

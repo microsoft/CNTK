@@ -130,9 +130,6 @@
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\graph.cc">
       <Filter>proto\onnx\onnxruntime\graph</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\graph_transformer_mgr.cc">
-      <Filter>proto\onnx\onnxruntime\graph</Filter>
-    </ClCompile>
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\graph_viewer.cc">
       <Filter>proto\onnx\onnxruntime\graph</Filter>
     </ClCompile>
@@ -144,9 +141,6 @@
     </ClCompile>
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\schema_registry.cc">
       <Filter>proto\onnx\onnxruntime\graph</Filter>
-    </ClCompile>
-    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorutils.cc">
-      <Filter>proto\onnx\onnxruntime\framework</Filter>
     </ClCompile>
     <ClCompile Include="proto\onnx\CNTKToONNX.cpp">
       <Filter>proto\onnx</Filter>
@@ -178,14 +172,69 @@
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\platform\env_time.cc">
       <Filter>proto\onnx\onnxruntime\platform</Filter>
     </ClCompile>
-    <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\env.cc" />
-    <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\env_time.cc" />
     <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\stacktrace.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\controlflow\old.cc">
       <Filter>proto\onnx\onnx_repo\onnx\defs\controlflow</Filter>
     </ClCompile>
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\traditionalml\old.cc">
       <Filter>proto\onnx\onnx_repo\onnx\defs\traditionalml</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorprotoutils.cc">
+      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\common\str_helper.cc">
+      <Filter>proto\onnx\onnxruntime\common</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\error_code.cc">
+      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_shape.cc">
+      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor.cc">
+      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\data_types.cc">
+      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\allocator.cc">
+      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_type_and_shape.cc">
+      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\onnxruntime_typeinfo.cc">
+      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\env_time.cc">
+      <Filter>proto\onnx\patch</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\env.cc">
+      <Filter>proto\onnx\patch</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\common\logging\ostream_sink.cc">
+      <Filter>proto\onnx\patch</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\environment.cc">
+      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\contrib_ops\contrib_defs.cc">
+      <Filter>proto\onnx\onnxruntime\graph\contrib_ops</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\contrib_ops\attn_lstm_schema_defs.cc">
+      <Filter>proto\onnx\onnxruntime\graph\contrib_ops</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\contrib_ops\range_schema_defs.cc">
+      <Filter>proto\onnx\onnxruntime\graph\contrib_ops</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\session\onnxruntime_c_api.cc">
+      <Filter>proto\onnx\patch</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_external_data_info.cc">
+      <Filter>proto\onnx\onnxruntime\framework</Filter>
+    </ClCompile>
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\framework\path_lib.cc">
+      <Filter>proto\onnx\patch</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -379,9 +428,6 @@
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\common\profiler.h">
       <Filter>proto\onnx\onnxruntime\common</Filter>
     </ClInclude>
-    <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorutils.h">
-      <Filter>proto\onnx\onnxruntime\framework</Filter>
-    </ClInclude>
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\inc\op_kernel_author_helper.h">
       <Filter>proto\onnx\onnxruntime\inc</Filter>
     </ClInclude>
@@ -515,6 +561,15 @@
     </Filter>
     <Filter Include="proto\onnx\onnxruntime\platform\windows">
       <UniqueIdentifier>{681310a9-13d1-4e99-87ea-4b342d35901e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\onnxruntime\session">
+      <UniqueIdentifier>{d0a338b2-3b7a-49ef-a6ca-35c54ed27721}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\patch">
+      <UniqueIdentifier>{8e0079c2-b575-45af-8694-4f4bf25b4ab4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="proto\onnx\onnxruntime\graph\contrib_ops">
+      <UniqueIdentifier>{542e5292-b201-4f16-a397-6bf97b5e6c71}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

@@ -4,7 +4,7 @@
 //
 
 #include "core/graph/graph.h"
-#include "core/framework/tensorutils.h"
+#include "core/framework/tensorprotoutils.h"
 
 #include "Utils.h"
 #include "Operators.h"
@@ -37,6 +37,7 @@ public:
         VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr,
         const DeviceDescriptor &computeDevice);
 
+    static std::string model_location_;
 private:
     static FunctionPtr CreateCNTKNode(const Node *node, const std::vector<Variable> &inputs, const Graph *graph,
         VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr,
@@ -445,6 +446,93 @@ Constant ONNXToCNTKHelper::CreateConstant(const Node *node, const DeviceDescript
     return CreateConstant(valueProto, node->Name(), computeDevice);
 }
 
+int64_t GetTensorElementTotal(const onnx::TensorProto &tensor_proto)
+{
+    const ::google::protobuf::RepeatedField<::google::protobuf::int64 >& dims = tensor_proto.dims();
+    int64_t count = 1;
+    for (int i = 0; i < dims.size(); i++)
+    {
+        count *= dims[i];
+    }
+    return count;
+}
+
+void LoadRawDataAndUnpack(onnx::TensorProto &tensor_proto, bool doUnpack)
+{
+    if (tensor_proto.data_location() == TensorProto_DataLocation_EXTERNAL && tensor_proto.raw_data().empty())
+    {
+        ::google::protobuf::RepeatedPtrField<::onnx::StringStringEntryProto> external_data = tensor_proto.external_data();
+        ::google::protobuf::RepeatedPtrField<::onnx::StringStringEntryProto>::iterator it =
+            std::find_if(external_data.begin(), external_data.end(), [](const ::onnx::StringStringEntryProto& StringStringEntryProto)
+        {
+            return StringStringEntryProto.has_key() && StringStringEntryProto.key() == "location";
+        });
+        if (it != external_data.end())
+        {
+            std::string filename = it->value();
+            std::string raw_data_from_file;
+#ifdef _WIN32
+            Env::Default().ReadFileAsString(ToFixedWString(ONNXToCNTKHelper::model_location_ + "/" + filename).c_str(), &raw_data_from_file);
+#else
+            Env::Default().ReadFileAsString((ONNXToCNTKHelper::model_location_ + "/" + filename).c_str(), &raw_data_from_file);
+#endif
+            const void* raw_data = raw_data_from_file.data();
+            size_t raw_data_len = raw_data_from_file.size();
+            tensor_proto.set_raw_data(raw_data, raw_data_len);
+        }
+    }
+
+    // unpack
+    if (!doUnpack)
+        return;
+
+    int64_t count = GetTensorElementTotal(tensor_proto);
+    auto tensorProtoDataType = tensor_proto.data_type();
+    switch (tensorProtoDataType)
+    {
+    case TensorProto_DataType_BOOL: 
+        if (tensor_proto.int32_data().empty())
+        {
+            std::vector<int32_t> srcData(count);
+#pragma warning (disable: 4238)
+            bool* p_data = (bool*)(&srcData[0]);
+            Status status = onnxruntime::utils::UnpackTensor(tensor_proto, tensor_proto.raw_data().data(), tensor_proto.raw_data().size(), p_data, count * 4);
+            tensor_proto.mutable_int32_data()->Resize(count, 0);
+            std::copy(srcData.begin(), srcData.end(), tensor_proto.mutable_int32_data()->begin());
+        } 
+    break;
+    case TensorProto_DataType_INT64:
+        if (tensor_proto.int64_data().empty())
+        {
+            std::vector<int64_t> srcData(count);
+            onnxruntime::utils::UnpackTensor(tensor_proto, tensor_proto.raw_data().data(), tensor_proto.raw_data().size(), &srcData[0], count);
+            tensor_proto.mutable_int64_data()->Resize(count, 0);
+            std::copy(srcData.begin(), srcData.end(), tensor_proto.mutable_int64_data()->begin()); 
+        } 
+        break;
+    case TensorProto_DataType_INT32:
+        if (tensor_proto.int32_data().empty())
+        {
+            std::vector<int32_t> srcData(count);
+            onnxruntime::utils::UnpackTensor(tensor_proto, tensor_proto.raw_data().data(), tensor_proto.raw_data().size(), &srcData[0], count);
+            tensor_proto.mutable_int32_data()->Resize(count, 0);
+            std::copy(srcData.begin(), srcData.end(), tensor_proto.mutable_int32_data()->begin());
+        }
+        break;
+    case TensorProto_DataType_FLOAT16:
+        RetrieveRawDataAsFloat16(tensor_proto);
+        break;
+    case TensorProto_DataType_FLOAT:
+        RetrieveRawDataAsFloat(tensor_proto);
+        break;
+    case TensorProto_DataType_DOUBLE:
+        RetrieveRawDataAsDouble(tensor_proto);
+        break;
+    default:
+        break;
+    }
+}
+
 Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, const std::string &nodeName,
                                           const DeviceDescriptor &computeDevice)
 {
@@ -461,7 +549,14 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     {
         // It does not work using vector<bool> because resulted memory layout is not what we expect.
         bool *srcData = new bool[shape.TotalSize()];
-        onnxruntime::utils::TensorUtils::UnpackTensor(valueProto, srcData, shape.TotalSize());
+        if (valueProto.int32_data_size() == shape.TotalSize())
+        {
+            std::copy(valueProto.int32_data().begin(), valueProto.int32_data().end(), srcData);
+        }
+        else
+        {
+            onnxruntime::utils::UnpackTensor(valueProto, valueProto.raw_data().data(), valueProto.raw_data().size(), srcData, shape.TotalSize());
+        }
 
         // CNTK does not support bool. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -476,7 +571,14 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     case TensorProto_DataType_INT32:
     {
         std::vector<int32_t> srcData(shape.TotalSize());
-        onnxruntime::utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
+        if (valueProto.int32_data_size() == shape.TotalSize())
+        {
+            std::copy(valueProto.int32_data().begin(), valueProto.int32_data().end(), srcData.begin());
+        }
+        else
+        {
+            onnxruntime::utils::UnpackTensor(valueProto, valueProto.raw_data().data(), valueProto.raw_data().size(), &srcData[0], shape.TotalSize());
+        }
 
         // CNTK does not support int. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -490,7 +592,15 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     case TensorProto_DataType_INT64:
     {
         std::vector<int64_t> srcData(shape.TotalSize());
-        onnxruntime::utils::TensorUtils::UnpackTensor(valueProto, &srcData[0], shape.TotalSize());
+        if (valueProto.int64_data_size() == shape.TotalSize())
+        {
+            std::copy(valueProto.int64_data().begin(), valueProto.int64_data().end(), srcData.begin());
+        }
+        else
+        {
+            onnxruntime::utils::UnpackTensor(
+                valueProto, valueProto.raw_data().data(), valueProto.raw_data().size(), &srcData[0], shape.TotalSize());
+        }
 
         // CNTK does not support int64_t. We need to convert to float.
         std::vector<float> srcFloatData(shape.TotalSize());
@@ -504,10 +614,9 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     case TensorProto_DataType_FLOAT:
     {
         if (valueProto.float_data().empty())
-        {
-            RetrieveRawDataAsFloat(valueProto);
+        { 
+            LoadRawDataAndUnpack(const_cast<onnx::TensorProto &>(valueProto), true);
         }
-
         return CreateConstantWithTensorData<float, float>(shape, tensorProtoDataType, CNTK::DataType::Float,
                                                           &(valueProto.float_data()[0]), reversedShape, computeDevice, nodeName);
     }
@@ -515,8 +624,8 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     case TensorProto_DataType_FLOAT16:
     {
         if (valueProto.int32_data().empty())
-        {
-            RetrieveRawDataAsFloat16(valueProto);
+        { 
+            LoadRawDataAndUnpack(const_cast<onnx::TensorProto &>(valueProto), true);
         }
 
         return CreateConstantWithTensorData<uint16_t, int>(shape, tensorProtoDataType, CNTK::DataType::Float16,
@@ -527,8 +636,8 @@ Constant ONNXToCNTKHelper::CreateConstant(const onnx::TensorProto &valueProto, c
     {
         // TODO: refactore commom code for float and double
         if (valueProto.double_data().empty())
-        {
-            RetrieveRawDataAsDouble(valueProto);
+        { 
+            LoadRawDataAndUnpack(const_cast<onnx::TensorProto &>(valueProto), true);
         }
 
         return CreateConstantWithTensorData<double, double>(shape, tensorProtoDataType, CNTK::DataType::Double,
@@ -1237,6 +1346,7 @@ std::vector<FunctionPtr> CreateRNNConstantOp(const Graph *graph, const Node *nod
     const onnx::TensorProto *valueProto;
     if (!graph->GetInitializedTensor(node->Name(), valueProto))
     {
+        LoadRawDataAndUnpack(const_cast<onnx::TensorProto &>(*valueProto), true);
         NodeAttributes::const_iterator itValue = node->GetAttributes().find("value");
         if (itValue == node->GetAttributes().cend())
         {
@@ -1262,6 +1372,7 @@ std::vector<Variable> ONNXToCNTKHelper::CreateRNNLeafVariableOrConstant(const No
     const onnx::TensorProto *valueProto;
     if (graph->GetInitializedTensor(nodeName, valueProto))
     {
+        LoadRawDataAndUnpack(const_cast<onnx::TensorProto &>(*valueProto), true);
         int index = CalculateNodeArgInputIndex(nodeArg, parentNode);
         return CreateRNNConstant(parentNode, index, nodeName, *valueProto, computeDevice);
     }
@@ -1381,6 +1492,7 @@ Variable ONNXToCNTKHelper::CreateLeafVariableOrConstant(const NodeArg *nodeArg,
     const onnx::TensorProto *valueProto;
     if (graph->GetInitializedTensor(nodeName, valueProto))
     {
+        LoadRawDataAndUnpack(const_cast<onnx::TensorProto &>(*valueProto), true);
         return CreateConstant(*valueProto, nodeName, computeDevice); // There is no batch axis added on here.
     }
 
@@ -1447,7 +1559,14 @@ std::vector<int64_t> ONNXToCNTKHelper::GetShapeFromInput(const NodeArg *shapeInp
 
     auto shapeSize = valueProto->dims(0);
     std::vector<int64_t> dimData(shapeSize);
-    onnxruntime::utils::TensorUtils::UnpackTensor(*valueProto, &dimData[0], shapeSize);
+    if (valueProto->int64_data_size() == shapeSize)
+    {
+        std::copy(valueProto->int64_data().begin(), valueProto->int64_data().end(), dimData.begin());
+    }
+    else
+    {
+        onnxruntime::utils::UnpackTensor(*valueProto, valueProto->raw_data().data(), valueProto->raw_data().size(), &dimData[0], shapeSize);
+    }
 
     return dimData;
 }
@@ -3613,8 +3732,10 @@ void FilterGraphOutputs(std::vector<Variable> &outputVariables)
     }
 }
 
-FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescriptor &computeDevice)
+FunctionPtr ONNXToCNTK::CreateGraph(onnxruntime::Graph *src, const DeviceDescriptor &computeDevice,
+    const std::string& model_location)
 {
+    ONNXToCNTKHelper::model_location_ = GetRootPath(model_location);
     FunctionPtr cntkModel;
 
     // To use depth-first-traversal, keeps a collection of visited nodes.
@@ -3816,3 +3937,5 @@ std::pair<bool, std::vector<FunctionPtr>> ONNXToCNTKHelper::CheckNodeBelongsToOp
     }
     return std::make_pair(isOptimizedRnnStack, lstmCntkFunction);
 }
+
+std::string CNTK::ONNXToCNTKHelper::model_location_;

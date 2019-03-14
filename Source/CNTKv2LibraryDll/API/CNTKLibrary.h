@@ -3559,6 +3559,19 @@ namespace CNTK
             return foundFunction;
         }
 
+        //FunctionPtr FindByUid(const std::wstring& uid, bool nestedSearchInsideBlockFunction = false)
+        //{
+        //    FunctionPtr  foundFunction = nullptr;
+        //    PreorderTraverseFunctions(RootFunction(), [&foundFunction, &uid, this](const FunctionPtr& function) {
+        //        if (uid.compare(function->Uid()) == 0)
+        //        { 
+        //            foundFunction = function;
+        //        }
+        //    }, nestedSearchInsideBlockFunction);
+
+        //    return foundFunction;
+        //}
+
         ///
         /// Find a list of functions with the given name in the Function graph underlying 'this' Function.
         /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched for the given name.
@@ -3595,7 +3608,8 @@ namespace CNTK
         ///
         /// Save this Function graph into a model file.
         ///
-        CNTK_API void Save(const std::wstring& filepath, ModelFormat format = ModelFormat::CNTKv2);
+        CNTK_API void Save(const std::wstring& filepath, ModelFormat format = ModelFormat::CNTKv2,
+            bool useExternalFilesToStoreParameters = false);
 
         ///
         /// Restore the models parameters (in-place) from a model file

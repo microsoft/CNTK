@@ -66,7 +66,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>.\proto\onnx;.\proto\onnx\onnxruntime\onnxruntime;.\proto\onnx\onnxruntime\include\onnxruntime;.\proto\onnx\onnx_repo;.\proto\onnx\onnx_repo\onnx;.\API;.\API\Internals;.\proto;$(BOOST_INCLUDE_PATH);$(SolutionDir)\Source\CNTKv2LibraryDll;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude);$(SolutionDir)Source\PerformanceProfilerDll;..\..\external\gsl\include;$(ProjectDir)Generated\Windows</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\proto\onnx;.\proto\onnx\onnxruntime\onnxruntime;.\proto\onnx\patch\onnxruntime\platform_specifics\windows;.\proto\onnx\onnxruntime\include\onnxruntime;.\proto\onnx\onnx_repo;.\proto\onnx\onnx_repo\onnx;.\API;.\API\Internals;.\proto;$(BOOST_INCLUDE_PATH);$(SolutionDir)\Source\CNTKv2LibraryDll;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude);$(SolutionDir)Source\PerformanceProfilerDll;..\..\external\gsl\include;$(ProjectDir)Generated\Windows</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'!$(IsUWP)'">$(SolutionDir)Source\1BitSGD;$(ProjectDir)Generated\Windows;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'!$(IsUWP)'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OpenMPSupport>true</OpenMPSupport>
@@ -84,7 +84,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>ONNX_NAMESPACE=onnx;ONNX_ML=1;ONNX_V1_OPSCHEMA_COMPAT;CNTKV2LIBRARYDLL;WIN32;_DEBUG;_WINDOWS;_USRDLL;PLATFORM_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ONNX_NAMESPACE=onnx;ONNX_ML=1;ONNX_V1_OPSCHEMA_COMPAT;CNTKV2LIBRARYDLL;WIN32;_DEBUG;_WINDOWS;_USRDLL;PLATFORM_WINDOWS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <TreatWarningAsError>true</TreatWarningAsError>
       <DisableSpecificWarnings>4800;4610;4512;4510;4267;4127;4125;4100;4456;4189;4996;4503;4146</DisableSpecificWarnings>
@@ -101,7 +101,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>ONNX_NAMESPACE=onnx;ONNX_ML=1;ONNX_V1_OPSCHEMA_COMPAT;CNTKV2LIBRARYDLL;WIN32;NDEBUG;_WINDOWS;_USRDLL;PLATFORM_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ONNX_NAMESPACE=onnx;ONNX_ML=1;ONNX_V1_OPSCHEMA_COMPAT;CNTKV2LIBRARYDLL;WIN32;NDEBUG;_WINDOWS;_USRDLL;PLATFORM_WINDOWS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalOptions>/d2Zi+ /bigobj %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -118,7 +118,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
-      <PreprocessorDefinitions>ONNX_NAMESPACE=onnx;ONNX_ML=1;ONNX_V1_OPSCHEMA_COMPAT;CPUONLY;PLATFORM_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ONNX_NAMESPACE=onnx;ONNX_ML=1;ONNX_V1_OPSCHEMA_COMPAT;CPUONLY;PLATFORM_WINDOWS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">$(IntDir)\$(ProjectName)\$(ConfigurationName)\%(RelativeDir)</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">$(IntDir)\$(ProjectName)\$(ConfigurationName)\%(RelativeDir)</ObjectFileName>
     </ClCompile>
@@ -183,7 +183,6 @@
     <ClInclude Include="proto\onnx\onnx-operators-ml.pb.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\common\profiler.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\common\task_thread_pool.h" />
-    <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorutils.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\graph\function.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\graph\function_container.h" />
     <ClInclude Include="proto\onnx\onnxruntime\onnxruntime\core\graph\function_impl.h" />
@@ -275,7 +274,20 @@
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\common\logging\logging.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\common\profiler.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\common\status.cc" />
-    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorutils.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\common\str_helper.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\allocator.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\data_types.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\environment.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\error_code.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\onnxruntime_typeinfo.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensorprotoutils.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_external_data_info.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_shape.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\framework\tensor_type_and_shape.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\contrib_ops\attn_lstm_schema_defs.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\contrib_ops\contrib_defs.cc" />
+    <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\contrib_ops\range_schema_defs.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\function.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\graph.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\graph_viewer.cc" />
@@ -284,6 +296,8 @@
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\graph\schema_registry.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\platform\env.cc" />
     <ClCompile Include="proto\onnx\onnxruntime\onnxruntime\core\platform\env_time.cc" />
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\common\logging\ostream_sink.cc" />
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\framework\path_lib.cc" />
     <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\env.cc" />
     <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\env_time.cc" />
     <ClCompile Include="proto\onnx\patch\onnxruntime\core\platform\windows\stacktrace.cc" />
@@ -319,6 +333,7 @@
     <ClCompile Include="proto\onnx\onnx_repo\onnx\defs\traditionalml\old.cc" />
     <ClCompile Include="proto\onnx\onnx_repo\onnx\shape_inference\implementation.cc" />
     <ClCompile Include="proto\onnx\Operators.cpp" />
+    <ClCompile Include="proto\onnx\patch\onnxruntime\core\session\onnxruntime_c_api.cc" />
     <ClCompile Include="proto\onnx\RNNHelper.cpp" />
     <ClCompile Include="Serialization.cpp" />
     <ClCompile Include="stdafx.cpp">

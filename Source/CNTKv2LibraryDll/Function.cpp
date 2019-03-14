@@ -482,12 +482,14 @@ namespace CNTK
         vectorBuf.assign(s.begin(), s.end());
     }
 
-    void Function::Save(const std::wstring& filepath, ModelFormat format)
+    void Function::Save(const std::wstring& filepath, ModelFormat format, bool useExternalFilesToStoreParameters)
     {
         switch (format)
         {
         case ModelFormat::CNTKv2:
         {
+            if (useExternalFilesToStoreParameters)
+                fprintf(stderr, "Warning: useExternalFilesToStoreParameters only applies to ONNX format."); 
             Dictionary model = Serialize();
             auto stream = GetFstream(filepath, false);
             *stream << model;
@@ -497,7 +499,7 @@ namespace CNTK
 
         case ModelFormat::ONNX:
         {
-            ONNXFormat::Save(RootFunction(), filepath);
+            ONNXFormat::Save(RootFunction(), filepath, useExternalFilesToStoreParameters);
             break;
         }
         }
