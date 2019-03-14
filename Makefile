@@ -707,6 +707,7 @@ SGDLIB_SRC=\
 	$(SOURCEDIR)/SGDLib/Profiler.cpp \
 	$(SOURCEDIR)/SGDLib/SGD.cpp \
 	$(SOURCEDIR)/SGDLib/PostComputingActions.cpp \
+	$(SOURCEDIR)/SGDLib/SimpleDistGradAggregatorHelper.cpp \
 
 SGDLIB_SRC+=$(CNTKLIBRARY_COMMON_SRC)
 

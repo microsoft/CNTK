@@ -269,10 +269,10 @@ public:
     }
 
     // ProcessOptionalParameters - Process the optional parameters of a node
-    virtual void ProcessOptionalParameters(NDLNode<ElemType>* node)
+    virtual void ProcessOptionalParameters(NDLNode<ElemType>* node, std::wstring& name)
     {
         vector<NDLNode<ElemType>*> params = node->GetParameters(true); // get all the optional parameters only
-        auto compNode = ComputationNode<ElemType>::FromVoidPtr(node->GetEvalValue());
+        ComputationNodeBasePtr compNode = m_net->GetNodeFromName(name);;
         std::string empty;
 
         // loop through all the optional parameters processing them as necessary
@@ -582,6 +582,7 @@ private:
     DEVICEID_TYPE m_deviceId;
 };
 
+template class NDLBuilder<half>;
 template class NDLBuilder<float>;
 template class NDLBuilder<double>;
 

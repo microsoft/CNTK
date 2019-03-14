@@ -142,12 +142,14 @@ shared_ptr<Object> MakeRuntimeObject<TrainAction>(const IConfigRecordPtr configp
 {
     const IConfigRecord& config = *configp;
     wstring precision = config[L"precision"]; // dispatch on ElemType
-    if (precision == L"float")
+    if (precision == L"float16")
+        DoTrain<IConfigRecord, half>(config);
+    else if (precision == L"float")
         DoTrain<IConfigRecord, float>(config);
     else if (precision == L"double")
         DoTrain<IConfigRecord, double>(config);
     else
-        RuntimeError("invalid value '%ls' for 'precision', must be 'float' or 'double'", precision.c_str());
+        RuntimeError("invalid value '%ls' for 'precision', must be 'float16' or 'float' or 'double'", precision.c_str());
 
     return make_shared<Object>(); // return a dummy object
 }
@@ -156,8 +158,10 @@ shared_ptr<Object> MakeRuntimeObject<TrainAction>(const IConfigRecordPtr configp
 ScriptableObjects::ConfigurableRuntimeTypeRegister::Add<TrainAction> registerTrainAction(L"TrainAction");
 }}}
 
+template void DoTrain<ScriptableObjects::IConfigRecord, half>(const ScriptableObjects::IConfigRecord& config);
 template void DoTrain<ScriptableObjects::IConfigRecord, float>(const ScriptableObjects::IConfigRecord& config);
 template void DoTrain<ScriptableObjects::IConfigRecord, double>(const ScriptableObjects::IConfigRecord& config);
+template void DoTrain<ConfigParameters, half>(const ConfigParameters& config);
 template void DoTrain<ConfigParameters, float>(const ConfigParameters& config);
 template void DoTrain<ConfigParameters, double>(const ConfigParameters& config);
 

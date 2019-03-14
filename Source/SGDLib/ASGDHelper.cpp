@@ -646,6 +646,20 @@ ASGDHelper<ElemType>* NewASGDHelper(
 #endif
 }
 
+template<> ASGDHelper<half>* NewASGDHelper<half>(
+    const std::list<ComputationNodeBasePtr> & learnableNodes,
+    size_t nodeNumRanks,
+    bool useAsyncBuffer,
+    bool isSimulatedModelAveragingSGD,
+    AdjustLearningRateAtBeginning adjusttype,
+    double adjustCoef,
+    size_t adjustPerMinibatches,
+    int traceLevel,
+    int syncPerfStats)
+{
+    RuntimeError("NewASGDHelper - half not supported!");
+}
+
 template ASGDHelper<float>* NewASGDHelper<float>(
     const std::list<ComputationNodeBasePtr> & learnableNodes,
     size_t nodeNumRanks,

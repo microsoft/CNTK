@@ -134,7 +134,10 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     {
         if (initFromFilePath.empty())
             RuntimeError("initFromFilePath parameter must be provided when using \"fromFile\" initialization method");
-        InitFromFile(initFromFilePath);
+        wstring initFromFilePrecision;
+        if (configp->Exists(L"learningRateMultiplier"))
+            initFromFilePrecision = (wstring)configp->Get(L"initFromFilePrecision");
+        InitFromFile(initFromFilePath, initFromFilePrecision);
         m_initString.clear();
     }
     // legacy
@@ -395,11 +398,28 @@ std::tuple<size_t, size_t, short> LearnableParameter<short>::InitRandom(Matrix<s
 
 // initialize by reading a matrix from a text file
 template <class ElemType>
+void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath, const wstring& initFromFilePrecision)
+{
+    if (initFromFilePrecision == L"double")
+        InitFromFile<double>(initFromFilePath);
+    else if (initFromFilePrecision == L"float")
+        InitFromFile<float>(initFromFilePath);
+    else if (initFromFilePrecision == L"float16")
+        InitFromFile<half>(initFromFilePath);
+    else
+        InitFromFile(initFromFilePath);
+}
+
+template <class ElemType>
+template <class FileElemType>
 void LearnableParameter<ElemType>::InitFromFile(const wstring& initFromFilePath)
 {
     size_t numRows, numCols;
-    auto array = File::LoadMatrixFromTextFile<ElemType>(initFromFilePath, numRows, numCols);
-    InitFromArray(array, numRows, numCols);
+    vector<FileElemType> fileArray = File::LoadMatrixFromTextFile<FileElemType>(initFromFilePath, numRows, numCols);
+    vector<ElemType> targetArray;
+    targetArray.resize(fileArray.size());
+    std::transform(fileArray.begin(), fileArray.end(), targetArray.begin(), [](FileElemType f) {return static_cast<ElemType>(f);});
+    InitFromArray(targetArray, numRows, numCols);
 }
 
 // initialize by reading a matrix from a text file
