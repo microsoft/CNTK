@@ -219,7 +219,9 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                     initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size() - 2);
                 if (!fexists(initFromFilePath))
                     RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
-                dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(initFromFilePath));
+
+                std::string initFromFilePrecision = node->GetOptionalParameter("initFromFilePrecision", "");
+                dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(initFromFilePath), Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(initFromFilePrecision));
             }
             else if (EqualCI(initString, L"heNormal"))
                 m_net->InitLearnableParameters(nodePtr, L"heNormal", initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
@@ -778,7 +780,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 #endif
         }
         // process common optional parameters (currently only "tag");
-        ProcessOptionalParameters(node);
+        ProcessOptionalParameters(node, name);
         break;
     }
     case ndlPassFinal:

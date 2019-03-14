@@ -207,6 +207,16 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 {
     let& criterionNodes = GetTrainCriterionNodes(net);
 
+    // Validate criterion Nodes
+    if (criterionNodes.empty())
+    {
+        InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
+    }
+    if (criterionNodes.front()->template Is<ComputationNode<half>>())
+    {
+        InvalidArgument("TrainOrAdaptModel: using Float16 for loss function may cause overflow, please cast to float.");
+    }
+    
     fprintf(stderr, "\n");
     if (criterionNodes.size() == 1)
     {
@@ -218,11 +228,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         for (const auto& node : criterionNodes)
         {
             LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
-        }
-        if (criterionNodes.empty())
-        {
-            LOGPRINTF(stderr, "\t(none)\n");
-            InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
         }
     }
 
@@ -1148,10 +1153,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // NOTE: the following two local matrices are not used in distGradAgg path
     // assume only one training criterion node for each epoch.
     // The criterion values are accumulated here over the minibatches (without having to pull them off the GPU).
-    CriterionAccumulator<ElemType> localEpochCriterion(criterionNodes, net->GetDeviceId());
-    CriterionAccumulator<ElemType> localEpochEvalErrors(
-        evaluationNodes, net->GetDeviceId(),
-        {evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end()});
+    shared_ptr<CriterionAccumulatorBase> localEpochCriterionPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
+        criterionNodes, net->GetDeviceId());
+    shared_ptr<CriterionAccumulatorBase> localEpochEvalErrorsPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
+        criterionNodes, net->GetDeviceId(),
+        { evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end() });
+    CriterionAccumulatorBase& localEpochCriterion = *localEpochCriterionPtr;
+    CriterionAccumulatorBase& localEpochEvalErrors = *localEpochEvalErrorsPtr;
 
     // --- MAIN MINIBATCH LOOP
 
