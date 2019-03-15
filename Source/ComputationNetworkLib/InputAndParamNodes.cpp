@@ -134,10 +134,15 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     {
         if (initFromFilePath.empty())
             RuntimeError("initFromFilePath parameter must be provided when using \"fromFile\" initialization method");
-        wstring initFromFilePrecision;
+
         if (configp->Exists(L"learningRateMultiplier"))
-            initFromFilePrecision = (wstring)configp->Get(L"initFromFilePrecision");
-        InitFromFile(initFromFilePath, initFromFilePrecision);
+        {
+            wstring initFromFilePrecision = configp->Get(L"initFromFilePrecision");
+            InitFromFile(initFromFilePath, initFromFilePrecision);
+        }
+        else
+            InitFromFile(initFromFilePath, L"");
+
         m_initString.clear();
     }
     // legacy
