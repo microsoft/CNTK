@@ -1350,7 +1350,7 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
 
 template <class ElemType>
 void CPUMatrix<ElemType>::AdaMax(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-	ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor)
+	ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor, ElemType epsilon)
 {
 	// see https://arxiv.org/pdf/1412.6980.pdf
 	// firstMomentDecayRate:	beta_1
@@ -1358,7 +1358,6 @@ void CPUMatrix<ElemType>::AdaMax(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemT
 	// adaMul:					1 / (1 - pow(beta_1, t))
 	// unitGainFactor:			1 - beta_1, set 1 if disable unit gain.
 	size_t numColsNeeded = 2 * gradients.GetNumCols();
-	const ElemType floor = 1e-5;
 
 	if (IsEmpty() || (GetNumCols() < numColsNeeded))
 	{
@@ -1381,7 +1380,7 @@ void CPUMatrix<ElemType>::AdaMax(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemT
 		ElemType g = gradient[i];
 		u[i] = std::max(secondMomentDecayRate * u[i], fabs_(g));
 		m[i] = firstMomentDecayRate * m[i] + unitGainFactor * g;
-		val[i] -= learnRatePerSample * adaMul * m[i] / (u[i] + floor);
+		val[i] -= learnRatePerSample * adaMul * m[i] / (u[i] + epsilon);
 	}
 
 }
@@ -1392,9 +1391,9 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
                                       ElemType learningRate, 
                                       ElemType momentum,
                                       ElemType RMS_GAMMA,
-                                      bool unitGainMomentum)
+                                      bool unitGainMomentum,
+									  ElemType epsilon)
 {
-    const ElemType floor = 1.0;
     const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0); 
 
     size_t n = gradients.GetNumElements();
@@ -1418,7 +1417,7 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
     for (long i = 0; i < n; i++)
     {
         avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (mean_grad[i] * mean_grad[i]);
-        moms[i] = moms[i] * momentum + unitGainFactor * (mean_grad[i] * learningRate) / (Sqrt(avars[i] + floor));
+        moms[i] = moms[i] * momentum + unitGainFactor * (mean_grad[i] * learningRate) / (Sqrt(avars[i] + epsilon));
         val[i] -= moms[i];
 	}
 }

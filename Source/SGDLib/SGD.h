@@ -109,13 +109,11 @@ struct AdamInfo
 {
     double beta1;
     double beta2;
-    double epsilon;
 
     AdamInfo()
     {
         beta1 = 0.9;
         beta2 = 0.999;
-        epsilon = pow(10, -8);
     }
 };
 
@@ -398,6 +396,8 @@ protected:
 	// currently used by adam to store pow of beta1 and beta2
 	map<wstring, double> m_additionalOptimizerInfo;
 
+	// epsilon
+	double m_epsilon;
 };
 
 template <class ElemType>

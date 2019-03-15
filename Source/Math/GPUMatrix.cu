@@ -1567,7 +1567,8 @@ void GPUMatrix<ElemType>::AdaMax(GPUMatrix<ElemType>& gradients,
 	ElemType firstMomentDecayRate, 
 	ElemType secondMomentDecayRate, 
 	ElemType adaMul, 
-	ElemType unitGainFactor)
+    ElemType unitGainFactor,
+    ElemType epsilon)
 {
 	// see https://arxiv.org/pdf/1412.6980.pdf
 	// firstMomentDecayRate:	beta_1
@@ -1587,7 +1588,7 @@ void GPUMatrix<ElemType>::AdaMax(GPUMatrix<ElemType>& gradients,
 	size_t n = gradients.GetNumElements();
 	int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
 	_adaMax<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (n, gradients.Data(), Data() + n, Data(), functionValues.Data(),
-		learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, unitGainFactor);
+		learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, unitGainFactor, epsilon);
 }
 
 template <class ElemType>
@@ -1596,9 +1597,9 @@ void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
                                       ElemType learningRate, 
                                       ElemType momentum, 
                                       ElemType RMS_GAMMA,
-                                      bool unitGainMomentum)
+                                      bool unitGainMomentum,
+                                      ElemType epsilon)
 {
-    const ElemType floor = 1.0;
     const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
     ElemType* mean_grad = gradients.Data();
     ElemType* val = functionValues.Data();
@@ -1622,7 +1623,7 @@ void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
 
     _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, moms, val, mean_grad, n,
                                                                         learningRate,momentum,RMS_GAMMA,
-                                                                        floor,unitGainFactor);
+                                                                        epsilon,unitGainFactor);
 }
 
 template <class ElemType>

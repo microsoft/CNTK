@@ -238,14 +238,15 @@ public:
               ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor);
 
 	void AdaMax(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-		ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor);
+		ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor, ElemType epsilon=1);
 
     void RmsProp(GPUMatrix<ElemType>& gradients,
                  GPUMatrix<ElemType>& functionValues,
                  ElemType learningRate,
                  ElemType momentum,
                  ElemType RMS_GAMMA,
-                 bool unitGainMomentum);
+                 bool unitGainMomentum,
+                 ElemType epsilon);
 
     template<typename GradType>
     void AdaDelta(GPUMatrix<GradType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);

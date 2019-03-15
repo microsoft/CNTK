@@ -5323,11 +5323,10 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
 
 template <class ElemType>
 __global__ void _adaMax(CUDA_LONG size, ElemType* grad, ElemType* firstMoment, ElemType* secondMoment, ElemType* val,
-	ElemType lr, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType typedUnitGainFactor)
+	ElemType lr, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType typedUnitGainFactor, ElemType epsilon)
 {
 	typedef typename TypeSelector<ElemType>::comp_t comp_t;
 	const comp_t unitGainFactor = (comp_t)typedUnitGainFactor;
-	const comp_t floor = 1e-5f;
 	CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
 	CUDA_LONG stride = blockDim.x * gridDim.x;
 	for (; idx < size; idx += stride)
@@ -5335,7 +5334,7 @@ __global__ void _adaMax(CUDA_LONG size, ElemType* grad, ElemType* firstMoment, E
 		comp_t g = grad[idx];
 		comp_t w = max((comp_t)secondMomentDecayRate * (comp_t)secondMoment[idx], fabs_(g));				// w = u_t = max(beta_2 * u_{t-1}, |g_t|), use w as a cache
 		secondMoment[idx] = w;																				// copy to global memory
-		w = (comp_t)adaMul / (w + floor);																	// w = 1 / [(1 - pow(beta_1, t)) * u_t]
+		w = (comp_t)adaMul / (w + epsilon);																	// w = 1 / [(1 - pow(beta_1, t)) * u_t]
 		g = (comp_t)firstMomentDecayRate * (comp_t)firstMoment[idx] + unitGainFactor * g;					// g <- m_t = beta_1 * m_{t-1} + unitGainFactor * g
 		firstMoment[idx] = g;																				// copy to global memory
 		w = (comp_t)lr * g * w;																				// w = m_t * lr / [(1 - pow(beta_1, t)) * u_t]
@@ -5347,17 +5346,16 @@ template <class ElemType>
 __global__ void _adaMax4BlockSparseCol(CUDA_LONG size,
 	ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
 	ElemType* firstMoment, ElemType* secondMoment, ElemType* val,
-	ElemType lr, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor)
+	ElemType lr, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor, ElemType epsilon)
 {
 	CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
 	CUDA_LONG stride = blockDim.x * gridDim.x;
-	const ElemType floor = 1e-5f;
 	for (; idx < size; idx += stride)
 	{
 		ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
 		ElemType w = max(secondMomentDecayRate * secondMoment[idx], fabs_(g));			// w = u_t = max(beta_2 * u_{t-1}, |g_t|), use w as a cache
 		secondMoment[idx] = w;															// copy to global memory
-		w = adaMul / (w + floor);														// w = 1 / [(1 - pow(beta_1, t)) * u_t]
+		w = adaMul / (w + epsilon);														// w = 1 / [(1 - pow(beta_1, t)) * u_t]
 		g = firstMomentDecayRate * firstMoment[idx] + unitGainFactor * g;				// g <- m_t = beta_1 * m_{t-1} + unitGainFactor * g
 		firstMoment[idx] = g;															// copy to global memory
 		w = lr * g * w;																	// w = m_t * lr / [(1 - pow(beta_1, t)) * u_t]

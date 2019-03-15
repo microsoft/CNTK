@@ -429,9 +429,9 @@ public:
     void NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum, ElemType unitGainFactor);
     ElemType Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier);
     void FSAdagrad(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType unitGainFactor);
-    void RmsProp(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType momentum, ElemType RMS_GAMMA,bool unitGainMomentum);
+    void RmsProp(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType momentum, ElemType RMS_GAMMA,bool unitGainMomentum, ElemType epsilon);
     void Adam(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor);
-	void AdaMax(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor);
+	void AdaMax(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor, ElemType epsilon);
 
     template<typename AccumType>
     void AdaDelta(GPUMatrix<AccumType>&c, GPUMatrix<AccumType>&functionValues, AccumType learningRate, AccumType rho, AccumType epsilon, int* timestamps, int currentTimestamp);

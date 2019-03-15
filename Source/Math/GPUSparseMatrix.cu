@@ -1635,7 +1635,8 @@ void GPUSparseMatrix<ElemType>::AdaMax(
 	ElemType firstMomentDecayRate,
 	ElemType secondMomentDecayRate,
 	ElemType adaMul,
-	ElemType unitGainFactor)
+    ElemType unitGainFactor,
+    ElemType epsilon)
 {
 	if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
 	{
@@ -1657,7 +1658,7 @@ void GPUSparseMatrix<ElemType>::AdaMax(
 	_adaMax4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (
 		n, Data(), ColOrRow2BlockId(), GetNumRows(),
 		c.Data() + n, c.Data(), functionValues.Data(),
-		learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, unitGainFactor);
+		learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, unitGainFactor, epsilon);
 }
 
 template <class ElemType>
@@ -1666,14 +1667,14 @@ void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     ElemType learningRate,
     ElemType momentum, 
     ElemType RMS_GAMMA,
-    bool unitGainMomentum)
+    bool unitGainMomentum,
+    ElemType epsilon)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
         NOT_IMPLEMENTED;
     }
 
-    const ElemType floor = 1.0;
     const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
 
     size_t n = GetNumElements();
@@ -1696,7 +1697,7 @@ void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     _rmsprop4BlockSparseCol<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(
         avars, moms, val,
         Data(),ColOrRow2BlockId(), GetNumRows(),
-        n, learningRate, momentum, RMS_GAMMA, floor, unitGainFactor);
+        n, learningRate, momentum, RMS_GAMMA, epsilon, unitGainFactor);
 }
 
 __global__ void _updateTimestamps(CUDA_LONG N, const GPUSPARSE_INDEX_TYPE* blockId2ColOrRow, int* timestamps, int currentTimestamp)
