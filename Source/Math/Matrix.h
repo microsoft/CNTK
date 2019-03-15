@@ -217,7 +217,7 @@ public:
 
     void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double beta1Pow, const double beta2Pow,
         const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax=false);
-	void AdaMaxUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
+	void AdaMaxUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double beta1Pow,
 		const double learnRatePerSample, const double meanMomentum, const double varMomentum, ElemType unitGainFactor, const double epsilon=1);
 
     void RmsPropUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double learningRate, const double momentum, ElemType RMS_GAMMA, bool unitGainMomentum = true, ElemType epsilon=1);
