@@ -47,6 +47,11 @@ def nb(tmpdir_factory, request, device_id):
     import subprocess
     from cntk.ops.tests.ops_test_utils import cntk_device
     from cntk.cntk_py import DeviceKind_GPU
+
+    # tests with Python 2.7 on Windows are not stable in the CI environment
+    if os.getenv("OS")=="Windows_NT" and sys.version_info[0] == 2:
+        return;
+
     inPath = getattr(request.module, "notebook")
 
     deviceIdsToRun = [-1, 0]
