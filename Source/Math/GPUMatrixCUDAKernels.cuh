@@ -5296,7 +5296,7 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* firstMoment, Ele
 		comp_t w = (comp_t)secondMomentDecayRate * (comp_t)secondMoment[idx] + (1.0f - (comp_t)secondMomentDecayRate) * g * g;
 		secondMoment[idx] = w;
 
-		val[idx] = (comp_t)val[idx] - (comp_t)lr * (comp_t)adaMul * g / (sqrt_(w) + (comp_t)epsilon);
+		val[idx] = (comp_t)val[idx] - (comp_t)lr * (comp_t)adaMul * g / (Sqrt(w) + (comp_t)epsilon);
     }
 }
 
@@ -5317,7 +5317,7 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
         ElemType w = secondMomentDecayRate * secondMoment[idx] + (1.0f - secondMomentDecayRate) * g * g;
 		secondMoment[idx] = w;
 
-		val[idx] -= lr * adaMul * g / (sqrt_(w) + epsilon);
+		val[idx] -= lr * adaMul * g / (Sqrt(w) + epsilon);
     }
 }
 
