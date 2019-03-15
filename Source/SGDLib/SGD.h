@@ -394,6 +394,10 @@ protected:
 
 
     LRAPIInfo m_lrapiInfo;
+
+	// currently used by adam to store pow of beta1 and beta2
+	map<wstring, double> m_additionalOptimizerInfo;
+
 };
 
 template <class ElemType>
@@ -432,6 +436,7 @@ public:
           m_gradHeader(nullptr)
     {
         msra::files::make_intermediate_dirs(m_modelPath);
+		InitializeAdditionalOptimizerInfo();
     }
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
 
@@ -448,6 +453,28 @@ public:
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::none;
         }
+
+	void InitializeAdditionalOptimizerInfo()
+	{
+		switch (m_gradType.type)
+		{
+		case GradientsUpdateType::Adam: case GradientsUpdateType::AdaMax:
+			m_additionalOptimizerInfo[L"beta1_pow"] = m_adamInfo.beta1;
+			m_additionalOptimizerInfo[L"beta2_pow"] = m_adamInfo.beta2;
+			break;
+		}
+	}
+
+	void UpdateAdditionalOptimizerInfo()
+	{
+		switch (m_gradType.type)
+		{
+		case GradientsUpdateType::Adam: case GradientsUpdateType::AdaMax:
+			m_additionalOptimizerInfo[L"beta1_pow"] *= m_adamInfo.beta1;
+			m_additionalOptimizerInfo[L"beta2_pow"] *= m_adamInfo.beta2;
+			break;
+		}
+	}
 
     void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,

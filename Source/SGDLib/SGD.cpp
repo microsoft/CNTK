@@ -341,6 +341,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
     list<Matrix<ElemType>> smoothedGradients;
     vector<double> smoothedCounts; // currently used by FSAdaGradUpdate()
+	map<wstring, double> optimizerInfo;
     size_t numParameters = 0;
 
     vector<wstring> nodesToUpdateDescriptions; // for logging only
@@ -1508,6 +1509,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 
+		// update additional optimizer information
+		UpdateAdditionalOptimizerInfo();
+
         // aggregation by model averaging or block momentum
         if (useModelAggregation)
         {
@@ -2540,34 +2544,37 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
         auto learningRate = learnRatePerSample * actualMBSize;
         Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
-        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain));
+        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain), (ElemType)m_epsilon);
 #else
 
-		smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain));
+		smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain), (ElemType)m_epsilon);
 #endif    
 	}
     else if (adpType == GradientsUpdateType::Adam)
 	{
         const auto unitGainFactor = ElemType(disableMomentumUnitGain ? 1.0 : (1.0 - m_adamInfo.beta1));
-		smoothedCount++;
+		double beta1Pow = m_additionalOptimizerInfo.at(L"beta1_pow");
+		double beta2Pow = m_additionalOptimizerInfo.at(L"beta2_pow");
+
 #ifdef USE_MEAN_GRADIENT
         auto learningRate = learnRatePerSample * actualMBSize;
 		Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
-        smoothedGradientValues.AdamUpdate(gradientValues, functionValues, smoothedCount, learningRate, m_adamInfo.beta1, m_adamInfo.beta2, m_adamInfo.epsilon, unitGainFactor);
+        smoothedGradientValues.AdamUpdate(gradientValues, functionValues, beta1Pow, beta2Pow, learningRate, m_adamInfo.beta1, m_adamInfo.beta2, m_epsilon, unitGainFactor);
 #else
-        smoothedGradientValues.AdamUpdate(gradientValues, functionValues, smoothedCount, learnRatePerSample, m_adamInfo.beta1, m_adamInfo.beta2, m_adamInfo.epsilon, unitGainFactor);
+        smoothedGradientValues.AdamUpdate(gradientValues, functionValues, beta1Pow, beta2Pow, learnRatePerSample, m_adamInfo.beta1, m_adamInfo.beta2, m_epsilon, unitGainFactor);
 #endif
 	}
 	else if (adpType == GradientsUpdateType::AdaMax)
 	{
 		const auto unitGainFactor = ElemType(disableMomentumUnitGain ? 1.0 : (1.0 - m_adaMaxInfo.beta1));
-		smoothedCount++;
+		double beta1Pow = m_additionalOptimizerInfo.at(L"beta1_pow");
+
 #ifdef USE_MEAN_GRADIENT
 		auto learningRate = learnRatePerSample * actualMBSize;
 		Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
-		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, smoothedCount, learningRate, m_adaMaxInfo.beta1, m_adaMaxInfo.beta2, unitGainFactor);
+		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, beta1Pow, learningRate, m_adaMaxInfo.beta1, m_adaMaxInfo.beta2, unitGainFactor, m_epsilon);
 #else
-		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, smoothedCount, learnRatePerSample, m_adaMaxInfo.beta1, m_adaMaxInfo.beta2, unitGainFactor);
+		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, beta1Pow, learnRatePerSample, m_adaMaxInfo.beta1, m_adaMaxInfo.beta2, unitGainFactor, m_epsilon);
 #endif
 	}
 
