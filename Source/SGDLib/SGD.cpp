@@ -3224,7 +3224,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_adamInfo.beta2 = configSGD(L"adam_beta2", 0.999);
     
 	// epsilon
-	m_epsilon = configSGD(L"epsilon", 1);
+	m_epsilon = configSGD(L"epsilon", 1.0);
 
 	// extract AdaMax parameters from config, it they exist. Default to reasonable values.
 	m_adaMaxInfo.beta1 = configSGD(L"adamax_beta1", 0.9);
