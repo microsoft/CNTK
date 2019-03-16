@@ -392,8 +392,6 @@ namespace CNTK
                         case PrimitiveOpType::StableSigmoid:
                         case PrimitiveOpType::ConstantOp:
                         case PrimitiveOpType::Cast:
-                        case PrimitiveOpType::Getbias:
-                        case PrimitiveOpType::BiasAttention:
                         case PrimitiveOpType::StraightThrough:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
@@ -460,6 +458,10 @@ namespace CNTK
                             outputShape = operandShape.SubShape(0, operandShape.Rank() - 1);
                             break;
                         }
+                        case PrimitiveOpType::Getbias:
+                        case PrimitiveOpType::BiasAttention:
+                            outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
+                            break;
                         case PrimitiveOpType::PackedIndex:
                             assert(m_inputs.size() == 2);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[1].Shape());

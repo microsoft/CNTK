@@ -1883,10 +1883,10 @@ public:
         std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout = InputRef(0).GetMBLayout();
         const auto numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
         const auto numSequences = phoneMBLayout->GetNumSequences();
-
+        //int m_deviceid_gpu = InputRef(0).Value().GetDeviceId();
         //get label sequence
         InputRef(0).Value().VectorMax(*m_maxIndexes, *m_maxValues, true);
-        size_t rowNum = m_maxIndexes->GetNumRows();
+        size_t rowNum = InputRef(0).Value().GetNumRows();
 
         //get infor for each utterances
         std::vector<size_t> uttPhoneNum, uttPhoneBeginIdx, uttPhoneToChanInd;
@@ -1913,8 +1913,10 @@ public:
         for (size_t seqid = 0; seqid < numSequences; seqid++)
         {
             words.push_back({});
+            word.clear();
             for (size_t n = 1; n < uttPhoneNum[seqid]; n++)
             {
+                
                 size_t phoneid = (n + uttPhoneBeginIdx[seqid]) * numPhoneParallelSequences + uttPhoneToChanInd[seqid];
                 size_t phoneVal = (size_t)((*m_maxIndexes)(0, phoneid));
                 if (phoneVal == m_spaceTokens[0]) //space
@@ -1929,8 +1931,19 @@ public:
                 word.push_back(phoneVal);
             }
         }
-
-        vector<vector<size_t>> words_bias;
+        //print words
+        fprintf(stderr, "words:\n");
+        for (auto it = words.begin(); it != words.end(); it++)
+        {
+            for (auto itw = it->begin(); itw != it->end(); itw++)
+            {
+                for (auto itwl = itw->begin(); itwl != itw->end(); itwl++)
+                    fprintf(stderr, "%zu ", *itwl);
+                fprintf(stderr, " ");
+            }
+            fprintf(stderr, "\n");
+        }
+        vector<vector<size_t>>  words_bias;
         //deal with each utt
         size_t totalbiaswordlen = 0, maxbiaswordlen = 0;
         size_t rand1, rand2, rand3;
@@ -1939,7 +1952,7 @@ public:
         {
             rand1 = m_m1() % 100;
             rand2 = m_m2();
-            if (rand1 > 50) //get the word from utt
+            if (rand1 > 50  || numSequences == 1) //get the word from utt
             {
                 size_t wordNum = words[seqid].size();
                 rand2 = rand2 % wordNum;
@@ -1951,7 +1964,7 @@ public:
                 while (rand2 % totalUttNum == seqid)
                     rand2 = m_m2();
                 rand2 = rand2 % totalUttNum;
-                rand3 = m_m2() % words[seqid].size();
+                rand3 = m_m2() % words[rand2].size();
                 words_bias.push_back(words[rand2][rand3]);
                 wordlen = words[rand2][rand3].size();
             }
@@ -1959,28 +1972,39 @@ public:
                 maxbiaswordlen = wordlen;
             totalbiaswordlen += wordlen;
         }
+        fprintf(stderr, "word bias:\n");
+        for (auto it = words_bias.begin(); it != words_bias.end(); it++)
+        {
+            for (auto itw = it->begin(); itw != it->end(); itw++)
+            {
+                fprintf(stderr, "%zu ", *itw);                
+            }
+            fprintf(stderr, "\n");
+        }
 
         //write output
         m_pMBLayout->Init(totalUttNum, maxbiaswordlen);
-        //Matrix<ElemType> outputMatrix = Value();
-        Value().Resize(rowNum, maxbiaswordlen * totalUttNum);
-        Value().SetValue(0.0);
+        Matrix<ElemType> outputMatrix(CPUDEVICE);
+        outputMatrix.Resize(rowNum, maxbiaswordlen * totalUttNum);
+        outputMatrix.SetValue(0.0);
+        //Value().TransferToDeviceIfNotThere(CPUDEVICE);
         size_t colNo = 0;
         seqId = 0;
         for (auto it = words_bias.begin(); it != words_bias.end(); it++)
         {
             for (auto wit = it->begin(); wit != it->end(); wit++)
             {
-                Value().SetValue(*wit, colNo, 1.0);
+                outputMatrix.SetValue(*wit, colNo, 1.0);
                 colNo++;
             }
-            m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, seqId, 0, it->size());
+            m_pMBLayout->AddSequence(seqId, seqId, 0, it->size());
             // and the gap behind if any
             if (it->size() < maxbiaswordlen)
                 m_pMBLayout->AddGap(seqId, it->size(), maxbiaswordlen);
             seqId++;
         }
-
+        //Value().TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
+        Value().SetValue(outputMatrix);
 #if NANCHECK
         functionValues.HasNan("GetbiasNode");
 #endif
@@ -1993,7 +2017,7 @@ public:
     {
 
         Base::Validate(isFinalValidationPass);
-
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
         //m_pMBLayout = nullptr; // no layout
         //InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
         if (isFinalValidationPass)
@@ -2004,6 +2028,7 @@ public:
                 m_pMBLayout->SetUniqueAxisName(L"GetbiasAxis");
             }
         }
+        SetDims(Input(0));
         //m_pMBLayout->Init(1, totalcol);
         //m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
         //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);

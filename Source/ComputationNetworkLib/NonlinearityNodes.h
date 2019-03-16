@@ -771,50 +771,140 @@ public:
         result.AssignClipOf(input0, input1, input2);*/
         auto input0 = OneSampleTensorFor(0, /*gradient=*/false, fr.AllowBroadcast());
         auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
+        //Matrix<ElemType>& hiddenMatrix = InputRef(1).Value();
+        //Matrix<ElemType>& outMatrix = Value();
         Matrix<ElemType>& hiddenMatrix = input0.GetSOB();
         Matrix<ElemType>& outMatrix = output.GetSOB();
         Matrix<ElemType>& biasMatrix = InputRef(1).Value();
+
         auto MBLayoutofHidden = InputRef(0).GetMBLayout();
         auto MBLayoutofBias = InputRef(1).GetMBLayout();
 
-        Matrix<ElemType> betaVector(outMatrix.GetDeviceId()), CMatrix(outMatrix.GetDeviceId());
+        size_t numrows = hiddenMatrix.GetNumRows();
+        assert(numrows == biasMatrix.GetNumRows());
+        size_t deviceID = hiddenMatrix.GetDeviceId();
+        Microsoft::MSR::CNTK::Matrix<ElemType> tempmatrix(deviceID), tempmatrix2(deviceID), tempmatrix3(deviceID), betaVector(deviceID), CMatrix(deviceID), wordMatrix(deviceID);
+
+        size_t numParallelHidden = MBLayoutofHidden->GetNumParallelSequences();
         //loop for each parallel sequence
         //for (size_t nChunk = 0; nChunk < MBLayoutofHidden.)
         //loop for each seq
         assert(MBLayoutofHidden->GetNumSequences() == MBLayoutofBias->GetNumSequences());
         auto BiasSeqs = MBLayoutofBias->GetAllSequences();
         size_t seqId = 0; //phone
-        for (const auto& seq : MBLayoutofHidden->GetAllSequences())
+        //loop for each sequence
+        tempmatrix3.Resize(numrows, numrows);
+        if (m_gradientofHidden->GetNumRows() != numrows * numrows || m_gradientofHidden->GetNumCols() != hiddenMatrix.GetNumCols())
         {
-            if (seq.seqId == GAP_SEQUENCE_ID)
-            {
-                continue;
-            }
-            assert(seq.seqId == seqId);
-            if (seq.tBegin + seq.GetNumTimeSteps() < fr.seqIndex)
-            {
-                auto biasSeq = MBLayoutofBias->FindSequence(seqId);
-                
-                size_t numFramesBias = biasSeq.GetNumTimeSteps();
-                size_t nBegin = biasSeq.tBegin;
-                Matrix<ElemType> wordMatrix = biasMatrix.ColumnSlice(nBegin, numFramesBias);
-                wordMatrix.Multiply(hiddenMatrix, true, wordMatrix, true, betaVector);
-                //betaVector.AssignSoftmaxSum();
-                betaVector.InplaceLogSoftmax(false);
-                betaVector.InplaceExp();
-                CMatrix.Multiply(wordMatrix, true, betaVector, true, CMatrix);
-                outMatrix.SetValue(CMatrix);
-            }
-            seqId++;
+            m_gradientofHidden->Resize(numrows * numrows, hiddenMatrix.GetNumCols());
         }
-    }
+        for (size_t nchunk = 0; nchunk < numParallelHidden; nchunk++)
+        {
+            seqId = 0;
+            for (const auto& seq : MBLayoutofHidden->GetAllSequences())
+            {
+                if (seq.seqId == GAP_SEQUENCE_ID)
+                {
+                    continue;
+                }
+                assert(seq.seqId == seqId);
+                if (seq.s == nchunk && (size_t) seq.tBegin <= fr.timeIdxInSeq && (size_t) seq.tBegin + seq.GetNumTimeSteps() > fr.timeIdxInSeq)
+                {
+                    //size_t numFrames = seq.GetNumTimeSteps();
 
+                    //get hidden vector of this sequence
+                    tempmatrix = hiddenMatrix.ColumnSlice(seq.s + (fr.timeIdxInSeq * numParallelHidden), 1);
+                    //tempmatrix.CopyColumnsStrided(loglikelihoodForCurrentParallelUtterance, numFrames, numParallelHidden, 1);
+                    //get bias word
+                    auto biasSeq = MBLayoutofBias->FindSequence(seqId);
+                    wordMatrix = biasMatrix.ColumnSlice(biasSeq.tBegin, biasSeq.GetNumTimeSteps());
+                    //wordMatrix.Print("word matrix");
+                    //tempmatrix.Print("hidden matrix");
+                    wordMatrix.Multiply(tempmatrix, true, wordMatrix, false, betaVector);
+                    //betaVector.Print("beta before softmax");
+                    //betaVector.AssignSoftmaxSum();
+                    betaVector.InplaceLogSoftmax(false);
+                    betaVector.InplaceExp();
+                    //betaVector.Print("beta after softmax");
+                    CMatrix.Multiply(wordMatrix, false, betaVector, true, CMatrix);
+                    //CMatrix.Print("C matrix");
+                    outMatrix.SetColumn(CMatrix, seq.s + (fr.timeIdxInSeq * numParallelHidden));
+
+                    //cal gradient
+                    tempmatrix3.Resize(numrows, numrows);
+                    tempmatrix3.SetValue(0.0);
+                    for (size_t ncol = 0; ncol < betaVector.GetNumCols(); ncol++)
+                    {
+                        //get Kj
+                        tempmatrix = wordMatrix.ColumnSlice(ncol, 1);
+                        //tempmatrix.Print("word matrix");
+                        tempmatrix2.AssignProductOf(tempmatrix, false, tempmatrix, true);
+                        tempmatrix2.Scale(betaVector(0, ncol), tempmatrix2);
+                        //tempmatrix2.Print("word matrix multiply");
+                        tempmatrix3.AssignSumOf(tempmatrix3, tempmatrix2);
+                    }
+
+                    tempmatrix3.Scale(-1.0, tempmatrix3);
+                    //tempmatrix3.Print("word matrix sum");
+                    tempmatrix2.AssignProductOf(CMatrix, false, CMatrix, true);
+                    //tempmatrix2.Print("C matrix multiply");
+                    tempmatrix3.AssignSumOf(tempmatrix3, tempmatrix2);
+                    //tempmatrix3.Print("final ");
+                    tempmatrix3.Reshape(numrows * numrows, 1);
+                    m_gradientofHidden->SetColumn(tempmatrix3, seq.s + (fr.timeIdxInSeq * numParallelHidden));
+                    break;
+                }
+                seqId++;
+            }
+        }
+        //outMatrix.Print("bias attention output");
+    }
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // there is only a gradient for the input tensor that is to be clipped
-        if (inputIndex == 2)
+        if (inputIndex == 0)
         {
+            auto input0 = OneSampleTensorFor(0, /*gradient=*/false, fr.AllowBroadcast());
+            auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
+            //Matrix<ElemType>& hiddenMatrix = InputRef(1).Value();
+            //Matrix<ElemType>& outMatrix = Value();
+            Matrix<ElemType>& inputGradient = input0.GetSOB();
+            Matrix<ElemType>& outputGradient = output.GetSOB();
+            //Microsoft::MSR::CNTK::Matrix<ElemType>& inputGradient = InputRef(inputIndex).Gradient();
+            //Microsoft::MSR::CNTK::Matrix<ElemType>& outputGradient = Gradient();
+            size_t numrows = InputRef(1).Value().GetNumRows();
+            auto MBLayoutofHidden = InputRef(0).GetMBLayout();
+            size_t numParallelHidden = MBLayoutofHidden->GetNumParallelSequences();
+            size_t seqId = 0;
+            size_t deviceID = InputRef(1).Value().GetDeviceId();
+            Microsoft::MSR::CNTK::Matrix<ElemType> tempmatrix(deviceID), tempmatrix2(deviceID), tempmatrix3(deviceID);
+            for (size_t nchunk = 0; nchunk < numParallelHidden; nchunk++)
+            {
+                seqId = 0;
+                for (const auto& seq : MBLayoutofHidden->GetAllSequences())
+                {
+                    if (seq.seqId == GAP_SEQUENCE_ID)
+                    {
+                        continue;
+                    }
+                    assert(seq.seqId == seqId);
+                    if (seq.s == nchunk && (size_t) seq.tBegin <= fr.timeIdxInSeq && (size_t) seq.tBegin + seq.GetNumTimeSteps() > fr.timeIdxInSeq)
+                    {
+                        tempmatrix = m_gradientofHidden->ColumnSlice(seq.s + (fr.timeIdxInSeq * numParallelHidden), 1);
+                        tempmatrix.Reshape(numrows, numrows);
+                        tempmatrix2 = outputGradient.ColumnSlice(seq.s + (fr.timeIdxInSeq * numParallelHidden), 1);
+                        tempmatrix3.AssignProductOf(tempmatrix, false, tempmatrix2, false);
+                        inputGradient.SetColumn(tempmatrix3, seq.s + (fr.timeIdxInSeq * numParallelHidden));
+
+                        break;
+                    }
+                    seqId++;
+                }
+                
+            }
         }
+        else if (inputIndex == 1)
+            return;
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -829,11 +919,41 @@ public:
         size_t rank = input->GetSampleLayout().GetRank();
         if (inputIndex == 0 && rank == 1) // transposing a 1D tensor implies it is really a 2D tensor. Note that m_transpose applies to left operand only.
             rank = 2;
-        if (!InputRef(0).HasMBLayout()) // left input is no MB data: run normally
+        /*if (!InputRef(0).HasMBLayout()) // left input is no MB data: run normally
             return input->DataTensorFor(data, rank, fr);
         auto tensorShape = input->GetOneSampleTensorSliceFor(rank, fr);
-        return TensorView<ElemType>(data, tensorShape);
+        return TensorView<ElemType>(data, tensorShape);*/
+        return input->DataTensorFor(data, rank, fr);
     }
+
+    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<BiasAttentionNode<ElemType>>(nodeP);
+
+            node->m_gradientofHidden = m_gradientofHidden;
+        }
+    }
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_gradientofHidden, matrixPool);
+        //RequestMatrixFromPool(m_maxValues, matrixPool);
+        //RequestMatrixFromPool(m_derivativeForG, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_gradientofHidden, matrixPool);
+        //ReleaseMatrixToPool(m_maxValues, matrixPool);
+        //ReleaseMatrixToPool(m_derivativeForG, matrixPool);
+    }
+
+protected:
+    shared_ptr<Matrix<ElemType>> m_gradientofHidden;
 };
 
 template class BiasAttentionNode<float>;
