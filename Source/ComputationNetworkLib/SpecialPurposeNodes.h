@@ -1932,7 +1932,7 @@ public:
             }
         }
         //print words
-        fprintf(stderr, "words:\n");
+        /*fprintf(stderr, "words:\n");
         for (auto it = words.begin(); it != words.end(); it++)
         {
             for (auto itw = it->begin(); itw != it->end(); itw++)
@@ -1942,7 +1942,7 @@ public:
                 fprintf(stderr, " ");
             }
             fprintf(stderr, "\n");
-        }
+        }*/
         vector<vector<size_t>>  words_bias;
         //deal with each utt
         size_t totalbiaswordlen = 0, maxbiaswordlen = 0;
@@ -1972,7 +1972,7 @@ public:
                 maxbiaswordlen = wordlen;
             totalbiaswordlen += wordlen;
         }
-        fprintf(stderr, "word bias:\n");
+        /*fprintf(stderr, "word bias:\n");
         for (auto it = words_bias.begin(); it != words_bias.end(); it++)
         {
             for (auto itw = it->begin(); itw != it->end(); itw++)
@@ -1980,7 +1980,7 @@ public:
                 fprintf(stderr, "%zu ", *itw);                
             }
             fprintf(stderr, "\n");
-        }
+        }*/
 
         //write output
         m_pMBLayout->Init(totalUttNum, maxbiaswordlen);
