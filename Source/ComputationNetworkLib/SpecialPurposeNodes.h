@@ -2094,11 +2094,11 @@ protected:
     //shared_ptr<Matrix<ElemType>> m_outputDensity;
     // shared_ptr<Matrix<ElemType>> m_outputDistribution;
     vector<size_t> m_spaceTokens;
-    std::uniform_int<int> m_distr;
+    //std::uniform_int<int> m_distr;
     //std::uniform_int_distribution<int> m_distr(1, 11);
     std::random_device rd;
     std::mt19937_64 m_m1{rd()};
-    std::mt19937_64 m_m2;
+    std::mt19937_64 m_m2{1000};
 };
 
 template class GetbiasNode<float>;
