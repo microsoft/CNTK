@@ -1916,7 +1916,7 @@ public:
             word.clear();
             for (size_t n = 1; n < uttPhoneNum[seqid]; n++)
             {
-                
+
                 size_t phoneid = (n + uttPhoneBeginIdx[seqid]) * numPhoneParallelSequences + uttPhoneToChanInd[seqid];
                 size_t phoneVal = (size_t)((*m_maxIndexes)(0, phoneid));
                 if (phoneVal == m_spaceTokens[0]) //space
@@ -1930,6 +1930,14 @@ public:
                 }
                 word.push_back(phoneVal);
             }
+            if (words[seqid].size() == 0 && word.size()!=0)
+                words[seqid].push_back(word);
+            else if (words[seqid].size() == 0 && word.size() == 0)
+            {
+                word.push_back(m_spaceTokens[0]);
+                word.push_back(m_spaceTokens[0]);
+                words[seqid].push_back(word);
+                }
         }
         //print words
         /*fprintf(stderr, "words:\n");
@@ -1943,7 +1951,7 @@ public:
             }
             fprintf(stderr, "\n");
         }*/
-        vector<vector<size_t>>  words_bias;
+        vector<vector<size_t>> words_bias;
         //deal with each utt
         size_t totalbiaswordlen = 0, maxbiaswordlen = 0;
         size_t rand1, rand2, rand3;
@@ -1952,7 +1960,7 @@ public:
         {
             rand1 = m_m1() % 100;
             rand2 = m_m2();
-            if (rand1 > 50  || numSequences == 1) //get the word from utt
+            if (rand1 > 50 || numSequences == 1) //get the word from utt
             {
                 size_t wordNum = words[seqid].size();
                 rand2 = rand2 % wordNum;
