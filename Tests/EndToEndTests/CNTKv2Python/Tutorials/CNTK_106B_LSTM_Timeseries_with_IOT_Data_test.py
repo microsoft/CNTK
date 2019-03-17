@@ -8,6 +8,7 @@ import os
 import re
 import numpy as np
 import sys
+import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 

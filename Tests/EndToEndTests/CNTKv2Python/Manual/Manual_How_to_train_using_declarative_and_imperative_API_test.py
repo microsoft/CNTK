@@ -7,6 +7,7 @@
 import os
 import re
 import sys
+import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "Tutorials"))
