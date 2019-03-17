@@ -7,6 +7,7 @@
 import os
 import re
 import numpy as np
+import sys
 import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +29,8 @@ def clean_data(device_id):
 @pytest.mark.skipif(not reWeekly.search(os.environ.get('TEST_TAG')),
                     reason="only runs as part of the weekly tests")
 def test_cntk_103a_mnist_dataloader_noErrors(clean_data, nb):
+    if os.getenv("OS")=="Windows_NT" and sys.version_info[0] == 2:
+        pytest.skip('tests with Python 2.7 on Windows are not stable in the CI environment. ')
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
