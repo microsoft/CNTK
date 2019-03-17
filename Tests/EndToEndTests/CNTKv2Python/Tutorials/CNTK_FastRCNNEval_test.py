@@ -23,6 +23,8 @@ linux_only = pytest.mark.skipif(sys.platform == 'win32', reason="it runs current
 @python_35_or_36
 @linux_only
 def test_cntk_fastrcnn_eval_noErrors(nb):
+    if os.getenv("OS")=="Windows_NT" and sys.version_info[0] == 2:
+        pytest.skip('tests with Python 2.7 on Windows are not stable in the CI environment. ')
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
 
@@ -31,6 +33,8 @@ def test_cntk_fastrcnn_eval_noErrors(nb):
 @python_35_or_36
 @linux_only
 def test_cntk_fastrcnn_eval_evalCorrect(nb):
+    if os.getenv("OS")=="Windows_NT" and sys.version_info[0] == 2:
+        pytest.skip('tests with Python 2.7 on Windows are not stable in the CI environment. ')
     # Make sure that the number of detections is more than 0
     detectionCells = [cell for cell in nb.cells
                  if cell.cell_type == 'code' and
