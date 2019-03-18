@@ -220,8 +220,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 if (!fexists(initFromFilePath))
                     RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
 
-                std::string initFromFilePrecision = node->GetOptionalParameter("initFromFilePrecision", "");
-                dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(initFromFilePath), Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(initFromFilePrecision));
+                dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(Microsoft::MSR::CNTK::ToFixedWStringFromMultiByte(initFromFilePath));
             }
             else if (EqualCI(initString, L"heNormal"))
                 m_net->InitLearnableParameters(nodePtr, L"heNormal", initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);

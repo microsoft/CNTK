@@ -77,10 +77,7 @@ public:
     }
 
     // initialize by reading a matrix from a text file
-    template <class FileElemType=ElemType>
     void InitFromFile(const std::wstring& initFromFilePath);
-
-    void InitFromFile(const std::wstring& initFromFilePath, const std::wstring& initFromFilePrecision);
 
 public:
     // initialize with random numbers
