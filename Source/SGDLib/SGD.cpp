@@ -1156,7 +1156,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     shared_ptr<CriterionAccumulatorBase> localEpochCriterionPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
         criterionNodes, net->GetDeviceId());
     shared_ptr<CriterionAccumulatorBase> localEpochEvalErrorsPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
-        criterionNodes, net->GetDeviceId(),
+        evaluationNodes, net->GetDeviceId(),
         { evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end() });
     CriterionAccumulatorBase& localEpochCriterion = *localEpochCriterionPtr;
     CriterionAccumulatorBase& localEpochEvalErrors = *localEpochEvalErrorsPtr;
