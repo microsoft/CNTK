@@ -426,6 +426,8 @@ public:
         {
             auto node = dynamic_pointer_cast<ConvolutionNodeBaseExtended<ElemType>>(nodeP);
             node->m_convolution2D = m_convolution2D;
+            node->m_dilation = m_dilation;
+            node->m_groups = m_groups;
         }
     }
 
@@ -455,6 +457,8 @@ public:
                 LogicError("groups: number of input channels (C) must be equal to number of input kernel channels (kC) * groups (G).");
         }
     }
+
+    size_t Groups() const { return m_groups; }
 
 protected:
     TensorShape m_dilation;
