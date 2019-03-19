@@ -1153,13 +1153,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // NOTE: the following two local matrices are not used in distGradAgg path
     // assume only one training criterion node for each epoch.
     // The criterion values are accumulated here over the minibatches (without having to pull them off the GPU).
-    shared_ptr<CriterionAccumulatorBase> localEpochCriterionPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
-        criterionNodes, net->GetDeviceId());
-    shared_ptr<CriterionAccumulatorBase> localEpochEvalErrorsPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
+    CriterionAccumulator<ElemType> localEpochCriterion(criterionNodes, net->GetDeviceId());
+    CriterionAccumulator<ElemType> localEpochEvalErrors(
         evaluationNodes, net->GetDeviceId(),
-        { evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end() });
-    CriterionAccumulatorBase& localEpochCriterion = *localEpochCriterionPtr;
-    CriterionAccumulatorBase& localEpochEvalErrors = *localEpochEvalErrorsPtr;
+        {evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end()});
 
     // --- MAIN MINIBATCH LOOP
 
