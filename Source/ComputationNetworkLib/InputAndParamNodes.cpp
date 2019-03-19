@@ -134,9 +134,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     {
         if (initFromFilePath.empty())
             RuntimeError("initFromFilePath parameter must be provided when using \"fromFile\" initialization method");
-
         InitFromFile(initFromFilePath);
-
         m_initString.clear();
     }
     // legacy
