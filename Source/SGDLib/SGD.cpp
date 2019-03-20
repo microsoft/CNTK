@@ -207,16 +207,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 {
     let& criterionNodes = GetTrainCriterionNodes(net);
 
-    // Validate criterion Nodes
-    if (criterionNodes.empty())
-    {
-        InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
-    }
-    if (criterionNodes.front()->template Is<ComputationNode<half>>())
-    {
-        InvalidArgument("TrainOrAdaptModel: using Float16 for loss function may cause overflow, please cast to float.");
-    }
-    
     fprintf(stderr, "\n");
     if (criterionNodes.size() == 1)
     {
@@ -229,6 +219,16 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
         }
+        if (criterionNodes.empty())
+        {
+            LOGPRINTF(stderr, "\t(none)\n");
+            InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
+        }
+    }
+
+    if (criterionNodes.front()->template Is<ComputationNode<half>>())
+    {
+        InvalidArgument("TrainOrAdaptModel: using Float16 for loss function may cause overflow, please cast to float.");
     }
 
     if (criterionNodes.front()->template Is<ComputationNode<half>>())

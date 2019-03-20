@@ -95,7 +95,7 @@ template <typename ElemType>
 void UpdateEpochEvaluationForAccumulatedResult(
     std::vector<EpochCriterion>& epochEvalErrors,
     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-    CriterionAccumulator<ElemType>& localEpochEvalErrors,
+    CriterionAccumulator<ElemType> localEpochEvalErrors,
     std::function<bool(ComputationNodeBasePtr)> containsAccumulatedResult
     )
 {
@@ -120,7 +120,7 @@ void AggregateAccumulatorValuesAndUpdateEpochEvaluation(
     std::shared_ptr<MPIWrapper> mpi,
     std::vector<EpochCriterion>& epochEvalErrors,
     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
-    CriterionAccumulator<ElemType>& localEpochEvalErrors,
+    CriterionAccumulator<ElemType> localEpochEvalErrors,
     std::function<bool(ComputationNodeBasePtr)> containsAccumulatedResult,
     size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
 {
