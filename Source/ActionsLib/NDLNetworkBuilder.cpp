@@ -778,7 +778,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 #endif
         }
         // process common optional parameters (currently only "tag");
-        ProcessOptionalParameters(node, name);
+        ProcessOptionalParameters(node);
         break;
     }
     case ndlPassFinal:

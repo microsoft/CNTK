@@ -269,10 +269,11 @@ public:
     }
 
     // ProcessOptionalParameters - Process the optional parameters of a node
-    virtual void ProcessOptionalParameters(NDLNode<ElemType>* node, std::wstring& name)
+    virtual void ProcessOptionalParameters(NDLNode<ElemType>* node) override
     {
         vector<NDLNode<ElemType>*> params = node->GetParameters(true); // get all the optional parameters only
-        ComputationNodeBasePtr compNode = m_net->GetNodeFromName(name);;
+        ComputationNodeBase* compNodePtr = (ComputationNodeBase *) (node->GetEvalValue());
+        ComputationNodeBasePtr compNode = compNodePtr ? compNodePtr->shared_from_this() : nullptr;
         std::string empty;
 
         // loop through all the optional parameters processing them as necessary
