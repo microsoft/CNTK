@@ -24,10 +24,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (const auto& iter : inputMatrices)
             matrices.insert(iter.second.matrix);
         for (auto& node : net->FeatureNodes())
-            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
+            if (matrices.find(node->ValuePtr()) != matrices.end())
                 node->NotifyFunctionValuesMBSizeModified();
         for (auto& node : net->LabelNodes())
-            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
+            if (matrices.find(node->ValuePtr()) != matrices.end())
                 node->NotifyFunctionValuesMBSizeModified();
     }
 

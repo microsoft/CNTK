@@ -160,6 +160,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(AtanhNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(AveragePoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(BatchNormalizationNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationName2Of(CastNode))) ret = true;
 #ifdef COMING_SOON
     else if (EqualInsensitive(nodeType, OperationNameOf(CRFNode), L"CRF")) ret = true;
 #endif
@@ -267,18 +268,24 @@ NDLScript<ElemType> NDLScript<ElemType>::s_global("global");
 
 // declare the static variables from the classes
 template <>
+NDLScript<half> NDLScript<half>::s_global{};
+template <>
 NDLScript<float> NDLScript<float>::s_global{};
 template <>
 NDLScript<double> NDLScript<double>::s_global{};
 
 template <>
+int NDLNode<half>::s_nameCounter = 0;
+template <>
 int NDLNode<float>::s_nameCounter = 0;
 template <>
 int NDLNode<double>::s_nameCounter = 0;
 
+template class NDLNode<half>;
 template class NDLNode<float>;
 template class NDLNode<double>;
 
+template class NDLScript<half>;
 template class NDLScript<float>;
 template class NDLScript<double>;
 

@@ -18,6 +18,7 @@
 #include "Matrix.h"
 #include "SimpleDistGradAggregator.h"
 #include "V2SimpleDistGradAggregator.h"
+#include "SimpleDistGradAggregatorHelper.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -46,21 +47,12 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
     }
 
     // Prepare aggregator.
-    std::shared_ptr<IDistGradAggregator<ElemType>> distGradAgg;
-    if (Globals::UseV2Aggregator())
-        distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(
-            mpi,
-            false /*useAsyncAggregation*/,
-            net->GetDeviceId(),
-            0 /*syncStatsTrace*/,
-            ::CNTK::MPICommunicator(packThresholdSizeInBytes));
-    else
-        distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(
-            mpi,
-            false /*useAsyncAggregation*/,
-            net->GetDeviceId(),
-            0 /*syncStatsTrace*/,
-            packThresholdSizeInBytes);
+    std::shared_ptr<IDistGradAggregator<ElemType>> distGradAgg = GetSimpleDistGradAggregator<ElemType>(
+        mpi,
+        false /*useAsyncAggregation*/,
+        net->GetDeviceId(),
+        0 /*syncStatsTrace*/,
+        packThresholdSizeInBytes);
 
     // Prepare header.
     const size_t c_evalNodes = 1;
