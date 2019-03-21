@@ -108,7 +108,7 @@ public:
         if (numSubminibatchesNeeded > 1)
             smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes);
 
-        shared_ptr<CriterionAccumulatorBase> localEpochEvalErrorsPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
+        shared_ptr<CriterionAccumulatorBase> localEpochEvalErrorsPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator<ElemType>(
             evalNodes, m_net->GetDeviceId(),
             {evalNodesWhichAccumulateResult.begin(), evalNodesWhichAccumulateResult.end()});
         CriterionAccumulatorBase& localEpochEvalErrors = *localEpochEvalErrorsPtr;

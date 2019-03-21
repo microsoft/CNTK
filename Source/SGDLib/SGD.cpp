@@ -1149,9 +1149,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // assume only one training criterion node for each epoch.
     // The criterion values are accumulated here over the minibatches (without having to pull them off the GPU).
     // For half, the cr and error nodes should be float nodes
-    shared_ptr<CriterionAccumulatorBase> localEpochCriterionPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
+    shared_ptr<CriterionAccumulatorBase> localEpochCriterionPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator<ElemType>(
         criterionNodes, net->GetDeviceId());
-    shared_ptr<CriterionAccumulatorBase> localEpochEvalErrorsPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator(
+    shared_ptr<CriterionAccumulatorBase> localEpochEvalErrorsPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator<ElemType>(
         evaluationNodes, net->GetDeviceId(),
         {evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end()});
     CriterionAccumulatorBase& localEpochCriterion = *localEpochCriterionPtr;

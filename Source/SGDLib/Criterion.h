@@ -206,18 +206,17 @@ private:
 class CriterionAccumulatorFactory
 {
 public:
+    template <class ElemType>
     static shared_ptr<CriterionAccumulatorBase> CreateCriterionAccumulator(
         const std::vector<ComputationNodeBasePtr>& criterionNodes, DEVICEID_TYPE deviceId,
         const std::vector<ComputationNodeBasePtr>& accumulatorCriterionNodesNodes = {})
     {
-        if (criterionNodes.empty())
-            RuntimeError("CreateCriterionAccumulator: criterionNodes is empty!");
-
-        if (criterionNodes.front()->template Is<ComputationNode<float>>())
+        // Both half and float use float as accumulator
+        if (std::is_same<ElemType, float>() || std::is_same<ElemType, half>())
         {
             return make_shared<CriterionAccumulator<float>>(criterionNodes, deviceId, accumulatorCriterionNodesNodes);
         }
-        else if (criterionNodes.front()->template Is<ComputationNode<double>>())
+        else if (std::is_same<ElemType, double>())
         {
             return make_shared<CriterionAccumulator<double>>(criterionNodes, deviceId, accumulatorCriterionNodesNodes);
         }
