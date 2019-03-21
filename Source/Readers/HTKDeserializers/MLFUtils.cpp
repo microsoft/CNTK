@@ -214,6 +214,7 @@ namespace CNTK {
             }
         }
 
+        
         if (utterance.front().FirstFrame() != 0)
         {
             fprintf(stderr, "WARNING: Invalid first frame in utterance '%s'", sequenceKey.c_str());

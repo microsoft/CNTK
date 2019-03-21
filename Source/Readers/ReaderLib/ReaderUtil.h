@@ -123,10 +123,10 @@ public:
         for (auto& s : sequences.m_data)
             s.resize(clean);
 
-        if (m_numberOfCleanedSequences > m_maxNumberOfInvalidSequences)
+        /*if (m_numberOfCleanedSequences > m_maxNumberOfInvalidSequences)
             RuntimeError("Number of invalid sequences '%d' in the input exceeded the specified maximum number '%d'",
                 (int)m_numberOfCleanedSequences,
-                (int)m_maxNumberOfInvalidSequences);
+                (int)m_maxNumberOfInvalidSequences);*/
     }
 
 private:

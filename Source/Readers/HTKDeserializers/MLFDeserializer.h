@@ -44,7 +44,8 @@ struct MLFSequenceData : SparseSequenceData
         m_nnzCounts.resize(numberOfSamples, static_cast<IndexType>(1));
         m_numberOfSamples = (uint32_t) numberOfSamples;
         m_totalNnzCount = static_cast<IndexType>(numberOfSamples);
-        m_indices = &m_indexBuffer[0];
+        if (numberOfSamples > 0)
+            m_indices = &m_indexBuffer[0];
     }
 
     MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries, const NDShape& frameShape)
@@ -163,6 +164,14 @@ public:
             const auto& utterance = m_sequences[sequenceIndex];
             const auto& sequence = m_descriptor.Sequences()[sequenceIndex];
 
+            /*if (utterance.size() > m_deserializer.m_maxLabelLen)
+            {
+                m_valid[sequenceIndex] = false;
+                SparseSequenceDataPtr s = make_shared<MLFSequenceData<ElementType>>(0, m_deserializer.m_streams.front().m_sampleLayout);
+                s->m_isValid = false;
+                result.push_back(s);
+                return;
+            }*/
             // Packing labels for the utterance into sparse sequence.
             vector<size_t> sequencePhoneBoundaries(m_deserializer.m_withPhoneBoundaries ? utterance.size() : 0);
             if (m_deserializer.m_withPhoneBoundaries)
@@ -242,7 +251,7 @@ public:
             vector<MLFFrameRange> utterance;
             auto absoluteOffset = m_descriptor.StartOffset() + sequence.OffsetInChunk();
             bool parsed = m_parser.Parse(boost::make_iterator_range(start, end), utterance, absoluteOffset);
-            if (!parsed) // cannot parse
+            if (!parsed || utterance.size() > m_deserializer.m_maxLabelLen) // cannot parse
             {
                 fprintf(stderr, "WARNING: Cannot parse the utterance '%s'\n", KeyOf(sequence).c_str());
                 m_valid[index] = false;
@@ -401,6 +410,7 @@ public:
     bool m_squashLabel;
     size_t m_blankID;
     bool m_blankInFront;
+    size_t m_maxLabelLen;
 
     StateTablePtr m_stateTable;
 
@@ -408,4 +418,4 @@ public:
     std::vector<std::wstring> m_mlfFiles;
     bool m_textReader;
 };
-}
+} // namespace CNTK
