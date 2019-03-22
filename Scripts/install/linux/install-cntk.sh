@@ -209,6 +209,8 @@ PY_ACTIVATE="$ANACONDA_PREFIX/bin/activate"
 PY_DEACTIVATE="$ANACONDA_PREFIX/bin/deactivate"
 [ -x "$PY_DEACTIVATE" ]
 
+# update `conda` to >= 4.3.30 before `conda install protobuf-3.6.0`
+$CONDA update conda -y
 CNTK_PY_ENV_NAME="cntk-py$PY_VERSION"
 CNTK_PY_ENV_PREFIX="$ANACONDA_PREFIX/envs/$CNTK_PY_ENV_NAME"
 if [ -d "$CNTK_PY_ENV_PREFIX" ]; then
