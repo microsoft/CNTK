@@ -200,7 +200,7 @@ public:
 
             lmin.Resize(vocabSize, 1);
             lmin.SetValue(0.0);
-            lmin(blankId, 0) = 1;
+            lmin(33748, 0) = 1;
 
             // Resetting layouts.
             lminput->second.pMBLayout->Init(1, 1);
@@ -560,69 +560,45 @@ public:
                 }
             }
         }
+        /*for (auto itseq = preComputeSequence.begin(); itseq != preComputeSequence.end(); itseq++)
+        {
+            fprintf(stderr , "seq: ");
+            for (auto itlabel = itseq->labelseq.begin(); itlabel != itseq->labelseq.end(); itlabel++)
+            {
+                fprintf(stderr, "%zu, ", *itlabel);
+            }
+            fprintf(stderr , "\n");
 
+            itseq->decodeoutput->Print("out of prediction");
+        }*/
+        size_t bestseq = 0;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
         {
             //encode forward prop for whole utterance
             ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes);
+
+            //forward prop encoder network
             m_net->ForwardProp(encodeOutputNodes[0]);
             encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
             //encodeOutput.Print("encodeoutput");
             dataReader.DataEnd();
-
-            //decode forward prop step by step
-            //size_t vocabSize = PlusTransNode->GetSampleMatrixNumRows();
-            //size_t blankId = vocabSize - 1;
-
-            nextSequences.clear();
+            encodeOutput.Print("encode output");
             keyNextSequences.clear();
 
-            //initialize with blank ID
-            oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
-            extendSeq(oneSeq, blankId, 0.0);
-            nextSequences.push_back(oneSeq);
+            //initialize  the first input ( blank ID)
 
             oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
             extendSeq(oneSeq, blankId, 0.0);
             keyNextSequences.push_back(oneSeq);
 
-            // loop for each t
+            // loop for each frame
             for (size_t t = 0; t < encodeOutput.GetNumCols(); t++)
             {
                 keyCurSequences = keyNextSequences;
 
-                vector<Sequence>().swap(keyNextSequences);
-                //deal with the same prefix
-                /*sort(CurSequences.begin(), CurSequences.end(),
-                     [](const Sequence& a, const Sequence& b) -> bool {
-                         return a.labelseq.size() > b.labelseq.size();
-                     });
-                for (size_t n = 0; n < CurSequences.size() - 1; n++)
-                {
-                    for (size_t h = n + 1; h < CurSequences.size(); h++)
-                    {
-                        if (isPrefix(CurSequences[h], CurSequences[n]))
-                        {
-                            //forward_prop the prefix
-                            forward_decode(CurSequences[h], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, CurSequences[h].labelseq.size());
+                vector<Sequence>().swap(keyNextSequences); //clear keyNextSequences
 
-                            forwardmerged(CurSequences[h], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
-
-                            size_t idx = CurSequences[h].labelseq.size();
-                            ElemType curlogp = CurSequences[h].logP + decodeOutput(CurSequences[n].labelseq[idx], 0);
-                            for (size_t k = idx; k < CurSequences[n].labelseq.size() - 1; k++)
-                            {
-                                forward_decode(CurSequences[n], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, k + 1);
-                                forwardmerged(CurSequences[n], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
-
-                                curlogp += decodeOutput(CurSequences[n].labelseq[k + 1], 0);
-                            }
-                            CurSequences[n].logP = decodeOutput.LogAdd(curlogp, CurSequences[n].logP);
-                        }
-                    }
-                }*/
-                //nextSequences.clear();
-                //key words
+                //expand candidates
                 while (true)
                 {
 
@@ -646,12 +622,15 @@ public:
                     }
                     else
                         forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
+
+                    //forward prop the joint part
                     forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
 
                     Sequence seqK;
 
                     ElemType newlogP;
 
+                    //expand with the next label and blank
                     std::map<size_t, size_t> labelmaps;
                     bool prefix = false;
                     for (size_t ikey = 0; ikey < keywords.size(); ikey++)
@@ -672,6 +651,7 @@ public:
                                 seqK.lengthwithblank++;
                                 for (Sequence seqP : keyNextSequences)
                                 {
+                                    //merge the score with same sequence
                                     if (seqK.labelseq == seqP.labelseq)
                                     {
                                         existseq = true;
@@ -701,6 +681,7 @@ public:
                             }
                         }
                     }
+                    //reach the end of the keywords, only expand blank
                     if (prefix == false)
                     {
                         seqK = newSeq(tempSeq);
@@ -760,6 +741,8 @@ public:
                     }*/
                     deleteSeq(tempSeq);
 
+                    //print output frame by frame
+                    
                     if (keyCurSequences.size() == 0)
                         break;
                     auto ya = std::max_element(keyCurSequences.begin(), keyCurSequences.end());
@@ -778,6 +761,16 @@ public:
                     //break;
                     //std::nth_element(logP, logP + beamSize, )
                 }
+                fprintf(stderr, "frame: %zu, candidates number:%zu\n", t, keyNextSequences.size());
+                for (auto itseq2 = keyNextSequences.begin(); itseq2 != keyNextSequences.end(); itseq2++)
+                {
+                    fprintf(stderr, "seq: ");
+                    for (auto itlabel = itseq2->labelseq.begin(); itlabel != itseq2->labelseq.end(); itlabel++)
+                    {
+                        fprintf(stderr, "%zu ", *itlabel);
+                    }
+                    fprintf(stderr, ", score: %f\n", itseq2->logP);
+                }
                 if (keyNextSequences.size() > beamSize)
                 {
 
@@ -793,6 +786,7 @@ public:
 
                 //check whether detect keywords
                 bool find = false;
+                bestseq = beamSize + 2;
                 for (size_t n = 0; n < keyNextSequences.size(); n++)
                 {
                     if (keyNextSequences[n].labelseq.size() >= minKeywordLen)
@@ -807,10 +801,10 @@ public:
                                 ElemType score = exp(keyNextSequences[n].logP / (keyNextSequences[n].labelseq.size() - 1)) * 3;
                                 if (score >= thresh)
                                 {
+                                    bestseq = n;
                                     find = true;
                                     break;
                                 }
-                                
                             }
                         }
                     }
@@ -851,7 +845,11 @@ public:
                         keyNextSequences[n].logP = -1000000;*/
                 }
             }
-            auto yb = std::max_element(keyNextSequences.begin(), keyNextSequences.end());
+            iterator yb;
+            if (bestseq == beamSize + 2)
+                yb = std::max_element(keyNextSequences.begin(), keyNextSequences.end());
+            else
+                yb = keyNextSequences.begin() + bestseq;
             size_t lmt = yb->length;
             greedyOutput.Resize(vocabSize, lmt);
             greedyOutput.SetValue(0.0);
