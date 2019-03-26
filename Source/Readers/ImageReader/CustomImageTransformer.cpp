@@ -194,14 +194,14 @@ namespace CNTK
         double _crop_x = config(L"crop_x", "0.5");
         double _crop_x_std = config(L"crop_x_std", "0.5");
         double _crop_x_range = config(L"crop_x_range", "0.5");
-        m_w_crop.init(m_crop_size != 0.0 ? _width : m_crop_size, _crop_x_offset, _crop_x, _crop_x_std, _crop_x_range, true);
+        m_w_crop.init(m_crop_size == 0.0 ? _width : m_crop_size, _crop_x_offset, _crop_x, _crop_x_std, _crop_x_range, true);
 
         int _height = config(L"height", 0);
         double _crop_y_offset = config(L"crop_y_offset", "0.5");
         double _crop_y = config(L"crop_y", "0.5");
         double _crop_y_std = config(L"crop_y_std", "0.5");
         double _crop_y_range = config(L"crop_y_range", "0.5");
-        m_h_crop.init(m_crop_size != 0.0 ? _height : m_crop_size, _crop_y_offset, _crop_y, _crop_y_std, _crop_y_range, true);
+        m_h_crop.init(m_crop_size == 0.0 ? _height : m_crop_size, _crop_y_offset, _crop_y, _crop_y_std, _crop_y_range, true);
 
         double _resize = config(L"resize", "0.0");
         double _resize_std = config(L"resize_std", "0.0");
