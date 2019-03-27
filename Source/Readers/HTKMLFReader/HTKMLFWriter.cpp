@@ -111,7 +111,7 @@ void HTKMLFWriter<ElemType>::GetSections(std::map<std::wstring, SectionType, noc
 }
 
 template <class ElemType>
-bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t /*numRecords*/, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
+bool HTKMLFWriter<ElemType>::SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t /*numRecords*/, size_t /*datasetSize*/, size_t /*byteVariableSized*/)
 {
 
     // std::map<std::wstring, void*, nocase_compare>::iterator iter;
@@ -124,7 +124,7 @@ bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std
         Matrix<ElemType>& outputData = *(static_cast<Matrix<ElemType>*>(iter->second));
         size_t id = outputNameToIdMap[outputName];
         size_t dim = outputNameToDimMap[outputName];
-        wstring outFile = outputFiles[id][outputFileIndex];
+        wstring outFile = outputFiles[id][outputFileIndex] + L"_" + to_wstring(recordStart);
 
         assert(outputData.GetNumRows() == dim);
         dim;
@@ -132,7 +132,8 @@ bool HTKMLFWriter<ElemType>::SaveData(size_t /*recordStart*/, const std::map<std
         Save(outFile, outputData);
     }
 
-    outputFileIndex++;
+    if (recordStart == 0)
+        outputFileIndex++;
 
     return true;
 }
