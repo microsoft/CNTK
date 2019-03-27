@@ -99,7 +99,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
     }
 
 	// using regularization or not
-    if (configp->Exists(L"disableReg") && configp->Get(L"disableReg"))
+    if (configp->Exists(L"disableRegularization") && configp->Get(L"disableRegularization"))
         SetRegMultiplier(0.f);
 
     // deferred variants
