@@ -540,7 +540,7 @@ public:
         //add all keyword seq
         for (size_t ikey = 0; ikey < keywords.size(); ikey++)
         {
-            for (size_t labelId = 2; labelId < keywords[ikey].size(); labelId++)
+            for (size_t labelId = 2; labelId <= keywords[ikey].size(); labelId++)
             {
                 vector<size_t> partlabel(keywords[ikey].begin(), keywords[ikey].begin() + labelId);
                 iterator it;
@@ -582,7 +582,7 @@ public:
             encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
             //encodeOutput.Print("encodeoutput");
             dataReader.DataEnd();
-            encodeOutput.Print("encode output");
+            //encodeOutput.Print("encode output");
             keyNextSequences.clear();
 
             //initialize  the first input ( blank ID)
@@ -761,7 +761,7 @@ public:
                     //break;
                     //std::nth_element(logP, logP + beamSize, )
                 }
-                fprintf(stderr, "frame: %zu, candidates number:%zu\n", t, keyNextSequences.size());
+                /*fprintf(stderr, "frame: %zu, candidates number:%zu\n", t, keyNextSequences.size());
                 for (auto itseq2 = keyNextSequences.begin(); itseq2 != keyNextSequences.end(); itseq2++)
                 {
                     fprintf(stderr, "seq: ");
@@ -770,7 +770,7 @@ public:
                         fprintf(stderr, "%zu ", *itlabel);
                     }
                     fprintf(stderr, ", score: %f\n", itseq2->logP);
-                }
+                }*/
                 if (keyNextSequences.size() > beamSize)
                 {
 
