@@ -2154,6 +2154,15 @@ void GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const GPUMatrix<ElemType>
 
 #pragma endregion
 
+#pragma region LabelSmoothing
+
+template <class ElemType>
+void GPUMatrix<ElemType>::LabelSmoothing(const GPUMatrix<ElemType>& label, ElemType keepRate, ElemType smoothValue)
+{
+}
+
+#pragma endregion
+
 
 template <class ElemType>
 void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const GPUMatrix<ElemType> &paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)

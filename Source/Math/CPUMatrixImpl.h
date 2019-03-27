@@ -5363,6 +5363,47 @@ void CPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const CPUMatrix<ElemType>
 
 #pragma endregion
 
+#pragma region LabelSmoothing
+
+template <class ElemType>
+void CPUMatrix<ElemType>::LabelSmoothing(const CPUMatrix<ElemType>& label, ElemType keepRate, ElemType smoothValue)
+{
+    size_t numElements = label.GetNumElements();
+    ElemType* labelPtr = label.Data();
+
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (numElements & ~3); i += 4)
+    {
+        if (labelPtr[i] == (ElemType)0)
+            labelPtr[i] += smoothValue;
+        else
+            labelPtr[i] = labelPtr[i] * keepRate + smoothValue;
+        if (labelPtr[i + 1] == (ElemType)0)
+            labelPtr[i + 1] += smoothValue;
+        else
+            labelPtr[i + 1] = labelPtr[i + 1] * keepRate + smoothValue;
+        if (labelPtr[i + 2] == (ElemType)0)
+            labelPtr[i + 2] += smoothValue;
+        else
+            labelPtr[i + 2] = labelPtr[i + 2] * keepRate + smoothValue;
+        if (labelPtr[i + 3] == (ElemType)0)
+            labelPtr[i + 3] += smoothValue;
+        else
+            labelPtr[i + 3] = labelPtr[i + 3] * keepRate + smoothValue;
+    }
+    // handle remaining stuffs
+    for (long i = numElements & ~3; i < numElements; i++)
+    {
+        if (labelPtr[i] == (ElemType)0)
+            labelPtr[i] += smoothValue;
+        else
+            labelPtr[i] = labelPtr[i] * keepRate + smoothValue;
+    }
+}
+
+#pragma endregion
+
 
 #pragma region Static BLAS Functions
 

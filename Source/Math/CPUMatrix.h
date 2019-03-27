@@ -475,6 +475,12 @@ public:
 
 #pragma endregion
 
+#pragma region LabelSmoothing
+
+    static void LabelSmoothing(const CPUMatrix<ElemType>& label, ElemType keepRate, ElemType smoothValue);
+
+#pragma endregion
+
 
 public:
     // This functions do not depend on <ElemType>, i.e. you can call them on any <ElemType>
