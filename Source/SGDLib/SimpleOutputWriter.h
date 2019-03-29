@@ -560,7 +560,8 @@ public:
                 }
             }
         }
-        /*for (auto itseq = preComputeSequence.begin(); itseq != preComputeSequence.end(); itseq++)
+        fprintf(stderr, "prediction begin:\n");
+        for (auto itseq = preComputeSequence.begin(); itseq != preComputeSequence.end(); itseq++)
         {
             fprintf(stderr , "seq: ");
             for (auto itlabel = itseq->labelseq.begin(); itlabel != itseq->labelseq.end(); itlabel++)
@@ -569,8 +570,10 @@ public:
             }
             fprintf(stderr , "\n");
 
-            itseq->decodeoutput->Print("out of prediction");
-        }*/
+            itseq->decodeoutput->Print("output of prediction");
+        }
+        fprintf(stderr, "prediction end:\n");
+        return;
         size_t bestseq = 0;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
         {
@@ -656,7 +659,7 @@ public:
                                     {
                                         existseq = true;
                                         seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
-                                        seqK.lengthwithblank = (seqK.lengthwithblank + seqP.lengthwithblank) / 2;
+                                        seqP.lengthwithblank = (seqK.lengthwithblank + seqP.lengthwithblank) / 2;
                                         break;
                                     }
                                 }
@@ -676,7 +679,23 @@ public:
                                 newlogP = decodeOutput(nextlabel, 0) + tempSeq.logP;
                                 extendSeq(seqK, nextlabel, newlogP);
 
-                                keyCurSequences.push_back(seqK);
+                                bool existseq = false;
+                                seqK.lengthwithblank++;
+                                for (Sequence seqP : keyNextSequences)
+                                {
+                                    //merge the score with same sequence
+                                    if (seqK.labelseq == seqP.labelseq)
+                                    {
+                                        existseq = true;
+                                        seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
+                                        seqP.lengthwithblank = (seqK.lengthwithblank + seqP.lengthwithblank) / 2;
+                                        break;
+                                    }
+                                }
+                                if (!existseq)
+                                {
+                                    keyNextSequences.push_back(seqK);
+                                }
                                 labelmaps[nextlabel] = 1;
                             }
                         }
