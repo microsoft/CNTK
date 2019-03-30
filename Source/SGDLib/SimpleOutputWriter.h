@@ -560,8 +560,7 @@ public:
                 }
             }
         }
-        fprintf(stderr, "prediction begin:\n");
-        for (auto itseq = preComputeSequence.begin(); itseq != preComputeSequence.end(); itseq++)
+        /*for (auto itseq = preComputeSequence.begin(); itseq != preComputeSequence.end(); itseq++)
         {
             fprintf(stderr , "seq: ");
             for (auto itlabel = itseq->labelseq.begin(); itlabel != itseq->labelseq.end(); itlabel++)
@@ -570,10 +569,8 @@ public:
             }
             fprintf(stderr , "\n");
 
-            itseq->decodeoutput->Print("output of prediction");
-        }
-        fprintf(stderr, "prediction end:\n");
-        return;
+            itseq->decodeoutput->Print("out of prediction");
+        }*/
         size_t bestseq = 0;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
         {
@@ -652,14 +649,15 @@ public:
                                 seqK.logP = newlogP;
                                 bool existseq = false;
                                 seqK.lengthwithblank++;
-                                for (Sequence seqP : keyNextSequences)
+                                for (itseq = keyNextSequences.begin(); itseq != keyNextSequences.end(); itseq++)
+                                //for (Sequence seqP : keyNextSequences)
                                 {
                                     //merge the score with same sequence
-                                    if (seqK.labelseq == seqP.labelseq)
+                                    if (seqK.labelseq == itseq->labelseq)
                                     {
                                         existseq = true;
-                                        seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
-                                        seqP.lengthwithblank = (seqK.lengthwithblank + seqP.lengthwithblank) / 2;
+                                        itseq->logP = decodeOutput.LogAdd(seqK.logP, itseq->logP);
+                                        itseq->lengthwithblank = (seqK.lengthwithblank + itseq->lengthwithblank) / 2;
                                         break;
                                     }
                                 }
@@ -678,24 +676,8 @@ public:
                                 seqK = newSeq(tempSeq);
                                 newlogP = decodeOutput(nextlabel, 0) + tempSeq.logP;
                                 extendSeq(seqK, nextlabel, newlogP);
-
-                                bool existseq = false;
-                                seqK.lengthwithblank++;
-                                for (Sequence seqP : keyNextSequences)
-                                {
-                                    //merge the score with same sequence
-                                    if (seqK.labelseq == seqP.labelseq)
-                                    {
-                                        existseq = true;
-                                        seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
-                                        seqP.lengthwithblank = (seqK.lengthwithblank + seqP.lengthwithblank) / 2;
-                                        break;
-                                    }
-                                }
-                                if (!existseq)
-                                {
-                                    keyNextSequences.push_back(seqK);
-                                }
+                                //seqK.lengthwithblank++;                                
+                                keyCurSequences.push_back(seqK);
                                 labelmaps[nextlabel] = 1;
                             }
                         }
