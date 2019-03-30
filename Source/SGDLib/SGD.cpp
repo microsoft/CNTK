@@ -437,7 +437,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+        {
+            msra::files::make_intermediate_dirs(GetModelNameForEpoch(int(startEpoch) - 1));
             net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
+        }
     }
 
     if (m_saveBestModelPerCriterion)
@@ -595,7 +598,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-                    net->Save(m_modelPath);
+                {
+                    msra::files::make_intermediate_dirs(m_modelPath + L"/" + m_modelName);
+                    net->Save(m_modelPath + L"/" + m_modelName);
+                }
             }
             break;
         }
@@ -607,7 +613,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-                    net->Save(m_modelPath);
+                {
+                    msra::files::make_intermediate_dirs(m_modelPath + L"/" + m_modelName);
+                    net->Save(m_modelPath + L"/" + m_modelName);
+                }
             }
             break;
         }
@@ -835,7 +844,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                         // In case of parallel training only the main node should we saving the model to prevent
                         // the parallel training nodes from colliding to write the same file
                         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+                        {
+                            msra::files::make_intermediate_dirs(GetModelNameForEpoch(i, true));
                             net->Save(GetModelNameForEpoch(i, true));
+                        }
 
                         LOGPRINTF(stderr, "Finished training and saved final model\n\n");
                         break;
@@ -922,7 +934,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     chosenMinibatchSize);
                 auto modelName = GetModelNameForEpoch(i);
                 if (m_traceLevel > 0)
-                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());                
                 net->Save(modelName);
                 if (!m_keepCheckPointFiles)
                 {
@@ -1752,9 +1764,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         if (0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel && m_lrapiInfo.iter != 0 && ((m_mpi == nullptr) || m_mpi->IsMainNode()))
         {
+            wstring IterModelPath = m_modelPath + L"-Iter" + L"/" + m_modelName + L"-Iter." + to_wstring(m_lrapiInfo.iter);
             if (m_lrapiInfo.sgdTraceLevel > 0)
-                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", (m_modelPath + L"-Iter" + to_wstring(m_lrapiInfo.iter)).c_str());
-            net->Save(m_modelPath + L"-Iter" + to_wstring(m_lrapiInfo.iter));
+                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", IterModelPath.c_str());
+            msra::files::make_intermediate_dirs(IterModelPath);
+            net->Save(IterModelPath);
         }
     }
 
@@ -2807,12 +2821,12 @@ wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel) co
     int epoch1Base = epoch + 1;
     if (epoch1Base == m_maxEpochs || bLastModel)
     {
-        return m_modelPath;
+        return (m_modelPath + L"/" + m_modelName).c_str();
     }
     else
     {
         wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
-        return w;
+        return msra::strfun::wstrprintf(L"%ls.%d", (w + L"/"+ m_modelName).c_str(), (int)epoch1Base);
     }
 }
 
