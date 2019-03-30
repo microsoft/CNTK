@@ -2013,6 +2013,7 @@ class CastNode : public UnaryElementWiseNode<ElemType>
     static const std::wstring TypeName() { return L"Cast"; }
 
 public:
+    DeclareConstructorFromConfig(CastNode);
     CastNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
