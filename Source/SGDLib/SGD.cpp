@@ -930,12 +930,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 i -= m_learnRateAdjustInterval;
             }
         }
-
+        /* mask out to allow LR = 0 for some debugging purpose
         if (learnRatePerSample < 1e-12)
         {
             LOGPRINTF(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n",
                       learnRatePerSample);
         }
+        */
     }
     // --- END OF MAIN EPOCH LOOP
 
