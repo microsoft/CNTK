@@ -208,12 +208,54 @@ shared_ptr<ComputationNodeBase> NewComputationNodeFromConfig(const Microsoft::MS
     wstring precision = configp->Get(L"precision"); // dispatch on ElemType
     wstring operationName = configp->Get(L"operation");
     ComputationNodeBasePtr node;
-    if (precision == L"float")
-        node = CreateNode<float>(operationName, configp);
-    else if (precision == L"double")
-        node = CreateNode<double>(operationName, configp);
+    if (operationName == OperationName2Of(CastNode))
+    {
+        auto inputs = ComputationNodeBase::GetInputsFromConfig(configp);
+        if (inputs.empty())
+            RuntimeError("NewComputationNodeFromConfig: No inputs found for Cast node.");
+
+        if (precision == L"float16" || precision == L"half")
+        {
+            if (inputs[0]->Is<ComputationNode<float>>())
+                node = CreateNode2<half, float>(operationName, configp);
+            else if (inputs[0]->Is<ComputationNode<double>>())
+                node = CreateNode2<half, double>(operationName, configp);
+            else
+                RuntimeError("NewComputationNodeFromConfig: for CastNode to cast to half, input must be  'float' or 'double'");
+        }
+        else if (precision == L"float")
+        {
+            if (inputs[0]->Is<ComputationNode<half>>())
+                node = CreateNode2<float, half>(operationName, configp);
+            else if (inputs[0]->Is<ComputationNode<double>>())
+                    node = CreateNode2<float, double>(operationName, configp);
+            else
+                RuntimeError("NewComputationNodeFromConfig: for CastNode to cast to float, input must be  'float16' or 'double'");
+        }
+        else if (precision == L"double")
+        {
+            if (inputs[0]->Is<ComputationNode<half>>())
+                node = CreateNode2<double, half>(operationName, configp);
+            else if (inputs[0]->Is<ComputationNode<float>>())
+                node = CreateNode2<double, float>(operationName, configp);
+            else
+                RuntimeError("NewComputationNodeFromConfig: for CastNode to cast to double, input must be  'float' or 'float16'");
+        }
+        else
+            RuntimeError("NewComputationNodeFromConfig: CastNode - need to specify 'precision' parameter: 'float', 'double' or 'float16'.");
+    }
     else
-        RuntimeError("NewStandardNode: Invalid value '%ls' for 'precision' parameter. Must be 'float' or 'double'.", precision.c_str());
+    {
+        if (precision == L"float")
+            node = CreateNode<float>(operationName, configp);
+        else if (precision == L"float16" || precision == L"half")
+            node = CreateNode<half>(operationName, configp);
+        else if (precision == L"double")
+            node = CreateNode<double>(operationName, configp);
+        else
+            RuntimeError("NewComputationNodeFromConfig: Invalid value '%ls' for 'precision' parameter. Must be 'float16', 'float' or 'double'.", precision.c_str());
+    }
+
     // add a tag
     // Tags are used to declare special node types to ComputationNetwork.
     // For now we support only a single tag, but we could in the future easily extend this to an array of tags.
