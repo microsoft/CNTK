@@ -690,13 +690,13 @@ public:
                         seqK.logP = newlogP;
                         bool existseq = false;
                         seqK.lengthwithblank++;
-                        for (Sequence seqP : keyNextSequences)
+                        for (itseq = keyNextSequences.begin(); itseq != keyNextSequences.end(); itseq++)
                         {
-                            if (seqK.labelseq == seqP.labelseq)
+                            if (seqK.labelseq == itseq->labelseq)
                             {
                                 existseq = true;
-                                seqP.logP = decodeOutput.LogAdd(seqK.logP, seqP.logP);
-                                seqK.lengthwithblank = (seqK.lengthwithblank + seqP.lengthwithblank) / 2;
+                                itseq->logP = decodeOutput.LogAdd(seqK.logP, itseq->logP);
+                                itseq->lengthwithblank = (seqK.lengthwithblank + itseq->lengthwithblank) / 2;
                                 break;
                             }
                         }
@@ -799,7 +799,7 @@ public:
                             vector<size_t> subseq(keyNextSequences[n].labelseq.begin(), keyNextSequences[n].labelseq.begin() + maxL);
                             if (subseq == keywords[keyNo])
                             {
-                                ElemType score = exp(keyNextSequences[n].logP / (keyNextSequences[n].labelseq.size() - 1)) * 3;
+                                ElemType score = exp(keyNextSequences[n].logP / (keyNextSequences[n].lengthwithblank - 1)) ;
                                 if (score >= thresh)
                                 {
                                     bestseq = n;
@@ -839,7 +839,7 @@ public:
                         }
                     }
                     if (find)
-                        keyNextSequences[n].logP /= (keyNextSequences[n].labelseq.size() - 1);
+                        keyNextSequences[n].logP /= (keyNextSequences[n].lengthwithblank - 1);
                     else
                         keyNextSequences[n].logP = -1000000;
                     /*if (!find)
