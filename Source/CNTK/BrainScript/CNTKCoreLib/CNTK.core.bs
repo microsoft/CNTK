@@ -412,7 +412,7 @@ CNTK2 = [
     // Changes: dims -> shape
     DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
     # TODO: Is it a good idea to default to "feature"?
-    Input(shape, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*shape*/ ] ; isImage = false /*plus the function args*/ ]
+    Input(shape, dynamicAxis='', tag='feature', precision=precision) = new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*shape*/ ] ; isImage = false /*plus the function args*/ ]
 
     // 2. Variables and constants
     // Changes: ParameterTensor -> _Parameter; "dims" -> "shape"
@@ -570,14 +570,14 @@ ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedVa
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
 # TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]
-Input(dims, dynamicAxis='', sparse=false, tag='feature') =
-     if sparse then SparseInput(dims, dynamicAxis=dynamicAxis, tag=tag)
+Input(dims, dynamicAxis='', sparse=false, tag='feature', precision=precision) =
+     if sparse then SparseInput(dims, dynamicAxis=dynamicAxis, tag=tag, precision=precision)
      else new ComputationNode [ operation = 'InputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
 # TODO: change from dynamicAxis by name to dynamicAxis being an actual object
 # the following variants of Input() are deprecated
-SparseInput(dims, dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
-ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]
-SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature') = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]
+SparseInput(dims, dynamicAxis='', tag='feature', precision=precision) = new ComputationNode [ operation = 'SparseInputValue' ; shape = new TensorShape [ /*dims*/ ] ; isImage = false /*plus the function args*/ ]
+ImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature', precision=precision) = new ComputationNode [ operation = 'InputValue' ; isImage = true /*plus the function args*/ ]
+SparseImageInput(imageWidth, imageHeight, imageChannels, imageLayout='CHW', dynamicAxis='', tag='feature', precision=precision) = new ComputationNode [ operation = 'SparseInputValue' ; isImage = true /*plus the function args*/ ]
 EnvironmentInput(propertyName, tag='') = new ComputationNode [ operation = 'EnvironmentInput' /*plus the function args*/ ]
 # TODO: make 'dims' the first parameter, think ConstantTensor<dims> (val)
 ConstantTensor(val, dims, tag='') = ParameterTensor(dims, learningRateMultiplier = 0, initValue = val)
@@ -705,6 +705,8 @@ Trace (node, say='', logFrequency=100, logFirst=10, logGradientToo=false, onlyUp
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 QuantizedTimes(leftMatrix, rightMatrix, bitSmoothingA=1, bitSmoothingB=1, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'QuantizedTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = _AsNodes (cond) /*plus the function args*/ ]
+
+Cast(node, precision='', tag='') = new ComputationNode [ operation = 'Cast' ; inputs = _AsNodes (node) /*plus the function args*/ ]
 
 ##############################################################################
 # non-neural-network functions
