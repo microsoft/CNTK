@@ -573,7 +573,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
 
         learnRateInitialized = true;
-
+        /* enable LR=0
         if (learnRatePerSample < m_minLearnRate)
         {
             LOGPRINTF(stderr, "Learn Rate Per Sample for Epoch[%d] = %.8g is less than minLearningRatePerSample %.8g. Training complete.\n",
@@ -587,7 +587,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             }
             break;
         }
-
+        */
         size_t chosenMinibatchSize;
         size_t actualMinibatchSize;
 
