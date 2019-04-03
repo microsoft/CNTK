@@ -127,13 +127,13 @@ default_openblas=""
 
 default_boost="boost-1.60.0"
 
-default_cudas="cuda-9.0"
+default_cudas="cuda-10.0"
 default_nccls="nccl"
 default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdk_includes="include/nvidia/gdk cuda/include"
 default_gdk_nvml_libs="src/gdk/nvml/lib cuda/lib64/stubs"
-default_cubs="cub-1.7.4"
-default_cudnns="cudnn-7.0"
+default_cubs="cub-1.8.0"
+default_cudnns="cudnn-7.3"
 default_opencvs="opencv-3.1.0 opencv-3.0.0"
 default_protobuf="protobuf-3.1.0"
 default_libzips="libzip-1.1.2"
@@ -688,7 +688,7 @@ do
                 then
                     echo "Cannot find NVIDIA CUB directory."
                     echo "Please specify a value for --with-cub"
-                    echo "NVIDIA CUB can be downloaded from https://github.com/NVlabs/cub/archive/1.4.1.zip, extract the archive to /usr/local"
+                    echo "NVIDIA CUB can be downloaded from https://github.com/NVlabs/cub/archive/1.8.0.zip, extract the archive to /usr/local"
                     exit 1
                 fi
             else
@@ -1082,7 +1082,7 @@ then
     if test x$cub_path = x ; then
         echo Cannot locate NVIDIA CUB directory
         echo GPU will be disabled
-        echo NVIDIA CUB can be downloaded from https://github.com/NVlabs/cub/archive/1.4.1.zip, extract the archive to /usr/local
+        echo NVIDIA CUB can be downloaded from https://github.com/NVlabs/cub/archive/1.8.0.zip, extract the archive to /usr/local
         enable_cuda=no
     else
         echo Found CUB at $cub_path
