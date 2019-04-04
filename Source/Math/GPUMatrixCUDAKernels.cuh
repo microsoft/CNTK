@@ -15,7 +15,9 @@
 #include "CommonMatrix.h"
 #include "GPUMatrix.h"
 #include "TensorOps.h" // for exp_() etc.
+#if CUDA_VERSION < 10000  
 #include "device_functions.h"
+#endif
 #include <cuda_runtime.h>
 #include <assert.h>
 #include <float.h>
