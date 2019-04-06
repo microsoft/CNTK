@@ -3783,7 +3783,7 @@ __global__ void _labelSmoothing(ElemType* label, ElemType keepRate, ElemType smo
     if (id < numElements)
     {
         if (label[id] == (ElemType)0)
-            label[id] += smoothValue;
+            label[id] = smoothValue;
         else
             label[id] = label[id] * keepRate + smoothValue;
     }

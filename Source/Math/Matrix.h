@@ -636,7 +636,7 @@ public:
 
 #pragma region LabelSmoothing
 
-    static void Matrix<ElemType>::LabelSmoothing(const Matrix<ElemType>& label, ElemType keepRate, ElemType smoothValue);
+    static void LabelSmoothing(const Matrix<ElemType>& label, ElemType keepRate, ElemType smoothValue);
 
 #pragma endregion
 
