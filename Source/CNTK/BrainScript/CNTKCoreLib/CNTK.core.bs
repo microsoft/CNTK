@@ -437,7 +437,7 @@ CNTK2 = [
                     else                         BS.Boolean.And (beginFlags, endFlags)
             out = if beginIndex == 0 && endIndex == 0
                   then _
-                  else BS.Sequences.Gather (flags, _, precision=precision)
+                  else BS.Sequences.Gather (flags, _)
         ].out
         else new ComputationNode [ operation = 'Slice' ; inputs = _AsNodes (_, precision=precision) /*plus the function args*/ ] # non-time axis
 
@@ -502,7 +502,7 @@ CNTK2 = [
     // empirical sequence is compared to. Keeping this for now.
     CrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, axis=0, tag='', precision=precision) =
         if axis==0 then new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = _AsNodes (labelSequence : outProbVectorSequence, precision=precision) /*plus the function args*/ ]
-        else [ tag1 = tag; out = Minus (ReduceLogSum (outProbVectorSequence, axis=axis, precision=precision), ReduceSum (labelSequence .* outProbVectorSequence, axis=axis, precision=precision), tag=tag1, precision=precision) ].out
+        else [ tag1 = tag; out = Minus (ReduceLogSum (outProbVectorSequence, axis=axis, precision=precision), ReduceSum (ElementTimes(labelSequence, outProbVectorSequence, precision=precision), axis=axis, precision=precision), tag=tag1, precision=precision) ].out
     # Classification error along a specific axis: account only for missed labels, i.e.
     # strictly check whether at the one '1' location in labels we find a value equal to the max
     ClassificationError(labelSequence, outVectorSequence, topN=1, axis=0, tag='', precision=precision) =
@@ -520,7 +520,7 @@ CNTK2 = [
     # TODO: replace with this (need to deal with topN thing):
     # (_new will be removed once the change is made)
     CrossEntropyWithSoftmax_new (L, z, tag='', precision=precision) = Minus (ReduceLogSum (z, precision=precision), TransposeTimes (L,          z, precision=precision),  tag=tag)
-    ClassificationError_new (L, z, tag='', precision=precision)     = Minus (BS.Constants.One(precision=precision), TransposeTimes (L, Hardmax (z, precision=precision), precision=precision), tag=tag, precision=precision)
+    ClassificationError_new (L, z, tag='', precision=precision)     = Minus (BS.Constants.One, TransposeTimes (L, Hardmax (z, precision=precision), precision=precision), tag=tag, precision=precision)
 
     // 12. Comparison nodes
     Less(_, y, tag='', precision=precision)         = new ComputationNode [ operation = 'Less'         ; inputs = _AsNodes (_ : y, precision=precision) /*plus the function args*/ ]
@@ -606,7 +606,7 @@ Slice(beginIndex, endIndex, input, axis=1, tag='', precision=precision) =
                 else                         BS.Boolean.And (beginFlags, endFlags)
         out = if beginIndex == 0 && endIndex == 0
               then input
-              else BS.Sequences.Gather (flags, input, precision=precision)
+              else BS.Sequences.Gather (flags, input)
     ].out
     else new ComputationNode [ operation = 'Slice' ; inputs = _AsNodes (input, precision=precision) /*plus the function args*/ ] # non-time axis
 Reshape(input, numRows, imageWidth = 0, imageHeight = 0, imageChannels = 0, tag='', precision=precision) = new ComputationNode [ operation = 'LegacyReshape' ; inputs = _AsNodes (input, precision=precision) /*plus the function args*/ ]
@@ -781,19 +781,19 @@ BS = [
 ##############################################################################
 
 Constants = [
-    Zero(precision=precision) = ConstantTensor (0, (1), precision=precision)
-    One(precision=precision)  = ConstantTensor (1, (1), precision=precision)
-    OnesTensor (dims, precision=precision) = ConstantTensor (1, dims, precision=precision)
+    Zero = ConstantTensor (0, (1))
+    One  = ConstantTensor (1, (1))
+    OnesTensor (dims) = ConstantTensor (1, dims)
     # A constant 1D tensor that contains an integer enumeration 0 .. (dims - 1).
-    Range (dim, precision=precision) = Splice( array [0..(dim-1)] ( i => Constant{i, precision=precision} ) , precision=precision)
+    Range (dim) = Splice( array [0..(dim-1)] ( i => Constant{i} ) )
     # BUGBUG: ZeroesLike() would recreate the full dimension of x. Well, no need if it considers broadcasting. But still wrong if we want to broadcast a vector of different tensor dim.
     #ZeroesLike (x) = CastAs (x, Zero) // read: Cast<x>(Zero)
     #OnesLike (x)   = CastAs (x, One)
     # CastAs() does not implement broadcasting
-    ZeroesLike (x, precision=precision) = SumColumnElements (RowSlice (0, 1, x, precision=precision) .* Zero(precision=precision), precision=precision)  // hack: get one row of input and multiply with zero; double-hack: reduce extra tensor dims by SumCol
+    ZeroesLike (x) = SumColumnElements (RowSlice (0, 1, x) .* Zero)  // hack: get one row of input and multiply with zero; double-hack: reduce extra tensor dims by SumCol
     ZeroSequenceLike = ZeroesLike   # TODO: this should yield a scalar sequence, while ZeroesLike should be a tensor
-    ZeroesLike1 (x, precision=precision) = x .* Zero     # get a tensor of zeroes of same dim as x  TODO: Do this as a C++ node (will be simple)
-    OnesLike (x, precision=precision) = ZeroesLike (x, precision=precision) + One
+    ZeroesLike1 (x) = x .* Zero     # get a tensor of zeroes of same dim as x  TODO: Do this as a C++ node (will be simple)
+    OnesLike (x) = ZeroesLike (x) + One
     # is this like Sequences.Repeat?
     True  = 1
     False = 0
@@ -824,7 +824,7 @@ Boolean = [
 
     # select a value
     # Note: This will be replaced by BrainScript 'if cond then thenVal else elseVal' and SwitchNode
-    If (cond, thenVal, elseVal, tag='') =  new ComputationNode [ operation = 'If' ; inputs = _AsNodes (cond : thenVal : elseVal, precision=precision) /*plus the function args*/ ]
+    If (cond, thenVal, elseVal, tag='') =  new ComputationNode [ operation = 'If' ; inputs = _AsNodes (cond : thenVal : elseVal) /*plus the function args*/ ]
 ]
 
 ##############################################################################
