@@ -1321,6 +1321,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                 if (m_lrapiInfo.sgdTraceLevel > 0 && 0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToShowLR)
                     fprintf(stderr, "Iteration %d: learning rate per sample = %.8g\n", (int) m_lrapiInfo.iter, learnRatePerSample);
+
+                if (learnRatePerSample < 0)
+                {
+                    fprintf(stderr, "Set learning rate per sample equal to min_learning, because Iteration %d: learning rate per sample = %.8g\n", (int)m_lrapiInfo.iter, learnRatePerSample);
+                    learnRatePerSample = m_minLearnRate;
+                }
             }
 
             // do forward and back propagation
