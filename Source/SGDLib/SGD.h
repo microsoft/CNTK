@@ -347,6 +347,7 @@ protected:
     bool m_disableRegInBatchNormalization;
 
     bool m_useFP16AllReduce;
+    double m_lossScale;
 };
 
 template <class ElemType>

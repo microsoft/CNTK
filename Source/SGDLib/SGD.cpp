@@ -1287,9 +1287,38 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // backprop
                 // ===========================================================
 
+                // Loss Scaling
+                if (m_lossScale != 1.0)
+                {
+                    if (criterionNodes[0] -> template Is<ComputationNode<float>>())
+                    {
+                        auto& crValues = dynamic_pointer_cast<ComputationNode<float>>(criterionNodes[0])->Value();
+                        Matrix<float>::Scale((float)m_lossScale, crValues);
+                    }
+                    else if (criterionNodes[0] -> template Is<ComputationNode<double>>())
+                    {
+                        auto& crValues = dynamic_pointer_cast<ComputationNode<double>>(criterionNodes[0])->Value();
+                        Matrix<double>::Scale(m_lossScale, crValues);
+                    }
+                }
+
                 if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                     net->Backprop(criterionNodes[0]);
 
+                // Scale it back after back prop
+                if (m_lossScale != 1.0)
+                {
+                    if (criterionNodes[0] -> template Is<ComputationNode<float>>())
+                    {
+                        auto& crValues = dynamic_pointer_cast<ComputationNode<float>>(criterionNodes[0])->Value();
+                        Matrix<float>::Scale((float)(1/m_lossScale), crValues);
+                    }
+                    else if (criterionNodes[0] -> template Is<ComputationNode<double>>())
+                    {
+                        auto& crValues = dynamic_pointer_cast<ComputationNode<double>>(criterionNodes[0])->Value();
+                        Matrix<double>::Scale(1/m_lossScale, crValues);
+                    }
+                }
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
                     smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
@@ -2489,6 +2518,11 @@ void SGD<ElemType1>::TypedUpdateWeights(Matrix<ElemType>& functionValues, Matrix
     // make actualMBSize is a valid value
     assert(actualMBSize > 0);
 
+    // Scale gradients back
+    if (m_lossScale != 1.0)
+    {
+        Matrix<ElemType>::Scale((float)(1 / m_lossScale), gradientValues);
+    }
     // clipping gradients to prevent outliers
     ClipGradient<ElemType>(gradientValues, actualMBSize);
 
@@ -3287,6 +3321,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_minLearnRate = configSGD(L"minLearningRatePerSample", 1e-9f);
 
     m_needAdaptRegularization = false;
+
+    m_lossScale = configSGD(L"lossScale", 1.0);
+    if (m_lossScale == 0) m_lossScale = 1.0;
 
     // BUGBUG: these are not passed to Init()
     m_doUnitTest = configSGD(L"unitTest", false);
