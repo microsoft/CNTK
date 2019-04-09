@@ -546,7 +546,7 @@ public:
             LogicError("GetColumnIndex: t out of sequence bounds.");
         if (seq.s > GetNumParallelSequences())
             LogicError("GetColumnIndex: seq.s out of sequence bounds."); // can only happen if 'seq' does not come out of our own m_sequences array, which is verboten
-        ptrdiff_t tIn = (ptrdiff_t)t + seq.tBegin;       // shifted time index
+        ptrdiff_t tIn = (ptrdiff_t)t + (seq.tBegin > 0 ?  seq.tBegin : 0 );       // shifted time index
         if (tIn < 0 || (size_t)tIn >= GetNumTimeSteps())
             LogicError("GetColumnIndex: Attempted to access a time step that is accessing a portion of a sequence that is not included in current minibatch."); // we may encounter this for truncated BPTT
         size_t col = (size_t)tIn * GetNumParallelSequences() + seq.s;
