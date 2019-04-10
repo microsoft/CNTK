@@ -77,6 +77,7 @@ shared_ptr<C> CreateObject(const ConfigParameters& config, const wchar_t* id)
 template <class ConfigRecordType, typename ElemType>
 void DoTrain(const ConfigRecordType& config)
 {
+    wstring modelPath = config(L"modelPath");
     bool makeMode = config(L"makeMode", true);
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
     int traceLevel = config(L"traceLevel", 0);
@@ -101,6 +102,8 @@ void DoTrain(const ConfigRecordType& config)
     }
 
     wstring modelFileName = optimizer->GetModelNameForEpoch(int(startEpoch) - 1);
+    if (!fexists(modelFileName.c_str()))
+        modelFileName = optimizer->GetModelName(int(startEpoch) - 1);
     bool loadNetworkFromCheckpoint = startEpoch >= 0;
     if (loadNetworkFromCheckpoint)
         LOGPRINTF(stderr, "\nStarting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());

@@ -2714,7 +2714,10 @@ bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
     // gracefully handle if a checkpoint file is missing
     // This means a user wanted to continue training from an older model, but that model had no checkpoint info anymore.
     // This is valid, we just don't get the features that require previous models, such as LR or MBSize control.
-    let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    if (!fexists(checkPointFileName.c_str())) 
+        checkPointFileName = GetCheckPointFileName(int(epochNumber));
+
     if (!fexists(checkPointFileName.c_str()))
     {
         // initialize as if nothing
@@ -2740,7 +2743,9 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
                                        /*out*/ double& prevCriterion,
                                        /*out*/ size_t& minibatchSize)
 {
-    let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    if (!fexists(checkPointFileName.c_str()))
+        checkPointFileName = GetCheckPointFileName(int(epochNumber));
     //fprintf(stderr, "Loading checkpoint info from %ls\n", checkPointFileName.c_str());
     File fstream(checkPointFileName,
                  FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
@@ -2822,6 +2827,12 @@ wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch)
 }
 
 template <class ElemType>
+wstring SGD<ElemType>::GetCheckPointFileName(const int epoch)
+{
+    return GetModelName(epoch) + L".ckp";
+}
+
+template <class ElemType>
 wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel) const
 {
     int epoch1Base = epoch + 1;
@@ -2833,6 +2844,20 @@ wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel) co
     {
         wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
         return msra::strfun::wstrprintf(L"%ls.%d", (w + L"/"+ m_modelName).c_str(), (int)epoch1Base);
+    }
+}
+
+template <class ElemType>
+wstring SGD<ElemType>::GetModelName(const int epoch, bool bLastModel) const
+{
+    int epoch1Base = epoch + 1;
+    if (epoch1Base == m_maxEpochs || bLastModel)
+    {
+        return (m_modelPath).c_str();
+    }
+    else
+    {
+        return msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int)epoch1Base);
     }
 }
 
@@ -2848,10 +2873,10 @@ int SGD<ElemType>::DetermineStartEpoch(const bool makeMode)
 
     int firstEpoch = -1;
 
-    wstring curEpochFile = GetModelNameForEpoch(int(m_maxEpochs) - 1);
+    wstring curEpochFile = GetModelName(int(m_maxEpochs) - 1);
     for (int e = int(m_maxEpochs) - 1; e >= -1; e--)
     {
-        const wstring prevEpochFile = GetModelNameForEpoch(e - 1);
+        const wstring prevEpochFile = GetModelName(e - 1);
 
         if (msra::files::fuptodate(curEpochFile, prevEpochFile, false))
         {
@@ -2864,7 +2889,7 @@ int SGD<ElemType>::DetermineStartEpoch(const bool makeMode)
         }
     }
     if (firstEpoch == m_maxEpochs)
-        LOGPRINTF(stderr, "Final model exists: %ls\n", GetModelNameForEpoch(firstEpoch - 1).c_str());
+        LOGPRINTF(stderr, "Final model exists: %ls\n", GetModelName(firstEpoch - 1).c_str());
 
     return firstEpoch;
 }
