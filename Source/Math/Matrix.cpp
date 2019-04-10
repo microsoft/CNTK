@@ -5145,6 +5145,21 @@ template <class ElemType>
 
 #pragma endregion
 
+#pragma region LabelSmoothing
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::LabelSmoothing(const Matrix<ElemType>& label, ElemType keepRate, ElemType smoothValue)
+{
+    DISPATCH_MATRIX_ON_FLAG(&label,
+        &label,
+        CPUMatrix<ElemType>::LabelSmoothing(*(label.m_CPUMatrix), keepRate, smoothValue),
+        GPUMatrix<ElemType>::LabelSmoothing(*(label.m_GPUMatrix), keepRate, smoothValue),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+#pragma endregion
+
 
 template <class ElemType>
 template <class StatType>

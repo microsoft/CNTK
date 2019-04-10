@@ -3774,6 +3774,33 @@ void GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const GPUMatrix<ElemType>
 
 #pragma endregion
 
+#pragma region LabelSmoothing
+
+template <class ElemType>
+__global__ void _labelSmoothing(ElemType* label, ElemType keepRate, ElemType smoothValue, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        if (label[id] == (ElemType)0)
+            label[id] = smoothValue;
+        else
+            label[id] = label[id] * keepRate + smoothValue;
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::LabelSmoothing(const GPUMatrix<ElemType>& label, ElemType keepRate, ElemType smoothValue)
+{
+    CUDA_LONG numElements = label.GetNumElements();
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _labelSmoothing<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (label.Data(), keepRate, smoothValue, numElements);
+}
+
+#pragma endregion
+
 
 #pragma region RNN Functions
 

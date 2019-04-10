@@ -634,6 +634,12 @@ public:
 
 #pragma endregion
 
+#pragma region LabelSmoothing
+
+    static void LabelSmoothing(const Matrix<ElemType>& label, ElemType keepRate, ElemType smoothValue);
+
+#pragma endregion
+
 
     void RNNForward(const Matrix<ElemType>& inputX, const Matrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
     void RNNBackwardData(const Matrix<ElemType>& outputDY, const Matrix<ElemType>& paramW, Matrix<ElemType>& outputDX, const struct RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace);
