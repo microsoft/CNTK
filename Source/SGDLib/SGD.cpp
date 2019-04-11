@@ -437,7 +437,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+        {
+            msra::files::make_intermediate_dirs(GetModelNameForEpoch(int(startEpoch) - 1));
             net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
+        }
     }
 
     if (m_saveBestModelPerCriterion)
@@ -595,7 +598,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-                    net->Save(m_modelPath);
+                {
+                    msra::files::make_intermediate_dirs(m_modelPath + L"/" + m_modelName);
+                    net->Save(m_modelPath + L"/" + m_modelName);
+                }
             }
             break;
         }
@@ -607,7 +613,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-                    net->Save(m_modelPath);
+                {
+                    msra::files::make_intermediate_dirs(m_modelPath + L"/" + m_modelName);
+                    net->Save(m_modelPath + L"/" + m_modelName);
+                }
             }
             break;
         }
@@ -835,7 +844,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                         // In case of parallel training only the main node should we saving the model to prevent
                         // the parallel training nodes from colliding to write the same file
                         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+                        {
+                            msra::files::make_intermediate_dirs(GetModelNameForEpoch(i, true));
                             net->Save(GetModelNameForEpoch(i, true));
+                        }
 
                         LOGPRINTF(stderr, "Finished training and saved final model\n\n");
                         break;
@@ -922,7 +934,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     chosenMinibatchSize);
                 auto modelName = GetModelNameForEpoch(i);
                 if (m_traceLevel > 0)
-                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());                
                 net->Save(modelName);
                 if (!m_keepCheckPointFiles)
                 {
@@ -1309,6 +1321,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                 if (m_lrapiInfo.sgdTraceLevel > 0 && 0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToShowLR)
                     fprintf(stderr, "Iteration %d: learning rate per sample = %.8g\n", (int) m_lrapiInfo.iter, learnRatePerSample);
+
+                if (learnRatePerSample < 0)
+                {
+                    fprintf(stderr, "Set learning rate per sample equal to min_learning, because Iteration %d: learning rate per sample = %.8g\n", (int)m_lrapiInfo.iter, learnRatePerSample);
+                    learnRatePerSample = m_minLearnRate;
+                }
             }
 
             // do forward and back propagation
@@ -1752,9 +1770,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         if (0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel && m_lrapiInfo.iter != 0 && ((m_mpi == nullptr) || m_mpi->IsMainNode()))
         {
+            wstring IterModelPath = m_modelPath + L"-Iter" + L"/" + m_modelName + L"-Iter." + to_wstring(m_lrapiInfo.iter);
             if (m_lrapiInfo.sgdTraceLevel > 0)
-                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", (m_modelPath + L"-Iter" + to_wstring(m_lrapiInfo.iter)).c_str());
-            net->Save(m_modelPath + L"-Iter" + to_wstring(m_lrapiInfo.iter));
+                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", IterModelPath.c_str());
+            msra::files::make_intermediate_dirs(IterModelPath);
+            net->Save(IterModelPath);
         }
     }
 
@@ -2694,7 +2714,10 @@ bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
     // gracefully handle if a checkpoint file is missing
     // This means a user wanted to continue training from an older model, but that model had no checkpoint info anymore.
     // This is valid, we just don't get the features that require previous models, such as LR or MBSize control.
-    let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    if (!fexists(checkPointFileName.c_str())) 
+        checkPointFileName = GetCheckPointFileName(int(epochNumber));
+
     if (!fexists(checkPointFileName.c_str()))
     {
         // initialize as if nothing
@@ -2720,7 +2743,9 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
                                        /*out*/ double& prevCriterion,
                                        /*out*/ size_t& minibatchSize)
 {
-    let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    if (!fexists(checkPointFileName.c_str()))
+        checkPointFileName = GetCheckPointFileName(int(epochNumber));
     //fprintf(stderr, "Loading checkpoint info from %ls\n", checkPointFileName.c_str());
     File fstream(checkPointFileName,
                  FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
@@ -2795,24 +2820,48 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
     return;
 }
 
+// function return FileNmae path like ../models/modelName.0/modelName.ckp
 template <class ElemType>
 wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch)
 {
     return GetModelNameForEpoch(epoch) + L".ckp";
 }
 
+// function return FileNmae path like ../models/modelName.0.ckp
+template <class ElemType>
+wstring SGD<ElemType>::GetCheckPointFileName(const int epoch)
+{
+    return GetModelName(epoch) + L".ckp";
+}
+
+// function return ModelNmae path like ../models/modelName.0/modelName.0
 template <class ElemType>
 wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel) const
 {
     int epoch1Base = epoch + 1;
     if (epoch1Base == m_maxEpochs || bLastModel)
     {
-        return m_modelPath;
+        return (m_modelPath + L"/" + m_modelName).c_str();
     }
     else
     {
         wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
-        return w;
+        return msra::strfun::wstrprintf(L"%ls.%d", (w + L"/"+ m_modelName).c_str(), (int)epoch1Base);
+    }
+}
+
+// function return ModelNmae path like ../models/modelName.0
+template <class ElemType>
+wstring SGD<ElemType>::GetModelName(const int epoch, bool bLastModel) const
+{
+    int epoch1Base = epoch + 1;
+    if (epoch1Base == m_maxEpochs || bLastModel)
+    {
+        return (m_modelPath).c_str();
+    }
+    else
+    {
+        return msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int)epoch1Base);
     }
 }
 
@@ -2828,10 +2877,10 @@ int SGD<ElemType>::DetermineStartEpoch(const bool makeMode)
 
     int firstEpoch = -1;
 
-    wstring curEpochFile = GetModelNameForEpoch(int(m_maxEpochs) - 1);
+    wstring curEpochFile = GetModelName(int(m_maxEpochs) - 1);
     for (int e = int(m_maxEpochs) - 1; e >= -1; e--)
     {
-        const wstring prevEpochFile = GetModelNameForEpoch(e - 1);
+        const wstring prevEpochFile = GetModelName(e - 1);
 
         if (msra::files::fuptodate(curEpochFile, prevEpochFile, false))
         {
@@ -2844,7 +2893,7 @@ int SGD<ElemType>::DetermineStartEpoch(const bool makeMode)
         }
     }
     if (firstEpoch == m_maxEpochs)
-        LOGPRINTF(stderr, "Final model exists: %ls\n", GetModelNameForEpoch(firstEpoch - 1).c_str());
+        LOGPRINTF(stderr, "Final model exists: %ls\n", GetModelName(firstEpoch - 1).c_str());
 
     return firstEpoch;
 }

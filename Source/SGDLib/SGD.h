@@ -396,6 +396,7 @@ public:
         : SGDParams(configSGD, sizeof(ElemType)),
           // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
           m_modelPath((const wstring&) configSGD(L"modelPath")),
+          m_modelName((const wstring&)configSGD(L"modelName")),
           m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
           m_saveBestModelPerCriterion(configSGD(L"saveBestModelPerCriterion", false)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
@@ -573,6 +574,7 @@ public:
     int DetermineStartEpoch(const bool makeMode);
 
     wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false) const;
+    wstring GetModelName(const int epoch, bool bLastModel = false) const;
 
 protected:
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
@@ -600,6 +602,7 @@ protected:
                             /*out*/ size_t& minibatchSize);
 
     wstring GetCheckPointFileNameForEpoch(const int epoch);
+    wstring GetCheckPointFileName(const int epoch);
 
     GradientsUpdateType GradUpdateType() const
     {
@@ -620,6 +623,7 @@ public:
 
 protected:
     std::wstring m_modelPath;
+    std::wstring m_modelName;
     bool m_keepCheckPointFiles;
     bool m_saveBestModelPerCriterion;
     // Mapping from criterion to the best epoch on validation data set.
