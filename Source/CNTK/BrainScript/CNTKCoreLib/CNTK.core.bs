@@ -85,6 +85,12 @@ GlobalConcatLayer {blockIndex, growthRate, segmentIndex, segmentNum} =
     apply (outProbVectorSequence) = GlobalConcat(outProbVectorSequence, blockIndex, growthRate, segmentIndex, segmentNum)
 }.apply
 
+# CrossEntropyWithSoftmaxLayer -- create a cross entropy with softmax layer, which support label smoothing feature
+CrossEntropyWithSoftmaxLayer {smoothRate=0} =
+{
+    apply (labelSequence, outProbVectorSequence) = CrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, smoothRate=smoothRate)
+}.apply
+
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
 DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank, initBias=initBias} : activation )
@@ -607,7 +613,7 @@ CNTK2 = [
     // 11. Criterion nodes
     // No changes here - we said the default input would be the label sequence here, against which the
     // empirical sequence is compared to. Keeping this for now.
-    CrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, axis=0, tag='') =
+    CrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, smoothRate=0, axis=0, tag='') =
         if axis==0 then new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
         else [ tag1 = tag; out = Minus (ReduceLogSum (outProbVectorSequence, axis=axis), ReduceSum (labelSequence .* outProbVectorSequence, axis=axis), tag=tag1) ].out
     # Classification error along a specific axis: account only for missed labels, i.e.

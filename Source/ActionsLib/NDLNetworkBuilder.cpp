@@ -421,8 +421,10 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 {
                     bool transpose = node->GetOptionalParameter("transpose", "false");
                     auto outputShape = paramResolver("outputShape", 0); 
+                    auto dilation = paramResolver("dilation", 1);
+                    size_t groups = node->GetOptionalParameter("groups", "1");
                     nodePtr = builder.Convolution(NULL, NULL, kernelShape, mapCount, stride, sharing, 
-                                                  autoPad, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, name);
+                                                  autoPad, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, dilation, groups, name);
                 }
 
             }

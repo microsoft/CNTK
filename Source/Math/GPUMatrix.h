@@ -591,6 +591,12 @@ public:
 
 #pragma endregion
 
+#pragma region LabelSmoothing
+
+    static void LabelSmoothing(const GPUMatrix<ElemType>& label, ElemType keepRate, ElemType smoothValue);
+
+#pragma endregion
+
 
     // RNN support functions
     void RNNForward(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const struct RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace);

@@ -1193,7 +1193,12 @@ class CrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*Computati
     }
 
 public:
-    DeclareConstructorFromConfigWithNumInputs(CrossEntropyWithSoftmaxNode);
+    CrossEntropyWithSoftmaxNode(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp)
+        : CrossEntropyWithSoftmaxNode(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        m_smoothRate = (ElemType)(configp->Get(L"smoothRate"));
+    }
     CrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
@@ -1260,6 +1265,10 @@ public:
         m_softmaxOfRight->InplaceExp();
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
         MaskMissingColumnsToZero(*m_logSoftmaxOfRight, InputRef(1).GetMBLayout(), fr);
+
+        if (m_keepRate != (ElemType) 1.0)
+            Matrix<ElemType>::LabelSmoothing(InputRef(0).MaskedValueFor(fr), m_keepRate, m_smoothValue);
+
         // reduce over all frames
         Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr), *m_logSoftmaxOfRight);
         Value() *= -1;
@@ -1274,6 +1283,8 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         ValidateBinaryReduce(isFinalValidationPass);
+        m_keepRate = (ElemType)(1.0 - m_smoothRate);
+        m_smoothValue = (ElemType)(m_smoothRate / Input(0)->GetSampleLayout().GetNumElements());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1303,7 +1314,22 @@ public:
         ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
     }
 
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_smoothRate;
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_smoothRate;
+    }
+
 protected:
+    ElemType m_smoothRate;
+    ElemType m_keepRate;
+    ElemType m_smoothValue;
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
 };
