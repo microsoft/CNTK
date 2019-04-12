@@ -243,7 +243,7 @@ public:
             }
             if (samplesInRecurrentStep > 1)
                 validframes[mapi] += numframes; // advance the cursor within the parallel sequence
-            fprintf(stderr, "dengamma value %f\n", denavlogp);
+            // fprintf(stderr, "dengamma value %f\n", denavlogp);     // chaojun: comment this out to avoid excessive log
             ts += numframes;
         }
         functionValues.SetValue(objectValue);
