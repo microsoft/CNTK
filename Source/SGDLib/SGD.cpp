@@ -7,7 +7,7 @@
 //
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
-//#define __PROFILE__
+#define __PROFILE__
 #include <cmath>
 const double Pi = acos(-1.0);
 
@@ -1028,6 +1028,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     clock_t forwardTime = 0;
     clock_t backwardTime = 0;
     clock_t aggregateTime = 0;
+    clock_t updateTime = 0;
     clock_t startTime = 0;
     clock_t endTime = 0;
 #endif
@@ -1273,9 +1274,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fprintf(stderr, "Iteration [%d-%d]: forward time = %.8gs\n", (int) (m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int) m_lrapiInfo.iter, (double) forwardTime / CLOCKS_PER_SEC);
                 fprintf(stderr, "Iteration [%d-%d]: backward time = %.8gs\n", (int) (m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int) m_lrapiInfo.iter, (double) backwardTime / CLOCKS_PER_SEC);
                 fprintf(stderr, "Iteration [%d-%d]: aggregate time = %.8gs\n", (int) (m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int) m_lrapiInfo.iter, (double) aggregateTime / CLOCKS_PER_SEC);
+                fprintf(stderr, "Iteration [%d-%d]: update time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, (double) updateTime / CLOCKS_PER_SEC);
                 forwardTime = 0;
                 backwardTime = 0;
                 aggregateTime = 0;
+                updateTime = 0;
             }
 #endif
 
@@ -1333,13 +1336,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #ifdef __PROFILE__
                 startTime = clock();
 #endif
-
-
                 // compute eval node first since when gradient is computed the forward function values
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
                 net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
-
-
 #ifdef __PROFILE__
                 endTime = clock();
                 forwardTime += endTime - startTime;
@@ -1354,12 +1353,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #ifdef __PROFILE__
                 startTime = clock();
 #endif
-
-
                 if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                     net->Backprop(criterionNodes[0]);
-
-
 #ifdef __PROFILE__
                 endTime = clock();
                 backwardTime += endTime - startTime;
@@ -1397,8 +1392,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #ifdef __PROFILE__
         startTime = clock();
 #endif
-
-
         // Sum of actualMBSize across all nodes when using parallel training
         // 'aggregate' here means across-worker aggregate for this one minibatch.
         size_t aggregateNumSamples = actualMBSize;                                                                                            // (0 for empty MB)
@@ -1479,10 +1472,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     epochEvalErrors[i] += m_gradHeader->evalErrors[i];
             }
         }
+#ifdef __PROFILE__
+        endTime = clock();
+        aggregateTime += endTime - startTime;
+#endif
 
         ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
         auto profWeights = ProfilerTimeBegin();
 
+#ifdef __PROFILE__
+        startTime = clock();
+#endif
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
@@ -1561,6 +1561,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 nSamplesSinceLastModelSync = 0;
             }
         }
+#ifdef __PROFILE__
+        endTime = clock();
+        updateTime += endTime - startTime;
+#endif
+
 
         ProfilerTimeEnd(profWeights, profilerEvtMainWeights);
         auto profPost = ProfilerTimeBegin();
@@ -1735,12 +1740,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // processing more utterances at the same time. Only used in Kaldi2Reader.
         // TODO: move the two-forward-pass support out of the reader.
         AttemptUtteranceDerivativeFeatures(net, trainSetDataReader, featureNodes, inputMatrices);
-
-
-#ifdef __PROFILE__
-        endTime = clock();
-        aggregateTime += endTime - startTime;
-#endif
 
 
         profiler.NextSample();
