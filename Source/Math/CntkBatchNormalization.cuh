@@ -45,30 +45,30 @@ __device__ __forceinline__ void LoadValues(const T1* src, T2 dst[U])
         dst[i] = (T2)src[i];
 }
 
-template <>
-__device__ __forceinline__ void LoadValues<2, float, float>(const float* src, float dst[2])
-{
-    // src must be aligned at 8 bytes boundary.
-    assert(reinterpret_cast<uintptr_t>(src) % (sizeof(dst)) == 0);
-    auto v = *(const float2*)src;
-    dst[0] = v.x;
-    dst[1] = v.y;
-}
-
-template <>
-__device__ __forceinline__ void LoadValues<4, float, float>(const float* src, float dst[4])
-{
-    // src must be aligned at 16 bytes boundary.
-    assert(reinterpret_cast<uintptr_t>(src) % (sizeof(dst)) == 0);
-    // Can do the following instead (use ld.global.nc.* on CC 3.5+):
-    // asm volatile("ld.global.v4.f32 {%0, %1, %2, %3}, [%4];" : "=f"(v.x), "=f"(v.y), "=f"(v.z), "=f"(v.w) : "l"(src));
-    // Similar for shared memory (e.g. ld.shared.*)
-    auto v = *(const float4*)src;
-    dst[0] = v.x;
-    dst[1] = v.y;
-    dst[2] = v.z;
-    dst[3] = v.w;
-}
+//template <>
+//__device__ __forceinline__ void LoadValues<2, float, float>(const float* src, float dst[2])
+//{
+//    // src must be aligned at 8 bytes boundary.
+//    assert(reinterpret_cast<uintptr_t>(src) % (sizeof(dst)) == 0);
+//    auto v = *(const float2*)src;
+//    dst[0] = v.x;
+//    dst[1] = v.y;
+//}
+//
+//template <>
+//__device__ __forceinline__ void LoadValues<4, float, float>(const float* src, float dst[4])
+//{
+//    // src must be aligned at 16 bytes boundary.
+//    assert(reinterpret_cast<uintptr_t>(src) % (sizeof(dst)) == 0);
+//    // Can do the following instead (use ld.global.nc.* on CC 3.5+):
+//    // asm volatile("ld.global.v4.f32 {%0, %1, %2, %3}, [%4];" : "=f"(v.x), "=f"(v.y), "=f"(v.z), "=f"(v.w) : "l"(src));
+//    // Similar for shared memory (e.g. ld.shared.*)
+//    auto v = *(const float4*)src;
+//    dst[0] = v.x;
+//    dst[1] = v.y;
+//    dst[2] = v.z;
+//    dst[3] = v.w;
+//}
 /*
 template <int U, typename T>
 __device__ __forceinline__ void StoreValues(const T src[U], T* dst)
@@ -86,29 +86,29 @@ __device__ __forceinline__ void StoreValues(const T1 src[U], T2* dst)
         dst[i] = (T2)src[i];
 }
 
-template <>
-__device__ __forceinline__ void StoreValues<2, float, float>(const float src[2], float* dst)
-{
-    // dst must be aligned at 8 bytes boundary.
-    assert(reinterpret_cast<uintptr_t>(dst) % (sizeof(src)) == 0);
-    float2 v;
-    v.x = src[0];
-    v.y = src[1];
-    *(reinterpret_cast<float2*>(dst)) = v;
-}
-
-template <>
-__device__ __forceinline__ void StoreValues<4, float, float>(const float src[4], float* dst)
-{
-    // dst must be aligned at 16 bytes boundary.
-    assert(reinterpret_cast<uintptr_t>(dst) % (sizeof(src)) == 0);
-    float4 v;
-    v.x = src[0];
-    v.y = src[1];
-    v.z = src[2];
-    v.w = src[3];
-    *(reinterpret_cast<float4*>(dst)) = v;
-}
+//template <>
+//__device__ __forceinline__ void StoreValues<2, float, float>(const float src[2], float* dst)
+//{
+//    // dst must be aligned at 8 bytes boundary.
+//    assert(reinterpret_cast<uintptr_t>(dst) % (sizeof(src)) == 0);
+//    float2 v;
+//    v.x = src[0];
+//    v.y = src[1];
+//    *(reinterpret_cast<float2*>(dst)) = v;
+//}
+//
+//template <>
+//__device__ __forceinline__ void StoreValues<4, float, float>(const float src[4], float* dst)
+//{
+//    // dst must be aligned at 16 bytes boundary.
+//    assert(reinterpret_cast<uintptr_t>(dst) % (sizeof(src)) == 0);
+//    float4 v;
+//    v.x = src[0];
+//    v.y = src[1];
+//    v.z = src[2];
+//    v.w = src[3];
+//    *(reinterpret_cast<float4*>(dst)) = v;
+//}
 
 template <typename T>
 __device__ __forceinline__ T Shuffle(T input, int srcLane, unsigned int mask)
