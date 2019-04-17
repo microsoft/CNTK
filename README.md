@@ -61,6 +61,7 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 * Moved to CUDA 10 for both Windows and Linux.
 * Support advance RNN loop in ONNX export.
 * Export larger than 2GB models in ONNX format.
+* Support FP16 in Brain Script train action.
 
 ## CNTK support for CUDA 10
 
