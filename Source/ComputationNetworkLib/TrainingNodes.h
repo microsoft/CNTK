@@ -61,7 +61,6 @@ public:
         size_t minibatchSize = InputRef(2).Value().GetNumCols();
         if (m_minibatchSize != minibatchSize)
         {
-            m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::getDistGradAggPtr();
             if (NULL == m_distGradAggPtr)
                 m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::getDistGradAggPtr();
             m_minibatchSize = minibatchSize;
@@ -123,7 +122,7 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
     {
-        return true;
+        return false;
     }
     virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
     {
