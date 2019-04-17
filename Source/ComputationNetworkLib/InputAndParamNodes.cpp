@@ -653,7 +653,7 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
         for (size_t i = 0; i < newDims.size(); i++)
             if (newDims[i] == 0)
                 newDims[i] = otherShape[i];
-        if (m_distribute)
+        if (this->m_distribute)
         {
             if (newDims[0] % Globals::getProcessNum() != 0)
                 LogicError("Label num mod process num must be 0. Please check the brainscript config.");

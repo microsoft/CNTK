@@ -57,8 +57,8 @@ public:
         LearnableParameter(deviceId, name)
     {
         if (configp != NULL && configp->Exists(L"distribute"))
-            m_distribute = configp->Get(L"distribute");
-        if (m_distribute)
+            this->m_distribute = configp->Get(L"distribute");
+        if (this->m_distribute)
         {
             SmallVector<size_t> vec;
             for (size_t i(0); i < shape.GetRank(); ++i)
