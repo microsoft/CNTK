@@ -2136,6 +2136,12 @@ namespace CNTK
     }
 
 
+    FunctionPtr DistributedFullyConnected(const Variable& W, const Variable& b, const Variable& X, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { W, b, X };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedFullyConnected, operands, Dictionary(), name), name);
+    }
+
     FunctionPtr MarginInnerProduct(const Variable& features, const Variable& labels, const Variable& weight, size_t outputDimension, double base, double gamma, double power, double lambdaMin, size_t marginCoefficient, const std::wstring& name)
     {
         std::vector<Variable> operands = {features, labels, weight};

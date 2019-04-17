@@ -127,7 +127,8 @@ namespace CNTK
         {PrimitiveOpType::AdditiveFullConnection, L"AdditiveFullConnection"},
         {PrimitiveOpType::CenterLoss, L"CenterLoss" },
         {PrimitiveOpType::ChannelMultiply, L"ChannelMultiply" },
-        {PrimitiveOpType::GlobalConcat, L"GlobalConcat"}
+        {PrimitiveOpType::GlobalConcat, L"GlobalConcat"},
+        {PrimitiveOpType::DistributedFullyConnected, L"DistributedFullyConnected" }
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)

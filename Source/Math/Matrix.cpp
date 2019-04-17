@@ -5182,6 +5182,33 @@ void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Ma
                             NOT_IMPLEMENTED);
 }
 
+#pragma region DistributedFC
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::Scatter(const Matrix<ElemType>& src, const Matrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
+{
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::Scatter(*(src.m_CPUMatrix), *(dst.m_CPUMatrix), minibatchSize, rank, processNum),
+        GPUMatrix<ElemType>::Scatter(*(src.m_GPUMatrix), *(dst.m_GPUMatrix), minibatchSize, rank, processNum),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ScatterInv(const Matrix<ElemType>& src, const Matrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
+{
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::ScatterInv(*(src.m_CPUMatrix), *(dst.m_CPUMatrix), minibatchSize, rank, processNum),
+        GPUMatrix<ElemType>::ScatterInv(*(src.m_GPUMatrix), *(dst.m_GPUMatrix), minibatchSize, rank, processNum),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+#pragma endregion
+
+
 template <class ElemType>
 void Matrix<ElemType>::RNNForward(const Matrix<ElemType> &inputX, const Matrix<ElemType> &paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const RnnAttributes& rnnAttributes, Matrix<ElemType>& reserve, Matrix<ElemType>& workspace)
 {

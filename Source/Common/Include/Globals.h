@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "ProgressTracing.h"
 #include <atomic>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -33,6 +34,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static void SetMPIPackThreshold(std::size_t packThreholdInBytes) { m_mpiPackThresholdInBytes = packThreholdInBytes; }
         static std::size_t GetMPIPackThreshold() { return m_mpiPackThresholdInBytes; }
+
+        static void setProcessNum(size_t pn) { processNum = pn; }
+        static void setRank(size_t r) { rank = r; }
+        static void setDistGradAggPtr(void* ptr) { distGradAggPtr = ptr; }
+        static size_t getProcessNum() { return processNum; }
+        static size_t getRank() { return rank; }
+        static void* getDistGradAggPtr() { return distGradAggPtr; }
+        static void printMpiInfo() { LOGPRINTF(stderr, "Using %d mpi processes, this rank is %d.", (int)processNum, (int)rank); }
     private:
         static std::atomic<bool> m_forceDeterministicAlgorithms;
         // The global flag to enable matrices values in forward and backward prop
@@ -41,5 +50,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static std::atomic<bool> m_optimizeGradientAccumulation;
         static std::atomic<bool> m_enableNodeTiming;
         static std::atomic<std::size_t> m_mpiPackThresholdInBytes;
+
+        static std::size_t processNum;
+        static std::size_t rank;
+        static void* distGradAggPtr;
     };
 }}}

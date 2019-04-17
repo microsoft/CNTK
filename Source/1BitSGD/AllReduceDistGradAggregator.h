@@ -565,6 +565,24 @@ public:
         }
     }
 
+
+    bool DistributedInit(size_t minibatchSize, size_t processNum, DEVICEID_TYPE deviceId, size_t bufferSize)
+    {
+        assert(false);
+        return true;
+    }
+
+    void DistributedGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count)
+    {
+        assert(false);
+    }
+
+    void DistributeReduce(const Matrix<ElemType>& distributedMatrix)
+    {
+        assert(false);
+    }
+
+
     // Debug helper to print matrix contents
     static void PrintMatrix(const char* printHeader, Matrix<ElemType>* matrixToPrint, bool peek = true)
     {

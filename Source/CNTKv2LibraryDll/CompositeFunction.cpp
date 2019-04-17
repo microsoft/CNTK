@@ -1154,6 +1154,11 @@ namespace CNTK
                 case PrimitiveOpType::SquaredError:
                     ASSIGN_NEW_NODE(SquareErrorNode, network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::DistributedFullyConnected:
+                {
+                    ASSIGN_NEW_NODE(DistributedFullyConnectedNode, network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 case PrimitiveOpType::MarginInnerProduct:
                 {
                     auto outputDimension = functionConfig[PrimitiveFunctionAttribute::AttributeMarginInnerProductOutputDimension].Value<size_t>();

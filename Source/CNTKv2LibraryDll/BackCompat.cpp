@@ -330,6 +330,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Logistic;
                 else if (node->OperationName() == OperationNameOf(SquareErrorNode))
                     opType = PrimitiveOpType::SquaredError;
+                else if (node->OperationName() == OperationNameOf(DistributedFullyConnectedNode))
+                    opType = PrimitiveOpType::DistributedFullyConnected;
                 else if (node->OperationName() == OperationNameOf(MarginInnerProductNode))
                 {
                     auto marginInnerProductNode = node->As<MarginInnerProductNode<ElementType>>();

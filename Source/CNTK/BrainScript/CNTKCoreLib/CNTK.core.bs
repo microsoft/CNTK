@@ -53,6 +53,15 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
 }.apply
 
 
+# DistributedFullyConnectedLayer -- create a distributed fully-connected linear projection layer
+# Note: outDim may describe a tensor as well.
+DistributedFullyConnectedLayer {inDim, outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} =
+{
+    W = ParameterTensor {_ConcatArrays (outDim, inDim), init=init, initValueScale=initValueScale, distribute=true}
+    b = ParameterTensor {outDim, initValue=initBias, distribute=true}
+    apply (x) = DistributedFullyConnected(W, b, x);
+}.apply
+
 # MarginInnerProductLayer -- create a marginInnerProduct projection layer
 # Note: outputDimension may describe a tensor as well.
 MarginInnerProductLayer {inputDimension, outputDimension, base, gamma, power, lambdaMin, coefficient, init='glorotUniform', initValueScale=1} =
@@ -425,6 +434,7 @@ Times                   = CNTK2.Times
 Abs                     = CNTK2.Abs
 Ceil                    = CNTK2.Ceil
 CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
+DistributedFullyConnected = CNTK2.DistributedFullyConnected
 MarginInnerProduct      = CNTK2.MarginInnerProduct
 FeatureNormalize        = CNTK2.FeatureNormalize
 AdditiveFullConnection  = CNTK2.AdditiveFullConnection
@@ -526,6 +536,12 @@ CNTK2 = [
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
     Times(x, y, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = _AsNodes (x : y) /*plus the function args*/ ]
 
+
+    #
+    # Distributed fully connected node
+    #
+    DistributedFullyConnected(W, X, b, tag='') =
+        new ComputationNode [ operation = 'DistributedFullyConnected' ; inputs = _AsNodes (W : X : b) /*plus the function args*/ ]
 
     #
     # MarginInnerProduct node
@@ -679,7 +695,7 @@ Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|unifor
 LearnableParameter = Parameter  // deprecated
 
 # TODO: make Parameter take tensor dims?
-ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, distribute=false, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
 # TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]

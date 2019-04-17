@@ -163,6 +163,34 @@ void NcclComm::AllReduceImpl(void* inputbuffer, void *outputbuffer, size_t count
         RuntimeError("NcclComm ncclAllReduce failed: %s", ncclGetErrorString(res));
 }
 
+void NcclComm::AllGatherImpl(void* inputBuffer, void* outputBuffer, size_t count)
+{
+    ncclResult_t res;
+    class NcclTypeLookup
+    {
+        ncclDataType_t ncclTypes[(int)DataType::COUNT];
+    public:
+        NcclTypeLookup()
+        {
+            ncclTypes[(int)DataType::FLOAT] = ncclFloat;
+            ncclTypes[(int)DataType::DOUBLE] = ncclDouble;
+            ncclTypes[(int)DataType::HALF] = ncclHalf;
+            ncclTypes[(int)DataType::INT] = ncclInt;
+        }
+        ncclDataType_t Lookup(DataType dtype)
+        {
+            return ncclTypes[(int)dtype];
+        }
+    };
+
+    static NcclTypeLookup s_ncclTypeLookup;
+
+    res = ncclAllGather(inputbuffer, outputbuffer, count, s_ncclTypeLookup.Lookup(dtype), m_ncclComm, m_stream)
+
+    if (res != ncclSuccess)
+        RuntimeError("NcclComm ncclAllReduce failed: %s", ncclGetErrorString(res));
+}
+
 void NcclComm::BroadcastImpl(void* buffer, size_t count, MPI_Datatype dtype, int root)
 {
     ncclResult_t res;

@@ -1273,6 +1273,7 @@ public:
     ComputationNode(DEVICEID_TYPE deviceId, const wstring& name)
         : ComputationNodeBase(deviceId, name)
     {
+        m_distribute = false; // default distribute is false, distribution usually appears in FC
     }
 
     // recover a shared_ptr from ourselves if given a naked pointer
@@ -1308,6 +1309,7 @@ public:
             }
             else
                 node->m_gradient = nullptr;
+            node->m_distribute = m_distribute;
         }
     }
 
@@ -2164,6 +2166,8 @@ public:
     // -----------------------------------------------------------------------
     // data members
     // -----------------------------------------------------------------------
+
+    bool m_distribute; // distribute flag
 
 protected:
 

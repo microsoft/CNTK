@@ -93,6 +93,28 @@ public:
 #endif
     }
 
+    template <typename ElemType>
+    void AllGather(ElemType* inputBuffer, ElemType* outputBuffer, size_t count)
+    {
+#ifdef USE_NCCL
+        DataType dtype = DataType::FLOAT;
+        if (std::is_same<ElemType, float>::value)
+            dtype = DataType::FLOAT;
+        else if (std::is_same<ElemType, double>::value)
+            dtype = DataType::DOUBLE;
+        else if (std::is_same<ElemType, half>::value)
+            dtype = DataType::HALF;
+        else if (std::is_same<ElemType, int>::value)
+            dtype = DataType::INT;
+        else
+            RuntimeError("NcclComm Unsupported reduction type");
+
+        AllGatherImpl(inputBuffer, outputBuffer, count);
+#else
+        RuntimeError("NcclComm: CNTK was built without NCCL support.");
+#endif
+    }
+
     void Broadcast(void* buffer, size_t count, MPI_Datatype dtype, int root)
     {
 #ifdef USE_NCCL

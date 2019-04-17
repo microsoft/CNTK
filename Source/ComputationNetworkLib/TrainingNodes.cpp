@@ -345,6 +345,10 @@ template class BatchNormalizationNode<float>;
 template class BatchNormalizationNode<double>;
 template class BatchNormalizationNode<half>;
 
+template class DistributedFullyConnectedNode<float>;
+template class DistributedFullyConnectedNode<double>;
+template class DistributedFullyConnectedNode<half>;
+
 template class MarginInnerProductNode<float>;
 template class MarginInnerProductNode<double>;
 template class MarginInnerProductNode<half>;

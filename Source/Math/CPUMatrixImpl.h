@@ -5404,6 +5404,52 @@ void CPUMatrix<ElemType>::LabelSmoothing(const CPUMatrix<ElemType>& label, ElemT
 
 #pragma endregion
 
+#pragma region DistributedFC
+
+template <class ElemType>
+void CPUMatrix<ElemType>::Scatter(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
+{
+    size_t minioutputDim = src.GetNumRows();
+    size_t outputDim = minioutputDim * processNum;
+    size_t miniblockSize = minioutputDim * minibatchSize;
+    size_t blockSize = miniblockSize * processNum;
+    size_t blockOffset = rank * miniblockSize;
+    size_t numElements = dst.GetNumElements();
+    ElemType* srcPtr = src.Data();
+    ElemType* dstPtr = dst.Data();
+    for (size_t i(0); i < numElements; ++i)
+    {
+        size_t row = i % outputDim;
+        size_t blockIndex = row / minioutputDim;
+        size_t rowIndex = row % minioutputDim;
+        size_t colIndex = i / outputDim;
+        dstPtr[i] = srcPtr[blockIndex * blockSize + blockOffset + colIndex * minioutputDim + rowIndex];
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ScatterInv(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
+{
+    size_t minioutputDim = src.GetNumRows();
+    size_t outputDim = minioutputDim * processNum;
+    size_t miniblockSize = minioutputDim * minibatchSize;
+    size_t blockSize = miniblockSize * processNum;
+    size_t blockOffset = rank * miniblockSize;
+    size_t numElements = dst.GetNumElements();
+    ElemType* srcPtr = src.Data();
+    ElemType* dstPtr = dst.Data();
+    for (size_t i(0); i < numElements; ++i)
+    {
+        size_t row = i % outputDim;
+        size_t blockIndex = row / minioutputDim;
+        size_t rowIndex = row % minioutputDim;
+        size_t colIndex = i / outputDim;
+        srcPtr[blockIndex * blockSize + blockOffset + colIndex * minioutputDim + rowIndex] = dstPtr[i];
+    }
+}
+
+#pragma endregion
+
 
 #pragma region Static BLAS Functions
 

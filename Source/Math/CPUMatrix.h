@@ -481,6 +481,14 @@ public:
 
 #pragma endregion
 
+#pragma region DistributedFC
+
+    static void Scatter(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
+
+    static void ScatterInv(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
+
+#pragma endregion
+
 
 public:
     // This functions do not depend on <ElemType>, i.e. you can call them on any <ElemType>

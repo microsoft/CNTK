@@ -3801,6 +3801,68 @@ void GPUMatrix<ElemType>::LabelSmoothing(const GPUMatrix<ElemType>& label, ElemT
 
 #pragma endregion
 
+#pragma region DistributedFC
+
+template <class ElemType>
+__global__ void _scatter(ElemType* src, ElemType* dst, int outputDim, int minioutputDim, int blockSize, int blockOffset, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        int row = id % outputDim;
+        int blockIndex = row / minioutputDim;
+        int rowIndex = row % minioutputDim;
+        int colIndex = id / outputDim;
+        dst[id] = src[blockIndex * blockSize + blockOffset + colIndex * minioutputDim + rowIndex];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::Scatter(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
+{
+    CUDA_LONG numElements = dst.GetNumElements();
+    int minioutputDim = (int)src.GetNumRows();
+    int outputDim = minioutputDim * processNum;
+    int miniblockSize = (int)(minioutputDim * minibatchSize);
+    int blockSize = miniblockSize * processNum;
+    int blockOffset = rank * miniblockSize;
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _scatter<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), dst.Data(), outputDim, minioutputDim, blockSize, blockOffset, numElements);
+}
+
+template <class ElemType>
+__global__ void _scatterinv(ElemType* src, ElemType* dst, int outputDim, int minioutputDim, int blockSize, int blockOffset, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        int row = id % outputDim;
+        int blockIndex = row / minioutputDim;
+        int rowIndex = row % minioutputDim;
+        int colIndex = id / outputDim;
+        src[blockIndex * blockSize + blockOffset + colIndex * minioutputDim + rowIndex] = dst[id];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ScatterInv(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
+{
+    CUDA_LONG numElements = dst.GetNumElements();
+    int minioutputDim = (int)src.GetNumRows();
+    int outputDim = minioutputDim * processNum;
+    int miniblockSize = (int)(minioutputDim * minibatchSize);
+    int blockSize = miniblockSize * processNum;
+    int blockOffset = rank * miniblockSize;
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _scatterinv<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), dst.Data(), outputDim, minioutputDim, blockSize, blockOffset, numElements);
+}
+
+#pragma endregion
+
 
 #pragma region RNN Functions
 

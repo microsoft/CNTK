@@ -10,6 +10,8 @@
 #include "RNGHandle.h"
 #include "InputAndParamNodes.h"
 #include "CPURNGHandle.h"
+#include "Globals.h"
+#include "../SGDLib/IDistGradAggregator.h"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -29,6 +31,188 @@ static const wstring RandomDistributionTypeNormal    = L"normal";
 static const wstring RandomDistributionTypeGumbel    = L"gumbel";
 static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
 
+
+// Distributed fully connected layer (Y = WX + b)
+// Input(0): W, Input(1): b, Input(2): X
+template <class ElemType>
+class DistributedFullyConnectedNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"DistributedFullyConnected";
+    }
+
+public:
+    DistributedFullyConnectedNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : DistributedFullyConnectedNode(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    DistributedFullyConnectedNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_rank(Globals::getRank()), m_processNum(Globals::getProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
+    {
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        size_t minibatchSize = InputRef(2).Value().GetNumCols();
+        if (m_minibatchSize != minibatchSize)
+        {
+            m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::getDistGradAggPtr();
+            if (NULL == m_distGradAggPtr)
+                m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::getDistGradAggPtr();
+            m_minibatchSize = minibatchSize;
+            m_batchSize = m_minibatchSize * m_processNum;
+            m_XSize = m_sampleSize * m_minibatchSize;
+            bool minibatchSizeEqual = m_distGradAggPtr->DistributedInit(m_minibatchSize, m_processNum, m_deviceId, std::max(m_sampleSize * m_batchSize, m_outputDim * m_processNum * m_batchSize));
+            if (!minibatchSizeEqual)
+                LogicError("With AllGather op, minibatch size in each Gpu must be the same.");
+        }
+
+        m_temp1->Resize(m_sampleSize, m_batchSize);               // Aggregated X
+        m_temp2->Resize(m_outputDim, m_batchSize);                // Single Y
+        m_temp3->Resize(m_outputDim, m_batchSize * m_processNum); // Aggregated Y
+        m_ones->Resize(m_batchSize, 1);                           // Ones
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (0 == inputIndex)
+        {
+            m_temp3->SetValue((ElemType)0);
+            Matrix<ElemType>::ScatterInv(*m_temp3, Gradient(), m_minibatchSize, m_rank, m_processNum);
+            m_temp2->SetValue(m_temp3->ColumnSlice(m_batchSize * m_rank, m_batchSize));
+
+            auto& W_gradient = InputRef(0).Gradient();
+            Matrix<ElemType>::Multiply(*m_temp2, false, *m_temp1, true, W_gradient);
+        }
+        else if (1 == inputIndex)
+        {
+            auto& b_gradient = InputRef(1).Gradient();
+            m_ones->SetValue((ElemType)1.0);
+            Matrix<ElemType>::Multiply(*m_temp2, false, *m_ones, false, b_gradient); //bug
+        }
+        else if (2 == inputIndex)
+        {
+            auto& W = InputRef(0).Value();
+            Matrix<ElemType>::Multiply(W, true, *m_temp2, false, *m_temp1);
+            FrameRange fr(InputRef(2).GetMBLayout());
+            auto X_gradient = InputRef(2).GradientFor(fr);
+            X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
+        }
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& W = InputRef(0).Value();
+        auto& b = InputRef(1).Value();
+        FrameRange fr(InputRef(2).GetMBLayout());
+        auto X = InputRef(2).ValueFor(fr);
+        m_distGradAggPtr->DistributedGather(X, *m_temp1, m_XSize);
+
+        Matrix<ElemType>::MultiplyAndAdd(W, false, *m_temp1, false, *m_temp2);
+        m_temp2->AssignSumOf(*m_temp2, b);
+
+        m_distGradAggPtr->DistributedGather(*m_temp2, *m_temp3, m_outputDim * m_batchSize);
+
+        Matrix<ElemType>::Scatter(*m_temp3, Value(), m_minibatchSize, m_rank, m_processNum);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return true;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        if (0 == childIndex) // for W
+            return true;
+        else if (1 == childIndex) // for b
+            return false;
+        else // for X
+            return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        m_outputDim = InputRef(1).Value().GetNumRows();
+        m_sampleSize = Input(2)->GetSampleLayout().GetNumElements();
+        SetDims(TensorShape(m_outputDim * m_processNum), HasMBLayout());
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<DistributedFullyConnectedNode<ElemType>>(nodeP);
+            node->m_rank           = m_rank;
+            node->m_processNum     = m_processNum;
+            node->m_sampleSize     = m_sampleSize;
+            node->m_minibatchSize  = m_minibatchSize;
+            node->m_batchSize      = m_batchSize;
+            node->m_XSize          = m_XSize;
+            node->m_outputDim      = m_outputDim;
+            node->m_distGradAggPtr = m_distGradAggPtr;
+            node->m_temp1->SetValue(*m_temp1);
+            node->m_temp2->SetValue(*m_temp2);
+            node->m_temp3->SetValue(*m_temp3);
+            node->m_ones->SetValue(*m_ones);
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_temp1, matrixPool);
+        RequestMatrixFromPool(m_temp2, matrixPool);
+        RequestMatrixFromPool(m_temp3, matrixPool);
+        RequestMatrixFromPool(m_ones, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_temp1, matrixPool);
+        ReleaseMatrixToPool(m_temp2, matrixPool);
+        ReleaseMatrixToPool(m_temp3, matrixPool);
+        ReleaseMatrixToPool(m_ones, matrixPool);
+    }
+
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_processNum;
+        if (Globals::getProcessNum() != m_processNum)
+            LogicError("The network loaded from file used %d GPUs, but now is using %d GPUs.", (int)m_processNum, (int)Globals::getProcessNum());
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_processNum;
+    }
+
+    size_t m_rank;
+    size_t m_processNum;
+    size_t m_sampleSize;
+    size_t m_minibatchSize;
+    size_t m_batchSize;
+    size_t m_XSize;
+    size_t m_outputDim;
+    IDistGradAggregator<ElemType>* m_distGradAggPtr;
+    shared_ptr<Matrix<ElemType>> m_temp1;
+    shared_ptr<Matrix<ElemType>> m_temp2;
+    shared_ptr<Matrix<ElemType>> m_temp3;
+    shared_ptr<Matrix<ElemType>> m_ones;
+};
 
 // Implements A-Softmax as described in:
 // SphereFace: DeepHypersphereEmbeddingforFaceRecognition [Weiyang Liu, Yandong Wen, Zhiding Yu, Ming Li, Bhiksha Raj, Le Song]

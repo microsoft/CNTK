@@ -19,6 +19,12 @@ public:
     // Returns a boolean indicating if any samples were processed
     virtual bool AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, bool resetState) = 0;
 
+    virtual bool DistributedInit(size_t minibatchSize, size_t processNum, DEVICEID_TYPE deviceId, size_t bufferSize) = 0;
+
+    virtual void DistributedGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count) = 0;
+
+    virtual void DistributeReduce(const Matrix<ElemType>& distributedMatrix) = 0;
+
     size_t NumProc()
     {
         return m_mpi->NumNodesInUse();

@@ -175,6 +175,11 @@ const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "ad
 template <typename ElemType>
 void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mpi)
 {
+    Globals::setProcessNum(mpi->NumNodesInUse());
+    Globals::setRank(mpi->CurrentNodeRank());
+    Globals::printMpiInfo();
+
+
     ConfigArray command = config(L"command", "train");
 
     if (Globals::ShouldForceDeterministicAlgorithms())

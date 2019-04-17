@@ -9,6 +9,7 @@
 #include "ScriptableObjects.h"
 #include "TensorShape.h"
 #include "Matrix.h"
+#include "Globals.h"
 
 #include <string>
 
@@ -52,10 +53,24 @@ public:
         m_initValue = 0;
         m_regMultiplier = 1.0f; // enable reg in update by default
     }
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape) :
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape, const ScriptableObjects::IConfigRecordPtr configp = NULL) :
         LearnableParameter(deviceId, name)
     {
-        InitShape(shape);
+        if (configp != NULL && configp->Exists(L"distribute"))
+            m_distribute = configp->Get(L"distribute");
+        if (m_distribute)
+        {
+            SmallVector<size_t> vec;
+            for (size_t i(0); i < shape.GetRank(); ++i)
+                vec.push_back(shape[i]);
+            if (vec[0] % Globals::getProcessNum() != 0)
+                LogicError("Label num mod process num must be 0. Please check the brainscript config.");
+            vec[0] /= Globals::getProcessNum();
+            TensorShape distributedShape(vec);
+            InitShape(distributedShape);
+        }
+        else
+            InitShape(shape);
         LazyInitParameters();
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols) :
