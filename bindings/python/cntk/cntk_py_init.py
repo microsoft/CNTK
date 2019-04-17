@@ -85,19 +85,19 @@ def cntk_check_libs():
         if call(['where', 'opencv_world*.dll'], stdout=devnull, stderr=devnull) != 0:
             warnings.warn(WARNING_MSG % ('   OpenCV   ', 'https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Windows-Python#optional-opencv'))
     elif __my_system__ == 'linux':
-        if call('ldconfig -p | grep libmklml_intel*.so*', shell=True, stdout=devnull, stderr=devnull) != 0 or \
-          call('ldconfig -p | grep libiomp5*.so*', shell=True, stdout=devnull, stderr=devnull) != 0:
+        if call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libmklml_intel*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0 or \
+          call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libiomp5*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0:
             warnings.warn(WARNING_MSG % ('    MKL     ', 'https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Linux-Python#mkl'))
-        if call('ldconfig -p | grep libcudart*.so*', shell=True, stdout=devnull, stderr=devnull) != 0 or \
-          call('ldconfig -p | grep libcublas*.so*', shell=True, stdout=devnull, stderr=devnull) != 0 or \
-          call('ldconfig -p | grep libcurand*.so*', shell=True, stdout=devnull, stderr=devnull) != 0 or \
-          call('ldconfig -p | grep libcusparse*.so*', shell=True, stdout=devnull, stderr=devnull) != 0 or \
-          call('ldconfig -p | grep libcuda*.so*', shell=True, stdout=devnull, stderr=devnull) != 0 or \
-          call('ldconfig -p | grep libnvidia-ml*.so*', shell=True, stdout=devnull, stderr=devnull) != 0 or \
-          call('ldconfig -p | grep libcudnn*.so*', shell=True, stdout=devnull, stderr=devnull) != 0:
+        if call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libcudart*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0 or \
+          call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libcublas*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0 or \
+          call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libcurand*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0 or \
+          call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libcusparse*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0 or \
+          call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libcuda*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0 or \
+          call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libnvidia-ml*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0 or \
+          call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libcudnn*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0:
             warnings.warn(WARNING_MSG_GPU_ONLY % ('GPU-Specific', 'https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Linux-Python#optional-gpu-specific-packages'))
-        if call('ldconfig -p | grep libopencv_core*.so*', shell=True, stdout=devnull, stderr=devnull) != 0 or \
-          call('ldconfig -p | grep libopencv_imgproc*.so*', shell=True, stdout=devnull, stderr=devnull) != 0 or \
-          call('ldconfig -p | grep libopencv_imgcodecs*.so*', shell=True, stdout=devnull, stderr=devnull) != 0:
+        if call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libopencv_core*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0 or \
+          call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libopencv_imgproc*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0 or \
+          call('ldconfig -N -v $(sed "s/:/ /g" <<< $LD_LIBRARY_PATH) | grep libopencv_imgcodecs*.so*', shell=True, executable='/bin/bash', stdout=devnull, stderr=devnull) != 0:
             warnings.warn(WARNING_MSG % ('   OpenCV   ', 'https://docs.microsoft.com/en-us/cognitive-toolkit/Setup-Linux-Python#optional-opencv'))
     devnull.close()
