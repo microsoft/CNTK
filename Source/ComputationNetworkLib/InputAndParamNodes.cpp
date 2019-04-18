@@ -472,7 +472,10 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
     Base::Save(fstream);
     fstream << m_learningRateMultiplier;
     m_sampleLayout.Save(fstream);
-    fstream << Value();
+
+    fstream << m_distribute;
+    if (!this->m_distribute)
+        fstream << Value();
 }
 
 template <class ElemType>
@@ -505,7 +508,24 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
         }
     }
 
-    LoadValue(fstream);
+    fstream >> m_distribute;
+    if (!this->m_distribute)
+        LoadValue(fstream);
+    else
+    {
+        CreateMatrixIfNull(m_value);
+        Matrix<ElemType> temp(Value().GetNumRows(), Value().GetNumCols(), this->m_deviceId);
+        for (size_t i(0); i < Globals::GetProcessNum(); ++i)
+        {
+            if (i == Globals::GetRank())
+                fstream >> Value();
+            else
+                fstream >> temp;
+        }
+        // above reads dimensions, so we must update our own dimensions
+        SetDims(TensorShape(Value().GetNumRows(), Value().GetNumCols()), false);
+    }
+
     SetDims(sampleLayout, false); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
     VerifyDataSize(Value());      // sanity check
 
@@ -655,9 +675,9 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
                 newDims[i] = otherShape[i];
         if (this->m_distribute)
         {
-            if (newDims[0] % Globals::getProcessNum() != 0)
+            if (newDims[0] % Globals::GetProcessNum() != 0)
                 LogicError("Label num mod process num must be 0. Please check the brainscript config.");
-            newDims[0] /= Globals::getProcessNum();
+            newDims[0] /= Globals::GetProcessNum();
         }
         InitShape(TensorShape(newDims));
     }

@@ -63,9 +63,9 @@ public:
             SmallVector<size_t> vec;
             for (size_t i(0); i < shape.GetRank(); ++i)
                 vec.push_back(shape[i]);
-            if (vec[0] % Globals::getProcessNum() != 0)
+            if (vec[shape.GetRank() - 1] % Globals::GetProcessNum() != 0)
                 LogicError("Label num mod process num must be 0. Please check the brainscript config.");
-            vec[0] /= Globals::getProcessNum();
+            vec[shape.GetRank() - 1] /= Globals::GetProcessNum();
             TensorShape distributedShape(vec);
             InitShape(distributedShape);
         }

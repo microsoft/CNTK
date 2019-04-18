@@ -32,7 +32,7 @@ static const wstring RandomDistributionTypeGumbel    = L"gumbel";
 static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
 
 
-// Distributed fully connected layer (Y = WX + b)
+// Distributed fully connected layer (Y = W'X + b)
 // Input(0): W, Input(1): b, Input(2): X
 template <class ElemType>
 class DistributedFullyConnectedNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
@@ -52,7 +52,7 @@ public:
     }
 
     DistributedFullyConnectedNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_rank(Globals::getRank()), m_processNum(Globals::getProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
+        : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
     {
     }
 
@@ -62,7 +62,7 @@ public:
         if (m_minibatchSize != minibatchSize)
         {
             if (NULL == m_distGradAggPtr)
-                m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::getDistGradAggPtr();
+                m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
             m_minibatchSize = minibatchSize;
             m_batchSize = m_minibatchSize * m_processNum;
             m_XSize = m_sampleSize * m_minibatchSize;
@@ -86,7 +86,7 @@ public:
             m_temp2->SetValue(m_temp3->ColumnSlice(m_batchSize * m_rank, m_batchSize));
 
             auto& W_gradient = InputRef(0).Gradient();
-            Matrix<ElemType>::Multiply(*m_temp2, false, *m_temp1, true, W_gradient);
+            Matrix<ElemType>::Multiply(*m_temp1, false, *m_temp2, true, W_gradient);
         }
         else if (1 == inputIndex)
         {
@@ -97,7 +97,7 @@ public:
         else if (2 == inputIndex)
         {
             auto& W = InputRef(0).Value();
-            Matrix<ElemType>::Multiply(W, true, *m_temp2, false, *m_temp1);
+            Matrix<ElemType>::Multiply(W, false, *m_temp2, false, *m_temp1);
             FrameRange fr(InputRef(2).GetMBLayout());
             auto X_gradient = InputRef(2).GradientFor(fr);
             X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
@@ -112,7 +112,7 @@ public:
         auto X = InputRef(2).ValueFor(fr);
         m_distGradAggPtr->DistributedGather(X, *m_temp1, m_XSize);
 
-        Matrix<ElemType>::MultiplyAndAdd(W, false, *m_temp1, false, *m_temp2);
+        Matrix<ElemType>::MultiplyAndAdd(W, true, *m_temp1, false, *m_temp2);
         m_temp2->AssignSumOf(*m_temp2, b);
 
         m_distGradAggPtr->DistributedGather(*m_temp2, *m_temp3, m_outputDim * m_batchSize);
@@ -189,8 +189,8 @@ public:
     {
         Base::Save(fstream);
         fstream << m_processNum;
-        if (Globals::getProcessNum() != m_processNum)
-            LogicError("The network loaded from file used %d GPUs, but now is using %d GPUs.", (int)m_processNum, (int)Globals::getProcessNum());
+        if (Globals::GetProcessNum() != m_processNum)
+            LogicError("The network loaded from file used %d GPUs, but now is using %d GPUs.", (int)m_processNum, (int)Globals::GetProcessNum());
     }
 
     void Load(File& fstream, size_t modelVersion) override

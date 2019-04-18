@@ -57,7 +57,7 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
 # Note: outDim may describe a tensor as well.
 DistributedFullyConnectedLayer {inDim, outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} =
 {
-    W = ParameterTensor {_ConcatArrays (outDim, inDim), init=init, initValueScale=initValueScale, distribute=true}
+    W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
     b = ParameterTensor {outDim, initValue=initBias, distribute=true}
     apply (x) = DistributedFullyConnected(W, b, x);
 }.apply
