@@ -14,6 +14,17 @@
 #include <vector>
 #include <type_traits>
 
+#define __PROFILE__
+#ifdef __PROFILE__
+#include <chrono>
+#include <ctime>
+using namespace std;
+static std::chrono::time_point<std::chrono::system_clock> profileStartTime;
+static std::chrono::time_point<std::chrono::system_clock> profileEndTime;
+static int profileCnt = 0;
+static vector<double> profileTimeVec;
+#endif
+
 // Forward declare CUDA stuff
 typedef struct CUstream_st* cudaStream_t;
 typedef struct ncclComm* ncclComm_t;
@@ -82,16 +93,45 @@ public:
         else
             RuntimeError("NcclComm Unsupported reduction type");
 
+#ifdef __PROFILE__
+        if (profileTimeVec.size() == 0)
+        {
+            profileTimeVec.resize(grads.size());
+            fill(profileTimeVec.begin(), profileTimeVec.end(), 0.0);
+        }
+#endif
         for (size_t i=0; i<grads.size(); ++i)
         {
             if (grads[i]->Data() == nullptr) // Hack in case of eval
                 continue;
+#ifdef __PROFILE__
+            profileStartTime = std::chrono::system_clock::now();
+#endif
             AllReduceImpl(grads[i]->Data(), grads[i]->Data(), grads[i]->GetNumElements(), dtype, op);
+#ifdef __PROFILE__
+            profileEndTime = std::chrono::system_clock::now();
+            profileTimeVec[i] += (std::chrono::duration<double>(profileEndTime - profileStartTime)).count();
+#endif
         }
+
+#ifdef __PROFILE__
+        ++profileCnt;
+        if (profileCnt % 100 == 0)
+        {
+            for (size_t i = 0; i < grads.size(); ++i)
+            {
+                if (grads[i]->Data() == nullptr) // Hack in case of eval
+                    continue;
+                fprintf(stderr, "Aggregate size = %d, aggregate time = %.8gs\n", (int)(grads[i]->GetNumElements()), profileTimeVec[i]);
+                profileTimeVec[i] = 0.0;
+        }
+    }
+#endif
+
 #else
         RuntimeError("NcclComm: CNTK was built without NCCL support.");
 #endif
-    }
+    }   
 
     template <typename ElemType>
     void AllGather(ElemType* inputBuffer, ElemType* outputBuffer, size_t count)

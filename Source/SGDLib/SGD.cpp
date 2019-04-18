@@ -53,6 +53,15 @@ namespace CNTK
 
 using namespace std;
 
+#ifdef __PROFILE__
+double forwardTime = 0.0;
+double backwardTime = 0.0;
+double aggregateTime = 0.0;
+double updateTime = 0.0;
+std::chrono::time_point<std::chrono::system_clock> startTime;
+std::chrono::time_point<std::chrono::system_clock> endTime;
+#endif
+
 // =======================================================================
 // class SGD
 // =======================================================================
@@ -1023,17 +1032,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 {
     PROFILE_SCOPE(profilerEvtMainEpoch);
     double learnRatePerSample = _learnRatePerSample;
-
-#ifdef __PROFILE__
-    clock_t forwardTime = 0;
-    clock_t backwardTime = 0;
-    clock_t aggregateTime = 0;
-    clock_t updateTime = 0;
-    clock_t startTime = 0;
-    clock_t endTime = 0;
-#endif
-
-
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
     // bring our 'out' values into consistent state
@@ -1271,14 +1269,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #ifdef __PROFILE__
             if (m_lrapiInfo.sgdTraceLevel > 0 && m_lrapiInfo.iter % m_lrapiInfo.numItersToShowLR == 0 && m_lrapiInfo.iter != 0)
             {
-                fprintf(stderr, "Iteration [%d-%d]: forward time = %.8gs\n", (int) (m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int) m_lrapiInfo.iter, (double) forwardTime / CLOCKS_PER_SEC);
-                fprintf(stderr, "Iteration [%d-%d]: backward time = %.8gs\n", (int) (m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int) m_lrapiInfo.iter, (double) backwardTime / CLOCKS_PER_SEC);
-                fprintf(stderr, "Iteration [%d-%d]: aggregate time = %.8gs\n", (int) (m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int) m_lrapiInfo.iter, (double) aggregateTime / CLOCKS_PER_SEC);
-                fprintf(stderr, "Iteration [%d-%d]: update time = %.8gs\n", (int) (m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, (double) updateTime / CLOCKS_PER_SEC);
-                forwardTime = 0;
-                backwardTime = 0;
-                aggregateTime = 0;
-                updateTime = 0;
+                fprintf(stderr, "Iteration [%d-%d]: forward time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, forwardTime);
+                fprintf(stderr, "Iteration [%d-%d]: backward time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, backwardTime);
+                fprintf(stderr, "Iteration [%d-%d]: aggregate time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, aggregateTime);
+                fprintf(stderr, "Iteration [%d-%d]: update time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, updateTime);
+                forwardTime = 0.0;
+                backwardTime = 0.0;
+                aggregateTime = 0.0;
+                updateTime = 0.0;
             }
 #endif
 
@@ -1334,14 +1332,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
 
 #ifdef __PROFILE__
-                startTime = clock();
+                startTime = std::chrono::system_clock::now();
 #endif
                 // compute eval node first since when gradient is computed the forward function values
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
                 net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
 #ifdef __PROFILE__
-                endTime = clock();
-                forwardTime += endTime - startTime;
+                endTime = std::chrono::system_clock::now();
+                forwardTime += (std::chrono::duration<double>(endTime - startTime)).count();
 #endif
 
 
@@ -1351,13 +1349,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
 
 #ifdef __PROFILE__
-                startTime = clock();
+                startTime = std::chrono::system_clock::now();
 #endif
                 if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                     net->Backprop(criterionNodes[0]);
 #ifdef __PROFILE__
-                endTime = clock();
-                backwardTime += endTime - startTime;
+                endTime = std::chrono::system_clock::now();
+                backwardTime += (std::chrono::duration<double>(endTime - startTime)).count();
 #endif
 
 
@@ -1390,7 +1388,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
 
 #ifdef __PROFILE__
-        startTime = clock();
+        startTime = std::chrono::system_clock::now();
 #endif
         // Sum of actualMBSize across all nodes when using parallel training
         // 'aggregate' here means across-worker aggregate for this one minibatch.
@@ -1473,15 +1471,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 #ifdef __PROFILE__
-        endTime = clock();
-        aggregateTime += endTime - startTime;
+        endTime = std::chrono::system_clock::now();
+        aggregateTime += (std::chrono::duration<double>(endTime - startTime)).count();
 #endif
 
         ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
         auto profWeights = ProfilerTimeBegin();
 
 #ifdef __PROFILE__
-        startTime = clock();
+        startTime = std::chrono::system_clock::now();
 #endif
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
@@ -1562,8 +1560,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 #ifdef __PROFILE__
-        endTime = clock();
-        updateTime += endTime - startTime;
+        endTime = std::chrono::system_clock::now();
+        updateTime += (std::chrono::duration<double>(endTime - startTime)).count();
 #endif
 
 
