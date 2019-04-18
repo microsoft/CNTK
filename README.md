@@ -81,7 +81,7 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 
 ## CNTK support for CUDA 10
 
-###CNTK now supports CUDA 10. This requires an update to build environment to Visual Studio 2017 v15.9 for Windows.
+### CNTK now supports CUDA 10. This requires an update to build environment to Visual Studio 2017 v15.9 for Windows.
 
 To setup build and runtime environment on Windows:
 * Install [Visual Studio 2017](https://www.visualstudio.com/downloads/). Note: going forward for CUDA 10 and beyond, it is no longer required to install and run with the specific VC Tools version 14.11.
@@ -92,10 +92,10 @@ To setup build and runtime environment on Windows:
 
 To setup build and runtime environment on Linux using docker, please build Unbuntu 16.04 docker image using Dockerfiles [here](./Tools/docker). For other Linux systems, please refer to the Dockerfiles to setup dependent libraries for CNTK.
 
-##Support advance RNN loop in ONNX export
+## Support advance RNN loop in ONNX export
 CNTK models with recursive loops can be exported to ONNX models with scan ops.
 
-##Export larger than 2GB models in ONNX format
+## Export larger than 2GB models in ONNX format
 To export models larger than 2GB in ONNX format, use cntk.Function API:
 save(self, filename, format=ModelFormat.CNTKv2, use_external_files_to_store_parameters=False)
 with 'format' set to ModelFormat.ONNX and use_external_files_to_store_parameters set to True.
