@@ -928,8 +928,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // as rank 0 deleting it below
         SynchronizeWorkers();
 
-        if (m_mpi != nullptr && Globals::GetProcessNum() > 1 && !loadedPrevModel)
-            AggregateDistParams(learnableNodes);
         // Persist model and check-point info
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
         {
@@ -999,8 +997,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 i -= m_learnRateAdjustInterval;
             }
         }
-        if (m_mpi != nullptr && Globals::GetProcessNum() > 1 && !loadedPrevModel)
-            AggregateDistParams(learnableNodes);
 
         if (learnRatePerSample < 1e-12)
         {
