@@ -2489,6 +2489,9 @@ void SGD<ElemType1>::TypedUpdateWeights(Matrix<ElemType>& functionValues, Matrix
     // make actualMBSize is a valid value
     assert(actualMBSize > 0);
 
+    double lossScale = 1.0;
+    Matrix<ElemType>::Scale((ElemType)(1 / lossScale), gradientValues);
+
     // clipping gradients to prevent outliers
     ClipGradient<ElemType>(gradientValues, actualMBSize);
 
