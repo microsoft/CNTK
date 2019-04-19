@@ -443,10 +443,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             m_mpi->WaitAll();
         }
 
+        if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+            AggregateDistParams(learnableNodes);
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
             net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
+        if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+            ReleaseDistParams(learnableNodes);
     }
 
     if (m_saveBestModelPerCriterion)
@@ -601,10 +605,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                       i + 1, learnRatePerSample, m_minLearnRate);
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
+                if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                    AggregateDistParams(learnableNodes);
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
                     net->Save(m_modelPath);
+                if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                    ReleaseDistParams(learnableNodes);
             }
             break;
         }
@@ -613,10 +621,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             LOGPRINTF(stderr, "Reach max SGD iteration. Training complete.\n");
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
+                if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                    AggregateDistParams(learnableNodes);
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
                     net->Save(m_modelPath);
+                if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                    ReleaseDistParams(learnableNodes);
             }
             break;
         }
@@ -841,10 +853,14 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     }
                     else
                     {
+                        if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                            AggregateDistParams(learnableNodes);
                         // In case of parallel training only the main node should we saving the model to prevent
                         // the parallel training nodes from colliding to write the same file
                         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
                             net->Save(GetModelNameForEpoch(i, true));
+                        if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                            ReleaseDistParams(learnableNodes);
 
                         LOGPRINTF(stderr, "Finished training and saved final model\n\n");
                         break;
@@ -893,6 +909,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // as rank 0 deleting it below
         SynchronizeWorkers();
 
+        if (m_mpi != nullptr && Globals::GetProcessNum() > 1 && !loadedPrevModel)
+            AggregateDistParams(learnableNodes);
         // Persist model and check-point info
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
         {
@@ -962,6 +980,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 i -= m_learnRateAdjustInterval;
             }
         }
+        if (m_mpi != nullptr && Globals::GetProcessNum() > 1 && !loadedPrevModel)
+            AggregateDistParams(learnableNodes);
 
         if (learnRatePerSample < 1e-12)
         {
@@ -1746,13 +1766,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         ProfilerTimeEnd(profPost, profilerEvtMainPost);
         ProfilerTimeEnd(profMinibatch, profilerEvtMainMinibatch);
 
-
+        if (0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel && m_lrapiInfo.iter != 0 && m_mpi != nullptr && Globals::GetProcessNum() > 1)
+            AggregateDistParams(learnableNodes);
         if (0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel && m_lrapiInfo.iter != 0 && ((m_mpi == nullptr) || m_mpi->IsMainNode()))
         {
             if (m_lrapiInfo.sgdTraceLevel > 0)
                 LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", (m_modelPath + L"-Iter" + to_wstring(m_lrapiInfo.iter)).c_str());
             net->Save(m_modelPath + L"-Iter" + to_wstring(m_lrapiInfo.iter));
         }
+        if (0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel && m_lrapiInfo.iter != 0 && m_mpi != nullptr && Globals::GetProcessNum() > 1)
+            ReleaseDistParams(learnableNodes);
     }
 
     // --- END MAIN MINIBATCH LOOP

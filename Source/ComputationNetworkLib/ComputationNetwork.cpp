@@ -157,19 +157,6 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
         fstream << nodePtr->NodeName();
         // content
         nodePtr->Save(fstream);
-
-        if (nodePtr->m_distribute)
-        {
-            if (nodePtr->Is<ComputationNode<float>>())
-                assert(SGD<ElemType>);
-            else if (nodePtr->Is<ComputationNode<double>>())
-                precision = ElemTypeName<double>();
-            else if (nodePtr->Is<ComputationNode<half>>())
-                precision = ElemTypeName<half>();
-            for (size_t i(0); i < Globals::GetProcessNum(); ++i)
-            {
-            }
-        }
     }
 
     fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
