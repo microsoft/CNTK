@@ -314,7 +314,7 @@ public:
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
         m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0),
         m_gradientInitializedBy(nullptr),
-        m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false)
+        m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false), m_distribute(false)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
         // we store a unique numeric number for every node that is constructed, as a debugging aid
@@ -354,6 +354,8 @@ public:
         }
 
         node->ClearConfigMemberCache();
+
+        node->m_distribute = m_distribute;
     }
 
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName = L"", const CopyNodeFlags flags = CopyNodeFlags::copyNodeAll) const = 0;   // (called on here implemented by ComputationNode<ElemType>
@@ -946,6 +948,9 @@ public:
 
     // debugging helper
     size_t m_uniqueNumericId; // (a unique handle for debugging)
+
+    bool m_distribute; // distribute flag
+
 protected:
 
     // -----------------------------------------------------------------------
@@ -1273,7 +1278,6 @@ public:
     ComputationNode(DEVICEID_TYPE deviceId, const wstring& name)
         : ComputationNodeBase(deviceId, name)
     {
-        m_distribute = false; // default distribute is false, distribution usually appears in FC
     }
 
     // recover a shared_ptr from ourselves if given a naked pointer
@@ -1309,7 +1313,6 @@ public:
             }
             else
                 node->m_gradient = nullptr;
-            node->m_distribute = m_distribute;
         }
     }
 
@@ -2166,8 +2169,6 @@ public:
     // -----------------------------------------------------------------------
     // data members
     // -----------------------------------------------------------------------
-
-    bool m_distribute; // distribute flag
 
 protected:
 

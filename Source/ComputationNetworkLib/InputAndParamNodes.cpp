@@ -476,6 +476,16 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
     fstream << m_distribute;
     if (!this->m_distribute)
         fstream << Value();
+    else
+    {
+        assert(m_gatheredParams != NULL && Value().GetNumCols() * Globals::GetProcessNum() == m_gatheredParams->GetNumCols());
+        Matrix<ElemType> temp(Value().GetNumRows(), Value().GetNumCols(), this->m_deviceId);
+        for (size_t i(0); i < Globals::GetProcessNum(); ++i)
+        {
+            temp.AssignColumnSlice(*m_gatheredParams, Value().GetNumCols() * i, Value().GetNumCols());
+            fstream << temp;
+        }
+    }
 }
 
 template <class ElemType>

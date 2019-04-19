@@ -66,7 +66,8 @@ public:
             m_minibatchSize = minibatchSize;
             m_batchSize = m_minibatchSize * m_processNum;
             m_XSize = m_sampleSize * m_minibatchSize;
-            bool minibatchSizeEqual = m_distGradAggPtr->DistributedInit(m_minibatchSize, m_processNum, m_deviceId, std::max(m_sampleSize * m_batchSize, m_outputDim * m_processNum * m_batchSize));
+            size_t CPUBufferSize = std::max(std::max(m_sampleSize * m_batchSize, m_outputDim * m_processNum * m_batchSize), m_sampleSize * m_outputDim * m_processNum);
+            bool minibatchSizeEqual = m_distGradAggPtr->DistributedInit(m_minibatchSize, m_processNum, m_deviceId, CPUBufferSize);
             if (!minibatchSizeEqual)
                 LogicError("With AllGather op, minibatch size in each Gpu must be the same.");
         }
@@ -110,13 +111,13 @@ public:
         auto& b = InputRef(1).Value();
         FrameRange fr(InputRef(2).GetMBLayout());
         auto X = InputRef(2).ValueFor(fr);
-        m_distGradAggPtr->DistributedGather(X, *m_temp1, m_XSize);
+        m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_XSize);
 
         m_temp2->SetValue((ElemType) 0);
         Matrix<ElemType>::MultiplyAndAdd(W, true, *m_temp1, false, *m_temp2);
         m_temp2->AssignSumOf(*m_temp2, b);
 
-        m_distGradAggPtr->DistributedGather(*m_temp2, *m_temp3, m_outputDim * m_batchSize);
+        m_distGradAggPtr->DistributedAllGather(*m_temp2, *m_temp3, m_outputDim * m_batchSize);
 
         Matrix<ElemType>::Scatter(*m_temp3, Value(), m_minibatchSize, m_rank, m_processNum);
     }

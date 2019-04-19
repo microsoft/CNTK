@@ -278,12 +278,12 @@ public:
         return true;
     }
 
-    void DistributedGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count)
+    void DistributedAllGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count)
     {
         assert(false);
     }
 
-    void DistributeReduce(const Matrix<ElemType>& distributedMatrix)
+    void DistributeAllReduce(const Matrix<ElemType>& distributedMatrix)
     {
         assert(false);
     }

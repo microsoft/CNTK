@@ -52,6 +52,7 @@ public:
         m_initString = L"fromValue"; // default init is with 0; typically overwritten
         m_initValue = 0;
         m_regMultiplier = 1.0f; // enable reg in update by default
+        m_gatheredParams = NULL;
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape, const ScriptableObjects::IConfigRecordPtr configp = NULL) :
         LearnableParameter(deviceId, name)
@@ -192,6 +193,9 @@ private:
 
     // flags related to gradient update
     float m_regMultiplier; // The multiplier to adjust the L1Reg and L2Reg for Learnable node
+
+public:
+    Matrix<ElemType>* m_gatheredParams;
 };
 
 // -----------------------------------------------------------------------

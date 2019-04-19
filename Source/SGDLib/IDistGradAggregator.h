@@ -21,9 +21,9 @@ public:
 
     virtual bool DistributedInit(size_t minibatchSize, size_t processNum, DEVICEID_TYPE deviceId, size_t bufferSize) = 0;
 
-    virtual void DistributedGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count) = 0;
+    virtual void DistributedAllGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count) = 0;
 
-    virtual void DistributeReduce(const Matrix<ElemType>& distributedMatrix) = 0;
+    virtual void DistributeAllReduce(const Matrix<ElemType>& distributedMatrix) = 0;
 
     size_t NumProc()
     {

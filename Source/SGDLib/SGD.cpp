@@ -2814,6 +2814,40 @@ wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel) co
     }
 }
 
+
+template <class ElemType>
+void SGD<ElemType>::AggregateDistParams(const std::list<ComputationNodeBasePtr>& learnableNodes)
+{
+    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+    {
+        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+        if (node->IsParameterUpdateRequired() && !node->m_distribute)
+        {
+            auto paramsNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+            auto& paramsValues = paramsNode->Value();
+            assert(NULL == paramsNode->m_gatheredParams);
+            paramsNode->m_gatheredParams = new Matrix<ElemType>(paramsValues.GetNumRows(), paramsValues.GetNumCols(), paramsValues.GetDeviceId());
+            m_distGradAgg->DistributedAllGather(paramsValues, *(paramsNode->m_gatheredParams), paramsValues.GetNumElements());
+        }
+    }
+}
+
+template <class ElemType>
+void SGD<ElemType>::ReleaseDistParams(const std::list<ComputationNodeBasePtr>& learnableNodes)
+{
+    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+    {
+        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+        if (node->IsParameterUpdateRequired() && !node->m_distribute)
+        {
+            auto paramsNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+            delete paramsNode->m_gatheredParams;
+            paramsNode->m_gatheredParams = NULL;
+        }
+    }
+}
+
+
 // return -1 if nothing exists
 template <class ElemType> // TODO: needed?
 int SGD<ElemType>::DetermineStartEpoch(const bool makeMode)

@@ -610,7 +610,9 @@ protected:
         return m_gradType.gaussianNoiseInjectStd;
     }
 
-    map<ComputationNodeBasePtr, vector<Matrix<ElemType>>> m_distributedWeights;
+    void AggregateDistParams(const std::list<ComputationNodeBasePtr>& learnableNodes);
+
+    void ReleaseDistParams(const std::list<ComputationNodeBasePtr>& learnableNodes);
 
 public:
 #define EPSILON 1e-5
