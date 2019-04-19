@@ -73,7 +73,7 @@ static bool SetRootGradientToScalarOne(ComputationNodeBasePtr nodep)
 //  - ForwardProp() for eval nodes
 //  - ForwardProp() for the training criterion (which will reuse computation results from the previous step)
 //  - Backprop() for the training criterion
-void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // training criterion to compute the gradients for
+void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode, const double lossScale) // training criterion to compute the gradients for
 {
     if (!Environment().IsTraining())
         LogicError("Backprop: Requires network is to be in training mode.");
@@ -81,6 +81,21 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
     // initialize root gradient with a scalar value of 1.0
     if (!SetRootGradientToScalarOne<float>(rootNode) && !SetRootGradientToScalarOne<double>(rootNode))
         LogicError("Backprop: Training criterion is neither ComputationNode<float> nor ComputationNode<double>.");
+
+    // Scale it by lossScale
+    if (lossScale != 1.0)
+    {
+        if (rootNode -> template Is<ComputationNode<float>>())
+        {
+            auto& rootGradient = dynamic_pointer_cast<ComputationNode<float>>(rootNode)->Gradient();
+            Matrix<float>::Scale((float)lossScale, rootGradient);
+        }
+        else if (rootNode -> template Is<ComputationNode<double>>())
+        {
+            auto& rootGradient = dynamic_pointer_cast<ComputationNode<double>>(rootNode)->Gradient();
+            Matrix<double>::Scale(lossScale, rootGradient);
+        }
+    }
 
     // reset all gradients below rootNode to zero (actually, internally, this is lazy, but we don't care here)
     ZeroInputGradients(rootNode);

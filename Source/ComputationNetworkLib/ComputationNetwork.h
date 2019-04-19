@@ -148,7 +148,7 @@ public:
     void PostForwardAndBackProp(const ComputationNodeBasePtr rootNode);
 
     // main entry point for backprop
-    void Backprop(const ComputationNodeBasePtr rootNode);
+    void Backprop(const ComputationNodeBasePtr rootNode, const double lossScale = 1.0);
 
     template <class NODESET> // version that takes multiple nodes
     void TravserseInSortedGlobalEvalOrder(const NODESET& nodes, const std::function<void(const ComputationNodeBasePtr&)>& action)
