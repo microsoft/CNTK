@@ -683,12 +683,6 @@ void LearnableParameter<ElemType>::InferInputDimsFrom(const TensorShape& otherSh
         for (size_t i = 0; i < newDims.size(); i++)
             if (newDims[i] == 0)
                 newDims[i] = otherShape[i];
-        if (this->m_distribute)
-        {
-            if (newDims[0] % Globals::GetProcessNum() != 0)
-                LogicError("Label num mod process num must be 0. Please check the brainscript config.");
-            newDims[0] /= Globals::GetProcessNum();
-        }
         InitShape(TensorShape(newDims));
     }
     fprintf(stderr, "%ls operation: Tensor shape was inferred as [%s].\n", NodeDescription().c_str(), string(GetSampleLayout()).c_str());
