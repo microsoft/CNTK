@@ -87,14 +87,12 @@ public:
 
             auto& W_gradient = InputRef(0).Gradient();
             Matrix<ElemType>::Multiply(*m_temp1, false, *m_temp2, true, W_gradient);
-            Matrix<ElemType>::Scale((ElemType) m_processNum, W_gradient);
         }
         else if (1 == inputIndex)
         {
             auto& b_gradient = InputRef(1).Gradient();
             m_ones->SetValue((ElemType)1.0);
             Matrix<ElemType>::Multiply(*m_temp2, false, *m_ones, false, b_gradient);
-            Matrix<ElemType>::Scale((ElemType) m_processNum, b_gradient);
         }
         else if (2 == inputIndex)
         {
