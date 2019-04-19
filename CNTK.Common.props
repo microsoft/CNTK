@@ -38,7 +38,7 @@
     <!-- CntkVersion:
          CNTK version which should be used where CNTK version is required. Ex: print version or tag CNTK binaries. Default value is the last released version of CNTK. -->
     <!-- NOTE: Modify both CntkVersion and PublicBuild during MAJOR RELEASE -->
-    <CntkVersion>2.6</CntkVersion>
+    <CntkVersion>2.7</CntkVersion>
     
     <!-- PublicBuild:
          True if build binaries are meant to shared publicly with CNTK community. -->
