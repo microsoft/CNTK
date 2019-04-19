@@ -272,10 +272,15 @@ public:
     }
 
 
-    bool DistributedInit(size_t minibatchSize, size_t processNum, DEVICEID_TYPE deviceId, size_t bufferSize)
+    bool DistributedCheck(size_t minibatchSize, size_t processNum)
     {
         assert(false);
         return true;
+    }
+
+    void DistributedInit(DEVICEID_TYPE deviceId, size_t bufferSize)
+    {
+        assert(false);
     }
 
     void DistributedAllGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count)

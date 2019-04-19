@@ -514,7 +514,7 @@ private:
         }
     }
 
-    bool DistributedInit(size_t minibatchSize, size_t processNum, DEVICEID_TYPE deviceId, size_t CPUBufferSize)
+    bool DistributedCheck(size_t minibatchSize, size_t processNum)
     {
         size_t* gatherBuffer = new size_t[processNum];
         m_mpi->AllGather(&minibatchSize, (size_t)1, gatherBuffer, (size_t)1);
@@ -526,15 +526,23 @@ private:
                 return false;
             }
         }
-        if (m_allocator.get() == nullptr && ShouldCopyDataToCPU(deviceId))
-        {
-            m_allocator.reset(new CUDAPageLockedMemAllocator(deviceId));
-            m_intermediateDistributedCPUBuffer1 = AllocateIntermediateBuffer(deviceId, CPUBufferSize);
-            m_intermediateDistributedCPUBuffer2 = AllocateIntermediateBuffer(deviceId, CPUBufferSize);
-            m_gpuDistributedTransferer = std::make_unique<GPUDataTransferer>(deviceId, m_useAsyncAggregation);
-        }
         delete[] gatherBuffer;
         return true;
+    }
+
+    void DistributedInit(DEVICEID_TYPE deviceId, size_t bufferSize)
+    {
+        if (ShouldCopyDataToCPU(deviceId))
+        {
+            if (m_allocator.get() == nullptr)
+                m_allocator.reset(new CUDAPageLockedMemAllocator(deviceId));
+            if (NULL == m_intermediateDistributedCPUBuffer1)
+                m_intermediateDistributedCPUBuffer1 = AllocateIntermediateBuffer(deviceId, bufferSize);
+            if (NULL == m_intermediateDistributedCPUBuffer2)
+                m_intermediateDistributedCPUBuffer2 = AllocateIntermediateBuffer(deviceId, bufferSize);
+            if (NULL == m_gpuDistributedTransferer)
+                m_gpuDistributedTransferer = std::make_unique<GPUDataTransferer>(deviceId, m_useAsyncAggregation);
+        }
     }
 
     void DistributedAllGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count)

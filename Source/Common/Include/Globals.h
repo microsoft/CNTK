@@ -35,11 +35,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void SetMPIPackThreshold(std::size_t packThreholdInBytes) { m_mpiPackThresholdInBytes = packThreholdInBytes; }
         static std::size_t GetMPIPackThreshold() { return m_mpiPackThresholdInBytes; }
 
-        static void SetProcessNum(size_t processNum) { m_processNum = processNum; }
-        static void SetRank(size_t rank) { m_rank = rank; }
+        static void SetProcessNum(std::size_t processNum) { m_processNum = processNum; }
+        static void SetRank(std::size_t rank) { m_rank = rank; }
         static void SetDistGradAggPtr(void* distGradAggPtr) { m_distGradAggPtr = distGradAggPtr; }
-        static size_t GetProcessNum() { return m_processNum; }
-        static size_t GetRank() { return m_rank; }
+        static std::size_t GetProcessNum() { return m_processNum; }
+        static std::size_t GetRank() { return m_rank; }
         static void* GetDistGradAggPtr() { return m_distGradAggPtr; }
         static void PrintMpiInfo() { LOGPRINTF(stderr, "Using %d mpi processes, this rank is %d.", (int)m_processNum, (int)m_rank); }
     private:

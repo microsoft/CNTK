@@ -61,18 +61,14 @@ public:
         size_t minibatchSize = InputRef(2).Value().GetNumCols();
         if (m_minibatchSize != minibatchSize)
         {
-            if (NULL == m_distGradAggPtr)
-                m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
-            m_minibatchSize = minibatchSize;
-            m_batchSize = m_minibatchSize * m_processNum;
-            m_XSize = m_sampleSize * m_minibatchSize;
-            size_t CPUBufferSize = std::max(std::max(m_sampleSize * m_batchSize, m_outputDim * m_processNum * m_batchSize), m_sampleSize * m_outputDim * m_processNum);
-            bool minibatchSizeEqual = m_distGradAggPtr->DistributedInit(m_minibatchSize, m_processNum, m_deviceId, CPUBufferSize);
+            m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
+            bool minibatchSizeEqual = m_distGradAggPtr->DistributedCheck(m_minibatchSize, m_processNum);
             if (!minibatchSizeEqual)
                 LogicError("With AllGather op, minibatch size in each Gpu must be the same.");
+            m_minibatchSize = minibatchSize;
+            m_batchSize = m_minibatchSize * m_processNum;
         }
-
-        m_temp1->Resize(m_sampleSize, m_batchSize);               // Aggregated X
+        m_temp1->Resize(m_inputDim, m_batchSize);               // Aggregated X
         m_temp2->Resize(m_outputDim, m_batchSize);                // Single Y
         m_temp3->Resize(m_outputDim, m_batchSize * m_processNum); // Aggregated Y
         m_ones->Resize(m_batchSize, 1);                           // Ones
@@ -111,7 +107,7 @@ public:
         auto& b = InputRef(1).Value();
         FrameRange fr(InputRef(2).GetMBLayout());
         auto X = InputRef(2).ValueFor(fr);
-        m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_XSize);
+        m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
 
         m_temp2->SetValue((ElemType) 0);
         Matrix<ElemType>::MultiplyAndAdd(W, true, *m_temp1, false, *m_temp2);
@@ -141,8 +137,8 @@ public:
         Base::Validate(isFinalValidationPass);
 
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-        m_outputDim = InputRef(1).Value().GetNumRows();
-        m_sampleSize = Input(2)->GetSampleLayout().GetNumElements();
+        m_inputDim  = InputRef(0).Value().GetNumRows();
+        m_outputDim = InputRef(0).Value().GetNumCols();
         SetDims(TensorShape(m_outputDim * m_processNum), HasMBLayout());
     }
 
@@ -154,11 +150,10 @@ public:
             auto node = dynamic_pointer_cast<DistributedFullyConnectedNode<ElemType>>(nodeP);
             node->m_rank           = m_rank;
             node->m_processNum     = m_processNum;
-            node->m_sampleSize     = m_sampleSize;
+            node->m_inputDim       = m_inputDim;
+            node->m_outputDim      = m_outputDim;
             node->m_minibatchSize  = m_minibatchSize;
             node->m_batchSize      = m_batchSize;
-            node->m_XSize          = m_XSize;
-            node->m_outputDim      = m_outputDim;
             node->m_distGradAggPtr = m_distGradAggPtr;
             node->m_temp1->SetValue(*m_temp1);
             node->m_temp2->SetValue(*m_temp2);
@@ -203,11 +198,10 @@ public:
 
     size_t m_rank;
     size_t m_processNum;
-    size_t m_sampleSize;
+    size_t m_inputDim;
+    size_t m_outputDim;
     size_t m_minibatchSize;
     size_t m_batchSize;
-    size_t m_XSize;
-    size_t m_outputDim;
     IDistGradAggregator<ElemType>* m_distGradAggPtr;
     shared_ptr<Matrix<ElemType>> m_temp1;
     shared_ptr<Matrix<ElemType>> m_temp2;

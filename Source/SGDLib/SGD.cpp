@@ -377,6 +377,23 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             numParameters += node->GetSampleLayout().GetNumElements();
         }
     }
+
+
+    size_t bufferSize = 0;
+    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+    {
+        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+        if (node->IsParameterUpdateRequired() && node->m_distribute)
+        {
+            auto paramsNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+            auto& paramsValues = paramsNode->Value();
+            bufferSize = std::max(paramsValues.GetNumRows() * paramsValues.GetNumCols() * Globals::GetProcessNum(), bufferSize);
+            bufferSize = std::max(paramsValues.GetNumRows() * (size_t)m_mbSize[0], bufferSize);
+            bufferSize = std::max(paramsValues.GetNumCols() * (size_t)m_mbSize[0] * Globals::GetProcessNum(), bufferSize);
+        }
+    }
+
+
     size_t numNeedsGradient = 0;
     for (let node : net->GetEvalOrder(criterionNodes[0]))
     {
@@ -424,6 +441,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         currentNumGradientBits = m_numGradientBits[startEpoch]; // remember so that we can detect a change
         InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel);
+        m_distGradAgg->DistributedInit(net->GetDeviceId(), bufferSize);
     }
     else if (GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
              GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD)
@@ -555,6 +573,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             currentNumGradientBits = m_numGradientBits[i];
             InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel);
+            m_distGradAgg->DistributedInit(net->GetDeviceId(), bufferSize);
         }
 
         Timer timer;
@@ -1766,15 +1785,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         ProfilerTimeEnd(profPost, profilerEvtMainPost);
         ProfilerTimeEnd(profMinibatch, profilerEvtMainMinibatch);
 
-        if (0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel && m_lrapiInfo.iter != 0 && m_mpi != nullptr && Globals::GetProcessNum() > 1)
+        if (m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel == 0 && m_lrapiInfo.iter != 0 && m_mpi != nullptr && Globals::GetProcessNum() > 1)
             AggregateDistParams(learnableNodes);
-        if (0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel && m_lrapiInfo.iter != 0 && ((m_mpi == nullptr) || m_mpi->IsMainNode()))
+        if (m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel == 0 && m_lrapiInfo.iter != 0 && ((m_mpi == nullptr) || m_mpi->IsMainNode()))
         {
             if (m_lrapiInfo.sgdTraceLevel > 0)
                 LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", (m_modelPath + L"-Iter" + to_wstring(m_lrapiInfo.iter)).c_str());
             net->Save(m_modelPath + L"-Iter" + to_wstring(m_lrapiInfo.iter));
         }
-        if (0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel && m_lrapiInfo.iter != 0 && m_mpi != nullptr && Globals::GetProcessNum() > 1)
+        if (m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel == 0 && m_lrapiInfo.iter != 0 && m_mpi != nullptr && Globals::GetProcessNum() > 1)
             ReleaseDistParams(learnableNodes);
     }
 
@@ -2844,12 +2863,12 @@ void SGD<ElemType>::AggregateDistParams(const std::list<ComputationNodeBasePtr>&
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-        if (node->IsParameterUpdateRequired() && !node->m_distribute)
+        if (node->IsParameterUpdateRequired() && node->m_distribute)
         {
             auto paramsNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
             auto& paramsValues = paramsNode->Value();
             assert(NULL == paramsNode->m_gatheredParams);
-            paramsNode->m_gatheredParams = new Matrix<ElemType>(paramsValues.GetNumRows(), paramsValues.GetNumCols(), paramsValues.GetDeviceId());
+            paramsNode->m_gatheredParams = new Matrix<ElemType>(paramsValues.GetNumRows(), paramsValues.GetNumCols() * Globals::GetProcessNum(), paramsValues.GetDeviceId());
             m_distGradAgg->DistributedAllGather(paramsValues, *(paramsNode->m_gatheredParams), paramsValues.GetNumElements());
         }
     }
@@ -2861,7 +2880,7 @@ void SGD<ElemType>::ReleaseDistParams(const std::list<ComputationNodeBasePtr>& l
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-        if (node->IsParameterUpdateRequired() && !node->m_distribute)
+        if (node->IsParameterUpdateRequired() && node->m_distribute)
         {
             auto paramsNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
             delete paramsNode->m_gatheredParams;
