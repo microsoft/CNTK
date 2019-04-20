@@ -200,17 +200,17 @@ public:
 
             lmin.Resize(vocabSize, 1);
             lmin.SetValue(0.0);
-            lmin(33748, 0) = 1;
+            lmin(blankId, 0) = 1;
 
             // Resetting layouts.
             lminput->second.pMBLayout->Init(1, 1);
             std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
-            lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 200);
+            lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 2000);
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
             m_net->ForwardProp(decodeOutputNodes[0]);
 
-            greedyOutputMax.Resize(vocabSize, 200);
+            greedyOutputMax.Resize(vocabSize, 2000);
             size_t lmt = 0;
             for (size_t t = 0; t < encodeOutput.GetNumCols(); t++)
             {
@@ -243,7 +243,7 @@ public:
 
                     std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
                     lminput->second.pMBLayout->Init(1, 1);
-                    lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, -1 - lmt, 199 - lmt);
+                    lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, -1 - lmt, 1999 - lmt);
                     ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
                     DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
                     m_net->ForwardProp(decodeOutputNodes[0]);
@@ -502,7 +502,7 @@ public:
 
             //initialize with blank ID
             Sequence oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
-            extendSeq(oneSeq, 33748, 0.0);
+            extendSeq(oneSeq, blankId, 0.0);
             nextSequences.push_back(oneSeq);
 
             // loop for each frame
