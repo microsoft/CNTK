@@ -1395,7 +1395,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #ifdef __PROFILE__
                 endTime = std::chrono::system_clock::now();
                 backwardTime += (std::chrono::duration<double>(endTime - startTime)).count();
-                fprintf(stderr, "SGD::breakpoint1\n");
+                //fprintf(stderr, "SGD::breakpoint1\n");
 #endif
 
 
@@ -1449,7 +1449,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
         else
         {
-            fprintf(stderr, "SGD::breakpoint3\n");
+            //fprintf(stderr, "SGD::breakpoint3\n");
             // distributed gradient aggregation
             if (learnParamsGradients.size() == 0)
             {
@@ -1518,7 +1518,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 #ifdef __PROFILE__
-        fprintf(stderr, "SGD::breakpoint9\n");
+        //fprintf(stderr, "SGD::breakpoint9\n");
         endTime = std::chrono::system_clock::now();
         aggregateTime += (std::chrono::duration<double>(endTime - startTime)).count();
 #endif
