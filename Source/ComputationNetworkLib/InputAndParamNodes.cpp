@@ -473,7 +473,7 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
     fstream << m_learningRateMultiplier;
     m_sampleLayout.Save(fstream);
 
-    fstream << m_distribute;
+    fstream << this->m_distribute;
     if (!this->m_distribute)
         fstream << Value();
     else
@@ -518,7 +518,7 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
         }
     }
 
-    fstream >> m_distribute;
+    fstream >> this->m_distribute;
     if (!this->m_distribute)
         LoadValue(fstream);
     else
