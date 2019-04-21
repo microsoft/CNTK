@@ -1395,7 +1395,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #ifdef __PROFILE__
                 endTime = std::chrono::system_clock::now();
                 backwardTime += (std::chrono::duration<double>(endTime - startTime)).count();
-                //fprintf(stderr, "SGD::breakpoint1\n");
 #endif
 
 
@@ -1429,7 +1428,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
 #ifdef __PROFILE__
         startTime = std::chrono::system_clock::now();
-        //fprintf(stderr, "SGD::breakpoint2\n");
 #endif
         // Sum of actualMBSize across all nodes when using parallel training
         // 'aggregate' here means across-worker aggregate for this one minibatch.
@@ -1438,18 +1436,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         if (!useGradientAggregation)
         {
-            //fprintf(stderr, "SGD::breakpoint8\n");
             // accumulate criterion values (objective, eval)
             assert(wasDataRead || numSamplesWithLabelOfNetwork == 0);
             // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
             localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
                 localEpochEvalErrors.Add(i, numSamplesWithLabelOfNetwork);
-            //fprintf(stderr, "SGD::breakpoint9\n");
         }
         else
         {
-            //fprintf(stderr, "SGD::breakpoint3\n");
             // distributed gradient aggregation
             if (learnParamsGradients.size() == 0)
             {
@@ -1474,7 +1469,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     }
                 }
             }
-            //fprintf(stderr, "SGD::breakpoint4\n");
             // hoist the criterion into CPU space for all-reduce
             localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
@@ -1482,20 +1476,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             // copy all values to be aggregated into the header
             m_gradHeader->numSamples = aggregateNumSamples;
-            //fprintf(stderr, "SGD::breakpoint5\n");
             m_gradHeader->criterion = localEpochCriterion.GetCriterion(0).first;
-            //fprintf(stderr, "SGD::breakpoint5.5\n");
             m_gradHeader->numSamplesWithLabel = localEpochCriterion.GetCriterion(0).second; // same as aggregateNumSamplesWithLabel
-            //fprintf(stderr, "SGD::breakpoint6\n");
             assert(m_gradHeader->numSamplesWithLabel == aggregateNumSamplesWithLabel);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
                 m_gradHeader->evalErrors[i] = localEpochEvalErrors.GetCriterion(i);
-            //fprintf(stderr, "SGD::breakpoint7\n");
             // aggregate
             m_gradHeader->numEvalNode = evaluationNodes.size(); // TODO: rename numEvalNode (plural)
             bool samplesProcessed = m_distGradAgg->AggregateGradients(learnParamsGradients, m_gradHeader.get(), isFirstMinibatch);
             noMoreSamplesToProcess = !samplesProcessed;
-            //fprintf(stderr, "SGD::breakpoint8\n");
             // read out the header--now everything is aggregated
             aggregateNumSamples = m_gradHeader->numSamples;
             aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
@@ -1518,7 +1507,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 #ifdef __PROFILE__
-        //fprintf(stderr, "SGD::breakpoint9\n");
         endTime = std::chrono::system_clock::now();
         aggregateTime += (std::chrono::duration<double>(endTime - startTime)).count();
 #endif
@@ -2869,7 +2857,6 @@ wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel) co
 template <class ElemType>
 void SGD<ElemType>::AggregateDistParams(const std::list<ComputationNodeBasePtr>& learnableNodes)
 {
-    //fprintf(stderr, "AggregateDistParams::breakpoint1\n");
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -2882,13 +2869,11 @@ void SGD<ElemType>::AggregateDistParams(const std::list<ComputationNodeBasePtr>&
             m_distGradAgg->DistributedAllGather(paramsValues, *(paramsNode->m_gatheredParams), paramsValues.GetNumElements());
         }
     }
-    //fprintf(stderr, "AggregateDistParams::breakpoint2\n");
 }
 
 template <class ElemType>
 void SGD<ElemType>::ReleaseDistParams(const std::list<ComputationNodeBasePtr>& learnableNodes)
 {
-    //fprintf(stderr, "ReleaseDistParams::breakpoint1\n");
     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
     {
         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
@@ -2899,7 +2884,6 @@ void SGD<ElemType>::ReleaseDistParams(const std::list<ComputationNodeBasePtr>& l
             paramsNode->m_gatheredParams = NULL;
         }
     }
-    //fprintf(stderr, "ReleaseDistParams::breakpoint2\n");
 }
 
 

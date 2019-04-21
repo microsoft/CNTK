@@ -58,11 +58,9 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        //fprintf(stderr, "UpdateFunctionMBSize::breakpoint1\n");
         size_t minibatchSize = InputRef(2).Value().GetNumCols();
         if (m_minibatchSize != minibatchSize)
         {
-            //fprintf(stderr, "UpdateFunctionMBSize::breakpoint1.5\n");
             m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
             bool minibatchSizeEqual = m_distGradAggPtr->DistributedCheck(m_minibatchSize, m_processNum);
             if (!minibatchSizeEqual)
@@ -74,13 +72,10 @@ public:
         m_temp2->Resize(m_outputDim, m_batchSize);                // Single Y
         m_temp3->Resize(m_outputDim, m_batchSize * m_processNum); // Aggregated Y
         m_ones->Resize(m_batchSize, 1);                           // Ones
-        //fprintf(stderr, "minibatchSize = %d\nbatchSize = %d\ninputDim = %d\noutputDim = %d\n", (int)m_minibatchSize, (int)m_batchSize, (int)m_inputDim, (int)m_outputDim);
-        //fprintf(stderr, "UpdateFunctionMBSize::breakpoint2\n");
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        //fprintf(stderr, "BackpropToNonLooping::breakpoint1\n");
         if (0 == inputIndex)
         {
             m_temp3->SetValue((ElemType)0);
@@ -89,14 +84,12 @@ public:
 
             auto& W_gradient = InputRef(0).Gradient();
             Matrix<ElemType>::Multiply(*m_temp1, false, *m_temp2, true, W_gradient);
-            //fprintf(stderr, "BackpropToNonLooping::breakpoint2\n");
         }
         else if (1 == inputIndex)
         {
             auto& b_gradient = InputRef(1).Gradient();
             m_ones->SetValue((ElemType)1.0);
             Matrix<ElemType>::Multiply(*m_temp2, false, *m_ones, false, b_gradient);
-            //fprintf(stderr, "BackpropToNonLooping::breakpoint3\n");
         }
         else if (2 == inputIndex)
         {
@@ -105,13 +98,11 @@ public:
             FrameRange fr(InputRef(2).GetMBLayout());
             auto X_gradient = InputRef(2).GradientFor(fr);
             X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
-            //fprintf(stderr, "BackpropToNonLooping::breakpoint4\n");
         }
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        //fprintf(stderr, "ForwardPropNonLooping::breakpoint1\n");
         auto& W = InputRef(0).Value();
         auto& b = InputRef(1).Value();
         FrameRange fr(InputRef(2).GetMBLayout());
@@ -125,7 +116,6 @@ public:
         m_distGradAggPtr->DistributedAllGather(*m_temp2, *m_temp3, m_outputDim * m_batchSize);
 
         Matrix<ElemType>::Scatter(*m_temp3, Value(), m_minibatchSize, m_rank, m_processNum);
-        //fprintf(stderr, "ForwardPropNonLooping::breakpoint2\n");
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override

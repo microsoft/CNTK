@@ -40,12 +40,10 @@ public:
     SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
         : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
     {
-        //fprintf(stderr, "SimpleDistGradAggregator::breakpoint\n");
     }
 
     ~SimpleDistGradAggregator()
     {
-        //fprintf(stderr, "~SimpleDistGradAggregator::breakpoint\n");
         for (size_t i = 0; i < m_recvHeaders.size(); ++i)
             DistGradHeader::Destroy(m_recvHeaders[i]);
 
@@ -56,7 +54,6 @@ public:
     // Aggregate the gradient matrices across all nodes
     bool AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, bool resetState) override
     {
-        //fprintf(stderr, "AggregateGradients::breakpoint1\n");
         if (m_mpi->NumNodesInUse() == 1) // No need to aggregate anything.
             return (headerCPU->numSamples != 0);
 
@@ -65,13 +62,11 @@ public:
             m_nccl.reset(new NcclComm(::CNTK::DeviceDescriptor::UseDefaultDevice().Id(), m_mpi));
 
         ResetState(gradients, headerCPU->numEvalNode, resetState);
-        //fprintf(stderr, "AggregateGradients::breakpoint2\n");
         bool showSyncPerfStats = (m_syncStatsTrace > 0) && ((m_iterationCount % m_syncStatsTrace) == 0);
         m_iterationCount++;
 
         if (m_useAsyncAggregation)
         {
-            //fprintf(stderr, "AggregateGradients::m_useAsyncAggregation=true\n");
             // If we are performing async gradient aggregation, let's wait for the pending gradient aggregation to finish
             // then swap the contents of the buffered gradients and the new gradient matrices and fire an async aggreagation
             // of the new gradient matrices
@@ -146,11 +141,9 @@ public:
         }
         else
         {
-            //fprintf(stderr, "AggregateGradients::m_useAsyncAggregation=false\n");
             AggregateGradientsImpl(gradients, headerCPU, showSyncPerfStats);
             return (headerCPU->numSamples != 0);
         }
-        //fprintf(stderr, "AggregateGradients::breakpoint3\n");
     }
 
 private:
@@ -158,11 +151,9 @@ private:
     {
         assert(deviceID >= 0);
 
-        //fprintf(stderr, "AllocateIntermediateBuffer::breakpoint1\n");
         // Use pinned memory for GPU devices for better copy performance
         size_t totalSize = sizeof(ElemType) * numElements;
         return std::shared_ptr<ElemType>((ElemType*) m_allocator->Malloc(totalSize), [this, deviceID](ElemType* p) {
-            //fprintf(stderr, "AllocateIntermediateBuffer::breakpoint2\n");
             m_allocator->Free(p);
         });
     }
@@ -261,7 +252,6 @@ private:
                 for (size_t i = 0; i < NumProc() - 1; ++i)
                     m_recvHeaders.push_back(DistGradHeader::Create(numEvalNodes));
             }
-            //fprintf(stderr, "ResetState::breakpoint2\n");
         }
         else if (resetState)
         {
@@ -282,7 +272,6 @@ private:
 
     void AggregateGradientsImpl(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, bool showSyncPerfStats)
     {
-        //fprintf(stderr, "AggregateGradientsImpl::breakpoint1\n");
         Timer aggregationTimer;
         int deviceId = gradients[0]->GetDeviceId();
         if (showSyncPerfStats)
@@ -377,13 +366,11 @@ private:
                     // currentGradientIndex == -1, first element is for packed gradients, which should not be with AsyncAggregation
                     assert(m_useAsyncAggregation == false);
                 }
-                //fprintf(stderr, "cudaMemcpy::breakpoint1\n");
 // First sync_g_to_c_copy
 // TODO: we need a CopyGPUToCPUSync
 #ifndef CPUONLY
                 cudaMemcpy(m_intermediateCPUBuffers[gpuToCpuIndex].get(), gpuCopyBuffer->Data(), gpuCopyBuffer->GetNumElements() * sizeof(ElemType), cudaMemcpyDeviceToHost);
 #endif
-                //fprintf(stderr, "cudaMemcpy::breakpoint2\n");
                 gpuToCpuIndex++;
 
                 for (size_t i = 1; i <= numGradientIndex; i++)
@@ -404,22 +391,18 @@ private:
                         // Async D-to-H copy (next gradient)
                         m_gpuDataTransferers[gpuToCpuIndex]->CopyGPUToCPUAsync(gpuCopyBuffer->Data(), gpuCopyBuffer->GetNumElements(), m_intermediateCPUBuffers[gpuToCpuIndex].get());
                     }
-                    //fprintf(stderr, "AggregateGradientsImpl::breakpoint2\n");
                     // Wait for previous copy
                     m_gpuDataTransferers[allReduceIndex]->WaitForCopyGPUToCPUAsync();
-                    //fprintf(stderr, "AggregateGradientsImpl::breakpoint3\n");
 
                     // Allreduce
                     reductionBuffer = m_intermediateCPUBuffers[allReduceIndex].get();
                     m_mpi->AllReduce(reductionBuffer, (currentGradientIndex == -1) ? m_aggregationBuffer->GetNumElements() : gradients[currentGradientIndex]->GetNumElements());
 
-                    //fprintf(stderr, "AggregateGradientsImpl::breakpoint4\n");
                     // Create async H-to-G copy
                     cpuToGpuIndex = allReduceIndex;
                     m_gpuDataTransferers[cpuToGpuIndex]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[cpuToGpuIndex].get(),
                                                                            (currentGradientIndex == -1) ? m_aggregationBuffer->GetNumElements() : gradients[currentGradientIndex]->GetNumElements(),
                                                                            (currentGradientIndex == -1) ? m_aggregationBuffer->Data() : gradients[currentGradientIndex]->Data());
-                    //fprintf(stderr, "AggregateGradientsImpl::breakpoint5\n");
                     allReduceIndex = gpuToCpuIndex;
                     gpuToCpuIndex++;
                     currentGradientIndex = nextGradientIndex;
@@ -498,11 +481,9 @@ private:
         // Non-GDR && GPU
         else if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE))
         {
-            //fprintf(stderr, "AggregateGradientsImpl::breakpoint6\n");
             // Wait for async CPU-to-GPU copy (non-GDR)
             for (size_t i = 0; i < allReduceIndex; i++)
                 m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();
-            //fprintf(stderr, "AggregateGradientsImpl::breakpoint7\n");
         }
         // CPU
         else if (m_mpi->UseGpuGdr() == 0)
@@ -532,12 +513,10 @@ private:
             double gradientAggregationTime = aggregationTimer.ElapsedSeconds();
             fprintf(stderr, "Actual gradient aggregation time: %.6g\n", gradientAggregationTime);
         }
-        //fprintf(stderr, "AggregateGradientsImpl::breakpoint8\n");
     }
 
     bool DistributedCheck(size_t minibatchSize, size_t processNum)
     {
-        //fprintf(stderr, "DistributedCheck::breakpoint1\n");
         size_t* gatherBuffer = new size_t[processNum];
         m_mpi->AllGather(&minibatchSize, (size_t)1, gatherBuffer, (size_t)1);
         for (size_t i(1); i < processNum; ++i)
@@ -545,33 +524,26 @@ private:
             if (gatherBuffer[i] != gatherBuffer[0])
             {
                 delete[] gatherBuffer;
-                //fprintf(stderr, "DistributedCheck::breakpoint2\n");
                 return false;
             }
         }
         delete[] gatherBuffer;
-        //fprintf(stderr, "DistributedCheck::breakpoint2\n");
         return true;
     }
 
     void DistributedInit(DEVICEID_TYPE deviceId, size_t bufferSize)
     {
-        //fprintf(stderr, "DistributedInit::breakpoint1\n");
-        //fprintf(stderr, "DistributedInit::bufferSize = %d\n", (int)bufferSize);
         if (ShouldCopyDataToCPU(deviceId))
         {
             if (m_allocator.get() == nullptr)
                 m_allocator.reset(new CUDAPageLockedMemAllocator(deviceId));
-            //m_gpuDistributedTransferer = std::make_unique<GPUDataTransferer>(deviceId, m_useAsyncAggregation);
             m_intermediateDistributedCPUBuffer1 = AllocateIntermediateBuffer(deviceId, bufferSize);
             m_intermediateDistributedCPUBuffer2 = AllocateIntermediateBuffer(deviceId, bufferSize);
         }
-        //fprintf(stderr, "DistributedInit::breakpoint2\n");
     }
 
     void DistributedAllGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count)
     {
-        //fprintf(stderr, "DistributedAllGather::breakpoint1\n");
         int deviceId = distributedMatrix.GetDeviceId();
         MPI_Request allGatherRequest;
         ElemType* distributedMatrixBuffer = distributedMatrix.Data();
@@ -622,7 +594,6 @@ private:
         {
             m_mpi->Wait(&allGatherRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait"); // Wait for the Iallreduce operations to finish
         }
-        //fprintf(stderr, "DistributedAllGather::breakpoint2\n");
     }
 
     void DistributeAllReduce(const Matrix<ElemType>& distributedMatrix)
@@ -689,7 +660,6 @@ private:
 
     std::shared_ptr<ElemType> m_intermediateDistributedCPUBuffer1;
     std::shared_ptr<ElemType> m_intermediateDistributedCPUBuffer2;
-    //std::unique_ptr<GPUDataTransferer> m_gpuDistributedTransferer;
 
     std::vector<DistGradHeader*> m_recvHeaders;
 

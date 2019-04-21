@@ -40,12 +40,8 @@ static inline string GeneratePaddedFloatOrExpFormat(int padSize, int precision, 
 struct EpochCriterion : public std::pair<double, size_t>
 {
     // construction
-    explicit EpochCriterion(double aggregateCriterionValue = 0.0, size_t aggregateSampleCount = 0) : std::pair<double, size_t>(aggregateCriterionValue, aggregateSampleCount) { 
-        //fprintf(stderr, "EpochCriterion::breakpoint1\n");
-    }
-    EpochCriterion(const std::pair<double, size_t>& other) : std::pair<double, size_t>(other) { 
-        //fprintf(stderr, "EpochCriterion::breakpoint2\n");
-    }
+    explicit EpochCriterion(double aggregateCriterionValue = 0.0, size_t aggregateSampleCount = 0) : std::pair<double, size_t>(aggregateCriterionValue, aggregateSampleCount) { }
+    EpochCriterion(const std::pair<double, size_t>& other) : std::pair<double, size_t>(other) { }
 
     // main way of reading this out: compute the actual average criterion value from the aggregate and sample count
     double Average() const { return second > 0 ? first / second : 0.0; } // compute the epoch-average
