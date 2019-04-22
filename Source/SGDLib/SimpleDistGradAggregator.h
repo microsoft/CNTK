@@ -176,7 +176,6 @@ private:
         // When called the first time let's setup the intermediateCPU buffers for gradient aggregation if needed
         if (!m_initialized)
         {
-            fprintf(stderr, "ResetState::breakpoint1\n");
             m_initialized = true;
             int deviceId = gradients[0]->GetDeviceId();
 
