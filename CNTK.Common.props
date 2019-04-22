@@ -43,7 +43,7 @@
     <!-- PublicBuild:
          True if build binaries are meant to shared publicly with CNTK community. -->
     <!-- NOTE: Modify both CntkVersion and PublicBuild during MAJOR RELEASE -->
-    <PublicBuild>false</PublicBuild>
+    <PublicBuild>true</PublicBuild>
 
     <PythonWithDeps>false</PythonWithDeps>
     <PythonWithDeps Condition=" '$(PYTHON_WITH_DEPS)' != '' ">$(PYTHON_WITH_DEPS)</PythonWithDeps>
