@@ -44,6 +44,7 @@ private:
         COUNT,
     };
     void AllReduceImpl(void* inputbuffer, void* outputbuffer, size_t count, DataType dtype, MPI_Op op);
+    void AllGatherImpl(void* inputBuffer, void* outputBuffer, size_t count);
     void BroadcastImpl(void* buffer, size_t count, MPI_Datatype dtype, int root);
     cudaStream_t m_stream;
     ncclComm_t m_ncclComm;
