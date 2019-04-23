@@ -348,7 +348,7 @@ protected:
 
     bool m_useFP16AllReduce;
     double m_lossScale;
-    bool m_skipMinibatchForNans;
+    int m_skipMinibatchForNans;
 };
 
 template <class ElemType>

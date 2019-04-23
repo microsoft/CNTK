@@ -1332,7 +1332,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // accumulate criterion values (objective, eval)
             assert(wasDataRead || numSamplesWithLabelOfNetwork == 0);
             // if nan, continue
-            if (m_skipMinibatchForNans)
+            if (m_skipMinibatchForNans > 0)
             {
                 tmpLocalEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
                 EpochCriterion tmpEpochCriterion = tmpLocalEpochCriterion.GetCriterion(0);
@@ -1341,8 +1341,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     fprintf(stderr, "WARN: skipping Minibatch %4d - as the training criterion is not a number (NAN).\n", numMBsRun);
                     if (lastSkippedConsecutiveMBEnd + 1 != numMBsRun) lastSkippedConsecutiveMBBegin = numMBsRun;
                     lastSkippedConsecutiveMBEnd = numMBsRun;
-                    if ((lastSkippedConsecutiveMBEnd - lastSkippedConsecutiveMBBegin) > 5)
-                        RuntimeError("The last 5 minibatches all had the training criterion NAN");
+                    if ((lastSkippedConsecutiveMBEnd - lastSkippedConsecutiveMBBegin) > m_skipMinibatchForNans)
+                        RuntimeError("The last consecutive %d minibatches all had the training criterion NAN.", m_skipMinibatchForNans);
 
                     numMBsRun++;
                     continue;
@@ -1406,15 +1406,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             EpochCriterion tmpEpochCriterion = EpochCriterion(m_gradHeader->criterion, m_gradHeader->numSamplesWithLabel);
 
             // if nan, continue
-            if (m_skipMinibatchForNans)
+            if (m_skipMinibatchForNans > 0)
             {
                 if (tmpEpochCriterion.IsNan())
                 {
                     fprintf(stderr, "WARN: skipping Minibatch %4d - as the training criterion is not a number (NAN).\n", numMBsRun);
                     if (lastSkippedConsecutiveMBEnd + 1 != numMBsRun) lastSkippedConsecutiveMBBegin = numMBsRun;
                     lastSkippedConsecutiveMBEnd = numMBsRun;
-                    if ((lastSkippedConsecutiveMBEnd - lastSkippedConsecutiveMBBegin) > 5)
-                        RuntimeError("The last 5 minibatches all had the training criterion NAN");
+                    if ((lastSkippedConsecutiveMBEnd - lastSkippedConsecutiveMBBegin) > m_skipMinibatchForNans)
+                        RuntimeError("The last consecutive %d minibatches all had the training criterion NAN.", m_skipMinibatchForNans);
 
                     numMBsRun++;
                     continue;
@@ -3341,6 +3341,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     m_lossScale = configSGD(L"lossScale", 1.0);
     if (m_lossScale == 0) m_lossScale = 1.0;
+    m_skipMinibatchForNans = configSGD(L"skpbMinibatchForNans", 0);
 
     // BUGBUG: these are not passed to Init()
     m_doUnitTest = configSGD(L"unitTest", false);
