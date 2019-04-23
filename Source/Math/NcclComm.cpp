@@ -188,7 +188,7 @@ void NcclComm::AllGatherImpl(void* inputBuffer, void* outputBuffer, size_t count
     res = ncclAllGather(inputBuffer, outputBuffer, count, s_ncclTypeLookup.Lookup(dtype), m_ncclComm, m_stream)
 
     if (res != ncclSuccess)
-        RuntimeError("NcclComm ncclAllReduce failed: %s", ncclGetErrorString(res));
+        RuntimeError("NcclComm ncclAllGather failed: %s", ncclGetErrorString(res));
 }
 
 void NcclComm::BroadcastImpl(void* buffer, size_t count, MPI_Datatype dtype, int root)
