@@ -54,6 +54,8 @@ public:
     DistributedFullyConnectedNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
     {
+        if (1 == m_processNum)
+            LogicError("Multi Gpus and mpi is needed in distributed FC");
     }
 
     virtual void UpdateFunctionMBSize() override

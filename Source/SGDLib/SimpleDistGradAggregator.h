@@ -532,6 +532,8 @@ private:
 
     void DistributedInit(DEVICEID_TYPE deviceId, size_t bufferSize)
     {
+        if (m_mpi->NumNodesInUse() == 1)
+            return;
         if (m_nccl == nullptr)
             m_nccl.reset(new NcclComm(::CNTK::DeviceDescriptor::UseDefaultDevice().Id(), m_mpi));
         if (ShouldCopyDataToCPU(deviceId))
