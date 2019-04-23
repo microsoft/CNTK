@@ -12,7 +12,7 @@ dependencies:
 - pandas=0.19.1=np111py36_0
 - pandas-datareader=0.2.1=py36_0
 - pandoc=1.19.2.1
-- pillow=3.4.2=py36_0
+- pillow=4.0.0=py36_0
 - pip=9.0.1=py36_1
 - python=3.6.0=0
 - pyyaml=3.12=py36_0
