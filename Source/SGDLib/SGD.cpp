@@ -1040,6 +1040,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     int numMBsRun = 0;
     int numMBsRunSinceLastLogged = 0;
+    int lastSkippedConsecutiveMBBegin = -1;
+    int lastSkippedConsecutiveMBEnd = -1;
 
     bool useGradientAggregation = UsingGradientAggregation(epochNumber);
     bool useModelAggregation = UsingModelAggregation(epochNumber);
@@ -1156,6 +1158,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         {evaluationNodesWhichAccumulateResult.begin(), evaluationNodesWhichAccumulateResult.end()});
     CriterionAccumulatorBase& localEpochCriterion = *localEpochCriterionPtr;
     CriterionAccumulatorBase& localEpochEvalErrors = *localEpochEvalErrorsPtr;
+    shared_ptr<CriterionAccumulatorBase> tmpLocalEpochCriterionPtr = CriterionAccumulatorFactory::CreateCriterionAccumulator<ElemType>(
+        criterionNodes, net->GetDeviceId());
+    CriterionAccumulatorBase& tmpLocalEpochCriterion = *tmpLocalEpochCriterionPtr;
 
     // --- MAIN MINIBATCH LOOP
 
@@ -1326,6 +1331,25 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         {
             // accumulate criterion values (objective, eval)
             assert(wasDataRead || numSamplesWithLabelOfNetwork == 0);
+            // if nan, continue
+            if (m_skipMinibatchForNans)
+            {
+                tmpLocalEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
+                EpochCriterion tmpEpochCriterion = tmpLocalEpochCriterion.GetCriterion(0);
+                if (tmpEpochCriterion.IsNan())
+                {
+                    fprintf(stderr, "WARN: skipping Minibatch %4d - as the training criterion is not a number (NAN).\n", numMBsRun);
+                    if (lastSkippedConsecutiveMBEnd + 1 != numMBsRun) lastSkippedConsecutiveMBBegin = numMBsRun;
+                    lastSkippedConsecutiveMBEnd = numMBsRun;
+                    if ((lastSkippedConsecutiveMBEnd - lastSkippedConsecutiveMBBegin) > 5)
+                        RuntimeError("The last 5 minibatches all had the training criterion NAN");
+
+                    numMBsRun++;
+                    continue;
+                }
+                lastSkippedConsecutiveMBBegin = -1;
+                lastSkippedConsecutiveMBEnd = -1;
+            }
             // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
             localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
@@ -1379,7 +1403,28 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // read out the header--now everything is aggregated
             aggregateNumSamples          = m_gradHeader->numSamples;
             aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
-            epochCriterion += EpochCriterion(m_gradHeader->criterion, m_gradHeader->numSamplesWithLabel);
+            EpochCriterion tmpEpochCriterion = EpochCriterion(m_gradHeader->criterion, m_gradHeader->numSamplesWithLabel);
+
+            // if nan, continue
+            if (m_skipMinibatchForNans)
+            {
+                if (tmpEpochCriterion.IsNan())
+                {
+                    fprintf(stderr, "WARN: skipping Minibatch %4d - as the training criterion is not a number (NAN).\n", numMBsRun);
+                    if (lastSkippedConsecutiveMBEnd + 1 != numMBsRun) lastSkippedConsecutiveMBBegin = numMBsRun;
+                    lastSkippedConsecutiveMBEnd = numMBsRun;
+                    if ((lastSkippedConsecutiveMBEnd - lastSkippedConsecutiveMBBegin) > 5)
+                        RuntimeError("The last 5 minibatches all had the training criterion NAN");
+
+                    numMBsRun++;
+                    continue;
+                }
+                lastSkippedConsecutiveMBBegin = -1;
+                lastSkippedConsecutiveMBEnd = -1;
+            }
+
+
+            epochCriterion += tmpEpochCriterion;
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
             {
                 if (ContainsAccumulatedResult(evaluationNodes[i]))
@@ -2490,7 +2535,10 @@ void SGD<ElemType1>::TypedUpdateWeights(Matrix<ElemType>& functionValues, Matrix
     assert(actualMBSize > 0);
 
     // Scale gradients back
-    Matrix<ElemType>::Scale((ElemType)(1 / m_lossScale), gradientValues);
+    if (m_lossScale != 1.0)
+    {
+        Matrix<ElemType>::Scale((ElemType)(1 / m_lossScale), gradientValues);
+    }
 
     // clipping gradients to prevent outliers
     ClipGradient<ElemType>(gradientValues, actualMBSize);
