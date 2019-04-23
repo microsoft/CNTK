@@ -163,7 +163,7 @@ void NcclComm::AllReduceImpl(void* inputbuffer, void *outputbuffer, size_t count
         RuntimeError("NcclComm ncclAllReduce failed: %s", ncclGetErrorString(res));
 }
 
-void NcclComm::AllGatherImpl(void* inputBuffer, void* outputBuffer, size_t count)
+void NcclComm::AllGatherImpl(void* inputBuffer, void* outputBuffer, size_t count, DataType dtype)
 {
     ncclResult_t res;
     class NcclTypeLookup

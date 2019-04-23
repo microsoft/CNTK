@@ -44,7 +44,7 @@ private:
         COUNT,
     };
     void AllReduceImpl(void* inputbuffer, void* outputbuffer, size_t count, DataType dtype, MPI_Op op);
-    void AllGatherImpl(void* inputBuffer, void* outputBuffer, size_t count);
+    void AllGatherImpl(void* inputBuffer, void* outputBuffer, size_t count, DataType dtype);
     void BroadcastImpl(void* buffer, size_t count, MPI_Datatype dtype, int root);
     cudaStream_t m_stream;
     ncclComm_t m_ncclComm;
@@ -150,7 +150,7 @@ public:
         else
             RuntimeError("NcclComm Unsupported reduction type");
 
-        AllGatherImpl(inputBuffer, outputBuffer, count);
+        AllGatherImpl(inputBuffer, outputBuffer, count, dtype);
 #else
         RuntimeError("NcclComm: CNTK was built without NCCL support.");
 #endif
