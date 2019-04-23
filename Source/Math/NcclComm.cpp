@@ -185,7 +185,7 @@ void NcclComm::AllGatherImpl(void* inputBuffer, void* outputBuffer, size_t count
 
     static NcclTypeLookup s_ncclTypeLookup;
 
-    res = ncclAllGather(inputBuffer, outputBuffer, count, s_ncclTypeLookup.Lookup(dtype), m_ncclComm, m_stream)
+    res = ncclAllGather(inputBuffer, outputBuffer, count, s_ncclTypeLookup.Lookup(dtype), m_ncclComm, m_stream);
 
     if (res != ncclSuccess)
         RuntimeError("NcclComm ncclAllGather failed: %s", ncclGetErrorString(res));
