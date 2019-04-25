@@ -478,6 +478,8 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
         fstream << Value();
     else
     {
+        size_t distNum = Globals::GetProcessNum();
+        fstream << distNum;
         assert(m_gatheredParams != NULL && Value().GetNumCols() * Globals::GetProcessNum() == m_gatheredParams->GetNumCols());
         fstream << (*m_gatheredParams);
     }
@@ -519,6 +521,10 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
     else
     {
         CreateMatrixIfNull(m_value);
+        size_t distNum;
+        fstream >> distNum;
+        if (distNum != Globals::GetProcessNum())
+            LogicError("Previous model used %d gpus, now is using %d gpus. Distributed num not match.", (int)distNum, (int)Globals::GetProcessNum());
         Matrix<ElemType> temp(Value().GetNumRows(), Value().GetNumCols() * Globals::GetProcessNum(), this->m_deviceId);
         fstream >> temp;
         Value().AssignColumnSlice(temp, Value().GetNumCols() * Globals::GetRank(), Value().GetNumCols());
