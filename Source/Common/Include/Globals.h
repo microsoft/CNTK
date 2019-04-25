@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static std::size_t GetProcessNum() { return m_processNum; }
         static std::size_t GetRank() { return m_rank; }
         static void* GetDistGradAggPtr() { return m_distGradAggPtr; }
-        static void PrintMpiInfo() { LOGPRINTF(stderr, "Using %d mpi processes, this rank is %d.", (int)m_processNum, (int)m_rank); }
+        static void PrintMpiInfo() { LOGPRINTF(stderr, "Using %d mpi processes, this rank is %d.\n", (int)m_processNum, (int)m_rank); }
     private:
         static std::atomic<bool> m_forceDeterministicAlgorithms;
         // The global flag to enable matrices values in forward and backward prop

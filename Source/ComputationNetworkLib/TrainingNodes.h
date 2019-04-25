@@ -111,8 +111,7 @@ public:
         auto X = InputRef(2).ValueFor(fr);
         m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
 
-        m_temp2->SetValue((ElemType) 0);
-        Matrix<ElemType>::MultiplyAndAdd(W, true, *m_temp1, false, *m_temp2);
+        Matrix<ElemType>::Multiply(W, true, *m_temp1, false, *m_temp2);
         m_temp2->AssignSumOf(*m_temp2, b);
 
         m_distGradAggPtr->DistributedAllGather(*m_temp2, *m_temp3, m_outputDim * m_batchSize);
@@ -187,15 +186,11 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_processNum;
-        if (Globals::GetProcessNum() != m_processNum)
-            LogicError("The network loaded from file used %d GPUs, but now is using %d GPUs.", (int)m_processNum, (int)Globals::GetProcessNum());
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_processNum;
     }
 
     size_t m_rank;

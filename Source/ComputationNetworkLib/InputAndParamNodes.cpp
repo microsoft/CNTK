@@ -479,12 +479,7 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
     else
     {
         assert(m_gatheredParams != NULL && Value().GetNumCols() * Globals::GetProcessNum() == m_gatheredParams->GetNumCols());
-        Matrix<ElemType> temp(Value().GetNumRows(), Value().GetNumCols(), this->m_deviceId);
-        for (size_t i(0); i < Globals::GetProcessNum(); ++i)
-        {
-            temp.AssignColumnSlice(*m_gatheredParams, Value().GetNumCols() * i, Value().GetNumCols());
-            fstream << temp;
-        }
+        fstream << (*m_gatheredParams);
     }
 }
 
@@ -524,14 +519,9 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
     else
     {
         CreateMatrixIfNull(m_value);
-        Matrix<ElemType> temp(Value().GetNumRows(), Value().GetNumCols(), this->m_deviceId);
-        for (size_t i(0); i < Globals::GetProcessNum(); ++i)
-        {
-            if (i == Globals::GetRank())
-                fstream >> Value();
-            else
-                fstream >> temp;
-        }
+        Matrix<ElemType> temp(Value().GetNumRows(), Value().GetNumCols() * Globals::GetProcessNum(), this->m_deviceId);
+        fstream >> temp;
+        Value().AssignColumnSlice(temp, Value().GetNumCols() * Globals::GetRank(), Value().GetNumCols());
         // above reads dimensions, so we must update our own dimensions
         SetDims(TensorShape(Value().GetNumRows(), Value().GetNumCols()), false);
     }
