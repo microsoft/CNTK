@@ -478,9 +478,10 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
         fstream << Value();
     else
     {
-        size_t distNum = Globals::GetProcessNum();
-        fstream << distNum;
+        fstream << m_isVector;
         assert(m_gatheredParams != NULL && Value().GetNumCols() * Globals::GetProcessNum() == m_gatheredParams->GetNumCols());
+        if (m_isVector)
+            m_gatheredParams->Resize(m_gatheredParams->GetNumElements(), 1);
         fstream << (*m_gatheredParams);
     }
 }
@@ -517,22 +518,33 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
 
     fstream >> this->m_distribute;
     if (!this->m_distribute)
+    {
         LoadValue(fstream);
+        SetDims(sampleLayout, false); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
+    }
     else
     {
+        fstream >> m_isVector;
         CreateMatrixIfNull(m_value);
-        size_t distNum;
-        fstream >> distNum;
-        if (distNum != Globals::GetProcessNum())
-            LogicError("Previous model used %d gpus, now is using %d gpus. Distributed num not match.", (int)distNum, (int)Globals::GetProcessNum());
-        Matrix<ElemType> temp(Value().GetNumRows(), Value().GetNumCols() * Globals::GetProcessNum(), this->m_deviceId);
+        Matrix<ElemType> temp(this->m_deviceId);
         fstream >> temp;
-        Value().AssignColumnSlice(temp, Value().GetNumCols() * Globals::GetRank(), Value().GetNumCols());
+        if (!m_isVector)
+        {
+            if (temp.GetNumCols() % Globals::GetProcessNum() != 0)
+                LogicError("Distributed parameter columns mod Gpu num must be zero");
+            Value().AssignColumnSlice(temp, temp.GetNumCols() / Globals::GetProcessNum() * Globals::GetRank(), temp.GetNumCols() / Globals::GetProcessNum());
+        }
+        else
+        {
+            if (temp.GetNumRows() % Globals::GetProcessNum() != 0)
+                LogicError("Distributed parameter rows mod Gpu num must be zero");
+            Value().Resize(temp.GetNumRows() / Globals::GetProcessNum(), 1);
+            Value().AssignRowSliceValuesOf(temp, temp.GetNumRows() / Globals::GetProcessNum() * Globals::GetRank(), temp.GetNumRows() / Globals::GetProcessNum());
+        }
         // above reads dimensions, so we must update our own dimensions
         SetDims(TensorShape(Value().GetNumRows(), Value().GetNumCols()), false);
     }
 
-    SetDims(sampleLayout, false); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
     VerifyDataSize(Value());      // sanity check
 
     m_initString.clear(); // deferred initialization not possible after loading

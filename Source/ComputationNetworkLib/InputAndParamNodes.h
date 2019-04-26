@@ -64,6 +64,7 @@ public:
             SmallVector<size_t> vec;
             for (size_t i(0); i < shape.GetRank(); ++i)
                 vec.push_back(shape[i]);
+            m_isVector = (vec.size() == 1);
             if (vec[shape.GetRank() - 1] % Globals::GetProcessNum() != 0)
                 LogicError("Label num mod process num must be 0. Please check the brainscript config.");
             vec[shape.GetRank() - 1] /= Globals::GetProcessNum();
@@ -195,6 +196,7 @@ private:
     float m_regMultiplier; // The multiplier to adjust the L1Reg and L2Reg for Learnable node
 
 public:
+    bool m_isVector;
     Matrix<ElemType>* m_gatheredParams;
 };
 
