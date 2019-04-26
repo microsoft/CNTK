@@ -56,6 +56,7 @@ public:
     {
         if (1 == m_processNum)
             LogicError("Multi Gpus and mpi is needed in distributed FC");
+        m_ones.reset(new Matrix<ElemType>(deviceId));
     }
 
     virtual void UpdateFunctionMBSize() override
@@ -69,11 +70,12 @@ public:
                 LogicError("With AllGather op, minibatch size in each Gpu must be the same.");
             m_minibatchSize = minibatchSize;
             m_batchSize = m_minibatchSize * m_processNum;
+            m_ones->Resize(m_batchSize, 1);                       // Ones
+            m_ones->SetValue((ElemType)1.0);
         }
         m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
         m_temp2->Resize(m_outputDim, m_batchSize);                // Single Y
         m_temp3->Resize(m_outputDim, m_batchSize * m_processNum); // Aggregated Y
-        m_ones->Resize(m_batchSize, 1);                           // Ones
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
@@ -90,7 +92,6 @@ public:
         else if (1 == inputIndex)
         {
             auto& b_gradient = InputRef(1).Gradient();
-            m_ones->SetValue((ElemType)1.0);
             Matrix<ElemType>::Multiply(*m_temp2, false, *m_ones, false, b_gradient);
         }
         else if (2 == inputIndex)
@@ -170,7 +171,6 @@ public:
         RequestMatrixFromPool(m_temp1, matrixPool);
         RequestMatrixFromPool(m_temp2, matrixPool);
         RequestMatrixFromPool(m_temp3, matrixPool);
-        RequestMatrixFromPool(m_ones, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -180,7 +180,6 @@ public:
         ReleaseMatrixToPool(m_temp1, matrixPool);
         ReleaseMatrixToPool(m_temp2, matrixPool);
         ReleaseMatrixToPool(m_temp3, matrixPool);
-        ReleaseMatrixToPool(m_ones, matrixPool);
     }
 
     void Save(File& fstream) const override
