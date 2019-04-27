@@ -55,7 +55,7 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
 
 # DistributedFullyConnectedLayer -- create a distributed fully-connected linear projection layer
 # Note: outDim may describe a tensor as well.
-DistributedFullyConnectedLayer {inDim, outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} =
+DistributedFullyConnectedLayer {inDim, outDim, init='glorotUniform', initValueScale=1, initBias=0} =
 {
     W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
     b = ParameterTensor {outDim, initValue=initBias, distribute=true}
