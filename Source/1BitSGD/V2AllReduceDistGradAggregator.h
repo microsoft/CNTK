@@ -288,7 +288,7 @@ public:
         assert(false);
     }
 
-    void DistributeAllReduce(const Matrix<ElemType>& distributedMatrix)
+    void DistributeAllReduce(const Matrix<ElemType>& distributedMatrix, MPI_Op op)
     {
         assert(false);
     }

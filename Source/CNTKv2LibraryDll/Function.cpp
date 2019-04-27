@@ -2136,9 +2136,9 @@ namespace CNTK
     }
 
 
-    FunctionPtr DistributedFullyConnected(const Variable& W, const Variable& b, const Variable& X, const std::wstring& name)
+    FunctionPtr DistributedFullyConnected(const Variable& W, const Variable& X, const Variable& b, const std::wstring& name)
     {
-        std::vector<Variable> operands = { W, b, X };
+        std::vector<Variable> operands = { W, X, b };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedFullyConnected, operands, Dictionary(), name), name);
     }
 

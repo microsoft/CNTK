@@ -554,14 +554,9 @@ private:
 
         if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE) && !m_nccl->IsSupported()) // non-GDR && GPU && non-NCCL: need to copy data from GPU to CPU
         {
-#ifndef CPUONLY
             cudaMemcpy(m_intermediateDistributedCPUBuffer1.get(), distributedMatrixBuffer, count * sizeof(ElemType), cudaMemcpyDeviceToHost);
-#endif
-            //m_gpuDistributedTransferer->CopyGPUToCPUAsync(distributedMatrixBuffer, count, m_intermediateDistributedCPUBuffer1.get());
-            //m_gpuDistributedTransferer->WaitForCopyGPUToCPUAsync();
             m_mpi->AllGather(m_intermediateDistributedCPUBuffer1.get(), count, m_intermediateDistributedCPUBuffer2.get(), count);
             cudaMemcpy(gatheredMatrixBuffer, m_intermediateDistributedCPUBuffer2.get(), gatheredMatrix.GetNumElements() * sizeof(ElemType), cudaMemcpyHostToDevice);
-            //m_gpuDistributedTransferer->CopyCPUToGPUAsync(m_intermediateDistributedCPUBuffer2.get(), gatheredMatrix.GetNumElements(), gatheredMatrixBuffer); // Create async H-to-G copy
         }
         else if (!m_nccl->IsSupported()) // non-NCCL, using CPU, using GDR
         {
@@ -576,14 +571,14 @@ private:
                 m_mpi->AllGather(distributedMatrixBuffer, count, gatheredMatrixBuffer, count);
             }
             else
-                LogicError("LogicError in SimpleDistGradAggregator::GatherFeature");
+                LogicError("LogicError in SimpleDistGradAggregator::DistributedAllGather");
         }
         else if (m_nccl->IsSupported()) // NCCL
         {
             m_nccl->AllGather(distributedMatrixBuffer, gatheredMatrixBuffer, count);
         }
         else
-            LogicError("LogicError in SimpleDistGradAggregator::GatherFeature");
+            LogicError("LogicError in SimpleDistGradAggregator::DistributedAllGather");
 
         if (m_nccl->IsSupported()) // Non-GDR && GPU
         {
@@ -591,17 +586,17 @@ private:
         }
         else if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE))
         {
-            //m_gpuDistributedTransferer->WaitForCopyCPUToGPUAsync(); // Wait for async CPU-to-GPU copy (non-GDR)
         }
         else if (m_mpi->UseGpuGdr() == 0) // CPU
         {
             m_mpi->Wait(&allGatherRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait"); // Wait for the Iallreduce operations to finish
         }
+        else
+            LogicError("LogicError in SimpleDistGradAggregator::DistributedAllGather");
     }
 
-    void DistributeAllReduce(const Matrix<ElemType>& distributedMatrix)
+    void DistributeAllReduce(const Matrix<ElemType>& distributedMatrix, MPI_Op op)
     {
-        /*
         int deviceId = distributedMatrix.GetDeviceId();
         MPI_Request allReduceRequest;
         ElemType* distributedMatrixBuffer = distributedMatrix.Data();
@@ -609,20 +604,16 @@ private:
 
         if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE) && !m_nccl->IsSupported()) // non-GDR && GPU && non-NCCL: need to copy data from GPU to CPU
         {
-#ifndef CPUONLY
             cudaMemcpy(m_intermediateDistributedCPUBuffer1.get(), distributedMatrixBuffer, count * sizeof(ElemType), cudaMemcpyDeviceToHost);
-#endif
-            //m_gpuDistributedTransferer->CopyGPUToCPUAsync(distributedMatrixBuffer, count, m_intermediateDistributedCPUBuffer1.get());
-            //m_gpuDistributedTransferer->WaitForCopyGPUToCPUAsync();
-            m_mpi->AllReduce(m_intermediateDistributedCPUBuffer1.get(), count);
-            m_gpuDistributedTransferer->CopyCPUToGPUAsync(m_intermediateDistributedCPUBuffer1.get(), count, distributedMatrixBuffer); // Create async H-to-G copy
+            m_mpi->AllReduce(m_intermediateDistributedCPUBuffer1.get(), count, op);
+            cudaMemcpy(distributedMatrixBuffer, m_intermediateDistributedCPUBuffer1.get(), count * sizeof(ElemType), cudaMemcpyHostToDevice);
         }
         else if (!m_nccl->IsSupported()) // non-NCCL, using CPU, using GDR
         {
             if (m_mpi->UseGpuGdr() == 0) // CPU
             {
                 m_mpi->Iallreduce(MPI_IN_PLACE, distributedMatrixBuffer, count,
-                    MPIWrapper::GetDataType(distributedMatrixBuffer), MPI_SUM, &allReduceRequest) ||
+                    MPIWrapper::GetDataType(distributedMatrixBuffer), op, &allReduceRequest) ||
                     MpiFail("MPI_Iallreduce");
             }
             else if (deviceId != CPUDEVICE) // GDR && GPU
@@ -630,14 +621,14 @@ private:
                 m_mpi->AllReduce(distributedMatrixBuffer, count);
             }
             else
-                LogicError("LogicError in SimpleDistGradAggregator::GatherFeature");
+                LogicError("LogicError in SimpleDistGradAggregator::DistributeAllReduce");
         }
         else if (m_nccl->IsSupported()) // NCCL
         {
-            m_nccl->AllReduce(distributedMatrixBuffer, distributedMatrixBuffer, count);
+            m_nccl->AllReduce(distributedMatrixBuffer, distributedMatrixBuffer, count, op);
         }
         else
-            LogicError("LogicError in SimpleDistGradAggregator::GatherFeature");
+            LogicError("LogicError in SimpleDistGradAggregator::DistributeAllReduce");
 
         if (m_nccl->IsSupported()) // Non-GDR && GPU
         {
@@ -645,13 +636,13 @@ private:
         }
         else if ((m_mpi->UseGpuGdr() == 0) && (deviceId != CPUDEVICE))
         {
-            m_gpuDistributedTransferer->WaitForCopyCPUToGPUAsync(); // Wait for async CPU-to-GPU copy (non-GDR)
         }
         else if (m_mpi->UseGpuGdr() == 0) // CPU
         {
             m_mpi->Wait(&allReduceRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait"); // Wait for the Iallreduce operations to finish
         }
-        */
+        else
+            LogicError("LogicError in SimpleDistGradAggregator::DistributeAllReduce");
     }
 
 

@@ -59,7 +59,7 @@ DistributedFullyConnectedLayer {inDim, outDim, init='glorotUniform', initValueSc
 {
     W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
     b = ParameterTensor {outDim, initValue=initBias, distribute=true}
-    apply (x) = DistributedFullyConnected(W, b, x);
+    apply (X) = DistributedFullyConnected(W, X, b);
 }.apply
 
 # MarginInnerProductLayer -- create a marginInnerProduct projection layer

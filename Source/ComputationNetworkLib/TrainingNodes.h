@@ -33,7 +33,7 @@ static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
 
 
 // Distributed fully connected layer (Y = W'X + b)
-// Input(0): W, Input(1): b, Input(2): X
+// Input(0): W, Input(1): X, Input(2): b
 template <class ElemType>
 class DistributedFullyConnectedNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
 {
@@ -55,13 +55,16 @@ public:
         : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
     {
         if (1 == m_processNum)
-            LogicError("Multi Gpus and mpi is needed in distributed FC");
+            LogicError("Multi Gpus and mpi is needed in distributed FC.");
         m_ones.reset(new Matrix<ElemType>(deviceId));
+#ifdef CPUONLY
+        LogicError("CPUONLY is not supported in DistributedFullyConnectedNode.");
+#endif
     }
 
     virtual void UpdateFunctionMBSize() override
     {
-        size_t minibatchSize = InputRef(2).Value().GetNumCols();
+        size_t minibatchSize = InputRef(1).Value().GetNumCols();
         if (m_minibatchSize != minibatchSize)
         {
             m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
@@ -70,7 +73,8 @@ public:
                 LogicError("With AllGather op, minibatch size in each Gpu must be the same.");
             m_minibatchSize = minibatchSize;
             m_batchSize = m_minibatchSize * m_processNum;
-            m_ones->Resize(m_batchSize, 1);                       // Ones
+            if (Environment().IsTraining())
+                m_ones->Resize(m_batchSize, 1);                   // Ones
             m_ones->SetValue((ElemType)1.0);
         }
         m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
@@ -91,25 +95,24 @@ public:
         }
         else if (1 == inputIndex)
         {
-            auto& b_gradient = InputRef(1).Gradient();
-            Matrix<ElemType>::Multiply(*m_temp2, false, *m_ones, false, b_gradient);
+            auto& W = InputRef(0).Value();
+            Matrix<ElemType>::Multiply(W, false, *m_temp2, false, *m_temp1);
+            m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
+            auto X_gradient = InputRef(1).GradientFor(InputRef(1).GetMBLayout());
+            X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
         }
         else if (2 == inputIndex)
         {
-            auto& W = InputRef(0).Value();
-            Matrix<ElemType>::Multiply(W, false, *m_temp2, false, *m_temp1);
-            FrameRange fr(InputRef(2).GetMBLayout());
-            auto X_gradient = InputRef(2).GradientFor(fr);
-            X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
+            auto& b_gradient = InputRef(1).Gradient();
+            Matrix<ElemType>::Multiply(*m_temp2, false, *m_ones, false, b_gradient);
         }
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         auto& W = InputRef(0).Value();
-        auto& b = InputRef(1).Value();
-        FrameRange fr(InputRef(2).GetMBLayout());
-        auto X = InputRef(2).ValueFor(fr);
+        auto  X = InputRef(1).ValueFor(InputRef(1).GetMBLayout());
+        auto& b = InputRef(2).Value();
         m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
 
         Matrix<ElemType>::Multiply(W, true, *m_temp1, false, *m_temp2);
@@ -128,9 +131,9 @@ public:
     {
         if (0 == childIndex) // for W
             return true;
-        else if (1 == childIndex) // for b
+        else if (1 == childIndex) // for x
             return false;
-        else // for X
+        else // for b
             return false;
     }
 
