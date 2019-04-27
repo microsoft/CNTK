@@ -116,7 +116,18 @@ private:
     {
         size_t fanOut, fanIn;
         ElemType range;
-        std::tie(fanOut, fanIn, range) = InitRandom(Value(), GetSampleLayout(), type, randomSeed, initValueScale, initFilterRank, initOutputRank, initOnCPUOnly, m_deviceId);
+        if (m_distribute)
+        {
+            SmallVector<size_t> vec;
+            auto shape = GetSampleLayout();
+            for (size_t i(0); i < shape.GetRank(); ++i)
+                vec.push_back(shape[i]);
+            vec[shape.GetRank() - 1] *= Globals::GetProcessNum();
+            TensorShape distributedShape(vec);
+            std::tie(fanOut, fanIn, range) = InitRandom(Value(), distributedShape, type, randomSeed + Globals::GetRank(), initValueScale, initFilterRank, initOutputRank, initOnCPUOnly, m_deviceId);
+        }
+        else
+            std::tie(fanOut, fanIn, range) = InitRandom(Value(), GetSampleLayout(), type, randomSeed, initValueScale, initFilterRank, initOutputRank, initOnCPUOnly, m_deviceId);
         if (fanOut == 0) // Shape not yet initialized
             return;
 
