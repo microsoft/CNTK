@@ -638,7 +638,7 @@ void LearnableParameter<ElemType>::LazyInitParameters()
     else if (ParseRandomizationType(m_initString).second != 0)
     {
         let randomSeed = Globals::ShouldForceConstantRandomSeed() ? 1UL : m_randomSeed; // debugging feature to enforce identical results across NDL, BrainScript, and V2 API/Python
-        InitRandom(m_initString, randomSeed, m_initValueScale, m_initFilterRank, m_initOutputRank, m_initOnCPUOnly);
+        InitRandom(m_initString, (this->m_distribute ? randomSeed + Globals::GetRank() : randomSeed), m_initValueScale, m_initFilterRank, m_initOutputRank, m_initOnCPUOnly);
     }
     else if (m_initString == L"bilinear")
     {

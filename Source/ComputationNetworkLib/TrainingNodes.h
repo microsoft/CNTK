@@ -82,9 +82,9 @@ public:
     {
         if (0 == inputIndex)
         {
-            m_temp3->SetValue((ElemType)0);
-            Matrix<ElemType>::ScatterInv(*m_temp3, Gradient(), m_minibatchSize, m_rank, m_processNum);
-            m_temp2->SetValue(m_temp3->ColumnSlice(m_batchSize * m_rank, m_batchSize));
+            m_temp3->Resize(m_outputDim * m_processNum, m_batchSize);
+            m_distGradAggPtr->DistributedAllGather(Gradient(), *m_temp3, m_outputDim * m_batchSize);
+            m_temp2->AssignRowSliceValuesOf(*m_temp3, m_outputDim * m_rank, m_outputDim);
 
             auto& W_gradient = InputRef(0).Gradient();
             Matrix<ElemType>::Multiply(*m_temp1, false, *m_temp2, true, W_gradient);
