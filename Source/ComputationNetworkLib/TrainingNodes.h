@@ -74,8 +74,10 @@ public:
             m_minibatchSize = minibatchSize;
             m_batchSize = m_minibatchSize * m_processNum;
             if (Environment().IsTraining())
+            {
                 m_ones->Resize(m_batchSize, 1);                   // Ones
-            m_ones->SetValue((ElemType)1.0);
+                m_ones->SetValue((ElemType)1.0);
+            }
         }
         m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
         m_temp2->Resize(m_outputDim, m_batchSize);                // Single Y
