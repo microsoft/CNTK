@@ -5255,7 +5255,7 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*static*/ void Matrix<ElemType>::DistributedSoftmax(const Matrix<ElemType>& Y, const Matrix<ElemType>& elementSum, const Matrix<ElemType>& softmax, const Matrix<ElemType>& logSoftmax)
+/*static*/ void Matrix<ElemType>::DistributedSoftmax(const Matrix<ElemType>& Y, const Matrix<ElemType>& logSum, const Matrix<ElemType>& softmax, const Matrix<ElemType>& logSoftmax)
 {
     assert(Y.GetNumCols() == elementSum.GetNumCols());
     DISPATCH_MATRIX_ON_FLAG(&Y,

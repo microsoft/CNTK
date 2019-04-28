@@ -5545,31 +5545,31 @@ void CPUMatrix<ElemType>::MinusRowVector(const CPUMatrix<ElemType>& src, const C
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::DistributedSoftmax(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& elementSum, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& logSoftmax)
+void CPUMatrix<ElemType>::DistributedSoftmax(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& logSum, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& logSoftmax)
 {
     size_t num = Y.GetNumElements();
     size_t col = Y.GetNumCols();
     ElemType* YPtr = Y.Data();
-    ElemType* elementSumPtr = elementSum.Data();
+    ElemType* logSumPtr = logSum.Data();
     ElemType* softmaxPtr = softmax.Data();
     ElemType* logSoftmaxPtr = logSoftmax.Data();
 #pragma omp parallel for
     // four-way unrolling
     for (long i = 0; i < (num & ~3); i += 4)
     {
-        logSoftmaxPtr[i] = YPtr[i] - elementSumPtr[i / col];
+        logSoftmaxPtr[i] = YPtr[i] - logSumPtr[i / col];
         softmaxPtr[i] = exp(logSoftmaxPtr[i]);
-        logSoftmaxPtr[i + 1] = YPtr[i + 1] - elementSumPtr[(i + 1) / col];
+        logSoftmaxPtr[i + 1] = YPtr[i + 1] - logSumPtr[(i + 1) / col];
         softmaxPtr[i + 1] = exp(logSoftmaxPtr[i + 1]);
-        logSoftmaxPtr[i + 2] = YPtr[i + 2] - elementSumPtr[(i + 2) / col];
+        logSoftmaxPtr[i + 2] = YPtr[i + 2] - logSumPtr[(i + 2) / col];
         softmaxPtr[i + 2] = exp(logSoftmaxPtr[i + 2]);
-        logSoftmaxPtr[i + 3] = YPtr[i + 3] - elementSumPtr[(i + 3) / col];
+        logSoftmaxPtr[i + 3] = YPtr[i + 3] - logSumPtr[(i + 3) / col];
         softmaxPtr[i + 3] = exp(logSoftmaxPtr[i + 3]);
     }
     // handle remaining stuffs
     for (long i = num & ~3; i < num; i++)
     {
-        logSoftmaxPtr[i] = YPtr[i] - elementSumPtr[i / col];
+        logSoftmaxPtr[i] = YPtr[i] - logSumPtr[i / col];
         softmaxPtr[i] = exp(logSoftmaxPtr[i]);
     }
 }

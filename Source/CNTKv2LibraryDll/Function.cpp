@@ -2144,7 +2144,7 @@ namespace CNTK
 
     FunctionPtr DistributedCrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name)
     {
-        std::vector<Variable> operands = { prediction, labels };
+        std::vector<Variable> operands = { labels, prediction };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedCrossEntropyWithSoftmax, operands, Dictionary(), name), name);
     }
 

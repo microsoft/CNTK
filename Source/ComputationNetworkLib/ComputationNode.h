@@ -1728,6 +1728,8 @@ protected:
             {
                 rows = GetSampleMatrixNumRows();
                 cols = GetSampleMatrixNumCols();
+                if (OperationName() == L"DistributedFullyConnected")
+                    cols *= Globals::GetProcessNum();
             }
             else
             {

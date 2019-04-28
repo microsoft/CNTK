@@ -495,7 +495,7 @@ public:
 
     static void MinusRowVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& rowVector, const CPUMatrix<ElemType>& dst);
 
-    static void DistributedSoftmax(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& elementSum, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& logSoftmax);
+    static void DistributedSoftmax(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& logSum, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& logSoftmax);
 
     static void DistributedCrossEntropy(const CPUMatrix<ElemType>& logP, const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
 

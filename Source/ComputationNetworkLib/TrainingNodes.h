@@ -111,7 +111,6 @@ public:
         auto& b = InputRef(2).Value();
         m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
 
-        Value().Resize(m_outputDim, m_batchSize);
         Matrix<ElemType>::Multiply(W, true, *m_temp1, false, Value());
         Matrix<ElemType>::AddColumnVector(Value(), b, Value());
     }
@@ -137,7 +136,7 @@ public:
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
         m_inputDim  = InputRef(0).Value().GetNumRows();
         m_outputDim = InputRef(0).Value().GetNumCols();
-        SetDims(TensorShape(m_outputDim * m_processNum), HasMBLayout());
+        SetDims(TensorShape(m_outputDim), HasMBLayout());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -226,7 +225,6 @@ public:
         {
             auto& gradient = InputRef(1).Gradient();
             auto& labels = InputRef(0).Value();
-            gradient.Resize(m_probDim, m_batchSize);
             Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, labels, gradient);
         }
     }
@@ -279,7 +277,7 @@ public:
     {
         ValidateBinaryReduce(isFinalValidationPass);
         m_probDim = Input(1)->GetSampleLayout().GetNumElements();
-        if (m_probDim % m_processNum != 0 || m_probDim != Input(0)->GetSampleLayout().GetNumElements())
+        if (m_probDim * Globals::GetProcessNum() != Input(0)->GetSampleLayout().GetNumElements())
             LogicError("Validate error in DistributedCrossEntropyWithSoftmaxNode");
     }
 
