@@ -80,25 +80,19 @@ public:
             }
         }
         m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
-        m_temp2->Resize(m_outputDim, m_batchSize);                // Single Y
-        m_temp3->Resize(m_outputDim, m_batchSize * m_processNum); // Aggregated Y
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         if (0 == inputIndex)
         {
-            m_temp3->Resize(m_outputDim * m_processNum, m_batchSize);
-            m_distGradAggPtr->DistributedAllGather(Gradient(), *m_temp3, m_outputDim * m_batchSize);
-            m_temp2->AssignRowSliceValuesOf(*m_temp3, m_outputDim * m_rank, m_outputDim);
-
             auto& W_gradient = InputRef(0).Gradient();
-            Matrix<ElemType>::Multiply(*m_temp1, false, *m_temp2, true, W_gradient);
+            Matrix<ElemType>::Multiply(*m_temp1, false, Gradient(), true, W_gradient);
         }
         else if (1 == inputIndex)
         {
             auto& W = InputRef(0).Value();
-            Matrix<ElemType>::Multiply(W, false, *m_temp2, false, *m_temp1);
+            Matrix<ElemType>::Multiply(W, false, Gradient(), false, *m_temp1);
             m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
             auto X_gradient = InputRef(1).GradientFor(InputRef(1).GetMBLayout());
             X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
@@ -106,7 +100,7 @@ public:
         else if (2 == inputIndex)
         {
             auto& b_gradient = InputRef(1).Gradient();
-            Matrix<ElemType>::Multiply(*m_temp2, false, *m_ones, false, b_gradient);
+            Matrix<ElemType>::Multiply(Gradient(), false, *m_ones, false, b_gradient);
         }
     }
 
@@ -117,12 +111,9 @@ public:
         auto& b = InputRef(2).Value();
         m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
 
-        Matrix<ElemType>::Multiply(W, true, *m_temp1, false, *m_temp2);
-        m_temp2->AssignSumOf(*m_temp2, b);
-
-        m_distGradAggPtr->DistributedAllGather(*m_temp2, *m_temp3, m_outputDim * m_batchSize);
-
-        Matrix<ElemType>::Scatter(*m_temp3, Value(), m_minibatchSize, m_rank, m_processNum);
+        Value().Resize(m_outputDim, m_batchSize);
+        Matrix<ElemType>::Multiply(W, true, *m_temp1, false, Value());
+        Matrix<ElemType>::AddColumnVector(Value(), b, Value());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -163,8 +154,6 @@ public:
             node->m_batchSize      = m_batchSize;
             node->m_distGradAggPtr = m_distGradAggPtr;
             node->m_temp1->SetValue(*m_temp1);
-            node->m_temp2->SetValue(*m_temp2);
-            node->m_temp3->SetValue(*m_temp3);
             node->m_ones->SetValue(*m_ones);
         }
     }
@@ -174,8 +163,6 @@ public:
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_temp1, matrixPool);
-        RequestMatrixFromPool(m_temp2, matrixPool);
-        RequestMatrixFromPool(m_temp3, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -183,8 +170,6 @@ public:
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_temp1, matrixPool);
-        ReleaseMatrixToPool(m_temp2, matrixPool);
-        ReleaseMatrixToPool(m_temp3, matrixPool);
     }
 
     void Save(File& fstream) const override
@@ -205,11 +190,11 @@ public:
     size_t m_batchSize;
     IDistGradAggregator<ElemType>* m_distGradAggPtr;
     shared_ptr<Matrix<ElemType>> m_temp1;
-    shared_ptr<Matrix<ElemType>> m_temp2;
-    shared_ptr<Matrix<ElemType>> m_temp3;
     shared_ptr<Matrix<ElemType>> m_ones;
 };
 
+// Distributed cross entropy with softmax node
+// Input(0): labels, Input(1): Y
 template <class ElemType>
 class DistributedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
@@ -227,24 +212,22 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
     DistributedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+        : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_batchSize(0)
     {
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        FrameRange fr(InputRef(0).GetMBLayout());
-        // left input is scalar
         if (inputIndex == 0) // left derivative
         {
-            auto gradient = InputRef(0).GradientFor(fr);
-            Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, Gradient() /*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
+            LogicError("There is no need to compute gradient for labels");
         }
-
         else if (inputIndex == 1) // right derivative
         {
-            auto gradient = InputRef(1).GradientFor(fr);
-            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, InputRef(0).ValueFor(fr), gradient);
+            auto& gradient = InputRef(1).Gradient();
+            auto& labels = InputRef(0).Value();
+            gradient.Resize(m_probDim, m_batchSize);
+            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, labels, gradient);
         }
     }
 
@@ -255,30 +238,47 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_logSoftmaxOfRight->Resize(Input(1)->Value());
+        size_t minibatchSize = InputRef(0).Value().GetNumCols();
+        size_t batchSize = InputRef(1).Value().GetNumCols();
+        if (minibatchSize != m_minibatchSize || batchSize != m_batchSize)
+        {
+            m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
+            m_minibatchSize = minibatchSize;
+            m_batchSize = batchSize;
+            if (m_minibatchSize * m_processNum != m_batchSize)
+                LogicError("DistributedCrossEntropyWithSoftmaxNode: m_minibatchSize(%d) * m_processNum(%d) != m_batchSize(%d)",
+                (int)m_minibatchSize, (int)m_processNum, (int)m_batchSize);
+        }
+        m_logSoftmaxOfRight->Resize(InputRef(1).Value());
         m_softmaxOfRight->Resize(*m_logSoftmaxOfRight);
+        m_temp1->Resize(1, m_batchSize);
+        m_temp2->Resize(1, m_batchSize);
+        m_temp3->Resize(1, m_minibatchSize);
+        m_temp4->Resize(1, m_minibatchSize);
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
     {
-        FrameRange fr(InputRef(0).GetMBLayout());
-        // first compute the softmax (column-wise)
-        // Note that we need both log and non-log for gradient computation.
-        m_logSoftmaxOfRight->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr), true);
-        // BUGBUG: No need to compute m_softmaxOfRight in ForwardProp, should be moved to BackpropTo().
-        m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
-        m_softmaxOfRight->InplaceExp();
-        // flatten all gaps to zero, such that gaps will contribute zero to the sum
-        MaskMissingColumnsToZero(*m_logSoftmaxOfRight, InputRef(1).GetMBLayout(), fr);
+        auto& Y = InputRef(1).Value();
+        Y.VectorMax(*m_temp1, *m_temp2, true);
+        m_distGradAggPtr->DistributeAllReduce(*m_temp2, MPI_MAX);
 
-        // reduce over all frames
-        Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr), *m_logSoftmaxOfRight);
-        Value() *= -1;
+        Matrix<ElemType>::MinusRowVector(Y, *m_temp2, Y);
+        Y.InplaceExp();
+        Matrix<ElemType>::VectorSum(Y, *m_temp1, true);
+        m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
+        m_temp1->InplaceLog();
+
+        Matrix<ElemType>::DistributedSoftmax(Y, *m_temp1, *m_softmaxOfRight, *m_logSoftmaxOfRight);
+        InputRef(0).Value().VectorMax(*m_temp3, *m_temp4, true);
+        m_distGradAggPtr->DistributedAllGather(*m_temp3, *m_temp1, m_minibatchSize);
+        Matrix<ElemType>::DistributedCrossEntropy(*m_logSoftmaxOfRight, *m_temp3, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         ValidateBinaryReduce(isFinalValidationPass);
+        m_probDim = InputRef(0).Value().GetNumRows();
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -289,6 +289,10 @@ public:
             auto node = dynamic_pointer_cast<DistributedCrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
             node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
+            node->m_temp1->SetValue(*m_temp1);
+            node->m_temp2->SetValue(*m_temp2);
+            node->m_temp3->SetValue(*m_temp3);
+            node->m_temp4->SetValue(*m_temp4);
         }
     }
 
@@ -298,6 +302,10 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
         RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_temp1, matrixPool);
+        RequestMatrixFromPool(m_temp2, matrixPool);
+        RequestMatrixFromPool(m_temp3, matrixPool);
+        RequestMatrixFromPool(m_temp4, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -306,6 +314,10 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
         ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_temp1, matrixPool);
+        ReleaseMatrixToPool(m_temp2, matrixPool);
+        ReleaseMatrixToPool(m_temp3, matrixPool);
+        ReleaseMatrixToPool(m_temp4, matrixPool);
     }
 
     void Save(File& fstream) const override
@@ -319,8 +331,18 @@ public:
     }
 
 protected:
+    size_t m_rank;
+    size_t m_processNum;
+    size_t m_minibatchSize;
+    size_t m_batchSize;
+    size_t m_probDim;
+    IDistGradAggregator<ElemType>* m_distGradAggPtr;
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_temp1;
+    shared_ptr<Matrix<ElemType>> m_temp2;
+    shared_ptr<Matrix<ElemType>> m_temp3;
+    shared_ptr<Matrix<ElemType>> m_temp4;
 };
 
 // Implements A-Softmax as described in:

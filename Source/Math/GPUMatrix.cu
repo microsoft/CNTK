@@ -3861,6 +3861,185 @@ void GPUMatrix<ElemType>::ScatterInv(const GPUMatrix<ElemType>& src, const GPUMa
     _scatterinv<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), dst.Data(), outputDim, minioutputDim, blockSize, blockOffset, numElements);
 }
 
+template <class ElemType>
+__global__ void _addColumnVector(ElemType* src, ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        dst[id] = src[id] + vec[id % row];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AddColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst)
+{
+    CUDA_LONG numElements = dst.GetNumElements();
+    int row = (int)columnVector.GetNumRows();
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _addColumnVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), columnVector.Data(), dst.Data(), row, numElements);
+}
+
+template <class ElemType>
+__global__ void _addRowVector(ElemType* src, ElemType* vec, ElemType* dst, int col, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        dst[id] = src[id] + vec[id / col];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AddRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst)
+{
+    CUDA_LONG numElements = dst.GetNumElements();
+    int col = (int)rowVector.GetNumCols();
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _addRowVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), col, numElements);
+}
+
+template <class ElemType>
+__global__ void _minusColumnVector(ElemType* src, ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        dst[id] = src[id] - vec[id % row];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::MinusColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst)
+{
+    CUDA_LONG numElements = dst.GetNumElements();
+    int row = (int)columnVector.GetNumRows();
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _minusColumnVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), columnVector.Data(), dst.Data(), row, numElements);
+}
+
+template <class ElemType>
+__global__ void _minusRowVector(ElemType* src, ElemType* vec, ElemType* dst, int col, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        dst[id] = src[id] - vec[id / col];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::MinusRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst)
+{
+    CUDA_LONG numElements = dst.GetNumElements();
+    int col = (int)rowVector.GetNumCols();
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _minusRowVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), col, numElements);
+}
+
+template <class ElemType>
+__global__ void _distributedSoftmax(ElemType* Y, ElemType* elementSum, ElemType* softmax, ElemType* logSoftmax, int col, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        logSoftmax[id] = Y[id] - elementSum[id / col];
+        softmax[id] = exp_(logSoftmax[id]);
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& elementSum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax)
+{
+    CUDA_LONG numElements = Y.GetNumElements();
+    int col = (int)Y.GetNumCols();
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _distributedSoftmax<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (Y.Data(), elementSum.Data(), softmax.Data(), logSoftmax.Data(), col, numElements);
+}
+
+template <class ElemType>
+__global__ void _distributedCrossEntropyOf512Threads(const ElemType* logP, const ElemType* labels, ElemType* value, const int row, const int startIndex, const int endIndex, CUDA_LONG numElements)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partials[512];
+
+    if (threadIdx.x < numElements && labels[threadIdx.x] >= startIndex && labels[threadIdx.x] <= endIndex)
+        partials[threadIdx.x] = (comp_t)logP[threadIdx.x * row + ((int)labels[threadIdx.x]) - startIndex];
+    else
+        partials[threadIdx.x] = 0.0f;
+    for (int i = threadIdx.x + 512; i < numElements; i += 512)
+    {
+        if(labels[i] >= startIndex && labels[i] <= endIndex)
+            partials[threadIdx.x] += (comp_t)logP[i * row + ((int)labels[i]) - startIndex];
+    }
+
+    if (threadIdx.x < 256)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 256];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 128)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 128];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 64)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 64];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 32)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 32];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 16)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 16];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 8)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 8];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 4)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 4];
+    }
+    __syncthreads();
+
+    if (threadIdx.x == 0)
+        value[0] = -(partials[0] + partials[1] + partials[2] + partials[3]);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedCrossEntropy(const GPUMatrix<ElemType>& logP, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    CUDA_LONG numElements = labels.GetNumElements();
+    int row = (int)logP.GetNumRows();
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _distributedCrossEntropyOf512Threads << <1, 512, 0, t_stream >> > (logP.Data(), labels.Data(), value.Data(), row, (int)startIndex, (int)endIndex, numElements);
+}
+
 #pragma endregion
 
 

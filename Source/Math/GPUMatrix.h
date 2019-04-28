@@ -603,6 +603,18 @@ public:
 
     static void ScatterInv(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
 
+    static void AddColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst);
+
+    static void AddRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst);
+
+    static void MinusColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst);
+
+    static void MinusRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst);
+
+    static void DistributedSoftmax(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& elementSum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax);
+
+    static void DistributedCrossEntropy(const GPUMatrix<ElemType>& logP, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
 #pragma endregion
 
 

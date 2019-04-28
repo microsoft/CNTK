@@ -5206,6 +5206,78 @@ template <class ElemType>
         NOT_IMPLEMENTED);
 }
 
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AddColumnVector(const Matrix<ElemType>& src, const Matrix<ElemType>& columnVector, const Matrix<ElemType>& dst)
+{
+    assert(src.GetNumRows() == dst.GetNumRows() && src.GetNumCols() == src.GetNumCols() && src.GetNumRows() == columnVector.GetNumRows());
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::AddColumnVector(*(src.m_CPUMatrix), *(columnVector.m_CPUMatrix), *(dst.m_CPUMatrix)),
+        GPUMatrix<ElemType>::AddColumnVector(*(src.m_GPUMatrix), *(columnVector.m_GPUMatrix), *(dst.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AddRowVector(const Matrix<ElemType>& src, const Matrix<ElemType>& rowVector, const Matrix<ElemType>& dst)
+{
+    assert(src.GetNumRows() == dst.GetNumRows() && src.GetNumCols() == src.GetNumCols() && src.GetNumCols() == rowVector.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::AddRowVector(*(src.m_CPUMatrix), *(rowVector.m_CPUMatrix), *(dst.m_CPUMatrix)),
+        GPUMatrix<ElemType>::AddRowVector(*(src.m_GPUMatrix), *(rowVector.m_GPUMatrix), *(dst.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::MinusColumnVector(const Matrix<ElemType>& src, const Matrix<ElemType>& columnVector, const Matrix<ElemType>& dst)
+{
+    assert(src.GetNumRows() == dst.GetNumRows() && src.GetNumCols() == src.GetNumCols() && src.GetNumRows() == columnVector.GetNumRows());
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::MinusColumnVector(*(src.m_CPUMatrix), *(columnVector.m_CPUMatrix), *(dst.m_CPUMatrix)),
+        GPUMatrix<ElemType>::MinusColumnVector(*(src.m_GPUMatrix), *(columnVector.m_GPUMatrix), *(dst.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::MinusRowVector(const Matrix<ElemType>& src, const Matrix<ElemType>& rowVector, const Matrix<ElemType>& dst)
+{
+    assert(src.GetNumRows() == dst.GetNumRows() && src.GetNumCols() == src.GetNumCols() && src.GetNumCols() == rowVector.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::MinusRowVector(*(src.m_CPUMatrix), *(rowVector.m_CPUMatrix), *(dst.m_CPUMatrix)),
+        GPUMatrix<ElemType>::MinusRowVector(*(src.m_GPUMatrix), *(rowVector.m_GPUMatrix), *(dst.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedSoftmax(const Matrix<ElemType>& Y, const Matrix<ElemType>& elementSum, const Matrix<ElemType>& softmax, const Matrix<ElemType>& logSoftmax)
+{
+    assert(Y.GetNumCols() == elementSum.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&Y,
+        &Y,
+        CPUMatrix<ElemType>::DistributedSoftmax(*(Y.m_CPUMatrix), *(elementSum.m_CPUMatrix), *(softmax.m_CPUMatrix), *(logSoftmax.m_CPUMatrix)),
+        GPUMatrix<ElemType>::DistributedSoftmax(*(Y.m_GPUMatrix), *(elementSum.m_GPUMatrix), *(softmax.m_GPUMatrix), *(logSoftmax.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedCrossEntropy(const Matrix<ElemType>& logP, const Matrix<ElemType>& labels, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    assert(prob.GetNumCols() == labels.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&logP,
+        &logP,
+        CPUMatrix<ElemType>::DistributedCrossEntropy(*(logP.m_CPUMatrix), *(labels.m_CPUMatrix), *(value.m_CPUMatrix), startIndex, endIndex),
+        GPUMatrix<ElemType>::DistributedCrossEntropy(*(logP.m_GPUMatrix), *(labels.m_GPUMatrix), *(value.m_GPUMatrix), startIndex, endIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
 #pragma endregion
 
 
