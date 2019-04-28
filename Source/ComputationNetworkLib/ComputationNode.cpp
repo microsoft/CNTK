@@ -481,10 +481,13 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     {
         if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
         {
-            string s1 = Input(0)->GetSampleLayout();
-            string s2 = Input(1)->GetSampleLayout();
-            // BUGBUG: Allow broadcasting?
-            LogicError("%ls: The tensor dimensions in the inputs do not match. %s != %s", NodeDescription().c_str(), s1.c_str(), s2.c_str());
+            if (Input(0)->OperationName() != L"DistributedFullyConnected" && Input(1)->OperationName() != L"DistributedFullyConnected")
+            {
+                string s1 = Input(0)->GetSampleLayout();
+                string s2 = Input(1)->GetSampleLayout();
+                // BUGBUG: Allow broadcasting?
+                LogicError("%ls: The tensor dimensions in the inputs do not match. %s != %s", NodeDescription().c_str(), s1.c_str(), s2.c_str());
+            }
         }
         else if (!(Input(0)->HasMBLayout()))
             LogicError("%ls: Expected MBLayout in Input 0.", NodeDescription().c_str());
