@@ -5260,8 +5260,8 @@ template <class ElemType>
     assert(Y.GetNumCols() == elementSum.GetNumCols());
     DISPATCH_MATRIX_ON_FLAG(&Y,
         &Y,
-        CPUMatrix<ElemType>::DistributedSoftmax(*(Y.m_CPUMatrix), *(elementSum.m_CPUMatrix), *(softmax.m_CPUMatrix), *(logSoftmax.m_CPUMatrix)),
-        GPUMatrix<ElemType>::DistributedSoftmax(*(Y.m_GPUMatrix), *(elementSum.m_GPUMatrix), *(softmax.m_GPUMatrix), *(logSoftmax.m_GPUMatrix)),
+        CPUMatrix<ElemType>::DistributedSoftmax(*(Y.m_CPUMatrix), *(logSum.m_CPUMatrix), *(softmax.m_CPUMatrix), *(logSoftmax.m_CPUMatrix)),
+        GPUMatrix<ElemType>::DistributedSoftmax(*(Y.m_GPUMatrix), *(logSum.m_GPUMatrix), *(softmax.m_GPUMatrix), *(logSoftmax.m_GPUMatrix)),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 }
