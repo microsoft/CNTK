@@ -435,6 +435,7 @@ Abs                     = CNTK2.Abs
 Ceil                    = CNTK2.Ceil
 CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
 DistributedFullyConnected = CNTK2.DistributedFullyConnected
+DistributedCrossEntropyWithSoftmax = CNTK2.DistributedCrossEntropyWithSoftmax
 MarginInnerProduct      = CNTK2.MarginInnerProduct
 FeatureNormalize        = CNTK2.FeatureNormalize
 AdditiveFullConnection  = CNTK2.AdditiveFullConnection
@@ -542,6 +543,11 @@ CNTK2 = [
     #
     DistributedFullyConnected(W, X, b, tag='') =
         new ComputationNode [ operation = 'DistributedFullyConnected' ; inputs = _AsNodes (W : X : b) /*plus the function args*/ ]
+
+    #
+    # Distributed cross entropy with softmax node
+    #
+    DistributedCrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'DistributedCrossEntropyWithSoftmax' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
 
     #
     # MarginInnerProduct node

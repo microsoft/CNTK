@@ -4343,6 +4343,8 @@ namespace CNTK
 
     CNTK_API FunctionPtr DistributedFullyConnected(const Variable& W, const Variable& X, const Variable& b, const std::wstring& name = L"");
 
+    CNTK_API FunctionPtr DistributedCrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
+
     CNTK_API FunctionPtr MarginInnerProduct(const Variable& prediction, const Variable& targets, const Variable& weight, size_t outputDimension, double base, double gamma, double power, double lambdaMin, size_t marginCoefficient, const std::wstring& name = L"");
 
     CNTK_API FunctionPtr FeatureNormalize(const Variable& feature, size_t normalizeType, const std::wstring& name = L"");

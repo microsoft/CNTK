@@ -114,6 +114,7 @@ namespace CNTK
         ChannelMultiply = 201,
         GlobalConcat = 202,
         DistributedFullyConnected = 203,
+        DistributedCrossEntropyWithSoftmax = 204,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

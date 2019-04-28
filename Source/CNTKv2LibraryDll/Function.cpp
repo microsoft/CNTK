@@ -2142,6 +2142,12 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedFullyConnected, operands, Dictionary(), name), name);
     }
 
+    FunctionPtr DistributedCrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { prediction, labels };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedCrossEntropyWithSoftmax, operands, Dictionary(), name), name);
+    }
+
     FunctionPtr MarginInnerProduct(const Variable& features, const Variable& labels, const Variable& weight, size_t outputDimension, double base, double gamma, double power, double lambdaMin, size_t marginCoefficient, const std::wstring& name)
     {
         std::vector<Variable> operands = {features, labels, weight};

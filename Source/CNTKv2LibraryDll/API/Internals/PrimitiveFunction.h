@@ -128,7 +128,8 @@ namespace CNTK
         {PrimitiveOpType::CenterLoss, L"CenterLoss" },
         {PrimitiveOpType::ChannelMultiply, L"ChannelMultiply" },
         {PrimitiveOpType::GlobalConcat, L"GlobalConcat"},
-        {PrimitiveOpType::DistributedFullyConnected, L"DistributedFullyConnected" }
+        {PrimitiveOpType::DistributedFullyConnected, L"DistributedFullyConnected" },
+        {PrimitiveOpType::DistributedCrossEntropyWithSoftmax, L"DistributedCrossEntropyWithSoftmax" }
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)

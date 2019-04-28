@@ -349,6 +349,10 @@ template class DistributedFullyConnectedNode<float>;
 template class DistributedFullyConnectedNode<double>;
 template class DistributedFullyConnectedNode<half>;
 
+template class DistributedCrossEntropyWithSoftmaxNode<float>;
+template class DistributedCrossEntropyWithSoftmaxNode<double>;
+template class DistributedCrossEntropyWithSoftmaxNode<half>;
+
 template class MarginInnerProductNode<float>;
 template class MarginInnerProductNode<double>;
 template class MarginInnerProductNode<half>;

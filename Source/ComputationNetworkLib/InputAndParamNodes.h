@@ -116,7 +116,7 @@ private:
     {
         size_t fanOut, fanIn;
         ElemType range;
-        if (m_distribute)
+        if (this->m_distribute)
         {
             SmallVector<size_t> vec;
             auto shape = GetSampleLayout();

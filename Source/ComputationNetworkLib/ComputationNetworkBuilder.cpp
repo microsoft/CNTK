@@ -127,6 +127,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(SqrtNode))                             return New<SqrtNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SquareErrorNode))                      return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DistributedFullyConnectedNode))        return New<DistributedFullyConnectedNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DistributedCrossEntropyWithSoftmaxNode))      return New<DistributedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(MarginInnerProductNode))               return New<MarginInnerProductNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(FeatureNormalizeNode))                 return New<FeatureNormalizeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(AdditiveFullConnectionNode))           return New<AdditiveFullConnectionNode<ElemType>>(forward<_Types>(_Args)...);
@@ -488,6 +489,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedFullyConnected(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<DistributedFullyConnectedNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b, c });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedCrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<DistributedCrossEntropyWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction });
 }
 
 template <class ElemType>

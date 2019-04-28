@@ -210,6 +210,119 @@ public:
     shared_ptr<Matrix<ElemType>> m_ones;
 };
 
+template <class ElemType>
+class DistributedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"DistributedCrossEntropyWithSoftmax";
+    }
+
+public:
+    DistributedCrossEntropyWithSoftmaxNode(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp)
+        : DistributedCrossEntropyWithSoftmaxNode(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+    DistributedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        // left input is scalar
+        if (inputIndex == 0) // left derivative
+        {
+            auto gradient = InputRef(0).GradientFor(fr);
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, Gradient() /*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
+        }
+
+        else if (inputIndex == 1) // right derivative
+        {
+            auto gradient = InputRef(1).GradientFor(fr);
+            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, InputRef(0).ValueFor(fr), gradient);
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        m_logSoftmaxOfRight->Resize(Input(1)->Value());
+        m_softmaxOfRight->Resize(*m_logSoftmaxOfRight);
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        // first compute the softmax (column-wise)
+        // Note that we need both log and non-log for gradient computation.
+        m_logSoftmaxOfRight->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr), true);
+        // BUGBUG: No need to compute m_softmaxOfRight in ForwardProp, should be moved to BackpropTo().
+        m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+        m_softmaxOfRight->InplaceExp();
+        // flatten all gaps to zero, such that gaps will contribute zero to the sum
+        MaskMissingColumnsToZero(*m_logSoftmaxOfRight, InputRef(1).GetMBLayout(), fr);
+
+        // reduce over all frames
+        Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr), *m_logSoftmaxOfRight);
+        Value() *= -1;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryReduce(isFinalValidationPass);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<DistributedCrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
+            node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+            node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
+        RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
+        ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+    }
+
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+    }
+
+protected:
+    shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
+    shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
+};
+
 // Implements A-Softmax as described in:
 // SphereFace: DeepHypersphereEmbeddingforFaceRecognition [Weiyang Liu, Yandong Wen, Zhiding Yu, Ming Li, Bhiksha Raj, Le Song]
 // https://arxiv.org/abs/1704.08063

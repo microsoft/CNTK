@@ -1159,6 +1159,11 @@ namespace CNTK
                     ASSIGN_NEW_NODE(DistributedFullyConnectedNode, network->GetDeviceId(), internalNodeName);
                     break;
                 }
+                case PrimitiveOpType::DistributedCrossEntropyWithSoftmax:
+                {
+                    ASSIGN_NEW_NODE(DistributedCrossEntropyWithSoftmaxNode, network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 case PrimitiveOpType::MarginInnerProduct:
                 {
                     auto outputDimension = functionConfig[PrimitiveFunctionAttribute::AttributeMarginInnerProductOutputDimension].Value<size_t>();
