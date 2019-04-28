@@ -272,13 +272,15 @@ public:
         Matrix<ElemType>::DistributedSoftmax(Y, *m_temp1, *m_softmaxOfRight, *m_logSoftmaxOfRight);
         InputRef(0).Value().VectorMax(*m_temp3, *m_temp4, true);
         m_distGradAggPtr->DistributedAllGather(*m_temp3, *m_temp1, m_minibatchSize);
-        Matrix<ElemType>::DistributedCrossEntropy(*m_logSoftmaxOfRight, *m_temp3, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
+        Matrix<ElemType>::DistributedCrossEntropy(*m_logSoftmaxOfRight, *m_temp1, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         ValidateBinaryReduce(isFinalValidationPass);
-        m_probDim = InputRef(0).Value().GetNumRows();
+        m_probDim = Input(1)->GetSampleLayout().GetNumElements();
+        if (m_probDim % m_processNum != 0 || m_probDim != Input(0)->GetSampleLayout().GetNumElements())
+            LogicError("Validate error in DistributedCrossEntropyWithSoftmaxNode");
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
