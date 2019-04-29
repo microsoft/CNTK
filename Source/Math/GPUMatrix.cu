@@ -4060,7 +4060,7 @@ void GPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const GPUMa
 
     SyncGuard syncGuard;
     GridDim grid(numElements);
-    _distributedSoftmaxWithCrossEntropyBackprop<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (postGradient.Data(), softmax.Data(), labels.Data(), gradient.Data(), (int)startIndex, row, numElements);
+    _distributedSoftmaxWithCrossEntropyBackprop<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (postGradient.Data(), softmax.Data(), labels.Data(), gradient.Data(), row, (int)startIndex, numElements);
 }
 
 #pragma endregion
