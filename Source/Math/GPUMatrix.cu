@@ -3883,24 +3883,24 @@ void GPUMatrix<ElemType>::AddColumnVector(const GPUMatrix<ElemType>& src, const 
 }
 
 template <class ElemType>
-__global__ void _addRowVector(ElemType* src, ElemType* vec, ElemType* dst, int col, CUDA_LONG numElements)
+__global__ void _addRowVector(ElemType* src, ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
     {
-        dst[id] = src[id] + vec[id / col];
+        dst[id] = src[id] + vec[id / row];
     }
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::AddRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst)
 {
-    CUDA_LONG numElements = dst.GetNumElements();
-    int col = (int)rowVector.GetNumCols();
+    CUDA_LONG numElements = src.GetNumElements();
+    int row = (int)src.GetNumRows();
 
     SyncGuard syncGuard;
     GridDim grid(numElements);
-    _addRowVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), col, numElements);
+    _addRowVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), row, numElements);
 }
 
 template <class ElemType>
@@ -3925,46 +3925,46 @@ void GPUMatrix<ElemType>::MinusColumnVector(const GPUMatrix<ElemType>& src, cons
 }
 
 template <class ElemType>
-__global__ void _minusRowVector(ElemType* src, ElemType* vec, ElemType* dst, int col, CUDA_LONG numElements)
+__global__ void _minusRowVector(ElemType* src, ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
     {
-        dst[id] = src[id] - vec[id / col];
+        dst[id] = src[id] - vec[id / row];
     }
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::MinusRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst)
 {
-    CUDA_LONG numElements = dst.GetNumElements();
-    int col = (int)rowVector.GetNumCols();
+    CUDA_LONG numElements = src.GetNumElements();
+    int row = (int)src.GetNumRows();
 
     SyncGuard syncGuard;
     GridDim grid(numElements);
-    _minusRowVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), col, numElements);
+    _minusRowVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), row, numElements);
 }
 
 template <class ElemType>
-__global__ void _distributedSoftmax(ElemType* Y, ElemType* logSum, ElemType* softmax, ElemType* logSoftmax, int row, CUDA_LONG numElements)
+__global__ void _distributedSoftmax(ElemType* expY, ElemType* sum, ElemType* softmax, ElemType* logSoftmax, int row, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
     {
-        logSoftmax[id] = Y[id] - logSum[id / row];
-        softmax[id] = exp_(logSoftmax[id]);
+        softmax[id] = expY[id] / sum[id / row];
+        logSoftmax[id] = log_(softmax[id]);
     }
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& logSum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax)
+void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& expY, const GPUMatrix<ElemType>& sum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax)
 {
-    CUDA_LONG numElements = Y.GetNumElements();
-    int row = (int)Y.GetNumRows();
+    CUDA_LONG numElements = expY.GetNumElements();
+    int row = (int)expY.GetNumRows();
 
     SyncGuard syncGuard;
     GridDim grid(numElements);
-    _distributedSoftmax<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (Y.Data(), logSum.Data(), softmax.Data(), logSoftmax.Data(), row, numElements);
+    _distributedSoftmax<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (expY.Data(), sum.Data(), softmax.Data(), logSoftmax.Data(), row, numElements);
 }
 
 template <class ElemType>
@@ -4046,9 +4046,9 @@ __global__ void _distributedSoftmaxWithCrossEntropyBackprop(const ElemType* post
     {
         int label = (int)labels[id / row];
         if (label == startIndex + id % row)
-            gradient[id] = postGradient[0] - postGradient[0] * softmax[id];
+            gradient[id] = postGradient[0] * softmax[id] - postGradient[0];
         else
-            gradient[id] = -postGradient[0] * softmax[id];
+            gradient[id] = postGradient[0] * softmax[id];
     }
 }
 

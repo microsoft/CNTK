@@ -266,7 +266,6 @@ public:
         InputRef(0).Value().VectorMax(*m_temp3, *m_temp4, true);
         m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
         m_distGradAggPtr->DistributedAllGather(*m_temp3, *m_temp2, m_minibatchSize);
-        m_temp1->InplaceLog();
 
         Matrix<ElemType>::DistributedSoftmax(Y, *m_temp1, *m_softmaxOfRight, *m_logSoftmaxOfRight);
         Matrix<ElemType>::DistributedCrossEntropy(*m_logSoftmaxOfRight, *m_temp2, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);

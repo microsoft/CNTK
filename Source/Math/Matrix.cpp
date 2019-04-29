@@ -5255,13 +5255,13 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*static*/ void Matrix<ElemType>::DistributedSoftmax(const Matrix<ElemType>& Y, const Matrix<ElemType>& logSum, const Matrix<ElemType>& softmax, const Matrix<ElemType>& logSoftmax)
+/*static*/ void Matrix<ElemType>::DistributedSoftmax(const Matrix<ElemType>& expY, const Matrix<ElemType>& sum, const Matrix<ElemType>& softmax, const Matrix<ElemType>& logSoftmax)
 {
-    assert(Y.GetNumCols() == elementSum.GetNumCols());
-    DISPATCH_MATRIX_ON_FLAG(&Y,
-        &Y,
-        CPUMatrix<ElemType>::DistributedSoftmax(*(Y.m_CPUMatrix), *(logSum.m_CPUMatrix), *(softmax.m_CPUMatrix), *(logSoftmax.m_CPUMatrix)),
-        GPUMatrix<ElemType>::DistributedSoftmax(*(Y.m_GPUMatrix), *(logSum.m_GPUMatrix), *(softmax.m_GPUMatrix), *(logSoftmax.m_GPUMatrix)),
+    assert(expY.GetNumCols() == elementSum.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&expY,
+        &expY,
+        CPUMatrix<ElemType>::DistributedSoftmax(*(expY.m_CPUMatrix), *(sum.m_CPUMatrix), *(softmax.m_CPUMatrix), *(logSoftmax.m_CPUMatrix)),
+        GPUMatrix<ElemType>::DistributedSoftmax(*(expY.m_GPUMatrix), *(sum.m_GPUMatrix), *(softmax.m_GPUMatrix), *(logSoftmax.m_GPUMatrix)),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 }
