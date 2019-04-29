@@ -4055,7 +4055,7 @@ __global__ void _distributedSoftmaxWithCrossEntropyBackprop(const ElemType* post
 template <class ElemType>
 void GPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const GPUMatrix<ElemType>& postGradient, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& gradient, size_t startIndex)
 {
-    CUDA_LONG numElements = softmax.GetNumRows();
+    CUDA_LONG numElements = softmax.GetNumElements();
     int row = (int)softmax.GetNumRows();
 
     SyncGuard syncGuard;

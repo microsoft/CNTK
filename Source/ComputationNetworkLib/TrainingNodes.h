@@ -217,11 +217,9 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        if (inputIndex == 0) // left derivative
-        {
+        if (0 == inputIndex) // labels
             LogicError("There is no need to compute gradient for labels");
-        }
-        else if (inputIndex == 1) // right derivative
+        else if (1 == inputIndex) // Y
         {
             auto& gradient = InputRef(1).Gradient();
             Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(Gradient(), *m_softmaxOfRight, *m_temp2, gradient, m_probDim * m_rank);
