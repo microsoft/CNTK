@@ -12,7 +12,8 @@
 #include "SequencePacker.h"
 #include "ReaderUtil.h"
 
-namespace CNTK {
+namespace CNTK
+{
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -57,7 +58,64 @@ MBLayoutPtr SequencePacker::CreateBinaryMBLayout(const StreamBatch& batch)
 
 Minibatch SequencePacker::ReadMinibatch()
 {
-    auto sequences = m_sequenceEnumerator->GetNextSequences(m_globalMinibatchSizeInSamples, m_localMinibatchSizeInSamples);
+    if (!m_readsequences)
+        m_sequences = m_sequenceEnumerator->GetNextSequences(m_globalMinibatchSizeInSamples, m_localMinibatchSizeInSamples);
+    auto sequencedata = m_sequences.m_data;
+    //get one minibatch
+    size_t totalframelabelsize = 0;
+    //select sequences for one minibatch, loop for sequence
+    size_t endIndex = m_sequenceindex;
+    bool found = false;
+    while (!found && endIndex < sequencedata[0].size())
+    {
+        for (; endIndex < sequencedata[0].size(); endIndex++)
+        {
+            totalframelabelsize += sequencedata[0][endIndex]->m_numberOfSamples * sequencedata[1][endIndex]->m_numberOfSamples;
+            if (totalframelabelsize > m_localMinibatchSizeInSamples)
+                break;
+        }
+        if (endIndex == m_sequenceindex)
+        {
+            found = false;
+            m_sequenceindex += 1;
+            endIndex = endIndex + 1;
+            totalframelabelsize = 0;
+        }
+        else
+        {
+            found = true;
+        }
+
+    }
+    std::vector<std::vector<SequenceDataPtr>> mbsequecedata;
+    mbsequecedata.resize(sequencedata.size());
+    //loop for stream, put sequence data into batch
+    for (size_t n = 0; n < sequencedata.size(); n++)
+    {
+        for (size_t i = m_sequenceindex; i < endIndex; i++)
+        {
+            mbsequecedata[n].push_back(sequencedata[n][i]);
+        }
+    }
+
+    Sequences sequences;
+    if (endIndex == sequencedata[0].size())  // read all data in this big batch to minibatch
+    {
+        m_readsequences = false;
+        sequences.m_endOfEpoch = m_sequences.m_endOfEpoch;
+        sequences.m_endOfSweep = m_sequences.m_endOfSweep;     
+        m_sequenceindex = 0;
+    }
+    else        //there is data left in big batch
+    {
+        m_readsequences = true;
+        m_sequenceindex = endIndex;
+        sequences.m_endOfEpoch = false;
+        sequences.m_endOfSweep = false;      
+    }
+    if (mbsequecedata[0].size() == 0)
+        mbsequecedata.clear();
+    sequences.m_data = mbsequecedata;
     const auto& batch = sequences.m_data;
 
     Minibatch minibatch(sequences.m_endOfSweep, sequences.m_endOfEpoch);
@@ -87,7 +145,7 @@ Minibatch SequencePacker::ReadMinibatch()
         else if (type == StorageFormat::SparseCSC)
             pMBLayout = PackSparseStream(streamBatch, streamIndex);
         else
-            RuntimeError("Unsupported for packing type '%d'", (int)type);
+            RuntimeError("Unsupported for packing type '%d'", (int) type);
 
         auto& buffer = currentBuffer[streamIndex];
 
@@ -112,16 +170,16 @@ void SequencePacker::SetConfiguration(const ReaderConfiguration& config, const s
     if (m_useLocalTimeline)
     {
         // Set global minibatch size to max and local minibatch per worker.
-        bool shouldAddOneSample = (int)m_config.m_minibatchSizeInSamples % m_config.m_numberOfWorkers > m_config.m_workerRank;
-        m_localMinibatchSizeInSamples = (int)m_config.m_minibatchSizeInSamples / (int)m_config.m_numberOfWorkers + (shouldAddOneSample ? 1 : 0);
+        bool shouldAddOneSample = (int) m_config.m_minibatchSizeInSamples % m_config.m_numberOfWorkers > m_config.m_workerRank;
+        m_localMinibatchSizeInSamples = (int) m_config.m_minibatchSizeInSamples / (int) m_config.m_numberOfWorkers + (shouldAddOneSample ? 1 : 0);
         m_globalMinibatchSizeInSamples = SIZE_MAX;
 
         if (m_localMinibatchSizeInSamples == 0)
         {
             // We expect to have a least a single sample per worker.
             fprintf(stderr, "WARNING: The minibatch size '%" PRIu64 "' is too small to be used with %d workers, adjusting to minibatch size of 1 sample per worker\n",
-                m_config.m_minibatchSizeInSamples,
-                (int)m_config.m_numberOfWorkers);
+                    m_config.m_minibatchSizeInSamples,
+                    (int) m_config.m_numberOfWorkers);
             m_localMinibatchSizeInSamples = 1;
         }
     }
@@ -147,9 +205,9 @@ void SequencePacker::RefreshSampleShape(const std::vector<SequenceDataPtr>& mini
         if (s->GetSampleShape() != outputStream.m_sampleLayout)
         {
             RuntimeError("Packer currently does not support samples with varying shapes."
-                "Please make sure there is a transform that unifies the shape of samples for input stream '%ls' "
-                "or the deserializer provides samples with the same shape.",
-                outputStream.m_name.c_str());
+                         "Please make sure there is a transform that unifies the shape of samples for input stream '%ls' "
+                         "or the deserializer provides samples with the same shape.",
+                         outputStream.m_name.c_str());
         }
     }
 }
@@ -191,7 +249,7 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
         // important for sparse input, where offset == number of preceding nnz elements).
         for (size_t sampleIndex = 0, sampleOffset = 0; sampleIndex < numSamples; ++sampleIndex)
         {
-            // Compute the offset into the destination buffer, using the layout information 
+            // Compute the offset into the destination buffer, using the layout information
             // to get the column index corresponding to the given sample.
             auto destinationOffset = pMBLayout->GetColumnIndex(sequenceInfo, sampleIndex) * sampleSize;
             // verify that there's enough space left in the buffer to fit a full sample.
@@ -213,13 +271,13 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
                 PackSparseSampleAsDense(destination, sparseSequence, sampleIndex, sampleOffset, sampleSize, elementSize);
                 // move the offset by nnz count of the sample.
                 sampleOffset += sparseSequence->m_nnzCounts[sampleIndex];
-                // verify that the offset is within the bounds (less or equal 
+                // verify that the offset is within the bounds (less or equal
                 // to the total nnz count of the sequence).
                 assert(sampleOffset <= sparseSequence->m_totalNnzCount);
             }
             else
             {
-                RuntimeError("Storage type %d is not supported.", (int)stream.m_storageFormat);
+                RuntimeError("Storage type %d is not supported.", (int) stream.m_storageFormat);
             }
         }
     }
@@ -242,7 +300,8 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
     if (nnzCount > numeric_limits<IndexType>::max())
     {
         RuntimeError("Minibatch NNZ count (%" PRIu64 ") exceeds the maximum allowed "
-            "value (%" PRIu64 ")\n", nnzCount, (size_t)numeric_limits<IndexType>::max());
+                     "value (%" PRIu64 ")\n",
+                     nnzCount, (size_t) numeric_limits<IndexType>::max());
     }
 
     const auto& stream = m_inputStreamDescriptions[streamIndex];
@@ -252,8 +311,8 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
     auto pMBLayout = CreateMBLayout(batch);
 
     // Compute the required buffer size:
-    // size of nnz type + nnz * (size of the element type) + nnz * (size of the row index type) + 
-    // (number of columns + 1) * (size of the column index type). 
+    // size of nnz type + nnz * (size of the element type) + nnz * (size of the row index type) +
+    // (number of columns + 1) * (size of the column index type).
     size_t requiredSize =
         sizeof(nnzCount) +
         nnzCount * (elementSize + indexSize) +
@@ -272,7 +331,7 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
     // create two pointers to the memory blocks inside the buffer,
     // one for data portion and another -- for indices.
     auto* dataDst = destination + sizeof(nnzCount);
-    auto* indicesDst = dataDst + elementSize* nnzCount;
+    auto* indicesDst = dataDst + elementSize * nnzCount;
     // column index for the current sample (= number of nnz value packed so far).
     IndexType columnOffset = 0;
     // a vector to store column index for each sample in the resulting (packed) matrix.
@@ -280,15 +339,15 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
     // a vector to keep track of the offsets into each input sequence,
     // there an offset is the number of nnz values packed so far. Current sample
     // values/indices start of the offset position in the sequence data/index array
-    vector<IndexType>  sequenceOffsets(batch.size(), 0); 
+    vector<IndexType> sequenceOffsets(batch.size(), 0);
 
     vector<MBLayout::SequenceInfo> sequenceInfos(pMBLayout->GetAllSequences());
 
     // sort the vector in ascending order of the parallel sequence index.
     sort(sequenceInfos.begin(), sequenceInfos.end(),
-        [](const MBLayout::SequenceInfo& a, const MBLayout::SequenceInfo& b){ return a.s < b.s; });
+         [](const MBLayout::SequenceInfo& a, const MBLayout::SequenceInfo& b) { return a.s < b.s; });
 
-    // Iterate over the all time steps in the layout (total number of samples/columns 
+    // Iterate over the all time steps in the layout (total number of samples/columns
     // in a parallel sequence), traversing the layout in horizontal direction.
     for (auto timeStep = 0; timeStep < pMBLayout->GetNumTimeSteps(); ++timeStep)
     {
@@ -340,7 +399,7 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
     }
 
     // at this point each element in sequenceOffsets should be equal to the total
-    // nnz count of the respective sequence and the sum of all elements - to the 
+    // nnz count of the respective sequence and the sum of all elements - to the
     // overall nnz count.
     assert(accumulate(sequenceOffsets.begin(), sequenceOffsets.end(), 0) == nnzCount);
 
@@ -354,7 +413,7 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
     assert((pMBLayout->GetNumCols() + 1) == sparseColumnIndices.size());
 
     // verify that there's enough space in the buffer for the array of column indices.
-    assert(indicesDst + sparseColumnIndices.size()*indexSize <= destination + requiredSize);
+    assert(indicesDst + sparseColumnIndices.size() * indexSize <= destination + requiredSize);
     // copy column indices into the buffer.
     memcpy(indicesDst, sparseColumnIndices.data(), sparseColumnIndices.size() * indexSize);
 
@@ -396,11 +455,10 @@ MBLayoutPtr SequencePacker::PackBinaryStream(const StreamBatch& batch, size_t st
         char* bufferPtr = buffer.m_data.get();
         auto destinationOffset = i * pMBLayout->GetNumTimeSteps() * elementSize;
 
-        auto source = (const char*)(sequence->GetDataBuffer());
+        auto source = (const char*) (sequence->GetDataBuffer());
         std::copy(source, source + numSamples * elementSize, bufferPtr + destinationOffset);
     }
     return pMBLayout;
 }
 
-
-}
+} // namespace CNTK

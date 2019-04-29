@@ -54,6 +54,11 @@ protected:
     // A minibatch size for this worker in global samples.
     size_t m_globalMinibatchSizeInSamples;
 
+    //sequences for mutli minibatch
+    Sequences m_sequences; 
+    bool m_readsequences = false;
+    size_t m_sequenceindex = 0;
+
 };
 
 typedef std::shared_ptr<SequencePacker> SequencePackerPtr;
