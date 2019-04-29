@@ -5409,20 +5409,20 @@ void CPUMatrix<ElemType>::LabelSmoothing(const CPUMatrix<ElemType>& label, ElemT
 template <class ElemType>
 void CPUMatrix<ElemType>::Scatter(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
 {
-    size_t minioutputDim = src.GetNumRows();
-    size_t outputDim = minioutputDim * processNum;
-    size_t miniblockSize = minioutputDim * minibatchSize;
-    size_t blockSize = miniblockSize * processNum;
-    size_t blockOffset = rank * miniblockSize;
-    size_t numElements = dst.GetNumElements();
+    long minioutputDim = (long)src.GetNumRows();
+    long outputDim = minioutputDim * (long)processNum;
+    long miniblockSize = minioutputDim * (long)minibatchSize;
+    long blockSize = miniblockSize * (long)processNum;
+    long blockOffset = (long)rank * miniblockSize;
+    long numElements = (long)dst.GetNumElements();
     ElemType* srcPtr = src.Data();
     ElemType* dstPtr = dst.Data();
-    for (size_t i(0); i < numElements; ++i)
+    for (long i(0); i < numElements; ++i)
     {
-        size_t row = i % outputDim;
-        size_t blockIndex = row / minioutputDim;
-        size_t rowIndex = row % minioutputDim;
-        size_t colIndex = i / outputDim;
+        long row = i % outputDim;
+        long blockIndex = row / minioutputDim;
+        long rowIndex = row % minioutputDim;
+        long colIndex = i / outputDim;
         dstPtr[i] = srcPtr[blockIndex * blockSize + blockOffset + colIndex * minioutputDim + rowIndex];
     }
 }
@@ -5430,20 +5430,20 @@ void CPUMatrix<ElemType>::Scatter(const CPUMatrix<ElemType>& src, const CPUMatri
 template <class ElemType>
 void CPUMatrix<ElemType>::ScatterInv(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
 {
-    size_t minioutputDim = src.GetNumRows();
-    size_t outputDim = minioutputDim * processNum;
-    size_t miniblockSize = minioutputDim * minibatchSize;
-    size_t blockSize = miniblockSize * processNum;
-    size_t blockOffset = rank * miniblockSize;
-    size_t numElements = dst.GetNumElements();
+    long minioutputDim = (long)src.GetNumRows();
+    long outputDim = minioutputDim * (long)processNum;
+    long miniblockSize = minioutputDim * (long)minibatchSize;
+    long blockSize = miniblockSize * (long)processNum;
+    long blockOffset = (long)rank * miniblockSize;
+    long numElements = (long)dst.GetNumElements();
     ElemType* srcPtr = src.Data();
     ElemType* dstPtr = dst.Data();
-    for (size_t i(0); i < numElements; ++i)
+    for (long i(0); i < numElements; ++i)
     {
-        size_t row = i % outputDim;
-        size_t blockIndex = row / minioutputDim;
-        size_t rowIndex = row % minioutputDim;
-        size_t colIndex = i / outputDim;
+        long row = i % outputDim;
+        long blockIndex = row / minioutputDim;
+        long rowIndex = row % minioutputDim;
+        long colIndex = i / outputDim;
         srcPtr[blockIndex * blockSize + blockOffset + colIndex * minioutputDim + rowIndex] = dstPtr[i];
     }
 }
@@ -5451,8 +5451,8 @@ void CPUMatrix<ElemType>::ScatterInv(const CPUMatrix<ElemType>& src, const CPUMa
 template <class ElemType>
 void CPUMatrix<ElemType>::AddColumnVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& columnVector, const CPUMatrix<ElemType>& dst)
 {
-    size_t num = src.GetNumElements();
-    size_t row = columnVector.GetNumRows();
+    long num = (long)src.GetNumElements();
+    long row = (long)columnVector.GetNumRows();
     ElemType* srcPtr = src.Data();
     ElemType* dstPtr = dst.Data();
     ElemType* vecPtr = columnVector.Data();
@@ -5475,8 +5475,8 @@ void CPUMatrix<ElemType>::AddColumnVector(const CPUMatrix<ElemType>& src, const 
 template <class ElemType>
 void CPUMatrix<ElemType>::AddRowVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& rowVector, const CPUMatrix<ElemType>& dst)
 {
-    size_t num = src.GetNumElements();
-    size_t col = rowVector.GetNumCols();
+    long num = (long)src.GetNumElements();
+    long col = (long)rowVector.GetNumCols();
     ElemType* srcPtr = src.Data();
     ElemType* dstPtr = dst.Data();
     ElemType* vecPtr = rowVector.Data();
@@ -5499,8 +5499,8 @@ void CPUMatrix<ElemType>::AddRowVector(const CPUMatrix<ElemType>& src, const CPU
 template <class ElemType>
 void CPUMatrix<ElemType>::MinusColumnVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& columnVector, const CPUMatrix<ElemType>& dst)
 {
-    size_t num = src.GetNumElements();
-    size_t row = columnVector.GetNumRows();
+    long num = (long)src.GetNumElements();
+    long row = (long)columnVector.GetNumRows();
     ElemType* srcPtr = src.Data();
     ElemType* dstPtr = dst.Data();
     ElemType* vecPtr = columnVector.Data();
@@ -5523,8 +5523,8 @@ void CPUMatrix<ElemType>::MinusColumnVector(const CPUMatrix<ElemType>& src, cons
 template <class ElemType>
 void CPUMatrix<ElemType>::MinusRowVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& rowVector, const CPUMatrix<ElemType>& dst)
 {
-    size_t num = src.GetNumElements();
-    size_t col = rowVector.GetNumCols();
+    long num = (long)src.GetNumElements();
+    long col = (long)rowVector.GetNumCols();
     ElemType* srcPtr = src.Data();
     ElemType* dstPtr = dst.Data();
     ElemType* vecPtr = rowVector.Data();
@@ -5547,8 +5547,8 @@ void CPUMatrix<ElemType>::MinusRowVector(const CPUMatrix<ElemType>& src, const C
 template <class ElemType>
 void CPUMatrix<ElemType>::DistributedSoftmax(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& logSum, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& logSoftmax)
 {
-    size_t num = Y.GetNumElements();
-    size_t col = Y.GetNumCols();
+    long num = (long)Y.GetNumElements();
+    long col = (long)Y.GetNumCols();
     ElemType* YPtr = Y.Data();
     ElemType* logSumPtr = logSum.Data();
     ElemType* softmaxPtr = softmax.Data();
@@ -5577,8 +5577,8 @@ void CPUMatrix<ElemType>::DistributedSoftmax(const CPUMatrix<ElemType>& Y, const
 template <class ElemType>
 void CPUMatrix<ElemType>::DistributedCrossEntropy(const CPUMatrix<ElemType>& logP, const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
 {
-    size_t row = logP.GetNumRows();
-    size_t col = logP.GetNumCols();
+    long row = (long)logP.GetNumRows();
+    long col = (long)logP.GetNumCols();
     ElemType* logPPtr = logP.Data();
     ElemType* labelsPtr = labels.Data();
     ElemType* valuePtr = value.Data();
@@ -5587,6 +5587,32 @@ void CPUMatrix<ElemType>::DistributedCrossEntropy(const CPUMatrix<ElemType>& log
     {
         if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex)
             valuePtr[0] += logPPtr[i * row + ((int)labelsPtr[i]) - startIndex];
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const CPUMatrix<ElemType>& postGradient, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& gradient, size_t startIndex)
+{
+    long num = (long)softmax.GetNumRows();
+    long row = (long)softmax.GetNumRows();
+    ElemType postGradientVal = postGradient.Data()[0];
+    ElemType* softmaxPtr = softmax.Data();
+    ElemType* labelsPtr = labels.Data();
+    ElemType* gradientPtr = gradient.Data();
+
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        gradientPtr[i] = postGradientVal * (((long)labelsPtr[i / row] == i % row + startIndex) ? (1 - sotfmaxPtr[i]) : -softmaxPtr[i]);
+        gradientPtr[i + 1] = postGradientVal * (((long)labelsPtr[(i + 1) / row] == (i + 1) % row + startIndex) ? (1 - sotfmaxPtr[i + 1]) : -softmaxPtr[i + 1]);
+        gradientPtr[i + 2] = postGradientVal * (((long)labelsPtr[(i + 2) / row] == (i + 2) % row + startIndex) ? (1 - sotfmaxPtr[i + 2]) : -softmaxPtr[i + 2]);
+        gradientPtr[i + 3] = postGradientVal * (((long)labelsPtr[(i + 2) / row] == (i + 3) % row + startIndex) ? (1 - sotfmaxPtr[i + 3]) : -softmaxPtr[i + 3]);
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        gradientPtr[i] = postGradientVal * (((long)labelsPtr[i / row] == i % row + startIndex) ? (1 - sotfmaxPtr[i]) : -softmaxPtr[i]);
     }
 }
 

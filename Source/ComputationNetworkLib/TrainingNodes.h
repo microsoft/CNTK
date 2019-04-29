@@ -224,8 +224,7 @@ public:
         else if (inputIndex == 1) // right derivative
         {
             auto& gradient = InputRef(1).Gradient();
-            auto& labels = InputRef(0).Value();
-            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, labels, gradient);
+            Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(Gradient(), *m_softmaxOfRight, *m_temp1, gradient, m_probDim * m_rank);
         }
     }
 

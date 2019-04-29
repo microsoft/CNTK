@@ -5278,6 +5278,17 @@ template <class ElemType>
         NOT_IMPLEMENTED);
 }
 
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const Matrix<ElemType>& postGradient, const Matrix<ElemType>& softmax, const Matrix<ElemType>& labels, const Matrix<ElemType>& gradient, size_t startIndex)
+{
+    DISPATCH_MATRIX_ON_FLAG(&gradient,
+        &gradient,
+        CPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(*(postGradient.m_CPUMatrix), *(softmax.m_CPUMatrix), *(labels.m_CPUMatrix), *(gradient.m_CPUMatrix), startIndex),
+        GPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(*(postGradient.m_GPUMatrix), *(softmax.m_GPUMatrix), *(labels.m_GPUMatrix), *(gradient.m_GPUMatrix), startIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
 #pragma endregion
 
 

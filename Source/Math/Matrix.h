@@ -658,6 +658,8 @@ public:
 
     static void DistributedCrossEntropy(const Matrix<ElemType>& logP, const Matrix<ElemType>& labels, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex);
 
+    static void DistributedSoftmaxWithCrossEntropyBackprop(const Matrix<ElemType>& postGradient, const Matrix<ElemType>& softmax, const Matrix<ElemType>& labels, const Matrix<ElemType>& gradient, size_t startIndex);
+
 #pragma endregion
 
 

@@ -2205,6 +2205,12 @@ void GPUMatrix<ElemType>::DistributedCrossEntropy(const GPUMatrix<ElemType>& log
 {
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const GPUMatrix<ElemType>& postGradient, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& gradient, size_t startIndex)
+{
+}
+
+
 #pragma endregion
 
 

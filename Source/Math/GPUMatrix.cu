@@ -3973,14 +3973,12 @@ __global__ void _distributedCrossEntropyOf512Threads(const ElemType* logP, const
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     __shared__ comp_t partials[512];
 
-    if (threadIdx.x < numElements && labels[threadIdx.x] >= startIndex && labels[threadIdx.x] <= endIndex)
-        partials[threadIdx.x] = (comp_t)logP[threadIdx.x * row + ((int)labels[threadIdx.x]) - startIndex];
-    else
-        partials[threadIdx.x] = 0.0f;
-    for (int i = threadIdx.x + 512; i < numElements; i += 512)
+    partials[threadIdx.x] = 0.0f;
+    for (int i = threadIdx.x; i < numElements; i += 512)
     {
-        if(labels[i] >= startIndex && labels[i] <= endIndex)
-            partials[threadIdx.x] += (comp_t)logP[i * row + ((int)labels[i]) - startIndex];
+        int label = (int)labels[i];
+        if(label >= startIndex && label <= endIndex)
+            partials[threadIdx.x] += (comp_t)logP[i * row + label - startIndex];
     }
 
     if (threadIdx.x < 256)
@@ -4038,6 +4036,32 @@ void GPUMatrix<ElemType>::DistributedCrossEntropy(const GPUMatrix<ElemType>& log
     SyncGuard syncGuard;
     GridDim grid(numElements);
     _distributedCrossEntropyOf512Threads << <1, 512, 0, t_stream >> > (logP.Data(), labels.Data(), value.Data(), row, (int)startIndex, (int)endIndex, numElements);
+}
+
+template <class ElemType>
+__global__ void _distributedSoftmaxWithCrossEntropyBackprop(const ElemType postGradientVal, const ElemType* softmax, const ElemType* labels, const ElemType* gradient, const int row, const int startIndex, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        int label = (int)labels[id / row];
+        if (label == startIndex + id % row)
+            gradient[id] = postGradientVal - postGradientVal * softmax[id];
+        else
+            gradient[id] = -postGradientVal * softmax[id];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const GPUMatrix<ElemType>& postGradient, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& gradient, size_t startIndex)
+{
+    CUDA_LONG numElements = softmax.GetNumRows();
+    int row = (int)softmax.GetNumRows();
+    ElemType postGradientVal = postGradient.Data()[0];
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _distributedSoftmaxWithCrossEntropyBackprop<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (postGradientVal, softmax.Data(), labels.Data(), gradient.Data(), (int)startIndex, row, numElements);
 }
 
 #pragma endregion

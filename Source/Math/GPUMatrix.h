@@ -615,6 +615,8 @@ public:
 
     static void DistributedCrossEntropy(const GPUMatrix<ElemType>& logP, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
 
+    static void DistributedSoftmaxWithCrossEntropyBackprop(const GPUMatrix<ElemType>& postGradient, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& gradient, size_t startIndex);
+
 #pragma endregion
 
 
