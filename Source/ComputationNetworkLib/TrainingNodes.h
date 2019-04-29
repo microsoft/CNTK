@@ -224,7 +224,7 @@ public:
         else if (inputIndex == 1) // right derivative
         {
             auto& gradient = InputRef(1).Gradient();
-            Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(Gradient(), *m_softmaxOfRight, *m_temp1, gradient, m_probDim * m_rank);
+            Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(Gradient(), *m_softmaxOfRight, *m_temp2, gradient, m_probDim * m_rank);
         }
     }
 
@@ -263,13 +263,13 @@ public:
         Matrix<ElemType>::MinusRowVector(Y, *m_temp2, Y);
         Y.InplaceExp();
         Matrix<ElemType>::VectorSum(Y, *m_temp1, true);
+        InputRef(0).Value().VectorMax(*m_temp3, *m_temp4, true);
         m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
+        m_distGradAggPtr->DistributedAllGather(*m_temp3, *m_temp2, m_minibatchSize);
         m_temp1->InplaceLog();
 
         Matrix<ElemType>::DistributedSoftmax(Y, *m_temp1, *m_softmaxOfRight, *m_logSoftmaxOfRight);
-        InputRef(0).Value().VectorMax(*m_temp3, *m_temp4, true);
-        m_distGradAggPtr->DistributedAllGather(*m_temp3, *m_temp1, m_minibatchSize);
-        Matrix<ElemType>::DistributedCrossEntropy(*m_logSoftmaxOfRight, *m_temp1, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
+        Matrix<ElemType>::DistributedCrossEntropy(*m_logSoftmaxOfRight, *m_temp2, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -338,10 +338,10 @@ protected:
     IDistGradAggregator<ElemType>* m_distGradAggPtr;
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
-    shared_ptr<Matrix<ElemType>> m_temp1;
-    shared_ptr<Matrix<ElemType>> m_temp2;
-    shared_ptr<Matrix<ElemType>> m_temp3;
-    shared_ptr<Matrix<ElemType>> m_temp4;
+    shared_ptr<Matrix<ElemType>> m_temp1; // temp buffer, size(1, m_batchsize)
+    shared_ptr<Matrix<ElemType>> m_temp2; // temp buffer, size(1, m_batchsize)
+    shared_ptr<Matrix<ElemType>> m_temp3; // temp buffer, size(1, m_minibatchsize)
+    shared_ptr<Matrix<ElemType>> m_temp4; // temp buffer, size(1, m_minibatchsize)
 };
 
 // Implements A-Softmax as described in:

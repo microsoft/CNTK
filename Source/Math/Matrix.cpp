@@ -5281,6 +5281,7 @@ template <class ElemType>
 template <class ElemType>
 /*static*/ void Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const Matrix<ElemType>& postGradient, const Matrix<ElemType>& softmax, const Matrix<ElemType>& labels, const Matrix<ElemType>& gradient, size_t startIndex)
 {
+    assert(gradient.GetNumCols() == labels.GetNumCols());
     DISPATCH_MATRIX_ON_FLAG(&gradient,
         &gradient,
         CPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(*(postGradient.m_CPUMatrix), *(softmax.m_CPUMatrix), *(labels.m_CPUMatrix), *(gradient.m_CPUMatrix), startIndex),
