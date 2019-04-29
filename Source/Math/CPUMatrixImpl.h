@@ -5604,15 +5604,15 @@ void CPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const CPUMa
     // four-way unrolling
     for (long i = 0; i < (num & ~3); i += 4)
     {
-        gradientPtr[i] = postGradientVal * (((long)labelsPtr[i / row] == i % row + startIndex) ? (1 - sotfmaxPtr[i]) : -softmaxPtr[i]);
-        gradientPtr[i + 1] = postGradientVal * (((long)labelsPtr[(i + 1) / row] == (i + 1) % row + startIndex) ? (1 - sotfmaxPtr[i + 1]) : -softmaxPtr[i + 1]);
-        gradientPtr[i + 2] = postGradientVal * (((long)labelsPtr[(i + 2) / row] == (i + 2) % row + startIndex) ? (1 - sotfmaxPtr[i + 2]) : -softmaxPtr[i + 2]);
-        gradientPtr[i + 3] = postGradientVal * (((long)labelsPtr[(i + 2) / row] == (i + 3) % row + startIndex) ? (1 - sotfmaxPtr[i + 3]) : -softmaxPtr[i + 3]);
+        gradientPtr[i] = postGradientVal * (((long)labelsPtr[i / row] == i % row + startIndex) ? (1 - softmaxPtr[i]) : -softmaxPtr[i]);
+        gradientPtr[i + 1] = postGradientVal * (((long)labelsPtr[(i + 1) / row] == (i + 1) % row + startIndex) ? (1 - softmaxPtr[i + 1]) : -softmaxPtr[i + 1]);
+        gradientPtr[i + 2] = postGradientVal * (((long)labelsPtr[(i + 2) / row] == (i + 2) % row + startIndex) ? (1 - softmaxPtr[i + 2]) : -softmaxPtr[i + 2]);
+        gradientPtr[i + 3] = postGradientVal * (((long)labelsPtr[(i + 2) / row] == (i + 3) % row + startIndex) ? (1 - softmaxPtr[i + 3]) : -softmaxPtr[i + 3]);
     }
     // handle remaining stuffs
     for (long i = num & ~3; i < num; i++)
     {
-        gradientPtr[i] = postGradientVal * (((long)labelsPtr[i / row] == i % row + startIndex) ? (1 - sotfmaxPtr[i]) : -softmaxPtr[i]);
+        gradientPtr[i] = postGradientVal * (((long)labelsPtr[i / row] == i % row + startIndex) ? (1 - softmaxPtr[i]) : -softmaxPtr[i]);
     }
 }
 
