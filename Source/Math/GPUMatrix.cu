@@ -4039,7 +4039,7 @@ void GPUMatrix<ElemType>::DistributedCrossEntropy(const GPUMatrix<ElemType>& log
 }
 
 template <class ElemType>
-__global__ void _distributedSoftmaxWithCrossEntropyBackprop(const ElemType postGradientVal, const ElemType* softmax, const ElemType* labels, const ElemType* gradient, const int row, const int startIndex, CUDA_LONG numElements)
+__global__ void _distributedSoftmaxWithCrossEntropyBackprop(const ElemType postGradientVal, const ElemType* softmax, const ElemType* labels, ElemType* gradient, const int row, const int startIndex, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
