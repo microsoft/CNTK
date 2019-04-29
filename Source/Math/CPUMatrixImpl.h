@@ -5548,7 +5548,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::DistributedSoftmax(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& logSum, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& logSoftmax)
 {
     long num = (long)Y.GetNumElements();
-    long col = (long)Y.GetNumCols();
+    long row = (long)Y.GetNumRows();
     ElemType* YPtr = Y.Data();
     ElemType* logSumPtr = logSum.Data();
     ElemType* softmaxPtr = softmax.Data();
@@ -5557,19 +5557,19 @@ void CPUMatrix<ElemType>::DistributedSoftmax(const CPUMatrix<ElemType>& Y, const
     // four-way unrolling
     for (long i = 0; i < (num & ~3); i += 4)
     {
-        logSoftmaxPtr[i] = YPtr[i] - logSumPtr[i / col];
+        logSoftmaxPtr[i] = YPtr[i] - logSumPtr[i / row];
         softmaxPtr[i] = exp(logSoftmaxPtr[i]);
-        logSoftmaxPtr[i + 1] = YPtr[i + 1] - logSumPtr[(i + 1) / col];
+        logSoftmaxPtr[i + 1] = YPtr[i + 1] - logSumPtr[(i + 1) / row];
         softmaxPtr[i + 1] = exp(logSoftmaxPtr[i + 1]);
-        logSoftmaxPtr[i + 2] = YPtr[i + 2] - logSumPtr[(i + 2) / col];
+        logSoftmaxPtr[i + 2] = YPtr[i + 2] - logSumPtr[(i + 2) / row];
         softmaxPtr[i + 2] = exp(logSoftmaxPtr[i + 2]);
-        logSoftmaxPtr[i + 3] = YPtr[i + 3] - logSumPtr[(i + 3) / col];
+        logSoftmaxPtr[i + 3] = YPtr[i + 3] - logSumPtr[(i + 3) / row];
         softmaxPtr[i + 3] = exp(logSoftmaxPtr[i + 3]);
     }
     // handle remaining stuffs
     for (long i = num & ~3; i < num; i++)
     {
-        logSoftmaxPtr[i] = YPtr[i] - logSumPtr[i / col];
+        logSoftmaxPtr[i] = YPtr[i] - logSumPtr[i / row];
         softmaxPtr[i] = exp(logSoftmaxPtr[i]);
     }
 }
