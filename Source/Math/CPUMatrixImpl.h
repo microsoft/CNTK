@@ -5593,7 +5593,7 @@ void CPUMatrix<ElemType>::DistributedCrossEntropy(const CPUMatrix<ElemType>& log
 template <class ElemType>
 void CPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const CPUMatrix<ElemType>& postGradient, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& gradient, size_t startIndex)
 {
-    long num = (long)softmax.GetNumRows();
+    long num = (long)softmax.GetNumElements();
     long row = (long)softmax.GetNumRows();
     ElemType postGradientVal = postGradient.Data()[0];
     ElemType* softmaxPtr = softmax.Data();
