@@ -1336,13 +1336,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 tmpLocalEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
                 EpochCriterion tmpEpochCriterion = tmpLocalEpochCriterion.GetCriterion(0);
-                if (tmpEpochCriterion.IsNan())
+                if (tmpEpochCriterion.IsNan() || tmpEpochCriterion.IsInf())
                 {
-                    fprintf(stderr, "WARN: skipping Minibatch %4d - as the training criterion is not a number (NAN).\n", numMBsRun);
+                    fprintf(stderr, "WARN: skipping Minibatch %4d - as the training criterion is not a number (NAN) or is inf.\n", numMBsRun);
                     if (lastSkippedConsecutiveMBEnd + 1 != numMBsRun) lastSkippedConsecutiveMBBegin = numMBsRun;
                     lastSkippedConsecutiveMBEnd = numMBsRun;
                     if ((lastSkippedConsecutiveMBEnd - lastSkippedConsecutiveMBBegin) > m_skipMinibatchForNans)
-                        RuntimeError("The last consecutive %d minibatches all had the training criterion NAN.", m_skipMinibatchForNans);
+                        RuntimeError("The last consecutive %d minibatches all had the training criterion NAN or inf.", m_skipMinibatchForNans);
 
                     numMBsRun++;
                     continue;
@@ -1350,6 +1350,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 lastSkippedConsecutiveMBBegin = -1;
                 lastSkippedConsecutiveMBEnd = -1;
             }
+
             // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
             localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
             for (size_t i = 0; i < evaluationNodes.size(); i++)
@@ -1408,13 +1409,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // if nan, continue
             if (m_skipMinibatchForNans > 0)
             {
-                if (tmpEpochCriterion.IsNan())
+                if (tmpEpochCriterion.IsNan() || tmpEpochCriterion.IsInf())
                 {
-                    fprintf(stderr, "WARN: skipping Minibatch %4d - as the training criterion is not a number (NAN).\n", numMBsRun);
+                    fprintf(stderr, "WARN: skipping Minibatch %4d - as the training criterion is not a number (NAN) or is inf.\n", numMBsRun);
                     if (lastSkippedConsecutiveMBEnd + 1 != numMBsRun) lastSkippedConsecutiveMBBegin = numMBsRun;
                     lastSkippedConsecutiveMBEnd = numMBsRun;
                     if ((lastSkippedConsecutiveMBEnd - lastSkippedConsecutiveMBBegin) > m_skipMinibatchForNans)
-                        RuntimeError("The last consecutive %d minibatches all had the training criterion NAN.", m_skipMinibatchForNans);
+                        RuntimeError("The last consecutive %d minibatches all had the training criterion NAN or inf.", m_skipMinibatchForNans);
 
                     numMBsRun++;
                     continue;
