@@ -48,6 +48,7 @@ struct EpochCriterion : public std::pair<double, size_t>
 
     // a few more handy operations that occurred multiple times
     bool IsNan() const { return std::isnan(first); }
+    bool IsInf() const { return std::isinf(first); }
     EpochCriterion operator-(const EpochCriterion& other) const { return EpochCriterion(first - other.first, second - other.second); }
     void operator+=(const EpochCriterion& other) { first += other.first; second += other.second; }
 
