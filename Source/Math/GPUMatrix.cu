@@ -3862,7 +3862,7 @@ void GPUMatrix<ElemType>::ScatterInv(const GPUMatrix<ElemType>& src, const GPUMa
 }
 
 template <class ElemType>
-__global__ void _addColumnVector(ElemType* src, ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
+__global__ void _addColumnVector(ElemType* src, const ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
@@ -3883,7 +3883,7 @@ void GPUMatrix<ElemType>::AddColumnVector(const GPUMatrix<ElemType>& src, const 
 }
 
 template <class ElemType>
-__global__ void _addRowVector(ElemType* src, ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
+__global__ void _addRowVector(ElemType* src, const ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
@@ -3904,7 +3904,7 @@ void GPUMatrix<ElemType>::AddRowVector(const GPUMatrix<ElemType>& src, const GPU
 }
 
 template <class ElemType>
-__global__ void _minusColumnVector(ElemType* src, ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
+__global__ void _minusColumnVector(ElemType* src, const ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
@@ -3925,7 +3925,7 @@ void GPUMatrix<ElemType>::MinusColumnVector(const GPUMatrix<ElemType>& src, cons
 }
 
 template <class ElemType>
-__global__ void _minusRowVector(ElemType* src, ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
+__global__ void _minusRowVector(ElemType* src, const ElemType* vec, ElemType* dst, int row, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
@@ -4030,7 +4030,7 @@ __global__ void _distributedCrossEntropyOf512Threads(const ElemType* logP, const
 template <class ElemType>
 void GPUMatrix<ElemType>::DistributedCrossEntropy(const GPUMatrix<ElemType>& logP, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
 {
-    CUDA_LONG numElements = labels.GetNumElements();
+    CUDA_LONG numElements = labels.GetNumCols();
     int row = (int)logP.GetNumRows();
 
     SyncGuard syncGuard;
@@ -4044,11 +4044,10 @@ __global__ void _distributedSoftmaxWithCrossEntropyBackprop(const ElemType* post
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
     {
+        gradient[id] = postGradient[0] * softmax[id];
         int label = (int)labels[id / row];
         if (label == startIndex + id % row)
-            gradient[id] = postGradient[0] * softmax[id] - postGradient[0];
-        else
-            gradient[id] = postGradient[0] * softmax[id];
+            gradient[id] -= postGradient[0];
     }
 }
 
