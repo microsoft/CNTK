@@ -423,7 +423,9 @@ private:
     static onnxruntime::Node *AddReshapeNodeImpl(Graph *graph, const string &nodeName, NodeArg *input, NodeArg *output, const std::vector<int64_t>& newShape);
 
     static NodeArg* GetInputAdjustmentForBroadcast(onnxruntime::Graph* graph, const FunctionPtr src, const Variable &input, int inputIndex,
-                                                   onnx::TypeProto &inputArgType, const std::unordered_map<Variable, Variable>& compositeOutputsMap);
+                                                   onnx::TypeProto &inputArgType,
+                                                   const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+                                                   const std::string& scanInputName = "");
 
     static int BatchSizeOverride(const FunctionPtr src, const std::vector<onnxruntime::NodeArg*>& inputs,
                                  onnx::TypeProto& outputArgType);
@@ -5501,8 +5503,14 @@ bool TryMatchNodeArgType(onnx::TypeProto &argType, onnxruntime::Graph* graph, co
 //      z = C.sequence.input_variable((2,)) + C.input_variable((3,2))
 //
 // input is not necessarily an input to src. It may be obtained via skipping of batch/sequence pack/unpack wrappers.
+//
+// Special note for scan input cases:
+// when input is also an input to a scan op, we have to keep its name so that
+// the main graph and subgraph is well connected.
 NodeArg* CNTKToONNXHelper::GetInputAdjustmentForBroadcast(onnxruntime::Graph* graph, const FunctionPtr src,
-                                                          const Variable &input, int inputIndex, onnx::TypeProto &inputArgType, const std::unordered_map<Variable, Variable>& compositeOutputsMap)
+                                                          const Variable &input, int inputIndex, onnx::TypeProto &inputArgType,
+                                                          const std::unordered_map<Variable, Variable>& compositeOutputsMap,
+                                                          const std::string& scanInputName)
 {
     // TODO: do we need to get blockroot if it is a block function?
     if (!Operators::SupportBroadcast(src->OpName()))
@@ -5558,11 +5566,16 @@ NodeArg* CNTKToONNXHelper::GetInputAdjustmentForBroadcast(onnxruntime::Graph* gr
         //inputArgType.mutable_tensor_type()->set_elem_type(inputArgType.tensor_type().elem_type());
         //UpdateONNXType(input.GetDataType(), inputArgType);
         std::string inputNodeArgName;
-        auto inputItr = compositeOutputsMap.find(input);
-        if (inputItr != compositeOutputsMap.end())
-            inputNodeArgName = UniqueNodeNameStorage::GetUniqueInputNodeName(inputItr->second);
+        if (scanInputName != "")
+            inputNodeArgName = scanInputName;
         else
-            inputNodeArgName = UniqueNodeNameStorage::GetUniqueInputNodeName(input);
+        {
+            auto inputItr = compositeOutputsMap.find(input);
+            if (inputItr != compositeOutputsMap.end())
+                inputNodeArgName = UniqueNodeNameStorage::GetUniqueInputNodeName(inputItr->second);
+            else
+                inputNodeArgName = UniqueNodeNameStorage::GetUniqueInputNodeName(input);
+        }
 
         std::string outputArgName = UniqueNodeNameStorage::GetUniqueNodeNameWithoutUid(inputNodeArgName + "_reshaped_for_broadcast");
         onnxruntime::NodeArg &nodeArg = graph->GetOrCreateNodeArg(inputNodeArgName, &inputArgType);
@@ -6000,12 +6013,18 @@ void CNTKToONNXHelper::ProcessInputs(const FunctionPtr& src,
             }
         }
 
-        onnxruntime::NodeArg *adjusted = GetInputAdjustmentForBroadcast(graph, src, input, inputIndex, inputArgType,
-                                                                        compositeOutputsMap);
-
+        onnxruntime::NodeArg *adjusted = nullptr;
         if ((isOutputOfStepFunction && isInSubGraph) || isScanInputInSubgraph)
         {
             inputName = MakeScanInputOutputNodeArgName(inputName);
+
+            // in case of broadcast, we want the input name unchanged.
+            // The inserted reshape op is treated as being inside of the scan subgraph.
+            adjusted = GetInputAdjustmentForBroadcast(graph, src, input, inputIndex, inputArgType, compositeOutputsMap, inputName);
+        }
+        else
+        {
+            adjusted = GetInputAdjustmentForBroadcast(graph, src, input, inputIndex, inputArgType, compositeOutputsMap);
         }
 
         onnxruntime::NodeArg &inputArg = adjusted == nullptr ? graph->GetOrCreateNodeArg(inputName, &inputArgType) : *adjusted;
