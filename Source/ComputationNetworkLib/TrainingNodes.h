@@ -22,9 +22,15 @@
 #include <list>
 #include <memory>
 #include <random>
+#include <iostream>
+#include <fstream>
+using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
+static int distfcForwardLogFlag = 0;
+static int distfcBackwardLogFlag = 0;
+static int distcrossentropywithsoftmaxForwardLogFlag = 0;
+static int distcrossentropywithsoftmaxBackwardLogFlag = 0;
 // Names of random variable types
 static const wstring RandomDistributionTypeUniform   = L"uniform";
 static const wstring RandomDistributionTypeNormal    = L"normal";
@@ -82,12 +88,27 @@ public:
         m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
     }
 
+    void dumpMatrix(const Matrix<ElemType>& matrix, string filename)
+    {
+        ofstream matrixFile(filename, ios::out);
+        matrixFile << "shape = [" << to_string(matrix.GetNumRows()) << ", " << to_string(matrix.GetNumCols()) << "]" << endl;
+        for (size_t i(0); i < matrix.GetNumRows(); ++i)
+        {
+            for (size_t j(0); j < matrix.GetNumCols(); ++j)
+                matrixFile << (double)matrix.GetValue(i, j) << " ";
+            matrixFile << endl;
+        }
+        matrixFile.close();
+    }
+
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         if (0 == inputIndex)
         {
             auto& W_gradient = InputRef(0).Gradient();
             Matrix<ElemType>::Multiply(*m_temp1, false, Gradient(), true, W_gradient);
+
+            if (3 == distfcBackwardLogFlag) dumpMatrix(W_gradient, "W_gradient_" + to_string(m_rank) + ".txt");
         }
         else if (1 == inputIndex)
         {
@@ -96,11 +117,18 @@ public:
             m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
             auto X_gradient = InputRef(1).GradientFor(InputRef(1).GetMBLayout());
             X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
+
+            if (3 == distfcBackwardLogFlag) dumpMatrix(X_gradient, "X_gradient_" + to_string(m_rank) + ".txt");
         }
         else if (2 == inputIndex)
         {
-            auto& b_gradient = InputRef(1).Gradient();
+            auto& b_gradient = InputRef(2).Gradient();
             Matrix<ElemType>::Multiply(Gradient(), false, *m_ones, false, b_gradient);
+
+            if (3 == distfcBackwardLogFlag) dumpMatrix(b_gradient, "b_gradient_" + to_string(m_rank) + ".txt");
+
+
+            ++distfcBackwardLogFlag;
         }
     }
 
@@ -109,10 +137,18 @@ public:
         auto& W = InputRef(0).Value();
         auto  X = InputRef(1).ValueFor(InputRef(1).GetMBLayout());
         auto& b = InputRef(2).Value();
+        if (3 == distfcForwardLogFlag) dumpMatrix(W, "W_" + to_string(m_rank) + ".txt");
+        if (3 == distfcForwardLogFlag) dumpMatrix(X, "X_" + to_string(m_rank) + ".txt");
+        if (3 == distfcForwardLogFlag) dumpMatrix(b, "b_" + to_string(m_rank) + ".txt");
         m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
 
         Matrix<ElemType>::Multiply(W, true, *m_temp1, false, Value());
         Matrix<ElemType>::AddColumnVector(Value(), b, Value());
+
+        if (3 == distfcForwardLogFlag) dumpMatrix(Value(), "Y_" + to_string(m_rank) + ".txt");
+
+
+        ++distfcForwardLogFlag;
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -213,17 +249,11 @@ public:
     DistributedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_batchSize(0)
     {
-    }
-
-    virtual void BackpropToNonLooping(size_t inputIndex) override
-    {
-        if (0 == inputIndex) // labels
-            LogicError("There is no need to compute gradient for labels");
-        else if (1 == inputIndex) // Y
-        {
-            auto& gradient = InputRef(1).Gradient();
-            Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(Gradient(), *m_softmaxOfRight, *m_temp2, gradient, m_probDim * m_rank);
-        }
+        if (1 == m_processNum)
+            LogicError("Multi Gpus and mpi is needed in distributed FC.");
+#ifdef CPUONLY
+        LogicError("CPUONLY is not supported in DistributedCrossEntropyWithSoftmaxNode.");
+#endif
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -252,6 +282,35 @@ public:
         m_temp4->Resize(1, m_minibatchSize);
     }
 
+    void dumpMatrix(const Matrix<ElemType>& matrix, string filename)
+    {
+        ofstream matrixFile(filename, ios::out);
+        matrixFile << "shape = [" << to_string(matrix.GetNumRows()) << ", " << to_string(matrix.GetNumCols()) << "]" << endl;
+        for (size_t i(0); i < matrix.GetNumRows(); ++i)
+        {
+            for (size_t j(0); j < matrix.GetNumCols(); ++j)
+                matrixFile << (double)matrix.GetValue(i, j) << " ";
+            matrixFile << endl;
+        }
+        matrixFile.close();
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (0 == inputIndex) // labels
+            LogicError("There is no need to compute gradient for labels");
+        else if (1 == inputIndex) // Y
+        {
+            auto& gradient = InputRef(1).Gradient();
+            if (3 == distcrossentropywithsoftmaxBackwardLogFlag) dumpMatrix(Gradient(), "postGradient_" + to_string(m_rank) + ".txt");
+            Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(Gradient(), *m_softmaxOfRight, *m_temp2, gradient, m_probDim * m_rank);
+            if (3 == distcrossentropywithsoftmaxBackwardLogFlag) dumpMatrix(gradient, "gradient_" + to_string(m_rank) + ".txt");
+
+
+            ++distcrossentropywithsoftmaxBackwardLogFlag;
+        }
+    }
+
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
     {
         auto& Y = InputRef(1).Value();
@@ -267,6 +326,14 @@ public:
 
         Matrix<ElemType>::DistributedSoftmax(Y, *m_temp1, *m_softmaxOfRight, *m_logSoftmaxOfRight);
         Matrix<ElemType>::DistributedCrossEntropy(*m_logSoftmaxOfRight, *m_temp2, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
+
+        if (3 == distcrossentropywithsoftmaxForwardLogFlag) dumpMatrix(*m_temp2, "labels_" + to_string(m_rank) + ".txt");
+        if (3 == distcrossentropywithsoftmaxForwardLogFlag) dumpMatrix(*m_softmaxOfRight, "softmax_" + to_string(m_rank) + ".txt");
+        if (3 == distcrossentropywithsoftmaxForwardLogFlag) dumpMatrix(*m_logSoftmaxOfRight, "logSoftmax_" + to_string(m_rank) + ".txt");
+        if (3 == distcrossentropywithsoftmaxForwardLogFlag) dumpMatrix(Value(), "loss_" + to_string(m_rank) + ".txt");
+
+
+        ++distcrossentropywithsoftmaxForwardLogFlag;
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
