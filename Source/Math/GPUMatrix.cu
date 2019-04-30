@@ -3946,16 +3946,64 @@ void GPUMatrix<ElemType>::MinusRowVector(const GPUMatrix<ElemType>& src, const G
 }
 
 template <class ElemType>
-__global__ void _assignExpSumOf512Threads(const ElemType* Y, ElemType* expSum, const CUDA_LONG n, const CUDA_LONG m)
+__global__ void _assignExpSumOf512Threads(const ElemType* Y, ElemType* expSum, const CUDA_LONG row)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
-    int id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= m)
-        return;
-    comp_t sum = 0;
-    for (CUDA_LONG i = 0; i < n; ++i)
-        sum += (comp_t)exp_(Y[IDX2C(i, id, n)]);
-    expSum[id] = sum;
+    __shared__ comp_t partials[512];
+    partials[threadIdx.x] = 0.0f;
+
+    for (int i = threadIdx.x; i < row; i += 512)
+    {
+        partials[threadIdx.x] += exp_((comp_t)Y[IDX2C(i, blockIdx.x, row)]);
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 256)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 256];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 128)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 128];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 64)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 64];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 32)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 32];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 16)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 16];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 8)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 8];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 4)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 4];
+    }
+    __syncthreads();
+
+    if (threadIdx.x == 0)
+    {
+        expSum[blockIdx.x] = partials[0] + partials[1] + partials[2] + partials[3];
+    }
 }
 
 template <class ElemType>
@@ -3963,10 +4011,9 @@ void GPUMatrix<ElemType>::AssignExpSum(const GPUMatrix<ElemType>& Y, const GPUMa
 {
     CUDA_LONG row = Y.GetNumRows();
     CUDA_LONG col = Y.GetNumCols();
-    int blocksPerGrid = (int)ceil(1.0 * col / GridDim::maxThreadsPerBlock);
 
     SyncGuard syncGuard;
-    _assignExpSumOf512Threads << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (Y.Data(), expSum.Data(), row, col);
+    _assignExpSumOf512Threads << <col, 512, 0, t_stream >> > (Y.Data(), expSum.Data(), row);
 }
 
 template <class ElemType>
