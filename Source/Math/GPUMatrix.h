@@ -611,7 +611,9 @@ public:
 
     static void MinusRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst);
 
-    static void DistributedSoftmax(const GPUMatrix<ElemType>& expY, const GPUMatrix<ElemType>& sum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax);
+    static void AssignExpSum(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& expSum);
+
+    static void DistributedSoftmax(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& logSum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax);
 
     static void DistributedCrossEntropy(const GPUMatrix<ElemType>& logP, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
 

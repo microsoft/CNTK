@@ -2196,7 +2196,12 @@ void GPUMatrix<ElemType>::MinusRowVector(const GPUMatrix<ElemType>& src, const G
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& expY, const GPUMatrix<ElemType>& sum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax)
+void GPUMatrix<ElemType>::AssignExpSum(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& expSum)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& logSum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax)
 {
 }
 

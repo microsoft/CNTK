@@ -654,7 +654,9 @@ public:
 
     static void MinusRowVector(const Matrix<ElemType>& src, const Matrix<ElemType>& rowVector, const Matrix<ElemType>& dst);
 
-    static void DistributedSoftmax(const Matrix<ElemType>& expY, const Matrix<ElemType>& sum, const Matrix<ElemType>& softmax, const Matrix<ElemType>& logSoftmax);
+    static void AssignExpSum(const Matrix<ElemType>& Y, const Matrix<ElemType>& expSum);
+
+    static void DistributedSoftmax(const Matrix<ElemType>& Y, const Matrix<ElemType>& logSum, const Matrix<ElemType>& softmax, const Matrix<ElemType>& logSoftmax);
 
     static void DistributedCrossEntropy(const Matrix<ElemType>& logP, const Matrix<ElemType>& labels, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex);
 

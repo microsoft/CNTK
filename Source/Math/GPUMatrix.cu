@@ -3946,25 +3946,49 @@ void GPUMatrix<ElemType>::MinusRowVector(const GPUMatrix<ElemType>& src, const G
 }
 
 template <class ElemType>
-__global__ void _distributedSoftmax(ElemType* expY, ElemType* sum, ElemType* softmax, ElemType* logSoftmax, int row, CUDA_LONG numElements)
+__global__ void _assignExpSumOf512Threads(const ElemType* Y, ElemType* expSum, const CUDA_LONG n, const CUDA_LONG m)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    int id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= m)
+        return;
+    comp_t sum = 0;
+    for (CUDA_LONG i = 0; i < n; ++i)
+        sum += (comp_t)exp_(Y[IDX2C(i, id, n)]);
+    expSum[id] = sum;
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AssignExpSum(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& expSum)
+{
+    CUDA_LONG row = Y.GetNumRows();
+    CUDA_LONG col = Y.GetNumCols();
+    int blocksPerGrid = (int)ceil(1.0 * col / GridDim::maxThreadsPerBlock);
+
+    SyncGuard syncGuard;
+    _assignExpSumOf512Threads << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (Y.Data(), expSum.Data(), row, col);
+}
+
+template <class ElemType>
+__global__ void _distributedSoftmax(ElemType* Y, ElemType* logSum, ElemType* softmax, ElemType* logSoftmax, int row, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
     {
-        softmax[id] = expY[id] / sum[id / row];
-        logSoftmax[id] = log_(softmax[id]);
+        logSoftmax[id] = Y[id] - logSum[id / row];
+        softmax[id] = exp_(logSoftmax[id]);
     }
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& expY, const GPUMatrix<ElemType>& sum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax)
+void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& logSum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax)
 {
-    CUDA_LONG numElements = expY.GetNumElements();
-    int row = (int)expY.GetNumRows();
+    CUDA_LONG numElements = Y.GetNumElements();
+    int row = (int)Y.GetNumRows();
 
     SyncGuard syncGuard;
     GridDim grid(numElements);
-    _distributedSoftmax<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (expY.Data(), sum.Data(), softmax.Data(), logSoftmax.Data(), row, numElements);
+    _distributedSoftmax<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (Y.Data(), logSum.Data(), softmax.Data(), logSoftmax.Data(), row, numElements);
 }
 
 template <class ElemType>
