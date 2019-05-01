@@ -819,6 +819,12 @@ private:
         std::unordered_map<Variable, onnxruntime::Node*>& variableNodes, 
         std::vector<ScanLoop>& scanLoops, int createLoopIndex);
 
+    static onnxruntime::Node* CreateConvolutionNode(const FunctionPtr& src,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+        std::vector<ScanLoop>& scanLoops, int createLoopIndex);
+
     static onnxruntime::Node* CreateConvolutionBlockNode(const FunctionPtr& src,
         onnxruntime::Graph* graph,
         std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
@@ -5511,9 +5517,12 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     {
         return CreateONNXNodesForFlatten(src, graph, functionNodes, variableNodes, scanLoops, createLoopIndex);
     }
-    else if (cntkOpName == "Convolution" && src->IsBlock())
+    else if (cntkOpName == "Convolution")
     {
+    if (src->IsBlock())
         return CreateConvolutionBlockNode(src, graph, functionNodes, variableNodes, scanLoops, createLoopIndex);
+    else
+        return CreateConvolutionNode(src, graph, functionNodes, variableNodes, scanLoops, createLoopIndex);
     }
 
     //
@@ -8389,6 +8398,63 @@ onnxruntime::Node* ApplyActivationToSequenceConvolution(Node* convNode, const Fu
         { activationInputNodeArg }, { activationOutputNodeArg });
 
     return activationNode;
+}
+
+onnxruntime::Node* CNTKToONNXHelper::CreateConvolutionNode(const FunctionPtr& src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+    std::vector<ScanLoop>& scanLoops, int createLoopIndex)
+{
+    std::vector<onnxruntime::NodeArg *> inputs;
+    ProcessInputs(src, graph, functionNodes, variableNodes, inputs,
+        scanLoops, createLoopIndex);
+
+    std::vector<onnxruntime::NodeArg *> outputs;
+    ProcessOutputs(src, inputs, outputs, graph);
+
+    int featureRank = inputs[0]->Shape()->dim_size() - 2;
+    int inputRank = inputs[1]->Shape()->dim_size();
+
+    int extra_dims = inputRank - featureRank - 1;
+    onnxruntime::Node* convNode = nullptr;
+    if (extra_dims > 1)
+    {
+        // need to reshape input to fit ONNX spec (N, C, Features), 
+        // applying Conv, then reshape back to the real output shape.
+        vector<int64_t> newDimInputToConv;
+        // collapse extra dims into one axis as N for ONNX Conv
+        newDimInputToConv.push_back(-1);
+        for (int i = extra_dims; i < inputRank; i++)
+        {
+            // copy channel and feature dimensions
+            if (!inputs[1]->Shape()->dim(i).has_dim_value())
+                LogicError("Convolution: feature dimensions need to have dim value.");
+            newDimInputToConv.push_back(inputs[1]->Shape()->dim(i).dim_value());
+        }
+
+        onnxruntime::Node* preReshape = AddReshapeNode(*inputs[1], newDimInputToConv, inputs[1]->Name() + "_reshaped_for_conv", graph);
+        std::vector<onnxruntime::NodeArg *> conv_inputs = inputs;
+        conv_inputs[1] = const_cast<NodeArg *>(preReshape->OutputDefs()[0]);
+        TypeProto convOutputTypeProto;
+        UpdateONNXType(src->Outputs()[0].GetDataType(), convOutputTypeProto);
+
+        NodeArg *convOutputArg = &graph->GetOrCreateNodeArg(outputs[0]->Name() + "_conv_of_reshaped", &convOutputTypeProto);
+
+        convNode = AddNode(src, graph, conv_inputs, { convOutputArg });
+
+        vector<int64_t> newDimOutputFromConv = ToINTS(*outputs[0]->TypeAsProto());
+        onnxruntime::Node* postReshape = AddReshapeNode(*convOutputArg, newDimOutputFromConv, outputs[0]->Name(), graph);
+    }
+    else
+    {
+        if (extra_dims != 1)
+            LogicError("Convolution op with incorrect input dumensions.");
+        convNode = AddNode(src, graph, inputs, outputs);
+    }
+
+    functionNodes.emplace(src, convNode);
+    return convNode;
 }
 
 onnxruntime::Node* CNTKToONNXHelper::CreateConvolutionBlockNode(const FunctionPtr &src,
