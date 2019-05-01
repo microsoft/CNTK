@@ -111,7 +111,6 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
                             rank = C.Communicator.rank(),
                             gen_heartbeat = gen_heartbeat)]
 
-    C.set_default_use_mean_gradient_value(True)
     lr = C.learning_rate_schedule(training_config['lr'], unit=C.learners.UnitType.sample)
 
     ema = {}
@@ -122,7 +121,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
         dummies.append(C.reduce_sum(C.assign(ema_p, 0.999 * ema_p + 0.001 * p)))
     dummy = C.combine(dummies)
 
-    learner = C.adadelta(z.parameters, lr)
+    learner = C.adadelta(z.parameters, lr, use_mean_gradient=True)
 
     if C.Communicator.num_workers() > 1:
         learner = C.data_parallel_distributed_learner(learner)

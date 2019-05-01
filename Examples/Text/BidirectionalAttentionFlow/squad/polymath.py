@@ -162,7 +162,7 @@ class PolyMath:
             start_hardmax = seq_hardmax(start_logits)
             att_mod_ctx = C.sequence.last(C.sequence.gather(mod_context, start_hardmax))
         else:
-            start_prob = C.softmax(start_logits)
+            start_prob = C.sequence.softmax(start_logits)
             att_mod_ctx = C.sequence.reduce_sum(mod_context * start_prob)
         att_mod_ctx_expanded = C.sequence.broadcast_as(att_mod_ctx, att_context)
         end_input = C.splice(att_context, mod_context, att_mod_ctx_expanded, mod_context * att_mod_ctx_expanded)
@@ -170,7 +170,7 @@ class PolyMath:
         end_logits = C.layers.Dense(1, name='out_end')(C.dropout(C.splice(m2, att_context), self.dropout))
 
         return C.as_block(
-            C.combine([start_logits, end_logits]),
+            C.combine([C.log(C.sequence.softmax(start_logits)), C.log(C.sequence.softmax(end_logits))]),
             [(att_context, attention_context), (mod_context, modeling_context)],
             'output_layer',
             'output_layer')
