@@ -16,7 +16,7 @@ import zipfile
 import string
 import pip
 
-if int(pip.__version__.split('.')[0])>9:
+if int(pip.__version__.split('.')[0]) > 9:
     from pip._internal import main
 else:
     from pip import main
