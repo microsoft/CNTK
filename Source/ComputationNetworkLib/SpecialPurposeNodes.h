@@ -1647,6 +1647,7 @@ public:
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
         Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, inputGradientValues);
+        //inputGradientValues.Print("gradient");
         /*printf("back to F\n");
         if (gradientValues.GetDeviceId() != CPUDEVICE)
             printf("gradientValues after F is in GPU\n");*/
@@ -1707,7 +1708,7 @@ public:
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
         // compute CTC score
         m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), InputRef(3).Value(), *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId);
-
+        
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
 #endif

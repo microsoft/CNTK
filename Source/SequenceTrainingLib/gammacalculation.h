@@ -548,6 +548,9 @@ public:
         m_derivative.TransferToDeviceIfNotThere(m_deviceid_gpu);
         m_derivative.AssignRNNTScore(mergedinput, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
             uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, -1,true);
+        
+        mergedinput.InplaceExp();
+        m_derivative.AssignElementProductOf(m_derivative, mergedinput);
         ElemType finalscore = 0;
         //m_derivative.Print("RNNT");
         finalscore =  totalScore.Get00Element();
