@@ -99,14 +99,18 @@ public:
                    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType unitGainFactor);
 
     void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-              ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax=false);
+              ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor);
+
+	void AdaMax(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+				ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor, ElemType epsilon);
 
     void RmsProp(CPUMatrix<ElemType>& gradients,
                  CPUMatrix<ElemType>& functionValues,
                  ElemType learningRate,
                  ElemType momentum,
                  ElemType RMS_GAMMA,
-                 bool unitGainMomentum);
+                 bool unitGainMomentum,
+				 ElemType epsilon=1);
 
     template<typename GradType>
     void AdaDelta(CPUMatrix<GradType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learningRate, ElemType rho, ElemType epsilon);

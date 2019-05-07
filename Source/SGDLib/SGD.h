@@ -55,7 +55,9 @@ enum class GradientsUpdateType : int
     None,
     AdaGrad,
     RmsProp,
-    FSAdaGrad
+    FSAdaGrad,
+    Adam,
+	AdaMax
 };
 
 // modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD 
@@ -104,6 +106,32 @@ struct RMSPropInfo
         max = 10.0;
         min = 0.1;
     }
+};
+
+// configuration parameters associated with Adam learning algorithm
+struct AdamInfo
+{
+    double beta1;
+    double beta2;
+
+    AdamInfo()
+    {
+        beta1 = 0.9;
+        beta2 = 0.999;
+    }
+};
+
+// configuration parameters associated with AdaMax learning algorithm
+struct AdaMaxInfo
+{
+	double beta1;
+	double beta2;
+	
+	AdaMaxInfo()
+	{
+		beta1 = 0.9;
+		beta2 = 0.999;
+	}
 };
 
 struct GradientUpdateInfo
@@ -295,6 +323,8 @@ protected:
 
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
+    AdamInfo m_adamInfo;
+	AdaMaxInfo m_adaMaxInfo;
 
     size_t m_numMBsToShowResult = 0;
     size_t m_firstMBsToShowResult = 0;
@@ -371,6 +401,12 @@ protected:
 
 
     LRAPIInfo m_lrapiInfo;
+
+	// currently used by adam to store pow of beta1 and beta2
+	map<wstring, double> m_additionalOptimizerInfo;
+
+	// epsilon
+	double m_epsilon;
 };
 
 template <class ElemType>
@@ -410,6 +446,7 @@ public:
           m_gradHeader(nullptr)
     {
         msra::files::make_intermediate_dirs(m_modelPath);
+		InitializeAdditionalOptimizerInfo();
     }
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
 
@@ -426,6 +463,28 @@ public:
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::none;
         }
+
+	void InitializeAdditionalOptimizerInfo()
+	{
+		switch (m_gradType.type)
+		{
+		case GradientsUpdateType::Adam: case GradientsUpdateType::AdaMax:
+			m_additionalOptimizerInfo[L"beta1_pow"] = m_adamInfo.beta1;
+			m_additionalOptimizerInfo[L"beta2_pow"] = m_adamInfo.beta2;
+			break;
+		}
+	}
+
+	void UpdateAdditionalOptimizerInfo()
+	{
+		switch (m_gradType.type)
+		{
+		case GradientsUpdateType::Adam: case GradientsUpdateType::AdaMax:
+			m_additionalOptimizerInfo[L"beta1_pow"] *= m_adamInfo.beta1;
+			m_additionalOptimizerInfo[L"beta2_pow"] *= m_adamInfo.beta2;
+			break;
+		}
+	}
 
     void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,

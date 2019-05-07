@@ -349,6 +349,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
     list<Matrix<ElemType>> smoothedGradients;
     vector<double> smoothedCounts; // currently used by FSAdaGradUpdate()
+	map<wstring, double> optimizerInfo;
     size_t numParameters = 0;
 
     vector<wstring> nodesToUpdateDescriptions; // for logging only
@@ -1546,6 +1547,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 
+		// update additional optimizer information
+		UpdateAdditionalOptimizerInfo();
+
         // aggregation by model averaging or block momentum
         if (useModelAggregation)
         {
@@ -2580,11 +2584,38 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
         auto learningRate = learnRatePerSample * actualMBSize;
         Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
-        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain));
+        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain), (ElemType)m_epsilon);
 #else
 
-		smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain));
+		smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain), (ElemType)m_epsilon);
 #endif    
+	}
+    else if (adpType == GradientsUpdateType::Adam)
+	{
+        const auto unitGainFactor = ElemType(disableMomentumUnitGain ? 1.0 : (1.0 - m_adamInfo.beta1));
+		double beta1Pow = m_additionalOptimizerInfo.at(L"beta1_pow");
+		double beta2Pow = m_additionalOptimizerInfo.at(L"beta2_pow");
+
+#ifdef USE_MEAN_GRADIENT
+        auto learningRate = learnRatePerSample * actualMBSize;
+		Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
+        smoothedGradientValues.AdamUpdate(gradientValues, functionValues, beta1Pow, beta2Pow, learningRate, m_adamInfo.beta1, m_adamInfo.beta2, m_epsilon, unitGainFactor);
+#else
+        smoothedGradientValues.AdamUpdate(gradientValues, functionValues, beta1Pow, beta2Pow, learnRatePerSample, m_adamInfo.beta1, m_adamInfo.beta2, m_epsilon, unitGainFactor);
+#endif
+	}
+	else if (adpType == GradientsUpdateType::AdaMax)
+	{
+		const auto unitGainFactor = ElemType(disableMomentumUnitGain ? 1.0 : (1.0 - m_adaMaxInfo.beta1));
+		double beta1Pow = m_additionalOptimizerInfo.at(L"beta1_pow");
+
+#ifdef USE_MEAN_GRADIENT
+		auto learningRate = learnRatePerSample * actualMBSize;
+		Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
+		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, beta1Pow, learningRate, m_adaMaxInfo.beta1, m_adaMaxInfo.beta2, unitGainFactor, m_epsilon);
+#else
+		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, beta1Pow, learnRatePerSample, m_adaMaxInfo.beta1, m_adaMaxInfo.beta2, unitGainFactor, m_epsilon);
+#endif
 	}
 
     if (noiseStd > 0)
@@ -3026,19 +3057,23 @@ static AdaptationRegType ParseAdaptationRegType(const wstring& s)
 
 static GradientsUpdateType ParseGradUpdateType(const wstring& s)
 {
-    if (EqualCI(s, L"") || EqualCI(s, L"none"))
-        return GradientsUpdateType::None;
-    else if (EqualCI(s, L"adagrad"))
-        return GradientsUpdateType::AdaGrad;
-    else if (EqualCI(s, L"rmsProp"))
-        return GradientsUpdateType::RmsProp;
-    else if (EqualCI(s, L"fsAdagrad"))
-        return GradientsUpdateType::FSAdaGrad;
+	if (EqualCI(s, L"") || EqualCI(s, L"none"))
+		return GradientsUpdateType::None;
+	else if (EqualCI(s, L"adagrad"))
+		return GradientsUpdateType::AdaGrad;
+	else if (EqualCI(s, L"rmsProp"))
+		return GradientsUpdateType::RmsProp;
+	else if (EqualCI(s, L"fsAdagrad"))
+		return GradientsUpdateType::FSAdaGrad;
+	else if (EqualCI(s, L"adam"))
+		return GradientsUpdateType::Adam;
+	else if (EqualCI(s, L"adaMax"))
+		return GradientsUpdateType::AdaMax;
     // legacy, deprecated
     else if (EqualCI(s, L"normal") || EqualCI(s, L"simple"))
         return GradientsUpdateType::None;
     else
-        InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
+        InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad | adam | adaMax)");
 }
 
 static ParallelizationMethod ParseParallelizationMethod(const wstring& s)
@@ -3266,6 +3301,17 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_rpi.min = configSGD(L"rms_wgt_min", 0.1);
     m_rpi.max = configSGD(L"rms_wgt_max", 10.0);
     m_rpi.gamma = configSGD(L"rms_gamma", 0.99);
+
+	// extract Adam parameters from config, if they exist. Default to reasonable values.
+    m_adamInfo.beta1 = configSGD(L"adam_beta1", 0.9);
+    m_adamInfo.beta2 = configSGD(L"adam_beta2", 0.999);
+    
+	// epsilon
+	m_epsilon = configSGD(L"epsilon", 1.0);
+
+	// extract AdaMax parameters from config, it they exist. Default to reasonable values.
+	m_adaMaxInfo.beta1 = configSGD(L"adamax_beta1", 0.9);
+	m_adaMaxInfo.beta2 = configSGD(L"adamax_beta2", 0.999);
 
     m_needAveMultiplier = configSGD(L"normWithAveMultiplier", true);
     m_L2RegWeight = configSGD(L"L2RegWeight", 0.0);
