@@ -1728,7 +1728,7 @@ protected:
             {
                 rows = GetSampleMatrixNumRows();
                 cols = GetSampleMatrixNumCols();
-                if (OperationName() == L"DistributedFullyConnected")
+                if (OperationName() == L"DistributedFullyConnected_v2")
                     cols *= Globals::GetProcessNum();
             }
             else

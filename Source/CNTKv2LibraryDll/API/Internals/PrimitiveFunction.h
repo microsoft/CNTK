@@ -129,6 +129,7 @@ namespace CNTK
         {PrimitiveOpType::ChannelMultiply, L"ChannelMultiply" },
         {PrimitiveOpType::GlobalConcat, L"GlobalConcat"},
         {PrimitiveOpType::DistributedFullyConnected, L"DistributedFullyConnected" },
+        {PrimitiveOpType::DistributedFullyConnected_v2, L"DistributedFullyConnected_v2" },
         {PrimitiveOpType::DistributedCrossEntropyWithSoftmax, L"DistributedCrossEntropyWithSoftmax" }
     };
 

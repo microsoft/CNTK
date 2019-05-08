@@ -332,6 +332,8 @@ namespace CNTK
                     opType = PrimitiveOpType::SquaredError;
                 else if (node->OperationName() == OperationNameOf(DistributedFullyConnectedNode))
                     opType = PrimitiveOpType::DistributedFullyConnected;
+                else if (node->OperationName() == OperationNameOf(DistributedFullyConnectedNode_v2))
+                    opType = PrimitiveOpType::DistributedFullyConnected_v2;
                 else if (node->OperationName() == OperationNameOf(DistributedCrossEntropyWithSoftmaxNode))
                     opType = PrimitiveOpType::DistributedCrossEntropyWithSoftmax;
                 else if (node->OperationName() == OperationNameOf(MarginInnerProductNode))

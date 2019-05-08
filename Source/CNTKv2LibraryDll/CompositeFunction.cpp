@@ -1159,6 +1159,11 @@ namespace CNTK
                     ASSIGN_NEW_NODE(DistributedFullyConnectedNode, network->GetDeviceId(), internalNodeName);
                     break;
                 }
+                case PrimitiveOpType::DistributedFullyConnected_v2:
+                {
+                    ASSIGN_NEW_NODE(DistributedFullyConnectedNode_v2, network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 case PrimitiveOpType::DistributedCrossEntropyWithSoftmax:
                 {
                     ASSIGN_NEW_NODE(DistributedCrossEntropyWithSoftmaxNode, network->GetDeviceId(), internalNodeName);

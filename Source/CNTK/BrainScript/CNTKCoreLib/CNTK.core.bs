@@ -54,12 +54,22 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
 
 
 # DistributedFullyConnectedLayer -- create a distributed fully-connected linear projection layer
-# Note: outDim may describe a tensor as well.
+# In this layer, we decompose the fc parameters, the input and output tensors are as the same as the 'LinearLayer'
 DistributedFullyConnectedLayer {inDim, outDim, init='glorotUniform', initValueScale=1, initBias=0} =
 {
     W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
     b = ParameterTensor {outDim, initValue=initBias, distribute=true}
     apply (X) = DistributedFullyConnected(W, X, b);
+}.apply
+
+# DistributedFullyConnectedLayer_v2 -- create a distributed fully-connected linear projection layer
+# In this layer, we decompose the fc parameters, the input tensors are still as the same as the 'LinearLayer'
+# However, the output tensors are also decomposed. The next layer must deal with the decomposed output tensors
+DistributedFullyConnectedLayer_v2 {inDim, outDim, init='glorotUniform', initValueScale=1, initBias=0} =
+{
+    W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
+    b = ParameterTensor {outDim, initValue=initBias, distribute=true}
+    apply (X) = DistributedFullyConnected_v2(W, X, b);
 }.apply
 
 # MarginInnerProductLayer -- create a marginInnerProduct projection layer
@@ -434,7 +444,8 @@ Times                   = CNTK2.Times
 Abs                     = CNTK2.Abs
 Ceil                    = CNTK2.Ceil
 CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
-DistributedFullyConnected = CNTK2.DistributedFullyConnected
+DistributedFullyConnected          = CNTK2.DistributedFullyConnected
+DistributedFullyConnected_v2       = CNTK2.DistributedFullyConnected_v2
 DistributedCrossEntropyWithSoftmax = CNTK2.DistributedCrossEntropyWithSoftmax
 MarginInnerProduct      = CNTK2.MarginInnerProduct
 FeatureNormalize        = CNTK2.FeatureNormalize
@@ -543,6 +554,12 @@ CNTK2 = [
     #
     DistributedFullyConnected(W, X, b, tag='') =
         new ComputationNode [ operation = 'DistributedFullyConnected' ; inputs = _AsNodes (W : X : b) /*plus the function args*/ ]
+
+    #
+    # Distributed fully connected node v2
+    #
+    DistributedFullyConnected_v2(W, X, b, tag='') =
+        new ComputationNode [ operation = 'DistributedFullyConnected_v2' ; inputs = _AsNodes (W : X : b) /*plus the function args*/ ]
 
     #
     # Distributed cross entropy with softmax node

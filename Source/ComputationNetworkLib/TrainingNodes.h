@@ -34,6 +34,7 @@ static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
 
 // Distributed fully connected layer (Y = W'X + b)
 // Input(0): W, Input(1): X, Input(2): b
+// Output is not decomposed
 template <class ElemType>
 class DistributedFullyConnectedNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
 {
@@ -59,6 +60,185 @@ public:
         m_ones.reset(new Matrix<ElemType>(deviceId));
 #ifdef CPUONLY
         LogicError("CPUONLY is not supported in DistributedFullyConnectedNode.");
+#endif
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        size_t minibatchSize = InputRef(1).Value().GetNumCols();
+        if (m_minibatchSize != minibatchSize)
+        {
+            m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
+            bool minibatchSizeEqual = m_distGradAggPtr->DistributedCheck(m_minibatchSize, m_processNum);
+            if (!minibatchSizeEqual)
+                LogicError("With AllGather op, minibatch size in each Gpu must be the same.");
+            m_minibatchSize = minibatchSize;
+            m_batchSize = m_minibatchSize * m_processNum;
+            if (Environment().IsTraining())
+            {
+                m_ones->Resize(m_batchSize, 1);                   // Ones
+                m_ones->SetValue((ElemType)1.0);
+            }
+        }
+        m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
+        m_temp2->Resize(m_outputDim, m_batchSize);                // Single Y
+        m_temp3->Resize(m_outputDim, m_batchSize * m_processNum); // Aggregated Y
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (0 == inputIndex)
+        {
+            m_temp3->Resize(m_outputDim * m_processNum, m_batchSize);
+            m_distGradAggPtr->DistributedAllGather(Gradient(), *m_temp3, m_outputDim * m_batchSize);
+            m_temp2->AssignRowSliceValuesOf(*m_temp3, m_outputDim * m_rank, m_outputDim);
+
+            auto& W_gradient = InputRef(0).Gradient();
+            Matrix<ElemType>::Multiply(*m_temp1, false, *m_temp2, true, W_gradient);
+        }
+        else if (1 == inputIndex)
+        {
+            auto& W = InputRef(0).Value();
+            Matrix<ElemType>::Multiply(W, false, *m_temp2, false, *m_temp1);
+            m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
+            auto X_gradient = InputRef(1).GradientFor(InputRef(1).GetMBLayout());
+            X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
+        }
+        else if (2 == inputIndex)
+        {
+            auto& b_gradient = InputRef(2).Gradient();
+            Matrix<ElemType>::Multiply(*m_temp2, false, *m_ones, false, b_gradient);
+        }
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& W = InputRef(0).Value();
+        auto  X = InputRef(1).ValueFor(InputRef(1).GetMBLayout());
+        auto& b = InputRef(2).Value();
+        m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
+
+        Matrix<ElemType>::Multiply(W, true, *m_temp1, false, *m_temp2);
+        Matrix<ElemType>::AddColumnVector(*m_temp2, b, *m_temp2);
+
+        m_distGradAggPtr->DistributedAllGather(*m_temp2, *m_temp3, m_outputDim * m_batchSize);
+
+        Matrix<ElemType>::Scatter(*m_temp3, Value(), m_minibatchSize, m_rank, m_processNum);
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        if (0 == childIndex) // for W
+            return true;
+        else if (1 == childIndex) // for X
+            return false;
+        else // for b
+            return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        m_inputDim = InputRef(0).Value().GetNumRows();
+        m_outputDim = InputRef(0).Value().GetNumCols();
+        SetDims(TensorShape(m_outputDim * m_processNum), HasMBLayout());
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<DistributedFullyConnectedNode<ElemType>>(nodeP);
+            node->m_rank = m_rank;
+            node->m_processNum = m_processNum;
+            node->m_inputDim = m_inputDim;
+            node->m_outputDim = m_outputDim;
+            node->m_minibatchSize = m_minibatchSize;
+            node->m_batchSize = m_batchSize;
+            node->m_distGradAggPtr = m_distGradAggPtr;
+            node->m_temp1->SetValue(*m_temp1);
+            node->m_temp2->SetValue(*m_temp2);
+            node->m_temp3->SetValue(*m_temp3);
+            node->m_ones->SetValue(*m_ones);
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_temp1, matrixPool);
+        RequestMatrixFromPool(m_temp2, matrixPool);
+        RequestMatrixFromPool(m_temp3, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_temp1, matrixPool);
+        ReleaseMatrixToPool(m_temp2, matrixPool);
+        ReleaseMatrixToPool(m_temp3, matrixPool);
+    }
+
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+    }
+
+    size_t m_rank;
+    size_t m_processNum;
+    size_t m_inputDim;
+    size_t m_outputDim;
+    size_t m_minibatchSize;
+    size_t m_batchSize;
+    IDistGradAggregator<ElemType>* m_distGradAggPtr;
+    shared_ptr<Matrix<ElemType>> m_temp1;
+    shared_ptr<Matrix<ElemType>> m_temp2;
+    shared_ptr<Matrix<ElemType>> m_temp3;
+    shared_ptr<Matrix<ElemType>> m_ones;
+};
+
+// Distributed fully connected layer v2 (Y = W'X + b)
+// Input(0): W, Input(1): X, Input(2): b
+// Output is decomposed
+template <class ElemType>
+class DistributedFullyConnectedNode_v2 : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"DistributedFullyConnected_v2";
+    }
+
+public:
+    DistributedFullyConnectedNode_v2(const ScriptableObjects::IConfigRecordPtr configp)
+        : DistributedFullyConnectedNode_v2(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    DistributedFullyConnectedNode_v2(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
+    {
+        if (1 == m_processNum)
+            LogicError("Multi Gpus and mpi is needed in distributed FC.");
+        m_ones.reset(new Matrix<ElemType>(deviceId));
+#ifdef CPUONLY
+        LogicError("CPUONLY is not supported in DistributedFullyConnectedNode_v2.");
 #endif
     }
 
@@ -122,7 +302,7 @@ public:
     {
         if (0 == childIndex) // for W
             return true;
-        else if (1 == childIndex) // for x
+        else if (1 == childIndex) // for X
             return false;
         else // for b
             return false;
@@ -143,7 +323,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<DistributedFullyConnectedNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<DistributedFullyConnectedNode_v2<ElemType>>(nodeP);
             node->m_rank           = m_rank;
             node->m_processNum     = m_processNum;
             node->m_inputDim       = m_inputDim;
