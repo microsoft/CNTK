@@ -349,6 +349,10 @@ template class DistributedFullyConnectedNode<float>;
 template class DistributedFullyConnectedNode<double>;
 template class DistributedFullyConnectedNode<half>;
 
+template class DistributedFullyConnectedNode_v2<float>;
+template class DistributedFullyConnectedNode_v2<double>;
+template class DistributedFullyConnectedNode_v2<half>;
+
 template class DistributedCrossEntropyWithSoftmaxNode<float>;
 template class DistributedCrossEntropyWithSoftmaxNode<double>;
 template class DistributedCrossEntropyWithSoftmaxNode<half>;
