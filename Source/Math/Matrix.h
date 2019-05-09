@@ -644,8 +644,6 @@ public:
 
     static void Scatter(const Matrix<ElemType>& src, const Matrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
 
-    static void ScatterInv(const Matrix<ElemType>& src, const Matrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
-
     static void AddColumnVector(const Matrix<ElemType>& src, const Matrix<ElemType>& columnVector, const Matrix<ElemType>& dst);
 
     static void AddRowVector(const Matrix<ElemType>& src, const Matrix<ElemType>& rowVector, const Matrix<ElemType>& dst);

@@ -571,8 +571,6 @@ public:
     {
         ValidateBinaryReduce(isFinalValidationPass);
         m_probDim = Input(1)->GetSampleLayout().GetNumElements();
-        if (m_probDim * Globals::GetProcessNum() != Input(0)->GetSampleLayout().GetNumElements())
-            LogicError("Validate error in DistributedCrossEntropyWithSoftmaxNode");
         if (Input(0)->OperationName() != L"DistributedLabelsGather")
             LogicError("DistributedCrossEntropyWithSoftmaxNode Input(0) is %s, but it should be DistributedLabelsGather", Input(0)->OperationName().c_str());
     }

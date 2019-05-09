@@ -5196,17 +5196,6 @@ template <class ElemType>
 }
 
 template <class ElemType>
-/*static*/ void Matrix<ElemType>::ScatterInv(const Matrix<ElemType>& src, const Matrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
-{
-    DISPATCH_MATRIX_ON_FLAG(&src,
-        &src,
-        CPUMatrix<ElemType>::ScatterInv(*(src.m_CPUMatrix), *(dst.m_CPUMatrix), minibatchSize, rank, processNum),
-        GPUMatrix<ElemType>::ScatterInv(*(src.m_GPUMatrix), *(dst.m_GPUMatrix), minibatchSize, rank, processNum),
-        NOT_IMPLEMENTED,
-        NOT_IMPLEMENTED);
-}
-
-template <class ElemType>
 /*static*/ void Matrix<ElemType>::AddColumnVector(const Matrix<ElemType>& src, const Matrix<ElemType>& columnVector, const Matrix<ElemType>& dst)
 {
     assert(src.GetNumRows() == dst.GetNumRows() && src.GetNumCols() == src.GetNumCols() && src.GetNumRows() == columnVector.GetNumRows());

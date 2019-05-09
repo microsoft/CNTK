@@ -2171,11 +2171,6 @@ void GPUMatrix<ElemType>::Scatter(const GPUMatrix<ElemType>& src, const GPUMatri
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ScatterInv(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
-{
-}
-
-template <class ElemType>
 void GPUMatrix<ElemType>::AddColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst)
 {
 }

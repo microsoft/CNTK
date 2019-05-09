@@ -3833,35 +3833,6 @@ void GPUMatrix<ElemType>::Scatter(const GPUMatrix<ElemType>& src, const GPUMatri
 }
 
 template <class ElemType>
-__global__ void _scatterinv(ElemType* src, ElemType* dst, CUDA_LONG outputDim, CUDA_LONG minioutputDim, CUDA_LONG blockSize, CUDA_LONG blockOffset, CUDA_LONG numElements)
-{
-    CUDA_LONG id = GridDim::GetLinearThreadId();
-    if (id < numElements)
-    {
-        CUDA_LONG row = id % outputDim;
-        CUDA_LONG blockIndex = row / minioutputDim;
-        CUDA_LONG rowIndex = row % minioutputDim;
-        CUDA_LONG colIndex = id / outputDim;
-        src[blockIndex * blockSize + blockOffset + colIndex * minioutputDim + rowIndex] = dst[id];
-    }
-}
-
-template <class ElemType>
-void GPUMatrix<ElemType>::ScatterInv(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
-{
-    CUDA_LONG numElements = (CUDA_LONG)dst.GetNumElements();
-    CUDA_LONG minioutputDim = (CUDA_LONG)src.GetNumRows();
-    CUDA_LONG outputDim = minioutputDim * processNum;
-    CUDA_LONG miniblockSize = (CUDA_LONG)(minioutputDim * minibatchSize);
-    CUDA_LONG blockSize = miniblockSize * processNum;
-    CUDA_LONG blockOffset = rank * miniblockSize;
-
-    SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _scatterinv<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), dst.Data(), outputDim, minioutputDim, blockSize, blockOffset, numElements);
-}
-
-template <class ElemType>
 __global__ void _addColumnVector(ElemType* src, const ElemType* vec, ElemType* dst, CUDA_LONG rows, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();

@@ -5431,27 +5431,6 @@ void CPUMatrix<ElemType>::Scatter(const CPUMatrix<ElemType>& src, const CPUMatri
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::ScatterInv(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
-{
-    long minioutputDim = (long)src.GetNumRows();
-    long outputDim = minioutputDim * (long)processNum;
-    long miniblockSize = minioutputDim * (long)minibatchSize;
-    long blockSize = miniblockSize * (long)processNum;
-    long blockOffset = (long)rank * miniblockSize;
-    long numElements = (long)dst.GetNumElements();
-    ElemType* srcPtr = src.Data();
-    ElemType* dstPtr = dst.Data();
-    for (long i(0); i < numElements; ++i)
-    {
-        long row = i % outputDim;
-        long blockIndex = row / minioutputDim;
-        long rowIndex = row % minioutputDim;
-        long colIndex = i / outputDim;
-        srcPtr[blockIndex * blockSize + blockOffset + colIndex * minioutputDim + rowIndex] = dstPtr[i];
-    }
-}
-
-template <class ElemType>
 void CPUMatrix<ElemType>::AddColumnVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& columnVector, const CPUMatrix<ElemType>& dst)
 {
     long num = (long)src.GetNumElements();
