@@ -2136,6 +2136,12 @@ namespace CNTK
     }
 
 
+    FunctionPtr DistributedLabelsGather(const Variable& labels, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { labels };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedLabelsGather, operands, Dictionary(), name), name);
+    }
+
     FunctionPtr DistributedFullyConnected(const Variable& W, const Variable& X, const Variable& b, const std::wstring& name)
     {
         std::vector<Variable> operands = { W, X, b };
@@ -2152,6 +2158,20 @@ namespace CNTK
     {
         std::vector<Variable> operands = { labels, prediction };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedCrossEntropyWithSoftmax, operands, Dictionary(), name), name);
+    }
+
+    FunctionPtr DistributedClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { labels, prediction };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedClassificationError, operands, Dictionary(), name), name);
+    }
+
+    FunctionPtr DistributedAdditiveFullConnection(const Variable& features, const Variable& labels, const Variable& weight, double bias, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { features, labels, weight };
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionBias] = bias;
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedAdditiveFullConnection, operands, std::move(additionalProperties), name), name);
     }
 
     FunctionPtr MarginInnerProduct(const Variable& features, const Variable& labels, const Variable& weight, size_t outputDimension, double base, double gamma, double power, double lambdaMin, size_t marginCoefficient, const std::wstring& name)

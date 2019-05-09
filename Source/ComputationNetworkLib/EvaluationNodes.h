@@ -9,6 +9,7 @@
 #include "gammacalculation.h"
 #include "InputAndParamNodes.h"
 #include "Sequences.h"
+#include "../SGDLib/IDistGradAggregator.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -131,6 +132,112 @@ private:
 
 template class ClassificationErrorNode<float>;
 template class ClassificationErrorNode<double>;
+
+
+// Distributed classification error node
+// Input(0): label, Input(1): probability
+// Input is decomposed
+template <class ElemType>
+class DistributedClassificationErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"DistributedClassificationError"; }
+
+public:
+    DeclareConstructorFromConfig(DistributedClassificationErrorNode);
+    DistributedClassificationErrorNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum())
+    {
+        if (1 == m_processNum)
+            LogicError("Multi Gpus and mpi is needed in distributed FC.");
+#ifdef CPUONLY
+        LogicError("CPUONLY is not supported in DistributedCrossEntropyWithSoftmaxNode.");
+#endif
+    }
+
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& labels = InputRef(0).Value();
+        auto& probs = InputRef(1).Value();
+        probs.VectorMax(*m_maxIndexes, *m_maxValues, true);
+        m_distGradAggPtr->DistributeAllReduce(*m_maxValues, MPI_MAX);
+        Matrix<ElemType>::DistributedAssignClassificationError(labels, probs, *m_maxValues, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryReduce(isFinalValidationPass);
+
+        if (Input(0)->OperationName() != L"DistributedLabelsGather")
+            LogicError("DistributedClassificationErrorNode Input(0) is %s, but it should be DistributedLabelsGather", Input(0)->OperationName().c_str());
+        m_probDim = Input(1)->GetSampleLayout().GetNumElements();
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        Base::UpdateFunctionMBSize();
+
+        // resize the temporaries to their proper size
+        size_t cols = Input(0)->Value().GetNumCols();
+        m_maxIndexes->Resize(1, cols);
+        m_maxValues->Resize(1, cols);
+
+        m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<DistributedClassificationErrorNode<ElemType>>(nodeP);
+            node->m_maxIndexes->SetValue(*m_maxIndexes);
+            node->m_maxValues->SetValue(*m_maxValues);
+        }
+    }
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_maxIndexes, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
+    }
+
+    // release temp matrices that are only used by forward computation
+    // don't release matrices that need to be used in the gradient computation
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes, matrixPool);
+        ReleaseMatrixToPool(m_maxValues, matrixPool);
+    }
+
+private:
+    size_t m_rank;
+    size_t m_processNum;
+    size_t m_probDim;
+    IDistGradAggregator<ElemType>* m_distGradAggPtr;
+    shared_ptr<Matrix<ElemType>> m_maxIndexes; // size(1, m_batchsize)
+    shared_ptr<Matrix<ElemType>> m_maxValues;  // size(1, m_batchsize)
+};
+
+template class DistributedClassificationErrorNode<float>;
+template class DistributedClassificationErrorNode<double>;
+
 
 // -----------------------------------------------------------------------
 // NDCG1EvalNode (gain, prediction, queryId)

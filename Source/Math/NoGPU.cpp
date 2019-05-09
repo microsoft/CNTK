@@ -2215,6 +2215,15 @@ void GPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const GPUMa
 {
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedAssignClassificationError(const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& probs, const GPUMatrix<ElemType>& maxProb, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedLabelAdd(const GPUMatrix<ElemType>& labels, ElemType bias, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+}
 
 #pragma endregion
 

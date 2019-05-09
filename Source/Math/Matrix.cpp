@@ -5302,6 +5302,30 @@ template <class ElemType>
         NOT_IMPLEMENTED);
 }
 
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedAssignClassificationError(const Matrix<ElemType>& labels, const Matrix<ElemType>& probs, const Matrix<ElemType>& maxProb, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    assert(value.GetNumCols() == labels.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&value,
+        &value,
+        CPUMatrix<ElemType>::DistributedAssignClassificationError(*(labels.m_CPUMatrix), *(probs.m_CPUMatrix), *(maxProb.m_CPUMatrix), *(value.m_CPUMatrix), startIndex, endIndex),
+        GPUMatrix<ElemType>::DistributedAssignClassificationError(*(labels.m_GPUMatrix), *(probs.m_GPUMatrix), *(maxProb.m_GPUMatrix), *(value.m_GPUMatrix), startIndex, endIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedLabelAdd(const Matrix<ElemType>& labels, ElemType bias, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    assert(labels.GetNumCols() == value.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&value,
+        &value,
+        CPUMatrix<ElemType>::DistributedLabelAdd(*(labels.m_CPUMatrix), bias, *(value.m_CPUMatrix), startIndex, endIndex),
+        GPUMatrix<ElemType>::DistributedLabelAdd(*(labels.m_GPUMatrix), bias, *(value.m_GPUMatrix), startIndex, endIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
 #pragma endregion
 
 

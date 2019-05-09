@@ -492,7 +492,9 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
 #ifdef COMING_SOON
         nodePtr->OperationName() == OperationNameOf(CRFNode) ||
 #endif
-        nodePtr->OperationName() == OperationNameOf(DummyCriterionNode))
+        nodePtr->OperationName() == OperationNameOf(DummyCriterionNode) ||
+        nodePtr->OperationName() == OperationNameOf(DistributedCrossEntropyWithSoftmaxNode) ||
+        nodePtr->OperationName() == OperationNameOf(DistributedClassificationErrorNode))
         return true;
 
     return false;

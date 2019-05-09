@@ -4341,11 +4341,17 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
 
+    CNTK_API FunctionPtr DistributedLabelsGather(const Variable& labels, const std::wstring& name = L"");
+
     CNTK_API FunctionPtr DistributedFullyConnected(const Variable& W, const Variable& X, const Variable& b, const std::wstring& name = L"");
 
     CNTK_API FunctionPtr DistributedFullyConnected_v2(const Variable& W, const Variable& X, const Variable& b, const std::wstring& name = L"");
 
     CNTK_API FunctionPtr DistributedCrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
+
+    CNTK_API FunctionPtr DistributedClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
+
+    CNTK_API FunctionPtr DistributedAdditiveFullConnection(const Variable& prediction, const Variable& targets, const Variable& weight, double bias, const std::wstring& name = L"");
 
     CNTK_API FunctionPtr MarginInnerProduct(const Variable& prediction, const Variable& targets, const Variable& weight, size_t outputDimension, double base, double gamma, double power, double lambdaMin, size_t marginCoefficient, const std::wstring& name = L"");
 

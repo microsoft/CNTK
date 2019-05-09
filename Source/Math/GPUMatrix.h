@@ -619,6 +619,10 @@ public:
 
     static void DistributedSoftmaxWithCrossEntropyBackprop(const GPUMatrix<ElemType>& postGradient, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& gradient, size_t startIndex);
 
+    static void DistributedAssignClassificationError(const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& probs, const GPUMatrix<ElemType>& maxProb, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedLabelAdd(const GPUMatrix<ElemType>& labels, ElemType bias, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
 #pragma endregion
 
 

@@ -64,12 +64,21 @@ DistributedFullyConnectedLayer {inDim, outDim, init='glorotUniform', initValueSc
 
 # DistributedFullyConnectedLayer_v2 -- create a distributed fully-connected linear projection layer
 # In this layer, we decompose the fc parameters, the input tensors are still as the same as the 'LinearLayer'
-# However, the output tensors are also decomposed. The next layer must deal with the decomposed output tensors
+# However, the output is decomposed. The next layer must deal with the decomposed output tensors
 DistributedFullyConnectedLayer_v2 {inDim, outDim, init='glorotUniform', initValueScale=1, initBias=0} =
 {
     W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
     b = ParameterTensor {outDim, initValue=initBias, distribute=true}
     apply (X) = DistributedFullyConnected_v2(W, X, b);
+}.apply
+
+# DistributedAdditiveFullConnectionLayer -- create a distributed label-specific-add full connection layer
+# The output is decomposed. The next layer must deal with the decomposed output tensors
+DistributedAdditiveFullConnectionLayer {inDim, outDim, bias=0, init='glorotUniform', initValueScale=1} =
+{
+    W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
+
+    apply (labelSequence, outProbVectorSequence) = DistributedAdditiveFullConnection(labelSequence, outProbVectorSequence, W, bias=bias)
 }.apply
 
 # MarginInnerProductLayer -- create a marginInnerProduct projection layer
@@ -444,9 +453,12 @@ Times                   = CNTK2.Times
 Abs                     = CNTK2.Abs
 Ceil                    = CNTK2.Ceil
 CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
+DistributedLabelsGather            = CNTK2.DistributedLabelsGather
 DistributedFullyConnected          = CNTK2.DistributedFullyConnected
 DistributedFullyConnected_v2       = CNTK2.DistributedFullyConnected_v2
 DistributedCrossEntropyWithSoftmax = CNTK2.DistributedCrossEntropyWithSoftmax
+DistributedClassificationError     = CNTK2.DistributedClassificationError
+DistributedAdditiveFullConnection  = CNTK2.DistributedAdditiveFullConnection
 MarginInnerProduct      = CNTK2.MarginInnerProduct
 FeatureNormalize        = CNTK2.FeatureNormalize
 AdditiveFullConnection  = CNTK2.AdditiveFullConnection
@@ -550,6 +562,12 @@ CNTK2 = [
 
 
     #
+    # Distributed labels gather node
+    #
+    DistributedLabelsGather(labels, tag='') =
+        new ComputationNode [ operation = 'DistributedLabelsGather' ; inputs = _AsNodes (labels) /*plus the function args*/ ]
+
+    #
     # Distributed fully connected node
     #
     DistributedFullyConnected(W, X, b, tag='') =
@@ -564,7 +582,20 @@ CNTK2 = [
     #
     # Distributed cross entropy with softmax node
     #
-    DistributedCrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, tag='') = new ComputationNode [ operation = 'DistributedCrossEntropyWithSoftmax' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
+    DistributedCrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, tag='') =
+        new ComputationNode [ operation = 'DistributedCrossEntropyWithSoftmax' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
+
+    #
+    # Distributed classification error node, the input labels and probability must be decomposed
+    #
+    DistributedClassificationError(labelSequence, outVectorSequence, tag='') =
+        new ComputationNode [ operation = 'DistributedClassificationError' ; inputs = _AsNodes (labelSequence : outVectorSequence) /*plus the function args*/ ]
+
+    #
+    # Distributed additiveFullConnection node, the input labels and probability must be decomposed
+    #
+    DistributedAdditiveFullConnection(labelSequence, outProbVectorSequence, W, bias=0, tag='') = 
+        new ComputationNode [ operation = 'DistributedAdditiveFullConnection' ; inputs = _AsNodes (labelSequence : outProbVectorSequence : W) /*plus the function args*/ ]
 
     #
     # MarginInnerProduct node

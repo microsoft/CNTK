@@ -481,7 +481,9 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     {
         if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
         {
-            if (Input(0)->OperationName() != L"DistributedFullyConnected_v2" && Input(1)->OperationName() != L"DistributedFullyConnected_v2")
+            // It is for DistributedCrossEntropyWithSoftmaxNode
+            if (Input(0)->OperationName() != L"DistributedFullyConnected_v2"      && Input(1)->OperationName() != L"DistributedFullyConnected_v2" &&
+                Input(0)->OperationName() != L"DistributedAdditiveFullConnection" && Input(1)->OperationName() != L"DistributedAdditiveFullConnection")
             {
                 string s1 = Input(0)->GetSampleLayout();
                 string s2 = Input(1)->GetSampleLayout();

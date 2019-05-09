@@ -1154,6 +1154,11 @@ namespace CNTK
                 case PrimitiveOpType::SquaredError:
                     ASSIGN_NEW_NODE(SquareErrorNode, network->GetDeviceId(), internalNodeName);
                     break;
+                case PrimitiveOpType::DistributedLabelsGather:
+                {
+                    ASSIGN_NEW_NODE(DistributedLabelsGatherNode, network->GetDeviceId(), internalNodeName);
+                    break;
+                }
                 case PrimitiveOpType::DistributedFullyConnected:
                 {
                     ASSIGN_NEW_NODE(DistributedFullyConnectedNode, network->GetDeviceId(), internalNodeName);
@@ -1167,6 +1172,17 @@ namespace CNTK
                 case PrimitiveOpType::DistributedCrossEntropyWithSoftmax:
                 {
                     ASSIGN_NEW_NODE(DistributedCrossEntropyWithSoftmaxNode, network->GetDeviceId(), internalNodeName);
+                    break;
+                }
+                case PrimitiveOpType::DistributedClassificationError:
+                {
+                    ASSIGN_NEW_NODE(DistributedClassificationErrorNode, network->GetDeviceId(), internalNodeName);
+                    break;
+                }
+                case PrimitiveOpType::DistributedAdditiveFullConnection:
+                {
+                    auto bias = functionConfig[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionBias].Value<double>();
+                    ASSIGN_NEW_NODE(DistributedAdditiveFullConnectionNode, network->GetDeviceId(), internalNodeName, bias);
                     break;
                 }
                 case PrimitiveOpType::MarginInnerProduct:

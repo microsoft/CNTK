@@ -130,9 +130,12 @@ namespace CNTK
         if ((op == PrimitiveOpType::SumAll) ||
             (op == PrimitiveOpType::ReduceElements &&  anyOfAxesInReduction([](const Axis& axis) { return axis == Axis::AllAxes(); })) ||
             (op == PrimitiveOpType::SquaredError) ||
+            (op == PrimitiveOpType::DistributedLabelsGather) ||
             (op == PrimitiveOpType::DistributedFullyConnected) ||
             (op == PrimitiveOpType::DistributedFullyConnected_v2) ||
             (op == PrimitiveOpType::DistributedCrossEntropyWithSoftmax) ||
+            (op == PrimitiveOpType::DistributedClassificationError) ||
+            (op == PrimitiveOpType::DistributedAdditiveFullConnection) ||
             (op == PrimitiveOpType::MarginInnerProduct) ||
             (op == PrimitiveOpType::FeatureNormalize) ||
             (op == PrimitiveOpType::AdditiveFullConnection) ||
@@ -949,6 +952,12 @@ namespace CNTK
                             outputShape = NDShape({1});
                             break;
                         }
+                        case PrimitiveOpType::DistributedLabelsGather:
+                        {
+                            assert(m_inputs.size() == 1);
+                            outputShape = NDShape{};
+                            break;
+                        }
                         case PrimitiveOpType::DistributedFullyConnected:
                         {
                             assert(m_inputs.size() == 3);
@@ -956,6 +965,13 @@ namespace CNTK
                             break;
                         }
                         case PrimitiveOpType::DistributedFullyConnected_v2:
+                        {
+                            assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
+                            break;
+                        }
+                        case PrimitiveOpType::DistributedClassificationError:
+                        case PrimitiveOpType::DistributedAdditiveFullConnection:
                         {
                             assert(m_inputs.size() == 3);
                             outputShape = NDShape{};
