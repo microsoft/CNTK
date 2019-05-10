@@ -205,6 +205,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DistributedClassificationErrorNode<ElemType>>(nodeP);
+            node->m_rank       = m_rank;
+            node->m_processNum = m_processNum;
+            node->m_probDim    = m_probDim;
             node->m_maxIndexes->SetValue(*m_maxIndexes);
             node->m_maxValues->SetValue(*m_maxValues);
         }

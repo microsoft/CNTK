@@ -107,9 +107,9 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DistributedLabelsGatherNode<ElemType>>(nodeP);
-            node->m_rank = m_rank;
-            node->m_processNum = m_processNum;
-            node->m_minibatchSize = m_minibatchSize;
+            node->m_rank           = m_rank;
+            node->m_processNum     = m_processNum;
+            node->m_minibatchSize  = m_minibatchSize;
             node->m_distGradAggPtr = m_distGradAggPtr;
             node->m_temp1->SetValue(*m_temp1);
             node->m_temp2->SetValue(*m_temp2);
@@ -703,7 +703,8 @@ public:
         auto& W      = InputRef(2).Value();
         m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
         Matrix<ElemType>::Multiply(W, true, *m_temp1, false, Value());
-        Matrix<ElemType>::DistributedLabelAdd(labels, (ElemType)m_bias, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
+        if (Environment().IsTraining())
+            Matrix<ElemType>::DistributedLabelAdd(labels, (ElemType)m_bias, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
