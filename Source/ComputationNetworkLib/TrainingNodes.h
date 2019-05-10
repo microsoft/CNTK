@@ -63,7 +63,7 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        size_t minibatchSize = InputRef(1).Value().GetNumCols();
+        size_t minibatchSize = InputRef(0).Value().GetNumCols();
         if (m_minibatchSize != minibatchSize)
         {
             m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
@@ -79,8 +79,7 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(InputRef(0).GetMBLayout());
-        InputRef(0).ValueFor(fr).VectorMax(*m_temp1, *m_temp2, true);
+        InputRef(0).Value().VectorMax(*m_temp1, *m_temp2, true);
         m_distGradAggPtr->DistributedAllGather(*m_temp1, Value(), m_minibatchSize);
     }
 
@@ -507,7 +506,7 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
     DistributedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_batchSize(0)
+        : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_batchSize(0)
     {
         if (1 == m_processNum)
             LogicError("Multi Gpus and mpi is needed in distributed FC.");
@@ -523,16 +522,11 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        size_t minibatchSize = InputRef(0).Value().GetNumCols();
         size_t batchSize = InputRef(1).Value().GetNumCols();
-        if (minibatchSize != m_minibatchSize || batchSize != m_batchSize)
+        if (batchSize != m_batchSize)
         {
             m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
-            m_minibatchSize = minibatchSize;
             m_batchSize = batchSize;
-            if (m_minibatchSize * m_processNum != m_batchSize)
-                LogicError("DistributedCrossEntropyWithSoftmaxNode: m_minibatchSize(%d) * m_processNum(%d) != m_batchSize(%d)",
-                (int)m_minibatchSize, (int)m_processNum, (int)m_batchSize);
         }
         m_logSoftmaxOfRight->Resize(InputRef(1).Value());
         m_softmaxOfRight->Resize(*m_logSoftmaxOfRight);
@@ -581,6 +575,10 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DistributedCrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
+            node->m_rank = m_rank;
+            node->m_processNum = m_processNum;
+            node->m_batchSize = m_batchSize;
+            node->m_probDim = m_probDim;
             node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
             node->m_temp1->SetValue(*m_temp1);
@@ -621,7 +619,6 @@ public:
 protected:
     size_t m_rank;
     size_t m_processNum;
-    size_t m_minibatchSize;
     size_t m_batchSize;
     size_t m_probDim;
     IDistGradAggregator<ElemType>* m_distGradAggPtr;
