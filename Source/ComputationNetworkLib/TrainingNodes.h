@@ -98,7 +98,7 @@ public:
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
         SetDims(TensorShape(1), HasMBLayout());
         if (Input(0)->OperationName() != L"InputValue")
-            LogicError("DistributedLabelsGatherNode Input(0) is %s, but it should be InputValue", Input(0)->OperationName().c_str());
+            LogicError("DistributedLabelsGatherNode Input(0) is %ls, but it should be InputValue", Input(0)->OperationName().c_str());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -573,7 +573,7 @@ public:
         ValidateBinaryReduce(isFinalValidationPass);
         m_probDim = Input(1)->GetSampleLayout().GetNumElements();
         if (Input(0)->OperationName() != L"DistributedLabelsGather")
-            LogicError("DistributedCrossEntropyWithSoftmaxNode Input(0) is %s, but it should be DistributedLabelsGather", Input(0)->OperationName().c_str());
+            LogicError("DistributedCrossEntropyWithSoftmaxNode Input(0) is %ls, but it should be DistributedLabelsGather", Input(0)->OperationName().c_str());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

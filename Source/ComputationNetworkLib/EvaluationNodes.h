@@ -183,7 +183,7 @@ public:
         ValidateBinaryReduce(isFinalValidationPass);
 
         if (Input(0)->OperationName() != L"DistributedLabelsGather")
-            LogicError("DistributedClassificationErrorNode Input(0) is %s, but it should be DistributedLabelsGather", Input(0)->OperationName().c_str());
+            LogicError("DistributedClassificationErrorNode Input(0) is %ls, but it should be DistributedLabelsGather", Input(0)->OperationName().c_str());
         m_probDim = Input(1)->GetSampleLayout().GetNumElements();
     }
 
