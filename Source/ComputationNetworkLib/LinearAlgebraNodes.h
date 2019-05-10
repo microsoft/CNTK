@@ -23,7 +23,12 @@
 #include "Quantizers.h"
 #include "InputAndParamNodes.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 // -----------------------------------------------------------------------
 // PlusNode (summand1, summand2)
@@ -32,8 +37,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class PlusNode : public BinaryElementWiseNode<ElemType>
 {
-    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName() { return L"Plus"; }
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"Plus";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(PlusNode);
@@ -45,7 +54,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorFor(rank, fr);
+        auto result = ValueTensorFor(rank, fr);
         auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignSumOf(input0, input1);
@@ -54,7 +63,7 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto gradient      =                    GradientTensorFor(rank, fr);
+        auto gradient = GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
         // if reduction then mask the respective input(s) (zero out the gaps)
@@ -73,6 +82,10 @@ public:
         }
         else
             inputGradient.AddCopyOf(gradient);
+        /*if (this->m_nodeName.compare( L"lstmLayers[1].wxxpbpwhh") ==0 && inputIndex == 1)
+        {
+            inputGradient.GetSOBPtr()->Print("gradient of whh");
+        }*/
     }
 
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
@@ -80,7 +93,8 @@ public:
         size_t i;
         for (i = 0; i < GetNumInputs(); i++)
         {
-            if (Input(i).get() == input) break;
+            if (Input(i).get() == input)
+                break;
         }
         if (i == GetNumInputs())
             LogicError("Cannot find input.");
@@ -114,13 +128,12 @@ public:
     {
     }
 
-    virtual void  ForwardProp(const FrameRange& fr) override
+    virtual void ForwardProp(const FrameRange& fr) override
     {
-        
+
         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout = InputRef(0).GetMBLayout();
         const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout = InputRef(1).GetMBLayout();
 
-        
         //get sequence number and channel number
         numParallelSequences = pMBLayout->GetNumParallelSequences();
         numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
@@ -180,7 +193,6 @@ public:
             uttPhoneBeginIdx.push_back(seq.tBegin);
             uttPhoneNum.push_back(numFrames);
             totalphonenum += numFrames;
-            
         }
 
         //calculate the memory need for f*g
@@ -193,11 +205,9 @@ public:
             totalcol += uttFrameNum[s] * uttPhoneNum[s];
         }
 
-        //compute f+g        
+        //compute f+g
         Value().AssignUserOp1(InputRef(0).Value(), InputRef(1).Value(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-                                               totalcol, numParallelSequences, numPhoneParallelSequences);
-
-        
+                              totalcol, numParallelSequences, numPhoneParallelSequences);
 
         //Value().Print("output of plus");
         //m_pMBLayout = nullptr;
@@ -205,21 +215,19 @@ public:
         m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
     }
 
-    virtual void  BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         //auto gradient = Gradient();
         //auto inputGradient = InputRef(inputIndex).Gradient();
-        
-        InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-                                       numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex);
-
+        FrameRange frameRange(InputRef(inputIndex).GetMBLayout());
+        InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex);
+        InputRef(inputIndex).InvalidateMissingGradientColumns(frameRange);
         //InputRef(inputIndex).Gradient().Print("devirative");
-        
     }
 
     virtual void Validate(bool isFinalValidationPass) override
     {
-        
+
         Base::Validate(isFinalValidationPass);
 
         //m_pMBLayout = nullptr; // no layout
@@ -240,8 +248,6 @@ public:
         //m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
         //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
     }
-
-    
 
 protected:
     // Prepare data structures from the reader
@@ -277,8 +283,12 @@ template class PlusBroadcastNode<half>;
 template <class ElemType>
 class LogPlusNode : public BinaryElementWiseNode<ElemType>
 {
-    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName() { return L"LogPlus"; }
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"LogPlus";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(LogPlusNode);
@@ -290,7 +300,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorFor(rank, fr);
+        auto result = ValueTensorFor(rank, fr);
         auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignLogSumOf(input0, input1);
@@ -299,10 +309,10 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto gradient      =                    GradientTensorFor(rank, fr);
+        auto gradient = GradientTensorFor(rank, fr);
         auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
-        auto input0        = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1        = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());        
+        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
 
         // if reduction then mask the respective input(s) (zero out the gaps)
         if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
@@ -343,7 +353,6 @@ template class LogPlusNode<float>;
 template class LogPlusNode<double>;
 template class LogPlusNode<half>;
 
-
 // -----------------------------------------------------------------------
 // PowNode (base, exponent)
 // Computes base ** exponent.
@@ -352,8 +361,12 @@ template class LogPlusNode<half>;
 template <class ElemType>
 class PowNode : public BinaryElementWiseNode<ElemType>
 {
-    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName() { return L"Pow"; }
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"Pow";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(PowNode);
@@ -366,8 +379,8 @@ public:
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto result = ValueTensorFor(rank, fr);
-        auto base   = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-        auto expo   = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto base = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto expo = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignPowOf(base, expo);
     }
 
@@ -383,7 +396,6 @@ public:
             MaskMissingGradientColumnsToZero(fr);
         if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
             Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
-
 
         if (inputIndex == 0)
         {
@@ -404,7 +416,6 @@ template class PowNode<float>;
 template class PowNode<double>;
 template class PowNode<half>;
 
-
 // -----------------------------------------------------------------------
 // MinusNode (minuend, subtrahend)
 // -----------------------------------------------------------------------
@@ -412,8 +423,12 @@ template class PowNode<half>;
 template <class ElemType>
 class MinusNode : public BinaryElementWiseNode<ElemType>
 {
-    typedef BinaryElementWiseNode<ElemType> Base; UsingBinaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName() { return L"Minus"; }
+    typedef BinaryElementWiseNode<ElemType> Base;
+    UsingBinaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"Minus";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(MinusNode);
@@ -425,7 +440,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorFor(rank, fr);
+        auto result = ValueTensorFor(rank, fr);
         auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
         auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
         result.AssignDifferenceOf(input0, input1);
@@ -434,7 +449,7 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto gradient      =                    GradientTensorFor(rank, fr);
+        auto gradient = GradientTensorFor(rank, fr);
         auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
 
         // if reduction then mask the respective input(s) (zero out the gaps)
@@ -492,15 +507,18 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        ForwardPropImpl(*this, fr, true/*allowBroadcast*/);
+        ForwardPropImpl(*this, fr, true /*allowBroadcast*/);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        BackpropToImpl(*this, inputIndex, fr, true/*allowBroadcast*/);
+        BackpropToImpl(*this, inputIndex, fr, true /*allowBroadcast*/);
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return true;
+    }
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
     {
         return ParentGradientOptimization::Overwrite;
@@ -510,7 +528,7 @@ public:
     static void ForwardPropImpl(classType& c, const FrameRange& fr, bool allowBroadcast)
     {
         size_t rank = c.DetermineElementwiseTensorRank();
-        auto result =             c.ValueTensorFor(rank, fr);
+        auto result = c.ValueTensorFor(rank, fr);
         auto input0 = c.InputRef(0).ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
         auto input1 = c.InputRef(1).ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
         result.AssignElementwiseProductOf(input0, input1);
@@ -520,9 +538,9 @@ public:
     static void BackpropToImpl(classType& c, const size_t inputIndex, const FrameRange& fr, bool allowBroadcast)
     {
         size_t rank = c.DetermineElementwiseTensorRank();
-        auto gradient        =                        c.GradientTensorFor(rank, fr);
-        auto inputGradient   = c.Input(    inputIndex)->GradientTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
-        auto otherInputValue = c.Input(1 - inputIndex)->ValueTensorFor   (rank, allowBroadcast ? fr.AllowBroadcast() : fr);
+        auto gradient = c.GradientTensorFor(rank, fr);
+        auto inputGradient = c.Input(inputIndex)->GradientTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
+        auto otherInputValue = c.Input(1 - inputIndex)->ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
 
         // if reduction then mask the respective input(s) (zero out the gaps)
         if (c.Input(inputIndex)->ReducesInTimeWrt(c.shared_from_this()))
@@ -557,7 +575,9 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
 {
     friend class ElementTimesNode<ElemType>;
 
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;                                                                                                                           \
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembers;
+    using Base::OperationName;
 
 public:
     enum : int
@@ -578,7 +598,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<TimesNodeBase<ElemType, m_transpose>>(nodeP);
-            node->m_outputRank          = m_outputRank;
+            node->m_outputRank = m_outputRank;
             node->m_inferInputRankToMap = m_inferInputRankToMap;
         }
     }
@@ -606,7 +626,7 @@ public:
 protected:
     // if the left argument of the matrix product (A) has a time axis, it can only be applied sample by sample
     // where each sample is treated as a separate matrix object (as a consequence, it then also applies to B and the result as well)
-    TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
+    TensorView<ElemType> OneSampleTensorFor(int inputIndex /*-1 for output*/, bool gradient /*instead of value*/, const FrameRange& fr)
     {
         auto input = inputIndex < 0 ? this : Input(inputIndex).get();
         auto data = gradient ? input->GradientPtr() : input->ValuePtr();
@@ -619,7 +639,7 @@ protected:
         return TensorView<ElemType>(data, tensorShape);
     }
 
-    static std::pair<size_t, size_t> CalcOutputMatrixSize(const size_t leftRank , const size_t rightRank, const TensorShape& outShape)
+    static std::pair<size_t, size_t> CalcOutputMatrixSize(const size_t leftRank, const size_t rightRank, const TensorShape& outShape)
     {
         size_t outRank = outShape.GetRank();
         size_t m = 1;
@@ -640,9 +660,9 @@ private:
     // 4. m_transpose (becomes Matrix::InnerProduct), or both input being dense
     bool IsReduceableDotProduct(const FrameRange& fr, bool& hasSparse)
     {
-        const auto& shape0   = InputRef(0).GetSampleLayout();
-        const auto& shape1   = InputRef(1).GetSampleLayout();
-        const auto& shapeOut =             GetSampleLayout();
+        const auto& shape0 = InputRef(0).GetSampleLayout();
+        const auto& shape1 = InputRef(1).GetSampleLayout();
+        const auto& shapeOut = GetSampleLayout();
 
         bool input0Sparse = (InputRef(0).Value().GetMatrixType() != DENSE);
         bool input1Sparse = (InputRef(1).Value().GetMatrixType() != DENSE);
@@ -661,13 +681,14 @@ private:
         bool notBothSparse = !(input0Sparse && input1Sparse);
 
         hasSparse = (input0Sparse || input1Sparse);
-        
+
         return input0_ok && input1_ok && outputScalar && notBothSparse && (m_transpose || !hasSparse);
     }
 
     void RequestReduceSequenceAxisMatricesIfNeeded(MatrixPool& matrixPool)
     {
-        if (!ReduceSequenceAxis()) return;
+        if (!ReduceSequenceAxis())
+            return;
 
         for (int i = 0; i < NumInputs; i++)
         {
@@ -682,7 +703,8 @@ private:
 
     void ReleaseReduceSequenceAxisMatricesIfNeeded(MatrixPool& matrixPool)
     {
-        if (!ReduceSequenceAxis()) return;
+        if (!ReduceSequenceAxis())
+            return;
 
         for (int i = 0; i < NumInputs; i++)
         {
@@ -700,7 +722,7 @@ private:
         // We unpack them to (m * k) x s* x b* and k x s* x b*
         // Then perform b* matrix multiplies to get m x b* with both k and s* being resolved
         auto inputMBLayout = InputRef(0).GetMBLayout();
-        auto numSequences = inputMBLayout->GetNumSequences(); // b*
+        auto numSequences = inputMBLayout->GetNumSequences();    // b*
         auto maxNumTimeSteps = inputMBLayout->GetNumTimeSteps(); // s*
         size_t m = InputRef(0).GetSampleLayout()[0];
         size_t k = InputRef(1).GetSampleLayout()[0];
@@ -722,7 +744,7 @@ private:
                 m_tempUnpackedValue[i],
                 m_tempScatterIndices[i],
                 std::shared_ptr<Matrix<char>>(nullptr),
-                /*batchMajor=*/ false,
+                /*batchMajor=*/false,
                 &gapPadValue);
         }
 
@@ -734,9 +756,9 @@ private:
         for (int s = 0; s < numSequences; s++)
         {
             Matrix<ElemType> mat0Slice = mat0.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // (m * k) x s*
-            mat0Slice.Reshape(m, k * maxNumTimeSteps); // m x (k * s*)
+            mat0Slice.Reshape(m, k * maxNumTimeSteps);                                           // m x (k * s*)
             Matrix<ElemType> mat1Slice = mat1.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // k x s*
-            mat1Slice.Reshape(k * maxNumTimeSteps, 1); // (k * s*) x 1
+            mat1Slice.Reshape(k * maxNumTimeSteps, 1);                                           // (k * s*) x 1
 
             Matrix<ElemType> value = Value().ColumnSlice(s, 1);
             Matrix<ElemType>::Multiply(mat0Slice, false, mat1Slice, false, value);
@@ -746,7 +768,7 @@ private:
     void BackpropTo_ReduceSequenceAxis(size_t inputIndex)
     {
         auto input0MBLayout = InputRef(0).GetMBLayout();
-        auto numSequences = input0MBLayout->GetNumSequences(); // b*
+        auto numSequences = input0MBLayout->GetNumSequences();    // b*
         auto maxNumTimeSteps = input0MBLayout->GetNumTimeSteps(); // s*
         size_t m = InputRef(0).GetSampleLayout()[0];
         size_t k = InputRef(1).GetSampleLayout()[0];
@@ -763,7 +785,7 @@ private:
                 m_tempUnpackedValue[i],
                 m_tempScatterIndices[i],
                 std::shared_ptr<Matrix<char>>(nullptr),
-                /*batchMajor=*/ false,
+                /*batchMajor=*/false,
                 &gapPadValue);
 
             unpacked[i] = ((input0MBLayout->GetNumTimeSteps() > 1) && (input0MBLayout->GetNumSequences() > 1));
@@ -771,7 +793,7 @@ private:
 
         const auto& unpackedInputValue = unpackedInput[1 - inputIndex].GetSOB();
 
-        ElemType beta = InputRef(inputIndex).IsGradientInitializedBy(this) ? (ElemType)0 : (ElemType)1;
+        ElemType beta = InputRef(inputIndex).IsGradientInitializedBy(this) ? (ElemType) 0 : (ElemType) 1;
 
         // note the unpacked input is not the normal MBLayout (batchMajor), so do ColumnSlice directly
         if (inputIndex == 0)
@@ -782,15 +804,15 @@ private:
             for (int s = 0; s < numSequences; s++)
             {
                 Matrix<ElemType> inputGradientSlice = inputGradientUnpacked.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // (m * k) x s*
-                inputGradientSlice.Reshape(m, k * maxNumTimeSteps); // m x (k * s*)
-                Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // k x s*
-                inputValueSlice.Reshape(k * maxNumTimeSteps, 1); // (k * s*) x 1
-                Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? (ElemType)0 : beta, inputGradientSlice);
+                inputGradientSlice.Reshape(m, k * maxNumTimeSteps);                                                            // m x (k * s*)
+                Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps);       // k x s*
+                inputValueSlice.Reshape(k * maxNumTimeSteps, 1);                                                               // (k * s*) x 1
+                Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1);                                                 // m x 1
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? (ElemType) 0 : beta, inputGradientSlice);
             }
 
             if (unpacked[inputIndex])
-                InputRef(inputIndex).Gradient().DoGatherColumnsOf(beta, *m_tempScatterIndices[inputIndex], inputGradientUnpacked, (ElemType)1);
+                InputRef(inputIndex).Gradient().DoGatherColumnsOf(beta, *m_tempScatterIndices[inputIndex], inputGradientUnpacked, (ElemType) 1);
         }
         else
         {
@@ -800,15 +822,15 @@ private:
             for (int s = 0; s < numSequences; s++)
             {
                 Matrix<ElemType> inputGradientSlice = inputGradientUnpacked.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // k x s*
-                inputGradientSlice.Reshape(k * maxNumTimeSteps, 1); // (k * s*) x 1
-                Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // (m * k) x s*
-                inputValueSlice.Reshape(m, k * maxNumTimeSteps); // m x (k * s*)
-                Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? (ElemType)0 : beta, inputGradientSlice);
+                inputGradientSlice.Reshape(k * maxNumTimeSteps, 1);                                                            // (k * s*) x 1
+                Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps);       // (m * k) x s*
+                inputValueSlice.Reshape(m, k * maxNumTimeSteps);                                                               // m x (k * s*)
+                Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1);                                                 // m x 1
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? (ElemType) 0 : beta, inputGradientSlice);
             }
-            
+
             if (unpacked[inputIndex])
-                InputRef(inputIndex).Gradient().DoGatherColumnsOf(beta, *m_tempScatterIndices[inputIndex], inputGradientUnpacked, (ElemType)1);
+                InputRef(inputIndex).Gradient().DoGatherColumnsOf(beta, *m_tempScatterIndices[inputIndex], inputGradientUnpacked, (ElemType) 1);
         }
     }
 
@@ -840,18 +862,18 @@ public:
                 // for sparse transposed, use InnerProduct
                 if (hasSparse)
                 {
-                    Matrix<ElemType> value  =             ValueFor(fr);
+                    Matrix<ElemType> value = ValueFor(fr);
                     Matrix<ElemType> input0 = InputRef(0).ValueFor(fr);
                     Matrix<ElemType> input1 = InputRef(1).ValueFor(fr);
                     if (input0.GetMatrixType() == SPARSE)
-                        Matrix<ElemType>::InnerProduct(input0, input1, value, true/*isColWise*/);
+                        Matrix<ElemType>::InnerProduct(input0, input1, value, true /*isColWise*/);
                     else
-                        Matrix<ElemType>::InnerProduct(input1, input0, value, true/*isColWise*/);
+                        Matrix<ElemType>::InnerProduct(input1, input0, value, true /*isColWise*/);
                     // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
                 }
                 else
                 {
-                    ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, true/*allowBroadcast*/);
+                    ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, true /*allowBroadcast*/);
                 }
                 return;
             }
@@ -870,9 +892,9 @@ public:
 
             // note this is not performant, warn user about the slow path being used
             if (Base::HasEnvironmentPtr() && Base::Environment().traceLevel > 0)
-                std::call_once(m_unrollWarningOnceFlag, [this]{ fprintf(stderr, "WARNING: %ls %ls operation: being unrolled, execution may be slow\n", NodeName().c_str(), OperationName().c_str()); });
+                std::call_once(m_unrollWarningOnceFlag, [this] { fprintf(stderr, "WARNING: %ls %ls operation: being unrolled, execution may be slow\n", NodeName().c_str(), OperationName().c_str()); });
 
-            auto timeRange     = fr.GetTimeRange();
+            auto timeRange = fr.GetTimeRange();
             auto sequenceRange = fr.GetSequenceRange();
             m_beingUnrolled = true;
             for (auto t = timeRange.first; t < timeRange.second; t++)
@@ -885,10 +907,10 @@ public:
         // TensorView::DoMatrixProductOf() will reduce each tensor object into a 2D tensor (or fail if it cannot)
         // and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
         // Transposition is applied after flattening into 2D, but only allowed if the input sample is 2D anyway.
-        auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
-        auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
+        auto input0 = OneSampleTensorFor(0, /*gradient=*/false, fr.AllowBroadcast());
+        auto input1 = OneSampleTensorFor(1, /*gradient=*/false, fr.AllowBroadcast());
         auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
-        output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/, 1.0f, this->m_pQuantizedMultiplier);
+        output.AssignMatrixProductOf(false /*transC*/, input0, m_transpose /*transA*/, input1, false /*transB*/, 1.0f, this->m_pQuantizedMultiplier);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -905,7 +927,7 @@ public:
                 BackpropTo_ReduceSequenceAxis(inputIndex);
                 return;
             }
-            
+
             // speed up using ElementTimes or InnerProduct to avoid unroll if possible
             bool hasSparse;
             if (IsReduceableDotProduct(fr, hasSparse))
@@ -916,20 +938,20 @@ public:
                     Matrix<ElemType> inputValue = InputRef(1 - inputIndex).ValueFor(fr);
                     Matrix<ElemType> inputGradient = InputRef(inputIndex).GradientFor(fr);
                     Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd(
-                        (ElemType)1.0, inputValue, gradient,
-                        Input(inputIndex)->IsGradientInitializedBy(this) ? (ElemType)0.0 : (ElemType)1.0,
+                        (ElemType) 1.0, inputValue, gradient,
+                        Input(inputIndex)->IsGradientInitializedBy(this) ? (ElemType) 0.0 : (ElemType) 1.0,
                         inputGradient);
                     // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
                     // Note: We do not need to mask gaps here, since this code branch operates sample by sample (no reduction over samples).
                 }
                 else
                 {
-                    ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, false/*allowBroadcast*/);
+                    ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, false /*allowBroadcast*/);
                 }
                 return;
             }
 
-            ElemType beta = Input(inputIndex)->IsGradientInitializedBy(this) ? (ElemType)0.0 : (ElemType)1.0;
+            ElemType beta = Input(inputIndex)->IsGradientInitializedBy(this) ? (ElemType) 0.0 : (ElemType) 1.0;
             if (inputIndex == 0)
             {
                 if (fr.IsBatchMatmul(InputRef(0).GetMBLayout()) && fr.IsBatchMatmul(InputRef(1).GetMBLayout()) && !hasSparse)
@@ -968,7 +990,7 @@ public:
             if (Base::HasEnvironmentPtr() && Base::Environment().traceLevel > 0)
                 std::call_once(m_unrollWarningOnceFlag, [this] { fprintf(stderr, "WARNING: %ls %ls operation: being unrolled in backprop, execution may be slow\n", NodeName().c_str(), OperationName().c_str()); });
 
-            auto timeRange     = fr.GetTimeRange();
+            auto timeRange = fr.GetTimeRange();
             auto sequenceRange = fr.GetSequenceRange();
             // when unroll, parent overwrite gradient should be ignored
             m_beingUnrolled = true;
@@ -990,7 +1012,6 @@ public:
             Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
         bool overwriteInputGradient = (Input(inputIndex)->IsGradientInitializedBy(this) && !m_beingUnrolled);
-
         if (inputIndex == 0) // left derivative
         {
             if (InputRef(1).Value().GetMatrixType() == SPARSE &&
@@ -1030,18 +1051,18 @@ public:
                 InputRef(0).SetPreferredGradientMatrixType(DENSE);
             }
 
-            auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true,  fr.AllowBroadcast());
-            auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
-            auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
+            auto input0Gradient = OneSampleTensorFor(0, /*gradient=*/true, fr.AllowBroadcast());
+            auto input1 = OneSampleTensorFor(1, /*gradient=*/false, fr.AllowBroadcast());
+            auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
             if (overwriteInputGradient)
-                input0Gradient.AssignMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
+                input0Gradient.AssignMatrixProductOf(m_transpose /*transC*/, outputGradient, false /*transA*/, input1, true /*transB*/);
             else
-                input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
+                input0Gradient.AddMatrixProductOf(m_transpose /*transC*/, outputGradient, false /*transA*/, input1, true /*transB*/);
         }
         else if (inputIndex == 1) // right derivative
         {
-            auto input0         = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
-            auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true,  fr.AllowBroadcast());
+            auto input0 = OneSampleTensorFor(0, /*gradient=*/false, fr.AllowBroadcast());
+            auto input1Gradient = OneSampleTensorFor(1, /*gradient=*/true, fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
 
             if (InputRef(1).Gradient().GetMatrixType() == SPARSE)
@@ -1053,16 +1074,23 @@ public:
             InputRef(1).SetPreferredGradientMatrixType(DENSE);
 
             if (overwriteInputGradient)
-                input1Gradient.AssignMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+                input1Gradient.AssignMatrixProductOf(false /*transC*/, input0, !m_transpose /*transA*/, outputGradient, false /*transB*/);
             else
-                input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+                input1Gradient.AddMatrixProductOf(false /*transC*/, input0, !m_transpose /*transA*/, outputGradient, false /*transB*/);
+            InputRef(1).InvalidateMissingGradientColumns(fr);
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
     // but both *inputs* are used, so we don't overload the InputUsed-() function which defaults to 'true'
 
-    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override { return ParentGradientOptimization::Overwrite; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase*) const override
+    {
+        return ParentGradientOptimization::Overwrite;
+    }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -1113,21 +1141,21 @@ public:
                 else if (dimsA.size() != 2)
                     InvalidArgument("%ls %ls operation: Transposition requires a 2D tensor (matrix) or a 1D tensor (column vector), instead of a [%s].", NodeName().c_str(), OperationName().c_str(), dimsAstring.c_str());
                 else if (m_outputRank != 1)
-                    InvalidArgument("%ls %ls operation: The outputRank (%d) must be 1 when transposing.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank);
+                    InvalidArgument("%ls %ls operation: The outputRank (%d) must be 1 when transposing.", NodeName().c_str(), OperationName().c_str(), (int) m_outputRank);
                 // swap them temporarily, to get transposition out of the way for validation
                 std::swap(dimsA[0], dimsA[1]);
             }
 
             if (m_outputRank > dimsA.size()) // note: it may be equal in case of dyadic product uv'
-                InvalidArgument("%ls %ls operation: outputRank %d exceeds left argument's shape [%s].", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
-            auto numReductionDims = dimsA.size() - m_outputRank;  // we reduce over the remaining dims; this is their number. Can be 0 in case of dyadic product uv'
+                InvalidArgument("%ls %ls operation: outputRank %d exceeds left argument's shape [%s].", NodeName().c_str(), OperationName().c_str(), (int) m_outputRank, dimsAstring.c_str());
+            auto numReductionDims = dimsA.size() - m_outputRank; // we reduce over the remaining dims; this is their number. Can be 0 in case of dyadic product uv'
             if (numReductionDims > dimsB.size())
-                InvalidArgument("%ls %ls operation: right argument shape [%s] has too few dimensions for outputRank %d.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str(), (int)m_outputRank);
+                InvalidArgument("%ls %ls operation: right argument shape [%s] has too few dimensions for outputRank %d.", NodeName().c_str(), OperationName().c_str(), dimsBstring.c_str(), (int) m_outputRank);
 
-#if 1       // support for legacy models when only the matrix dimensions had to match
-            // Note: This is non-ambiguous w.r.t. valid new configurations because this condition would otherwise just be considered an error.
-            //       But it will fail to discover trailing reduction dimensions that are 1. We assume that no such legacy models exist.
-            // Note: This is very ugly [Wayne Xiong]. I agree [fseide].
+#if 1 // support for legacy models when only the matrix dimensions had to match                                                        \
+    // Note: This is non-ambiguous w.r.t. valid new configurations because this condition would otherwise just be considered an error. \
+    //       But it will fail to discover trailing reduction dimensions that are 1. We assume that no such legacy models exist.        \
+    // Note: This is very ugly [Wayne Xiong]. I agree [fseide].
             if (dimsA.size() == 2 && !transpose && m_outputRank == 1 && dimsA[1] != dimsB[0] && dimsB[0] != 0)
             {
                 // search whether we can interpret dimsA[1] as the flattening of the first dimensions
@@ -1146,7 +1174,7 @@ public:
                         fprintf(stderr, "\n%ls %ls operation: For legacy compatibility, the sample layout of left input (%ls %ls operation) was patched to [%s] (from [%s])\n",
                                 NodeName().c_str(), OperationName().c_str(), Input(0)->NodeName().c_str(), Input(0)->OperationName().c_str(), string(Input(0)->GetSampleLayout()).c_str(), dimsAstring.c_str());
                         dimsAstring = string(Input(0)->GetSampleLayout()); // for error messages
-                        break; // we will continue with this patched up model from here on
+                        break;                                             // we will continue with this patched up model from here on
                     }
                 }
             }
@@ -1155,7 +1183,7 @@ public:
             // validate or automatically infer dimension inference for learnable parameters
             for (size_t k = 0; k < m_outputRank; k++) // outputRank dimensions cannot be inferred
                 if (dimsA[k] == 0)
-                    InvalidArgument("%ls %ls operation: The outputRank (%d) dimensions in left argument's shape [%s] must not be 0.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
+                    InvalidArgument("%ls %ls operation: The outputRank (%d) dimensions in left argument's shape [%s] must not be 0.", NodeName().c_str(), OperationName().c_str(), (int) m_outputRank, dimsAstring.c_str());
 
             // infer rank of dimsA
             // For purpose of dimension inference, Times() accepts an optional parameter inferInputRankToMap (default -1=unspecified).
@@ -1174,10 +1202,10 @@ public:
             // e.g. when adding an ROI dimension to a pretrained weights tensor of a dense layer after ROI pooling)
             if (m_inferInputRankToMap >= 0 && dimsA.back() == 0) // if given, we pad if needed
             {
-                if ((size_t)m_inferInputRankToMap >= dimsB.size() && isFinalValidationPass) // at least one axis must be left to reduce over
+                if ((size_t) m_inferInputRankToMap >= dimsB.size() && isFinalValidationPass) // at least one axis must be left to reduce over
                     InvalidArgument("%ls %ls operation: 'inferInputRankToMap' argument %d must be less than rank of second operand [%s].", NodeName().c_str(), OperationName().c_str(), m_inferInputRankToMap, dimsBstring.c_str());
                 assert(dimsA.size() == m_outputRank + numReductionDims);
-                while (numReductionDims + (size_t)m_inferInputRankToMap < dimsB.size())
+                while (numReductionDims + (size_t) m_inferInputRankToMap < dimsB.size())
                 {
                     dimsA.push_back(0);
                     numReductionDims++;
@@ -1200,7 +1228,7 @@ public:
 
             // now determine result dimensions
             auto dimsC = dimsA;
-            dimsC.resize(m_outputRank);    // output dims
+            dimsC.resize(m_outputRank); // output dims
             for (size_t k = numReductionDims; k < dimsB.size(); k++)
                 dimsC.push_back(dimsB[k]); // input dims
             SetDims(TensorShape(dimsC), HasMBLayout());
@@ -1237,19 +1265,28 @@ public:
         ReleaseReduceSequenceAxisMatricesIfNeeded(matrixPool);
     }
 
-    size_t OutputRank() const { return m_outputRank; }
-    int InferInputRankToMap() const { return m_inferInputRankToMap; }
+    size_t OutputRank() const
+    {
+        return m_outputRank;
+    }
+    int InferInputRankToMap() const
+    {
+        return m_inferInputRankToMap;
+    }
 
-protected: 
+protected:
     shared_ptr<QuantizedMultiplier<ElemType>> m_pQuantizedMultiplier;
 
 private:
     size_t m_outputRank;
-    int m_inferInputRankToMap;  // -1 (not specified) or says how to expand shape of W, to keep this many mapping dims
+    int m_inferInputRankToMap; // -1 (not specified) or says how to expand shape of W, to keep this many mapping dims
     bool m_beingUnrolled;
     std::once_flag m_unrollWarningOnceFlag;
 
-    bool ReduceSequenceAxis() const { return m_inferInputRankToMap == ReduceSequenceAxisWithoutInferredInputRank; }
+    bool ReduceSequenceAxis() const
+    {
+        return m_inferInputRankToMap == ReduceSequenceAxisWithoutInferredInputRank;
+    }
 
     static const int NumInputs = 2;
     shared_ptr<Matrix<ElemType>> m_tempScatterIndices[NumInputs];
@@ -1277,7 +1314,10 @@ class TimesNode : public TimesNodeBase<ElemType, false>
 {
     typedef TimesNodeBase<ElemType, false> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"Times"; }
+    static const std::wstring TypeName()
+    {
+        return L"Times";
+    }
 
 public:
     TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = Base::NoInferredInputRank)
@@ -1309,7 +1349,10 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
 {
     typedef TimesNodeBase<ElemType, true> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"TransposeTimes"; }
+    static const std::wstring TypeName()
+    {
+        return L"TransposeTimes";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
@@ -1348,8 +1391,8 @@ class QuantizedTimesNode : public TimesNodeBase<ElemType, false>
 
 private:
     // Quantizer bit shift for matrices A and B
-    size_t m_bitShiftA; 
-    size_t m_bitShiftB; 
+    size_t m_bitShiftA;
+    size_t m_bitShiftB;
 
 public:
     QuantizedTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t bitShiftA = 1, size_t bitShiftB = 1, size_t outputRank = 1, int inferInputRankToMap = Base::NoInferredInputRank)
@@ -1457,8 +1500,14 @@ public:
         InputRef(0).GradientFor(fr) += Gradient(); // here the assumption is that gradientValues are 1x1 matrix
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -1482,8 +1531,12 @@ template class SumElementsNode<double>;
 template <class ElemType>
 class TransposeDimensionsNode : public ComputationNode /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"TransposeDimensions"; }
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"TransposeDimensions";
+    }
 
 public:
     TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, int axis1 = 1, int axis2 = 2)
@@ -1494,7 +1547,7 @@ public:
     TransposeDimensionsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::vector<int>& perm)
         : Base(deviceId, name), m_axis1(0), m_axis2(0), m_perm({})
     {
-        if (!std::all_of(perm.begin(), perm.end(), [](int p) {return p >= 1; }))
+        if (!std::all_of(perm.begin(), perm.end(), [](int p) { return p >= 1; }))
             InvalidArgument("%ls %ls operation: _internal_ indices for axes must be >= 1.", NodeName().c_str(), OperationName().c_str());
 
         // undo the annoying +1
@@ -1522,7 +1575,7 @@ public:
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        if (modelVersion >= CNTK_MODEL_VERSION_3) 
+        if (modelVersion >= CNTK_MODEL_VERSION_3)
         {
             fstream >> m_axis1 >> m_axis2;
             if (modelVersion >= CNTK_MODEL_VERSION_25 && m_axis1 == 0 && m_axis2 == 0)
@@ -1530,7 +1583,7 @@ public:
                 size_t size = 0;
                 fstream >> size;
                 m_perm.resize(size);
-                for (size_t i = 0; i < size; ++i) 
+                for (size_t i = 0; i < size; ++i)
                     fstream >> m_perm[i];
             }
         }
@@ -1538,8 +1591,14 @@ public:
             m_axis1 = 1, m_axis2 = 2; // default
     }
 
-    int Axis1() const { return m_axis1; }
-    int Axis2() const { return m_axis2; }
+    int Axis1() const
+    {
+        return m_axis1;
+    }
+    int Axis2() const
+    {
+        return m_axis2;
+    }
 
 private:
     // compute the transposed tensor shape (in-place)
@@ -1566,7 +1625,7 @@ private:
         return shape;
     }
 
-    // verify that the argument is a valid permutation 
+    // verify that the argument is a valid permutation
     // We pass by value because the function mutates perm
     static bool IsPermutation(std::vector<size_t> perm)
     {
@@ -1581,21 +1640,27 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output =                                  ValueTensorFor(                         rank, fr);
-        auto input  = TensorView<ElemType>(InputRef(0).ValuePtr(), GetTransposedTensorSliceFor(rank, fr));
+        auto output = ValueTensorFor(rank, fr);
+        auto input = TensorView<ElemType>(InputRef(0).ValuePtr(), GetTransposedTensorSliceFor(rank, fr));
         output.AssignCopyOf(input);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto outputGradient =                                  GradientTensorFor(                         rank, fr);
-        auto inputGradient  = TensorView<ElemType>(InputRef(0).GradientPtr(), GetTransposedTensorSliceFor(rank, fr));
+        auto outputGradient = GradientTensorFor(rank, fr);
+        auto inputGradient = TensorView<ElemType>(InputRef(0).GradientPtr(), GetTransposedTensorSliceFor(rank, fr));
         inputGradient.AddCopyOf(outputGradient);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -1605,9 +1670,9 @@ public:
 
         // input shape
         auto shape = Input(0)->GetSampleLayout();
-        
+
         if (m_perm.size() == 0 && shape.GetRank() > 0)
-        {   
+        {
             // we are swapping two axes
             // validate indices
             if (m_axis1 < 1 || m_axis2 < 1)
@@ -1644,8 +1709,8 @@ public:
     }
 
 private:
-    int m_axis1, m_axis2; // the two dimensions (axes, 1-based) to swap
-    std::vector<size_t>  m_perm; // permutation to use for transposition
+    int m_axis1, m_axis2;       // the two dimensions (axes, 1-based) to swap
+    std::vector<size_t> m_perm; // permutation to use for transposition
 };
 
 template class TransposeDimensionsNode<float>;
@@ -2113,7 +2178,7 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
     set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
     shared_ptr<DistGradHeader> gradHeader,
     shared_ptr<MPIWrapper> mpi,
-    size_t packThresholdSizeInBytes = (size_t)DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
+    size_t packThresholdSizeInBytes = (size_t) DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
 
 // -----------------------------------------------------------------------
 // EpochAccumulatorNode calculates mean values of all samples used in forward pass.
@@ -2131,7 +2196,10 @@ class EpochAccumulatorNode : public ComputationNodeNonLooping<ElemType>, public 
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"EpochAccumulator"; }
+    static const std::wstring TypeName()
+    {
+        return L"EpochAccumulator";
+    }
 
 public:
     EpochAccumulatorNode(DEVICEID_TYPE deviceId, const wstring& name);
@@ -2140,9 +2208,15 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override;
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     virtual void OnEpochStart() override;
 
@@ -2158,7 +2232,6 @@ public:
     TensorView<ElemType> EnsureAccumlator();
 
 protected:
-
     friend void AggregateAccumulatorValuesAndUpdateEvaluation<ElemType>(
         shared_ptr<ComputationNetwork> net,
         set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
@@ -2168,9 +2241,18 @@ protected:
 
     void Reset();
 
-    size_t GetNumberOfSamples() const { return m_numSamples; }
-    void SetNumberOfSamples(size_t samples) { m_numSamples = samples; }
-    shared_ptr<Matrix<ElemType>> GetAccumulator() { return m_accumulator; }
+    size_t GetNumberOfSamples() const
+    {
+        return m_numSamples;
+    }
+    void SetNumberOfSamples(size_t samples)
+    {
+        m_numSamples = samples;
+    }
+    shared_ptr<Matrix<ElemType>> GetAccumulator()
+    {
+        return m_accumulator;
+    }
     // Copies internal accumulator to the output.
     void CopyAccumulatorToValue();
 
@@ -2184,8 +2266,12 @@ protected:
 template <class ElemType, class InputType>
 class CastNode : public UnaryElementWiseNode<ElemType>
 {
-    typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName() { return L"Cast"; }
+    typedef UnaryElementWiseNode<ElemType> Base;
+    UsingUnaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"Cast";
+    }
 
 public:
     CastNode(DEVICEID_TYPE deviceId, const wstring& name)
@@ -2212,8 +2298,14 @@ public:
         ValidateUnaryMap(isFinalValidationPass);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 };
 
 template class CastNode<half, float>;
@@ -2222,4 +2314,6 @@ template class CastNode<float, half>;
 template class CastNode<float, double>;
 template class CastNode<double, half>;
 template class CastNode<double, float>;
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft

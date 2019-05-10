@@ -2003,7 +2003,7 @@ public:
         {
             for (auto wit = it->begin(); wit != it->end(); wit++)
             {
-                outputMatrix.SetValue(*wit, colNo, 1.0);
+                outputMatrix.SetValue(*wit, /*m_spaceTokens[0]*/, colNo, 1.0);
                 colNo++;
             }
             m_pMBLayout->AddSequence(seqId, seqId, 0, it->size());

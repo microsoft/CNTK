@@ -872,12 +872,13 @@ public:
             Matrix<ElemType>& outputGradient = output.GetSOB();
             //Microsoft::MSR::CNTK::Matrix<ElemType>& inputGradient = InputRef(inputIndex).Gradient();
             //Microsoft::MSR::CNTK::Matrix<ElemType>& outputGradient = Gradient();
+            bool overwriteInputGradient = (Input(inputIndex)->IsGradientInitializedBy(this));
             size_t numrows = InputRef(1).Value().GetNumRows();
             auto MBLayoutofHidden = InputRef(0).GetMBLayout();
             size_t numParallelHidden = MBLayoutofHidden->GetNumParallelSequences();
             size_t seqId = 0;
             size_t deviceID = InputRef(1).Value().GetDeviceId();
-            Microsoft::MSR::CNTK::Matrix<ElemType> tempmatrix(deviceID), tempmatrix2(deviceID), tempmatrix3(deviceID);
+            Microsoft::MSR::CNTK::Matrix<ElemType> tempmatrix(deviceID), tempmatrix2(deviceID), tempmatrix3(deviceID), tempmatrix4(deviceID);
             for (size_t nchunk = 0; nchunk < numParallelHidden; nchunk++)
             {
                 seqId = 0;
@@ -894,14 +895,24 @@ public:
                         tempmatrix.Reshape(numrows, numrows);
                         tempmatrix2 = outputGradient.ColumnSlice(seq.s + (fr.timeIdxInSeq * numParallelHidden), 1);
                         tempmatrix3.AssignProductOf(tempmatrix, false, tempmatrix2, false);
-                        inputGradient.SetColumn(tempmatrix3, seq.s + (fr.timeIdxInSeq * numParallelHidden));
+                        if (overwriteInputGradient)
+                            inputGradient.SetColumn(tempmatrix3, seq.s + (fr.timeIdxInSeq * numParallelHidden));
+                        else
+                        {
+                            tempmatrix4.Resize(inputGradient.GetNumRows(), inputGradient.GetNumCols());
+                            tempmatrix4.SetValue(0.0);
+                            tempmatrix4.SetColumn(tempmatrix3, seq.s + (fr.timeIdxInSeq * numParallelHidden));
+                            inputGradient.AssignSumOf(inputGradient, tempmatrix4);
+                        }
 
                         break;
                     }
                     seqId++;
                 }
-                
             }
+            InputRef(0).InvalidateMissingGradientColumns(fr);
+            MaskMissingColumnsToZero(inputGradient, MBLayoutofHidden, fr);
+            //inputGradient.Print("gradient");
         }
         else if (inputIndex == 1)
             return;
