@@ -655,7 +655,7 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-    DistributedAdditiveFullConnectionNode(DEVICEID_TYPE deviceId, const wstring& name, bool weightNormalize = true, ElemType bias = 0, ElemType scale = 0)
+    DistributedAdditiveFullConnectionNode(DEVICEID_TYPE deviceId, const wstring& name, bool weightNormalize = true, double bias = 0, double scale = 0)
         : Base(deviceId, name), m_weightNormalize(weightNormalize), m_bias(bias), m_scale(scale), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
     {
         if (1 == m_processNum)
@@ -685,7 +685,7 @@ public:
     {
         if (1 == inputIndex)      // for W
         {
-            Matrix<ElemType>::Scale(m_scale, Gradient());
+            Matrix<ElemType>::Scale((ElemType)m_scale, Gradient());
             auto& W_gradient = InputRef(1).Gradient();
             Matrix<ElemType>::Multiply(*m_temp1, false, Gradient(), true, W_gradient);
         }
@@ -713,7 +713,7 @@ public:
         Matrix<ElemType>::Multiply(W, true, *m_temp1, false, Value());
         if (Environment().IsTraining())
             Matrix<ElemType>::DistributedLabelAdd(labels, m_bias, Value(), m_outputDim * m_rank, m_outputDim * (m_rank + 1) - 1);
-        Matrix<ElemType>::Scale(m_scale, Value());
+        Matrix<ElemType>::Scale((ElemType)m_scale, Value());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -799,8 +799,8 @@ public:
     size_t m_minibatchSize;
     size_t m_batchSize;
     bool m_weightNormalize;
-    ElemType m_bias;
-    ElemType m_scale;
+    double m_bias;
+    double m_scale;
     IDistGradAggregator<ElemType>* m_distGradAggPtr;
     shared_ptr<Matrix<ElemType>> m_temp1;
     shared_ptr<Matrix<ElemType>> m_WNorm;
