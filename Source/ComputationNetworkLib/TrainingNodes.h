@@ -712,7 +712,7 @@ public:
         m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
         Matrix<ElemType>::Multiply(W, true, *m_temp1, false, Value());
         if (Environment().IsTraining())
-            Matrix<ElemType>::DistributedLabelAdd(labels, m_bias, Value(), m_outputDim * m_rank, m_outputDim * (m_rank + 1) - 1);
+            Matrix<ElemType>::DistributedLabelAdd(labels, (ElemType)m_bias, Value(), m_outputDim * m_rank, m_outputDim * (m_rank + 1) - 1);
         Matrix<ElemType>::Scale((ElemType)m_scale, Value());
     }
 
