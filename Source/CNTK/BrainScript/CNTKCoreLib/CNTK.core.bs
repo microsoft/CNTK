@@ -78,7 +78,7 @@ DistributedAdditiveFullConnectionLayer {inDim, outDim, bias=0, init='glorotUnifo
 {
     W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
 
-    apply (labelSequence, outProbVectorSequence) = DistributedAdditiveFullConnection(labelSequence, outProbVectorSequence, W, bias=bias)
+    apply (labelSequence, outProbVectorSequence) = DistributedAdditiveFullConnection(labelSequence, W, outProbVectorSequence, bias=bias)
 }.apply
 
 # MarginInnerProductLayer -- create a marginInnerProduct projection layer

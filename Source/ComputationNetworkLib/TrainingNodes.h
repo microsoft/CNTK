@@ -629,7 +629,7 @@ protected:
 };
 
 // Distributed additive full connection layer
-// Input(0): labels, Input(1): X, Input(2): W
+// Input(0): labels, Input(1): W, Input(2): X
 // Input and output are both decomposed
 template <class ElemType>
 class DistributedAdditiveFullConnectionNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
@@ -660,7 +660,7 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        size_t minibatchSize = InputRef(1).Value().GetNumCols();
+        size_t minibatchSize = InputRef(2).Value().GetNumCols();
         if (m_minibatchSize != minibatchSize)
         {
             m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
@@ -675,30 +675,30 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        if (1 == inputIndex)      // for X
+        if (1 == inputIndex)      // for W
         {
-            auto& W = InputRef(2).Value();
+            auto& W_gradient = InputRef(1).Gradient();
+            Matrix<ElemType>::Multiply(*m_temp1, false, Gradient(), true, W_gradient);
+        }
+        else if (2 == inputIndex) // for X
+        {
+            auto& W = InputRef(1).Value();
             Matrix<ElemType>::Multiply(W, false, Gradient(), false, *m_temp1);
             m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
-            auto& X_gradient = InputRef(1).Gradient();
+            auto& X_gradient = InputRef(2).Gradient();
             X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
-        }
-        else if (2 == inputIndex) // for W
-        {
-            auto& W_gradient = InputRef(2).Gradient();
-            Matrix<ElemType>::Multiply(*m_temp1, false, Gradient(), true, W_gradient);
         }
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         auto& labels = InputRef(0).Value();
-        auto& X      = InputRef(1).Value();
-        auto& W      = InputRef(2).Value();
+        auto& W      = InputRef(1).Value();
+        auto& X      = InputRef(2).Value();
         m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
         Matrix<ElemType>::Multiply(W, true, *m_temp1, false, Value());
         if (Environment().IsTraining())
-            Matrix<ElemType>::DistributedLabelAdd(labels, (ElemType)m_bias, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
+            Matrix<ElemType>::DistributedLabelAdd(labels, (ElemType)m_bias, Value(), m_outputDim * m_rank, m_outputDim * (m_rank + 1) - 1);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -709,10 +709,10 @@ public:
     {
         if (0 == childIndex) // for labels
             return false;
-        else if (1 == childIndex) // for X
-            return false;
-        else // for W
+        else if (1 == childIndex) // for W
             return true;
+        else // for X
+            return false;
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -720,8 +720,8 @@ public:
         Base::Validate(isFinalValidationPass);
 
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-        m_inputDim = InputRef(2).Value().GetNumRows();
-        m_outputDim = InputRef(2).Value().GetNumCols();
+        m_inputDim = InputRef(1).Value().GetNumRows();
+        m_outputDim = InputRef(1).Value().GetNumCols();
         SetDims(TensorShape(m_outputDim), HasMBLayout());
     }
 
@@ -737,7 +737,6 @@ public:
             node->m_outputDim      = m_outputDim;
             node->m_minibatchSize  = m_minibatchSize;
             node->m_batchSize      = m_batchSize;
-            node->m_probDim        = m_probDim;
             node->m_distGradAggPtr = m_distGradAggPtr;
             node->m_temp1->SetValue(*m_temp1);
         }
@@ -773,7 +772,6 @@ public:
     size_t m_outputDim;
     size_t m_minibatchSize;
     size_t m_batchSize;
-    size_t m_probDim;
     double m_bias;
     IDistGradAggregator<ElemType>* m_distGradAggPtr;
     shared_ptr<Matrix<ElemType>> m_temp1;

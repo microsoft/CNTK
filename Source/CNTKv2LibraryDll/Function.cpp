@@ -2166,9 +2166,9 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedClassificationError, operands, Dictionary(), name), name);
     }
 
-    FunctionPtr DistributedAdditiveFullConnection(const Variable& features, const Variable& labels, const Variable& weight, double bias, const std::wstring& name)
+    FunctionPtr DistributedAdditiveFullConnection(const Variable& labels, const Variable& weight, const Variable& features, double bias, const std::wstring& name)
     {
-        std::vector<Variable> operands = { features, labels, weight };
+        std::vector<Variable> operands = { labels, weight, features };
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionBias] = bias;
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedAdditiveFullConnection, operands, std::move(additionalProperties), name), name);

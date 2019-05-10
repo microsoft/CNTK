@@ -203,7 +203,7 @@ public:
     ComputationNodePtr DistributedLabelsGather(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr DistributedFullyConnected(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"");
     ComputationNodePtr DistributedFullyConnected_v2(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"");
-    ComputationNodePtr DistributedCrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
+    ComputationNodePtr DistributedCrossEntropyWithSoftmax(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr DistributedClassificationError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr DistributedAdditiveFullConnection(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, ElemType bias, const std::wstring nodeName = L"");
     ComputationNodePtr MarginInnerProduct(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, size_t outputDimension, ElemType base, ElemType gamma, ElemType power, ElemType lambdaMin, size_t marginCoefficient, const std::wstring nodeName = L"");
