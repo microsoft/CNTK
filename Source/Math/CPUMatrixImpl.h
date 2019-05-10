@@ -5615,7 +5615,7 @@ void CPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const CPUMa
 template <class ElemType>
 void CPUMatrix<ElemType>::DistributedAssignClassificationError(const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& probs, const CPUMatrix<ElemType>& maxProb, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
 {
-    long cols = (long)value.GetNumRows();
+    long cols = (long)probs.GetNumRows();
     long rows = (long)probs.GetNumRows();
     ElemType* labelsPtr = labels.Data();
     ElemType* probPtr = probs.Data();
