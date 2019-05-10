@@ -520,9 +520,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Distr
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedAdditiveFullConnection(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, bool weightNormalize, ElemType bias, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedAdditiveFullConnection(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, bool weightNormalize, ElemType bias, ElemType scale, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<DistributedAdditiveFullConnectionNode<ElemType>>(net.GetDeviceId(), nodeName, weightNormalize, bias), { a, b, c });
+    return net.AddNodeToNetAndAttachInputs(New<DistributedAdditiveFullConnectionNode<ElemType>>(net.GetDeviceId(), nodeName, weightNormalize, bias, scale), { a, b, c });
 }
 
 template <class ElemType>

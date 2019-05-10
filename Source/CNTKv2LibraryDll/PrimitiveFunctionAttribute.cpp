@@ -149,6 +149,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeGlobalConcatSegmentNum = L"segmentNum";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionWeightNormalize = L"weightNormalize";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionBias = L"bias";
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionScale = L"scale";
 
     /*static*/ const std::vector<std::wstring> PrimitiveFunctionAttribute::s_rngStateAttributes =
                    { PrimitiveFunctionAttribute::AttributeNameRngSeed,

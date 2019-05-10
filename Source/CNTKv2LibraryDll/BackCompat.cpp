@@ -345,6 +345,7 @@ namespace CNTK
                     auto distributedAdditiveFullConnectionNode = node->As<DistributedAdditiveFullConnectionNode<ElementType>>();
                     primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionWeightNormalize] = distributedAdditiveFullConnectionNode->m_weightNormalize;
                     primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionBias] = distributedAdditiveFullConnectionNode->m_bias;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionScale] = distributedAdditiveFullConnectionNode->m_scale;
 
                     opType = PrimitiveOpType::DistributedAdditiveFullConnection;
                 }

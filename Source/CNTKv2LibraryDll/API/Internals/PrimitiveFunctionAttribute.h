@@ -164,6 +164,7 @@ namespace CNTK
         CNTK_API static const std::wstring AttributeGlobalConcatSegmentNum;
         CNTK_API static const std::wstring AttributeDistributedAdditiveFullConnectionWeightNormalize;
         CNTK_API static const std::wstring AttributeDistributedAdditiveFullConnectionBias;
+        CNTK_API static const std::wstring AttributeDistributedAdditiveFullConnectionScale;
 
         CNTK_API static const std::vector<std::wstring> s_rngStateAttributes;
     };

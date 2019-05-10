@@ -74,11 +74,11 @@ DistributedFullyConnectedLayer_v2 {inDim, outDim, init='glorotUniform', initValu
 
 # DistributedAdditiveFullConnectionLayer -- create a distributed label-specific-add full connection layer
 # The output is decomposed. The next layer must deal with the decomposed output tensors
-DistributedAdditiveFullConnectionLayer {inDim, outDim, weightNormalize=true, bias=0, init='glorotUniform', initValueScale=1} =
+DistributedAdditiveFullConnectionLayer {inDim, outDim, weightNormalize=true, bias=0, scale=1, init='glorotUniform', initValueScale=1} =
 {
     W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
 
-    apply (labelSequence, outProbVectorSequence) = DistributedAdditiveFullConnection(labelSequence, W, outProbVectorSequence, weightNormalize=weightNormalize, bias=bias)
+    apply (labelSequence, outProbVectorSequence) = DistributedAdditiveFullConnection(labelSequence, W, outProbVectorSequence, weightNormalize=weightNormalize, bias=bias, scale=scale)
 }.apply
 
 # MarginInnerProductLayer -- create a marginInnerProduct projection layer
@@ -594,7 +594,7 @@ CNTK2 = [
     #
     # Distributed additiveFullConnection node, the input labels and probability must be decomposed
     #
-    DistributedAdditiveFullConnection(labelSequence, outProbVectorSequence, W, weightNormalize=true, bias=0, tag='') = 
+    DistributedAdditiveFullConnection(labelSequence, outProbVectorSequence, W, weightNormalize=true, bias=0, scale=1, tag='') = 
         new ComputationNode [ operation = 'DistributedAdditiveFullConnection' ; inputs = _AsNodes (labelSequence : outProbVectorSequence : W) /*plus the function args*/ ]
 
     #

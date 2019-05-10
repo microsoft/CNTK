@@ -1183,7 +1183,8 @@ namespace CNTK
                 {
                     auto weightNormalize = functionConfig[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionWeightNormalize].Value<bool>();
                     auto bias = functionConfig[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionBias].Value<double>();
-                    ASSIGN_NEW_NODE(DistributedAdditiveFullConnectionNode, network->GetDeviceId(), internalNodeName, weightNormalize, bias);
+                    auto scale = functionConfig[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionScale].Value<double>();
+                    ASSIGN_NEW_NODE(DistributedAdditiveFullConnectionNode, network->GetDeviceId(), internalNodeName, weightNormalize, bias, scale);
                     break;
                 }
                 case PrimitiveOpType::MarginInnerProduct:
