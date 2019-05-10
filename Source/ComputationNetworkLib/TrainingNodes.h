@@ -519,6 +519,12 @@ public:
     {
         return false;
     }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        if (0 == childIndex) // for labels
+            return true;
+        return false;
+    }
 
     virtual void UpdateFunctionMBSize() override
     {
@@ -540,14 +546,14 @@ public:
             LogicError("There is no need to compute gradient for labels");
         else if (1 == inputIndex) // Y
         {
+            auto& labels = InputRef(0).Value();
             auto& gradient = InputRef(1).Gradient();
-            Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(Gradient(), *m_softmaxOfRight, *m_temp2, gradient, m_probDim * m_rank);
+            Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(Gradient(), *m_softmaxOfRight, labels, gradient, m_probDim * m_rank);
         }
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        auto& labels = InputRef(0).Value();
         auto& Y = InputRef(1).Value();
         Y.VectorMax(*m_temp1, *m_temp2, true);
         m_distGradAggPtr->DistributeAllReduce(*m_temp2, MPI_MAX);
@@ -557,6 +563,7 @@ public:
         m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
         m_temp1->InplaceLog();
 
+        auto& labels = InputRef(0).Value();
         Matrix<ElemType>::DistributedSoftmax(Y, *m_temp1, *m_softmaxOfRight, *m_logSoftmaxOfRight);
         Matrix<ElemType>::DistributedCrossEntropy(*m_logSoftmaxOfRight, labels, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
     }
@@ -575,10 +582,10 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DistributedCrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
-            node->m_rank = m_rank;
+            node->m_rank       = m_rank;
             node->m_processNum = m_processNum;
-            node->m_batchSize = m_batchSize;
-            node->m_probDim = m_probDim;
+            node->m_batchSize  = m_batchSize;
+            node->m_probDim    = m_probDim;
             node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
             node->m_temp1->SetValue(*m_temp1);
@@ -643,13 +650,13 @@ class DistributedAdditiveFullConnectionNode : public ComputationNodeNonLooping /
 
 public:
     DistributedAdditiveFullConnectionNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : DistributedAdditiveFullConnectionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"bias"))
+        : DistributedAdditiveFullConnectionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"weightNormalize"), configp->Get(L"bias"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-    DistributedAdditiveFullConnectionNode(DEVICEID_TYPE deviceId, const wstring& name, double bias = 0)
-        : Base(deviceId, name), m_bias(bias), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
+    DistributedAdditiveFullConnectionNode(DEVICEID_TYPE deviceId, const wstring& name, bool weightNormalize = true, double bias = 0)
+        : Base(deviceId, name), m_weightNormalize(weightNormalize), m_bias(bias), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
     {
         if (1 == m_processNum)
             LogicError("Multi Gpus and mpi is needed in distributed FC.");
@@ -671,6 +678,7 @@ public:
             m_batchSize = m_minibatchSize * m_processNum;
         }
         m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
+        m_WNorm->Resize(m_outputDim, 1);
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
@@ -695,6 +703,11 @@ public:
         auto& labels = InputRef(0).Value();
         auto& W      = InputRef(1).Value();
         auto& X      = InputRef(2).Value();
+        if (m_weightNormalize)
+        {
+            W.VectorNorm2(*m_WNorm, false);
+            W.ColumnElementDivideBy(*m_WNorm);
+        }
         m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
         Matrix<ElemType>::Multiply(W, true, *m_temp1, false, Value());
         if (Environment().IsTraining())
@@ -731,12 +744,14 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DistributedAdditiveFullConnectionNode<ElemType>>(nodeP);
-            node->m_rank           = m_rank;
-            node->m_processNum     = m_processNum;
-            node->m_inputDim       = m_inputDim;
-            node->m_outputDim      = m_outputDim;
-            node->m_minibatchSize  = m_minibatchSize;
-            node->m_batchSize      = m_batchSize;
+            node->m_rank            = m_rank;
+            node->m_processNum      = m_processNum;
+            node->m_inputDim        = m_inputDim;
+            node->m_outputDim       = m_outputDim;
+            node->m_minibatchSize   = m_minibatchSize;
+            node->m_batchSize       = m_batchSize;
+            node->m_weightNormalize = m_weightNormalize;
+            node->m_bias            = m_bias;
             node->m_distGradAggPtr = m_distGradAggPtr;
             node->m_temp1->SetValue(*m_temp1);
         }
@@ -747,6 +762,7 @@ public:
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_temp1, matrixPool);
+        RequestMatrixFromPool(m_WNorm, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -754,16 +770,21 @@ public:
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_temp1, matrixPool);
+        ReleaseMatrixToPool(m_WNorm, matrixPool);
     }
 
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
+        fstream << m_weightNormalize;
+        fstream << m_bias;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
+        fstream >> m_weightNormalize;
+        fstream >> m_bias;
     }
 
     size_t m_rank;
@@ -772,9 +793,11 @@ public:
     size_t m_outputDim;
     size_t m_minibatchSize;
     size_t m_batchSize;
+    bool m_weightNormalize;
     double m_bias;
     IDistGradAggregator<ElemType>* m_distGradAggPtr;
     shared_ptr<Matrix<ElemType>> m_temp1;
+    shared_ptr<Matrix<ElemType>> m_WNorm;
 };
 
 // Implements A-Softmax as described in:

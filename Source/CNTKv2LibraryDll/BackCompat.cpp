@@ -343,6 +343,7 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(DistributedAdditiveFullConnectionNode))
                 {
                     auto distributedAdditiveFullConnectionNode = node->As<DistributedAdditiveFullConnectionNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionWeightNormalize] = distributedAdditiveFullConnectionNode->m_weightNormalize;
                     primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionBias] = distributedAdditiveFullConnectionNode->m_bias;
 
                     opType = PrimitiveOpType::DistributedAdditiveFullConnection;

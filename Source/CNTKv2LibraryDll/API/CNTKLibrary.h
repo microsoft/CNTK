@@ -4351,7 +4351,7 @@ namespace CNTK
 
     CNTK_API FunctionPtr DistributedClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
 
-    CNTK_API FunctionPtr DistributedAdditiveFullConnection(const Variable& targets, const Variable& weight, const Variable& prediction, double bias, const std::wstring& name = L"");
+    CNTK_API FunctionPtr DistributedAdditiveFullConnection(const Variable& targets, const Variable& weight, const Variable& prediction, bool weightNormalize, double bias, const std::wstring& name = L"");
 
     CNTK_API FunctionPtr MarginInnerProduct(const Variable& prediction, const Variable& targets, const Variable& weight, size_t outputDimension, double base, double gamma, double power, double lambdaMin, size_t marginCoefficient, const std::wstring& name = L"");
 
