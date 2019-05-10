@@ -4167,7 +4167,7 @@ __global__ void _distributedAssignClassificationErrorOf512Threads(const ElemType
 template <class ElemType>
 void GPUMatrix<ElemType>::DistributedAssignClassificationError(const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& probs, const GPUMatrix<ElemType>& maxProb, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
 {
-    CUDA_LONG cols = value.GetNumCols();
+    CUDA_LONG cols = probs.GetNumCols();
     CUDA_LONG rows = probs.GetNumRows();
 
     SyncGuard syncGuard;
