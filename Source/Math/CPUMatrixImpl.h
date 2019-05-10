@@ -5624,7 +5624,8 @@ void CPUMatrix<ElemType>::DistributedAssignClassificationError(const CPUMatrix<E
     valuePtr[0] = 0;
     for (long i = 0; i < cols; ++i)
     {
-        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && probPtr[i * rows + startIndex] < maxProbPtr[i])
+        size_t label = (size_t)labelsPtr[i];
+        if (label >= startIndex && label <= endIndex && probPtr[i * rows + label - startIndex] < maxProbPtr[i])
             valuePtr[0] += 1;
     }
 }

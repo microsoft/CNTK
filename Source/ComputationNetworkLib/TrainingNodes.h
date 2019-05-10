@@ -752,7 +752,7 @@ public:
             node->m_batchSize       = m_batchSize;
             node->m_weightNormalize = m_weightNormalize;
             node->m_bias            = m_bias;
-            node->m_distGradAggPtr = m_distGradAggPtr;
+            node->m_distGradAggPtr  = m_distGradAggPtr;
             node->m_temp1->SetValue(*m_temp1);
         }
     }

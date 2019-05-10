@@ -4114,7 +4114,7 @@ __global__ void _distributedAssignClassificationErrorOf512Threads(const ElemType
     for (int i = threadIdx.x; i < numElements; i += 512)
     {
         CUDA_LONG label = (CUDA_LONG)labels[i];
-        if (label >= startIndex && label <= endIndex && prob[i * rows + startIndex] < maxProb[i])
+        if (label >= startIndex && label <= endIndex && prob[i * rows + label - startIndex] < maxProb[i])
             partials[threadIdx.x] += (comp_t)1;
     }
 
