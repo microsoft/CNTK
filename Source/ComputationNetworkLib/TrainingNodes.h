@@ -699,8 +699,8 @@ public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         auto& labels = InputRef(0).Value();
-        auto& W      = InputRef(1).Value();
-        auto& X      = InputRef(2).Value();
+        auto& X      = InputRef(1).Value();
+        auto& W      = InputRef(2).Value();
         m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
         Matrix<ElemType>::Multiply(W, true, *m_temp1, false, Value());
         Matrix<ElemType>::DistributedLabelAdd(labels, (ElemType)m_bias, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
@@ -736,13 +736,13 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DistributedAdditiveFullConnectionNode<ElemType>>(nodeP);
-            node->m_rank = m_rank;
-            node->m_processNum = m_processNum;
-            node->m_inputDim = m_inputDim;
-            node->m_outputDim = m_outputDim;
-            node->m_minibatchSize = m_minibatchSize;
-            node->m_batchSize = m_batchSize;
-            node->m_probDim = m_probDim;
+            node->m_rank           = m_rank;
+            node->m_processNum     = m_processNum;
+            node->m_inputDim       = m_inputDim;
+            node->m_outputDim      = m_outputDim;
+            node->m_minibatchSize  = m_minibatchSize;
+            node->m_batchSize      = m_batchSize;
+            node->m_probDim        = m_probDim;
             node->m_distGradAggPtr = m_distGradAggPtr;
             node->m_temp1->SetValue(*m_temp1);
             node->m_ones->SetValue(*m_ones);
