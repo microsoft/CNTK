@@ -653,7 +653,6 @@ public:
     {
         if (1 == m_processNum)
             LogicError("Multi Gpus and mpi is needed in distributed FC.");
-        m_ones.reset(new Matrix<ElemType>(deviceId));
 #ifdef CPUONLY
         LogicError("CPUONLY is not supported in DistributedAdditiveFullConnectionNode.");
 #endif
@@ -670,11 +669,6 @@ public:
                 LogicError("With AllGather op, minibatch size in each Gpu must be the same.");
             m_minibatchSize = minibatchSize;
             m_batchSize = m_minibatchSize * m_processNum;
-            if (Environment().IsTraining())
-            {
-                m_ones->Resize(m_batchSize, 1);                   // Ones
-                m_ones->SetValue((ElemType)1.0);
-            }
         }
         m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
     }
@@ -746,7 +740,6 @@ public:
             node->m_probDim        = m_probDim;
             node->m_distGradAggPtr = m_distGradAggPtr;
             node->m_temp1->SetValue(*m_temp1);
-            node->m_ones->SetValue(*m_ones);
         }
     }
 
@@ -784,7 +777,6 @@ public:
     double m_bias;
     IDistGradAggregator<ElemType>* m_distGradAggPtr;
     shared_ptr<Matrix<ElemType>> m_temp1;
-    shared_ptr<Matrix<ElemType>> m_ones;
 };
 
 // Implements A-Softmax as described in:
