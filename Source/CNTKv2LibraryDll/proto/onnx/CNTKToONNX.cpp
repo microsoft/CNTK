@@ -4047,28 +4047,11 @@ onnxruntime::Node* CNTKToONNXHelper::CreatePastFutureValueNode(const FunctionPtr
     bool past = src->OpName() == L"PastValue";
     size_t offset = src->Attributes()[L"offset"].Value<size_t>();
 
-    // 1. slice off first or last timeframe from input[0] -> input_sliced_node
-    // 2. expand initial value input[1] to the shape of input[0] without sequence axis (the first axis) -> init_value_expanded
-    // 3. concat input_sliced_node with init_value_expanded or other way around -> Past(Future)Value node
+    // 1. expand initial value input[1] to the shape of input[0] with sequence dim equals offset -> init_value_expanded
+    // 2. concat input with init_value_expanded or the other way around -> concatNode
+    // 3. slice concatNode -> sliceNode and delayedInitialValues
 
-    // 1. slice input
-    int64_t sliceAxis = 0, sliceStart, sliceEnd;
-    if (past)
-    {
-        sliceStart = 0;
-        sliceEnd = -offset;
-    }
-    else
-    {
-        sliceStart = offset;
-        sliceEnd = std::numeric_limits<int64_t>::max();
-    }
-
-    const std::string sliceOutputArgName = UniqueNodeNameStorage::GetUniqueInputNodeName(src->Inputs()[0]) +
-                                           "_slice_" + UniqueNodeNameStorage::GetUniqueNodeName(src);
-    Node* sliceNode = AddSliceNode(*inputs[0], {sliceAxis}, {sliceStart}, {sliceEnd}, sliceOutputArgName, graph);
-
-    // 2. expand init_value
+    // 1. expand initial value
     std::vector<int64_t> expandShape = ToINTS(*inputs[0]->TypeAsProto());
     // sequence dimension is offset for init_value
     expandShape[0] = offset;
@@ -4076,14 +4059,15 @@ onnxruntime::Node* CNTKToONNXHelper::CreatePastFutureValueNode(const FunctionPtr
                                          UniqueNodeNameStorage::GetUniqueNodeName(src);
     Node* initValueExpand = AddExpandNode(*inputs[1], expandShape, expandOutputName, graph);
 
-    // 3. concat
-    std::string outputNodeArgName = UniqueNodeNameStorage::GetUniqueOutputNodeName(src->Outputs()[0]);
+    // 2. concat
+    std::string outputName = UniqueNodeNameStorage::GetUniqueOutputNodeName(src->Outputs()[0]);
+    std::string concatOutputNodeArgName = outputName + "_concated_preslice";
 
     Node* concatNode;
     // there are cases where input is a scaler and step function turns output to a dim 1 vector [#, *]() -> [#, *](1)
     // in this case, Concat shall output with original shape (#, *) and followed by an expand to get the matching shape [*, #](1).
     bool pastFutureValueOutputDoesNotMatchInputByOne = 
-        sliceNode->OutputDefs()[0]->Shape()->dim_size() == 2 && 
+        inputs[0]->Shape()->dim_size() == 2 &&
         outputs[0]->Shape()->dim_size() == 3 && 
         outputs[0]->Shape()->dim(2).dim_value() == 1;
     std::vector<onnxruntime::NodeArg *> concatOutputs;
@@ -4098,22 +4082,26 @@ onnxruntime::Node* CNTKToONNXHelper::CreatePastFutureValueNode(const FunctionPtr
                 typeProto.mutable_tensor_type()->mutable_shape()->add_dim()->set_dim_value(outputs[0]->Shape()->dim(i).dim_value());
         }
         UpdateONNXType(src->Output().GetDataType(), typeProto);
-        NodeArg *arg = &graph->GetOrCreateNodeArg(outputNodeArgName + "_before_expand", &typeProto);
+        NodeArg *arg = &graph->GetOrCreateNodeArg(concatOutputNodeArgName + "_before_expand", &typeProto);
         concatOutputs.push_back(arg);
     }
     else
-        concatOutputs = outputs;
-
+    {
+        TypeProto concatOutputTypeProto;
+        UpdateONNXType(src->Outputs()[0].GetDataType(), concatOutputTypeProto);
+        onnxruntime::NodeArg *concatOutputArg = &graph->GetOrCreateNodeArg(concatOutputNodeArgName, &concatOutputTypeProto);
+        concatOutputs.push_back(concatOutputArg);
+    }
     if (past)
     {
         concatNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Concat", "", 
-            {const_cast<NodeArg*>(initValueExpand->OutputDefs()[0]), const_cast<NodeArg*>(sliceNode->OutputDefs()[0])},
+            {const_cast<NodeArg*>(initValueExpand->OutputDefs()[0]), const_cast<NodeArg*>(inputs[0])},
             concatOutputs);
     }
     else
     {
         concatNode = &graph->AddNode(UniqueNodeNameStorage::GetUniqueNodeName(src), "Concat", "", 
-            {const_cast<NodeArg*>(sliceNode->OutputDefs()[0]), const_cast<NodeArg*>(initValueExpand->OutputDefs()[0])}, 
+            {const_cast<NodeArg*>(inputs[0]), const_cast<NodeArg*>(initValueExpand->OutputDefs()[0])},
             concatOutputs);
     }
     // concat on sequence axis
@@ -4122,16 +4110,53 @@ onnxruntime::Node* CNTKToONNXHelper::CreatePastFutureValueNode(const FunctionPtr
     if (pastFutureValueOutputDoesNotMatchInputByOne)
     {
         std::vector<int64_t> newShape = ToINTS(*outputs[0]->TypeAsProto()); 
-        Node* expandNode = AddReshapeNode(const_cast<NodeArg &>(*concatNode->OutputDefs()[0]), 
+        concatNode = AddReshapeNode(const_cast<NodeArg &>(*concatNode->OutputDefs()[0]),
             newShape, outputs[0]->Name(), graph);
-        functionNodes.emplace(src, expandNode);
-        return expandNode;
+    }
+
+    int64_t sliceAxis = 0, sliceStart, sliceEnd;
+    if (past)
+    {
+        sliceStart = 0;
+        sliceEnd = -offset;
     }
     else
     {
-        functionNodes.emplace(src, concatNode);
-        return concatNode;
+        sliceStart = offset;
+        sliceEnd = std::numeric_limits<int64_t>::max();
     }
+
+    Node* sliceNode = AddSliceNode(const_cast<NodeArg &>(*concatNode->OutputDefs()[0]), 
+        { sliceAxis }, { sliceStart }, { sliceEnd }, outputName, graph);
+    functionNodes.emplace(src, sliceNode);
+
+    // for segmented sequence to run in a consecutive way - delayed values are taken from previous runs, 
+    // we need to output rest of sliced frames
+    if (past)
+    {
+        sliceStart = -offset;
+        sliceEnd = std::numeric_limits<int64_t>::max();
+    }
+    else
+    {
+        sliceStart = 0;
+        sliceEnd = offset;
+    }
+
+    // get the delayed initial value shape right
+    std::vector<int64_t> delayedInitialValuesOutputShape = ToINTS(*sliceNode->OutputDefs()[0]->TypeAsProto());
+    delayedInitialValuesOutputShape[0] = offset;
+    TypeProto delayedInitialValuesNodeArgType = ToTypeProto(delayedInitialValuesOutputShape, false);
+    UpdateONNXType(src->Output().GetDataType(), delayedInitialValuesNodeArgType);
+
+    std::string delayedInitialValuesNodeArgName = outputName + "_delayed_initial_values";
+    NodeArg* delayedInitialValuesNodeArg = &graph->GetOrCreateNodeArg(
+        delayedInitialValuesNodeArgName, &delayedInitialValuesNodeArgType);
+
+    Node* delayedInitialValues = AddSliceNode(const_cast<NodeArg &>(*concatNode->OutputDefs()[0]),
+        { sliceAxis }, { sliceStart }, { sliceEnd }, delayedInitialValuesNodeArgName, graph);
+
+    return sliceNode;
 }
 
 // the idea is to create an EyeLike node and slice the first slice for IsFirst, the last slice for IsLast op.
