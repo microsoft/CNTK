@@ -2576,11 +2576,6 @@ FunctionPtr ONNXToCNTKHelper::CreateFunction(const Node *node, const std::vector
             return ElementMin(inputs[0], inputs[0], ToFixedWStringFromMultiByte(node->Name()));
         }
     }
-    else if (onnxOpName == "Sum")
-    {
-        // not specified in Operators.cpp
-        return nullptr;
-    }
     else if (onnxOpName == "Softmax" || onnxOpName == "LogSoftmax" || onnxOpName == "Hardmax")
     {
         int64_t onnxAxis = GetNamedAttributeAsInt64(node, "axis", 1);

@@ -459,7 +459,7 @@ Variable ToBatchAndSequence(Variable input, VariableToFunctionPtr &sequenceWrapp
     if (sequenceWrapperInputToFunctionPtr.find(input) != sequenceWrapperInputToFunctionPtr.end())
         return sequenceWrapperInputToFunctionPtr[input];
 
-    if (input.DynamicAxes().size() != 0)
+    if (input.DynamicAxes().size() == 0)
         return input;
 
     if(input.DynamicAxes().size() != 0)

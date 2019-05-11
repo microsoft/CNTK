@@ -136,7 +136,7 @@ namespace CNTK
                 resultVar.shape = FromNDShape(var.Shape());
                 result.get()[i] = resultVar;
 
-                varCleaner.release();
+                varCleaner.reset(nullptr);
             }
 
             *numResultVars = (uint32_t)vars.size();

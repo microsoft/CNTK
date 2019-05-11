@@ -592,7 +592,7 @@ namespace CNTK
                 }
                 else if (rightOperandShape[i] == NDShape::InferredDimension || rightOperandShape[i] == NDShape::FreeDimension)
                 {
-                    if (leftOperandShape[outputRank + i] == NDShape::FreeDimension && leftOperandShape[outputRank + i] == NDShape::InferredDimension)
+                    if (leftOperandShape[outputRank + i] == NDShape::FreeDimension || leftOperandShape[outputRank + i] == NDShape::InferredDimension)
                         InvalidArgument("Times: %s operand '%S' shape '%S' dimension cannot be inferred from a %s operand '%S' shape '%S' free dimension.",
                             Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
                             rightOperand.AsString().c_str(),

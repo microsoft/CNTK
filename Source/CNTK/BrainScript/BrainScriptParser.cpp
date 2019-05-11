@@ -580,7 +580,7 @@ void Expression::DumpToStream(wstringstream & treeStream, int indent)
     else if (op == L"d")
         treeStream << std::fixed << std::setprecision(0) << d;
     else if (op == L"b")
-        treeStream << b ? "true" : "false";
+        treeStream << (b ? "true" : "false");
     else if (op == L"id")
         treeStream << id.c_str();
     else if (op == L"new" || op == L"array" || op == L".")
