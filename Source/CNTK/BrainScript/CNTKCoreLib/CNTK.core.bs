@@ -594,8 +594,8 @@ CNTK2 = [
     #
     # Distributed additiveFullConnection node, the input labels and probability must be decomposed
     #
-    DistributedAdditiveFullConnection(labelSequence, outProbVectorSequence, W, weightNormalize=true, bias=0, scale=1, tag='') = 
-        new ComputationNode [ operation = 'DistributedAdditiveFullConnection' ; inputs = _AsNodes (labelSequence : outProbVectorSequence : W) /*plus the function args*/ ]
+    DistributedAdditiveFullConnection(labelSequence,  W, outProbVectorSequence, weightNormalize=true, bias=0, scale=1, tag='') = 
+        new ComputationNode [ operation = 'DistributedAdditiveFullConnection' ; inputs = _AsNodes (labelSequence : W  : outProbVectorSequence) /*plus the function args*/ ]
 
     #
     # MarginInnerProduct node
