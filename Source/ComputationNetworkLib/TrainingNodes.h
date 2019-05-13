@@ -512,7 +512,7 @@ public:
         else
             LogicError("This normalizeType is not supported yet.");
 
-        m_temp1->SetValue((ElemType) 1e-6);
+        m_temp1->SetValue((ElemType) 1e-12);
         Matrix<ElemType>::ScaleAndAdd((ElemType) 1, *m_temp1, *m_magnitude);
         Value().SetValue(X);
         Value().RowElementDivideBy(*m_magnitude);
