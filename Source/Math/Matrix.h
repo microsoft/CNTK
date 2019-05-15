@@ -616,6 +616,10 @@ public:
 
 #pragma region AMsoftmax
 
+    static void FeatureNormalizeL1Backprop(const Matrix<ElemType>& value, const Matrix<ElemType>& gradient, const Matrix<ElemType>& magnitude, const Matrix<ElemType>& alpha, const Matrix<ElemType>& X_gradient);
+
+    static void FeatureNormalizeL2Backprop(const Matrix<ElemType>& value, const Matrix<ElemType>& gradient, const Matrix<ElemType>& magnitude, const Matrix<ElemType>& alpha, const Matrix<ElemType>& X_gradient);
+
     static void LabelAdd(const Matrix<ElemType>& label, ElemType bias, const Matrix<ElemType>& value);
 
 #pragma endregion

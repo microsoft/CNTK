@@ -5092,6 +5092,28 @@ template <class ElemType>
 #pragma region AMsoftmax
 
 template <class ElemType>
+/*static*/ void Matrix<ElemType>::FeatureNormalizeL1Backprop(const Matrix<ElemType>& value, const Matrix<ElemType>& gradient, const Matrix<ElemType>& magnitude, const Matrix<ElemType>& alpha, const Matrix<ElemType>& X_gradient)
+{
+    DISPATCH_MATRIX_ON_FLAG(&X_gradient,
+        &X_gradient,
+        CPUMatrix<ElemType>::FeatureNormalizeL1Backprop(*(value.m_CPUMatrix), *(gradient.m_CPUMatrix), *(magnitude.m_CPUMatrix), *(alpha.m_CPUMatrix), *(X_gradient.m_CPUMatrix)),
+        GPUMatrix<ElemType>::FeatureNormalizeL1Backprop(*(value.m_GPUMatrix), *(gradient.m_GPUMatrix), *(magnitude.m_GPUMatrix), *(alpha.m_GPUMatrix), *(X_gradient.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::FeatureNormalizeL2Backprop(const Matrix<ElemType>& value, const Matrix<ElemType>& gradient, const Matrix<ElemType>& magnitude, const Matrix<ElemType>& alpha, const Matrix<ElemType>& X_gradient)
+{
+    DISPATCH_MATRIX_ON_FLAG(&X_gradient,
+        &X_gradient,
+        CPUMatrix<ElemType>::FeatureNormalizeL2Backprop(*(value.m_CPUMatrix), *(gradient.m_CPUMatrix), *(magnitude.m_CPUMatrix), *(alpha.m_CPUMatrix), *(X_gradient.m_CPUMatrix)),
+        GPUMatrix<ElemType>::FeatureNormalizeL2Backprop(*(value.m_GPUMatrix), *(gradient.m_GPUMatrix), *(magnitude.m_GPUMatrix), *(alpha.m_GPUMatrix), *(X_gradient.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 /*static*/ void Matrix<ElemType>::LabelAdd(const Matrix<ElemType>& label, ElemType bias, const Matrix<ElemType>& value)
 {
     DISPATCH_MATRIX_ON_FLAG(&value,

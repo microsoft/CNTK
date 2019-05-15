@@ -1243,10 +1243,9 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_minibatchSize = InputRef(0).Value().GetNumCols();
-        m_magnitude->Resize(1, m_minibatchSize);
-        m_temp1->Resize(1, m_minibatchSize);
-        m_temp2->Resize(m_inputDimension, m_minibatchSize);
+        size_t minibatchSize = InputRef(0).Value().GetNumCols();
+        m_magnitude->Resize(1, minibatchSize);
+        m_temp1->Resize(1, minibatchSize);
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
@@ -1254,26 +1253,14 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         auto X = InputRef(0).ValueFor(fr);
         auto X_gradient = InputRef(0).GradientFor(fr);
+        Matrix<ElemType>::InnerProduct(Value(), Gradient(), *m_temp1, true);
 
         if (1 == m_normalizeType)
-        {
-            Matrix<ElemType>::InnerProduct(Value(), Gradient(), *m_temp1, true);
-            m_temp1->RowElementDivideBy(*m_magnitude);
-            X_gradient.AssignSignOf(X);
-            Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd((ElemType) -1, X_gradient, *m_temp1, (ElemType) 0, X_gradient);
-        }
+            Matrix<ElemType>::FeatureNormalizeL1Backprop(Value(), Gradient(), *m_magnitude, *m_temp1, X_gradient);
         else if (2 == m_normalizeType)
-        {
-            Matrix<ElemType>::InnerProduct(Value(), Gradient(), *m_temp1, true);
-            m_temp1->RowElementDivideBy(*m_magnitude);
-            Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd((ElemType) -1, Value(), *m_temp1, (ElemType) 0, X_gradient);
-        }
+            Matrix<ElemType>::FeatureNormalizeL2Backprop(Value(), Gradient(), *m_magnitude, *m_temp1, X_gradient);
         else
             LogicError("This normalizeType is not supported yet.");
-
-        m_temp2->SetValue(Gradient());
-        m_temp2->RowElementDivideBy(*m_magnitude);
-        Matrix<ElemType>::ScaleAndAdd((ElemType) 1, *m_temp2, X_gradient);
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
@@ -1288,8 +1275,7 @@ public:
         else
             LogicError("This normalizeType is not supported yet.");
 
-        m_temp1->SetValue((ElemType) 1e-12);
-        Matrix<ElemType>::ScaleAndAdd((ElemType) 1, *m_temp1, *m_magnitude);
+        *m_magnitude += (ElemType)1e-12;
         Value().SetValue(X);
         Value().RowElementDivideBy(*m_magnitude);
     }
@@ -1305,11 +1291,6 @@ public:
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
-        auto dims = Input(0)->GetSampleLayout().GetDims();
-        m_inputDimension = 1;
-        for (size_t i(0); i < dims.size(); ++i)
-            m_inputDimension *= dims[i];
-
         ValidateUnaryMap(isFinalValidationPass);
     }
 
@@ -1322,7 +1303,6 @@ public:
             node->m_normalizeType = m_normalizeType;
             node->m_magnitude->SetValue(*m_magnitude);
             node->m_temp1->SetValue(*m_temp1);
-            node->m_temp2->SetValue(*m_temp2);
         }
     }
 
@@ -1332,7 +1312,6 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_magnitude, matrixPool, 1, true, false, false);
         RequestMatrixFromPool(m_temp1, matrixPool, 1, true, false, false);
-        RequestMatrixFromPool(m_temp2, matrixPool, m_inputDimension, true, true, false);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1341,7 +1320,6 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_magnitude, matrixPool);
         ReleaseMatrixToPool(m_temp1, matrixPool);
-        ReleaseMatrixToPool(m_temp2, matrixPool);
     }
 
     void Save(File& fstream) const override
@@ -1356,13 +1334,9 @@ public:
         fstream >> m_normalizeType;
     }
 
-
-    size_t m_inputDimension;                  // n
-    size_t m_minibatchSize;                   // m
     size_t m_normalizeType;                   // L1-normalization or L2-normalization
-    shared_ptr<Matrix<ElemType>> m_magnitude; // Matrix(1, m)
-    shared_ptr<Matrix<ElemType>> m_temp1;     // Matrix(1, m)
-    shared_ptr<Matrix<ElemType>> m_temp2;     // Matrix(n, m)
+    shared_ptr<Matrix<ElemType>> m_magnitude; // Matrix(1, minibatchSize)
+    shared_ptr<Matrix<ElemType>> m_temp1;     // Matrix(1, minibatchSize)
 };
 
 template <class ElemType>
@@ -4296,59 +4270,68 @@ class GlobalMemoryBlock
 public:
     GlobalMemoryBlock() {}
 
-    GlobalMemoryBlock(size_t _memoryLength)
+    GlobalMemoryBlock(DEVICEID_TYPE deviceId)
     {
-        memoryLength = _memoryLength;
+        m_globalMemoryMatrix.reset(new Matrix<ElemType>(deviceId));
     }
 
-    void init(size_t _minibatchSize, shared_ptr<Matrix<ElemType>> _globalMemoryMatrix, bool needInit = false)
+    void resetMinibatchSize(size_t minibatchSize, bool needInit = false)
     {
-        minibatchSize = _minibatchSize;
-        globalMemoryMatrix = _globalMemoryMatrix;
-        index = 0;
-        globalMemoryMatrix->Resize(memoryLength, minibatchSize);
+        m_minibatchSize = minibatchSize;
+        m_index = 0;
+        m_globalMemoryMatrix->Resize(m_memoryLength, minibatchSize);
         if (needInit)
-            globalMemoryMatrix->SetValue((ElemType) 0);
+            m_globalMemoryMatrix->SetValue((ElemType) 0);
+    }
+
+    void initZero()
+    {
+        m_globalMemoryMatrix->SetValue((ElemType) 0);
+    }
+
+    void setMemoryLength(size_t length)
+    {
+        m_memoryLength = length;
     }
 
     void stackSegmentMatrix(const Matrix<ElemType>& segmentMatrix, size_t numRows)
     {
-        if (segmentMatrix.GetNumCols() != minibatchSize)
+        if (segmentMatrix.GetNumCols() != m_minibatchSize)
             LogicError("Segment batch size not matches global batch size in stackSegmentMatrix.");
 
-        if (numRows >= 0 && index + numRows <= memoryLength)
-            globalMemoryMatrix->AssignToRowSliceValuesOf(segmentMatrix, index, numRows);
+        if (numRows >= 0 && m_index + numRows <= m_memoryLength)
+            m_globalMemoryMatrix->AssignToRowSliceValuesOf(segmentMatrix, m_index, numRows);
         else
             LogicError("Segment range error in stackSegmentMatrix.");
 
-        index += numRows;
+        m_index += numRows;
     }
 
     void getSegmentMatrix(Matrix<ElemType>& segmentMatrix, size_t startIndex, size_t numRows)
     {
-        if (segmentMatrix.GetNumCols() != minibatchSize)
+        if (segmentMatrix.GetNumCols() != m_minibatchSize)
             LogicError("Segment batch size not matches global batch size in getSegmentMatrix.");
 
-        if (startIndex >= 0 && numRows >= 0 && startIndex + numRows <= memoryLength)
-            segmentMatrix.AssignRowSliceValuesOf(*globalMemoryMatrix, startIndex, numRows);
+        if (startIndex >= 0 && numRows >= 0 && startIndex + numRows <= m_memoryLength)
+            segmentMatrix.AssignRowSliceValuesOf(*m_globalMemoryMatrix, startIndex, numRows);
         else
             LogicError("Segment range error in getSegmentMatrix.");
     }
 
-    void addSegmentMatrix(Matrix<ElemType>& segmentMatrix, size_t numRows)
+    void addSegmentMatrix(const Matrix<ElemType>& segmentMatrix, size_t numRows)
     {
-        globalMemoryMatrix->AddToRowSliceValuesOf(segmentMatrix, 0, numRows);
+        m_globalMemoryMatrix->AddToRowSliceValuesOf(segmentMatrix, 0, numRows);
     }
 
-    size_t memoryLength;  // row
-    size_t minibatchSize; // col
-    size_t index;
-    shared_ptr<Matrix<ElemType>> globalMemoryMatrix;
+    size_t m_memoryLength;  // row
+    size_t m_minibatchSize; // col
+    size_t m_index;
+    shared_ptr<Matrix<ElemType>> m_globalMemoryMatrix;
 };
-
-static vector<void*> valueGlobalMemoryBlockVec = vector<void*>();
-static vector<void*> gradientGlobalMemoryBlockVec = vector<void*>();
-static vector<size_t> validateCounter = vector<size_t>();
+template <class ElemType>
+static map<size_t, shared_ptr<GlobalMemoryBlock<ElemType>>> m_valueGlobalMemoryBlockMap;
+template <class ElemType>
+static map<size_t, shared_ptr<GlobalMemoryBlock<ElemType>>> m_gradientGlobalMemoryBlockMap;
 #pragma endregion
 
 #pragma region Training Nodes Share Global Memory
@@ -4370,21 +4353,34 @@ public:
     }
 
     GlobalConcatNode(DEVICEID_TYPE deviceId, const wstring& name, size_t blockIndex = 0, size_t growthRate = 0, size_t segmentIndex = 0, size_t segmentNum = 0)
-        : Base(deviceId, name), m_blockIndex(blockIndex), m_growthRate(growthRate), m_segmentIndex(segmentIndex), m_segmentNum(segmentNum)
+        : Base(deviceId, name), m_minibatchSize(0), m_blockIndex(blockIndex), m_growthRate(growthRate), m_segmentIndex(segmentIndex), m_segmentNum(segmentNum)
     {
+        if (0 == m_segmentIndex)
+        {
+            if (m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) != m_valueGlobalMemoryBlockMap<ElemType>.end())
+                LogicError("Value global memory block error in GlobalConcatNode");
+            if (m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) != m_gradientGlobalMemoryBlockMap<ElemType>.end())
+                LogicError("Gradient global memory block error in GlobalConcatNode");
+            m_valueGlobalMemoryBlockMap<ElemType>[m_blockIndex] = make_shared<GlobalMemoryBlock<ElemType>>(deviceId);
+            m_gradientGlobalMemoryBlockMap<ElemType>[m_blockIndex] = make_shared<GlobalMemoryBlock<ElemType>>(deviceId);
+        }
+        m_valueGlobalMemoryBlock = m_valueGlobalMemoryBlockMap<ElemType>[m_blockIndex];
+        m_gradientGlobalMemoryBlock = m_gradientGlobalMemoryBlockMap<ElemType>[m_blockIndex];
     }
 
     ~GlobalConcatNode()
     {
-        if (0 == m_segmentIndex && (valueGlobalMemoryBlockVec.size() > m_blockIndex || gradientGlobalMemoryBlockVec.size() > m_blockIndex))
+        if (0 == m_segmentIndex)
         {
-            GlobalMemoryBlock<ElemType>* valueGlobalMemoryPtr = (GlobalMemoryBlock<ElemType>*) valueGlobalMemoryBlockVec[m_blockIndex];
-            GlobalMemoryBlock<ElemType>* gradientGlobalMemoryPtr = (GlobalMemoryBlock<ElemType>*) gradientGlobalMemoryBlockVec[m_blockIndex];
-            if(valueGlobalMemoryPtr != NULL)
-                delete valueGlobalMemoryPtr;
-            if (gradientGlobalMemoryPtr != NULL)
-                delete gradientGlobalMemoryPtr;
+            if (m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) == m_valueGlobalMemoryBlockMap<ElemType>.end())
+                LogicError("Value global memory block error in ~GlobalConcatNode");
+            if (m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) == m_gradientGlobalMemoryBlockMap<ElemType>.end())
+                LogicError("Gradient global memory block error in ~GlobalConcatNode");
+            m_valueGlobalMemoryBlockMap<ElemType>.erase(m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex));
+            m_gradientGlobalMemoryBlockMap<ElemType>.erase(m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex));
         }
+        m_valueGlobalMemoryBlock.reset();
+        m_gradientGlobalMemoryBlock.reset();
     }
 
     virtual void UpdateFunctionMBSize() override
@@ -4392,39 +4388,32 @@ public:
         if (0 == m_segmentIndex)
         {
             size_t minibatchSize = InputRef(0).Value().GetNumCols();
-            ((GlobalMemoryBlock<ElemType>*) valueGlobalMemoryBlockVec[m_blockIndex])->init(minibatchSize, m_valueGlobalMemoryMatrix);
-            ((GlobalMemoryBlock<ElemType>*) gradientGlobalMemoryBlockVec[m_blockIndex])->init(minibatchSize, m_gradientGlobalMemoryMatrix, true);
+            if (m_minibatchSize != minibatchSize)
+            {
+                minibatchSize = m_minibatchSize;
+                m_valueGlobalMemoryBlock->resetMinibatchSize(m_minibatchSize);
+                if (Environment().IsTraining())
+                    m_gradientGlobalMemoryBlock->resetMinibatchSize(m_minibatchSize, true);
+            }
+            else if (Environment().IsTraining())
+                m_gradientGlobalMemoryBlock->initZero();
         }
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        GlobalMemoryBlock<ElemType>* globalMemoryBlockPtr = (GlobalMemoryBlock<ElemType>*) (gradientGlobalMemoryBlockVec[m_blockIndex]);
         FrameRange fr(InputRef(0).GetMBLayout());
         auto X_gradient = InputRef(0).GradientFor(fr);
-        globalMemoryBlockPtr->addSegmentMatrix(Gradient(), Gradient().GetNumRows());
-        globalMemoryBlockPtr->getSegmentMatrix(X_gradient, m_startIndex, m_numRows);
-
-        if (0 == m_segmentIndex)
-        {
-            ((GlobalMemoryBlock<ElemType>*) valueGlobalMemoryBlockVec[m_blockIndex])->globalMemoryMatrix.reset();
-            ((GlobalMemoryBlock<ElemType>*) gradientGlobalMemoryBlockVec[m_blockIndex])->globalMemoryMatrix.reset();
-        }
+        m_gradientGlobalMemoryBlock->addSegmentMatrix(Gradient(), Gradient().GetNumRows());
+        m_gradientGlobalMemoryBlock->getSegmentMatrix(X_gradient, m_startIndex, m_numRows);
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        GlobalMemoryBlock<ElemType>* globalMemoryBlockPtr = (GlobalMemoryBlock<ElemType>*) (valueGlobalMemoryBlockVec[m_blockIndex]);
         FrameRange fr(InputRef(0).GetMBLayout());
         auto X = InputRef(0).ValueFor(fr);
-        globalMemoryBlockPtr->stackSegmentMatrix(X, m_numRows);
-        globalMemoryBlockPtr->getSegmentMatrix(Value(), 0, globalMemoryBlockPtr->index);
-
-        if (m_segmentNum == m_segmentIndex && !Environment().IsTraining())
-        {
-            ((GlobalMemoryBlock<ElemType>*) valueGlobalMemoryBlockVec[m_blockIndex])->globalMemoryMatrix.reset();
-            ((GlobalMemoryBlock<ElemType>*) gradientGlobalMemoryBlockVec[m_blockIndex])->globalMemoryMatrix.reset();
-        }
+        m_valueGlobalMemoryBlock->stackSegmentMatrix(X, m_numRows);
+        m_valueGlobalMemoryBlock->getSegmentMatrix(Value(), 0, m_valueGlobalMemoryBlock->m_index);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -4441,32 +4430,19 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-        if (0 == m_dims.size())
+        SmallVector<size_t> dims = Input(0)->GetSampleLayout().GetDims();
+        if(dims.size() != 3)
+            LogicError("GlobalConcatNode : input dims not equals to 3\n");
+        if (0 == m_segmentIndex)
         {
-            m_dims = Input(0)->GetSampleLayout().GetDims();
-            if(m_dims.size() != 3)
-                LogicError("GlobalConcatNode : input dims not equals to 3\n");
-            m_numRows = m_dims[0] * m_dims[1] * m_dims[2];
-            if (0 == m_segmentIndex)
-            {
-                m_startIndex = 0;
-                validateCounter.push_back(0);
-
-                m_memoryLength = m_dims[0] * m_dims[1] * (m_dims[2] + m_growthRate * m_segmentNum);
-                GlobalMemoryBlock<ElemType>* valueMemoryBlock = new GlobalMemoryBlock<ElemType>(m_memoryLength);
-                valueGlobalMemoryBlockVec.push_back(valueMemoryBlock);
-                GlobalMemoryBlock<ElemType>* gradientMemoryBlock = new GlobalMemoryBlock<ElemType>(m_memoryLength);
-                gradientGlobalMemoryBlockVec.push_back(gradientMemoryBlock);
-            }
-            else
-            {
-                m_startIndex = m_dims[0] * m_dims[1] * validateCounter[m_blockIndex];
-                m_dims[2] += validateCounter[m_blockIndex];
-            }
-            validateCounter[m_blockIndex] = m_dims[2];
+            m_valueGlobalMemoryBlock->m_index = 0;
+            m_valueGlobalMemoryBlock->setMemoryLength(dims[0] * dims[1] * (dims[2] + m_growthRate * m_segmentNum));
         }
+        m_startIndex = m_valueGlobalMemoryBlock->m_index;
+        m_numRows = dims[0] * dims[1] * dims[2];
+        m_valueGlobalMemoryBlock->m_index += m_numRows;
 
-        SetDims(TensorShape(m_dims), HasMBLayout());
+        SetDims(TensorShape(dims), HasMBLayout());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -4475,61 +4451,48 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<GlobalConcatNode<ElemType>>(nodeP);
-            node->m_blockIndex = m_blockIndex;
-            node->m_growthRate = m_growthRate;
-            node->m_memoryLength = m_segmentIndex;
-            node->m_segmentIndex = m_segmentNum;
-            node->m_startIndex = m_startIndex;
-            node->m_numRows = m_numRows;
+            node->m_blockIndex                = m_blockIndex;
+            node->m_growthRate                = m_growthRate;
+            node->m_segmentIndex              = m_segmentIndex;
+            node->m_segmentNum                = m_segmentNum;
+            node->m_startIndex                = m_startIndex;
+            node->m_numRows                   = m_numRows;
+            node->m_valueGlobalMemoryBlock    = m_valueGlobalMemoryBlock;
+            node->m_gradientGlobalMemoryBlock = m_gradientGlobalMemoryBlock;
         }
     }
 
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-
-        if (0 == m_segmentIndex)
-        {
-            RequestMatrixFromPool(m_valueGlobalMemoryMatrix, matrixPool, m_memoryLength, true, false, false);
-            RequestMatrixFromPool(m_gradientGlobalMemoryMatrix, matrixPool, m_memoryLength, true, false, false);
-        }
     }
 
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-
-        if (0 == m_segmentIndex)
-        {
-            ReleaseMatrixToPool(m_valueGlobalMemoryMatrix, matrixPool);
-            ReleaseMatrixToPool(m_gradientGlobalMemoryMatrix, matrixPool);
-        }
     }
 
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_blockIndex << m_growthRate << m_segmentIndex << m_segmentNum << m_startIndex << m_numRows << m_memoryLength;
+        fstream << m_blockIndex << m_growthRate << m_segmentIndex << m_segmentNum << m_startIndex << m_numRows;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_blockIndex >> m_growthRate >> m_segmentIndex >> m_segmentNum >> m_startIndex >> m_numRows >> m_memoryLength;
+        fstream >> m_blockIndex >> m_growthRate >> m_segmentIndex >> m_segmentNum >> m_startIndex >> m_numRows;
     }
 
-
+    size_t m_minibatchSize;
     size_t m_blockIndex;
     size_t m_growthRate;
     size_t m_segmentIndex;
     size_t m_segmentNum;
     size_t m_startIndex;
     size_t m_numRows;
-    size_t m_memoryLength;
-    SmallVector<size_t> m_dims;
-
-    shared_ptr<Matrix<ElemType>> m_valueGlobalMemoryMatrix;
-    shared_ptr<Matrix<ElemType>> m_gradientGlobalMemoryMatrix;
+    shared_ptr<GlobalMemoryBlock<ElemType>> m_valueGlobalMemoryBlock;
+    shared_ptr<GlobalMemoryBlock<ElemType>> m_gradientGlobalMemoryBlock;
 };
 #pragma endregion
 
@@ -4917,7 +4880,7 @@ public:
 
                 GlobalConcatNode<ElemType>* inputNode = dynamic_cast<GlobalConcatNode<ElemType>*>(Input(DATA).get());
                 m_tempSegment->Resize(inputNode->m_startIndex + inputNode->m_numRows, Gradient().GetNumCols());
-                GlobalMemoryBlock<ElemType>* globalMemoryBlockPtr = (GlobalMemoryBlock<ElemType>*) (valueGlobalMemoryBlockVec[inputNode->m_blockIndex]);
+                shared_ptr<GlobalMemoryBlock<ElemType>> globalMemoryBlockPtr = m_valueGlobalMemoryBlockMap<ElemType>[inputNode->m_blockIndex];
                 globalMemoryBlockPtr->getSegmentMatrix(*m_tempSegment, 0, inputNode->m_startIndex + inputNode->m_numRows);
 
                 const Matrix<StatType>& scale = this->template TypedInput<StatType>(SCALE)->Value();

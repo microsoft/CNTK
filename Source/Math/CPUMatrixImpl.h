@@ -5269,6 +5269,65 @@ void CPUMatrix<ElemType>::AsoftmaxBackward4(ElemType lambda, size_t inputDimensi
 #pragma region AMsoftmax
 
 template <class ElemType>
+void CPUMatrix<ElemType>::FeatureNormalizeL1Backprop(const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& magnitude, const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& X_gradient)
+{
+    long num = (long)X_gradient.GetNumElements();
+    long rows = (long)X_gradient.GetNumRows();
+    ElemType* valuePtr = value.Data();
+    ElemType* gradientPtr = gradient.Data();
+    ElemType* magnitudePtr = magnitude.Data();
+    ElemType* alphaPtr = alpha.Data();
+    ElemType* X_gradientPtr = X_gradient.Data();
+
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        if (valuePtr[i] > 0) X_gradientPtr[i] = (gradientPtr[i] - alphaPtr[i / rows]) / magnitudePtr[i / rows];
+        else X_gradientPtr[i] = (gradientPtr[i] + alphaPtr[i / rows]) / magnitudePtr[i / rows];
+        if (valuePtr[i + 1] > 0) X_gradientPtr[i + 1] = (gradientPtr[i + 1] - alphaPtr[(i + 1) / rows]) / magnitudePtr[(i + 1) / rows];
+        else X_gradientPtr[i + 1] = (gradientPtr[i + 1] + alphaPtr[(i + 1) / rows]) / magnitudePtr[(i + 1) / rows];
+        if (valuePtr[i + 2] > 0) X_gradientPtr[i + 2] = (gradientPtr[i + 2] - alphaPtr[(i + 2) / rows]) / magnitudePtr[(i + 2) / rows];
+        else X_gradientPtr[i + 2] = (gradientPtr[i + 2] + alphaPtr[(i + 2) / rows]) / magnitudePtr[(i + 2) / rows];
+        if (valuePtr[i + 3] > 0) X_gradientPtr[i + 3] = (gradientPtr[i + 3] - alphaPtr[(i + 3) / rows]) / magnitudePtr[(i + 3) / rows];
+        else X_gradientPtr[i + 3] = (gradientPtr[i + 3] + alphaPtr[(i + 3) / rows]) / magnitudePtr[(i + 3) / rows];
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        if (valuePtr[i] > 0) X_gradientPtr[i] = (gradientPtr[i] - alphaPtr[i / rows]) / magnitudePtr[i / rows];
+        else  X_gradientPtr[i] = (gradientPtr[i] + alphaPtr[i / rows]) / magnitudePtr[i / rows];
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::FeatureNormalizeL2Backprop(const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& magnitude, const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& X_gradient)
+{
+    long num = (long)X_gradient.GetNumElements();
+    long rows = (long)X_gradient.GetNumRows();
+    ElemType* valuePtr = value.Data();
+    ElemType* gradientPtr = gradient.Data();
+    ElemType* magnitudePtr = magnitude.Data();
+    ElemType* alphaPtr = alpha.Data();
+    ElemType* X_gradientPtr = X_gradient.Data();
+
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        X_gradientPtr[i] = (gradientPtr[i] - valuePtr[i] * alphaPtr[i / rows]) / magnitudePtr[i / rows];
+        X_gradientPtr[i + 1] = (gradientPtr[i + 1] - valuePtr[i + 1] * alphaPtr[(i + 1) / rows]) / magnitudePtr[(i + 1) / rows];
+        X_gradientPtr[i + 2] = (gradientPtr[i + 2] - valuePtr[i + 2] * alphaPtr[(i + 2) / rows]) / magnitudePtr[(i + 2) / rows];
+        X_gradientPtr[i + 3] = (gradientPtr[i + 3] - valuePtr[i + 3] * alphaPtr[(i + 3) / rows]) / magnitudePtr[(i + 3) / rows];
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        X_gradientPtr[i] = (gradientPtr[i] - valuePtr[i] * alphaPtr[i / rows]) / magnitudePtr[i / rows];
+    }
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::LabelAdd(const CPUMatrix<ElemType>& label, ElemType bias, const CPUMatrix<ElemType>& value)
 {
     size_t minibatchSize = value.GetNumCols();

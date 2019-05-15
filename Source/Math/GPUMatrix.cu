@@ -3658,6 +3658,51 @@ void GPUMatrix<ElemType>::AsoftmaxBackward4(ElemType lambda, size_t inputDimensi
 #pragma region AMsoftmax
 
 template <class ElemType>
+__global__ void _featureNormalizeL1Backprop(const ElemType* value, const ElemType* gradient, const ElemType* magnitude, const ElemType* alpha, ElemType* X_gradient, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        if (value[id] > 0)
+            X_gradient[id] = (gradient[id] - alpha[id / rows]) / magnitude[id / rows];
+        else
+            X_gradient[id] = (gradient[id] + alpha[id / rows]) / magnitude[id / rows];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::FeatureNormalizeL1Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient)
+{
+    CUDA_LONG numElements = (CUDA_LONG)X_gradient.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)X_gradient.GetNumRows();
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _featureNormalizeL1Backprop<ElemType><< <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (value.Data(), gradient.Data(), magnitude.Data(), alpha.Data(), X_gradient.Data(), rows, numElements);
+}
+
+template <class ElemType>
+__global__ void _featureNormalizeL2Backprop(const ElemType* value, const ElemType* gradient, const ElemType* magnitude, const ElemType* alpha, ElemType* X_gradient, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        X_gradient[id] = (gradient[id] - value[id] * alpha[id / rows]) / magnitude[id / rows];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::FeatureNormalizeL2Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient)
+{
+    CUDA_LONG numElements = (CUDA_LONG)X_gradient.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)X_gradient.GetNumRows();
+
+    SyncGuard syncGuard;
+    GridDim grid(numElements);
+    _featureNormalizeL2Backprop<ElemType><< <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (value.Data(), gradient.Data(), magnitude.Data(), alpha.Data(), X_gradient.Data(), rows, numElements);
+}
+
+template <class ElemType>
 __global__ void _labelAdd(CUDA_LONG outputDimension, const ElemType* label, ElemType bias, ElemType* value, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();

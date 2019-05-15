@@ -573,6 +573,10 @@ public:
 
 #pragma region AMsoftmax
 
+    static void FeatureNormalizeL1Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient);
+
+    static void FeatureNormalizeL2Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient);
+
     static void LabelAdd(const GPUMatrix<ElemType>& label, ElemType bias, const GPUMatrix<ElemType>& value);
 
 #pragma endregion

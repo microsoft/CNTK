@@ -457,6 +457,10 @@ public:
 
 #pragma region AMsoftmax
 
+    static void FeatureNormalizeL1Backprop(const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& magnitude, const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& X_gradient);
+
+    static void FeatureNormalizeL2Backprop(const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& magnitude, const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& X_gradient);
+
     static void LabelAdd(const CPUMatrix<ElemType>& label, ElemType bias, const CPUMatrix<ElemType>& value);
 
 #pragma endregion
