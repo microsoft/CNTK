@@ -4354,32 +4354,20 @@ public:
     GlobalConcatNode(DEVICEID_TYPE deviceId, const wstring& name, size_t blockIndex = 0, size_t growthRate = 0, size_t segmentIndex = 0, size_t segmentNum = 0)
         : Base(deviceId, name), m_minibatchSize(0), m_blockIndex(blockIndex), m_growthRate(growthRate), m_segmentIndex(segmentIndex), m_segmentNum(segmentNum)
     {
-        if (0 == m_segmentIndex)
-        {
-            if (m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) != m_valueGlobalMemoryBlockMap<ElemType>.end())
-                LogicError("Value global memory block error in GlobalConcatNode");
-            if (m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) != m_gradientGlobalMemoryBlockMap<ElemType>.end())
-                LogicError("Gradient global memory block error in GlobalConcatNode");
+        if (m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) == m_valueGlobalMemoryBlockMap<ElemType>.end())
             m_valueGlobalMemoryBlockMap<ElemType>[m_blockIndex] = make_shared<GlobalMemoryBlock<ElemType>>(deviceId);
+        if (m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) == m_gradientGlobalMemoryBlockMap<ElemType>.end())
             m_gradientGlobalMemoryBlockMap<ElemType>[m_blockIndex] = make_shared<GlobalMemoryBlock<ElemType>>(deviceId);
-        }
         m_valueGlobalMemoryBlock = m_valueGlobalMemoryBlockMap<ElemType>[m_blockIndex];
         m_gradientGlobalMemoryBlock = m_gradientGlobalMemoryBlockMap<ElemType>[m_blockIndex];
     }
 
     ~GlobalConcatNode()
     {
-        if (0 == m_segmentIndex)
-        {
-            if (m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) == m_valueGlobalMemoryBlockMap<ElemType>.end())
-                LogicError("Value global memory block error in ~GlobalConcatNode");
-            if (m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) == m_gradientGlobalMemoryBlockMap<ElemType>.end())
-                LogicError("Gradient global memory block error in ~GlobalConcatNode");
+        if (m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) != m_valueGlobalMemoryBlockMap<ElemType>.end())
             m_valueGlobalMemoryBlockMap<ElemType>.erase(m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex));
+        if (m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) != m_gradientGlobalMemoryBlockMap<ElemType>.end())
             m_gradientGlobalMemoryBlockMap<ElemType>.erase(m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex));
-        }
-        m_valueGlobalMemoryBlock.reset();
-        m_gradientGlobalMemoryBlock.reset();
     }
 
     virtual void UpdateFunctionMBSize() override
