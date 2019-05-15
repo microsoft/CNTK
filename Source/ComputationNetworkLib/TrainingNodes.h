@@ -1251,7 +1251,6 @@ public:
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         FrameRange fr(InputRef(0).GetMBLayout());
-        auto X = InputRef(0).ValueFor(fr);
         auto X_gradient = InputRef(0).GradientFor(fr);
         Matrix<ElemType>::InnerProduct(Value(), Gradient(), *m_temp1, true);
 
@@ -1260,7 +1259,7 @@ public:
         else if (2 == m_normalizeType)
             Matrix<ElemType>::FeatureNormalizeL2Backprop(Value(), Gradient(), *m_magnitude, *m_temp1, X_gradient);
         else
-            LogicError("This normalizeType is not supported yet.");
+            LogicError("NormalizeType = %d not supported yet.", (int)m_normalizeType);
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
@@ -1286,7 +1285,7 @@ public:
     }
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
-        return true;
+        return false;
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -4248,7 +4247,7 @@ private:
 /*
     GlobalMemoryBlock
     Layout : Matrix<ElemType>(memoryLength, minibatchSize)
-    Memory : GlobalMemoryBlock will be allocated/released by the first trainingNodes (Segment 0).
+    Memory : GlobalMemoryBlock will be allocated/released by the first GlobalConcatNode (Segment 0).
                         minibatchSize
                  ---------------------------
                  |        Segment 0        |       Value/Gradient matrix 0
@@ -4279,7 +4278,7 @@ public:
     {
         m_minibatchSize = minibatchSize;
         m_index = 0;
-        m_globalMemoryMatrix->Resize(m_memoryLength, minibatchSize);
+        m_globalMemoryMatrix->Resize(m_memoryLength, m_minibatchSize);
         if (needInit)
             m_globalMemoryMatrix->SetValue((ElemType) 0);
     }
