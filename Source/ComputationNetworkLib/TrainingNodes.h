@@ -4377,7 +4377,7 @@ public:
             size_t minibatchSize = InputRef(0).Value().GetNumCols();
             if (m_minibatchSize != minibatchSize)
             {
-                minibatchSize = m_minibatchSize;
+                m_minibatchSize = minibatchSize;
                 m_valueGlobalMemoryBlock->resetMinibatchSize(m_minibatchSize);
                 if (Environment().IsTraining())
                     m_gradientGlobalMemoryBlock->resetMinibatchSize(m_minibatchSize, true);
