@@ -4902,7 +4902,7 @@ public:
 
                 // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
                 // TODO: Move this out. Follow the same pattern as the RNN node. But can't without requiring another buffer.
-                m_bnEng->Backward(*m_tempSegment, sliceOutputGrad,               // (in)  input from below, gradient from above
+                m_bnEng->Backward(*m_tempSegment, sliceOutputGrad,              // (in)  input from below, gradient from above
                                   sliceInputGrad,                               // (out) gradient for data input goes here  --TODO: Check if cudnn engine adds the gradient, or just overwrites (BUGBUG). CNTK engine is OK.
                                   scale,                                        // (in)  out of scale and bias, only scale is needed in gradient propagation
                                   blendFactor,                                  // (in)  smoothing weight for running stats (1=use only running stats)

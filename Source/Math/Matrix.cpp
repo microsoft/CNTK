@@ -5292,9 +5292,9 @@ template <class ElemType>
 template <class ElemType>
 /*static*/ void Matrix<ElemType>::DistributedCrossEntropy(const Matrix<ElemType>& logP, const Matrix<ElemType>& labels, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex)
 {
-    assert(prob.GetNumCols() == labels.GetNumCols());
-    DISPATCH_MATRIX_ON_FLAG(&logP,
-        &logP,
+    assert(logP.GetNumCols() == labels.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&value,
+        &value,
         CPUMatrix<ElemType>::DistributedCrossEntropy(*(logP.m_CPUMatrix), *(labels.m_CPUMatrix), *(value.m_CPUMatrix), startIndex, endIndex),
         GPUMatrix<ElemType>::DistributedCrossEntropy(*(logP.m_GPUMatrix), *(labels.m_GPUMatrix), *(value.m_GPUMatrix), startIndex, endIndex),
         NOT_IMPLEMENTED,
