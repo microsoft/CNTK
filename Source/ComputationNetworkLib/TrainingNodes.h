@@ -4328,6 +4328,8 @@ public:
     size_t m_memoryLength;  // row
     size_t m_minibatchSize; // col
     size_t m_index;
+    size_t m_dimH;
+    size_t m_dimW;
     shared_ptr<Matrix<ElemType>> m_globalMemoryMatrix;
 };
 template <class ElemType>
@@ -4422,17 +4424,24 @@ public:
 
         SmallVector<size_t> dims = Input(0)->GetSampleLayout().GetDims();
         if(dims.size() != 3)
-            LogicError("GlobalConcatNode : input dims not equals to 3\n");
+            LogicError("GlobalConcatNode: input dims not equals to 3\n");
         if (0 == m_segmentIndex)
         {
             m_valueGlobalMemoryBlock->m_index = 0;
             m_gradientGlobalMemoryBlock->m_index = 0;
-            m_valueGlobalMemoryBlock->setMemoryLength(dims[0] * dims[1] * (dims[2] + m_growthRate * m_segmentNum));
-            m_gradientGlobalMemoryBlock->setMemoryLength(dims[0] * dims[1] * (dims[2] + m_growthRate * m_segmentNum));
+            size_t memoryLength = dims[0] * dims[1] * (dims[2] + m_growthRate * m_segmentNum);
+            m_valueGlobalMemoryBlock->setMemoryLength(memoryLength);
+            m_gradientGlobalMemoryBlock->setMemoryLength(memoryLength);
+            m_valueGlobalMemoryBlock->m_dimH = m_gradientGlobalMemoryBlock->m_dimH = dims[0];
+            m_valueGlobalMemoryBlock->m_dimW = m_gradientGlobalMemoryBlock->m_dimW = dims[1];
         }
+        else if (m_valueGlobalMemoryBlock->m_dimH != dims[0] || m_valueGlobalMemoryBlock->m_dimW != dims[1])
+            LogicError("GlobalConcatNode: feature layout not matched. Expected HW layout is [%d, %d], but input HW layout is [%d, %d]\n",
+            (int)m_valueGlobalMemoryBlock->m_dimH, (int)m_valueGlobalMemoryBlock->m_dimW, (int)dims[0], (int)dims[1]);
         m_startIndex = m_valueGlobalMemoryBlock->m_index;
         m_numRows = dims[0] * dims[1] * dims[2];
         m_valueGlobalMemoryBlock->m_index += m_numRows;
+        dims[2] = m_valueGlobalMemoryBlock->m_index / (m_valueGlobalMemoryBlock->m_dimH * m_valueGlobalMemoryBlock->m_dimW);
 
         SetDims(TensorShape(dims), HasMBLayout());
     }
