@@ -678,7 +678,8 @@ public:
             m_batchSize = m_minibatchSize * m_processNum;
         }
         m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
-        m_WNorm->Resize(m_outputDim, 1);
+        if (m_weightNormalize)
+            m_WNorm->Resize(m_outputDim, 1);
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
@@ -765,7 +766,8 @@ public:
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_temp1, matrixPool);
-        RequestMatrixFromPool(m_WNorm, matrixPool);
+        if (m_weightNormalize)
+            RequestMatrixFromPool(m_WNorm, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -773,7 +775,8 @@ public:
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_temp1, matrixPool);
-        ReleaseMatrixToPool(m_WNorm, matrixPool);
+        if (m_weightNormalize)
+            ReleaseMatrixToPool(m_WNorm, matrixPool);
     }
 
     void Save(File& fstream) const override
