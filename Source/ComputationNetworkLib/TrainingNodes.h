@@ -4426,7 +4426,9 @@ public:
         if (0 == m_segmentIndex)
         {
             m_valueGlobalMemoryBlock->m_index = 0;
+            m_gradientGlobalMemoryBlock->m_index = 0;
             m_valueGlobalMemoryBlock->setMemoryLength(dims[0] * dims[1] * (dims[2] + m_growthRate * m_segmentNum));
+            m_gradientGlobalMemoryBlock->setMemoryLength(dims[0] * dims[1] * (dims[2] + m_growthRate * m_segmentNum));
         }
         m_startIndex = m_valueGlobalMemoryBlock->m_index;
         m_numRows = dims[0] * dims[1] * dims[2];
