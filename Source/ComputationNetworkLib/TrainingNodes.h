@@ -4441,6 +4441,7 @@ public:
         m_startIndex = m_valueGlobalMemoryBlock->m_index;
         m_numRows = dims[0] * dims[1] * dims[2];
         m_valueGlobalMemoryBlock->m_index += m_numRows;
+        m_gradientGlobalMemoryBlock->m_index += m_numRows;
         dims[2] = m_valueGlobalMemoryBlock->m_index / (m_valueGlobalMemoryBlock->m_dimH * m_valueGlobalMemoryBlock->m_dimW);
 
         SetDims(TensorShape(dims), HasMBLayout());
