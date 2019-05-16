@@ -4287,7 +4287,7 @@ public:
 
     void stackSegmentMatrix(const Matrix<ElemType>& segmentMatrix, size_t numRows)
     {
-        if (numRows >= 0 && m_index + numRows <= m_memoryLength)
+        if (m_index + numRows <= m_memoryLength)
             m_globalMemoryMatrix->AssignToRowSliceValuesOf(segmentMatrix, m_index, numRows);
         else
             LogicError("Segment range error in stackSegmentMatrix.");
@@ -4297,7 +4297,7 @@ public:
 
     void getSegmentMatrix(Matrix<ElemType>& segmentMatrix, size_t startIndex, size_t numRows)
     {
-        if (startIndex >= 0 && numRows >= 0 && startIndex + numRows <= m_memoryLength)
+        if (startIndex + numRows <= m_memoryLength)
             segmentMatrix.AssignRowSliceValuesOf(*m_globalMemoryMatrix, startIndex, numRows);
         else
             LogicError("Segment range error in getSegmentMatrix.");
@@ -4398,29 +4398,33 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-        SmallVector<size_t> dims = Input(0)->GetSampleLayout().GetDims();
-        if(dims.size() != 3)
-            LogicError("GlobalConcatNode: input dims not equals to 3\n");
-        if (0 == m_segmentIndex)
+        if (m_dims.size() == 0)
         {
-            m_valueGlobalMemoryBlock->m_index = 0;
-            m_gradientGlobalMemoryBlock->m_index = 0;
-            size_t memoryLength = dims[0] * dims[1] * (dims[2] + m_growthRate * m_segmentNum);
-            m_valueGlobalMemoryBlock->setMemoryLength(memoryLength);
-            m_gradientGlobalMemoryBlock->setMemoryLength(memoryLength);
-            m_valueGlobalMemoryBlock->m_dimH = m_gradientGlobalMemoryBlock->m_dimH = dims[0];
-            m_valueGlobalMemoryBlock->m_dimW = m_gradientGlobalMemoryBlock->m_dimW = dims[1];
-        }
-        else if (m_valueGlobalMemoryBlock->m_dimH != dims[0] || m_valueGlobalMemoryBlock->m_dimW != dims[1])
-            LogicError("GlobalConcatNode: feature layout not matched. Expected HW layout is [%d, %d], but input HW layout is [%d, %d]\n",
-            (int)m_valueGlobalMemoryBlock->m_dimH, (int)m_valueGlobalMemoryBlock->m_dimW, (int)dims[0], (int)dims[1]);
-        m_startIndex = m_valueGlobalMemoryBlock->m_index;
-        m_numRows = dims[0] * dims[1] * dims[2];
-        m_valueGlobalMemoryBlock->m_index += m_numRows;
-        m_gradientGlobalMemoryBlock->m_index += m_numRows;
-        dims[2] = m_valueGlobalMemoryBlock->m_index / (m_valueGlobalMemoryBlock->m_dimH * m_valueGlobalMemoryBlock->m_dimW);
+            m_dims = Input(0)->GetSampleLayout().GetDims();
+            if (m_dims.size() != 3)
+                LogicError("GlobalConcatNode: input dims not equals to 3\n");
+            if (0 == m_segmentIndex)
+            {
+                m_valueGlobalMemoryBlock->m_index = 0;
+                m_gradientGlobalMemoryBlock->m_index = 0;
+                size_t memoryLength = m_dims[0] * m_dims[1] * (m_dims[2] + m_growthRate * m_segmentNum);
+                m_valueGlobalMemoryBlock->setMemoryLength(memoryLength);
+                m_gradientGlobalMemoryBlock->setMemoryLength(memoryLength);
+                m_valueGlobalMemoryBlock->m_dimH = m_gradientGlobalMemoryBlock->m_dimH = m_dims[0];
+                m_valueGlobalMemoryBlock->m_dimW = m_gradientGlobalMemoryBlock->m_dimW = m_dims[1];
+            }
+            else if (m_valueGlobalMemoryBlock->m_dimH != m_dims[0] || m_valueGlobalMemoryBlock->m_dimW != m_dims[1])
+                LogicError("GlobalConcatNode: feature layout not matched. Expected HW layout is [%d, %d], but input HW layout is [%d, %d]\n",
+                (int)m_valueGlobalMemoryBlock->m_dimH, (int)m_valueGlobalMemoryBlock->m_dimW, (int)m_dims[0], (int)m_dims[1]);
 
-        SetDims(TensorShape(dims), HasMBLayout());
+            m_startIndex = m_valueGlobalMemoryBlock->m_index;
+            m_numRows = m_dims[0] * m_dims[1] * m_dims[2];
+            m_valueGlobalMemoryBlock->m_index += m_numRows;
+            m_gradientGlobalMemoryBlock->m_index += m_numRows;
+            m_dims[2] = m_valueGlobalMemoryBlock->m_index / (m_valueGlobalMemoryBlock->m_dimH * m_valueGlobalMemoryBlock->m_dimW);
+        }
+
+        SetDims(TensorShape(m_dims), HasMBLayout());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -4435,6 +4439,7 @@ public:
             node->m_segmentNum                = m_segmentNum;
             node->m_startIndex                = m_startIndex;
             node->m_numRows                   = m_numRows;
+            node->m_dims                      = m_dims;
             node->m_valueGlobalMemoryBlock    = m_valueGlobalMemoryBlock;
             node->m_gradientGlobalMemoryBlock = m_gradientGlobalMemoryBlock;
         }
@@ -4478,6 +4483,7 @@ public:
     size_t m_segmentNum;
     size_t m_startIndex;
     size_t m_numRows;
+    SmallVector<size_t> m_dims;
     shared_ptr<GlobalMemoryBlock<ElemType>> m_valueGlobalMemoryBlock;
     shared_ptr<GlobalMemoryBlock<ElemType>> m_gradientGlobalMemoryBlock;
 };
