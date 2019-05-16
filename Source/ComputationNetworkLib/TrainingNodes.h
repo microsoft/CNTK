@@ -4272,23 +4272,12 @@ class GlobalMemoryBlock
 public:
     GlobalMemoryBlock() {}
 
-    GlobalMemoryBlock(DEVICEID_TYPE deviceId)
-    {
-        m_globalMemoryMatrix.reset(new Matrix<ElemType>(deviceId));
-    }
-
     void resetMinibatchSize(size_t minibatchSize, bool needInit = false)
     {
-        m_minibatchSize = minibatchSize;
         m_index = 0;
-        m_globalMemoryMatrix->Resize(m_memoryLength, m_minibatchSize);
+        m_globalMemoryMatrix->Resize(m_memoryLength, minibatchSize);
         if (needInit)
             m_globalMemoryMatrix->SetValue((ElemType) 0);
-    }
-
-    void initZero()
-    {
-        m_globalMemoryMatrix->SetValue((ElemType) 0);
     }
 
     void setMemoryLength(size_t length)
@@ -4298,9 +4287,6 @@ public:
 
     void stackSegmentMatrix(const Matrix<ElemType>& segmentMatrix, size_t numRows)
     {
-        if (segmentMatrix.GetNumCols() != m_minibatchSize)
-            LogicError("Segment batch size not matches global batch size in stackSegmentMatrix.");
-
         if (numRows >= 0 && m_index + numRows <= m_memoryLength)
             m_globalMemoryMatrix->AssignToRowSliceValuesOf(segmentMatrix, m_index, numRows);
         else
@@ -4311,9 +4297,6 @@ public:
 
     void getSegmentMatrix(Matrix<ElemType>& segmentMatrix, size_t startIndex, size_t numRows)
     {
-        if (segmentMatrix.GetNumCols() != m_minibatchSize)
-            LogicError("Segment batch size not matches global batch size in getSegmentMatrix.");
-
         if (startIndex >= 0 && numRows >= 0 && startIndex + numRows <= m_memoryLength)
             segmentMatrix.AssignRowSliceValuesOf(*m_globalMemoryMatrix, startIndex, numRows);
         else
@@ -4325,8 +4308,7 @@ public:
         m_globalMemoryMatrix->AddToRowSliceValuesOf(segmentMatrix, 0, numRows);
     }
 
-    size_t m_memoryLength;  // row
-    size_t m_minibatchSize; // col
+    size_t m_memoryLength;
     size_t m_index;
     size_t m_dimH;
     size_t m_dimW;
@@ -4357,12 +4339,12 @@ public:
     }
 
     GlobalConcatNode(DEVICEID_TYPE deviceId, const wstring& name, size_t blockIndex = 0, size_t growthRate = 0, size_t segmentIndex = 0, size_t segmentNum = 0)
-        : Base(deviceId, name), m_minibatchSize(0), m_blockIndex(blockIndex), m_growthRate(growthRate), m_segmentIndex(segmentIndex), m_segmentNum(segmentNum)
+        : Base(deviceId, name), m_blockIndex(blockIndex), m_growthRate(growthRate), m_segmentIndex(segmentIndex), m_segmentNum(segmentNum)
     {
         if (m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) == m_valueGlobalMemoryBlockMap<ElemType>.end())
-            m_valueGlobalMemoryBlockMap<ElemType>[m_blockIndex] = make_shared<GlobalMemoryBlock<ElemType>>(deviceId);
+            m_valueGlobalMemoryBlockMap<ElemType>[m_blockIndex] = make_shared<GlobalMemoryBlock<ElemType>>();
         if (m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) == m_gradientGlobalMemoryBlockMap<ElemType>.end())
-            m_gradientGlobalMemoryBlockMap<ElemType>[m_blockIndex] = make_shared<GlobalMemoryBlock<ElemType>>(deviceId);
+            m_gradientGlobalMemoryBlockMap<ElemType>[m_blockIndex] = make_shared<GlobalMemoryBlock<ElemType>>();
         m_valueGlobalMemoryBlock = m_valueGlobalMemoryBlockMap<ElemType>[m_blockIndex];
         m_gradientGlobalMemoryBlock = m_gradientGlobalMemoryBlockMap<ElemType>[m_blockIndex];
     }
@@ -4380,15 +4362,9 @@ public:
         if (0 == m_segmentIndex)
         {
             size_t minibatchSize = InputRef(0).Value().GetNumCols();
-            if (m_minibatchSize != minibatchSize)
-            {
-                m_minibatchSize = minibatchSize;
-                m_valueGlobalMemoryBlock->resetMinibatchSize(m_minibatchSize);
-                if (Environment().IsTraining())
-                    m_gradientGlobalMemoryBlock->resetMinibatchSize(m_minibatchSize, true);
-            }
-            else if (Environment().IsTraining())
-                m_gradientGlobalMemoryBlock->initZero();
+            m_valueGlobalMemoryBlock->resetMinibatchSize(minibatchSize);
+            if (Environment().IsTraining())
+                m_gradientGlobalMemoryBlock->resetMinibatchSize(minibatchSize, true);
         }
     }
 
@@ -4467,11 +4443,21 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
+        if (0 == m_segmentIndex)
+        {
+            RequestMatrixFromPool(m_valueGlobalMemoryBlock->m_globalMemoryMatrix, matrixPool, m_valueGlobalMemoryBlock->m_memoryLength, true);
+            RequestMatrixFromPool(m_gradientGlobalMemoryBlock->m_globalMemoryMatrix, matrixPool, m_gradientGlobalMemoryBlock->m_memoryLength, true);
+        }
     }
 
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
+        if (0 == m_segmentIndex)
+        {
+            ReleaseMatrixToPool(m_valueGlobalMemoryBlock->m_globalMemoryMatrix, matrixPool);
+            ReleaseMatrixToPool(m_gradientGlobalMemoryBlock->m_globalMemoryMatrix, matrixPool);
+        }
     }
 
     void Save(File& fstream) const override
@@ -4486,7 +4472,6 @@ public:
         fstream >> m_blockIndex >> m_growthRate >> m_segmentIndex >> m_segmentNum >> m_startIndex >> m_numRows;
     }
 
-    size_t m_minibatchSize;
     size_t m_blockIndex;
     size_t m_growthRate;
     size_t m_segmentIndex;
