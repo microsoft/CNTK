@@ -2136,9 +2136,9 @@ namespace CNTK
     }
 
 
-    FunctionPtr DistributedLabelsGather(const Variable& labels, const std::wstring& name)
+    FunctionPtr DistributedLabelsGather(const Variable& labels, const Variable& previousNode, const std::wstring& name)
     {
-        std::vector<Variable> operands = { labels };
+        std::vector<Variable> operands = { labels, previousNode };
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedLabelsGather, operands, Dictionary(), name), name);
     }
 

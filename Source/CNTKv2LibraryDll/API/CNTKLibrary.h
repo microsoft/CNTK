@@ -4341,7 +4341,7 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
 
-    CNTK_API FunctionPtr DistributedLabelsGather(const Variable& labels, const std::wstring& name = L"");
+    CNTK_API FunctionPtr DistributedLabelsGather(const Variable& labels, const Variable& previousNode, const std::wstring& name = L"");
 
     CNTK_API FunctionPtr DistributedFullyConnected(const Variable& W, const Variable& X, const Variable& b, const std::wstring& name = L"");
 

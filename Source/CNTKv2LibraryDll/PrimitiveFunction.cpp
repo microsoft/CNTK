@@ -954,7 +954,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::DistributedLabelsGather:
                         {
-                            assert(m_inputs.size() == 1);
+                            assert(m_inputs.size() == 2);
                             outputShape = NDShape{};
                             break;
                         }

@@ -564,8 +564,8 @@ CNTK2 = [
     #
     # Distributed labels gather node
     #
-    DistributedLabelsGather(labels, tag='') =
-        new ComputationNode [ operation = 'DistributedLabelsGather' ; inputs = _AsNodes (labels) /*plus the function args*/ ]
+    DistributedLabelsGather(labels, previousNode, tag='') =
+        new ComputationNode [ operation = 'DistributedLabelsGather' ; inputs = _AsNodes (labels, previousNode) /*plus the function args*/ ]
 
     #
     # Distributed fully connected node

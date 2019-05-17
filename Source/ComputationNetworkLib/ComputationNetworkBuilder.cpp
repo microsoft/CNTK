@@ -490,9 +490,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Squar
 
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedLabelsGather(const ComputationNodePtr a, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedLabelsGather(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<DistributedLabelsGatherNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
+    return net.AddNodeToNetAndAttachInputs(New<DistributedLabelsGatherNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>

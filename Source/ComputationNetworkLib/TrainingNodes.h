@@ -34,8 +34,10 @@ static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
 // Distributed labels gather layer
 // Input: minibatch one-hot labels
 // Output: batch dense labels
+// v-zhimao: we need to sync the distributed nodes, so we have to specify the previous trainingnode of 'DistributedLabelsGatherNode'
+//           Input(1) is the privious training node of 'DistributedLabelsGatherNode'
 template <class ElemType>
-class DistributedLabelsGatherNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<1>
+class DistributedLabelsGatherNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
