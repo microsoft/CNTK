@@ -54,6 +54,8 @@ namespace CNTK
 using namespace std;
 
 #ifdef __PROFILE__
+double prepareTime1 = 0.0;
+double prepareTime2 = 0.0;
 double prepareTime = 0.0;
 double forwardTime = 0.0;
 double backwardTime = 0.0;
@@ -1269,6 +1271,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             ProfilerEnable(false); // Profiler will be enabled at the beginning of the next epoch.
         }
 
+
+#ifdef __PROFILE__
+        if (m_lrapiInfo.iter != 0)
+        {
+            endTime = std::chrono::system_clock::now();
+            prepareTime1 += (std::chrono::duration<double>(endTime - startTime)).count();
+        }
+#endif
+
+
         ProfilerTimeEnd(profGetMinibatch, profilerEvtMainGetMinibatch);
         auto profForwardBackward = ProfilerTimeBegin();
 
@@ -1289,6 +1301,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         if (actualMBSize > 0)
         {
+#ifdef __PROFILE__
+            if (m_lrapiInfo.iter != 0)
+            {
+                endTime = std::chrono::system_clock::now();
+                prepareTime2 += (std::chrono::duration<double>(endTime - startTime)).count();
+            }
+#endif
+
+
             assert(wasDataRead);
 #ifndef EVALDLL
             if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
@@ -1322,11 +1343,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #ifdef __PROFILE__
             if (m_lrapiInfo.sgdTraceLevel > 0 && m_lrapiInfo.iter % m_lrapiInfo.numItersToShowLR == 0 && m_lrapiInfo.iter != 0)
             {
+                fprintf(stderr, "Iteration [%d-%d]: prepare time1 = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, prepareTime1);
+                fprintf(stderr, "Iteration [%d-%d]: prepare time2 = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, prepareTime2);
                 fprintf(stderr, "Iteration [%d-%d]: prepare time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, prepareTime);
                 fprintf(stderr, "Iteration [%d-%d]: forward time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, forwardTime);
                 fprintf(stderr, "Iteration [%d-%d]: backward time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, backwardTime);
                 fprintf(stderr, "Iteration [%d-%d]: aggregate time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, aggregateTime);
                 fprintf(stderr, "Iteration [%d-%d]: update time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, updateTime);
+                prepareTime1 = 0.0;
+                prepareTime2 = 0.0;
                 prepareTime = 0.0;
                 forwardTime = 0.0;
                 backwardTime = 0.0;
