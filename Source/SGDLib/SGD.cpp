@@ -54,6 +54,7 @@ namespace CNTK
 using namespace std;
 
 #ifdef __PROFILE__
+double prepareTime = 0.0;
 double forwardTime = 0.0;
 double backwardTime = 0.0;
 double aggregateTime = 0.0;
@@ -1236,6 +1237,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool isFirstMinibatch = true;
     for (;;)
     {
+#ifdef __PROFILE__
+        startTime = std::chrono::system_clock::now();
+#endif
+
+
         auto profMinibatch = ProfilerTimeBegin();
 
         // get minibatch
@@ -1306,12 +1312,22 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
 
 #ifdef __PROFILE__
+            if (m_lrapiInfo.iter != 0)
+            {
+                endTime = std::chrono::system_clock::now();
+                prepareTime += (std::chrono::duration<double>(endTime - startTime)).count();
+            }
+#endif
+
+#ifdef __PROFILE__
             if (m_lrapiInfo.sgdTraceLevel > 0 && m_lrapiInfo.iter % m_lrapiInfo.numItersToShowLR == 0 && m_lrapiInfo.iter != 0)
             {
+                fprintf(stderr, "Iteration [%d-%d]: prepare time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, prepareTime);
                 fprintf(stderr, "Iteration [%d-%d]: forward time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, forwardTime);
                 fprintf(stderr, "Iteration [%d-%d]: backward time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, backwardTime);
                 fprintf(stderr, "Iteration [%d-%d]: aggregate time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, aggregateTime);
                 fprintf(stderr, "Iteration [%d-%d]: update time = %.8gs\n", (int)(m_lrapiInfo.iter - m_lrapiInfo.numItersToShowLR + 1), (int)m_lrapiInfo.iter, updateTime);
+                prepareTime = 0.0;
                 forwardTime = 0.0;
                 backwardTime = 0.0;
                 aggregateTime = 0.0;
