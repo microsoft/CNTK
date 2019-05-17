@@ -544,9 +544,7 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        if (0 == inputIndex) // labels
-            LogicError("There is no need to compute gradient for labels");
-        else if (1 == inputIndex) // Y
+        if (1 == inputIndex) // Y
         {
             auto& labels = InputRef(0).Value();
             auto& gradient = InputRef(1).Gradient();
