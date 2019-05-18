@@ -4221,14 +4221,14 @@ void GPUMatrix<ElemType>::DistributedAssignClassificationError(const GPUMatrix<E
 }
 
 template <class ElemType>
-__global__ void _distributedLabelAdd(const ElemType* labels, ElemType bias, ElemType* value, const int rows, const CUDA_LONG startIndex, const CUDA_LONG endIndex, CUDA_LONG numElements)
+__global__ void _distributedLabelAdd(const ElemType* labels, ElemType bias, ElemType* value, CUDA_LONG rows, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
     {
         CUDA_LONG label = (CUDA_LONG)labels[id];
         if (label >= startIndex && label <= endIndex && value[id * rows + label - startIndex] > -bias)
-            value[id * rows + label - startIndex] += -bias;
+            value[id * rows + label - startIndex] += bias;
     }
 }
 
