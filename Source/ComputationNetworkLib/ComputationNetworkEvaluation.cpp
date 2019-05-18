@@ -21,7 +21,28 @@
 
 using namespace std;
 
+
+#define __DISTRIBUTED_PROFILE__
+
+
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+
+#ifdef __DISTRIBUTED_PROFILE__
+    double distributedLabelsGatherTime = 0.0;
+    std::chrono::time_point<std::chrono::system_clock> distributedLabelsGatherStartTime;
+    std::chrono::time_point<std::chrono::system_clock> distributedLabelsGatherEndTime;
+    int distributedLabelsGatherCnt = 0;
+    double distributedAdditiveFullConnectionTime = 0.0;
+    std::chrono::time_point<std::chrono::system_clock> distributedAdditiveFullConnectionStartTime;
+    std::chrono::time_point<std::chrono::system_clock> distributedAdditiveFullConnectionEndTime;
+    int distributedAdditiveFullConnectionCnt = 0;
+    double distributedCrossEntropyWithSoftmaxTime = 0.0;
+    std::chrono::time_point<std::chrono::system_clock> distributedCrossEntropyWithSoftmaxStartTime;
+    std::chrono::time_point<std::chrono::system_clock> distributedCrossEntropyWithSoftmaxEndTime;
+    int distributedCrossEntropyWithSoftmaxCnt = 0;
+#endif
+
 
 // This source file contains methods related to evaluation (forward prop, backprop), network validation, and matrix memory allocation (memory sharing).
 
@@ -146,6 +167,16 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 {
     if (node->IsOutOfDateWrtInputs())
     {
+#ifdef __DISTRIBUTED_PROFILE__
+        if (node->OperationName() == L"DistributedLabelsGather")
+            distributedLabelsGatherStartTime = std::chrono::system_clock::now();
+        else if (node->OperationName() == L"DistributedAdditiveFullConnection")
+            distributedAdditiveFullConnectionStartTime = std::chrono::system_clock::now();
+        else if (node->OperationName() == L"DistributedCrossEntropyWithSoftmax")
+            distributedCrossEntropyWithSoftmaxStartTime = std::chrono::system_clock::now();
+#endif
+
+
         node->BeginForwardProp();
         node->BeginTiming(false /*backward*/);
         node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
@@ -157,6 +188,40 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         // Extreme Tracing, part 1/4
         if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
             DumpNode(node, /*dumpGradient=*/false);
+
+
+#ifdef __DISTRIBUTED_PROFILE__
+        if (node->OperationName() == L"DistributedLabelsGather")
+        {
+            distributedLabelsGatherEndTime = std::chrono::system_clock::now();
+            distributedLabelsGatherTime += (std::chrono::duration<double>(distributedLabelsGatherEndTime - distributedLabelsGatherStartTime)).count();
+            if (++distributedLabelsGatherCnt % 100 == 0)
+            {
+                fprintf(stderr, "Iteration [%d-%d]: distributedLabelsGather forward time = %.8gs\n", distributedLabelsGatherCnt - 100, distributedLabelsGatherCnt, distributedLabelsGatherTime);
+                distributedLabelsGatherTime = 0.0;
+            }
+        }
+        else if (node->OperationName() == L"DistributedAdditiveFullConnection")
+        {
+            distributedAdditiveFullConnectionEndTime = std::chrono::system_clock::now();
+            distributedAdditiveFullConnectionTime += (std::chrono::duration<double>(distributedAdditiveFullConnectionEndTime - distributedAdditiveFullConnectionStartTime)).count();
+            if (++distributedAdditiveFullConnectionCnt % 100 == 0)
+            {
+                fprintf(stderr, "Iteration [%d-%d]: distributedAdditiveFullConnection forward time = %.8gs\n", distributedAdditiveFullConnectionCnt - 100, distributedAdditiveFullConnectionCnt, distributedAdditiveFullConnectionTime);
+                distributedAdditiveFullConnectionTime = 0.0;
+            }
+        }
+        else if (node->OperationName() == L"DistributedCrossEntropyWithSoftmax")
+        {
+            distributedCrossEntropyWithSoftmaxEndTime = std::chrono::system_clock::now();
+            distributedCrossEntropyWithSoftmaxTime += (std::chrono::duration<double>(distributedCrossEntropyWithSoftmaxEndTime - distributedCrossEntropyWithSoftmaxStartTime)).count();
+            if (++distributedCrossEntropyWithSoftmaxCnt % 100 == 0)
+            {
+                fprintf(stderr, "Iteration [%d-%d]: distributedCrossEntropyWithSoftmax forward time = %.8gs\n", distributedCrossEntropyWithSoftmaxCnt - 100, distributedCrossEntropyWithSoftmaxCnt, distributedCrossEntropyWithSoftmaxTime);
+                distributedCrossEntropyWithSoftmaxTime = 0.0;
+            }
+        }
+#endif
     }
 }
 
