@@ -428,10 +428,7 @@ public:
         m_temp1->Resize(1, m_batchSize);
         m_temp2->Resize(1, m_batchSize);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
-        {
-            DistributedGatheredLabels<ElemType>::m_gatheredLabels->Resize(1, m_batchSize);
-            DistributedGatheredLabels<ElemType>::m_minibatchSize = m_minibatchSize;
-        }
+            DistributedGatheredLabels<ElemType>::setMinibatchSize(m_minibatchSize);
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
@@ -586,10 +583,7 @@ public:
         if (m_weightNormalize)
             m_WNorm->Resize(m_outputDim, 1);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
-        {
-            DistributedGatheredLabels<ElemType>::m_gatheredLabels->Resize(1, m_batchSize);
-            DistributedGatheredLabels<ElemType>::m_minibatchSize = m_minibatchSize;
-        }
+            DistributedGatheredLabels<ElemType>::setMinibatchSize(m_minibatchSize);
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override

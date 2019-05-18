@@ -2261,8 +2261,20 @@ class DistributedGatheredLabels
 public:
     static void gatherDistributedLabels(const Matrix<ElemType>& labels)
     {
-        m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
-        m_distGradAggPtr->DistributedAllGather(labels, *m_gatheredLabels, m_minibatchSize);
+        labels.VectorMax(*m_labelsIndex, *m_labelsValue, true);
+        m_distGradAggPtr->DistributedAllGather(*m_labelsIndex, *m_gatheredLabels, m_minibatchSize);
+    }
+
+    static void setMinibatchSize(size_t minibatchSize)
+    {
+        if (m_minibatchSize != minibatchSize)
+        {
+            m_minibatchSize = minibatchSize;
+            m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
+        }
+        m_gatheredLabels->Resize(1, m_minibatchSize * Globals::GetProcessNum());
+        m_labelsIndex->Resize(1, m_minibatchSize);
+        m_labelsValue->Resize(1, m_minibatchSize);
     }
 
     static void setInitializeNode(void* nodePtr)
@@ -2279,6 +2291,8 @@ public:
     static IDistGradAggregator<ElemType>* m_distGradAggPtr;
     static void* initializeNodePtr;
     static shared_ptr<Matrix<ElemType>> m_gatheredLabels;
+    static shared_ptr<Matrix<ElemType>> m_labelsIndex;
+    static shared_ptr<Matrix<ElemType>> m_labelsValue;
     static size_t m_minibatchSize;
 };
 

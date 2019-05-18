@@ -205,10 +205,7 @@ public:
         m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
 
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
-        {
-            DistributedGatheredLabels<ElemType>::m_gatheredLabels->Resize(1, cols);
-            DistributedGatheredLabels<ElemType>::m_minibatchSize = Input(0)->Value().GetNumCols();
-        }
+            DistributedGatheredLabels<ElemType>::setMinibatchSize(Input(0)->Value().GetNumCols());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
