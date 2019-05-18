@@ -25,7 +25,7 @@ public:
 
     virtual void DistributedAllGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count) = 0;
 
-    virtual void DistributeAllReduce(const Matrix<ElemType>& distributedMatrix, MPI_Op op) = 0;
+    virtual void DistributedAllReduce(const Matrix<ElemType>& distributedMatrix, MPI_Op op) = 0;
 
     size_t NumProc()
     {

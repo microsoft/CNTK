@@ -595,7 +595,7 @@ private:
             LogicError("LogicError in SimpleDistGradAggregator::DistributedAllGather");
     }
 
-    void DistributeAllReduce(const Matrix<ElemType>& distributedMatrix, MPI_Op op)
+    void DistributedAllReduce(const Matrix<ElemType>& distributedMatrix, MPI_Op op)
     {
         int deviceId = distributedMatrix.GetDeviceId();
         MPI_Request allReduceRequest;
@@ -621,14 +621,14 @@ private:
                 m_mpi->AllReduce(distributedMatrixBuffer, count);
             }
             else
-                LogicError("LogicError in SimpleDistGradAggregator::DistributeAllReduce");
+                LogicError("LogicError in SimpleDistGradAggregator::DistributedAllReduce");
         }
         else if (m_nccl->IsSupported()) // NCCL
         {
             m_nccl->AllReduce(distributedMatrixBuffer, distributedMatrixBuffer, count, op);
         }
         else
-            LogicError("LogicError in SimpleDistGradAggregator::DistributeAllReduce");
+            LogicError("LogicError in SimpleDistGradAggregator::DistributedAllReduce");
 
         if (m_nccl->IsSupported()) // Non-GDR && GPU
         {
@@ -642,7 +642,7 @@ private:
             m_mpi->Wait(&allReduceRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait"); // Wait for the Iallreduce operations to finish
         }
         else
-            LogicError("LogicError in SimpleDistGradAggregator::DistributeAllReduce");
+            LogicError("LogicError in SimpleDistGradAggregator::DistributedAllReduce");
     }
 
 

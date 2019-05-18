@@ -218,7 +218,7 @@ public:
         {
             auto& W = InputRef(0).Value();
             Matrix<ElemType>::Multiply(W, false, *m_temp2, false, *m_temp1);
-            m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
+            m_distGradAggPtr->DistributedAllReduce(*m_temp1, MPI_SUM);
             auto X_gradient = InputRef(1).GradientFor(InputRef(1).GetMBLayout());
             X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
         }
@@ -391,7 +391,7 @@ public:
         {
             auto& W = InputRef(0).Value();
             Matrix<ElemType>::Multiply(W, false, Gradient(), false, *m_temp1);
-            m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
+            m_distGradAggPtr->DistributedAllReduce(*m_temp1, MPI_SUM);
             auto& X_gradient = InputRef(1).Gradient();
             X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
         }
@@ -556,11 +556,11 @@ public:
     {
         auto& Y = InputRef(1).Value();
         Y.VectorMax(*m_temp1, *m_temp2, true);
-        m_distGradAggPtr->DistributeAllReduce(*m_temp2, MPI_MAX);
+        m_distGradAggPtr->DistributedAllReduce(*m_temp2, MPI_MAX);
 
         Matrix<ElemType>::MinusRowVector(Y, *m_temp2, Y);
         Matrix<ElemType>::AssignExpSum(Y, *m_temp1);
-        m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
+        m_distGradAggPtr->DistributedAllReduce(*m_temp1, MPI_SUM);
         m_temp1->InplaceLog();
 
         auto& labels = InputRef(0).Value();
@@ -694,7 +694,7 @@ public:
         {
             auto& W = InputRef(1).Value();
             Matrix<ElemType>::Multiply(W, false, Gradient(), false, *m_temp1);
-            m_distGradAggPtr->DistributeAllReduce(*m_temp1, MPI_SUM);
+            m_distGradAggPtr->DistributedAllReduce(*m_temp1, MPI_SUM);
             auto& X_gradient = InputRef(2).Gradient();
             X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
         }

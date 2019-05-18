@@ -174,7 +174,7 @@ public:
         auto& labels = InputRef(0).Value();
         auto& probs = InputRef(1).Value();
         probs.VectorMax(*m_maxIndexes, *m_maxValues, true);
-        m_distGradAggPtr->DistributeAllReduce(*m_maxValues, MPI_MAX);
+        m_distGradAggPtr->DistributedAllReduce(*m_maxValues, MPI_MAX);
         Matrix<ElemType>::DistributedAssignClassificationError(labels, probs, *m_maxValues, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
     }
 
