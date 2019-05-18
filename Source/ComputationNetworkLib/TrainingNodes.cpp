@@ -345,10 +345,6 @@ template class BatchNormalizationNode<float>;
 template class BatchNormalizationNode<double>;
 template class BatchNormalizationNode<half>;
 
-template class DistributedLabelsGatherNode<float>;
-template class DistributedLabelsGatherNode<double>;
-template class DistributedLabelsGatherNode<half>;
-
 template class DistributedFullyConnectedNode<float>;
 template class DistributedFullyConnectedNode<double>;
 template class DistributedFullyConnectedNode<half>;

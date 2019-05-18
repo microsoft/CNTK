@@ -128,7 +128,6 @@ namespace CNTK
         {PrimitiveOpType::CenterLoss, L"CenterLoss" },
         {PrimitiveOpType::ChannelMultiply, L"ChannelMultiply" },
         {PrimitiveOpType::GlobalConcat, L"GlobalConcat"},
-        {PrimitiveOpType::DistributedLabelsGather, L"DistributedLabelsGather" },
         {PrimitiveOpType::DistributedFullyConnected, L"DistributedFullyConnected" },
         {PrimitiveOpType::DistributedFullyConnected_v2, L"DistributedFullyConnected_v2" },
         {PrimitiveOpType::DistributedCrossEntropyWithSoftmax, L"DistributedCrossEntropyWithSoftmax" },

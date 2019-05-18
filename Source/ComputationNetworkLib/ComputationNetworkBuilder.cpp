@@ -126,7 +126,6 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SqrtNode))                             return New<SqrtNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SquareErrorNode))                      return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(DistributedLabelsGatherNode))                 return New<DistributedLabelsGatherNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DistributedFullyConnectedNode))               return New<DistributedFullyConnectedNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DistributedFullyConnectedNode_v2))            return New<DistributedFullyConnectedNode_v2<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DistributedCrossEntropyWithSoftmaxNode))      return New<DistributedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
@@ -488,12 +487,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Squar
     return net.AddNodeToNetAndAttachInputs(New<SquareErrorNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
-
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedLabelsGather(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
-{
-    return net.AddNodeToNetAndAttachInputs(New<DistributedLabelsGatherNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
-}
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedFullyConnected(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)

@@ -200,7 +200,6 @@ public:
     ComputationNodePtr Softmax(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Sqrt(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr SquareError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
-    ComputationNodePtr DistributedLabelsGather(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr DistributedFullyConnected(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"");
     ComputationNodePtr DistributedFullyConnected_v2(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName = L"");
     ComputationNodePtr DistributedCrossEntropyWithSoftmax(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");

@@ -155,6 +155,12 @@ public:
 #endif
     }
 
+    ~DistributedClassificationErrorNode()
+    {
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            DistributedGatheredLabels<ElemType>::initializeNodePtr = NULL;
+    }
+
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
     {
         LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
@@ -174,6 +180,8 @@ public:
         auto& labels = InputRef(0).Value();
         auto& probs = InputRef(1).Value();
         probs.VectorMax(*m_maxIndexes, *m_maxValues, true);
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            DistributedGatheredLabels<ElemType>::gatherDistributedLabels(labels);
         m_distGradAggPtr->DistributedAllReduce(*m_maxValues, MPI_MAX);
         Matrix<ElemType>::DistributedAssignClassificationError(labels, probs, *m_maxValues, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
     }
@@ -182,21 +190,26 @@ public:
     {
         ValidateBinaryReduce(isFinalValidationPass);
 
-        if (Input(0)->OperationName() != L"DistributedLabelsGather")
-            LogicError("DistributedClassificationErrorNode Input(0) is %ls, but it should be DistributedLabelsGather", Input(0)->OperationName().c_str());
         m_probDim = Input(1)->GetSampleLayout().GetNumElements();
+
+        DistributedGatheredLabels<ElemType>::setInitializeNode(this);
     }
 
     virtual void UpdateFunctionMBSize() override
     {
         Base::UpdateFunctionMBSize();
 
-        // resize the temporaries to their proper size
-        size_t cols = Input(0)->Value().GetNumCols();
+        size_t cols = Input(1)->Value().GetNumCols();
         m_maxIndexes->Resize(1, cols);
         m_maxValues->Resize(1, cols);
 
         m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
+
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+        {
+            DistributedGatheredLabels<ElemType>::m_gatheredLabels->Resize(1, cols);
+            DistributedGatheredLabels<ElemType>::m_minibatchSize = Input(0)->Value().GetNumCols();
+        }
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -205,28 +218,31 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<DistributedClassificationErrorNode<ElemType>>(nodeP);
-            node->m_rank       = m_rank;
-            node->m_processNum = m_processNum;
-            node->m_probDim    = m_probDim;
+            node->m_rank           = m_rank;
+            node->m_processNum     = m_processNum;
+            node->m_probDim        = m_probDim;
+            node->m_distGradAggPtr = m_distGradAggPtr;
             node->m_maxIndexes->SetValue(*m_maxIndexes);
             node->m_maxValues->SetValue(*m_maxValues);
         }
     }
-    // request matrices needed to do node function value evaluation
+
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
     }
 
-    // release temp matrices that are only used by forward computation
-    // don't release matrices that need to be used in the gradient computation
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterForwardProp(matrixPool);
         ReleaseMatrixToPool(m_maxIndexes, matrixPool);
         ReleaseMatrixToPool(m_maxValues, matrixPool);
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
     }
 
 private:
@@ -234,8 +250,8 @@ private:
     size_t m_processNum;
     size_t m_probDim;
     IDistGradAggregator<ElemType>* m_distGradAggPtr;
-    shared_ptr<Matrix<ElemType>> m_maxIndexes; // size(1, m_batchsize)
-    shared_ptr<Matrix<ElemType>> m_maxValues;  // size(1, m_batchsize)
+    shared_ptr<Matrix<ElemType>> m_maxIndexes; // shape(1, m_batchsize)
+    shared_ptr<Matrix<ElemType>> m_maxValues;  // shape(1, m_batchsize)
 };
 
 template class DistributedClassificationErrorNode<float>;

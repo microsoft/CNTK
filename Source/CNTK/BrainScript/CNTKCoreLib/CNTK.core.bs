@@ -453,7 +453,6 @@ Times                   = CNTK2.Times
 Abs                     = CNTK2.Abs
 Ceil                    = CNTK2.Ceil
 CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
-DistributedLabelsGather            = CNTK2.DistributedLabelsGather
 DistributedFullyConnected          = CNTK2.DistributedFullyConnected
 DistributedFullyConnected_v2       = CNTK2.DistributedFullyConnected_v2
 DistributedCrossEntropyWithSoftmax = CNTK2.DistributedCrossEntropyWithSoftmax
@@ -560,12 +559,6 @@ CNTK2 = [
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
     Times(x, y, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = _AsNodes (x : y) /*plus the function args*/ ]
 
-
-    #
-    # Distributed labels gather node
-    #
-    DistributedLabelsGather(labels, previousNode, tag='') =
-        new ComputationNode [ operation = 'DistributedLabelsGather' ; inputs = _AsNodes (labels : previousNode) /*plus the function args*/ ]
 
     #
     # Distributed fully connected node

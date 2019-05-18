@@ -130,7 +130,6 @@ namespace CNTK
         if ((op == PrimitiveOpType::SumAll) ||
             (op == PrimitiveOpType::ReduceElements &&  anyOfAxesInReduction([](const Axis& axis) { return axis == Axis::AllAxes(); })) ||
             (op == PrimitiveOpType::SquaredError) ||
-            (op == PrimitiveOpType::DistributedLabelsGather) ||
             (op == PrimitiveOpType::DistributedFullyConnected) ||
             (op == PrimitiveOpType::DistributedFullyConnected_v2) ||
             (op == PrimitiveOpType::DistributedCrossEntropyWithSoftmax) ||
@@ -950,12 +949,6 @@ namespace CNTK
                             m_attributes[PrimitiveFunctionAttribute::AttributeNameKernelShape] = kernelShape;
                             // output shape is simply {1}: 1D denoting sequence length for each sequence. 
                             outputShape = NDShape({1});
-                            break;
-                        }
-                        case PrimitiveOpType::DistributedLabelsGather:
-                        {
-                            assert(m_inputs.size() == 2);
-                            outputShape = NDShape{};
                             break;
                         }
                         case PrimitiveOpType::DistributedFullyConnected:

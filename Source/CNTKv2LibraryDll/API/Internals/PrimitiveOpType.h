@@ -113,12 +113,11 @@ namespace CNTK
         CenterLoss = 200,
         ChannelMultiply = 201,
         GlobalConcat = 202,
-        DistributedLabelsGather = 203,
-        DistributedFullyConnected = 204,
-        DistributedFullyConnected_v2 = 205,
-        DistributedCrossEntropyWithSoftmax = 206,
-        DistributedClassificationError = 207,
-        DistributedAdditiveFullConnection = 208,
+        DistributedFullyConnected = 203,
+        DistributedFullyConnected_v2 = 204,
+        DistributedCrossEntropyWithSoftmax = 205,
+        DistributedClassificationError = 206,
+        DistributedAdditiveFullConnection = 207,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

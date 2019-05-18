@@ -1223,6 +1223,19 @@ template class ComputationNode<float>;
 template class ComputationNode<double>;
 template class ComputationNode<half>;
 
+
+template class DistributedGatheredLabels<float>;
+template class DistributedGatheredLabels<double>;
+template class DistributedGatheredLabels<half>;
+template <class ElemType>
+IDistGradAggregator<ElemType>* DistributedGatheredLabels<ElemType>::m_distGradAggPtr(NULL);
+template <class ElemType>
+void* DistributedGatheredLabels<ElemType>::initializeNodePtr(NULL);
+template <class ElemType>
+shared_ptr<Matrix<ElemType>> DistributedGatheredLabels<ElemType>::m_gatheredLabels;
+template <class ElemType>
+size_t DistributedGatheredLabels<ElemType>::m_minibatchSize(0);
+
 }}}
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {

@@ -331,8 +331,6 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(SquareErrorNode))
                     opType = PrimitiveOpType::SquaredError;
                 else if (node->OperationName() == OperationNameOf(DistributedFullyConnectedNode))
-                     opType = PrimitiveOpType::DistributedLabelsGather;
-                else if (node->OperationName() == OperationNameOf(DistributedLabelsGatherNode))
                     opType = PrimitiveOpType::DistributedFullyConnected;
                 else if (node->OperationName() == OperationNameOf(DistributedFullyConnectedNode_v2))
                     opType = PrimitiveOpType::DistributedFullyConnected_v2;

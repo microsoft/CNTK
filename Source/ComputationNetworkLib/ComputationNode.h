@@ -13,6 +13,7 @@
 #include "MatrixPool.h"
 #include "ComputationEnvironment.h"
 #include "Globals.h"
+#include "../SGDLib/IDistGradAggregator.h"
 
 #include <unordered_set>
 #include <map>
@@ -1728,7 +1729,7 @@ protected:
             {
                 rows = GetSampleMatrixNumRows();
                 cols = GetSampleMatrixNumCols();
-                if (OperationName() == L"DistributedLabelsGather" || OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection")
+                if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection")
                     cols *= Globals::GetProcessNum();
             }
             else
@@ -2251,6 +2252,36 @@ struct WriteFormattingOptions
 // ComputationNodeNonLooping -- abstract base class for computation nodes that do not implement eval/partial for individual frames
 // Such as CRFNode, SequenceDecoderNode, and training criteria.
 // =======================================================================
+
+
+// Global static class for distributed gathered labels matrix
+template <class ElemType>
+class DistributedGatheredLabels
+{
+public:
+    static void gatherDistributedLabels(const Matrix<ElemType>& labels)
+    {
+        m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
+        m_distGradAggPtr->DistributedAllGather(labels, *m_gatheredLabels, m_minibatchSize);
+    }
+
+    static void setInitializeNode(void* nodePtr)
+    {
+        if (NULL == initializeNodePtr)
+            initializeNodePtr = nodePtr;
+    }
+
+    static bool isInitializeNode(void* nodePtr)
+    {
+        return nodePtr == initializeNodePtr;
+    }
+
+    static IDistGradAggregator<ElemType>* m_distGradAggPtr;
+    static void* initializeNodePtr;
+    static shared_ptr<Matrix<ElemType>> m_gatheredLabels;
+    static size_t m_minibatchSize;
+};
+
 
 // This will provide default implementations for those two functions that will fail at runtime with a meaningful error.
 // TODO: Most of these are reduce nodes that output a single number, no MBLayout. Maybe abstract those out further
