@@ -493,7 +493,11 @@ public:
         RequestMatrixFromPool(m_temp1, matrixPool);
         RequestMatrixFromPool(m_temp2, matrixPool);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+        {
             RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labelsIndex, matrixPool, 1, true);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labelsValue, matrixPool, 1, true);
+        }
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -505,7 +509,11 @@ public:
         ReleaseMatrixToPool(m_temp1, matrixPool);
         ReleaseMatrixToPool(m_temp2, matrixPool);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+        {
             ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labelsIndex, matrixPool);
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labelsValue, matrixPool);
+        }
     }
 
     void Save(File& fstream) const override
@@ -676,7 +684,11 @@ public:
         if (m_weightNormalize)
             RequestMatrixFromPool(m_WNorm, matrixPool);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+        {
             RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labelsIndex, matrixPool, 1, true);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labelsValue, matrixPool, 1, true);
+        }
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -687,7 +699,11 @@ public:
         if (m_weightNormalize)
             ReleaseMatrixToPool(m_WNorm, matrixPool);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+        {
             ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labelsIndex, matrixPool);
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labelsValue, matrixPool);
+        }
     }
 
     void Save(File& fstream) const override

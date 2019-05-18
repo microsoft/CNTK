@@ -229,7 +229,11 @@ public:
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+        {
             RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labelsIndex, matrixPool, 1, true);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labelsValue, matrixPool, 1, true);
+        }
     }
 
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
@@ -238,7 +242,11 @@ public:
         ReleaseMatrixToPool(m_maxIndexes, matrixPool);
         ReleaseMatrixToPool(m_maxValues, matrixPool);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+        {
             ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labelsIndex, matrixPool);
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labelsValue, matrixPool);
+        }
     }
 
 private:
