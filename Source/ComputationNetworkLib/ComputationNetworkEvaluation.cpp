@@ -29,10 +29,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 
 #ifdef __DISTRIBUTED_PROFILE__
-    double distributedLabelsGatherTime = 0.0;
-    std::chrono::time_point<std::chrono::system_clock> distributedLabelsGatherStartTime;
-    std::chrono::time_point<std::chrono::system_clock> distributedLabelsGatherEndTime;
-    int distributedLabelsGatherCnt = 0;
     double distributedAdditiveFullConnectionTime = 0.0;
     std::chrono::time_point<std::chrono::system_clock> distributedAdditiveFullConnectionStartTime;
     std::chrono::time_point<std::chrono::system_clock> distributedAdditiveFullConnectionEndTime;
@@ -168,9 +164,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     if (node->IsOutOfDateWrtInputs())
     {
 #ifdef __DISTRIBUTED_PROFILE__
-        if (node->OperationName() == L"DistributedLabelsGather")
-            distributedLabelsGatherStartTime = std::chrono::system_clock::now();
-        else if (node->OperationName() == L"DistributedAdditiveFullConnection")
+        if (node->OperationName() == L"DistributedAdditiveFullConnection")
             distributedAdditiveFullConnectionStartTime = std::chrono::system_clock::now();
         else if (node->OperationName() == L"DistributedCrossEntropyWithSoftmax")
             distributedCrossEntropyWithSoftmaxStartTime = std::chrono::system_clock::now();
@@ -191,17 +185,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 
 
 #ifdef __DISTRIBUTED_PROFILE__
-        if (node->OperationName() == L"DistributedLabelsGather")
-        {
-            distributedLabelsGatherEndTime = std::chrono::system_clock::now();
-            distributedLabelsGatherTime += (std::chrono::duration<double>(distributedLabelsGatherEndTime - distributedLabelsGatherStartTime)).count();
-            if (++distributedLabelsGatherCnt % 100 == 0)
-            {
-                fprintf(stderr, "Iteration [%d-%d]: distributedLabelsGather forward time = %.8gs\n", distributedLabelsGatherCnt - 100, distributedLabelsGatherCnt, distributedLabelsGatherTime);
-                distributedLabelsGatherTime = 0.0;
-            }
-        }
-        else if (node->OperationName() == L"DistributedAdditiveFullConnection")
+        if (node->OperationName() == L"DistributedAdditiveFullConnection")
         {
             distributedAdditiveFullConnectionEndTime = std::chrono::system_clock::now();
             distributedAdditiveFullConnectionTime += (std::chrono::duration<double>(distributedAdditiveFullConnectionEndTime - distributedAdditiveFullConnectionStartTime)).count();
