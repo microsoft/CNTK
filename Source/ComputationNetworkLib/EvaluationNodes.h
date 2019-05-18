@@ -177,13 +177,12 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        auto& labels = InputRef(0).Value();
         auto& probs = InputRef(1).Value();
         probs.VectorMax(*m_maxIndexes, *m_maxValues, true);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
-            DistributedGatheredLabels<ElemType>::gatherDistributedLabels(labels);
+            DistributedGatheredLabels<ElemType>::gatherDistributedLabels(InputRef(0).Value());
         m_distGradAggPtr->DistributedAllReduce(*m_maxValues, MPI_MAX);
-        Matrix<ElemType>::DistributedAssignClassificationError(labels, probs, *m_maxValues, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
+        Matrix<ElemType>::DistributedAssignClassificationError(*DistributedGatheredLabels<ElemType>::m_gatheredLabels, probs, *m_maxValues, Value(), m_probDim * m_rank, m_probDim * (m_rank + 1) - 1);
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
