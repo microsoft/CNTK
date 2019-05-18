@@ -3962,7 +3962,7 @@ void GPUMatrix<ElemType>::MinusRowVector(const GPUMatrix<ElemType>& src, const G
 }
 
 template <class ElemType>
-__global__ void _assignExpSumOf512Threads(const ElemType* Y, ElemType* expSum, const CUDA_LONG row)
+__global__ void _assignExpSumOf512Threads(const ElemType* Y, ElemType* expSum, CUDA_LONG row)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     __shared__ comp_t partials[512];
@@ -4055,7 +4055,7 @@ void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& Y, const
 }
 
 template <class ElemType>
-__global__ void _distributedCrossEntropyOf512Threads(const ElemType* logP, const ElemType* labels, ElemType* value, const CUDA_LONG row, const CUDA_LONG startIndex, const CUDA_LONG endIndex, CUDA_LONG numElements)
+__global__ void _distributedCrossEntropyOf512Threads(const ElemType* logP, const ElemType* labels, ElemType* value, CUDA_LONG row, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG numElements)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     __shared__ comp_t partials[512];
@@ -4063,7 +4063,7 @@ __global__ void _distributedCrossEntropyOf512Threads(const ElemType* logP, const
     partials[threadIdx.x] = 0.0f;
     for (int i = threadIdx.x; i < numElements; i += 512)
     {
-        int label = (int)labels[i];
+        CUDA_LONG label = (CUDA_LONG)labels[i];
         if(label >= startIndex && label <= endIndex)
             partials[threadIdx.x] += (comp_t)logP[i * row + label - startIndex];
     }
@@ -4126,13 +4126,13 @@ void GPUMatrix<ElemType>::DistributedCrossEntropy(const GPUMatrix<ElemType>& log
 }
 
 template <class ElemType>
-__global__ void _distributedSoftmaxWithCrossEntropyBackprop(const ElemType* postGradient, const ElemType* softmax, const ElemType* labels, ElemType* gradient, const CUDA_LONG rows, const CUDA_LONG startIndex, CUDA_LONG numElements)
+__global__ void _distributedSoftmaxWithCrossEntropyBackprop(const ElemType* postGradient, const ElemType* softmax, const ElemType* labels, ElemType* gradient, CUDA_LONG rows, CUDA_LONG startIndex, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id < numElements)
     {
         gradient[id] = postGradient[0] * softmax[id];
-        int label = (int)labels[id / rows];
+        CUDA_LONG label = (CUDA_LONG)labels[id / rows];
         if (label == startIndex + id % rows)
             gradient[id] -= postGradient[0];
     }
