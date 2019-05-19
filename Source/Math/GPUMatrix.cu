@@ -3676,9 +3676,10 @@ void GPUMatrix<ElemType>::FeatureNormalizeL1Backprop(const GPUMatrix<ElemType>& 
     CUDA_LONG numElements = (CUDA_LONG)X_gradient.GetNumElements();
     CUDA_LONG rows = (CUDA_LONG)X_gradient.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    value.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _featureNormalizeL1Backprop<ElemType><< <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (value.Data(), gradient.Data(), magnitude.Data(), alpha.Data(), X_gradient.Data(), rows, numElements);
+    _featureNormalizeL1Backprop<ElemType><< <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (value.Data(), gradient.Data(), magnitude.Data(), alpha.Data(), X_gradient.Data(), rows, numElements);
 }
 
 template <class ElemType>
@@ -3697,9 +3698,10 @@ void GPUMatrix<ElemType>::FeatureNormalizeL2Backprop(const GPUMatrix<ElemType>& 
     CUDA_LONG numElements = (CUDA_LONG)X_gradient.GetNumElements();
     CUDA_LONG rows = (CUDA_LONG)X_gradient.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    value.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _featureNormalizeL2Backprop<ElemType><< <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (value.Data(), gradient.Data(), magnitude.Data(), alpha.Data(), X_gradient.Data(), rows, numElements);
+    _featureNormalizeL2Backprop<ElemType><< <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (value.Data(), gradient.Data(), magnitude.Data(), alpha.Data(), X_gradient.Data(), rows, numElements);
 }
 
 template <class ElemType>
@@ -3718,12 +3720,13 @@ __global__ void _labelAdd(CUDA_LONG outputDimension, const ElemType* label, Elem
 template <class ElemType>
 void GPUMatrix<ElemType>::LabelAdd(const GPUMatrix<ElemType>& label, ElemType bias, const GPUMatrix<ElemType>& value)
 {
-    CUDA_LONG minibatchSize = value.GetNumCols();
-    CUDA_LONG outputDimension = value.GetNumRows();
+    CUDA_LONG minibatchSize = (CUDA_LONG)value.GetNumCols();
+    CUDA_LONG outputDimension = (CUDA_LONG)value.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * minibatchSize / GridDim::maxThreadsPerBlock);
+    label.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(minibatchSize);
-    _labelAdd<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(outputDimension, label.Data(), bias, value.Data(), minibatchSize);
+    _labelAdd<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (outputDimension, label.Data(), bias, value.Data(), minibatchSize);
 }
 
 #pragma endregion
