@@ -589,7 +589,7 @@ public:
         }
         m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
         if (m_weightNormalize)
-            m_WNorm->Resize(m_outputDim, 1);
+            m_WNorm->Resize(1, m_outputDim);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
             DistributedGatheredLabels<ElemType>::setMinibatchSize(m_minibatchSize);
     }
@@ -618,8 +618,8 @@ public:
         auto& X = InputRef(2).Value();
         if (m_weightNormalize)
         {
-            W.VectorNorm2(*m_WNorm, false);
-            W.ColumnElementDivideBy(*m_WNorm);
+            W.VectorNorm2(*m_WNorm, true);
+            W.RowElementDivideBy(*m_WNorm);
         }
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
             DistributedGatheredLabels<ElemType>::gatherDistributedLabels(InputRef(0).Value());
