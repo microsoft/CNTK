@@ -3839,9 +3839,10 @@ void GPUMatrix<ElemType>::LabelSmoothing(const GPUMatrix<ElemType>& label, ElemT
 {
     CUDA_LONG numElements = label.GetNumElements();
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    label.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _labelSmoothing<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (label.Data(), keepRate, smoothValue, numElements);
+    _labelSmoothing<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (label.Data(), keepRate, smoothValue, numElements);
 }
 
 #pragma endregion
@@ -3872,9 +3873,10 @@ void GPUMatrix<ElemType>::Scatter(const GPUMatrix<ElemType>& src, const GPUMatri
     CUDA_LONG blockSize = miniblockSize * processNum;
     CUDA_LONG blockOffset = rank * miniblockSize;
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    src.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _scatter<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), dst.Data(), outputDim, minioutputDim, blockSize, blockOffset, numElements);
+    _scatter<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (src.Data(), dst.Data(), outputDim, minioutputDim, blockSize, blockOffset, numElements);
 }
 
 template <class ElemType>
@@ -3893,9 +3895,10 @@ void GPUMatrix<ElemType>::AddColumnVector(const GPUMatrix<ElemType>& src, const 
     CUDA_LONG numElements = (CUDA_LONG)dst.GetNumElements();
     CUDA_LONG rows = (CUDA_LONG)columnVector.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    src.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _addColumnVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), columnVector.Data(), dst.Data(), rows, numElements);
+    _addColumnVector<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (src.Data(), columnVector.Data(), dst.Data(), rows, numElements);
 }
 
 template <class ElemType>
@@ -3914,9 +3917,10 @@ void GPUMatrix<ElemType>::AddRowVector(const GPUMatrix<ElemType>& src, const GPU
     CUDA_LONG numElements = (CUDA_LONG)src.GetNumElements();
     CUDA_LONG rows = (CUDA_LONG)src.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    src.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _addRowVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), rows, numElements);
+    _addRowVector<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), rows, numElements);
 }
 
 template <class ElemType>
@@ -3935,9 +3939,10 @@ void GPUMatrix<ElemType>::MinusColumnVector(const GPUMatrix<ElemType>& src, cons
     CUDA_LONG numElements = (CUDA_LONG)dst.GetNumElements();
     CUDA_LONG rows = (CUDA_LONG)columnVector.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    src.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _minusColumnVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), columnVector.Data(), dst.Data(), rows, numElements);
+    _minusColumnVector<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (src.Data(), columnVector.Data(), dst.Data(), rows, numElements);
 }
 
 template <class ElemType>
@@ -3956,21 +3961,22 @@ void GPUMatrix<ElemType>::MinusRowVector(const GPUMatrix<ElemType>& src, const G
     CUDA_LONG numElements = (CUDA_LONG)src.GetNumElements();
     CUDA_LONG rows = (CUDA_LONG)src.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    src.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _minusRowVector<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), rows, numElements);
+    _minusRowVector<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), rows, numElements);
 }
 
 template <class ElemType>
-__global__ void _assignExpSumOf512Threads(const ElemType* Y, ElemType* expSum, CUDA_LONG row)
+__global__ void _assignExpSumOf512Threads(const ElemType* Y, ElemType* expSum, CUDA_LONG rows)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     __shared__ comp_t partials[512];
     partials[threadIdx.x] = 0.0f;
 
-    for (int i = threadIdx.x; i < row; i += 512)
+    for (int i = threadIdx.x; i < rows; i += 512)
     {
-        partials[threadIdx.x] += exp_((comp_t)Y[IDX2C(i, blockIdx.x, row)]);
+        partials[threadIdx.x] += exp_((comp_t)Y[IDX2C(i, blockIdx.x, rows)]);
     }
     __syncthreads();
 
@@ -4025,11 +4031,11 @@ __global__ void _assignExpSumOf512Threads(const ElemType* Y, ElemType* expSum, C
 template <class ElemType>
 void GPUMatrix<ElemType>::AssignExpSum(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& expSum)
 {
-    CUDA_LONG row = (CUDA_LONG)Y.GetNumRows();
-    CUDA_LONG col = (CUDA_LONG)Y.GetNumCols();
+    CUDA_LONG rows = (CUDA_LONG)Y.GetNumRows();
+    CUDA_LONG cols = (CUDA_LONG)Y.GetNumCols();
 
     SyncGuard syncGuard;
-    _assignExpSumOf512Threads << <col, 512, 0, t_stream >> > (Y.Data(), expSum.Data(), row);
+    _assignExpSumOf512Threads << <cols, 512, 0, t_stream >> > (Y.Data(), expSum.Data(), rows);
 }
 
 template <class ElemType>
@@ -4049,9 +4055,10 @@ void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& Y, const
     CUDA_LONG numElements = (CUDA_LONG)Y.GetNumElements();
     CUDA_LONG rows = (CUDA_LONG)Y.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    Y.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _distributedSoftmax<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (Y.Data(), logSum.Data(), softmax.Data(), logSoftmax.Data(), rows, numElements);
+    _distributedSoftmax<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (Y.Data(), logSum.Data(), softmax.Data(), logSoftmax.Data(), rows, numElements);
 }
 
 template <class ElemType>
@@ -4143,9 +4150,10 @@ void GPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const GPUMa
     CUDA_LONG numElements = (CUDA_LONG)softmax.GetNumElements();
     CUDA_LONG rows = (CUDA_LONG)softmax.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    postGradient.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _distributedSoftmaxWithCrossEntropyBackprop<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (postGradient.Data(), softmax.Data(), labels.Data(), gradient.Data(), rows, (CUDA_LONG)startIndex, numElements);
+    _distributedSoftmaxWithCrossEntropyBackprop<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (postGradient.Data(), softmax.Data(), labels.Data(), gradient.Data(), rows, (CUDA_LONG)startIndex, numElements);
 }
 
 template <class ElemType>
@@ -4214,8 +4222,8 @@ void GPUMatrix<ElemType>::DistributedAssignClassificationError(const GPUMatrix<E
     CUDA_LONG cols = probs.GetNumCols();
     CUDA_LONG rows = probs.GetNumRows();
 
+    labels.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(cols);
     _distributedAssignClassificationErrorOf512Threads<ElemType> << <1, 512, 0, t_stream >> > (labels.Data(), probs.Data(), maxProb.Data(), value.Data(), (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, rows, cols);
 }
 
@@ -4237,9 +4245,10 @@ void GPUMatrix<ElemType>::DistributedLabelAdd(const GPUMatrix<ElemType>& labels,
     CUDA_LONG cols = value.GetNumCols();
     CUDA_LONG rows = value.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * cols / GridDim::maxThreadsPerBlock);
+    labels.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(cols);
-    _distributedLabelAdd<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (labels.Data(), bias, value.Data(), rows, (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, cols);
+    _distributedLabelAdd<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (labels.Data(), bias, value.Data(), rows, (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, cols);
 }
 
 #pragma endregion
