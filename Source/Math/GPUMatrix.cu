@@ -4065,7 +4065,7 @@ void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& Y, const
 }
 
 template <class ElemType>
-__global__ void _distributedCrossEntropyOf512Threads(const ElemType* logP, const ElemType* labels, ElemType* value, CUDA_LONG row, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG numElements)
+__global__ void _distributedCrossEntropyOf512Threads(const ElemType* logP, const ElemType* labels, ElemType* value, CUDA_LONG rows, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG numElements)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     __shared__ comp_t partials[512];
@@ -4075,7 +4075,7 @@ __global__ void _distributedCrossEntropyOf512Threads(const ElemType* logP, const
     {
         CUDA_LONG label = (CUDA_LONG)labels[i];
         if(label >= startIndex && label <= endIndex)
-            partials[threadIdx.x] += (comp_t)logP[i * row + label - startIndex];
+            partials[threadIdx.x] += (comp_t)logP[i * rows + label - startIndex];
     }
 
     if (threadIdx.x < 256)

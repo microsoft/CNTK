@@ -614,8 +614,8 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        auto& W      = InputRef(1).Value();
-        auto& X      = InputRef(2).Value();
+        auto& W = InputRef(1).Value();
+        auto& X = InputRef(2).Value();
         if (m_weightNormalize)
         {
             W.VectorNorm2(*m_WNorm, false);
