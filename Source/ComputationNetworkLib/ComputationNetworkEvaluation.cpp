@@ -191,7 +191,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
             distributedAdditiveFullConnectionTime += (std::chrono::duration<double>(distributedAdditiveFullConnectionEndTime - distributedAdditiveFullConnectionStartTime)).count();
             if (++distributedAdditiveFullConnectionCnt % 100 == 0)
             {
-                fprintf(stderr, "Iteration [%d-%d]: distributedAdditiveFullConnection forward time = %.8gs\n", distributedAdditiveFullConnectionCnt - 100, distributedAdditiveFullConnectionCnt, distributedAdditiveFullConnectionTime);
+                fprintf(stderr, "Iteration [%d-%d]: distributedAdditiveFullConnection forward time = %.8gs\n", distributedAdditiveFullConnectionCnt - 99, distributedAdditiveFullConnectionCnt, distributedAdditiveFullConnectionTime);
                 distributedAdditiveFullConnectionTime = 0.0;
             }
         }
@@ -201,7 +201,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
             distributedCrossEntropyWithSoftmaxTime += (std::chrono::duration<double>(distributedCrossEntropyWithSoftmaxEndTime - distributedCrossEntropyWithSoftmaxStartTime)).count();
             if (++distributedCrossEntropyWithSoftmaxCnt % 100 == 0)
             {
-                fprintf(stderr, "Iteration [%d-%d]: distributedCrossEntropyWithSoftmax forward time = %.8gs\n", distributedCrossEntropyWithSoftmaxCnt - 100, distributedCrossEntropyWithSoftmaxCnt, distributedCrossEntropyWithSoftmaxTime);
+                fprintf(stderr, "Iteration [%d-%d]: distributedCrossEntropyWithSoftmax forward time = %.8gs\n", distributedCrossEntropyWithSoftmaxCnt - 99, distributedCrossEntropyWithSoftmaxCnt, distributedCrossEntropyWithSoftmaxTime);
                 distributedCrossEntropyWithSoftmaxTime = 0.0;
             }
         }
