@@ -559,7 +559,7 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-    DistributedAdditiveFullConnectionNode(DEVICEID_TYPE deviceId, const wstring& name, bool weightNormalize = true, double bias = 0, double scale = 0)
+    DistributedAdditiveFullConnectionNode(DEVICEID_TYPE deviceId, const wstring& name, bool weightNormalize = true, double bias = 0.0, double scale = 1.0)
         : Base(deviceId, name), m_weightNormalize(weightNormalize), m_bias(bias), m_scale(scale), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
     {
         if (1 == m_processNum)

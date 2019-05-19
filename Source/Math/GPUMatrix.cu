@@ -4121,7 +4121,6 @@ void GPUMatrix<ElemType>::DistributedCrossEntropy(const GPUMatrix<ElemType>& log
     CUDA_LONG rows = (CUDA_LONG)logP.GetNumRows();
 
     SyncGuard syncGuard;
-    GridDim grid(numElements);
     _distributedCrossEntropyOf512Threads << <1, 512, 0, t_stream >> > (logP.Data(), labels.Data(), value.Data(), rows, (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, numElements);
 }
 
