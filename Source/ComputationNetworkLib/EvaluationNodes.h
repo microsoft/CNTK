@@ -231,8 +231,7 @@ public:
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
         {
             RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
-            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labelsIndex, matrixPool, 1, true);
-            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labelsValue, matrixPool, 1, true);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool, 1, true);
         }
     }
 
@@ -244,8 +243,7 @@ public:
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
         {
             ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
-            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labelsIndex, matrixPool);
-            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labelsValue, matrixPool);
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool);
         }
     }
 

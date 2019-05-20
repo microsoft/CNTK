@@ -2176,6 +2176,11 @@ void GPUMatrix<ElemType>::LabelSmoothing(const GPUMatrix<ElemType>& label, ElemT
 #pragma region DistributedFC
 
 template <class ElemType>
+void GPUMatrix<ElemType>::GetDenseLabelsFromOneHot(const GPUMatrix<ElemType>& oneHotLabels, const GPUMatrix<ElemType>& labels)
+{
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::Scatter(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
 {
 }

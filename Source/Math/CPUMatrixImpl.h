@@ -5457,7 +5457,7 @@ void CPUMatrix<ElemType>::LabelSmoothing(const CPUMatrix<ElemType>& label, ElemT
     // handle remaining stuffs
     for (long i = numElements & ~3; i < numElements; i++)
     {
-        if (labelPtr[i] == (ElemType)0)
+        if (labelPtr[i] == (ElemType)0.5)
             labelPtr[i] = smoothValue;
         else
             labelPtr[i] = labelPtr[i] * keepRate + smoothValue;
@@ -5467,6 +5467,36 @@ void CPUMatrix<ElemType>::LabelSmoothing(const CPUMatrix<ElemType>& label, ElemT
 #pragma endregion
 
 #pragma region DistributedFC
+
+template <class ElemType>
+void CPUMatrix<ElemType>::GetDenseLabelsFromOneHot(const CPUMatrix<ElemType>& oneHotLabels, const CPUMatrix<ElemType>& labels)
+{
+    long rows = (long)oneHotLabels.GetNumRows();
+    long cols = (long)oneHotLabels.GetNumCols();
+
+#pragma omp parallel for
+    for (long j = 0; j < cols; ++j)
+    {
+        // four-way unrolling
+        for (long i = 0; i < (rows & ~3); i += 4)
+        {
+            if (oneHotLabels(i, j) > (ElemType)0)
+                labels(0, j) = i;
+            if (oneHotLabels(i + 1, j) > (ElemType)0)
+                labels(0, j) = i + 1;
+            if (oneHotLabels(i + 2, j) > (ElemType)0)
+                labels(0, j) = i + 2;
+            if (oneHotLabels(i + 3, j) > (ElemType)0)
+                labels(0, j) = i + 3;
+        }
+        // handle remaining stuffs
+        for (long i = rows & ~3; i < rows; i++)
+        {
+            if (oneHotLabels(i, j) > (ElemType)0)
+                labels(0, j) = i;
+        }
+    }
+}
 
 template <class ElemType>
 void CPUMatrix<ElemType>::Scatter(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)

@@ -5207,6 +5207,17 @@ void Matrix<ElemType>::BatchNormalizationBackward(const Matrix<ElemType>& in, Ma
 #pragma region DistributedFC
 
 template <class ElemType>
+/*static*/ void Matrix<ElemType>::GetDenseLabelsFromOneHot(const Matrix<ElemType>& oneHotLabels, const Matrix<ElemType>& labels)
+{
+    DISPATCH_MATRIX_ON_FLAG(&labels,
+        &labels,
+        CPUMatrix<ElemType>::GetDenseLabelsFromOneHot(*(oneHotLabels.m_CPUMatrix), *(labels.m_CPUMatrix)),
+        GPUMatrix<ElemType>::GetDenseLabelsFromOneHot(*(oneHotLabels.m_GPUMatrix), *(labels.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 /*static*/ void Matrix<ElemType>::Scatter(const Matrix<ElemType>& src, const Matrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
 {
     DISPATCH_MATRIX_ON_FLAG(&src,

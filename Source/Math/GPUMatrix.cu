@@ -3853,6 +3853,30 @@ void GPUMatrix<ElemType>::LabelSmoothing(const GPUMatrix<ElemType>& label, ElemT
 #pragma region DistributedFC
 
 template <class ElemType>
+__global__ void _getDenseLabelsFromOneHot(ElemType* oneHotLabels, ElemType* labels, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements)
+    {
+        if (oneHotLabels[id] > (ElemType)0.5)
+            labels[id / rows] = id % rows;
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::GetDenseLabelsFromOneHot(const GPUMatrix<ElemType>& oneHotLabels, const GPUMatrix<ElemType>& labels)
+{
+    CUDA_LONG numElements = (CUDA_LONG)oneHotLabels.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)oneHotLabels.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    oneHotLabels.PrepareDevice();
+    SyncGuard syncGuard;
+
+    _getDenseLabelsFromOneHot<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (oneHotLabels.Data(), labels.Data(), rows, numElements);
+}
+
+template <class ElemType>
 __global__ void _scatter(ElemType* src, ElemType* dst, CUDA_LONG outputDim, CUDA_LONG minioutputDim, CUDA_LONG blockSize, CUDA_LONG blockOffset, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();

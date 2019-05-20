@@ -1234,9 +1234,7 @@ void* DistributedGatheredLabels<ElemType>::initializeNodePtr(NULL);
 template <class ElemType>
 shared_ptr<Matrix<ElemType>> DistributedGatheredLabels<ElemType>::m_gatheredLabels;
 template <class ElemType>
-shared_ptr<Matrix<ElemType>> DistributedGatheredLabels<ElemType>::m_labelsIndex;
-template <class ElemType>
-shared_ptr<Matrix<ElemType>> DistributedGatheredLabels<ElemType>::m_labelsValue;
+shared_ptr<Matrix<ElemType>> DistributedGatheredLabels<ElemType>::m_labels;
 template <class ElemType>
 size_t DistributedGatheredLabels<ElemType>::m_minibatchSize(0);
 

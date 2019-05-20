@@ -603,6 +603,8 @@ public:
 
 #pragma region DistributedFC
 
+    static void GetDenseLabelsFromOneHot(const GPUMatrix<ElemType>& oneHotLabels, const GPUMatrix<ElemType>& labels);
+
     static void Scatter(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
 
     static void AddColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst);

@@ -646,6 +646,8 @@ public:
 
 #pragma region DistributedFC
 
+    static void GetDenseLabelsFromOneHot(const Matrix<ElemType>& oneHotLabels, const Matrix<ElemType>& labels);
+
     static void Scatter(const Matrix<ElemType>& src, const Matrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
 
     static void AddColumnVector(const Matrix<ElemType>& src, const Matrix<ElemType>& columnVector, const Matrix<ElemType>& dst);
