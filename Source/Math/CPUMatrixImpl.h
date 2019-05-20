@@ -5471,30 +5471,29 @@ void CPUMatrix<ElemType>::LabelSmoothing(const CPUMatrix<ElemType>& label, ElemT
 template <class ElemType>
 void CPUMatrix<ElemType>::GetDenseLabelsFromOneHot(const CPUMatrix<ElemType>& oneHotLabels, const CPUMatrix<ElemType>& labels)
 {
+    long num = (long)oneHotLabels.GetNumElements();
     long rows = (long)oneHotLabels.GetNumRows();
-    long cols = (long)oneHotLabels.GetNumCols();
+    ElemType* oneHotLabelsPtr = oneHotLabels.Data();
+    ElemType* labelsPtr = labels.Data();
 
 #pragma omp parallel for
-    for (long j = 0; j < cols; ++j)
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
     {
-        // four-way unrolling
-        for (long i = 0; i < (rows & ~3); i += 4)
-        {
-            if (oneHotLabels(i, j) > (ElemType)0)
-                labels(0, j) = i;
-            if (oneHotLabels(i + 1, j) > (ElemType)0)
-                labels(0, j) = i + 1;
-            if (oneHotLabels(i + 2, j) > (ElemType)0)
-                labels(0, j) = i + 2;
-            if (oneHotLabels(i + 3, j) > (ElemType)0)
-                labels(0, j) = i + 3;
-        }
-        // handle remaining stuffs
-        for (long i = rows & ~3; i < rows; i++)
-        {
-            if (oneHotLabels(i, j) > (ElemType)0)
-                labels(0, j) = i;
-        }
+        if (oneHotLabelsPtr[i] > (ElemType)0.5)
+            labels[i / rows] = i % rows;
+        if (oneHotLabelsPtr[i + 1] > (ElemType)0.5)
+            labels[(i + 1) / rows] = (i + 1) % rows;
+        if (oneHotLabelsPtr[i + 2] > (ElemType)0.5)
+            labels[(i + 2) / rows] = (i + 2) % rows;
+        if (oneHotLabelsPtr[i + 3] > (ElemType)0.5)
+            labels[(i + 3) / rows] = (i + 3) % rows;
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        if (oneHotLabelsPtr[i] > (ElemType)0.5)
+            labels[i / rows] = i % rows;
     }
 }
 
