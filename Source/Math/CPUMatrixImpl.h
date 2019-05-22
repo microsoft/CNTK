@@ -5481,19 +5481,19 @@ void CPUMatrix<ElemType>::GetDenseLabelsFromOneHot(const CPUMatrix<ElemType>& on
     for (long i = 0; i < (num & ~3); i += 4)
     {
         if (oneHotLabelsPtr[i] > (ElemType)0.5)
-            labelsPtr[i / rows] = (ElemType)(i % rows);
+            labelsPtr[i / rows] = ElemType(1.0) * (i % rows);
         if (oneHotLabelsPtr[i + 1] > (ElemType)0.5)
-            labelsPtr[(i + 1) / rows] = (ElemType)((i + 1) % rows);
+            labelsPtr[(i + 1) / rows] = ElemType(1.0) * ((i + 1) % rows);
         if (oneHotLabelsPtr[i + 2] > (ElemType)0.5)
-            labelsPtr[(i + 2) / rows] = (ElemType)((i + 2) % rows);
+            labelsPtr[(i + 2) / rows] = ElemType(1.0) * ((i + 2) % rows);
         if (oneHotLabelsPtr[i + 3] > (ElemType)0.5)
-            labelsPtr[(i + 3) / rows] = (ElemType)((i + 3) % rows);
+            labelsPtr[(i + 3) / rows] = ElemType(1.0) * ((i + 3) % rows);
     }
     // handle remaining stuffs
     for (long i = num & ~3; i < num; i++)
     {
         if (oneHotLabelsPtr[i] > (ElemType)0.5)
-            labelsPtr[i / rows] = (ElemType)(i % rows);
+            labelsPtr[i / rows] = ElemType(1.0) * (i % rows);
     }
 }
 
