@@ -3712,8 +3712,9 @@ __global__ void _labelAdd(CUDA_LONG outputDimension, const ElemType* label, Elem
     {
         CUDA_LONG labelValue = static_cast<CUDA_LONG>(label[id]);
         CUDA_LONG index = id * outputDimension + labelValue;
-        if (value[index] > -bias)
-            value[index] += bias;
+        if (value[index] <= -bias)
+            return;
+        value[index] += bias;
     }
 }
 
