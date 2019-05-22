@@ -3859,7 +3859,7 @@ __global__ void _getDenseLabelsFromOneHot(ElemType* oneHotLabels, ElemType* labe
     if (id < numElements)
     {
         if (oneHotLabels[id] > (ElemType)0.5)
-            labels[id / rows] = id % rows;
+            labels[id / rows] = (ElemType)(id % rows);
     }
 }
 
