@@ -4264,20 +4264,20 @@ public:
     GlobalConcatNode(DEVICEID_TYPE deviceId, const wstring& name, size_t blockIndex = 0, size_t growthRate = 0, size_t segmentIndex = 0, size_t segmentNum = 0)
         : Base(deviceId, name), m_blockIndex(blockIndex), m_growthRate(growthRate), m_segmentIndex(segmentIndex), m_segmentNum(segmentNum)
     {
-        if (m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) == m_valueGlobalMemoryBlockMap<ElemType>.end())
+        if (0 == m_segmentIndex)
+        {
             m_valueGlobalMemoryBlockMap<ElemType>[m_blockIndex] = make_shared<GlobalMemoryBlock<ElemType>>();
-        if (m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) == m_gradientGlobalMemoryBlockMap<ElemType>.end())
             m_gradientGlobalMemoryBlockMap<ElemType>[m_blockIndex] = make_shared<GlobalMemoryBlock<ElemType>>();
-        m_valueGlobalMemoryBlock = m_valueGlobalMemoryBlockMap<ElemType>[m_blockIndex];
-        m_gradientGlobalMemoryBlock = m_gradientGlobalMemoryBlockMap<ElemType>[m_blockIndex];
+        }
     }
 
     ~GlobalConcatNode()
     {
-        if (m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) != m_valueGlobalMemoryBlockMap<ElemType>.end())
+        if (0 == m_segmentIndex)
+        {
             m_valueGlobalMemoryBlockMap<ElemType>.erase(m_valueGlobalMemoryBlockMap<ElemType>.find(m_blockIndex));
-        if (m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex) != m_gradientGlobalMemoryBlockMap<ElemType>.end())
             m_gradientGlobalMemoryBlockMap<ElemType>.erase(m_gradientGlobalMemoryBlockMap<ElemType>.find(m_blockIndex));
+        }
     }
 
     virtual void UpdateFunctionMBSize() override
@@ -4286,13 +4286,16 @@ public:
         {
             size_t minibatchSize = InputRef(0).Value().GetNumCols();
             m_valueGlobalMemoryBlock->resetMinibatchSize(minibatchSize);
-            if (Environment().IsTraining())
-                m_gradientGlobalMemoryBlock->resetMinibatchSize(minibatchSize, true);
         }
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
+        if (m_segmentNum - 1 == m_segmentIndex)
+        {
+            size_t minibatchSize = InputRef(0).Gradient().GetNumCols();
+            m_gradientGlobalMemoryBlock->resetMinibatchSize(minibatchSize, true);
+        }
         FrameRange fr(InputRef(0).GetMBLayout());
         auto X_gradient = InputRef(0).GradientFor(fr);
         m_gradientGlobalMemoryBlock->addSegmentMatrix(Gradient(), Gradient().GetNumRows());
@@ -4323,6 +4326,9 @@ public:
 
         if (m_dims.size() == 0)
         {
+            m_valueGlobalMemoryBlock = m_valueGlobalMemoryBlockMap<ElemType>[m_blockIndex];
+            m_gradientGlobalMemoryBlock = m_gradientGlobalMemoryBlockMap<ElemType>[m_blockIndex];
+
             m_dims = Input(0)->GetSampleLayout().GetDims();
             if (m_dims.size() != 3)
                 LogicError("GlobalConcatNode: input dims not equals to 3\n");
@@ -4372,10 +4378,14 @@ public:
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         if (0 == m_segmentIndex)
-        {
             RequestMatrixFromPool(m_valueGlobalMemoryBlock->m_globalMemoryMatrix, matrixPool, m_valueGlobalMemoryBlock->m_memoryLength, true);
+    }
+
+    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+        if (m_segmentNum - 1 == m_segmentIndex)
             RequestMatrixFromPool(m_gradientGlobalMemoryBlock->m_globalMemoryMatrix, matrixPool, m_gradientGlobalMemoryBlock->m_memoryLength, true);
-        }
     }
 
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
