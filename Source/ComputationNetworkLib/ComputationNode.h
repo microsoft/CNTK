@@ -1855,7 +1855,11 @@ public:
     {
         size_t matrixSize = m_sampleLayout.GetNumElements();
         if (IsValueSharable() && !m_isValueSparse)
+        {
+            if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection")
+                matrixSize *= Globals::GetProcessNum();
             RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
+        }
         else
             CreateMatrixIfNull(m_value);
 
