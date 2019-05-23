@@ -1254,6 +1254,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
                                                                                 useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
 
+
+#ifdef __PROFILE__
+        if (m_lrapiInfo.iter != 0)
+        {
+            endTime = std::chrono::system_clock::now();
+            prepareTime1 += (std::chrono::duration<double>(endTime - startTime)).count();
+        }
+#endif
+
+
         if (maxNumSamplesExceeded) // Dropping data.
             wasDataRead = false;
 
@@ -1276,7 +1286,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (m_lrapiInfo.iter != 0)
         {
             endTime = std::chrono::system_clock::now();
-            prepareTime1 += (std::chrono::duration<double>(endTime - startTime)).count();
+            prepareTime2 += (std::chrono::duration<double>(endTime - startTime)).count();
         }
 #endif
 
@@ -1301,15 +1311,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         if (actualMBSize > 0)
         {
-#ifdef __PROFILE__
-            if (m_lrapiInfo.iter != 0)
-            {
-                endTime = std::chrono::system_clock::now();
-                prepareTime2 += (std::chrono::duration<double>(endTime - startTime)).count();
-            }
-#endif
-
-
             assert(wasDataRead);
 #ifndef EVALDLL
             if (m_doGradientCheck && GradientCheck(net, criterionNodes, learnableNodes, 0) == false)
