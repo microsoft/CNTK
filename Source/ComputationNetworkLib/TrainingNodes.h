@@ -423,10 +423,10 @@ public:
             m_minibatchSize = minibatchSize;
             m_batchSize = m_minibatchSize * m_processNum;
         }
-        m_logSoftmaxOfRight->Resize(InputRef(1).Value());
-        m_softmaxOfRight->Resize(*m_logSoftmaxOfRight);
         m_temp1->Resize(1, m_batchSize);
         m_temp2->Resize(1, m_batchSize);
+        m_logSoftmaxOfRight->Resize(InputRef(1).Value());
+        m_softmaxOfRight->Resize(*m_logSoftmaxOfRight);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
             DistributedGatheredLabels<ElemType>::setMinibatchSize(m_minibatchSize);
     }
@@ -484,34 +484,36 @@ public:
         }
     }
 
-    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
-        RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
-        RequestMatrixFromPool(m_temp1, matrixPool);
-        RequestMatrixFromPool(m_temp2, matrixPool);
+        RequestMatrixFromPool(m_temp1, matrixPool, m_processNum, true);
+        RequestMatrixFromPool(m_temp2, matrixPool, m_processNum, true);
+        RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool, m_probDim * m_processNum, true);
+        RequestMatrixFromPool(m_softmaxOfRight, matrixPool, m_probDim * m_processNum, true);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
         {
-            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool, m_processNum, true);
             RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool, 1, true);
         }
     }
 
-    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_temp1, matrixPool);
+        ReleaseMatrixToPool(m_temp2, matrixPool);
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool);
+    }
+
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
         ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
-        ReleaseMatrixToPool(m_temp1, matrixPool);
-        ReleaseMatrixToPool(m_temp2, matrixPool);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
-        {
             ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
-            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool);
-        }
     }
 
     void Save(File& fstream) const override
@@ -674,32 +676,34 @@ public:
         }
     }
 
-    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_temp1, matrixPool);
         if (m_weightNormalize)
             RequestMatrixFromPool(m_WNorm, matrixPool);
+        RequestMatrixFromPool(m_temp1, matrixPool, m_inputDim * m_processNum, true);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
         {
-            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool, m_processNum, true);
             RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool, 1, true);
         }
     }
 
-    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        if (m_weightNormalize)
+            ReleaseMatrixToPool(m_WNorm, matrixPool);
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool);
+    }
+
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_temp1, matrixPool);
-        if (m_weightNormalize)
-            ReleaseMatrixToPool(m_WNorm, matrixPool);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
-        {
             ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
-            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool);
-        }
     }
 
     void Save(File& fstream) const override

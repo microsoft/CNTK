@@ -230,7 +230,7 @@ public:
         RequestMatrixFromPool(m_maxValues, matrixPool);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
         {
-            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool, m_processNum, true);
             RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool, 1, true);
         }
     }
