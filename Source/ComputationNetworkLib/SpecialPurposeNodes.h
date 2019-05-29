@@ -1655,8 +1655,8 @@ public:
         //m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 0);
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
-        Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, *m_tmpMatrix);
-        Matrix<ElemType>::VectorSum(*m_tmpMatrix,  inputGradientValues, false);
+        //Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, *m_tmpMatrix);
+        Matrix<ElemType>::VectorSum(RNNTDerivative, inputGradientValues, false);
         //inputGradientValues.Print("gradient");
         /*printf("back to F\n");
         if (gradientValues.GetDeviceId() != CPUDEVICE)
@@ -1678,8 +1678,8 @@ public:
         //m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 0);
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
-        Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, *m_tmpMatrix);
-        inputGradientValues.AssignProductOf(inputValue, false, *m_tmpMatrix, true);
+        //Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, *m_tmpMatrix);
+        inputGradientValues.AssignProductOf(inputValue, false, RNNTDerivative, true);
         //inputGradientValues.Print("gradient");
         /*printf("back to F\n");
         if (gradientValues.GetDeviceId() != CPUDEVICE)
@@ -1701,8 +1701,8 @@ public:
         //m_tmpMatrix->AssignUserOp2(RNNTDerivative, InputRef(2).Value().GetNumCols(), InputRef(1).Value().GetNumCols(), InputRef(0).GetMBLayout()->GetNumParallelSequences(), 0);
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
-        Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, *m_tmpMatrix);
-        inputGradientValues.AssignProductOf(inputValue, false, *m_tmpMatrix, false);
+        //Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, *m_tmpMatrix);
+        inputGradientValues.AssignProductOf(inputValue, false, RNNTDerivative, false);
         //inputGradientValues.Print("gradient");
         /*printf("back to F\n");
         if (gradientValues.GetDeviceId() != CPUDEVICE)

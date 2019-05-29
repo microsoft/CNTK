@@ -4702,9 +4702,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         // Max number of phones in utterances in this minibatch
         //size_t maxPhoneNum = phoneSeq.GetNumRows();
 
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
 
         
 
@@ -4744,7 +4741,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 
         int blocksPerGrid = (int) ceil(1.0 * uttNum / GridDim::maxThreadsPerBlock);
         //_AssignSequenceError<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(hsmoothingWeight, Data(), label.Data(), dnnoutput.Data(), gamma.Data(), alpha, N);
-        cudaEventRecord(start);
+
         for (size_t t = 0; t < maxFrameNum; t++)
         {
             for (size_t u = 0; u < maxPhoneNum; u++)
@@ -4760,12 +4757,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                                                                   gpuFrameNum, gpuPhoneNum, gpuBeginFrame, gpuFrameToChanInd, gpuUttBeginForMergedinput, numParallelSequences, t, u,
                                                                                                   maxPhoneNum, totalPhoneNum, blankTokenId, uttNum);
         }
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-        float milliseconds = 0;
-        cudaEventElapsedTime(&milliseconds, start, stop);
 
-        printf("time for fb:%f\n", milliseconds);
             //beta.Print("beta");
             //alpha.Print("alpha");
             ElemType zerVar = 0.0;
@@ -4774,7 +4766,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 
         this->SetValue(0.0);
 
-        cudaEventRecord(start);
         // x dimension is for each phone
         // y dimention is for each time
         // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances
@@ -4797,11 +4788,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
             _assignRNNTScoreS3<<<block_tail, thread_tail, 0, t_stream>>>(Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttFrameNum[s], uttPhoneNum[s], uttFrameBeginIdx[s], uttFrameToChanInd[s],
                                                                          uttBeginForOutputditribution[s], numParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId, s);
         }
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-        cudaEventElapsedTime(&milliseconds, start, stop);
 
-        printf("time for error cal:%f\n", milliseconds);
         CUDA_CALL(cudaFree(gpuFrameNum));
         CUDA_CALL(cudaFree(gpuPhoneNum));
         CUDA_CALL(cudaFree(gpuBeginFrame));

@@ -555,6 +555,7 @@ public:
         
         mergedinput.InplaceExp();
         m_derivative.AssignElementProductOf(m_derivative, mergedinput);
+        //mergedinput.ReleaseMemory();
         ElemType finalscore = 0;
         //m_derivative.Print("RNNT");
         finalscore =  totalScore.Get00Element();
