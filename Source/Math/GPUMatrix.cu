@@ -4764,7 +4764,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         totalScore.SetColumn(&zerVar, 0);
         _assignRNNTTotalScore<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha.Data(), beta.Data(), totalScore.Data(), uttNum, gpuFrameNum, gpuFrameToChanInd, gpuBeginFrame, numParallelSequences, maxPhoneNum);
 
-        this->SetValue(0.0);
+        //this->SetValue(0.0);
 
         // x dimension is for each phone
         // y dimention is for each time
@@ -4779,15 +4779,15 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         dim3 block_tail2((totalPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
         for (int s = 0; s < numSequences; s++)
         {
-            _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, uttFrameNum[s], uttPhoneNum[s], uttFrameBeginIdx[s], uttFrameToChanInd[s],
+            _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), phoneSeq.Data(), uttFrameNum[s], uttPhoneNum[s], uttFrameBeginIdx[s], uttFrameToChanInd[s],
                                                                           uttBeginForOutputditribution[s], numParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId, s);
         }
 
-        for (int s = 0; s < numSequences; s++)
+        /*for (int s = 0; s < numSequences; s++)
         {
             _assignRNNTScoreS3<<<block_tail, thread_tail, 0, t_stream>>>(Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttFrameNum[s], uttPhoneNum[s], uttFrameBeginIdx[s], uttFrameToChanInd[s],
                                                                          uttBeginForOutputditribution[s], numParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId, s);
-        }
+        }*/
 
         CUDA_CALL(cudaFree(gpuFrameNum));
         CUDA_CALL(cudaFree(gpuPhoneNum));

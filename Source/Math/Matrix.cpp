@@ -6253,12 +6253,12 @@ alpha._transferToDevice(CPUDEVICE);
     
     alpha.Resize(phoneSeq.GetNumRows(), numParallelSequences*maxFrameNum);
     beta.Resize(phoneSeq.GetNumRows(), numParallelSequences*maxFrameNum);
-    Resize(prob.GetNumRows(), prob.GetNumCols());
+    //Resize(prob.GetNumRows(), prob.GetNumCols());
 
     alpha.SetValue(LZERO);
     beta.SetValue(LZERO);
-    SetValue(LZERO);
-    SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
+    //SetValue(LZERO);
+    //SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
     DISPATCH_MATRIX_ON_FLAG(&prob,
         this,
         this->m_CPUMatrix->AssignRNNTScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, uttFrameToChanInd, uttFrameBeginIdx, 

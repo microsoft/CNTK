@@ -1603,7 +1603,7 @@ public:
         // Left node must be a scalar
         if (inputIndex == 0) //left derivative
         {
-            BackpropToLeft(*m_derivative, InputRef(inputIndex).Gradient(), Gradient());
+            BackpropToLeft(*m_outputDensity, InputRef(inputIndex).Gradient(), Gradient());
         }
         else if (inputIndex == 1 || inputIndex == 2) //backprop to transcription f
         {
@@ -1611,16 +1611,16 @@ public:
         }
         else if (inputIndex == 3)
         {
-            BackpropToX(InputRef(inputIndex).Gradient(), Gradient(), *m_derivative, InputRef(4).Value());
+            BackpropToX(InputRef(inputIndex).Gradient(), Gradient(), *m_outputDensity, InputRef(4).Value());
 
             }
         else if (inputIndex == 5)
         {
-            BackpropToB(InputRef(inputIndex).Gradient(), Gradient(), *m_derivative);
+            BackpropToB(InputRef(inputIndex).Gradient(), Gradient(), *m_outputDensity);
         }
         else if (inputIndex == 4)
         {
-            BackpropToW(InputRef(inputIndex).Gradient(), Gradient(), *m_derivative, InputRef(3).Value());
+            BackpropToW(InputRef(inputIndex).Gradient(), Gradient(), *m_outputDensity, InputRef(3).Value());
         }
         else
             RuntimeError("RNNTNode criterion expects only two inputs: labels and network output.");
@@ -1768,7 +1768,7 @@ public:
         
         // compute CTC score
         m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId);
-        
+        //m_outputDensity->Print("gradient");
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
 #endif
