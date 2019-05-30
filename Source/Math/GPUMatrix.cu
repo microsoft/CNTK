@@ -4794,6 +4794,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         CUDA_CALL(cudaFree(gpuBeginFrame));
         CUDA_CALL(cudaFree(gpuFrameToChanInd));
         CUDA_CALL(cudaFree(gpuUttBeginForMergedinput));
+        CUDA_CALL(cudaFree(gpuDerivativeValue));
+
 
         CUDA_CALL(cudaEventRecord(done));
         CUDA_CALL(cudaEventSynchronize(done));
