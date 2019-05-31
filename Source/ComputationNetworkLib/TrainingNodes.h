@@ -410,6 +410,7 @@ public:
 
         // labels_expended->Print("labels_expended");
         // Value().Print("Cross entrophy final values");
+
         // labels_expended->VectorMax(*labels_expended_max_idxs, *labels_expended_max_values, true);
         // labels_expended_max_idxs->Print("labels_expended_max_idxs");
 
