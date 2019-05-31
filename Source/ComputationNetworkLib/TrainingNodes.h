@@ -310,7 +310,7 @@ public:
         // InputRef(0).Value().Print("CrossEntropyWithSoftmax Partial-inputFunctionValues-0");
         // InputRef(1).Value().Print("CrossEntropyWithSoftmax Partial-inputFunctionValues-1");
 
-		/*
+        /*
         for (size_t i = 0; i < utt_frame2chanIdx.size(); ++i)
         {
             fprintf(stderr, "utt_frame2chanIdx %.10f\t", (double) utt_frame2chanIdx[i]);
@@ -331,7 +331,7 @@ public:
             fprintf(stderr, "utt_units_num %.10f\t", (double) utt_units_num[i]);
         }
         fprintf(stderr, "...\n");
-		*/
+        */
 
         // get crossbonding labels matrix at frist
         // labels_expended->Resize(InputRef(1).Value());
