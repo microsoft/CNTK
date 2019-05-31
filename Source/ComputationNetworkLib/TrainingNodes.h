@@ -243,7 +243,7 @@ public:
         assert(labels_dim == InputRef(1).Value().GetNumRows());
 
         const size_t num_utts = labels_MBLayout->GetNumSequences();
-        assert(num_utts == preds_MBLayout->GetNumSequences);
+        assert(num_utts == preds_MBLayout->GetNumSequences());
         const size_t num_labels_para_utts = labels_MBLayout->GetNumParallelSequences();
         // const size_t num_preds_para_utts = preds_MBLayout->GetNumParallelSequences();
 
