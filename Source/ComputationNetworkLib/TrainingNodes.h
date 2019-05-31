@@ -307,6 +307,7 @@ public:
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
         MaskMissingColumnsToZero(*m_logSoftmaxOfRight, InputRef(1).GetMBLayout(), fr);
 
+
         // InputRef(0).Value().Print("CrossEntropyWithSoftmax Partial-inputFunctionValues-0");
         // InputRef(1).Value().Print("CrossEntropyWithSoftmax Partial-inputFunctionValues-1");
 
