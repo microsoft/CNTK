@@ -539,18 +539,21 @@ public:
         //   totalcol, numParallelSequences, numPhoneParallelSequences);
         //matrixOutputDistribution.Print("h");
         //log softmax of f+g
-        mergedinput.InplaceLogSoftmax(true);
+        //mergedinput.InplaceLogSoftmax(true);
+        Microsoft::MSR::CNTK::Matrix<ElemType> logsoftmax(m_deviceid_gpu);
+        logsoftmax.SetValue(mergedinput);
 
+        logsoftmax.InplaceLogSoftmax(true);
         //matrixOutputDistribution.Print("prob");
         // forward backward to compute alpha, beta derivaitves
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid_gpu);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid_gpu);
         m_derivative.TransferToDeviceIfNotThere(m_deviceid_gpu);
-        m_derivative.AssignRNNTScore(mergedinput, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
+        m_derivative.AssignRNNTScore(logsoftmax, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
             uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, -1,true);
         
-        mergedinput.InplaceExp();
-        m_derivative.AssignElementProductOf(m_derivative, mergedinput);
+        logsoftmax.InplaceExp();
+        m_derivative.AssignElementProductOf(m_derivative, logsoftmax);
         ElemType finalscore = 0;
         //m_derivative.Print("RNNT");
         finalscore =  totalScore.Get00Element();

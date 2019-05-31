@@ -21,12 +21,17 @@
 #include <memory>
 #include <random>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 // Names of random variable types
-static const wstring RandomDistributionTypeUniform   = L"uniform";
-static const wstring RandomDistributionTypeNormal    = L"normal";
-static const wstring RandomDistributionTypeGumbel    = L"gumbel";
+static const wstring RandomDistributionTypeUniform = L"uniform";
+static const wstring RandomDistributionTypeNormal = L"normal";
+static const wstring RandomDistributionTypeGumbel = L"gumbel";
 static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
 
 // -----------------------------------------------------------------------
@@ -37,8 +42,12 @@ static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
 template <class ElemType>
 class SquareErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"SquareError"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"SquareError";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(SquareErrorNode);
@@ -57,9 +66,9 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         m_leftMinusRight->AssignDifferenceOf(InputRef(0).ValueFor(fr), InputRef(1).ValueFor(fr));
         MaskMissingColumnsToZero(*m_leftMinusRight, InputRef(0).GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
-        ElemType v = m_leftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ (I0[i] - I1[i])^2 } )
+        ElemType v = m_leftMinusRight->FrobeniusNorm();                             // v = sqrt( sum{ (I0[i] - I1[i])^2 } )
         Value().VerifySize(1, 1);
-        Value().SetValue(v * v);  // Value = sum{ (I0[i] - I1[i])^2 }
+        Value().SetValue(v * v); // Value = sum{ (I0[i] - I1[i])^2 }
 #if NANCHECK
         Value().HasNan("SquareError");
 #endif
@@ -72,8 +81,14 @@ public:
         Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 2.0f : -2.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient); // O = (I0-I1)^2; dO/dI0 = 2*(I0-I1); dO/dI1 = -2*(I0-I1)
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -119,8 +134,12 @@ template class SquareErrorNode<double>;
 template <class ElemType>
 class CrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"CrossEntropyWithSoftmax"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"CrossEntropyWithSoftmax";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(CrossEntropyWithSoftmaxNode);
@@ -131,7 +150,8 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        FrameRange fr(InputRef(0).GetMBLayout());
+        FrameRange fr(InputRef(1).GetMBLayout());
+        FrameRange fr0(InputRef(0).GetMBLayout());
         // left input is scalar
         if (inputIndex == 0) // left derivative
         {
@@ -141,7 +161,7 @@ public:
             InputRef(0).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
 
-            auto gradient = InputRef(0).GradientFor(fr);
+            auto gradient = InputRef(0).GradientFor(fr0);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, Gradient() /*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
 #if DUMPOUTPUT
             InputRef(0).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
@@ -158,7 +178,8 @@ public:
 #endif
 
             auto gradient = InputRef(1).GradientFor(fr);
-            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, InputRef(0).ValueFor(fr), gradient);
+            // Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, InputRef(0).ValueFor(fr), gradient);
+            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, *labels_expended, gradient);
 #if DUMPOUTPUT
             InputRef(1).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
@@ -177,10 +198,20 @@ public:
     {
         m_logSoftmaxOfRight->Resize(Input(1)->Value());
         m_softmaxOfRight->Resize(*m_logSoftmaxOfRight);
+
+        size_t cols = InputRef(1).Value().GetNumCols();
+        labels_max_values->Resize(1, cols);
+        labels_max_idxs->Resize(1, cols);
+        labels_expended->Resize(InputRef(1).Value());
+
+        // labels_expended_max_values->Resize(1, InputRef(1).Value().GetNumRows());
+        // labels_expended_max_idxs->Resize(1, InputRef(1).Value().GetNumRows());
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
     {
+
+        /*
         FrameRange fr(InputRef(0).GetMBLayout());
         // first compute the softmax (column-wise)
         // Note that we need both log and non-log for gradient computation.
@@ -199,6 +230,192 @@ public:
 #if DUMPOUTPUT
         Value().Print("CrossEntropyWithSoftmaxNode");
 #endif
+        */
+        FrameRange fr(InputRef(1).GetMBLayout());
+        FrameRange fr0(InputRef(0).GetMBLayout());
+
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> labels_MBLayout = InputRef(0).GetMBLayout();
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> preds_MBLayout = InputRef(1).GetMBLayout();
+
+        const size_t labels_dim = InputRef(0).Value().GetNumRows(); // should be label dimension. letter:30
+        const size_t labels_len = InputRef(0).Value().GetNumCols(); // should be the sum of utt length in one minibatch
+        const size_t preds_len = InputRef(1).Value().GetNumCols();  // should be the output of before RNNT, the layout is [u11, u12...ut1, ut2...] (all utt in one minibatch)
+        assert(labels_dim == InputRef(1).Value().GetNumRows());
+
+        const size_t num_utts = labels_MBLayout->GetNumSequences();
+        assert(num_utts == preds_MBLayout->GetNumSequences);
+        const size_t num_labels_para_utts = labels_MBLayout->GetNumParallelSequences();
+        // const size_t num_preds_para_utts = preds_MBLayout->GetNumParallelSequences();
+
+        utt_frames_beginIdx.clear();
+        utt_frame2chanIdx.clear();
+        utt_frames_num.clear();
+        utt_units_num.clear();
+        utt_items_num.clear();
+
+        utt_frames_beginIdx.reserve(num_utts);
+        utt_frame2chanIdx.reserve(num_utts);
+        utt_frames_num.reserve(num_utts);
+        utt_units_num.reserve(num_utts);
+        utt_items_num.reserve(num_utts);
+
+        // get labels max indexes and labels max values
+        InputRef(0).ValueFor(fr0).VectorMax(*labels_max_idxs, *labels_max_values, true);
+        // labels_max_idxs->Print("labels_max_idxs");
+        // labels_max_values->Print("labels_max_values");
+
+        //get each utt length (number of frames and number of units)
+        size_t seq_idx = 0;
+        std::vector<size_t> units_boud;
+        for (const auto& seq : labels_MBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seq_idx);
+            seq_idx++;
+            size_t num_frames = seq.GetNumTimeSteps();
+
+            utt_frame2chanIdx.push_back(seq.s);
+            utt_frames_beginIdx.push_back(seq.tBegin);
+            utt_frames_num.push_back(num_frames);
+
+            // get units number
+            size_t frame_start_idx = seq.tBegin * num_labels_para_utts + seq.s;
+            size_t frame_end_idx = seq.tEnd * num_labels_para_utts + seq.s;
+            size_t num_units = 0;
+            for (auto t = frame_start_idx; t < frame_end_idx; t += num_labels_para_utts)
+            {
+                if (labels_max_values->GetValue(0, t) == 2)
+                {
+                    ++num_units;
+                }
+            }
+            ++num_units; //	add 1 to match the true number
+            utt_units_num.push_back(num_units);
+
+            // get items number
+            size_t num_items = num_frames * num_units;
+            utt_items_num.push_back(num_items);
+        }
+
+        // get log softmax of preds
+        m_logSoftmaxOfRight->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr), true);
+        m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
+        m_softmaxOfRight->InplaceExp();
+        // flatten all gaps to zero, such that gaps will contribute zero to the sum
+        MaskMissingColumnsToZero(*m_logSoftmaxOfRight, InputRef(1).GetMBLayout(), fr);
+
+        // InputRef(0).Value().Print("CrossEntropyWithSoftmax Partial-inputFunctionValues-0");
+        // InputRef(1).Value().Print("CrossEntropyWithSoftmax Partial-inputFunctionValues-1");
+
+		/*
+        for (size_t i = 0; i < utt_frame2chanIdx.size(); ++i)
+        {
+            fprintf(stderr, "utt_frame2chanIdx %.10f\t", (double) utt_frame2chanIdx[i]);
+        }
+        fprintf(stderr, "...\n");
+        for (size_t i = 0; i < utt_frames_beginIdx.size(); ++i)
+        {
+            fprintf(stderr, "utt_frames_beginIdx %.10f\t", (double) utt_frames_beginIdx[i]);
+        }
+        fprintf(stderr, "...\n");
+        for (size_t i = 0; i < utt_frames_num.size(); ++i)
+        {
+            fprintf(stderr, "utt_frames_num %.10f\t", (double) utt_frames_num[i]);
+        }
+        fprintf(stderr, "...\n");
+        for (size_t i = 0; i < utt_units_num.size(); ++i)
+        {
+            fprintf(stderr, "utt_units_num %.10f\t", (double) utt_units_num[i]);
+        }
+        fprintf(stderr, "...\n");
+		*/
+
+        // get crossbonding labels matrix at frist
+        // labels_expended->Resize(InputRef(1).Value());
+        size_t total_items = 0;
+        labels_expended->SetValue((ElemType) 0);              //init
+        for (size_t s = 0; s < utt_frame2chanIdx.size(); ++s) // loop for each utt
+        {
+            size_t num_units = utt_units_num[s];
+            size_t num_frames = utt_frames_num[s];
+
+            // fprintf(stderr, "%.1f\t", (float) num_units);
+            // fprintf(stderr, "%.1f\t", (float) num_frames);
+
+            size_t units_cnt = 0;
+            size_t u_start = 0;
+
+            for (size_t t = 0; t < num_frames; ++t)
+            {
+                // determine boundary
+                size_t t_idx = (utt_frames_beginIdx[s] + t) * num_labels_para_utts + utt_frame2chanIdx[s]; // col idx of input label
+                if (labels_max_values->GetValue(0, t_idx) == 2 && t != 0)
+                {
+                    ++units_cnt;
+                }
+                for (size_t u = u_start; u < num_units; ++u)
+                {
+                    if (u == units_cnt)
+                    {
+                        // if (t == 0 || t == 1)
+                        // {
+                        //    fprintf(stderr, "%.1f\t", (float) u);
+                        // }
+                        for (size_t p = 0; p + u + t * num_units < num_frames * num_units; p += num_units)
+                        {
+                            // if (s == 0 && t == 0 && u == 0)
+                            // {
+                            //     fprintf(stderr, "set first unit done 0\n");
+                            // }
+                            size_t col_idx = p + u + t * num_units + total_items;
+                            auto row_idx = labels_max_idxs->GetValue(0, t_idx);
+                            //labels_expended->SetValue((size_t)row_idx, col_idx, (ElemType) 1);
+                            (*labels_expended)((size_t) row_idx, col_idx) = (ElemType) 1;
+                            // for (size_t k = 0; k < labels_dim; ++k)
+                            // {
+                            //    size_t col_idx = p + u + t * num_units + total_items;
+                            //    labels_expended->SetValue(k, col_idx, InputRef(0).MaskedValueFor(fr0)(k, t_idx));
+                            // }
+                        }
+                        // if (s == 0 && t == 0)
+                        // {
+                        //     fprintf(stderr, "set first frame done 0\n");
+                        // }
+                        ++u_start;
+                    }
+                    else
+                    {
+                        // if (t == 0 || t == 1)
+                        // {
+                        //     fprintf(stderr, "%.1f\t", (float) u);
+                        // }
+
+                        size_t col_idx = u + t * num_units + total_items;
+                        auto row_idx = labels_dim - 1;
+                        (*labels_expended)((size_t) row_idx, col_idx) = (ElemType) 1;
+                        // if (s == 0 && t == 0)
+                        // {
+                        //     fprintf(stderr, "set first frame done 1\n");
+                        // }
+                    }
+                }
+            }
+            total_items += num_units * num_frames;
+        }
+        Value().AssignInnerProductOfMatrices(*labels_expended, *m_logSoftmaxOfRight);
+        Value() *= -1;
+
+        // labels_expended->Print("labels_expended");
+        // Value().Print("Cross entrophy final values");
+        // labels_expended->VectorMax(*labels_expended_max_idxs, *labels_expended_max_values, true);
+        // labels_expended_max_idxs->Print("labels_expended_max_idxs");
+
+#if NANCHECK
+        Value().HasNan("CrossEntropyWithSoftmax");
+#endif
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -214,6 +431,13 @@ public:
             auto node = dynamic_pointer_cast<CrossEntropyWithSoftmaxNode<ElemType>>(nodeP);
             node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
+
+            node->labels_max_idxs->SetValue(*labels_max_idxs);
+            node->labels_max_values->SetValue(*labels_max_values);
+            node->labels_expended->SetValue(*labels_expended);
+
+            // node->labels_expended_max_values->SetValue(*labels_expended_max_values);
+            // node->labels_expended_max_idxs->SetValue(*labels_expended_max_idxs);
         }
     }
 
@@ -223,6 +447,13 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
         RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
+
+        RequestMatrixFromPool(labels_max_idxs, matrixPool);
+        RequestMatrixFromPool(labels_max_values, matrixPool);
+        RequestMatrixFromPool(labels_expended, matrixPool);
+
+        // RequestMatrixFromPool(labels_expended_max_values, matrixPool);
+        // RequestMatrixFromPool(labels_expended_max_idxs, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -231,11 +462,33 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
         ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
+
+        ReleaseMatrixToPool(labels_max_idxs, matrixPool);
+        ReleaseMatrixToPool(labels_max_values, matrixPool);
+        ReleaseMatrixToPool(labels_expended, matrixPool);
+
+        // ReleaseMatrixToPool(labels_expended_max_values, matrixPool);
+        // ReleaseMatrixToPool(labels_expended_max_idxs, matrixPool);
     }
 
 protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
+
+    shared_ptr<Matrix<ElemType>> labels_max_idxs;
+    shared_ptr<Matrix<ElemType>> labels_max_values; //used for unit boudary
+    shared_ptr<Matrix<ElemType>> labels_expended;
+
+    // shared_ptr<Matrix<ElemType>> labels_expended_max_values;
+    // shared_ptr<Matrix<ElemType>> labels_expended_max_idxs;
+
+    std::vector<size_t> utt_frames_beginIdx;
+    std::vector<size_t> utt_frames_num;
+    std::vector<size_t> utt_frame2chanIdx;
+    std::vector<size_t> utt_units_num;
+    std::vector<size_t> utt_items_num;
+
+    // std::vector<std::vector<size_t>> utt_units_boud;
 };
 
 template class CrossEntropyWithSoftmaxNode<float>;
@@ -381,8 +634,12 @@ template class CrossEntropyNode<double>;
 template <class ElemType>
 class MatrixL1RegNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"MatrixL1Reg"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"MatrixL1Reg";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(MatrixL1RegNode);
@@ -488,8 +745,8 @@ public:
     {
         FrameRange fr(Input(0)->GetMBLayout());
 
-        if (inputIndex == 1 &&  // right derivative
-            m_numberOfUrlPairs > 0)   // 
+        if (inputIndex == 1 &&      // right derivative
+            m_numberOfUrlPairs > 0) //
         {
             auto gradient = Input(1)->GradientFor(fr);
 
@@ -520,12 +777,13 @@ public:
                     size_t k = UrlI.m_K;
                     discountI = m_logWeights[UrlI.m_rank];
                     gainI = UrlI.m_gain;
-                    if (k == 0) continue;
+                    if (k == 0)
+                        continue;
                     for (typename std::vector<Url>::iterator itUrlJ = itUrlI + 1; itUrlJ <= itUrlI + k; itUrlJ++)
                     {
                         Url& UrlJ = *itUrlJ;
                         discountJ = m_logWeights[UrlJ.m_rank];
-                        if (abs(gainI - UrlJ.m_gain) < (ElemType)0.0000001)
+                        if (abs(gainI - UrlJ.m_gain) < (ElemType) 0.0000001)
                         {
                             continue;
                         }
@@ -534,7 +792,7 @@ public:
                         lambdaIJ = (gainI - UrlJ.m_gain) * (discountI - discountJ) / (discountI * discountJ);
 
                         // |delta NDCG|
-                        lambdaIJ = (idealMetric == (ElemType)0.0 ? (ElemType) 0.0 : (ElemType)abs(lambdaIJ / idealMetric));
+                        lambdaIJ = (idealMetric == (ElemType) 0.0 ? (ElemType) 0.0 : (ElemType) abs(lambdaIJ / idealMetric));
 
                         // Combine lambda
                         lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
@@ -542,7 +800,6 @@ public:
                         // Assign to gradient
                         (*m_weightUpdate)(0, UrlI.m_id) += lambdaIJ;
                         (*m_weightUpdate)(0, UrlJ.m_id) -= lambdaIJ;
-                        
                     }
                 }
             }
@@ -561,9 +818,12 @@ public:
         UpdateCounts();
 
         // clean up first
-        if (!m_queryUrls.empty()) m_queryUrls.clear();
-        if (!m_urlSorter.empty()) m_urlSorter.clear();
-        if (!m_logWeights.empty()) m_logWeights.clear();
+        if (!m_queryUrls.empty())
+            m_queryUrls.clear();
+        if (!m_urlSorter.empty())
+            m_urlSorter.clear();
+        if (!m_logWeights.empty())
+            m_logWeights.clear();
 
         m_pairwiseDifferences->Resize(1, m_numberOfUrlPairs);
         m_lambdas->Resize(1, m_numberOfUrlPairs);
@@ -575,7 +835,7 @@ public:
 
         // keep one additional space to avoid pointer moving out
         m_urlSorter.resize(m_maxNumberOfUrlsPerQuery + 1);
-        
+
         // prepared lookup table
         m_logWeights.resize(m_maxNumberOfUrlsPerQuery);
         size_t i = 0;
@@ -591,7 +851,7 @@ public:
         //      0. gain
         //      1. predicted score
         //      2. query id (used to separate urls belonging to different queries)
-        // 
+        //
         // Following is an example: two queries (0 and 1) and 6 urls (three for each).
         // 31,  0.9,    0
         // 7,   0.3,    0
@@ -612,11 +872,11 @@ public:
         int previousQueryId = -1;
         int numberOfQueries = 0;
 
-        // Iterate all samples and populate m_queryUrls table. 
+        // Iterate all samples and populate m_queryUrls table.
         for (size_t i = 0; i < numberOfSamples; i++)
         {
-            int queryId = (int)queryIds(0, i);
-            // Samples are grouped by queries. Find all the urls 
+            int queryId = (int) queryIds(0, i);
+            // Samples are grouped by queries. Find all the urls
             // belonging to each individual query.
             if (queryId != previousQueryId)
             {
@@ -631,11 +891,11 @@ public:
             qu.m_urls.push_back(u);
         }
 
-        // Update K (number of url pairs that have smaller or equal gain), rk (rank of 
-        // score in descending order) and m_pairwiseDifferences (save for gradient 
+        // Update K (number of url pairs that have smaller or equal gain), rk (rank of
+        // score in descending order) and m_pairwiseDifferences (save for gradient
         // computation).
         size_t pairCount = 0;
-        for (auto &qu : m_queryUrls)
+        for (auto& qu : m_queryUrls)
         {
             std::vector<Url>& urls = qu.m_urls;
             size_t numberOfUrls = urls.size();
@@ -656,7 +916,7 @@ public:
                     }
                 }
                 // Skip urls with gain equal to min (0).
-                else 
+                else
                 {
                     urls[j].m_K = 0;
                 }
@@ -666,7 +926,7 @@ public:
             typename std::vector<Url>::iterator its0 = its;
             its = std::copy(it, urls.end(), its);
             std::sort(its0, its);
-            // Set the sorted rk order to each url and 
+            // Set the sorted rk order to each url and
             // the urls are still in the original order
             int rk = 0;
             for (it = its0; it != its; it++)
@@ -677,18 +937,18 @@ public:
 
         // Compute ir metric.
         size_t sampleCount = 0;
-        for (const auto &qu: m_queryUrls)
+        for (const auto& qu : m_queryUrls)
         {
-            for (const auto &url : qu.m_urls)
+            for (const auto& url : qu.m_urls)
             {
                 (*m_urlGain0)(0, sampleCount) = url.m_gain;
                 (*m_urlGain1)(0, sampleCount) = url.m_gain;
-                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.m_rank0;
-                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.m_rank;
+                (*m_urlDiscount0)(0, sampleCount) = (ElemType) url.m_rank0;
+                (*m_urlDiscount1)(0, sampleCount) = (ElemType) url.m_rank;
                 sampleCount++;
             }
         }
-        
+
         // log(2+rank)
         *m_urlDiscount0 += 2.0;
         m_urlDiscount0->InplaceLog();
@@ -702,12 +962,12 @@ public:
         const Matrix<ElemType>& urlDiscountedGain0 = *m_urlGain0;
         const Matrix<ElemType>& urlDiscountedGain1 = *m_urlGain1;
         ElemType irMetricValue = 0.0;
-        for (auto &qu : m_queryUrls)
+        for (auto& qu : m_queryUrls)
         {
             qu.m_idealMetric = 0.0;
             qu.m_metric = 0.0;
 
-            for (const auto &url : qu.m_urls)
+            for (const auto& url : qu.m_urls)
             {
                 qu.m_idealMetric += urlDiscountedGain0(0, url.m_id);
                 qu.m_metric += urlDiscountedGain1(0, url.m_id);
@@ -732,7 +992,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         if (m_inputs.size() != 3)
-            InvalidArgument("%ls operation requires three inputs instead of %d.", NodeDescription().c_str(), (int)m_inputs.size());
+            InvalidArgument("%ls operation requires three inputs instead of %d.", NodeDescription().c_str(), (int) m_inputs.size());
 
         if (Input(0)->NeedsGradient() == true)
             InvalidArgument("%ls %ls operation needs input type (no gradient) for gain input.", NodeName().c_str(), OperationName().c_str());
@@ -787,7 +1047,7 @@ public:
         ReleaseMatrixToPool(m_urlGain1, matrixPool);
         ReleaseMatrixToPool(m_urlDiscount0, matrixPool);
         ReleaseMatrixToPool(m_urlDiscount1, matrixPool);
-        
+
         // is this the right place?  it was not called after bp.
         m_queryUrls.clear();
         m_urlSorter.clear();
@@ -795,7 +1055,6 @@ public:
     }
 
 protected:
-
     void UpdateCounts()
     {
         FrameRange fr(Input(0)->GetMBLayout());
@@ -807,13 +1066,13 @@ protected:
         // Number of urls we have seen for the current query
         size_t numberOfUrls = 0;
 
-        // Number of urls that have gains greater than 0 for the current query 
+        // Number of urls that have gains greater than 0 for the current query
         size_t numberOfUrlsWithNonZeroGain = 0;
         size_t numberOfUrlPairs = 0;
         size_t maxNumberOfUrlsPerQuery = 0;
         for (size_t i = 0; i < numberOfQueryUrls; i++)
         {
-            int queryId = (int)queryIds(0, i);
+            int queryId = (int) queryIds(0, i);
             ElemType gain = gains(0, i);
             if (queryId != previousQueryId)
             {
@@ -829,7 +1088,7 @@ protected:
                 numberOfUrlsWithNonZeroGain = 0;
                 previousQueryId = queryId;
             }
-            
+
             numberOfUrls++;
             if (gain > 0)
             {
@@ -858,20 +1117,22 @@ protected:
             m_id = 0;
             m_rank0 = 0;
             m_rank = 0;
-            m_score = (ElemType)0;
-            m_gain = (ElemType)0;
+            m_score = (ElemType) 0;
+            m_gain = (ElemType) 0;
             m_K = 0;
         }
 
-        Url(int id, int rk0, ElemType sc, ElemType gn) : m_id(id), m_rank0(rk0), m_rank(0), m_score(sc), m_gain(gn), m_K(0) {}
+        Url(int id, int rk0, ElemType sc, ElemType gn)
+            : m_id(id), m_rank0(rk0), m_rank(0), m_score(sc), m_gain(gn), m_K(0) {}
 
-        int m_id;           // sample id
-        int m_rank0;        // original rank based on label
-        int m_rank;         // rank based on s in the associated query
-        ElemType m_score;   // score
-        ElemType m_gain;    // gain
-        int m_K;            // the pair index
-        bool operator < (const Url &url) const {
+        int m_id;         // sample id
+        int m_rank0;      // original rank based on label
+        int m_rank;       // rank based on s in the associated query
+        ElemType m_score; // score
+        ElemType m_gain;  // gain
+        int m_K;          // the pair index
+        bool operator<(const Url& url) const
+        {
             // tie breaking
             if (m_score == url.m_score || std::isnan(m_score) || std::isnan(url.m_score))
             {
@@ -884,8 +1145,8 @@ protected:
 
     struct QueryUrls
     {
-        ElemType m_idealMetric;  // the ideal NDCG
-        ElemType m_metric;   // NDCG based on the current scores
+        ElemType m_idealMetric; // the ideal NDCG
+        ElemType m_metric;      // NDCG based on the current scores
 
         std::vector<Url> m_urls;
     };
@@ -906,10 +1167,10 @@ protected:
     shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
     // 1/(1+exp(sigma*(si - sj)))
     shared_ptr<Matrix<ElemType>> m_lambdas;
-    
+
     // update of weight matrix
     shared_ptr<Matrix<ElemType>> m_weightUpdate;
-    
+
     // store the gains and position discounts
     shared_ptr<Matrix<ElemType>> m_urlGain0;
     shared_ptr<Matrix<ElemType>> m_urlGain1;
@@ -928,8 +1189,12 @@ template class LambdaRankNode<double>;
 template <class ElemType>
 class MatrixL2RegNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"MatrixL2Reg"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"MatrixL2Reg";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(MatrixL2RegNode);
@@ -1156,8 +1421,6 @@ private:
 template class NoiseContrastiveEstimationNode<float>;
 template class NoiseContrastiveEstimationNode<double>;
 
-
-
 // Nodes using a random number generators should derive from this interface.
 // One purpose of this interface is to have a common interface for setting the seeds when setting up a network.
 class IRngUser
@@ -1203,7 +1466,6 @@ public:
     }
 
 protected:
-
     void Load(File& fstream, size_t modelVersion)
     {
         if (modelVersion < CNTK_MODEL_VERSION_16)
@@ -1218,13 +1480,13 @@ protected:
             fstream >> seed_16;
             seed = seed_16;
         }
-        else 
+        else
         {
             fstream >> seed;
         }
 
         fstream >> offset;
-        SetRngState(seed, offset);  
+        SetRngState(seed, offset);
     }
 
     void Save(File& fstream) const
@@ -1238,7 +1500,6 @@ protected:
     std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 
-
 // -----------------------------------------------------------------------
 // RandomDistributionNode (/*no input*/)
 // a random variable
@@ -1247,8 +1508,12 @@ protected:
 template <class ElemType>
 class RandomDistributionNode : public ComputationNode<ElemType>, public RngUser
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"RandomDistribution"; }
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"RandomDistribution";
+    }
 
     enum RandomDistributionType : unsigned int
     {
@@ -1282,17 +1547,23 @@ public:
     RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args)
         : Base(deviceId, name), m_type(GetRandomDistributionType(rvType)) /*, m_shape(TensorShape())*/
     {
-        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) { return static_cast<ElemType>(d); });
     }
 
     RandomDistributionNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& rvType, const std::vector<double>& args, const TensorShape& sampleLayout)
         : Base(deviceId, name), m_type(GetRandomDistributionType(rvType)), m_shape(sampleLayout)
     {
-        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) {return static_cast<ElemType>(d); });
+        std::transform(args.begin(), args.end(), std::back_inserter(m_args), [](const double d) { return static_cast<ElemType>(d); });
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange&) override;
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange&) override;
     virtual bool /*ComputationNodeBase::*/ IsOutOfDateWrtInputs() const override;
@@ -1302,7 +1573,7 @@ public:
         if (numInputs == 0)
         {
             this->m_pMBLayout = nullptr;
-            SetDims(m_shape, /*HasMbLayout=*/ false);
+            SetDims(m_shape, /*HasMbLayout=*/false);
         }
         else if (numInputs == 1)
             ValidateUnaryMap(isFinalValidationPass);
@@ -1314,6 +1585,7 @@ public:
     {
         return RngUser::GetRNGHandle(ValuePtr()->GetDeviceId());
     }
+
 private:
     RandomDistributionType m_type;
     std::vector<ElemType> m_args;
@@ -1321,7 +1593,7 @@ private:
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
-// RandomSampleNodeBase(samplingWeights, sizeOfSampledSet, allowDuplicates): 
+// RandomSampleNodeBase(samplingWeights, sizeOfSampledSet, allowDuplicates):
 // Base class for RandomSampleNode and RandomSampleInclusionFrequencyNode.
 // Provides random sampling functionality.
 //
@@ -1334,8 +1606,12 @@ private:
 template <class ElemType>
 class RandomSampleNodeBase : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>, public RngUser
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName(){return L"RandomSampleNodeBase";}
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"RandomSampleNodeBase";
+    }
 
 public:
     RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
@@ -1356,7 +1632,6 @@ public:
     virtual void Load(File& fstream, size_t modelVersion) override;
 
 protected:
-
     void UpdateWeightsPrefixSum();
 
     // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
@@ -1366,21 +1641,33 @@ protected:
 public:
     virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {} // This node does not propagate gradients.
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false;}
-    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override{}
-    virtual bool GetAllowDuplicates() const { return m_allowDuplicates; }
-    virtual size_t GetNumSamples() const { return m_sizeOfSampledSet; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override {}
+    virtual bool GetAllowDuplicates() const
+    {
+        return m_allowDuplicates;
+    }
+    virtual size_t GetNumSamples() const
+    {
+        return m_sizeOfSampledSet;
+    }
 
 protected:
-    bool m_allowDuplicates; // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
+    bool m_allowDuplicates;    // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
     size_t m_sizeOfSampledSet; // Requested size of sample in case of run-mode = CREATE_SAMPLES.
     std::vector<double> m_samplingWeightsPrefixSum;
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleNode(samplingWeights, sizeOfSampledSet, allowDuplicates):
-// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix 
+// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix
 // of shape [numClasses x sizeOfSampledSet] where numClasses is the number of classes (categories) to choose from.
 // The output has no dynamic axis.
 // The samples are drawn with a probability proportional to the weights w of the vector 'samplingWeights' : p(w_i) = w_i / sum_k(w_k)
@@ -1394,16 +1681,21 @@ protected:
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
-template<class ElemType> 
+template <class ElemType>
 class RandomSampleNode : public RandomSampleNodeBase<ElemType>
 {
-    typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName(){ return L"RandomSample"; }
+    typedef RandomSampleNodeBase<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"RandomSample";
+    }
 
 public:
     RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
-    {}
+    {
+    }
 
     RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
         : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
@@ -1418,10 +1710,10 @@ public:
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
-// RandomSampleInclusionFrequencyNode(samplingWeights, sizeOfSampledSet, allowDuplicates): 
+// RandomSampleInclusionFrequencyNode(samplingWeights, sizeOfSampledSet, allowDuplicates):
 // Intended uses are e.g. sampled softmax, noise contrastive estimation etc. where it is used together with RandomSampleNode.
-// This node estimates how often each class will occur in a set sampled with RandomSampleNode(...) on the average. 
-// If the sampling mode 'allowDuplicates = true' is choosen this is trivial and exact. 
+// This node estimates how often each class will occur in a set sampled with RandomSampleNode(...) on the average.
+// If the sampling mode 'allowDuplicates = true' is choosen this is trivial and exact.
 // For allowDuplicates = false we get some estimate. The value is updated only when the input weights change.
 //
 // Parameters:
@@ -1429,15 +1721,21 @@ public:
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
-template<class ElemType>
+template <class ElemType>
 class RandomSampleInclusionFrequencyNode : public RandomSampleNodeBase<ElemType>
 {
-    typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName(){ return L"RandomSampleInclusionFrequency"; }
+    typedef RandomSampleNodeBase<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"RandomSampleInclusionFrequency";
+    }
+
 public:
     RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
-    {}
+    {
+    }
 
     RandomSampleInclusionFrequencyNode(const ScriptableObjects::IConfigRecordPtr configp)
         : RandomSampleInclusionFrequencyNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
@@ -1446,6 +1744,7 @@ public:
     }
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+
 private:
     // Approximates the expected number of occurrences of a class in the sampled set.
     // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
@@ -1472,8 +1771,12 @@ private:
 template <class ElemType>
 class ClassBasedCrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<4>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"ClassBasedCrossEntropyWithSoftmax"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ClassBasedCrossEntropyWithSoftmax";
+    }
 
     // our inputs
     static const size_t LABELDATA = 0;
@@ -1496,7 +1799,7 @@ public:
 private:
     // iterate over a large workspace that contains all class-conditioned probs concatenated
     // 'sz' is the offset into that vector. We will iterate over these vectors at a few places. Always use this same boilerplate code.
-    template<class F>
+    template <class F>
     size_t ForColumnsWithClass(const F& op)
     {
         const size_t nT = Input(LABELDATA)->GetNumTimeSteps();
@@ -1510,11 +1813,11 @@ private:
                     continue;
 
                 const Matrix<ElemType>& lbl_t = Input(LABELDATA)->ValueFor(fr);
-                size_t y_t = (size_t)lbl_t(0, 0);     // current word token index
-                size_t c_t = (size_t)lbl_t(1, 0);     // current word token's class index
-                size_t lft_bnd = (size_t)lbl_t(2, 0); // index of first word belonging to current word token's class
-                size_t rgt_bnd = (size_t)lbl_t(3, 0); // and end of that range
-                size_t nbr_wrd = (rgt_bnd - lft_bnd); // number of words in the class
+                size_t y_t = (size_t) lbl_t(0, 0);     // current word token index
+                size_t c_t = (size_t) lbl_t(1, 0);     // current word token's class index
+                size_t lft_bnd = (size_t) lbl_t(2, 0); // index of first word belonging to current word token's class
+                size_t rgt_bnd = (size_t) lbl_t(3, 0); // and end of that range
+                size_t nbr_wrd = (rgt_bnd - lft_bnd);  // number of words in the class
 
                 // perform the operation
                 op(s, t, fr, y_t, c_t, sz, lft_bnd, nbr_wrd);
@@ -1533,8 +1836,7 @@ private:
 
         ComputeSoftMaxPartial(); // Note: Flag m_needRecomputeGradientToSoftmaxInput guards so that this computes only once.
 
-        ForColumnsWithClass([&](size_t /*s*/, size_t /*t*/, const FrameRange& fr, size_t /*y_t*/, size_t c_t, size_t sz, size_t lft_bnd, size_t nbr_wrd)
-        {
+        ForColumnsWithClass([&](size_t /*s*/, size_t /*t*/, const FrameRange& fr, size_t /*y_t*/, size_t c_t, size_t sz, size_t lft_bnd, size_t nbr_wrd) {
             // compute prb - 1 and prb
             Matrix<ElemType> weightForClass = InputRef(EMBEDDINGMATRIX).ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
             Matrix<ElemType> obs = InputRef(INPUTDATA).ValueFor(fr); // hidden activation vector for current word token
@@ -1542,32 +1844,35 @@ private:
 
             switch (inputIndex)
             {
-                case 1:
-                {
-                    // gradient to input
-                    Matrix<ElemType> grd_t = InputRef(INPUTDATA).GradientFor(fr);
-                    Matrix<ElemType>::MultiplyAndAdd(weightForClass, false, grd_to_soft_max_input, true, grd_t);
-                    break;
-                }
-                case 2:
-                {
-                    // gradient to input weight
-                    Matrix<ElemType> grd_to_wgt_t = InputRef(EMBEDDINGMATRIX).GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
-                    Matrix<ElemType>::MultiplyAndAdd(obs, false, grd_to_soft_max_input, false, grd_to_wgt_t);
-                    break;
-                }
-                case 3:
-                {
-                    Matrix<ElemType> grd_t = InputRef(CLASSPROBINDATA).GradientFor(fr);
-                    grd_t.AssignValuesOf(InputRef(CLASSPROBINDATA).DataFor(m_clsSoftmax, fr));
-                    ComputeCEPartialToSoftmaxInputs(grd_t, Gradient(), c_t);
-                    break;
-                }
+            case 1:
+            {
+                // gradient to input
+                Matrix<ElemType> grd_t = InputRef(INPUTDATA).GradientFor(fr);
+                Matrix<ElemType>::MultiplyAndAdd(weightForClass, false, grd_to_soft_max_input, true, grd_t);
+                break;
+            }
+            case 2:
+            {
+                // gradient to input weight
+                Matrix<ElemType> grd_to_wgt_t = InputRef(EMBEDDINGMATRIX).GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
+                Matrix<ElemType>::MultiplyAndAdd(obs, false, grd_to_soft_max_input, false, grd_to_wgt_t);
+                break;
+            }
+            case 3:
+            {
+                Matrix<ElemType> grd_t = InputRef(CLASSPROBINDATA).GradientFor(fr);
+                grd_t.AssignValuesOf(InputRef(CLASSPROBINDATA).DataFor(m_clsSoftmax, fr));
+                ComputeCEPartialToSoftmaxInputs(grd_t, Gradient(), c_t);
+                break;
+            }
             }
         });
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
 
 private:
     void ComputeCEPartialToSoftmaxInputs(Matrix<ElemType>& inputGradientValues, Matrix<ElemType>& gradientValues, size_t y_t)
@@ -1583,8 +1888,7 @@ private:
         {
             m_grdToSoftMaxInput.Resize(1, m_totalNbrWords); // buffer that contains a concatenation of class-conditional values
 
-            ForColumnsWithClass([&](size_t /*s*/, size_t /*t*/, const FrameRange& /*fr*/, size_t y_t, size_t /*c_t*/, size_t sz, size_t lft_bnd, size_t nbr_wrd)
-            {
+            ForColumnsWithClass([&](size_t /*s*/, size_t /*t*/, const FrameRange& /*fr*/, size_t y_t, size_t /*c_t*/, size_t sz, size_t lft_bnd, size_t nbr_wrd) {
                 Matrix<ElemType> softMax = m_softMax.ColumnSlice(sz, nbr_wrd);
 
                 size_t idx_in_class = y_t - lft_bnd;
@@ -1607,7 +1911,7 @@ public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         // get the label matrix to CPU, ideally in location=BOTH state
-        InputRef(LABELDATA).Value().TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ false/*means: BOTH state OK*/, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ false);
+        InputRef(LABELDATA).Value().TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/false /*means: BOTH state OK*/, /*emptyTransfer =*/false, /*updatePreferredDevice =*/false);
 
         auto& functionValues = Value();
 
@@ -1620,8 +1924,7 @@ public:
         m_clsSoftmax.AssignExpOf(m_clsLogSoftmax); // non-log
 
         // create a large workspace to contain all class-conditioned probs concatenated
-        m_totalNbrWords = ForColumnsWithClass([](size_t /*s*/, size_t /*t*/, const FrameRange& /*fr*/, size_t y_t, size_t /*c_t*/, size_t /*sz*/, size_t lft_bnd, size_t nbr_wrd)
-        {
+        m_totalNbrWords = ForColumnsWithClass([](size_t /*s*/, size_t /*t*/, const FrameRange& /*fr*/, size_t y_t, size_t /*c_t*/, size_t /*sz*/, size_t lft_bnd, size_t nbr_wrd) {
             if (nbr_wrd == 0)
                 LogicError("ClassBasedCrossEntropyWithSoftmax: Encountered a class of size 0.");
             if (y_t < lft_bnd || y_t >= lft_bnd + nbr_wrd)
@@ -1635,8 +1938,7 @@ public:
 
         // accumulate objective
         functionValues.SetValue(0);
-        ForColumnsWithClass([&](size_t s, size_t t, const FrameRange& fr, size_t y_t, size_t c_t, size_t sz, size_t lft_bnd, size_t nbr_wrd)
-        {
+        ForColumnsWithClass([&](size_t s, size_t t, const FrameRange& fr, size_t y_t, size_t c_t, size_t sz, size_t lft_bnd, size_t nbr_wrd) {
             // now get views of various arrays that correspond to the index range of words belonging to this class
 
             // get hidden vectors for the words in this class
@@ -2054,7 +2356,7 @@ public:
         m_temp->AssignDifferenceOf(InputRef(0).ValueFor(fr), *m_classZeroLabels); // TODO: need a slice for m_classZeroLabels?
 
         // Multiply the vector by the InputRef(2).Value()
-        if (m_inputs.size() == 3)                                            // with weight
+        if (m_inputs.size() == 3)                                              // with weight
             m_temp->AssignElementProductOf(*m_temp, InputRef(2).ValueFor(fr)); // TODO: is Input(2) minibatch data? Confirm
 
         // divide class by p (class 1) or (1-p) (class 0)
@@ -2120,7 +2422,7 @@ public:
             // sum of weights
             m_sumOfWeights->AssignSumOfElements(InputRef(2).ValueFor(fr));
             // number of elements
-            ElemType numOfElements = (ElemType)ones.GetNumCols();
+            ElemType numOfElements = (ElemType) ones.GetNumCols();
             // sum of weighted log loss
             Value().AssignInnerProductOf(InputRef(2).ValueFor(fr), *m_temp, false).ElementDivideBy(*m_sumOfWeights);
             Value() *= -numOfElements;
@@ -2196,13 +2498,11 @@ private:
 template class LogisticNode<float>;
 template class LogisticNode<double>;
 
-
-
 // Non-temlate base class for the DropoutNode containing the getter/setter for the dropout rate.
-class DropoutNodeBase 
+class DropoutNodeBase
 {
 public:
-    void SetDropoutRate(double value) 
+    void SetDropoutRate(double value)
     {
         if (value < 0 || value >= 1)
             LogicError("DropoutRate must be >= 0 and < 1.");
@@ -2214,14 +2514,14 @@ public:
         return m_dropoutRate > 0;
     }
 
-    double GetDropoutRate() const 
+    double GetDropoutRate() const
     {
         return m_dropoutRate;
     }
 
 protected:
     virtual ~DropoutNodeBase() = default;
-    double m_dropoutRate {0};
+    double m_dropoutRate{0};
 };
 
 // -----------------------------------------------------------------------
@@ -2270,8 +2570,14 @@ public:
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* /*input*/) const
     {
         return ParentGradientOptimization::Overwrite;
@@ -2298,7 +2604,7 @@ public:
         {
             // determine drop-out mask for this minibatch
             auto sliceMask = DataFor(*m_maskOfDropout, fr);
-            sliceMask.SetUniformRandomMask((ElemType)GetDropoutRate(), (ElemType)(1.0 / (1.0 - GetDropoutRate())) /*pre-scaled*/, GetRNGHandle());
+            sliceMask.SetUniformRandomMask((ElemType) GetDropoutRate(), (ElemType)(1.0 / (1.0 - GetDropoutRate())) /*pre-scaled*/, GetRNGHandle());
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
             UpdateRngOffset(GetRngOffset() + sliceMask.GetNumElements());
@@ -2347,7 +2653,7 @@ private:
 // -----------------------------------------------------------------------
 // BatchNormalizationNode (input, scale, bias, runMean, runVariance, runCount,
 //                         spatial, normalizationTimeConstant = 0, blendTimeConstant = 0,
-//                         epsilon = 0.00001, useCntkEngine = true, 
+//                         epsilon = 0.00001, useCntkEngine = true,
 //                         disableRegularization = false, imageLayout = 'cudnn')
 //
 // Implements batch normalization technique as described in:
@@ -2355,17 +2661,17 @@ private:
 // http://arxiv.org/abs/1502.03167
 // In short, it normalizes layer outputs for every minibatch for each output(feature) independently and applies affine transformation to preserve representation of the layer.
 // That is, for layer input:
-// 
+//
 // m = mean(input)
 // var = variance(input)
 // input_norm = (input - mean) / sqrt(epsilon + var)
 // output = gamma * input_norm + beta
-// 
+//
 // where gamma and beta are trainable parameters(represented as LearnableParameter).
-// 
+//
 // * input is the input of the batch normalization node
 // * scale is a LearnableParameter that stores scale vector (gamma term in the equation above).
-// * bias is a LearnableParameter that stores bias vector (beta term). scale and bias must have the same dimensions which must be equal 
+// * bias is a LearnableParameter that stores bias vector (beta term). scale and bias must have the same dimensions which must be equal
 //      to the input dimensions in case of spatial = false or number of output convolution feature maps in case of spatial = true.
 //      BUGBUG: Number of convolution feature maps are considered the last axis of the input.
 //              More correct would be to infer that from broadcasting dimensions (spatial mode is broadcasting).
@@ -2388,39 +2694,38 @@ private:
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
 template <class ElemType>
-class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public IFreezable,
-    public IdentityTransformerNodeOnOneInput<0>
+class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public IFreezable, public IdentityTransformerNodeOnOneInput<0>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"BatchNormalization"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"BatchNormalization";
+    }
 
     typedef typename std::conditional<std::is_same<ElemType, half>::value, float, ElemType>::type StatType;
 
     // inputs
     // TODO: Change all of these throughout the codebase to 'class enum'. Also change all places where we still use integer constants.
-    static const size_t DATA      = 0;
-    static const size_t SCALE     = 1;
-    static const size_t BIAS      = 2;
-    static const size_t RUN_MEAN  = 3;
-    static const size_t RUN_VAR   = 4;
+    static const size_t DATA = 0;
+    static const size_t SCALE = 1;
+    static const size_t BIAS = 2;
+    static const size_t RUN_MEAN = 3;
+    static const size_t RUN_VAR = 4;
     static const size_t RUN_COUNT = 5; // note: no such parameter for legacy V1 models that do not share the count correctly
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial = false,
-                           double normalizationTimeConstant=0, double blendTimeConstant=0,
-                           double epsilon = 0, bool useCntkEngine = true, bool disableRegularization = false, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
-        Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_disableRegularization(disableRegularization), m_imageLayoutKind(imageLayoutKind),
-        m_runCountUntied(0),
-        m_one(1, 1, deviceId),
-        m_convertRunningVariancePending(false)
+                           double normalizationTimeConstant = 0, double blendTimeConstant = 0,
+                           double epsilon = 0, bool useCntkEngine = true, bool disableRegularization = false, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW)
+        : Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant), m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_disableRegularization(disableRegularization), m_imageLayoutKind(imageLayoutKind), m_runCountUntied(0), m_one(1, 1, deviceId), m_convertRunningVariancePending(false)
     {
-        m_one.SetValue((StatType)1); // (constant value used for GPU-side update of runCount)
+        m_one.SetValue((StatType) 1); // (constant value used for GPU-side update of runCount)
     }
-    BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
-        BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
-                               configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"),
-                               configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"), configp->Get(L"disableRegularization"),
-                               ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+    BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
+                                 configp->Get(L"normalizationTimeConstant"), configp->Get(L"blendTimeConstant"),
+                                 configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"), configp->Get(L"disableRegularization"),
+                                 ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         //AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
         // To support legacy models, runCount is optional. Hence, we cannot use NumInputs<>, and must check ourselves in Validation.
@@ -2434,12 +2739,12 @@ public:
         fstream << m_spatial;
         fstream << m_normTimeConst;
         fstream << m_blendTimeConst;
-        fstream << (int32_t)m_imageLayoutKind;
-        RunCount();                   // cache m_runCountUntied, so that someone who inspects the file sees something meaningful (as an FYI)
+        fstream << (int32_t) m_imageLayoutKind;
+        RunCount(); // cache m_runCountUntied, so that someone who inspects the file sees something meaningful (as an FYI)
 #if CURRENT_CNTK_MODEL_VERSION == CNTK_MODEL_VERSION_19
-        fstream << (bool)(m_runCountUntied == 0);  // a temp version that saved a flag instead (beta11)
+        fstream << (bool) (m_runCountUntied == 0); // a temp version that saved a flag instead (beta11)
 #else
-        fstream << m_runCountUntied;  // this is really saved as a FYI and for optimizing 0-checks; the primary storage for this value is in the shared Parameter
+        fstream << m_runCountUntied; // this is really saved as a FYI and for optimizing 0-checks; the primary storage for this value is in the shared Parameter
 #endif
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
@@ -2481,7 +2786,7 @@ public:
             int32_t verWritten;
             int32_t verReadable;
             fstream >> verWritten >> verReadable;
-    
+
             if (verReadable > verWritten)
                 RuntimeError("Corrupt model file.");
             if (verWritten < m_version.VerWeCanReadBack())
@@ -2540,19 +2845,18 @@ public:
             auto node = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(nodeP);
             assert(node != nullptr);
 
-            node->m_spatial               = m_spatial;
-            node->m_normTimeConst         = m_normTimeConst;
-            node->m_blendTimeConst        = m_blendTimeConst;
-            node->m_imageLayoutKind       = m_imageLayoutKind;
-            node->m_runCountUntied        = m_runCountUntied;
-            node->m_epsilon               = m_epsilon;
-            node->m_useCntkEngine         = m_useCntkEngine;
+            node->m_spatial = m_spatial;
+            node->m_normTimeConst = m_normTimeConst;
+            node->m_blendTimeConst = m_blendTimeConst;
+            node->m_imageLayoutKind = m_imageLayoutKind;
+            node->m_runCountUntied = m_runCountUntied;
+            node->m_epsilon = m_epsilon;
+            node->m_useCntkEngine = m_useCntkEngine;
             node->m_disableRegularization = m_disableRegularization;
         }
     }
 
 private: // time-constant conversions
-
     // The case of parameter tying is tricky. The same set of BN parameters can be shared
     // across multiple instances in a network. This happens if the same BN object is applied
     // in multiple parts of the network. For example, a DSSM network that compares images,
@@ -2562,7 +2866,10 @@ private: // time-constant conversions
     // We still keep a non-tied version of the count, for the special purposes of
     //  - knowing whether the shared accumulator can never be 0, to avoid a GPU sync point
     //  - replicating the behavior of an old version that did not tie the count at all (incorrect).
-    bool HasTiedRunCount() const { return GetNumInputs() > RUN_COUNT; }
+    bool HasTiedRunCount() const
+    {
+        return GetNumInputs() > RUN_COUNT;
+    }
     void ResetRunCount()
     {
         if (HasTiedRunCount())
@@ -2573,20 +2880,23 @@ private: // time-constant conversions
     {
         if (HasTiedRunCount())
         {
-            this->template TypedInput<StatType>(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(StatType)countToAdd, m_one); // this += countToAdd * (1)
+            this->template TypedInput<StatType>(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(StatType) countToAdd, m_one); // this += countToAdd * (1)
             if (countToAdd != 0)
                 m_runCountUntied = SIZE_MAX; // we only need this for 0 checks, this value says we only know it's not 0
         }
         else
-            m_runCountUntied += countToAdd;  // legacy case (non-shared): this is the count accumulator
+            m_runCountUntied += countToAdd; // legacy case (non-shared): this is the count accumulator
     }
     size_t RunCount() const // const version of above; keep identical
     {
         if (HasTiedRunCount())
-            m_runCountUntied = (size_t)this->template TypedInput<StatType>(RUN_COUNT)->Value().Get00Element(); // if needed then cache it over
+            m_runCountUntied = (size_t) this->template TypedInput<StatType>(RUN_COUNT)->Value().Get00Element(); // if needed then cache it over
         return m_runCountUntied;
     }
-    bool IsRunCount0() const { return m_runCountUntied == 0 && RunCount() == 0; } // tied count >= untied one, so we can ask the untied one first to avoid GPU sync
+    bool IsRunCount0() const
+    {
+        return m_runCountUntied == 0 && RunCount() == 0;
+    } // tied count >= untied one, so we can ask the untied one first to avoid GPU sync
 
     // map time constants to exp avg factor
     // This is the factor for the current MB's estimate (1-factor is used for the previous value of the running stats).
@@ -2597,10 +2907,10 @@ private: // time-constant conversions
         {
             //if (IsRunCount0())
             //    RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
-            return 0;                                        // (m_normTimeConst == infinity) no new contribution from current minibatch
+            return 0; // (m_normTimeConst == infinity) no new contribution from current minibatch
         }
 
-        double numSamples = (double)GetMBLayout()->GetActualNumSamples();
+        double numSamples = (double) GetMBLayout()->GetActualNumSamples();
 
         // m_normTimeConst < 0 is used to denote corpus-level statistics (without forgetting factor).
         // BUGBUG: Corpus aggregation in float is numerically instable. E.g. over a corpus of 36000 samples,
@@ -2623,12 +2933,12 @@ private: // time-constant conversions
         // Convert to per-minibatch factor. The limit, positive infinity, means that running mean/var parameters are "frozen"
         // that is, do not require updates.
         // The code below special-cases two boundary cases, but those are just the limit cases of the main formula.
-        if (!isfinite(m_normTimeConst))                      // infinite
-            return 0;                                        // no new contribution from current minibatch (infinitely long memory)
-        else if (m_normTimeConst > 0)                        // not zero
-            return -expm1(-numSamples / m_normTimeConst);    // interpolate expAvgFactor * MB stats + (1-expAvgFactor) * prev running stats
-        else                                                 // zero
-            return 1.0;                                      // don't use running stats at all
+        if (!isfinite(m_normTimeConst))                   // infinite
+            return 0;                                     // no new contribution from current minibatch (infinitely long memory)
+        else if (m_normTimeConst > 0)                     // not zero
+            return -expm1(-numSamples / m_normTimeConst); // interpolate expAvgFactor * MB stats + (1-expAvgFactor) * prev running stats
+        else                                              // zero
+            return 1.0;                                   // don't use running stats at all
     }
 
     // map sample count to blend factor
@@ -2640,7 +2950,7 @@ private: // time-constant conversions
         {
             //if (IsRunCount0())
             //    RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
-            return 1.0;                 // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
+            return 1.0; // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
         }
 
         // Initialization case: only use current minibatch.
@@ -2649,7 +2959,7 @@ private: // time-constant conversions
 
         // convert to blend factor (= weight for running stats)
         // The code below special-cases two boundary cases, but those are just the limit cases of the main formula.
-        double numSamples = (double)GetMBLayout()->GetActualNumSamples();
+        double numSamples = (double) GetMBLayout()->GetActualNumSamples();
         if (!isfinite(m_blendTimeConst))                               // infinite weight for prior stats
             return 1.0;                                                // only use running statistics
         else if (m_blendTimeConst > 0)                                 // not zero
@@ -2657,19 +2967,19 @@ private: // time-constant conversions
         else                                                           // zero
             return 0;                                                  // no weight for prior stats, only use MB stats
     }
-public:
 
+public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         if (m_convertRunningVariancePending)
             LogicError("%ls: Failed to convert running variance until forward prop", NodeName().c_str());
         FrameRange fr(Input(DATA)->GetMBLayout());
 
-        Matrix<ElemType> sliceInputValue  = Input(DATA)->MaskedValueFor(fr);
-        const Matrix<StatType>& scale     = this->template TypedInput<StatType>(SCALE)->Value();
-        const Matrix<StatType>& bias      = this->template TypedInput<StatType>(BIAS)->Value();
-        Matrix<StatType>& runMean         = this->template TypedInput<StatType>(RUN_MEAN)->Value();
-        Matrix<StatType>& runVariance     = this->template TypedInput<StatType>(RUN_VAR)->Value();
+        Matrix<ElemType> sliceInputValue = Input(DATA)->MaskedValueFor(fr);
+        const Matrix<StatType>& scale = this->template TypedInput<StatType>(SCALE)->Value();
+        const Matrix<StatType>& bias = this->template TypedInput<StatType>(BIAS)->Value();
+        Matrix<StatType>& runMean = this->template TypedInput<StatType>(RUN_MEAN)->Value();
+        Matrix<StatType>& runVariance = this->template TypedInput<StatType>(RUN_VAR)->Value();
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         assert(scale.GetNumRows() == bias.GetNumRows());
@@ -2681,18 +2991,18 @@ public:
 
         // determine the factors from the time constants
         double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
-        double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
+        double blendFactor = ComputeBlendFactor();   // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
         // In inference-only mode, m_savedMean and m_saveInvStdDev will not be
         // produced and BackpropToNonLooping() may not be called. In
         // non-inference (training) mode, saved statistics must be produced.
         bool inferenceOnly = !Environment().IsTraining();
-        m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias,   // (in)
+        m_bnEng->Forward(/*in=*/sliceInputValue, scale, bias, // (in)
                          inferenceOnly, expAvgFactor, blendFactor,
-                         runMean, runVariance,                   // (in/out) running estimates, updated from the current MB mean/variance
-                         /*out=*/ sliceOutputValue,              // (out) batch-normalized output value
+                         runMean, runVariance,     // (in/out) running estimates, updated from the current MB mean/variance
+                         /*out=*/sliceOutputValue, // (out) batch-normalized output value
                          m_epsilon,
-                         *m_savedMean, *m_savedInvStdDev);       // (out) actual interpolated mean/stddev values. Note: unused/empty for blendFactor==1 for CNTK engine
+                         *m_savedMean, *m_savedInvStdDev); // (out) actual interpolated mean/stddev values. Note: unused/empty for blendFactor==1 for CNTK engine
 
         // and update the denominator
         if (expAvgFactor != 0 || blendFactor != 1)
@@ -2718,10 +3028,10 @@ public:
 
         if (inputIndex == DATA || !m_gradientValid) // derivative with respect to the input.
         {
-            auto sliceOutputGrad          = MaskedGradientFor(fr);
-            auto sliceInputValue          = Input(DATA)->ValueFor(fr);
+            auto sliceOutputGrad = MaskedGradientFor(fr);
+            auto sliceInputValue = Input(DATA)->ValueFor(fr);
             const Matrix<StatType>& scale = this->template TypedInput<StatType>(SCALE)->Value();
-            const Matrix<StatType>& bias  = this->template TypedInput<StatType>(BIAS)->Value();
+            const Matrix<StatType>& bias = this->template TypedInput<StatType>(BIAS)->Value();
 
             // If inputIndex is not DATA and we get here, then it means that DATA receives no gradient.
             // However, the underlying engine does not foresee this case, and thus always needs a place
@@ -2736,16 +3046,16 @@ public:
             m_dScale->Resize(scale); // gradients for scale and bias get stored here
             m_dBias->Resize(bias);
 
-            double blendFactor = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
+            double blendFactor = ComputeBlendFactor(); // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
             // TODO: Move this out. Follow the same pattern as the RNN node. But can't without requiring another buffer.
-            m_bnEng->Backward(sliceInputValue, sliceOutputGrad, // (in)  input from below, gradient from above
-                              sliceInputGrad,                   // (out) gradient for data input goes here  --TODO: Check if cudnn engine adds the gradient, or just overwrites (BUGBUG). CNTK engine is OK.
-                              scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
-                              blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
-                              *m_savedMean, *m_savedInvStdDev,  // (in)  saved mean/invstddev values used in ForwardProp()
-                              *m_dScale, *m_dBias,              // (out) gradients for scale and bias
+            m_bnEng->Backward(sliceInputValue, sliceOutputGrad,             // (in)  input from below, gradient from above
+                              sliceInputGrad,                               // (out) gradient for data input goes here  --TODO: Check if cudnn engine adds the gradient, or just overwrites (BUGBUG). CNTK engine is OK.
+                              scale,                                        // (in)  out of scale and bias, only scale is needed in gradient propagation
+                              blendFactor,                                  // (in)  smoothing weight for running stats (1=use only running stats)
+                              *m_savedMean, *m_savedInvStdDev,              // (in)  saved mean/invstddev values used in ForwardProp()
+                              *m_dScale, *m_dBias,                          // (out) gradients for scale and bias
                               !Input(DATA)->IsGradientInitializedBy(this)); // whether data gradient should be accumulated
 
             m_gradientValid = true;
@@ -2771,7 +3081,10 @@ public:
         // No derivatives with respect to running mean and variance.
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
 
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const
     {
@@ -2787,7 +3100,7 @@ public:
         Base::Validate(isFinalValidationPass);
 
         if (GetNumInputs() != RUN_COUNT && GetNumInputs() != RUN_COUNT + 1)
-            InvalidArgument("%ls %ls operation accepts %d inputs.", NodeName().c_str(), OperationName().c_str(), (int)RUN_COUNT + 1);
+            InvalidArgument("%ls %ls operation accepts %d inputs.", NodeName().c_str(), OperationName().c_str(), (int) RUN_COUNT + 1);
         // (we won't report that it also accepts RUN_COUNT inputs, as this is the deprecated legacy case)
 
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
@@ -2800,13 +3113,13 @@ public:
         for (size_t i = RUN_MEAN; i < GetNumInputs(); i++)
             //if (!Input(i)->Is<LearnableParameter<ElemType>>()) // somehow this does not compile on gcc (works on VS)
             if (!dynamic_cast<LearnableParameter<StatType>*>(this->template TypedInput<StatType>(i).get()))
-                InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), (int)RUN_MEAN, (int)GetNumInputs());
+                InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), (int) RUN_MEAN, (int) GetNumInputs());
 
-        // infer dimensions of learnable parameters
-        // BUGBUG: Parameter dimensions are totally wrong. E.g. a valid spatial bias for [15 x 15 x 32] is currently [32 x 1].
-        //         The correct bias shape should be [1 x 1 x 32]. That can be specified but leads to different results for unknown reasons.
-        //         Until this has been corrected, we need a workaround that infers the wrong dimensions.
-#if 1   // Workaround for today's definition: Trigger on [0 x 1] and infer that 0 as the total # elements needed.
+                // infer dimensions of learnable parameters
+                // BUGBUG: Parameter dimensions are totally wrong. E.g. a valid spatial bias for [15 x 15 x 32] is currently [32 x 1].
+                //         The correct bias shape should be [1 x 1 x 32]. That can be specified but leads to different results for unknown reasons.
+                //         Until this has been corrected, we need a workaround that infers the wrong dimensions.
+#if 1                                              // Workaround for today's definition: Trigger on [0 x 1] and infer that 0 as the total # elements needed.
         for (size_t i = SCALE; i < RUN_COUNT; i++) // scale, bias, run_mean, and run_variance
         {
             auto paramLayout = this->template TypedInput<StatType>(i)->GetSampleLayout();
@@ -2818,7 +3131,7 @@ public:
         }
 #else
         // These are here only inferred like for elementwise operations. We must check more.
-        ValidateNaryZip(isFinalValidationPass, /*allowBroadcast=*/ true, GetNumInputs());
+        ValidateNaryZip(isFinalValidationPass, /*allowBroadcast=*/true, GetNumInputs());
 #endif
 
         if (isFinalValidationPass)
@@ -2845,11 +3158,11 @@ public:
             {
                 auto inputPtr = this->template TypedInput<StatType>(i);
                 if (inputPtr->HasMBLayout())
-                    InvalidArgument("%ls: Input[%d] has a dynamic axis. BatchNormalization parameters cannot have that.", NodeDescription().c_str(), (int)i);
+                    InvalidArgument("%ls: Input[%d] has a dynamic axis. BatchNormalization parameters cannot have that.", NodeDescription().c_str(), (int) i);
                 auto paramLayout = inputPtr->GetSampleLayout();
                 if (paramLayout != this->template TypedInput<StatType>(SCALE)->GetSampleLayout())
-                    InvalidArgument("%ls: Input[%d] has a layout different from Input[1]. All must be identical.", NodeDescription().c_str(), (int)i);
-#if 0           // BUGBUG: For this to work, parameter shapes must be correct (cf. comment above on inference).
+                    InvalidArgument("%ls: Input[%d] has a layout different from Input[1]. All must be identical.", NodeDescription().c_str(), (int) i);
+#if 0 // BUGBUG: For this to work, parameter shapes must be correct (cf. comment above on inference).
                 if (paramLayout.GetRank() > inputLayout.GetRank())
                     InvalidArgument("%ls: Input[%d] has a tensor rank greated than the data input.", NodeDescription().c_str(), (int)i);
                 for (size_t k = 0; k < paramLayout.size(); k++)
@@ -2868,9 +3181,10 @@ public:
             if (m_spatial && m_imageLayoutKind != CHW)
             {
                 InvalidArgument(
-                    "%ls %ls currently supports only cuDNN (CHW) data layout. " 
+                    "%ls %ls currently supports only cuDNN (CHW) data layout. "
                     "Please specify imageLayout=\"cudnn\" in BatchNormalization node in your NDL/BrainScript "
-                    "and make sure your input data layout is CHW", NodeName().c_str(), OperationName().c_str());
+                    "and make sure your input data layout is CHW",
+                    NodeName().c_str(), OperationName().c_str());
             }
 
             if (!m_useCntkEngine)
@@ -2896,7 +3210,7 @@ public:
             }
 
             double cudnnMinEps = 1e-5; // CUDNN_BN_MIN_EPSILON
-            if (!m_useCntkEngine && m_epsilon < cudnnMinEps) 
+            if (!m_useCntkEngine && m_epsilon < cudnnMinEps)
                 fprintf(stderr, "\nWARNING: cuDNN batch normalization requires epsilon >= %e. Epsilon will be reset to that value.\n", cudnnMinEps);
 
             if (m_blendTimeConst < 0)
@@ -2906,7 +3220,7 @@ public:
             {
                 auto shape = GetSampleLayout();
                 m_bnEng = BatchNormEngine<ElemType, StatType>::Create(m_deviceId, shape, m_spatial, m_imageLayoutKind,
-                                                            m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
+                                                                      m_useCntkEngine ? BatchNormEngineKind::Cntk : BatchNormEngineKind::CuDnn);
             }
 
             if (m_disableRegularization)
@@ -2956,7 +3270,7 @@ public:
     // Once called, this node is put into inference mode.
     virtual void FreezeParameters() override // from IFreezable
     {
-        m_normTimeConst  = std::numeric_limits<double>::infinity();
+        m_normTimeConst = std::numeric_limits<double>::infinity();
         m_blendTimeConst = std::numeric_limits<double>::infinity();
     }
 
@@ -2974,16 +3288,34 @@ public:
     void DisableRegInBatchNormalization()
     {
         let scaleNode = dynamic_pointer_cast<LearnableParameter<StatType>>(this->template TypedInput<StatType>(SCALE));
-        let biasNode  = dynamic_pointer_cast<LearnableParameter<StatType>>(this->template TypedInput<StatType>(BIAS));
+        let biasNode = dynamic_pointer_cast<LearnableParameter<StatType>>(this->template TypedInput<StatType>(BIAS));
         scaleNode->SetRegMultiplier(0.f);
         biasNode->SetRegMultiplier(0.f);
     }
-    double NormalizationTimeConstant() const { return m_normTimeConst; }
-    double BlendTimeConstant() const { return m_blendTimeConst; }
-    bool Spatial() const { return m_spatial; }
-    double Epsilon() const { return m_epsilon; }
-    bool UseCNTKEngine() const { return m_useCntkEngine; }
-    bool DisableRegularization() const { return m_disableRegularization; }
+    double NormalizationTimeConstant() const
+    {
+        return m_normTimeConst;
+    }
+    double BlendTimeConstant() const
+    {
+        return m_blendTimeConst;
+    }
+    bool Spatial() const
+    {
+        return m_spatial;
+    }
+    double Epsilon() const
+    {
+        return m_epsilon;
+    }
+    bool UseCNTKEngine() const
+    {
+        return m_useCntkEngine;
+    }
+    bool DisableRegularization() const
+    {
+        return m_disableRegularization;
+    }
 
 private:
     // Old versioning - do not use. Do not remove until we're sure there are no old models around.
@@ -2992,9 +3324,18 @@ private:
         //int32_t VerWrittenCur() const      { return 0x00010001; } // Initial
         //int32_t VerWrittenCur() const      { return 0x00010002; } // Added m_imageLayoutKind and m_mbCount
         //int32_t VerWrittenCur() const      { return 0x00010003; } // Added m_epsilon and m_useCntkEngine
-        int32_t VerWrittenCur() const        { return 0x00010004; } // Added m_normTimeConst
-        int32_t VerReadableCur() const       { return 0x00010004; }
-        int32_t VerWeCanReadBack() const     { return 0x00010001; }
+        int32_t VerWrittenCur() const
+        {
+            return 0x00010004;
+        } // Added m_normTimeConst
+        int32_t VerReadableCur() const
+        {
+            return 0x00010004;
+        }
+        int32_t VerWeCanReadBack() const
+        {
+            return 0x00010001;
+        }
     };
     VersionInfo m_version;
 
@@ -3049,7 +3390,7 @@ private:
     // This value is not updated unless needed, so it may be out of date during most operation.
     // It will be updated at start (Validate()) and saving models, and any time the true value is needed.
     mutable size_t m_runCountUntied; // cached running sample count (mutable since it is a cache)
-    Matrix<StatType> m_one;  // constant [1x1] matrix that contains a 1 (used for updating the shared count)
+    Matrix<StatType> m_one;          // constant [1x1] matrix that contains a 1 (used for updating the shared count)
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.
     shared_ptr<Matrix<StatType>> m_savedMean;
@@ -3067,4 +3408,6 @@ private:
     bool m_convertRunningVariancePending;
 };
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft
