@@ -292,7 +292,7 @@ public:
                     ++num_units;
                 }
             }
-            ++num_units; //	add 1 to match the true number
+            ++num_units; // add 1 to match the true number
             utt_units_num.push_back(num_units);
 
             // get items number
