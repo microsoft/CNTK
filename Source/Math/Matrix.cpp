@@ -1899,6 +1899,40 @@ void Matrix<ElemType>::AdaMaxUpdate(Matrix<ElemType>& gradients, Matrix<ElemType
 	// Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
+///
+// Implement the original adaBound algorithm according to the paper
+// Ref: ADAPTIVE GRADIENT METHODS WITH DYNAMIC BOUND OF LEARNING RATE, https://arxiv.org/pdf/1902.09843.pdf
+///
+template <class ElemType>
+void Matrix<ElemType>::AdaBoundUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double beta1Pow, const double beta2Pow,
+	const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, const double gamma, const double finalLr, const bool amsBound, const double updateStep, ElemType unitGainFactor)
+{
+	let biasCorrection = (ElemType)(sqrt(1 - beta2Pow) / (1 - beta1Pow));
+	let upperBound = finalLr * (1 + 1 / (gamma * updateStep));
+	let lowerBound = finalLr * (1 - 1 / (gamma * updateStep + 1));
+
+	DecideAndMoveToRightDevice(*this, gradients, functionValues);
+
+	DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
+		{
+			m_CPUMatrix->AdaBound(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix,
+			(ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+			biasCorrection, (ElemType)epsilon, (ElemType)upperBound, (ElemType)lowerBound, unitGainFactor, amsBound);
+			SetDataLocation(CPU);
+		},
+		{
+			m_GPUMatrix->AdaBound(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix,
+			(ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+			biasCorrection, (ElemType)epsilon, (ElemType)upperBound, (ElemType)lowerBound, unitGainFactor, amsBound);
+			SetDataLocation(GPU);
+		},
+		{ NOT_IMPLEMENTED; },
+		{ gradients.m_GPUSparseMatrix->AdaBound(*m_GPUMatrix, *functionValues.m_GPUMatrix,
+			(ElemType)learnRatePerSample, (ElemType)meanMomentum,
+			(ElemType)varMomentum, biasCorrection, (ElemType)epsilon, (ElemType)upperBound, (ElemType)lowerBound, unitGainFactor, amsBound);
+			SetDataLocation(GPU); });
+}
+
 template <class ElemType>
 void Matrix<ElemType>::RmsPropUpdate(Matrix<ElemType>& gradients,
                                    Matrix<ElemType>& functionValues, 

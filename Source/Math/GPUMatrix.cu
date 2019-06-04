@@ -1592,6 +1592,33 @@ void GPUMatrix<ElemType>::AdaMax(GPUMatrix<ElemType>& gradients,
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::AdaBound(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+	ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType epsilon, ElemType upperBound, ElemType lowerBound, ElemType unitGainFactor, const bool amsBound)
+{
+	size_t numColsNeeded = 2 * gradients.GetNumCols();
+	if (amsBound)
+		numColsNeeded += gradients.GetNumCols();
+
+	if (IsEmpty() || (GetNumCols() < numColsNeeded))
+	{
+		RequireSize(gradients.GetNumRows(), numColsNeeded);
+		SetValue(0.0);
+	}
+
+	assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+	size_t n = gradients.GetNumElements();
+	int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+
+	if (amsBound)
+		_amsBound<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (n, gradients.Data(), Data() + n, Data(), Data() + 2 * n, functionValues.Data(),
+			learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, epsilon, upperBound, lowerBound, unitGainFactor);
+	else
+		_adaBound<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (n, gradients.Data(), Data() + n, Data(), functionValues.Data(),
+			learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, epsilon, upperBound, lowerBound, unitGainFactor);
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
                                       GPUMatrix<ElemType>& functionValues,
                                       ElemType learningRate, 

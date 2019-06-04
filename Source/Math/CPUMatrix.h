@@ -104,6 +104,9 @@ public:
 	void AdaMax(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
 				ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor, ElemType epsilon);
 
+	void AdaBound(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+		ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType epsilon, ElemType upperBound, ElemType lowerBound, ElemType unitGainFactor, const bool amsBound);
+
     void RmsProp(CPUMatrix<ElemType>& gradients,
                  CPUMatrix<ElemType>& functionValues,
                  ElemType learningRate,

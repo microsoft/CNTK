@@ -1662,6 +1662,52 @@ void GPUSparseMatrix<ElemType>::AdaMax(
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::AdaBound(
+	GPUMatrix<ElemType>& c,
+	GPUMatrix<ElemType>& functionValues,
+	ElemType learnRatePerSample,
+	ElemType firstMomentDecayRate,
+	ElemType secondMomentDecayRate,
+	ElemType adaMul,
+	ElemType epsilon,
+	ElemType upperBound,
+	ElemType lowerBound,
+	ElemType unitGainFactor,
+	const bool amsBound)
+{
+	if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
+	{
+		NOT_IMPLEMENTED;
+	}
+
+	size_t numColsNeeded = 2 * GetNumCols();
+	if (amsBound)
+		numColsNeeded += GetNumCols();
+
+	if (c.IsEmpty() || (c.GetNumCols() < numColsNeeded))
+	{
+		c.RequireSize(GetNumRows(), numColsNeeded);
+		c.SetValue(0.0);
+	}
+
+	assert((c.GetNumRows() == GetNumRows()) && (c.GetNumCols() == numColsNeeded));
+
+	size_t n = GetNumElements();
+	int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+
+	if (amsBound)
+		_amsBound4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (
+			n, Data(), ColOrRow2BlockId(), GetNumRows(),
+			c.Data() + n, c.Data(), c.Data() + 2*n, functionValues.Data(),
+			learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, epsilon, upperBound, lowerBound, unitGainFactor);
+	else
+		_adaBound4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> > (
+			n, Data(), ColOrRow2BlockId(), GetNumRows(),
+			c.Data() + n, c.Data(), functionValues.Data(),
+			learnRatePerSample, firstMomentDecayRate, secondMomentDecayRate, adaMul, epsilon, upperBound, lowerBound, unitGainFactor);
+}
+
+template <class ElemType>
 void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
     GPUMatrix<ElemType>& functionValues,
     ElemType learningRate,

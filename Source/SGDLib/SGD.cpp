@@ -1520,6 +1520,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++, smoothedCountIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
+				++(*smoothedCountIter); // increase update_step
                 if (node->IsParameterUpdateRequired())
                 {
 #ifdef _DEBUG
@@ -1846,6 +1847,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             net, evaluationNodesWhichAccumulateResult, m_gradHeader, m_mpi, epochEvalErrors, evaluationNodes,
             localEpochEvalErrors, ContainsAccumulatedResult, m_packThresholdSizeInBytes);
     }
+
+	//// for DEBUG
+	//for (auto learnableNode : learnableNodes)
+	//{
+	//	learnableNode->PrintSelf(true);
+	//}
 
     return numMBsRun;
 }
@@ -2606,15 +2613,34 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 	}
 	else if (adpType == GradientsUpdateType::AdaMax)
 	{
-		const auto unitGainFactor = ElemType(disableMomentumUnitGain ? 1.0 : (1.0 - m_adaMaxInfo.beta1));
+		const auto unitGainFactor = ElemType(disableMomentumUnitGain ? 1.0 : (1.0 - m_adamInfo.beta1));
 		double beta1Pow = m_additionalOptimizerInfo.at(L"beta1_pow");
 
 #ifdef USE_MEAN_GRADIENT
 		auto learningRate = learnRatePerSample * actualMBSize;
 		Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
-		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, beta1Pow, learningRate, m_adaMaxInfo.beta1, m_adaMaxInfo.beta2, unitGainFactor, m_epsilon);
+		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, beta1Pow, learningRate, m_adamInfo.beta1, m_adamInfo.beta2, unitGainFactor, m_epsilon);
 #else
 		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, beta1Pow, learnRatePerSample, m_adaMaxInfo.beta1, m_adaMaxInfo.beta2, unitGainFactor, m_epsilon);
+#endif
+	}
+	else if (adpType == GradientsUpdateType::AdaBound)
+	{
+		const auto unitGainFactor = static_cast<ElemType>(disableMomentumUnitGain ? 1.0 : (1.0 - m_adamInfo.beta1));
+		const double beta1Pow = m_additionalOptimizerInfo.at(L"beta1_pow");
+		const double beta2Pow = m_additionalOptimizerInfo.at(L"beta2_pow");
+		double finalLr = 0;
+		if (m_lrapiInfo.adjustType != AdjustType::None)
+			finalLr = m_adaBoundInfo.final_lr * (learnRatePerSample * actualMBSize) / m_lrapiInfo.baseLR;
+		else
+			finalLr = learnRatePerSample * actualMBSize;
+
+#ifdef USE_MEAN_GRADIENT
+		auto learningRate = learnRatePerSample * actualMBSize;
+		Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
+		smoothedGradientValues.AdaBoundUpdate(gradientValues, functionValues, beta1Pow, beta2Pow, learningRate, m_adamInfo.beta1, m_adamInfo.beta2, m_epsilon, m_adaBoundInfo.gamma, finalLr, m_adaBoundInfo.amsBound, smoothedCount, unitGainFactor);
+#else
+		smoothedGradientValues.AdaBoundUpdate(gradientValues, functionValues, beta1Pow, beta2Pow, learnRatePerSample, m_adamInfo.beta1, m_adamInfo.beta2, m_epsilon, m_adaBoundInfo.gamma, finalLr / actualMBSize, m_adaBoundInfo.amsBound, smoothedCount, unitGainFactor);
 #endif
 	}
 
@@ -3095,6 +3121,8 @@ static GradientsUpdateType ParseGradUpdateType(const wstring& s)
 		return GradientsUpdateType::Adam;
 	else if (EqualCI(s, L"adaMax"))
 		return GradientsUpdateType::AdaMax;
+	else if (EqualCI(s, L"adaBound"))
+		return GradientsUpdateType::AdaBound;
     // legacy, deprecated
     else if (EqualCI(s, L"normal") || EqualCI(s, L"simple"))
         return GradientsUpdateType::None;
@@ -3321,23 +3349,38 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_gradType.varianceTimeConstant = configSGD(L"varianceTimeConstant", 2 * 3600 * 100); // default originates from 2h of speech
     m_gradType.targetAdagradAvDenom = configSGD(L"fsAdagradTargetAvDenom", 1.0);          // TODO: deprecated parameter kept for back compat (set to 0.0025 inconjunction with reenabling the static bug)
 
-    // extract RMSProp parameters from config, if they exist. Default to reasonable values.
+	// epsilon
+	m_epsilon = configSGD(L"epsilon", 1.0);
+    
+	// extract RMSProp parameters from config, if they exist. Default to reasonable values.
     m_rpi.dec = configSGD(L"rms_wgt_dec", 0.75);
     m_rpi.inc = configSGD(L"rms_wgt_inc", 1.2);
     m_rpi.min = configSGD(L"rms_wgt_min", 0.1);
     m_rpi.max = configSGD(L"rms_wgt_max", 10.0);
     m_rpi.gamma = configSGD(L"rms_gamma", 0.99);
 
-	// extract Adam parameters from config, if they exist. Default to reasonable values.
-    m_adamInfo.beta1 = configSGD(L"adam_beta1", 0.9);
-    m_adamInfo.beta2 = configSGD(L"adam_beta2", 0.999);
-    
-	// epsilon
-	m_epsilon = configSGD(L"epsilon", 1.0);
+	if (m_gradType.type == GradientsUpdateType::Adam)
+	{
+		// extract Adam parameters from config, if they exist. Default to reasonable values.
+		m_adamInfo.beta1 = configSGD(L"adam_beta1", 0.9);
+		m_adamInfo.beta2 = configSGD(L"adam_beta2", 0.999);
+	}
+	else if (m_gradType.type == GradientsUpdateType::AdaMax)
+	{
+		// extract AdaMax parameters from config, it they exist. Default to reasonable values.
+		m_adamInfo.beta1 = configSGD(L"adamax_beta1", 0.9);
+		m_adamInfo.beta2 = configSGD(L"adamax_beta2", 0.999);
+	}
+	else if (m_gradType.type == GradientsUpdateType::AdaBound)
+	{
+		// extract AdaBound parameters from config, if they exist. Default to reasonable values.
+		m_adamInfo.beta1 = configSGD(L"adabound_beta1", 0.9);
+		m_adamInfo.beta2 = configSGD(L"adabound_beta2", 0.999);
+		m_adaBoundInfo.gamma = configSGD(L"adabound_gamma", 1 - m_adamInfo.beta2);
+		m_adaBoundInfo.final_lr = configSGD(L"adabound_final_lr", 0.1);
+		m_adaBoundInfo.amsBound = configSGD(L"adabound_using_amsbound", false);
+	}
 
-	// extract AdaMax parameters from config, it they exist. Default to reasonable values.
-	m_adaMaxInfo.beta1 = configSGD(L"adamax_beta1", 0.9);
-	m_adaMaxInfo.beta2 = configSGD(L"adamax_beta2", 0.999);
 
     m_needAveMultiplier = configSGD(L"normWithAveMultiplier", true);
     m_L2RegWeight = configSGD(L"L2RegWeight", 0.0);
