@@ -2702,6 +2702,17 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
 
+			if (!m_additionalOptimizerInfo.empty())
+			{
+				fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BAdditionalOptimizerInfo");
+				fstream << m_additionalOptimizerInfo.size();
+				for (auto additionalItem = m_additionalOptimizerInfo.begin(); additionalItem != m_additionalOptimizerInfo.end(); ++additionalItem)
+				{
+					fstream << additionalItem->first << additionalItem->second;
+				}
+				fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EAdditionalOptimizerInfo");
+			}
+
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"BCount");
 
             for (auto sc : smoothedCounts)
@@ -2814,6 +2825,21 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
         fstream >> smoothedGradientValues;
     }
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
+
+	if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BAdditionalOptimizerInfo"))
+	{
+		size_t numAdditionalItem;
+		fstream >> numAdditionalItem;
+		for (size_t i = 0; i < numAdditionalItem; ++i)
+		{
+			wstring name;
+			double value;
+			fstream >> name;
+			fstream >> value;
+			m_additionalOptimizerInfo[name] = value;
+		}
+		fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EAdditionalOptimizerInfo");
+	}
 
     if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BCount"))
     {

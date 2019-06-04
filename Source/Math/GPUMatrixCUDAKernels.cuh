@@ -5288,15 +5288,15 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* firstMoment, Ele
     {
         comp_t g = grad[idx];
 		
-		// g <- m_t = beta_1 * m_{t-1} + unitGainFactor * g, copy to global memory.
-		g = (comp_t)firstMomentDecayRate * (comp_t)firstMoment[idx] + unitGainFactor * g;
-		firstMoment[idx] = g;
+		// m <- m_t = beta_1 * m_{t-1} + unitGainFactor * g, copy to global memory.
+		comp_t m = (comp_t)firstMomentDecayRate * (comp_t)firstMoment[idx] + unitGainFactor * g;
+		firstMoment[idx] = m;
 
 		// w <- v_t = beta_2 * v_{t-1} + (1-beta_2) * g * g, copy to global memory.
 		comp_t w = (comp_t)secondMomentDecayRate * (comp_t)secondMoment[idx] + (1.0f - (comp_t)secondMomentDecayRate) * g * g;
 		secondMoment[idx] = w;
 
-		val[idx] = (comp_t)val[idx] - (comp_t)lr * (comp_t)adaMul * g / (Sqrt(w) + (comp_t)epsilon);
+		val[idx] = (comp_t)val[idx] - (comp_t)lr * (comp_t)adaMul * m / (Sqrt(w) + (comp_t)epsilon);
     }
 }
 
@@ -5311,13 +5311,13 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     for (; idx < size; idx += stride)
     {
         ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
-		g = firstMomentDecayRate * firstMoment[idx] + unitGainFactor * g;
-		firstMoment[idx] = g;
+		ElemType m = firstMomentDecayRate * firstMoment[idx] + unitGainFactor * g;
+		firstMoment[idx] = m;
 
         ElemType w = secondMomentDecayRate * secondMoment[idx] + (1.0f - secondMomentDecayRate) * g * g;
 		secondMoment[idx] = w;
 
-		val[idx] -= lr * adaMul * g / (Sqrt(w) + epsilon);
+		val[idx] -= lr * adaMul * m / (Sqrt(w) + epsilon);
     }
 }
 
