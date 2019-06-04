@@ -150,6 +150,20 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
         else if (nodePtr->Is<ComputationNode<half>>())
             precision = ElemTypeName<half>();
         else LogicError("Unexpected node type.");
+#if CURRENT_CNTK_MODEL_VERSION >= CNTK_MODEL_VERSION_31
+        if (nodePtr->Is<CastNode<half,float>>())
+            precision = ElemTypeName2<half,float>();
+        else if (nodePtr->Is<CastNode<half, double>>())
+            precision = ElemTypeName2<half, double>();
+        else if (nodePtr->Is<CastNode<float, half>>())
+            precision = ElemTypeName2<float, half>();
+        else if (nodePtr->Is<CastNode<float, double>>())
+            precision = ElemTypeName2<float, double>();
+        else if (nodePtr->Is<CastNode<double, half>>())
+            precision = ElemTypeName2<double, half>();
+        else if (nodePtr->Is<CastNode<double, float>>())
+            precision = ElemTypeName2<double, float>();
+#endif
         fstream << precision;
 #endif
         fstream << nodePtr->OperationName();
@@ -265,6 +279,20 @@ void ComputationNetwork::ReadPersistableParameters(size_t modelVersion, File& fs
             node = ComputationNetworkBuilder<half>::NewNode(opName, m_deviceId, nodeName);
         else if (precision == L"") // old file format: default to <ElemType>
             node = ComputationNetworkBuilder<ElemType>::NewNode(opName, m_deviceId, nodeName);
+#if CURRENT_CNTK_MODEL_VERSION >= CNTK_MODEL_VERSION_31
+        else if (precision == L"half,float")
+            node = ComputationNetworkBuilder<half>::NewNode2<float>(opName, m_deviceId, nodeName);
+        else if (precision == L"half,double")
+            node = ComputationNetworkBuilder<half>::NewNode2<double>(opName, m_deviceId, nodeName);
+        else if (precision == L"float,half")
+            node = ComputationNetworkBuilder<float>::NewNode2<half>(opName, m_deviceId, nodeName);
+        else if (precision == L"float,double")
+            node = ComputationNetworkBuilder<float>::NewNode2<double>(opName, m_deviceId, nodeName);
+        else if (precision == L"double,half")
+            node = ComputationNetworkBuilder<double>::NewNode2<half>(opName, m_deviceId, nodeName);
+        else if (precision == L"double,float")
+            node = ComputationNetworkBuilder<double>::NewNode2<float>(opName, m_deviceId, nodeName);
+#endif
         else
             RuntimeError("Read: Unexpected precision tag '%ls'", precision.c_str());
 

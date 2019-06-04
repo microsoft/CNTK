@@ -1313,6 +1313,14 @@ template <> /*static*/ inline const wchar_t* ElemTypeName<float>()  { return L"f
 template <> /*static*/ inline const wchar_t* ElemTypeName<double>() { return L"double"; }
 template <> /*static*/ inline const wchar_t* ElemTypeName<half>() { return L"half"; }
 
+template <typename ElemType, typename ElemType2> static inline const wchar_t* ElemTypeName2();
+template <> /*static*/ inline const wchar_t* ElemTypeName2<float,half>() { return L"float,half"; }
+template <> /*static*/ inline const wchar_t* ElemTypeName2<float,double>() { return L"float,double"; }
+template <> /*static*/ inline const wchar_t* ElemTypeName2<double,half>() { return L"double,half"; }
+template <> /*static*/ inline const wchar_t* ElemTypeName2<double,float>() { return L"double,float"; }
+template <> /*static*/ inline const wchar_t* ElemTypeName2<half,float>() { return L"half,float"; }
+template <> /*static*/ inline const wchar_t* ElemTypeName2<half,double>() { return L"half,double"; }
+
 // The following emits the class and enables the BaseMatrix<double> to be available (used by EvalDll)
 // The corresponding Matrix<float> is emitted in the SetDeviceId function above.
 template class Matrix<double>;

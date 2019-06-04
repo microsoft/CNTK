@@ -38,10 +38,10 @@ fi
 
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 cd "$SCRIPT_DIR"
-wget -q http://prdownloads.sourceforge.net/swig/$SWIG_PATH.tar.gz -O - | tar xvfz -
+wget -q https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/swig/$SWIG_VERSION/$SWIG_PATH.tar.gz -O - | tar xvfz -
 cd swig-$SWIG_VERSION
 # Note: we specify --without-alllang to suppress building tests and examples for specific languages.
-./configure --prefix=$SWIG_PREFIX --without-alllang
+./configure --prefix=$SWIG_PREFIX --without-perl5 --without-alllang
 make -j $(nproc)
 $AS_ROOT make install
 cd ..

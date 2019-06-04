@@ -26,7 +26,7 @@ def test_native_binary_function():
         "Please check if HALIDE_PATH is configured properly "
         "and try building {1} again"
         .format('Cntk.BinaryConvolution-' + C.__version__.rstrip('+'),
-        'Extnsibiliy\BinaryConvolution'))          
+        'Extnsibiliy\\BinaryConvolution'))
 
     # be sure to only run on CPU, binary convolution does not have GPU support for now
     dev = C.cpu()

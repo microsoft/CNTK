@@ -3559,6 +3559,19 @@ namespace CNTK
             return foundFunction;
         }
 
+        //FunctionPtr FindByUid(const std::wstring& uid, bool nestedSearchInsideBlockFunction = false)
+        //{
+        //    FunctionPtr  foundFunction = nullptr;
+        //    PreorderTraverseFunctions(RootFunction(), [&foundFunction, &uid, this](const FunctionPtr& function) {
+        //        if (uid.compare(function->Uid()) == 0)
+        //        { 
+        //            foundFunction = function;
+        //        }
+        //    }, nestedSearchInsideBlockFunction);
+
+        //    return foundFunction;
+        //}
+
         ///
         /// Find a list of functions with the given name in the Function graph underlying 'this' Function.
         /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched for the given name.
@@ -3595,7 +3608,8 @@ namespace CNTK
         ///
         /// Save this Function graph into a model file.
         ///
-        CNTK_API void Save(const std::wstring& filepath, ModelFormat format = ModelFormat::CNTKv2);
+        CNTK_API void Save(const std::wstring& filepath, ModelFormat format = ModelFormat::CNTKv2,
+            bool useExternalFilesToStoreParameters = false);
 
         ///
         /// Restore the models parameters (in-place) from a model file
@@ -4161,7 +4175,12 @@ namespace CNTK
     /// Create an instance of the expand dims operation on specified tensor input operand, for the specified axis 
     ///
     CNTK_API FunctionPtr ExpandDims(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-    
+
+    //
+    /// Create an instance of a constant-like operation. This produces a tensor with given constant value with the shape and dynamic axes specified by the operand.
+    ///
+    CNTK_API FunctionPtr ConstantLike(const Variable& operand, const double value, const std::wstring& name = L"");
+
     ///
     /// Create an instance of a zeros-like operation. This produces zeros with the shape and dynamic axes specified by the operand.
     ///
@@ -5147,6 +5166,8 @@ namespace CNTK
         ///
         virtual void ResetSmoothedGradients() = 0;
 
+        virtual void SetNeedToUpdateMasterParameter() { NOT_IMPLEMENTED }
+
         ///
         /// Returns current learning rate.
         ///
@@ -6075,6 +6096,12 @@ namespace CNTK
     CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles, bool phoneBoundaries = false);
 
     ///
+    /// Create an HTKMLFBinaryDeserializer with the specified options
+    ///
+    CNTK_API  Deserializer HTKMLFBinaryDeserializer(const std::wstring& streamName, const std::vector<std::wstring>& mlfFiles, size_t dimension);
+
+
+    ///
     /// Create a LatticeDeserializer with the specified options
     ///
     CNTK_API  Deserializer LatticeDeserializer(const std::wstring& streamName, const std::wstring& latticeIndexFile);
@@ -6242,7 +6269,7 @@ namespace CNTK
     ///
     /// Built-in MPI-based communicator.
     ///
-    CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = Internal::GetMPIPackThreshold());
+    CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = Internal::GetMPIPackThreshold(), bool useFP16AllReduce = false);
 
     ///
     /// Distributed communicator that allows quantized aggregations.

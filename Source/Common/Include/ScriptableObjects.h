@@ -9,6 +9,8 @@
 #include <functional> // for function<>
 #include <map>
 #include <set>
+#include <File.h>
+#include <half.hpp>
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
@@ -355,6 +357,10 @@ public:
     operator float() const
     {
         return (float) AsRef<Double>();
+    }
+    operator half() const
+    {
+        return (half)AsRef<Double>();
     }
     operator bool() const
     {

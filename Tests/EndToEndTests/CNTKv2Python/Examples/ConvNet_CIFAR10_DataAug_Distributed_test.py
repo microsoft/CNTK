@@ -84,7 +84,7 @@ def test_cifar_convnet_distributed_block_momentum(device_id):
     # 13000 samples / 2 worker / 64 mb_size = 101 minibatchs. 
     # We expect to see only Minibatch[ 1 -100] 
     output = mpiexec_execute(script_under_test, mpiexec_params, params, device_id=device_id)
-    results = re.findall("Minibatch\[(.+?)\]: loss = .+?%", output)
+    results = re.findall(r"Minibatch\[(.+?)\]: loss = .+?%", output)
     assert len(results) == 2
     assert results[0] == '   1- 100'
     assert results[1] == '   1- 100'

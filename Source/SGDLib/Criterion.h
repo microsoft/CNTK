@@ -74,8 +74,17 @@ struct EpochCriterion : public std::pair<double, size_t>
 
 // We accumulate criteria in this struct.
 // Criteria are accumulated together with their counts (counts depend on sequence lengths, and different criteria may have different sequence lengths).
+struct CriterionAccumulatorBase
+{
+    CriterionAccumulatorBase() {};
+    virtual ~CriterionAccumulatorBase() {};
+    virtual const CriterionAccumulatorBase& Add(size_t i, size_t numSamplesInMinibatch) = 0;
+    virtual const CriterionAccumulatorBase& Assign(size_t i, size_t numSamplesInMinibatch) = 0;
+    virtual EpochCriterion GetCriterion(size_t i) const = 0;
+};
+
 template <class ElemType>
-struct CriterionAccumulator
+struct CriterionAccumulator : CriterionAccumulatorBase
 {
     // constructor params:
     //  criterionNodes                  - list of criterion nodes
@@ -91,16 +100,16 @@ struct CriterionAccumulator
     }
     // 'i' is the index of the element we add into (multiple eval criteria share the same matrix object)
     // Use 'reset=true' to not accumulate but overwrite.
-    const CriterionAccumulator& Add(size_t i, size_t numSamplesInMinibatch)
+    virtual const CriterionAccumulator& Add(size_t i, size_t numSamplesInMinibatch) override
     {
         return Accumulate(i, numSamplesInMinibatch, /*reset=*/false);
     }
-    const CriterionAccumulator& Assign(size_t i, size_t numSamplesInMinibatch)
+    virtual const CriterionAccumulator& Assign(size_t i, size_t numSamplesInMinibatch) override
     {
         return Accumulate(i, numSamplesInMinibatch, /*reset=*/true);
     }
     // retrieve an accumulated result as a pair (numerator, denominator)
-    EpochCriterion GetCriterion(size_t i) const
+    virtual EpochCriterion GetCriterion(size_t i) const override
     {
         // BUGBUG: For unknown reasons, this (or the other below) check makes a difference for MPI configs.
         //         If it is left out, then training and test configs end up being scaled by the same factor close to 1.
@@ -192,6 +201,28 @@ private:
     const std::vector<ComputationNodeBasePtr> m_criterionNodes;
     // Criterion nodes that accumulate result themselves.
     const std::vector<ComputationNodeBasePtr> m_accumulatorCriterionNodes;
+};
+
+class CriterionAccumulatorFactory
+{
+public:
+    template <class ElemType>
+    static shared_ptr<CriterionAccumulatorBase> CreateCriterionAccumulator(
+        const std::vector<ComputationNodeBasePtr>& criterionNodes, DEVICEID_TYPE deviceId,
+        const std::vector<ComputationNodeBasePtr>& accumulatorCriterionNodesNodes = {})
+    {
+        // Both half and float use float as accumulator
+        if (std::is_same<ElemType, float>() || std::is_same<ElemType, half>())
+        {
+            return make_shared<CriterionAccumulator<float>>(criterionNodes, deviceId, accumulatorCriterionNodesNodes);
+        }
+        else if (std::is_same<ElemType, double>())
+        {
+            return make_shared<CriterionAccumulator<double>>(criterionNodes, deviceId, accumulatorCriterionNodesNodes);
+        }
+        RuntimeError("CreateCriterionAccumulator: unsupported node element type!");
+    }
+
 };
 
 }}}

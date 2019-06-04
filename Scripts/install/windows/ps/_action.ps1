@@ -92,6 +92,9 @@ function InstallYml(
     $envsDir = Join-Path $basePath envs
     $targetDir = Join-Path $envsDir $env
 
+    $newTable = @{ Function = "InstallExe"; Command = "$basepath\Scripts\conda.exe"; Param = "update conda -y"; WorkDir = "$basePath\Scripts"; runAs=$false }
+    InstallExe $newTable
+
     if (test-path -path $targetDir -PathType Container) {
         $newTable = @{ Function = "InstallExe"; Command = "$basepath\Scripts\conda.exe"; Param = "env update --file `"$ymlFile`" --name `"$targetDir`""; WorkDir = "$basePath\Scripts"; runAs=$false }
     }

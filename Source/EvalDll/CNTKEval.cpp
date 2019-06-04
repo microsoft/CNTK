@@ -4,6 +4,9 @@
 //
 // CNTKEval.cpp : Defines the exported functions for the CNTK DLL.
 //
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+#endif
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>

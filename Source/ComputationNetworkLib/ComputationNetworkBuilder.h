@@ -38,6 +38,8 @@ public:
     // TODO: move into a separate header/class, to decouple from this class which would then be only used by old NDL and SimpleNetworkBuilder.
     static ComputationNodePtr NewStandardNode(const std::wstring& nodeType, DEVICEID_TYPE deviceId, const wstring& name);
     static ComputationNodePtr NewNode(const std::wstring& nodeType, DEVICEID_TYPE deviceId, const wstring& name);
+    template <class ElemType2>
+    static ComputationNodePtr NewNode2(const std::wstring& nodeType, DEVICEID_TYPE deviceId, const wstring& name);
 
     // The following functions create nodes and add them to the net, but don't attach inputs (some don't have inputs).
     // There are special versions for nodes with custom constructors, and a catch-all, CreateComputationNode(), for all others.
@@ -53,12 +55,25 @@ public:
     template<class ValueType>
     shared_ptr<ComputationNode<ValueType>> TypedCreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape); // V2
 
+    template <class InputNodeType>
+    shared_ptr<ComputationNode<ElemType>> CreateCastNode(const std::wstring& nodeName);
+
     // sparse matrix size is optionally specified
     // ComputationNodePtr CreateSparseLearnableParameter(const std::wstring & paramName, const size_t rows, const size_t cols, const size_t size = 0);
     ComputationNodePtr CreateInputNode(const std::wstring& inputName, const size_t rows, const wstring& dynamicAxisName = L"");
     ComputationNodePtr CreateSparseInputNode(const std::wstring& inputName, const size_t rows, const wstring& dynamicAxisName = L"");
-    ComputationNodePtr CreateInputNode(const std::wstring& inputName, const TensorShape& sampleLayout, const wstring& dynamicAxisName = L"");
-    ComputationNodePtr CreateSparseInputNode(const std::wstring& inputName, const TensorShape& sampleLayout, const wstring& dynamicAxisName = L"");
+    shared_ptr<ComputationNode<ElemType>> CreateInputNode(const std::wstring& inputName, const TensorShape& sampleLayout, const wstring& dynamicAxisName = L"")
+    {
+        return this->template TypedCreateInputNode<ElemType>(inputName, sampleLayout, dynamicAxisName);
+    }
+    template<class ValueType>
+    shared_ptr<ComputationNode<ValueType>> TypedCreateInputNode(const std::wstring& inputName, const TensorShape& sampleLayout, const wstring& dynamicAxisName);
+    shared_ptr<ComputationNode<ElemType>> CreateSparseInputNode(const std::wstring& inputName, const TensorShape& sampleLayout, const wstring& dynamicAxisName = L"")
+    {
+        return this->template TypedCreateSparseInputNode<ElemType>(inputName, sampleLayout, dynamicAxisName);
+    }
+    template<class ValueType>
+    shared_ptr<ComputationNode<ValueType>> TypedCreateSparseInputNode(const std::wstring& inputName, const TensorShape& sampleLayout, const wstring& dynamicAxisName);
     ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                                              const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                              bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples);

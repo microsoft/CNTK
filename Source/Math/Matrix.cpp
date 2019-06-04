@@ -1827,7 +1827,11 @@ void Matrix<ElemType>::FSAdagradUpdate(Matrix<ElemType>& gradients, Matrix<ElemT
 ///
 // Implement the original adam algorithm according to the paper
 // Ref: ADAM: A METHOD FOR STOCHASTIC OPTIMIZATION, https://arxiv.org/pdf/1412.6980.pdf
-///
+/// 
+// Association between the method parameters and the paper notation:
+// smoothedCount - t 
+// meanMomentum - /beta_1 
+// varMomentum - /beta_2
 template <class ElemType>
 void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
     const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax)

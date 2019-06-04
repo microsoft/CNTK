@@ -1,5 +1,14 @@
-FROM nvidia/cuda:8.0-runtime-ubuntu16.04
-# use nvidia-docker to run!
+# Tag: nvidia/cuda:10.0-cudnn7-devel-ubuntu16.04
+# Created: 2018-10-22T21:14:30.605789926Z
+# Label: com.nvidia.cuda.version: 10.0.
+# Label: com.nvidia.cudnn.version: 7.3.1.20
+# Label: com.nvidia.nccl.version: 2.3.5
+#
+# To build, run from the parent with the command line:
+#      docker build -t <image name> -f CNTK-GPU-Image/Dockerfile .
+
+# Ubuntu 16.04.5
+FROM nvidia/cuda@sha256:362e4e25aa46a18dfa834360140e91b61cdb0a3a2796c8e09dadb268b9de3f6b
 
 ARG PY_VERSION
 ARG WHEEL_BASE_URL

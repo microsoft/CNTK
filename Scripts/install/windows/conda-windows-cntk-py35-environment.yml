@@ -6,9 +6,9 @@ channels:
 dependencies:
 - h5py=2.6.0=np111py35_2
 - imageio=2.2.0=py35_0
+- pyqt=5.6.0=py35ha878b3d_6
 - jupyter=1.0.0=py35_3
 - matplotlib=2.0.0=np111py35_0
-- numpy=1.11.2=py35_0
 - pandas=0.19.1=np111py35_0
 - pandas-datareader=0.2.1=py35_0
 - pandoc=1.19.2.1
@@ -35,7 +35,11 @@ dependencies:
   - sphinx==1.5.4
   - nbsphinx==0.2.14
   - twine==1.8.1
-  - protobuf==3.2.0
   - gym==0.5.2
   - pydot-ng==1.0.0
   - easydict==1.6.0
+  - protobuf==3.6.0
+  - numpy==1.15.0
+  - typing==3.6.6
+  - typing-extensions==3.6.5
+  - onnx==1.2.2

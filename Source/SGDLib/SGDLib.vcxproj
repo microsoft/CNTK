@@ -137,6 +137,7 @@
     <ClInclude Include="MASGD.h" />
     <ClInclude Include="PostComputingActions.h" />
     <ClInclude Include="SimpleDistGradAggregator.h" />
+    <ClInclude Include="SimpleDistGradAggregatorHelper.h" />
     <ClInclude Include="SimpleEvaluator.h" />
     <ClInclude Include="SimpleOutputWriter.h" />
     <ClInclude Include="SGD.h" />
@@ -149,6 +150,7 @@
     <ClCompile Include="PostComputingActions.cpp" />
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="SGD.cpp" />
+    <ClCompile Include="SimpleDistGradAggregatorHelper.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

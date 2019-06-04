@@ -5,6 +5,8 @@
 # ==============================================================================
 
 import os
+import sys
+import pytest
 import re
 import numpy as np
 
@@ -16,6 +18,8 @@ notebook_deviceIdsToRun = [0]
 #Note: Given this is a manual for debugging, we check only for functional correctness of API.
 
 def test_debugging_cntk_noErrors(nb):
+    if os.getenv("OS")=="Windows_NT" and sys.version_info[0] == 2:
+        pytest.skip('tests with Python 2.7 on Windows are not stable in the CI environment. ')
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []

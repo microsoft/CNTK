@@ -5,6 +5,8 @@
 # ==============================================================================
 
 import os
+import sys
+import pytest
 import re
 import numpy as np
 
@@ -24,6 +26,8 @@ def clean_data(device_id):
     subprocess.check_call(args)
 
 def test_cntk_302b_superresolution_cnns_gans_noErrors(nb):
+    if os.getenv("OS")=="Windows_NT" and sys.version_info[0] == 2:
+        pytest.skip('tests with Python 2.7 on Windows are not stable in the CI environment. ')
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []

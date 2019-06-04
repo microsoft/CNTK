@@ -99,7 +99,7 @@ this “append” processing is not used for arrays elements, and the entire arr
 The ‘\#’ character signifies the beginning of a comment, everything that occurs after the ‘\#’ is ignored. The ‘\#’ must be preceded by whitespace or be at the beginning of the line to be interpreted as a comment. The following are valid comments, and an example of a value that will not be interpreted as a comment:
 
 ```
-#commands used will be appended the stderr name to create a path
+# commands used will be appended the stderr name to create a path
 stderr=c:\cntk\log\cntk # "_mnistTrain_mnistTest.log" would be appended
 # the parameter below is set to infinity, the ‘#’ in ‘1#INF’ is not a comment marker
 var = 1#INF
@@ -115,11 +115,11 @@ Here is a simple example of a configuration file:
 # sample configuration file for CNTK 
 command=mnistTrain:mnistTest
 
-#global parameters, all commands use these values unless overridden at a higher level
+# global parameters, all commands use these values unless overridden at a higher level
 precision=float
 deviceId=auto
 
-#commands used will be appended the stderr name to create a path 
+# commands used will be appended the stderr name to create a path 
 stderr=c:\cntk\log\cntk # “_mnistTrain_mnistTest.log” would be appended
 traceLevel=0 # larger values mean more output
 ndlMacros=C:\cntk\config\DefaultMacros.ndl
@@ -136,7 +136,7 @@ mnistTrain=[
         run=ndlMacroUse
     ]
     SGD=[
-        #modelPath - moved to root level to share with mnistTest
+        # modelPath - moved to root level to share with mnistTest
         learningRatesPerMB=0.001
         maxEpochs=50
     ]
@@ -276,7 +276,7 @@ mnistTrain=[
         run=ndlMacroUse
     ]
     SGD=[
-        #modelPath - moved to root level to share with mnistTest
+        # modelPath - moved to root level to share with mnistTest
         learningRatesPerMB=0.001
         maxEpochs=50
     ]
@@ -873,7 +873,7 @@ A subsection is for input label information.
 
 -   lableIn – the section for input label. It contains the following setups
 
-    -   usewordmap – \[Ture, False\] specifies if using word map to map input words to other input words.
+    -   usewordmap – \[True, False\] specifies if using word map to map input words to other input words.
 
     -   beginSequence – the sentence beginning symbol
 
@@ -925,11 +925,11 @@ The following is an example of a BinaryWriter definition. Since it is most commo
 
       #### write definition
       wfile=c:\data\mnist\mnist_train.bin
-      #wsize - inital size of the file in MB
+      # wsize - inital size of the file in MB
       # if calculated size would be bigger, that is used instead
       wsize=256
 
-      #wrecords - number of records we should allocate space for in the file
+      # wrecords - number of records we should allocate space for in the file
       # files cannot be expanded, so this should be large enough. 
       wrecords=60000
 
@@ -939,8 +939,8 @@ The following is an example of a BinaryWriter definition. Since it is most commo
         file=c:\data\mnist\mnist_train.txt
 
         ### write definition
-        #wsize=200
-        #wfile=c:\data\mnist\mnist_train_features.bin
+        # wsize=200
+        # wfile=c:\data\mnist\mnist_train_features.bin
         sectionType=data
       ]
       labels=[
@@ -953,22 +953,22 @@ The following is an example of a BinaryWriter definition. Since it is most commo
 
         #### Write definition ####
         # sizeof(unsigned) which is the label index type
-        #wsize=10
-        #wfile=c:\data\mnist\mnist_train_labels.bin
+        # wsize=10
+        # wfile=c:\data\mnist\mnist_train_labels.bin
         elementSize=4
         wref=features
         sectionType=labels
         mapping=[
-          #redefine number of records for this section, 
-          #since we don't need to save it for each data record
+          # redefine number of records for this section, 
+          # since we don't need to save it for each data record
           wrecords=10
-          #variable size so use an average string size
+          # variable size so use an average string size
           elementSize=10
           sectionType=labelMapping
         ]
         category=[
           dim=10
-          #elementSize=sizeof(ElemType) is default
+          # elementSize=sizeof(ElemType) is default
           sectionType=categoryLabels
         ]
       ]
@@ -1154,7 +1154,7 @@ The key class that is used to allow the JIT evaluation of configuration strings 
 
 Configuration files are mainly made up of a hierarchy of Configuration Sets (*ConfigParameters*), which are dictionaries of *ConfigValue*. This class provides access to the configuration values and automatically searches up the hierarchy of ConfigParameter classes if a value is not found on the current level. The hierarchy is maintained by the order of class instantiations on the stack. ConfigParameters should only be created on the stack.
 
-In configuration files the ‘name=value’ named pair are usually separated by newlines. However, they also can be separated by other characters and placed on the same line. The default separator for ConfigParmeters is a ‘;’ (semicolon). This can be overridden by placing the alternate separator character immediately following the opening brace. For example ‘\[|’ causes ‘|’ to be the separator for that ConfigParameter instance:
+In configuration files the ‘name=value’ named pair are usually separated by newlines. However, they also can be separated by other characters and placed on the same line. The default separator for ConfigParameters is a ‘;’ (semicolon). This can be overridden by placing the alternate separator character immediately following the opening brace. For example ‘\[|’ causes ‘|’ to be the separator for that ConfigParameter instance:
 
 ```
 name=[|parameter1=value1|parameter2=value2|parameter3=value3]
@@ -1524,7 +1524,7 @@ descriptor->FunctionParam(1-inputIndex, paramOptionsInput);
 descriptor->GradientParam(inputIndex, paramOptionsInput | paramOptionsOutput | paramOptionsInitialize);
 ```
 
-The second parameter is interesting because it is required to retain it value from one call to the next, this is done in a filter graph by having a parameter be input and output at the same time, meaning it updates itself. There is a clear distinction between values that need to be maintained and those that are transcient in a filter graph, and this idiom is how we instruct PTaskGraphBuilder to retain the value. The Initialize option is also necessary so on the first iteration the matrix will be cleared out (zeros).
+The second parameter is interesting because it is required to retain its value from one call to the next, this is done in a filter graph by having a parameter in input and output at the same time, meaning it updates itself. There is a clear distinction between values that need to be maintained and those that are transcient in a filter graph, and this idiom is how we instruct PTaskGraphBuilder to retain the value. The Initialize option is also necessary so on the first iteration the matrix will be cleared out (zeros).
 
 The last parameter is the gradient matrix of the current node, and is an input (defaults for this function).
 

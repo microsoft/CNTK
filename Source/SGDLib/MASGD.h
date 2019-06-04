@@ -150,7 +150,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
          }
 
          virtual void OnEpochEnd(const std::list<ComputationNodeBasePtr>&    LearnableNodes,
-                                    std::list<Matrix<ElemType>>&                smoothedGradient, 
+                                    std::list<MatrixBasePtr>&                   smoothedGradients,
                                     size_t                                      samplesSinceLastSync 
                                     )
          {
@@ -165,7 +165,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              if (read2sync)
              {
                  m_numSyncPerformed++;
-                 ModelAggregationProcessing(samplesSinceLastSync, LearnableNodes, smoothedGradient, totalSamplesProcessed, secondsOnCommunication);
+                 ModelAggregationProcessing(samplesSinceLastSync, LearnableNodes, smoothedGradients, totalSamplesProcessed, secondsOnCommunication);
                  m_perfReporter.OnMAPerformed(samplesSinceLastSync, totalSamplesProcessed, secondsOnCommunication);
              }
              
@@ -175,7 +175,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
          virtual bool OnArrivingAtSyncPoint(
             const std::list<ComputationNodeBasePtr>& LearnableNodes,        /* input/output: */
-            std::list<Matrix<ElemType>>& smoothedGradient,                  /* input/output: under some setup, it will reset to zero*/
+            std::list<MatrixBasePtr>& smoothedGradients,                     /* input/output: under some setup, it will reset to zero*/
             size_t  samplesSinceLastSync                                    /* input:  samples processed since last sync on this worker only */
              )
          {
@@ -190,7 +190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
              if (read2Sync)
              {
                  m_numSyncPerformed++;
-                 ModelAggregationProcessing(samplesSinceLastSync, LearnableNodes, smoothedGradient, totalSamplesProcessed, secondsOnCommunication);
+                 ModelAggregationProcessing(samplesSinceLastSync, LearnableNodes, smoothedGradients, totalSamplesProcessed, secondsOnCommunication);
                  m_perfReporter.OnMAPerformed(samplesSinceLastSync, totalSamplesProcessed, secondsOnCommunication);
              }
              return read2Sync;
@@ -199,7 +199,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
          virtual void ModelAggregationProcessing(
              size_t samplesSinceLastSync,                                       /* in: */
              const std::list<ComputationNodeBasePtr>&  learnableNodes,          /* in/out */
-             std::list<Matrix<ElemType>>&              smoothedGradient,        /* in/out */
+             std::list<MatrixBasePtr>&                 smoothedGradients,       /* in/out */
              size_t&                                   totalSamplesProcessed,   /* out */
              float&                                    secondsOnCommunication   /* out */) = 0; 
          
@@ -346,7 +346,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         void ModelAggregationProcessing(
             size_t samplesSinceLastSync,                                       /* in */
             const std::list<ComputationNodeBasePtr>&  learnableNodes,          /* in/out */
-            std::list<Matrix<ElemType>>&              smoothedGradient,        /* in/out */
+            std::list<MatrixBasePtr>&                 smoothedGradients,       /* in/out */
             size_t&                                   totalSamplesProcessed,   /* out */
             float&                                    secondsOnCommunication   /* out */) override
             // NOTE: the variable type is determined by the interface in SGD::TrainOneEpoch

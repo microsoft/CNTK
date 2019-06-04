@@ -45,7 +45,7 @@ def convert_to_native_binary_convolution(model):
             "Please check if HALIDE_PATH is configured properly "
             "and try building {1} again"
             .format('Cntk.BinaryConvolution-' + C.__version__.rstrip('+'),
-            'Extnsibiliy\BinaryConvolution'))
+            'Extnsibiliy\\BinaryConvolution'))
 
     bin_conv_filter = (lambda m: type(m) == C.Function 
                 and m.is_block 

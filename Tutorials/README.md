@@ -1,12 +1,12 @@
 # Tutorials
 
-In this folder you find several tutorials both for the CNTK Python API, the Python Functional API, and for BrainScript. 
+In this folder you will find several tutorials both for the CNTK Python API, the Python Functional API, and for BrainScript. 
 
 ## Python
 
-The Python Jupyter notebooks in this folder cover a range of different application including 
+The Python Jupyter notebooks in this folder cover a range of different applications including 
 image classification, language understanding, reinforcement learning and others. 
-Additionally, the folder NumpyInterop contains a simple example of how to use 
+Additionally, the folder NumpyInterop contains a simple example on how to use 
 numpy arrays as input for CNTK training and evaluation.
 
 ### Functional API (still Python)

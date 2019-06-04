@@ -482,12 +482,14 @@ namespace CNTK
         vectorBuf.assign(s.begin(), s.end());
     }
 
-    void Function::Save(const std::wstring& filepath, ModelFormat format)
+    void Function::Save(const std::wstring& filepath, ModelFormat format, bool useExternalFilesToStoreParameters)
     {
         switch (format)
         {
         case ModelFormat::CNTKv2:
         {
+            if (useExternalFilesToStoreParameters)
+                fprintf(stderr, "Warning: useExternalFilesToStoreParameters only applies to ONNX format."); 
             Dictionary model = Serialize();
             auto stream = GetFstream(filepath, false);
             *stream << model;
@@ -497,7 +499,7 @@ namespace CNTK
 
         case ModelFormat::ONNX:
         {
-            ONNXFormat::Save(RootFunction(), filepath);
+            ONNXFormat::Save(RootFunction(), filepath, useExternalFilesToStoreParameters);
             break;
         }
         }
@@ -1714,20 +1716,22 @@ namespace CNTK
         return AsBlock(std::move(result), { { operandPlaceholder, operand }}, L"ExpandDims", name);
     }
 
-    FunctionPtr ZerosLike(const Variable& operand, const std::wstring& name)
+    FunctionPtr ConstantLike(const Variable& operand, const double value, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = 0.0;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = value;
 
         return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ZerosLike(const Variable& operand, const std::wstring& name)
+    {
+        return ConstantLike(operand, 0.0, name);
+    }
+
     FunctionPtr OnesLike(const Variable& operand, const std::wstring& name)
     {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunctionAttribute::AttributeNameFillValue] = 1.0;
-
-        return UnaryOp(PrimitiveOpType::ConstantOp, operand, std::move(additionalProperties), name);
+        return ConstantLike(operand, 1.0, name);
     }
 
     FunctionPtr CustomProxyOp(const std::vector<Variable>& operands, const std::wstring& customOp, const NDShape& outputShape, DataType outputType, const std::wstring& name)
@@ -2274,7 +2278,7 @@ namespace CNTK
             auto refPlaceholder = PlaceholderVariable();
             auto lastAxis = Axis(-1);
             auto swapped = TransposeAxes(refPlaceholder, lastAxis, axis);
-            auto gatherSwapped = GatherOp(indPlaceholder, swapped);
+            auto gatherSwapped = GatherOp(indPlaceholder, swapped, name + L"_inner");
             auto result = TransposeAxes(gatherSwapped, lastAxis, axis);
             return AsBlock(std::move(result), { { indPlaceholder, indices }, { refPlaceholder, reference } }, std::move(additionalProperties), L"GatherOp", name);
         }

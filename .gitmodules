@@ -8,3 +8,6 @@
 [submodule "Source/CNTKv2LibraryDll/proto/onnx/onnx_repo"]
 	path = Source/CNTKv2LibraryDll/proto/onnx/onnx_repo
 	url = https://github.com/onnx/onnx.git
+[submodule "Source/CNTKv2LibraryDll/proto/onnx/onnxruntime"]
+	path = Source/CNTKv2LibraryDll/proto/onnx/onnxruntime
+	url = https://github.com/Microsoft/onnxruntime.git

@@ -163,5 +163,7 @@ Examples/Extensibility/BinaryConvolution/BinaryConvolutionLib/halide/halide_conv
 Tests/EndToEndTests/Speech/Data/mlf2.bin binary
 external/gsl text
 Source/CNTKv2LibraryDll/proto/onnx/onnx_repo text
+Source/CNTKv2LibraryDll/proto/onnx/onnxruntime text
 #certificates
 *.pfx binary
+*.exe binary

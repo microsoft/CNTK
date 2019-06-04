@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-#include "proto/onnx/core/graph/model.h"
+#include "proto/onnx/onnxruntime/onnxruntime/core/graph/model.h"
 
 #include "RNNHelper.h"
 #include "Operators.h"
@@ -504,7 +504,7 @@ FunctionPtr UnwrapRNNOps(FunctionPtr rnnFunction, int numDirections)
     int hidden = newShape[0] / numDirections;
     newShape = newShape.AppendShape({ NDShape::FreeDimension });
     newShape[2] = numDirections;
-    newShape[1] = FreeBatchSize;
+    newShape[1] = BatchSizeProcessor::FreeBatchSize();
     newShape[0] = hidden;
     // because FreeBatchSize = 1, we can skip transpose between # and dirs.
     FunctionPtr cntkFunctionWithoutDynamicAxisFixedBatch = Reshape(cntkFunctionWithoutDynamicAxis, newShape, L"");
@@ -512,7 +512,7 @@ FunctionPtr UnwrapRNNOps(FunctionPtr rnnFunction, int numDirections)
     return cntkFunctionWithoutDynamicAxisFixedBatch;
 }
 
-FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+FunctionPtr CreateLSTM(const onnxruntime::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
     VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
@@ -604,7 +604,7 @@ FunctionPtr CreateLSTM(const LotusIR::Node *node, const std::vector<Variable> &i
     return unpackedRnnFunction;
 }
 
-FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+FunctionPtr CreateGRU(const onnxruntime::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
     VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {
@@ -670,7 +670,7 @@ FunctionPtr CreateGRU(const LotusIR::Node *node, const std::vector<Variable> &in
     return unpackedRnnFunction;
 }
 
-FunctionPtr CreateRNN(const LotusIR::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
+FunctionPtr CreateRNN(const onnxruntime::Node *node, const std::vector<Variable> &inputs, const std::string &direction,
     const std::vector<string> &activations, const std::vector<float> &activation_alpha, const std::vector<float> &activation_beta,
     VariableToFunctionPtr &sequenceWrapperInputToFunctionPtr)
 {

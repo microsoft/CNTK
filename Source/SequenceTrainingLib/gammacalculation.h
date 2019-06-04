@@ -208,6 +208,7 @@ public:
                                                                    (const msra::math::ssematrixbase&) predstripe, (const msra::asr::simplesenonehmm&) m_hset,
                                                                    (msra::math::ssematrixbase&) dengammasstripe, (msra::math::ssematrixbase&) gammasbuffer /*empty, not used*/,
                                                                    lmf, wp, amf, boostmmifactor, seqsMBRmode, uidsstripe, boundariesstripe);
+
             objectValue += (ElemType)((numavlogp - denavlogp) * numframes);
 
             if (samplesInRecurrentStep == 1)

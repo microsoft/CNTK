@@ -948,7 +948,7 @@ public:
                 }
                 else
                 {
-                    ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, false /*allowBroadcast*/);
+                    ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, true/*allowBroadcast*/);
                 }
                 return;
             }
@@ -2276,6 +2276,7 @@ class CastNode : public UnaryElementWiseNode<ElemType>
     }
 
 public:
+    DeclareConstructorFromConfig(CastNode);
     CastNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {

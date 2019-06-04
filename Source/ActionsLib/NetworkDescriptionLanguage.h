@@ -98,6 +98,7 @@ public:
     }
 };
 
+template class NDLNodeEvaluator<half>;
 template class NDLNodeEvaluator<float>;
 template class NDLNodeEvaluator<double>;
 

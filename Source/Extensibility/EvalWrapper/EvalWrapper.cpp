@@ -231,7 +231,7 @@ public:
                 pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
                 shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
                 sharedInputVectors.push_back(ptr);
-                stdInputs.insert(MapEntry(key, ptr.get()));
+                stdInputs.insert(MapEntry(static_cast<std::wstring>(key), ptr.get()));
             }
 
             for each (auto item in outputs)
@@ -239,7 +239,7 @@ public:
                 pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
                 shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
                 sharedOutputVectors.push_back(ptr);
-                stdOutputs.insert(MapEntry(key, ptr.get()));
+                stdOutputs.insert(MapEntry(static_cast<std::wstring>(key), ptr.get()));
             }
 
             try
@@ -382,13 +382,13 @@ public:
         std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
         pin_ptr<const WCHAR> inputKey = PtrToStringChars(inputNodeName);
         shared_ptr<std::vector<ElemType>> f2(featureVector);
-        stdInputs.insert(MapEntry(inputKey, f2.get()));
+        stdInputs.insert(MapEntry(static_cast<std::wstring>(inputKey), f2.get()));
 
         pin_ptr<const WCHAR> key = PtrToStringChars(outputKey);
         // Do we have to initialize the output nodes?
         shared_ptr<std::vector<ElemType>> ptr(new std::vector<ElemType>(outputSize));
         sharedOutputVectors.push_back(ptr);
-        stdOutputs.insert(MapEntry(key, ptr.get()));
+        stdOutputs.insert(MapEntry(static_cast<std::wstring>(key), ptr.get()));
         try
         {
             m_eval->Evaluate(stdInputs, stdOutputs);
@@ -517,7 +517,7 @@ private:
             pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
             shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
             sharedOutputVectors.push_back(ptr);
-            stdOutputs.insert(MapEntry(key, ptr.get()));
+            stdOutputs.insert(MapEntry(static_cast<std::wstring>(key), ptr.get()));
         }
 
         try

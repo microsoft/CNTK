@@ -46,7 +46,23 @@ You can learn more about using and contributing to CNTK with the following resou
 
 ## Disclaimer
 
-CNTK is in active use at Microsoft and constantly evolving. There will be bugs.
+Dear community, 
+
+With our ongoing contributions to ONNX and the ONNX Runtime, we have made it easier to interoperate within the AI framework ecosystem and to access high performance, cross-platform inferencing capabilities for both traditional ML models and deep neural networks. Over the last few years we have been privileged to develop such key open-source machine learning projects, including the Microsoft Cognitive Toolkit, which has enabled its users to leverage industry-wide advancements in deep learning at scale. 
+
+Today’s 2.7 release will be the last main release of CNTK. We may have some subsequent minor releases for bug fixes, but these will be evaluated on a case-by-case basis. There are no plans for new feature development post this release. 
+
+The CNTK 2.7 release has full support for ONNX 1.4.1, and we encourage those seeking to operationalize their CNTK models to take advantage of ONNX and the ONNX Runtime. Moving forward, users can continue to leverage evolving ONNX innovations via the number of frameworks that support it. For example, users can natively export ONNX models from PyTorch or convert TensorFlow models to ONNX with the TensorFlow-ONNX converter. 
+
+We are incredibly grateful for all the support we have received from contributors and users over the years since the initial open-source release of CNTK. CNTK has enabled both Microsoft teams and external users to execute complex and large-scale workloads in all manner of deep learning applications, such as historical breakthroughs in speech recognition achieved by Microsoft Speech researchers, the originators of the framework. 
+
+As ONNX is increasingly employed in serving models used across Microsoft products such as Bing and Office, we are dedicated to synthesizing innovations from research with the rigorous demands of production to progress the ecosystem forward. 
+
+Above all, our goal is to make innovations in deep learning across the software and hardware stacks as open and accessible as possible. We will be working hard to bring both the existing strengths of CNTK and new state-of-the-art research into other open-source projects to truly broaden the reach of such technologies. 
+
+With gratitude, 
+
+-- The CNTK Team 
 
 ## Microsoft Open Source Code of Conduct
 
@@ -56,7 +72,43 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 
 > You can find more news on [the official project feed](https://docs.microsoft.com/en-us/cognitive-toolkit/news)
 
+***2019-03-29.*** CNTK 2.7.0
+## Highlights of this release
+* Moved to CUDA 10 for both Windows and Linux.
+* Support advance RNN loop in ONNX export.
+* Export larger than 2GB models in ONNX format.
+* Support FP16 in Brain Script train action.
+
+## CNTK support for CUDA 10
+
+### CNTK now supports CUDA 10. This requires an update to build environment to Visual Studio 2017 v15.9 for Windows.
+
+To setup build and runtime environment on Windows:
+* Install [Visual Studio 2017](https://www.visualstudio.com/downloads/). Note: going forward for CUDA 10 and beyond, it is no longer required to install and run with the specific VC Tools version 14.11.
+* Install [Nvidia CUDA 10](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64)
+* From PowerShell, run:
+    [DevInstall.ps1](../Tools/devInstall/Windows/DevInstall.ps1)
+* Start Visual Studio 2017 and open [CNTK.sln](./CNTK.sln).
+
+To setup build and runtime environment on Linux using docker, please build Unbuntu 16.04 docker image using Dockerfiles [here](./Tools/docker). For other Linux systems, please refer to the Dockerfiles to setup dependent libraries for CNTK.
+
+## Support advance RNN loop in ONNX export
+CNTK models with recursive loops can be exported to ONNX models with scan ops.
+
+## Export larger than 2GB models in ONNX format
+To export models larger than 2GB in ONNX format, use cntk.Function API:
+save(self, filename, format=ModelFormat.CNTKv2, use_external_files_to_store_parameters=False)
+with 'format' set to ModelFormat.ONNX and use_external_files_to_store_parameters set to True.
+In this case, model parameters are saved in external files. Exported models shall be used with external parameter files when doing model evaluation with onnxruntime.
+
+***2018-11-26.***  
+[Netron](https://github.com/lutzroeder/netron) now supports visualizing CNTK v1 and CNTK v2 `.model` files.
+
+<img src=https://cntk.ai/Images/netron/netron-cntk-dark-1.png alt="NetronCNTKDark1" width="300"> <img src=https://cntk.ai/Images/netron/netron-cntk-light-1.png alt="NetronCNTKLight1" width="300">
+
+
 ### Project changelog
+
 ***2018-09-17.*** CNTK 2.6.0
 ## Efficient group convolution
 The implementation of group convolution in CNTK has been updated. The updated implementation moves away from creating a sub-graph for group convolution (using slicing and splicing), and instead uses cuDNN7 and MKL2017 APIs directly. This improves the experience both in terms of performance and model size. 
@@ -134,7 +186,7 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 - Major overhaul to `ConvolutionTranspose` export and import. Attributes such as `output_shape`, `output_padding`, and `pads` are fully supported.
 - Added support for CNTK's `StopGradient` as a no-op.
 - Added ONNX support for TopK op.
-- Added ONNX support for sequence ops: sequence.slice, sequence.first, sequence.last, sequence.reduce_sum, sequence.reduce_max, sequence.softmax. For these ops, there is no need to expand ONNX spec. CNTK ONNX exporter just builds computation equavalent graphs for these sequence ops.
+- Added ONNX support for sequence ops: sequence.slice, sequence.first, sequence.last, sequence.reduce_sum, sequence.reduce_max, sequence.softmax. For these ops, there is no need to expand ONNX spec. CNTK ONNX exporter just builds computation equivalent graphs for these sequence ops.
 - Added full support for Softmax op.
 - Made CNTK broadcast ops compatible with ONNX specification.
 - Handle to_batch, to_sequence, unpack_batch, sequence.unpack ops in CNTK ONNX exporter.
@@ -235,7 +287,7 @@ CPU inference performance improvements using MKL
 New loss function: hierarchical softmax
 * Thanks @yaochengji for the contribution!
 
-Distributed Training with Mulitple Learners
+Distributed Training with Multiple Learners
 * Trainer now accepts multiple parameter learners for distributed training. With this change, different parameters of a network can be learned by different learners in a single training session. This also facilitates distributed training for GANs. For more information, please refer to the [Basic_GAN_Distributed.py](/Examples/Image/GAN/Basic_GAN_Distributed.py) and the [cntk.learners.distributed_multi_learner_test.py](/bindings/python/cntk/learners/tests/distributed_multi_learner_test.py)
 
 Operators
@@ -330,32 +382,3 @@ Halide Binary Convolution
 
 See more in the [Release Notes](https://docs.microsoft.com/en-us/cognitive-toolkit/ReleaseNotes/CNTK_2_4_Release_Notes).
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
----
-
-***2018-01-22.*** CNTK support for CUDA 9
-
-CNTK now supports CUDA 9/cuDNN 7. This requires an update to build environment to Ubuntu 16/GCC 5 for Linux, and Visual Studio 2017/VCTools 14.11 for Windows. With CUDA 9, CNTK also added a preview for 16-bit floating point (a.k.a FP16) computation.
-
-Please check out the example of FP16 in ResNet50 [here](./Examples/Image/Classification/ResNet/Python/TrainResNet_ImageNet_Distributed.py)
-
-Notes on FP16 preview:
-* FP16 implementation on CPU is not optimized, and it's not supposed to be used in CPU inference directly. User needs to convert the model to 32-bit floating point before running on CPU.
-* Loss/Criterion for FP16 training needs to be 32bit for accumulation without overflow, using cast function. Please check the example above.
-* Readers do not have FP16 output unless using numpy to feed data, cast from FP32 to FP16 is needed. Please check the example above.
-* FP16 gradient aggregation is currently only implemented on GPU using NCCL2. Distributed training with FP16 with MPI is not supported.
-* FP16 math is a subset of current FP32 implementation. Some model may get Feature Not Implemented exception using FP16.
-* FP16 is currently not supported in BrainScript. Please use Python for FP16.
-
-To setup build and runtime environment on Windows:
-* Install [Visual Studio 2017](https://www.visualstudio.com/downloads/) with following workloads and components. From command line (use Community version installer as example):
-    `vs_community.exe --add Microsoft.VisualStudio.Workload.NativeDesktop --add Microsoft.VisualStudio.Workload.ManagedDesktop --add Microsoft.VisualStudio.Workload.Universal --add Microsoft.Component.PythonTools --add Microsoft.VisualStudio.Component.VC.Tools.14.11`
-* Install [NVidia CUDA 9](https://developer.nvidia.com/cuda-90-download-archive?target_os=Windows&target_arch=x86_64)
-* From PowerShell, run:
-    [DevInstall.ps1](./Tools/devInstall/Windows/DevInstall.ps1)
-* Start VCTools 14.11 command line, run:
-    `cmd /k "%VS2017INSTALLDIR%\VC\Auxiliary\Build\vcvarsall.bat" x64 --vcvars_ver=14.11`
-* Open [CNTK.sln](./CNTK.sln) from the VCTools 14.11 command line. Note that starting CNTK.sln other than VCTools 14.11 command line, would causes CUDA 9 [build error](https://developercommunity.visualstudio.com/content/problem/163758/vs-2017-155-doesnt-support-cuda-9.html).
-
-To setup build and runtime environment on Linux using docker, please build Unbuntu 16.04 docker image using Dockerfiles [here](./Tools/docker). For other Linux systems, please refer to the Dockerfiles to setup dependent libraries for CNTK.
-

@@ -22,8 +22,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void SetGradientAccumulationOptimization(bool enable) { m_optimizeGradientAccumulation = enable; }
         static bool ShouldOptimizeGradientAccumulation() { return m_optimizeGradientAccumulation; }
 
-        // TODO: Currently the flag is set to false. Should be switched to true after more rigorous testing.
-        static bool UseV2Aggregator() { return false; }
+        static void SetUseV2Aggregator() { m_useV2Aggregator = true; }
+        static bool UseV2Aggregator() { return m_useV2Aggregator; }
 
         static void SetShareNodeValueMatrices(bool enable) { m_enableShareNodeValueMatrices = enable; }
         static bool ShouldEnableShareNodeValueMatrices() { return m_enableShareNodeValueMatrices; }
@@ -40,6 +40,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static std::atomic<bool> m_forceConstantRandomSeed;
         static std::atomic<bool> m_optimizeGradientAccumulation;
         static std::atomic<bool> m_enableNodeTiming;
+        static std::atomic<bool> m_useV2Aggregator;
         static std::atomic<std::size_t> m_mpiPackThresholdInBytes;
     };
 }}}

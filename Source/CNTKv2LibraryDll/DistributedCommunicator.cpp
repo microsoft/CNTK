@@ -29,9 +29,9 @@ namespace CNTK
         }
     }
 
-    DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes)
+    DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes, bool useFP16AllReduce)
     {
-        return std::make_shared<MPICommunicatorImpl>(packThresholdSizeInBytes);
+        return std::make_shared<MPICommunicatorImpl>(packThresholdSizeInBytes, useFP16AllReduce);
     }
 
     void DistributedCommunicator::Finalize()
@@ -71,7 +71,7 @@ namespace CNTK
         return nullptr; // Make compiler happy.
     }
 
-    MPICommunicatorImpl::MPICommunicatorImpl(size_t packThresholdSizeInBytes)
+    MPICommunicatorImpl::MPICommunicatorImpl(size_t packThresholdSizeInBytes, bool useFP16AllReduce)
     {
         m_mpi = MPIWrapper::GetInstance();
         if (m_mpi == nullptr)
@@ -89,6 +89,7 @@ namespace CNTK
                 m_workers.insert({ i,  L"" });
         }
         m_packThresholdSizeInBytes = packThresholdSizeInBytes;
+        m_useFP16AllReduce = useFP16AllReduce;
     }
 
     void MPICommunicatorImpl::Initialize(const std::vector<NDArrayViewPtr>& values)
@@ -97,6 +98,9 @@ namespace CNTK
         DeviceDescriptor lastGpuDevice = DeviceDescriptor::CPUDevice();
         m_gpuDataTransferers.resize(values.size());
         m_intermediateCPUBuffers.resize(values.size());
+        if (m_useFP16AllReduce)
+            m_intermediateGPUBuffers.resize(values.size());
+
         for (auto i = 0; i < values.size(); ++i)
         {
             auto view = values[i];
@@ -123,7 +127,22 @@ namespace CNTK
                 m_gpuDataTransferers[i] = std::make_shared<GPUDataTransferer>(device.Id(), true);
                 if (m_intermediateCPUBuffers[i].totalSize < requiredSize)
                     m_intermediateCPUBuffers[i] = AllocateIntermediateBuffer(device.Id(), requiredSize);
-            } 
+
+                if (ShouldUseFP16AllReduce(view))
+                {
+                    // For sure we're float
+                    size_t rows = view->GetMatrix<float>()->GetNumRows();
+                    size_t cols = view->GetMatrix<float>()->GetNumCols();
+                    if (m_intermediateGPUBuffers[i] == nullptr)
+                    {
+                        m_intermediateGPUBuffers[i] = std::make_shared<Matrix<half>>(rows, cols, AsCNTKImplDeviceId(device));
+                    }
+                    else
+                    {
+                        m_intermediateGPUBuffers[i]->Resize(rows, cols);
+                    }
+                }
+            }
             else
             {
                 LogicError("Invalid device type (%u).", (unsigned int)device.Type());
@@ -343,6 +362,11 @@ namespace CNTK
 
         numValues = valuesToAggregate.size();
 
+        if (m_nccl == nullptr)
+        {
+            m_nccl.reset(new NcclComm(DeviceDescriptor::UseDefaultDevice().Id(), m_mpi));
+        }
+
         Initialize(valuesToAggregate);
 
         // We need to make sure no compuatation happens on the main CUDA stream.
@@ -356,11 +380,6 @@ namespace CNTK
             // the gradient aggregation asynchronously on a separate stream
             std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(device.Id()));
             mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
-        }
-
-        if (m_nccl == nullptr)
-        {
-            m_nccl.reset(new NcclComm(DeviceDescriptor::UseDefaultDevice().Id(), m_mpi));
         }
 
         // For all values residing on GPU initiate async transfer to CPU buffers if needed
@@ -391,8 +410,28 @@ namespace CNTK
 
             if (dataType == DataType::Float)
             {
-                AllReduceData(static_cast<float*>(inputData), static_cast<float*>(outputData), numElements,
-                    &allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
+                if (ShouldUseFP16AllReduce(inputValue))
+                {
+                    // We know we're On GPU
+
+                    // cast float to half
+                    auto inputMatrix = inputValue->GetWritableMatrix<float>();
+                    m_intermediateGPUBuffers[i]->CastAssignValuesOf(*inputMatrix);
+
+                    half* dataBufferHalf = m_intermediateGPUBuffers[i]->Data();
+
+                    // allreducehalf
+                    AllReduceDataHalf(dataBufferHalf, dataBufferHalf, numElements,
+                        &allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
+
+                    // cast half to float
+                    inputMatrix->CastAssignValuesOf(*m_intermediateGPUBuffers[i]);
+                }
+                else
+                {
+                    AllReduceData(static_cast<float*>(inputData), static_cast<float*>(outputData), numElements,
+                        &allReduceRequests, (inputValue->Device() == DeviceDescriptor::CPUDevice()));
+                }
             }
             else if (dataType == DataType::Double)
             {
@@ -616,6 +655,15 @@ namespace CNTK
             return false;
 
         return true;
+    }
+
+    bool MPICommunicatorImpl::ShouldUseFP16AllReduce(const NDArrayViewPtr& viewPtr)
+    {
+        // currenly AllReduceDataHalf only supports NCCL/ and on GPU data
+        return (m_useFP16AllReduce &&
+            m_nccl->IsSupported() &&
+            (DeviceKind::GPU == viewPtr->Device().Type()) &&
+            (DataType::Float == viewPtr->GetDataType()));
     }
 
     void MPICommunicatorImpl::CopyDataFromGPUToCPU(std::vector<NDArrayViewPtr>& inputValues)

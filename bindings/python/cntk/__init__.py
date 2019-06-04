@@ -5,6 +5,11 @@
 
 import os
 os.environ["PATH"] += os.pathsep + os.path.join(os.path.dirname(__file__), 'libs')
+cntk_library_path=os.pathsep + os.path.join(os.path.dirname(__file__), 'libs')
+if os.environ.get('LD_LIBRARY_PATH'):
+    os.environ['LD_LIBRARY_PATH'] += cntk_library_path
+else:
+    os.environ['LD_LIBRARY_PATH'] = cntk_library_path
 
 # Read version information
 version_file = open(os.path.join(os.path.dirname(__file__), 'VERSION'), 'r')

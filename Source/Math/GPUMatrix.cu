@@ -1537,10 +1537,10 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
 template <class ElemType>
 void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
     GPUMatrix<ElemType>& functionValues,
-    ElemType learnRatePerSample,
-    ElemType momentum,
-    ElemType adaWeight,
-    ElemType adaMul,
+    ElemType learnRatePerSample, //alpha
+    ElemType momentum, // /beta_1 
+    ElemType adaWeight, // /beta_2
+    ElemType adaMul, //biasCorrection
     ElemType epsilon,
     ElemType unitGainFactor,
     bool adamax)

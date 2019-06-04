@@ -7,6 +7,7 @@
 import os
 import re
 import sys
+import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "Tutorials"))
@@ -16,12 +17,16 @@ from nb_helper import get_output_stream_from_cell
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Manual", "Manual_How_to_write_a_custom_deserializer.ipynb")
 
 def test_cntk_how_to_train_no_errors(nb):
+    if os.getenv("OS")=="Windows_NT" and sys.version_info[0] == 2:
+        pytest.skip('tests with Python 2.7 on Windows are not stable in the CI environment. ')
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
 expectedOutput = 'Total number of samples 200000'
 def test_csv_correct(nb):
+    if os.getenv("OS")=="Windows_NT" and sys.version_info[0] == 2:
+        pytest.skip('tests with Python 2.7 on Windows are not stable in the CI environment. ')
     testCells = [cell for cell in nb.cells
                 if cell.cell_type == 'code']
     assert len(testCells) == 6
