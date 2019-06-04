@@ -1612,8 +1612,7 @@ public:
         else if (inputIndex == 3)
         {
             BackpropToX(InputRef(inputIndex).Gradient(), Gradient(), *m_outputDensity, InputRef(4).Value());
-
-            }
+        }
         else if (inputIndex == 5)
         {
             BackpropToB(InputRef(inputIndex).Gradient(), Gradient(), *m_outputDensity);
@@ -1644,7 +1643,7 @@ public:
     }
 
     void BackpropToB(Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
-                         Matrix<ElemType>& RNNTDerivative)
+                     Matrix<ElemType>& RNNTDerivative)
     {
 #if DUMPOUTPUT
         inputFunctionValues.Print("RNNTNode Partial-inputFunctionValues");
@@ -1765,7 +1764,6 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
 
-        
         // compute CTC score
         m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId);
         //m_outputDensity->Print("gradient");
@@ -1805,9 +1803,7 @@ public:
         {
             auto node = dynamic_pointer_cast<RNNTNode<ElemType>>(nodeP);
 
-            node->m_derivative->SetValue(*m_derivativeForG);
-            //node->m_outputDistribution->SetValue(*m_outputDistribution);
-            node->m_derivativeForG->SetValue(*m_derivative);
+            node->m_derivative->SetValue(*m_derivative);
             node->m_maxIndexes->SetValue(*m_maxIndexes);
             node->m_maxValues->SetValue(*m_maxValues);
             node->m_outputDensity->SetValue(*m_outputDensity);
@@ -1816,12 +1812,15 @@ public:
             node->m_tmpMatrix->SetValue(*m_tmpMatrix);
         }
     }
-
+    virtual void EndBackprop()
+    {
+        Base::EndBackprop();
+        m_outputDensity->Resize(1, 1);
+    }
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_derivativeForG, matrixPool);
         RequestMatrixFromPool(m_outputDensity, matrixPool);
         RequestMatrixFromPool(m_derivative, matrixPool);
         //RequestMatrixFromPool(m_outputDistribution, matrixPool);
@@ -1834,7 +1833,6 @@ public:
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_derivativeForG, matrixPool);
         ReleaseMatrixToPool(m_outputDensity, matrixPool);
         ReleaseMatrixToPool(m_derivative, matrixPool);
         //ReleaseMatrixToPool(m_outputDistribution, matrixPool);
@@ -1886,7 +1884,6 @@ protected:
     shared_ptr<Matrix<ElemType>> m_derivative;
     shared_ptr<Matrix<ElemType>> m_maxIndexes;
     shared_ptr<Matrix<ElemType>> m_maxValues;
-    shared_ptr<Matrix<ElemType>> m_derivativeForG;
     shared_ptr<Matrix<ElemType>> m_tmpMatrix;
 
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;
@@ -1993,14 +1990,14 @@ public:
                 }
                 word.push_back(phoneVal);
             }
-            if (words[seqid].size() == 0 && word.size()!=0)
+            if (words[seqid].size() == 0 && word.size() != 0)
                 words[seqid].push_back(word);
             else if (words[seqid].size() == 0 && word.size() == 0)
             {
                 word.push_back(m_spaceTokens[0]);
                 word.push_back(m_spaceTokens[0]);
                 words[seqid].push_back(word);
-                }
+            }
         }
         //print words
         /*fprintf(stderr, "words:\n");
@@ -2124,7 +2121,7 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
-        //RequestMatrixFromPool(m_derivativeForG, matrixPool);
+        
     }
 
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
@@ -2132,7 +2129,7 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_maxIndexes, matrixPool);
         ReleaseMatrixToPool(m_maxValues, matrixPool);
-        //ReleaseMatrixToPool(m_derivativeForG, matrixPool);
+        
     }
 
     std::vector<size_t> SpaceTokens() const
