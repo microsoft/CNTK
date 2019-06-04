@@ -306,6 +306,11 @@ void GPUSparseMatrix<ElemType>::AdaMax(GPUMatrix<ElemType>& gradients, GPUMatrix
 }
 
 template<class ElemType>
+void GPUSparseMatrix<ElemType>::AdaBound(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType upperBound, ElemType lowerBound, ElemType unitGainFactor, const bool amsBound)
+{
+}
+
+template<class ElemType>
 void GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>&, GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, bool, ElemType)
 {
 }
@@ -1189,6 +1194,13 @@ void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemTyp
 template <class ElemType>
 void GPUMatrix<ElemType>::AdaMax(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
 	ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor, ElemType epsilon)
+{
+
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AdaBound(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+	ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType upperBound, ElemType lowerBound, ElemType unitGainFactor, const bool amsBound)
 {
 
 }

@@ -240,6 +240,9 @@ public:
 	void AdaMax(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
 		ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor, ElemType epsilon=1);
 
+	void AdaBound(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+		ElemType firstMomentDecayRate, ElemType secondMomentDecayRate,ElemType adaMul, ElemType epsilon, ElemType upperBound, ElemType lowerBound, ElemType unitGainFactor, const bool amsBound);
+
     void RmsProp(GPUMatrix<ElemType>& gradients,
                  GPUMatrix<ElemType>& functionValues,
                  ElemType learningRate,

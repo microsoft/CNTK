@@ -57,7 +57,8 @@ enum class GradientsUpdateType : int
     RmsProp,
     FSAdaGrad,
     Adam,
-	AdaMax
+	AdaMax,
+	AdaBound
 };
 
 // modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD 
@@ -121,16 +122,17 @@ struct AdamInfo
     }
 };
 
-// configuration parameters associated with AdaMax learning algorithm
-struct AdaMaxInfo
+struct AdaBoundInfo
 {
-	double beta1;
-	double beta2;
-	
-	AdaMaxInfo()
+	double final_lr; // final SGD base learning rate, learningRatePerMB
+	double gamma; // default is (1 - beta2), used for upper_bound and lower_bound for learning rate.
+	bool amsBound; // use amsBound or adaBound.
+
+	AdaBoundInfo()
 	{
-		beta1 = 0.9;
-		beta2 = 0.999;
+		final_lr = 0.1;
+		gamma = 0.001;
+		amsBound = false;
 	}
 };
 
@@ -324,7 +326,7 @@ protected:
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
     AdamInfo m_adamInfo;
-	AdaMaxInfo m_adaMaxInfo;
+	AdaBoundInfo m_adaBoundInfo;
 
     size_t m_numMBsToShowResult = 0;
     size_t m_firstMBsToShowResult = 0;
@@ -468,7 +470,7 @@ public:
 	{
 		switch (m_gradType.type)
 		{
-		case GradientsUpdateType::Adam: case GradientsUpdateType::AdaMax:
+		case GradientsUpdateType::Adam: case GradientsUpdateType::AdaMax: case GradientsUpdateType::AdaBound:
 			m_additionalOptimizerInfo[L"beta1_pow"] = m_adamInfo.beta1;
 			m_additionalOptimizerInfo[L"beta2_pow"] = m_adamInfo.beta2;
 			break;
@@ -479,7 +481,7 @@ public:
 	{
 		switch (m_gradType.type)
 		{
-		case GradientsUpdateType::Adam: case GradientsUpdateType::AdaMax:
+		case GradientsUpdateType::Adam: case GradientsUpdateType::AdaMax: case GradientsUpdateType::AdaBound:
 			m_additionalOptimizerInfo[L"beta1_pow"] *= m_adamInfo.beta1;
 			m_additionalOptimizerInfo[L"beta2_pow"] *= m_adamInfo.beta2;
 			break;

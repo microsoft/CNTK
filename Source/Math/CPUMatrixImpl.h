@@ -68,6 +68,7 @@
         (a) ^= (b); \
     }
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
+#define CLAMP(x, upper, lower) min(upper, max(lower, x))
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Helpful Enum Definitions
@@ -1383,6 +1384,57 @@ void CPUMatrix<ElemType>::AdaMax(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemT
 		val[i] -= learnRatePerSample * adaMul * m[i] / (u[i] + epsilon);
 	}
 
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AdaBound(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+	ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType epsilon, ElemType upperBound, ElemType lowerBound, ElemType unitGainFactor, const bool amsBound)
+{
+	// see https://arxiv.org/abs/1902.09843
+	// firstMomentDecayRate:	beta_1
+	// secondMomentDecayRate:	beta_2
+	// adaMul:					sqrt(1 - pow(beta_2, t)) / (1 - pow(beta_1, t))
+	// unitGainFactor:			1 - beta_1, set 1 if disable unit gain.
+	size_t numColsNeeded = 2 * gradients.GetNumCols();
+	if (amsBound)
+		numColsNeeded = 3 * gradients.GetNumCols();
+
+	if (IsEmpty() || (GetNumCols() < numColsNeeded))
+	{
+		RequireSize(gradients.GetNumRows(), numColsNeeded);
+		SetValue(0.0);
+	}
+
+	if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+		LogicError("The matrix gradients does not have expected dimensions.");
+
+	size_t n = gradients.GetNumElements();
+	ElemType* gradient = gradients.Data();
+	ElemType* v = Data();					// biased 2nd raw moment estimate, v_t = beta_2 * v_{t-1} + (1 - beta_2) * g_t^2
+	ElemType* m = Data() + n;				// biased 1st raw moment estimate, m_t = beta_1 * g_{t-1} + unitGainFactor * g_t
+	ElemType* max_v = nullptr;
+	ElemType denorm = 0;
+	ElemType stepSize = adaMul * learnRatePerSample;
+	if (amsBound)
+		max_v = Data() + 2 * n;
+	ElemType* val = functionValues.Data();
+#pragma omp parallel for
+	// TODO: Unroll 4-times for better performance leveraging vectorization
+	for (long i = 0; i < n; i++)
+	{
+		ElemType g = gradient[i];
+		v[i] = secondMomentDecayRate * v[i] + (1 - secondMomentDecayRate) * g * g;
+		m[i] = firstMomentDecayRate * m[i] + unitGainFactor * g;
+		if (amsBound)
+		{
+			max_v[i] = max(v[i], max_v[i]);
+			denorm = sqrt(max_v[i]) + epsilon;
+		}
+		else
+			denorm = sqrt(v[i]) + epsilon;
+
+		val[i] -=  CLAMP(stepSize / denorm, upperBound, lowerBound) * m[i];
+	}
 }
 
 template <class ElemType>
