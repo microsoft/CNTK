@@ -1165,6 +1165,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     bool noMoreSamplesToProcess = false;
     bool isFirstMinibatch = true;
+    //Microsoft::MSR::CNTK::StartProfiler();
     for (;;)
     {
         auto profMinibatch = ProfilerTimeBegin();

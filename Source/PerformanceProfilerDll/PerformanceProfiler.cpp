@@ -165,7 +165,7 @@ void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsig
     g_profilerState->customEventBuffer.reset(new char[customEventBufferBytes]);
 
     g_profilerState->syncGpu = syncGpu;
-    g_profilerState->enabled = false;
+    g_profilerState->enabled = true;
 
     if (_wmkdir(g_profilerState->profilerDir.c_str()) == -1 && errno != EEXIST)
     {
