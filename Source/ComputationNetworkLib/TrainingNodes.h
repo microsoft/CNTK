@@ -54,8 +54,6 @@ public:
     DistributedFullyConnectedNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
     {
-        if (1 == m_processNum)
-            LogicError("Multi Gpus and mpi is needed in distributed FC.");
         m_ones.reset(new Matrix<ElemType>(deviceId));
 #ifdef CPUONLY
         LogicError("CPUONLY is not supported in DistributedFullyConnectedNode.");
@@ -67,6 +65,8 @@ public:
         size_t minibatchSize = InputRef(1).Value().GetNumCols();
         if (m_minibatchSize != minibatchSize)
         {
+            if (1 == m_processNum)
+                LogicError("Multi Gpus and mpi is needed in distributed FC.");
             m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
             bool minibatchSizeEqual = m_distGradAggPtr->DistributedCheck(m_minibatchSize, m_processNum);
             if (!minibatchSizeEqual)
@@ -233,8 +233,6 @@ public:
     DistributedFullyConnectedNode_v2(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
     {
-        if (1 == m_processNum)
-            LogicError("Multi Gpus and mpi is needed in distributed FC.");
         m_ones.reset(new Matrix<ElemType>(deviceId));
 #ifdef CPUONLY
         LogicError("CPUONLY is not supported in DistributedFullyConnectedNode_v2.");
@@ -246,6 +244,8 @@ public:
         size_t minibatchSize = InputRef(1).Value().GetNumCols();
         if (m_minibatchSize != minibatchSize)
         {
+            if (1 == m_processNum)
+                LogicError("Multi Gpus and mpi is needed in distributed FC.");
             m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
             bool minibatchSizeEqual = m_distGradAggPtr->DistributedCheck(m_minibatchSize, m_processNum);
             if (!minibatchSizeEqual)
@@ -392,8 +392,6 @@ public:
     DistributedCrossEntropyWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_batchSize(0), m_distGradAggPtr(NULL)
     {
-        if (1 == m_processNum)
-            LogicError("Multi Gpus and mpi is needed in distributed FC.");
 #ifdef CPUONLY
         LogicError("CPUONLY is not supported in DistributedCrossEntropyWithSoftmaxNode.");
 #endif
@@ -417,8 +415,10 @@ public:
     virtual void UpdateFunctionMBSize() override
     {
         size_t minibatchSize = InputRef(0).Value().GetNumCols();
-        if (minibatchSize != m_minibatchSize)
+        if (m_minibatchSize != minibatchSize)
         {
+            if (1 == m_processNum)
+                LogicError("Multi Gpus and mpi is needed in distributed FC.");
             m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
             m_minibatchSize = minibatchSize;
             m_batchSize = m_minibatchSize * m_processNum;
@@ -562,8 +562,6 @@ public:
     DistributedAdditiveFullConnectionNode(DEVICEID_TYPE deviceId, const wstring& name, bool weightNormalize = true, double bias = 0.0, double scale = 1.0)
         : Base(deviceId, name), m_weightNormalize(weightNormalize), m_bias(bias), m_scale(scale), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
     {
-        if (1 == m_processNum)
-            LogicError("Multi Gpus and mpi is needed in distributed FC.");
 #ifdef CPUONLY
         LogicError("CPUONLY is not supported in DistributedAdditiveFullConnectionNode.");
 #endif
@@ -580,6 +578,8 @@ public:
         size_t minibatchSize = InputRef(0).Value().GetNumCols();
         if (m_minibatchSize != minibatchSize)
         {
+            if (1 == m_processNum)
+                LogicError("Multi Gpus and mpi is needed in distributed FC.");
             m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
             bool minibatchSizeEqual = m_distGradAggPtr->DistributedCheck(m_minibatchSize, m_processNum);
             if (!minibatchSizeEqual)

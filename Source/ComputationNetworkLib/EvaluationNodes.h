@@ -148,8 +148,6 @@ public:
     DistributedClassificationErrorNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum())
     {
-        if (1 == m_processNum)
-            LogicError("Multi Gpus and mpi is needed in distributed FC.");
 #ifdef CPUONLY
         LogicError("CPUONLY is not supported in DistributedCrossEntropyWithSoftmaxNode.");
 #endif
@@ -198,6 +196,8 @@ public:
     {
         Base::UpdateFunctionMBSize();
 
+        if (1 == m_processNum)
+            LogicError("Multi Gpus and mpi is needed in distributed FC.");
         size_t cols = Input(1)->Value().GetNumCols();
         m_maxIndexes->Resize(1, cols);
         m_maxValues->Resize(1, cols);
