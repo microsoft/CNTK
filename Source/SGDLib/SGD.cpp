@@ -8,6 +8,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 //#define __PROFILE__
+
 #include <cmath>
 const double Pi = acos(-1.0);
 
@@ -64,6 +65,7 @@ template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
 
 using Params = std::normal_distribution<>::param_type;
 normal_distribution<double> normalDist(0, 1);
+
 std::default_random_engine generator;
 
 // -----------------------------------------------------------------------
@@ -1319,7 +1321,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * (1.0 / (1.0 + exp(-m_lrapiInfo.gamma * (m_lrapiInfo.iter - m_lrapiInfo.stepSize))));
                 if (m_lrapiInfo.iter >= m_lrapiInfo.maxIter)
                     m_lrapiInfo.reachMaxIter = true;
-
                 if (m_lrapiInfo.sgdTraceLevel > 0 && 0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToShowLR)
                     fprintf(stderr, "Iteration %d: learning rate per sample = %.8g\n", (int) m_lrapiInfo.iter, learnRatePerSample);
 
@@ -3214,7 +3215,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     if (EqualCI(adjustType, L"none") || EqualCI(adjustType, L"None"))
         m_lrapiInfo.adjustType = AdjustType::None;
     else if (EqualCI(adjustType, L"poly") || EqualCI(adjustType, L"Poly"))
-        m_lrapiInfo.adjustType = AdjustType::Poly;
+		m_lrapiInfo.adjustType = AdjustType::Poly;
     else if (EqualCI(adjustType, L"inv") || EqualCI(adjustType, L"Inv"))
         m_lrapiInfo.adjustType = AdjustType::Inv;
     else if (EqualCI(adjustType, L"exp") || EqualCI(adjustType, L"Exp"))
