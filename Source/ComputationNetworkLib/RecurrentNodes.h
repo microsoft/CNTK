@@ -132,6 +132,10 @@ public:
         : Base(configp)
     {
     }
+    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+    }
 };
 
 // -----------------------------------------------------------------------

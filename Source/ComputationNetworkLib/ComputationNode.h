@@ -2059,7 +2059,7 @@ public:
         }
     }
 
-protected:
+public:
     // print node values
     // This is used for dumping model parameters, not minibatch data.
     void PrintNodeValuesToFile(const bool printValues, const bool printMetadata, File& fstream) const

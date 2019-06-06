@@ -625,6 +625,7 @@ protected:
     void ZeroStorageInit() { m_sob->ZeroInit(); }
     void ReleaseStorageMemory() { m_sob->ReleaseMemory(); }
 
+public:
     // copy all metadata (but not content that m_sob points to)
     void ShallowCopyFrom(const BaseMatrix& other) 
     {
