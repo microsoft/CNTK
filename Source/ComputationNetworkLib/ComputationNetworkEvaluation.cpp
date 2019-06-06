@@ -22,7 +22,7 @@
 using namespace std;
 
 
-#define __DISTRIBUTED_PROFILE__
+//#define __DISTRIBUTED_PROFILE__
 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
