@@ -45,6 +45,7 @@ class SimpleOutputWriter
         {
             return logP < rhs.logP;
         }
+        unordered_map<wstring, shared_ptr<ComputationNode<ElemType>>> nameToNode;
     };
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     typedef typename std::vector<Sequence>::iterator iterator;
@@ -329,6 +330,20 @@ public:
         insequence.lengthwithblank++;
     }
 
+    std::vector<ComputationNodeBasePtr> GetNodesByNames(const std::vector<std::wstring>& names) const
+    {
+        std::vector<ComputationNodeBasePtr> nodes;
+        for (size_t i = 0; i < names.size(); i++)
+        {
+            auto nodesByName = m_net->GetNodesFromName(names[i]);
+            if (nodesByName.size() != 1)
+                LogicError("Exactly one node is expected for name %ls", names[i]);
+
+            nodes.push_back(nodesByName[0]);
+        }
+        return nodes;
+    }
+
     void forward_decode(Sequence oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
                         std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize, size_t plength)
     {
@@ -353,9 +368,36 @@ public:
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
             m_net->ForwardProp(decodeOutputNodes[0]);
+            //std::vector<std::wstring> nodeNames;
+            //nodeNames.push_back(L"evaluation");
+            //std::vector<ComputationNodeBasePtr> evalNodes = GetNodesByNames(nodeNames);
+            //m_net->ForwardProp(decodeOutputNodes[0]);
             //Matrix<ElemType> tempMatrix = *(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value());
             oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())).ColumnSlice(plength - 1, 1));
             oneSeq.processlength = plength;
+            m_nodesToCache.push_back(L"lstmLayers[1].dc");
+            for (size_t i = 0; i < m_nodesToCache.size(); i++)
+            {
+                auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
+
+                shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
+                oneSeq.nameToNode[m_nodesToCache[i]] = pLearnableNode;
+                Matrix<ElemType>& mat = pLearnableNode->Value();
+                //mat.Print();
+                //Matrix<ElemType> deepCopy(mat);
+                ElemType* tempArray = nullptr;
+                size_t tempArraySize = 0;
+                mat.CopyToArray(tempArray, tempArraySize);
+                /*
+                tempArray[0] = -1;
+                tempArray[1] = 1;
+                mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), tempArray, matrixFlagNormal, nullptr);
+                tempArray[0] = 0;
+                tempArray[1] = 0;
+                mat.CopyToArray(tempArray, tempArraySize);
+                */
+                delete[] tempArray;
+            }
             lmin.ReleaseMemory();
         }
     }
@@ -658,15 +700,15 @@ public:
             //nbest output
             for (size_t n = 0; n < nextSequences.size(); n++)
             {
-                nextSequences[n].logP /= nextSequences[n].labelseq.size()-1;
+                nextSequences[n].logP /= nextSequences[n].labelseq.size() - 1;
             }
             auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
-            size_t lmt = yb->length-1;
+            size_t lmt = yb->length - 1;
             greedyOutput.Resize(vocabSize, lmt);
             greedyOutput.SetValue(0.0);
             for (size_t n = 0; n < lmt; n++)
             {
-                greedyOutput(yb->labelseq[n+1], n) = 1.0;
+                greedyOutput(yb->labelseq[n + 1], n) = 1.0;
             }
             //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
             //greedyOutput.Print("greedy output");
@@ -901,6 +943,7 @@ public:
 
 private:
     ComputationNetworkPtr m_net;
+    std::vector<wstring> m_nodesToCache;
     int m_verbosity;
     void operator=(const SimpleOutputWriter&); // (not assignable)
 };
