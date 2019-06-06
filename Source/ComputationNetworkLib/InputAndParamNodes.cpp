@@ -478,8 +478,9 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
         fstream << Value();
     else
     {
+        if (NULL == m_gatheredParams || Value().GetNumRows() != m_gatheredParams->GetNumRows() || Value().GetNumCols() * Globals::GetProcessNum() != m_gatheredParams->GetNumCols())
+            LogicError("LearnableParameter: Cannot save distributed parameters.");
         fstream << m_isVector;
-        assert(m_gatheredParams != NULL && Value().GetNumCols() * Globals::GetProcessNum() == m_gatheredParams->GetNumCols());
         if (m_isVector)
             m_gatheredParams->Resize(m_gatheredParams->GetNumElements(), 1);
         fstream << (*m_gatheredParams);
@@ -541,7 +542,7 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
             Value().Resize(temp.GetNumRows() / Globals::GetProcessNum(), 1);
             Value().AssignRowSliceValuesOf(temp, temp.GetNumRows() / Globals::GetProcessNum() * Globals::GetRank(), temp.GetNumRows() / Globals::GetProcessNum());
         }
-        // above reads dimensions, so we must update our own dimensions
+
         SetDims(TensorShape(Value().GetNumRows(), Value().GetNumCols()), false);
     }
 
