@@ -358,21 +358,21 @@ public:
             Matrix<ElemType> lmin(deviceID);
 
             //greedyOutput.SetValue(greedyOutputMax.ColumnSlice(0, lmt));
-            lmin.Resize(vocabSize, plength);
+            lmin.Resize(vocabSize, 1);
             lmin.SetValue(0.0);
-            for (size_t n = 0; n < plength; n++)
+            lmin(oneSeq.labelseq[plength - 1], 0) = 1.0;
+            /*for (size_t n = 0; n < plength; n++)
             {
                 lmin(oneSeq.labelseq[n], n) = 1.0;
-            }
+            }*/
             auto lminput = decodeinputMatrices.begin();
-            lminput->second.pMBLayout->Init(1, plength);
+            lminput->second.pMBLayout->Init(1, 1);
             //std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
             lminput->second.GetMatrix<ElemType>().SetValue(lmin);
-            lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, plength);
+            lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
 
-            m_nodesToCache.push_back(L"lstmLayers[1].dc");
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
@@ -388,7 +388,7 @@ public:
             }
 
             m_net->ForwardProp(decodeOutputNodes[0]);
-            oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())).ColumnSlice(plength - 1, 1));
+            oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())));
             oneSeq.processlength = plength;
 
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
