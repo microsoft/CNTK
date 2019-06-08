@@ -45,7 +45,11 @@ class SimpleOutputWriter
         {
             return logP < rhs.logP;
         }
-        unordered_map<wstring, shared_ptr<ComputationNode<ElemType>>> nameToNode;
+        ~Sequence()
+        {
+            //TODO: free values;
+        }
+        unordered_map<wstring, vector<ElemType>> nameToNodeValues;
     };
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     typedef typename std::vector<Sequence>::iterator iterator;
@@ -367,36 +371,38 @@ public:
             lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, plength);
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
-            m_net->ForwardProp(decodeOutputNodes[0]);
-            //std::vector<std::wstring> nodeNames;
-            //nodeNames.push_back(L"evaluation");
-            //std::vector<ComputationNodeBasePtr> evalNodes = GetNodesByNames(nodeNames);
-            //m_net->ForwardProp(decodeOutputNodes[0]);
-            //Matrix<ElemType> tempMatrix = *(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value());
-            oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())).ColumnSlice(plength - 1, 1));
-            oneSeq.processlength = plength;
+
             m_nodesToCache.push_back(L"lstmLayers[1].dc");
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
 
                 shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
-                oneSeq.nameToNode[m_nodesToCache[i]] = pLearnableNode;
                 Matrix<ElemType>& mat = pLearnableNode->Value();
-                //mat.Print();
-                //Matrix<ElemType> deepCopy(mat);
-                ElemType* tempArray = nullptr;
-                size_t tempArraySize = 0;
-                mat.CopyToArray(tempArray, tempArraySize);
-                /*
-                tempArray[0] = -1;
-                tempArray[1] = 1;
-                mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), tempArray, matrixFlagNormal, nullptr);
-                tempArray[0] = 0;
-                tempArray[1] = 0;
-                mat.CopyToArray(tempArray, tempArraySize);
-                */
-                delete[] tempArray;
+                //ElemType* tempArray = nullptr;
+                //size_t tempArraySize = 0;
+                if (oneSeq.nameToNodeValues[m_nodesToCache[i]].size() > 0)
+                {
+                    mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), oneSeq.nameToNodeValues[m_nodesToCache[i]].data(), matrixFlagNormal, nullptr);
+                }
+            }
+
+            m_net->ForwardProp(decodeOutputNodes[0]);
+            oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())).ColumnSlice(plength - 1, 1));
+            oneSeq.processlength = plength;
+
+            for (size_t i = 0; i < m_nodesToCache.size(); i++)
+            {
+                auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
+
+                shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
+                Matrix<ElemType>& mat = pLearnableNode->Value();
+                oneSeq.nameToNodeValues[m_nodesToCache[i]].resize(mat.GetNumElements());
+                ElemType* dataPtr = oneSeq.nameToNodeValues[m_nodesToCache[i]].data();
+                size_t valueSize = oneSeq.nameToNodeValues[m_nodesToCache[i]].size();
+                mat.CopyToArray(dataPtr, valueSize);
+                if (valueSize != oneSeq.nameToNodeValues[m_nodesToCache[i]].size())
+                    LogicError("Size mismatch for node"); // %ls", m_nodesToCache[i]
             }
             lmin.ReleaseMemory();
         }
@@ -494,6 +500,19 @@ public:
         //get decode input matrix
         std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin() + 1, outputNodeNames.begin() + 2);
         std::vector<ComputationNodeBasePtr> decodeOutputNodes = m_net->OutputNodesByName(decodeOutputNodeNames);
+        std::list<ComputationNodeBasePtr> pastValueNodes = m_net->PastValueNodesForOutputs(decodeOutputNodes);
+
+        std::vector<ComputationNodeBasePtr> result;
+        std::list<ComputationNodeBasePtr>::iterator it;
+        for (it = pastValueNodes.begin(); it != pastValueNodes.end(); ++it)
+        {
+            auto pastValueNode = dynamic_pointer_cast<PastValueNode<ElemType>>(*it);
+            if (pastValueNode)
+            {
+                m_nodesToCache.push_back(pastValueNode->NodeName());
+            }
+        }
+
         std::vector<ComputationNodeBasePtr> decodeinputNodes = m_net->InputNodesForOutputs(decodeOutputNodeNames);
         StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
