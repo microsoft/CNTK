@@ -396,6 +396,10 @@ public:
             lmin.Resize(vocabSize, 1);
             lmin.SetValue(0.0);
             lmin(oneSeq.labelseq[plength - 1], 0) = 1.0;
+            /*for (size_t n = 0; n < plength; n++)
+            {
+                lmin(oneSeq.labelseq[n], n) = 1.0;
+            }*/
             auto lminput = decodeinputMatrices.begin();
             lminput->second.pMBLayout->Init(1, 1);
             //std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
@@ -410,6 +414,7 @@ public:
             }
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             bool shallowCopy = false;
+
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
