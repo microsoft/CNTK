@@ -468,8 +468,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // the parallel training nodes from colliding to write the same file
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
             net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
-        if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
-            ReleaseDistParams(learnableNodes);
     }
 
     if (m_saveBestModelPerCriterion)
@@ -630,9 +628,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-                    net->Save(m_modelPath);
-                if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
-                    ReleaseDistParams(learnableNodes);
+                {
+                    msra::files::make_intermediate_dirs(m_modelPath + L"/" + m_modelName);
+                    net->Save(m_modelPath + L"/" + m_modelName);
+                }
             }
             break;
         }
@@ -646,9 +645,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-                    net->Save(m_modelPath);
-                if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
-                    ReleaseDistParams(learnableNodes);
+                {
+                    msra::files::make_intermediate_dirs(m_modelPath + L"/" + m_modelName);
+                    net->Save(m_modelPath + L"/" + m_modelName);
+                }
             }
             break;
         }
@@ -879,8 +879,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                         // the parallel training nodes from colliding to write the same file
                         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
                             net->Save(GetModelNameForEpoch(i, true));
-                        if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
-                            ReleaseDistParams(learnableNodes);
 
                         LOGPRINTF(stderr, "Finished training and saved final model\n\n");
                         break;
