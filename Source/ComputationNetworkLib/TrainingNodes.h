@@ -3447,7 +3447,7 @@ public:
         {
             // determine drop-out mask for this minibatch
             auto sliceMask = DataFor(*m_maskOfDropout, fr);
-            sliceMask.SetUniformRandomMask((ElemType) GetDropoutRate(), (ElemType)(1.0 / (1.0 - GetDropoutRate())) /*pre-scaled*/, GetRNGHandle());
+            sliceMask.SetUniformRandomMask((ElemType) GetDropoutRate(), (ElemType)1.0, GetRNGHandle());
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
             UpdateRngOffset(GetRngOffset() + sliceMask.GetNumElements());
