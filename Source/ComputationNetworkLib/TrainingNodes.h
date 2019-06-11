@@ -4040,7 +4040,9 @@ private: // time-constant conversions
         // Convert to per-minibatch factor. The limit, positive infinity, means that running mean/var parameters are "frozen"
         // that is, do not require updates.
         // The code below special-cases two boundary cases, but those are just the limit cases of the main formula.
-        if (!isfinite(m_normTimeConst))                   // infinite
+        if (Globals::GetUseBNMomentum())
+            return 1.0 - Globals::GetBNMomentum();
+        else if (!isfinite(m_normTimeConst))              // infinite
             return 0;                                     // no new contribution from current minibatch (infinitely long memory)
         else if (m_normTimeConst > 0)                     // not zero
             return -expm1(-numSamples / m_normTimeConst); // interpolate expAvgFactor * MB stats + (1-expAvgFactor) * prev running stats
