@@ -35,6 +35,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void SetMPIPackThreshold(std::size_t packThreholdInBytes) { m_mpiPackThresholdInBytes = packThreholdInBytes; }
         static std::size_t GetMPIPackThreshold() { return m_mpiPackThresholdInBytes; }
 
+        static void SetUseBNMomentum(bool useBNMomentum) { m_useBNMomentum = useBNMomentum; }
+        static bool GetUseBNMomentum() { return m_useBNMomentum; }
+
+        static void SetBNMomentum(double BNMomentum) { m_BNMomentum = BNMomentum; }
+        static double GetBNMomentum() { return m_BNMomentum; }
+
         static void SetProcessNum(std::size_t processNum) { m_processNum = processNum; }
         static void SetRank(std::size_t rank) { m_rank = rank; }
         static void SetDistGradAggPtr(void* distGradAggPtr) { m_distGradAggPtr = distGradAggPtr; }
@@ -50,6 +56,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static std::atomic<bool> m_optimizeGradientAccumulation;
         static std::atomic<bool> m_enableNodeTiming;
         static std::atomic<std::size_t> m_mpiPackThresholdInBytes;
+
+        // If m_useBNMomentum == true, the BN Momentum will be overwrote as m_BNMomentum, regardless bnTimeConst.
+        static std::atomic<bool> m_useBNMomentum;
+        static std::atomic<double> m_BNMomentum;
 
         static std::size_t m_processNum;
         static std::size_t m_rank;
