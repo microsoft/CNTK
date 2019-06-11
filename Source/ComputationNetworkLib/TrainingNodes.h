@@ -4133,7 +4133,7 @@ public:
 
                 GlobalConcatNode<ElemType>* inputNode = dynamic_cast<GlobalConcatNode<ElemType>*>(Input(DATA).get());
                 m_tempSegment->Resize(inputNode->m_startIndex + inputNode->m_numRows, Gradient().GetNumCols());
-                GlobalMemoryBlock<ElemType>* globalMemoryBlockPtr = (GlobalMemoryBlock<ElemType>*) (valueGlobalMemoryBlockVec[inputNode->m_blockIndex]);
+                shared_ptr<GlobalMemoryBlock<ElemType>> globalMemoryBlockPtr = m_valueGlobalMemoryBlockMap<ElemType>[inputNode->m_blockIndex];
                 globalMemoryBlockPtr->getSegmentMatrix(*m_tempSegment, 0, inputNode->m_startIndex + inputNode->m_numRows);
 
                 const Matrix<StatType>& scale = this->template TypedInput<StatType>(SCALE)->Value();
