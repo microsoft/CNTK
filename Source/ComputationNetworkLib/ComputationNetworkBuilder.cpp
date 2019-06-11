@@ -126,6 +126,11 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(SoftmaxNode))                          return New<SoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SqrtNode))                             return New<SqrtNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SquareErrorNode))                      return New<SquareErrorNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DistributedFullyConnectedNode))               return New<DistributedFullyConnectedNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DistributedFullyConnectedNode_v2))            return New<DistributedFullyConnectedNode_v2<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DistributedCrossEntropyWithSoftmaxNode))      return New<DistributedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DistributedClassificationErrorNode))          return New<DistributedClassificationErrorNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DistributedAdditiveFullConnectionNode))       return New<DistributedAdditiveFullConnectionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(MarginInnerProductNode))               return New<MarginInnerProductNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(FeatureNormalizeNode))                 return New<FeatureNormalizeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(AdditiveFullConnectionNode))           return New<AdditiveFullConnectionNode<ElemType>>(forward<_Types>(_Args)...);
@@ -482,6 +487,36 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Squar
     return net.AddNodeToNetAndAttachInputs(New<SquareErrorNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedFullyConnected(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<DistributedFullyConnectedNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b, c });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedFullyConnected_v2(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<DistributedFullyConnectedNode_v2<ElemType>>(net.GetDeviceId(), nodeName), { a, b, c });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedCrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<DistributedCrossEntropyWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedClassificationError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<DistributedClassificationErrorNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedAdditiveFullConnection(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, bool weightNormalize, ElemType bias, ElemType scale, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<DistributedAdditiveFullConnectionNode<ElemType>>(net.GetDeviceId(), nodeName, weightNormalize, bias, scale), { a, b, c });
+}
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MarginInnerProduct(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, size_t outputDimension, ElemType base, ElemType gamma, ElemType power, ElemType lambdaMin, size_t marginCoefficient, const std::wstring nodeName)

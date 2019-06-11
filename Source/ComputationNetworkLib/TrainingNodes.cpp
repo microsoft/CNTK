@@ -345,6 +345,22 @@ template class BatchNormalizationNode<float>;
 template class BatchNormalizationNode<double>;
 template class BatchNormalizationNode<half>;
 
+template class DistributedFullyConnectedNode<float>;
+template class DistributedFullyConnectedNode<double>;
+template class DistributedFullyConnectedNode<half>;
+
+template class DistributedFullyConnectedNode_v2<float>;
+template class DistributedFullyConnectedNode_v2<double>;
+template class DistributedFullyConnectedNode_v2<half>;
+
+template class DistributedCrossEntropyWithSoftmaxNode<float>;
+template class DistributedCrossEntropyWithSoftmaxNode<double>;
+template class DistributedCrossEntropyWithSoftmaxNode<half>;
+
+template class DistributedAdditiveFullConnectionNode<float>;
+template class DistributedAdditiveFullConnectionNode<double>;
+template class DistributedAdditiveFullConnectionNode<half>;
+
 template class MarginInnerProductNode<float>;
 template class MarginInnerProductNode<double>;
 template class MarginInnerProductNode<half>;

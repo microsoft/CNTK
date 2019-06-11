@@ -330,6 +330,23 @@ namespace CNTK
                     opType = PrimitiveOpType::Logistic;
                 else if (node->OperationName() == OperationNameOf(SquareErrorNode))
                     opType = PrimitiveOpType::SquaredError;
+                else if (node->OperationName() == OperationNameOf(DistributedFullyConnectedNode))
+                    opType = PrimitiveOpType::DistributedFullyConnected;
+                else if (node->OperationName() == OperationNameOf(DistributedFullyConnectedNode_v2))
+                    opType = PrimitiveOpType::DistributedFullyConnected_v2;
+                else if (node->OperationName() == OperationNameOf(DistributedCrossEntropyWithSoftmaxNode))
+                    opType = PrimitiveOpType::DistributedCrossEntropyWithSoftmax;
+                else if (node->OperationName() == OperationNameOf(DistributedClassificationErrorNode))
+                    opType = PrimitiveOpType::DistributedClassificationError;
+                else if (node->OperationName() == OperationNameOf(DistributedAdditiveFullConnectionNode))
+                {
+                    auto distributedAdditiveFullConnectionNode = node->As<DistributedAdditiveFullConnectionNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionWeightNormalize] = distributedAdditiveFullConnectionNode->m_weightNormalize;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionBias] = distributedAdditiveFullConnectionNode->m_bias;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionScale] = distributedAdditiveFullConnectionNode->m_scale;
+
+                    opType = PrimitiveOpType::DistributedAdditiveFullConnection;
+                }
                 else if (node->OperationName() == OperationNameOf(MarginInnerProductNode))
                 {
                     auto marginInnerProductNode = node->As<MarginInnerProductNode<ElementType>>();

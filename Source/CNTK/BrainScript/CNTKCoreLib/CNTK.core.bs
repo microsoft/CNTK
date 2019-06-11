@@ -53,6 +53,34 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
 }.apply
 
 
+# DistributedFullyConnectedLayer -- create a distributed fully-connected linear projection layer
+# In this layer, we decompose the fc parameters, the input and output tensors are as the same as the 'LinearLayer'
+DistributedFullyConnectedLayer {inDim, outDim, init='glorotUniform', initValueScale=1, initBias=0} =
+{
+    W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
+    b = ParameterTensor {outDim, initValue=initBias, distribute=true}
+    apply (X) = DistributedFullyConnected(W, X, b);
+}.apply
+
+# DistributedFullyConnectedLayer_v2 -- create a distributed fully-connected linear projection layer
+# In this layer, we decompose the fc parameters, the input tensors are still as the same as the 'LinearLayer'
+# However, the output is decomposed. The next layer must deal with the decomposed output tensors
+DistributedFullyConnectedLayer_v2 {inDim, outDim, init='glorotUniform', initValueScale=1, initBias=0} =
+{
+    W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
+    b = ParameterTensor {outDim, initValue=initBias, distribute=true}
+    apply (X) = DistributedFullyConnected_v2(W, X, b);
+}.apply
+
+# DistributedAdditiveFullConnectionLayer -- create a distributed label-specific-add full connection layer
+# The output is decomposed. The next layer must deal with the decomposed output tensors
+DistributedAdditiveFullConnectionLayer {inDim, outDim, weightNormalize=true, bias=0, scale=1, init='glorotUniform', initValueScale=1} =
+{
+    W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
+
+    apply (labelSequence, outProbVectorSequence) = DistributedAdditiveFullConnection(labelSequence, W, outProbVectorSequence, weightNormalize=weightNormalize, bias=bias, scale=scale)
+}.apply
+
 # MarginInnerProductLayer -- create a marginInnerProduct projection layer
 # Note: outputDimension may describe a tensor as well.
 MarginInnerProductLayer {inputDimension, outputDimension, base, gamma, power, lambdaMin, coefficient, init='glorotUniform', initValueScale=1} =
@@ -427,6 +455,11 @@ Times                   = CNTK2.Times
 Abs                     = CNTK2.Abs
 Ceil                    = CNTK2.Ceil
 CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
+DistributedFullyConnected          = CNTK2.DistributedFullyConnected
+DistributedFullyConnected_v2       = CNTK2.DistributedFullyConnected_v2
+DistributedCrossEntropyWithSoftmax = CNTK2.DistributedCrossEntropyWithSoftmax
+DistributedClassificationError     = CNTK2.DistributedClassificationError
+DistributedAdditiveFullConnection  = CNTK2.DistributedAdditiveFullConnection
 MarginInnerProduct      = CNTK2.MarginInnerProduct
 FeatureNormalize        = CNTK2.FeatureNormalize
 AdditiveFullConnection  = CNTK2.AdditiveFullConnection
@@ -528,6 +561,36 @@ CNTK2 = [
     // Changes: Matrix -> Tensor. A -> x, B -> y. Data must come on y ("default parameter") hence not using _
     Times(x, y, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'Times' ; inputs = _AsNodes (x : y) /*plus the function args*/ ]
 
+
+    #
+    # Distributed fully connected node
+    #
+    DistributedFullyConnected(W, X, b, tag='') =
+        new ComputationNode [ operation = 'DistributedFullyConnected' ; inputs = _AsNodes (W : X : b) /*plus the function args*/ ]
+
+    #
+    # Distributed fully connected node v2
+    #
+    DistributedFullyConnected_v2(W, X, b, tag='') =
+        new ComputationNode [ operation = 'DistributedFullyConnected_v2' ; inputs = _AsNodes (W : X : b) /*plus the function args*/ ]
+
+    #
+    # Distributed cross entropy with softmax node
+    #
+    DistributedCrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, tag='') =
+        new ComputationNode [ operation = 'DistributedCrossEntropyWithSoftmax' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
+
+    #
+    # Distributed classification error node, the input labels and probability must be decomposed
+    #
+    DistributedClassificationError(labelSequence, outVectorSequence, tag='') =
+        new ComputationNode [ operation = 'DistributedClassificationError' ; inputs = _AsNodes (labelSequence : outVectorSequence) /*plus the function args*/ ]
+
+    #
+    # Distributed additiveFullConnection node, the input labels and probability must be decomposed
+    #
+    DistributedAdditiveFullConnection(labelSequence, W, outProbVectorSequence, weightNormalize=true, bias=0, scale=1, tag='') = 
+        new ComputationNode [ operation = 'DistributedAdditiveFullConnection' ; inputs = _AsNodes (labelSequence : W : outProbVectorSequence) /*plus the function args*/ ]
 
     #
     # MarginInnerProduct node
@@ -681,7 +744,7 @@ Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|unifor
 LearnableParameter = Parameter  // deprecated
 
 # TODO: make Parameter take tensor dims?
-ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='', disableRegularization = false} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, distribute=false, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
 # TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]

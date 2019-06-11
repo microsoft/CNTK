@@ -481,10 +481,15 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
     {
         if (!(Input(0)->GetSampleLayout().IsElementwiseCompatibleWith(Input(1)->GetSampleLayout())))
         {
-            string s1 = Input(0)->GetSampleLayout();
-            string s2 = Input(1)->GetSampleLayout();
-            // BUGBUG: Allow broadcasting?
-            LogicError("%ls: The tensor dimensions in the inputs do not match. %s != %s", NodeDescription().c_str(), s1.c_str(), s2.c_str());
+            // It is for DistributedCrossEntropyWithSoftmaxNode
+            if (Input(0)->OperationName() != L"DistributedFullyConnected_v2"      && Input(1)->OperationName() != L"DistributedFullyConnected_v2" &&
+                Input(0)->OperationName() != L"DistributedAdditiveFullConnection" && Input(1)->OperationName() != L"DistributedAdditiveFullConnection")
+            {
+                string s1 = Input(0)->GetSampleLayout();
+                string s2 = Input(1)->GetSampleLayout();
+                // BUGBUG: Allow broadcasting?
+                LogicError("%ls: The tensor dimensions in the inputs do not match. %s != %s", NodeDescription().c_str(), s1.c_str(), s2.c_str());
+            }
         }
         else if (!(Input(0)->HasMBLayout()))
             LogicError("%ls: Expected MBLayout in Input 0.", NodeDescription().c_str());
@@ -1217,6 +1222,21 @@ template <> map<size_t, map<size_t, shared_ptr<HalfMatrix>>> ComputationNode<hal
 template class ComputationNode<float>;
 template class ComputationNode<double>;
 template class ComputationNode<half>;
+
+
+template class DistributedGatheredLabels<float>;
+template class DistributedGatheredLabels<double>;
+template class DistributedGatheredLabels<half>;
+template <class ElemType>
+IDistGradAggregator<ElemType>* DistributedGatheredLabels<ElemType>::m_distGradAggPtr(NULL);
+template <class ElemType>
+void* DistributedGatheredLabels<ElemType>::initializeNodePtr(NULL);
+template <class ElemType>
+shared_ptr<Matrix<ElemType>> DistributedGatheredLabels<ElemType>::m_gatheredLabels;
+template <class ElemType>
+shared_ptr<Matrix<ElemType>> DistributedGatheredLabels<ElemType>::m_labels;
+template <class ElemType>
+size_t DistributedGatheredLabels<ElemType>::m_minibatchSize(0);
 
 }}}
 

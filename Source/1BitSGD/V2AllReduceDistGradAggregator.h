@@ -271,6 +271,29 @@ public:
         }
     }
 
+
+    bool DistributedCheck(size_t minibatchSize, size_t processNum)
+    {
+        assert(false);
+        return true;
+    }
+
+    void DistributedInit(DEVICEID_TYPE deviceId, size_t bufferSize)
+    {
+        assert(false);
+    }
+
+    void DistributedAllGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count)
+    {
+        assert(false);
+    }
+
+    void DistributedAllReduce(const Matrix<ElemType>& distributedMatrix, MPI_Op op)
+    {
+        assert(false);
+    }
+
+
 private:
     // Perform asynchronous gradient aggregation using double buffering of the gradient matrices
     bool m_useAsyncAggregation;

@@ -464,6 +464,10 @@ public:
 
 #pragma region AMsoftmax
 
+    static void FeatureNormalizeL1Backprop(const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& magnitude, const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& X_gradient);
+
+    static void FeatureNormalizeL2Backprop(const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& magnitude, const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& X_gradient);
+
     static void LabelAdd(const CPUMatrix<ElemType>& label, ElemType bias, const CPUMatrix<ElemType>& value);
 
 #pragma endregion
@@ -485,6 +489,34 @@ public:
 #pragma region LabelSmoothing
 
     static void LabelSmoothing(const CPUMatrix<ElemType>& label, ElemType keepRate, ElemType smoothValue);
+
+#pragma endregion
+
+#pragma region DistributedFC
+
+    static void GetDenseLabelsFromOneHot(const CPUMatrix<ElemType>& oneHotLabels, const CPUMatrix<ElemType>& labels);
+
+    static void Scatter(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
+
+    static void AddColumnVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& columnVector, const CPUMatrix<ElemType>& dst);
+
+    static void AddRowVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& rowVector, const CPUMatrix<ElemType>& dst);
+
+    static void MinusColumnVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& columnVector, const CPUMatrix<ElemType>& dst);
+
+    static void MinusRowVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& rowVector, const CPUMatrix<ElemType>& dst);
+
+    static void AssignExpSum(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& expSum);
+
+    static void DistributedSoftmax(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& logSum, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& logSoftmax);
+
+    static void DistributedCrossEntropy(const CPUMatrix<ElemType>& logP, const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedSoftmaxWithCrossEntropyBackprop(const CPUMatrix<ElemType>& postGradient, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& gradient, size_t startIndex);
+
+    static void DistributedAssignClassificationError(const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& probs, const CPUMatrix<ElemType>& maxProb, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedLabelAdd(const CPUMatrix<ElemType>& labels, ElemType bias, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
 
 #pragma endregion
 

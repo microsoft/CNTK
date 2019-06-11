@@ -4,7 +4,6 @@
 //
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
-//#define __PROFILE__
 
 #include "Basics.h"
 #include "ComputationNode.h"
@@ -22,7 +21,24 @@
 
 using namespace std;
 
+
+//#define __DISTRIBUTED_PROFILE__
+
+
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+
+#ifdef __DISTRIBUTED_PROFILE__
+    double distributedAdditiveFullConnectionTime = 0.0;
+    std::chrono::time_point<std::chrono::system_clock> distributedAdditiveFullConnectionStartTime;
+    std::chrono::time_point<std::chrono::system_clock> distributedAdditiveFullConnectionEndTime;
+    int distributedAdditiveFullConnectionCnt = 0;
+    double distributedCrossEntropyWithSoftmaxTime = 0.0;
+    std::chrono::time_point<std::chrono::system_clock> distributedCrossEntropyWithSoftmaxStartTime;
+    std::chrono::time_point<std::chrono::system_clock> distributedCrossEntropyWithSoftmaxEndTime;
+    int distributedCrossEntropyWithSoftmaxCnt = 0;
+#endif
+
 
 // This source file contains methods related to evaluation (forward prop, backprop), network validation, and matrix memory allocation (memory sharing).
 
@@ -143,29 +159,15 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
     }
 }
 
-
-#ifdef __PROFILE__
-static map<void*, clock_t> forwardNodeCnt;
-static map<void*, clock_t> backwardNodeCnt;
-static map<void*, clock_t> forwardNodeTime;
-static map<void*, clock_t> backwardNodeTime;
-#endif
-
-
 /*static*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr)
 {
     if (node->IsOutOfDateWrtInputs())
     {
-#ifdef __PROFILE__
-        void* ptr = node.get();
-        if (forwardNodeTime.find(ptr) == forwardNodeTime.end())
-        {
-            forwardNodeTime[ptr] = 0;
-            forwardNodeCnt[ptr] = 1;
-        }
-        else
-            ++forwardNodeCnt[ptr];
-        clock_t t1 = clock();
+#ifdef __DISTRIBUTED_PROFILE__
+        if (node->OperationName() == L"DistributedAdditiveFullConnection")
+            distributedAdditiveFullConnectionStartTime = std::chrono::system_clock::now();
+        else if (node->OperationName() == L"DistributedCrossEntropyWithSoftmax")
+            distributedCrossEntropyWithSoftmaxStartTime = std::chrono::system_clock::now();
 #endif
 
 
@@ -182,16 +184,26 @@ static map<void*, clock_t> backwardNodeTime;
             DumpNode(node, /*dumpGradient=*/false);
 
 
-#ifdef __PROFILE__
-        clock_t t2 = clock();
-        forwardNodeTime[ptr] += t2 - t1;
-
-        if (forwardNodeCnt[ptr] == 100 && forwardNodeTime[ptr] >= 100)
-            fprintf(stderr, "%ls : Forward[1-100] time = %.8gs\n", node->NodeName().c_str(), (double) forwardNodeTime[ptr] / 1000);
-        else if (forwardNodeCnt[ptr] % 10000 == 0 && forwardNodeTime[ptr] >= CLOCKS_PER_SEC)
+#ifdef __DISTRIBUTED_PROFILE__
+        if (node->OperationName() == L"DistributedAdditiveFullConnection")
         {
-            fprintf(stderr, "%ls : Forward[%d-%d] time = %.8gs\n", node->NodeName().c_str(), (int) (forwardNodeCnt[ptr] - 9999), (int) forwardNodeCnt[ptr], (double) forwardNodeTime[ptr] / CLOCKS_PER_SEC);
-            forwardNodeTime[ptr] = 0;
+            distributedAdditiveFullConnectionEndTime = std::chrono::system_clock::now();
+            distributedAdditiveFullConnectionTime += (std::chrono::duration<double>(distributedAdditiveFullConnectionEndTime - distributedAdditiveFullConnectionStartTime)).count();
+            if (++distributedAdditiveFullConnectionCnt % 100 == 0)
+            {
+                fprintf(stderr, "Iteration [%d-%d]: distributedAdditiveFullConnection forward time = %.8gs\n", distributedAdditiveFullConnectionCnt - 99, distributedAdditiveFullConnectionCnt, distributedAdditiveFullConnectionTime);
+                distributedAdditiveFullConnectionTime = 0.0;
+            }
+        }
+        else if (node->OperationName() == L"DistributedCrossEntropyWithSoftmax")
+        {
+            distributedCrossEntropyWithSoftmaxEndTime = std::chrono::system_clock::now();
+            distributedCrossEntropyWithSoftmaxTime += (std::chrono::duration<double>(distributedCrossEntropyWithSoftmaxEndTime - distributedCrossEntropyWithSoftmaxStartTime)).count();
+            if (++distributedCrossEntropyWithSoftmaxCnt % 100 == 0)
+            {
+                fprintf(stderr, "Iteration [%d-%d]: distributedCrossEntropyWithSoftmax forward time = %.8gs\n", distributedCrossEntropyWithSoftmaxCnt - 99, distributedCrossEntropyWithSoftmaxCnt, distributedCrossEntropyWithSoftmaxTime);
+                distributedCrossEntropyWithSoftmaxTime = 0.0;
+            }
         }
 #endif
     }
@@ -223,20 +235,6 @@ static map<void*, clock_t> backwardNodeTime;
     {
         auto& node = *pnode;
 
-
-#ifdef __PROFILE__
-        void* ptr = node.get();
-        if (backwardNodeTime.find(ptr) == backwardNodeTime.end())
-        {
-            backwardNodeTime[ptr] = 0;
-            backwardNodeCnt[ptr] = 1;
-        }
-        else
-            ++backwardNodeCnt[ptr];
-        clock_t t1 = clock();
-#endif
-
-
         node->BeginBackprop();
         node->BeginTiming(true /*backward*/);
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
@@ -246,20 +244,6 @@ static map<void*, clock_t> backwardNodeTime;
         // Extreme Tracing, part 2/4
         if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode() && node->NeedsGradient())
             DumpNode(node, /*dumpGradient=*/true);
-
-
-#ifdef __PROFILE__
-        clock_t t2 = clock();
-        backwardNodeTime[ptr] += t2 - t1;
-
-        if (backwardNodeCnt[ptr] == 100 && backwardNodeTime[ptr] >= 100)
-            fprintf(stderr, "%ls : Backward[1-100] time = %.8gs\n", node->NodeName().c_str(), (double) backwardNodeTime[ptr] / 1000);
-        else if (backwardNodeCnt[ptr] % 10000 == 0 && backwardNodeTime[ptr] >= CLOCKS_PER_SEC)
-        {
-            fprintf(stderr, "%ls : Backward[%d-%d] time = %.8gs\n", node->NodeName().c_str(), (int) (backwardNodeCnt[ptr] - 9999), (int) backwardNodeCnt[ptr], (double) backwardNodeTime[ptr] / CLOCKS_PER_SEC);
-            backwardNodeTime[ptr] = 0;
-        }
-#endif
     }
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) /*override*/

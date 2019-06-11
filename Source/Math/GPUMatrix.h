@@ -580,6 +580,10 @@ public:
 
 #pragma region AMsoftmax
 
+    static void FeatureNormalizeL1Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient);
+
+    static void FeatureNormalizeL2Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient);
+
     static void LabelAdd(const GPUMatrix<ElemType>& label, ElemType bias, const GPUMatrix<ElemType>& value);
 
 #pragma endregion
@@ -601,6 +605,34 @@ public:
 #pragma region LabelSmoothing
 
     static void LabelSmoothing(const GPUMatrix<ElemType>& label, ElemType keepRate, ElemType smoothValue);
+
+#pragma endregion
+
+#pragma region DistributedFC
+
+    static void GetDenseLabelsFromOneHot(const GPUMatrix<ElemType>& oneHotLabels, const GPUMatrix<ElemType>& labels);
+
+    static void Scatter(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
+
+    static void AddColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst);
+
+    static void AddRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst);
+
+    static void MinusColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst);
+
+    static void MinusRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst);
+
+    static void AssignExpSum(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& expSum);
+
+    static void DistributedSoftmax(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& logSum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax);
+
+    static void DistributedCrossEntropy(const GPUMatrix<ElemType>& logP, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedSoftmaxWithCrossEntropyBackprop(const GPUMatrix<ElemType>& postGradient, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& gradient, size_t startIndex);
+
+    static void DistributedAssignClassificationError(const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& probs, const GPUMatrix<ElemType>& maxProb, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedLabelAdd(const GPUMatrix<ElemType>& labels, ElemType bias, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
 
 #pragma endregion
 

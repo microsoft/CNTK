@@ -5352,6 +5352,65 @@ void CPUMatrix<ElemType>::AsoftmaxBackward4(ElemType lambda, size_t inputDimensi
 #pragma region AMsoftmax
 
 template <class ElemType>
+void CPUMatrix<ElemType>::FeatureNormalizeL1Backprop(const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& magnitude, const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& X_gradient)
+{
+    long num = (long)X_gradient.GetNumElements();
+    long rows = (long)X_gradient.GetNumRows();
+    ElemType* valuePtr = value.Data();
+    ElemType* gradientPtr = gradient.Data();
+    ElemType* magnitudePtr = magnitude.Data();
+    ElemType* alphaPtr = alpha.Data();
+    ElemType* X_gradientPtr = X_gradient.Data();
+
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        if (valuePtr[i] > 0) X_gradientPtr[i] = (gradientPtr[i] - alphaPtr[i / rows]) / magnitudePtr[i / rows];
+        else X_gradientPtr[i] = (gradientPtr[i] + alphaPtr[i / rows]) / magnitudePtr[i / rows];
+        if (valuePtr[i + 1] > 0) X_gradientPtr[i + 1] = (gradientPtr[i + 1] - alphaPtr[(i + 1) / rows]) / magnitudePtr[(i + 1) / rows];
+        else X_gradientPtr[i + 1] = (gradientPtr[i + 1] + alphaPtr[(i + 1) / rows]) / magnitudePtr[(i + 1) / rows];
+        if (valuePtr[i + 2] > 0) X_gradientPtr[i + 2] = (gradientPtr[i + 2] - alphaPtr[(i + 2) / rows]) / magnitudePtr[(i + 2) / rows];
+        else X_gradientPtr[i + 2] = (gradientPtr[i + 2] + alphaPtr[(i + 2) / rows]) / magnitudePtr[(i + 2) / rows];
+        if (valuePtr[i + 3] > 0) X_gradientPtr[i + 3] = (gradientPtr[i + 3] - alphaPtr[(i + 3) / rows]) / magnitudePtr[(i + 3) / rows];
+        else X_gradientPtr[i + 3] = (gradientPtr[i + 3] + alphaPtr[(i + 3) / rows]) / magnitudePtr[(i + 3) / rows];
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        if (valuePtr[i] > 0) X_gradientPtr[i] = (gradientPtr[i] - alphaPtr[i / rows]) / magnitudePtr[i / rows];
+        else  X_gradientPtr[i] = (gradientPtr[i] + alphaPtr[i / rows]) / magnitudePtr[i / rows];
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::FeatureNormalizeL2Backprop(const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& magnitude, const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& X_gradient)
+{
+    long num = (long)X_gradient.GetNumElements();
+    long rows = (long)X_gradient.GetNumRows();
+    ElemType* valuePtr = value.Data();
+    ElemType* gradientPtr = gradient.Data();
+    ElemType* magnitudePtr = magnitude.Data();
+    ElemType* alphaPtr = alpha.Data();
+    ElemType* X_gradientPtr = X_gradient.Data();
+
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        X_gradientPtr[i] = (gradientPtr[i] - valuePtr[i] * alphaPtr[i / rows]) / magnitudePtr[i / rows];
+        X_gradientPtr[i + 1] = (gradientPtr[i + 1] - valuePtr[i + 1] * alphaPtr[(i + 1) / rows]) / magnitudePtr[(i + 1) / rows];
+        X_gradientPtr[i + 2] = (gradientPtr[i + 2] - valuePtr[i + 2] * alphaPtr[(i + 2) / rows]) / magnitudePtr[(i + 2) / rows];
+        X_gradientPtr[i + 3] = (gradientPtr[i + 3] - valuePtr[i + 3] * alphaPtr[(i + 3) / rows]) / magnitudePtr[(i + 3) / rows];
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        X_gradientPtr[i] = (gradientPtr[i] - valuePtr[i] * alphaPtr[i / rows]) / magnitudePtr[i / rows];
+    }
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::LabelAdd(const CPUMatrix<ElemType>& label, ElemType bias, const CPUMatrix<ElemType>& value)
 {
     size_t minibatchSize = value.GetNumCols();
@@ -5413,6 +5472,9 @@ void CPUMatrix<ElemType>::ChannelMultiply(const CPUMatrix<ElemType>& X, const CP
         for (long i = 0; i < (m & ~3); i += 4)
         {
             value(i, j) = X(i, j) * weight(i / featureSize, j);
+            value(i + 1, j) = X(i + 1, j) * weight((i + 1) / featureSize, j);
+            value(i + 2, j) = X(i + 2, j) * weight((i + 2) / featureSize, j);
+            value(i + 3, j) = X(i + 3, j) * weight((i + 3) / featureSize, j);
         }
         // handle remaining stuffs
         for (long i = m & ~3; i < m; i++)
@@ -5478,10 +5540,292 @@ void CPUMatrix<ElemType>::LabelSmoothing(const CPUMatrix<ElemType>& label, ElemT
     // handle remaining stuffs
     for (long i = numElements & ~3; i < numElements; i++)
     {
-        if (labelPtr[i] == (ElemType)0)
+        if (labelPtr[i] == (ElemType)0.5)
             labelPtr[i] = smoothValue;
         else
             labelPtr[i] = labelPtr[i] * keepRate + smoothValue;
+    }
+}
+
+#pragma endregion
+
+#pragma region DistributedFC
+
+template <class ElemType>
+void CPUMatrix<ElemType>::GetDenseLabelsFromOneHot(const CPUMatrix<ElemType>& oneHotLabels, const CPUMatrix<ElemType>& labels)
+{
+    long num = (long)oneHotLabels.GetNumElements();
+    long rows = (long)oneHotLabels.GetNumRows();
+    ElemType* oneHotLabelsPtr = oneHotLabels.Data();
+    ElemType* labelsPtr = labels.Data();
+
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        if (oneHotLabelsPtr[i] > (ElemType)0.5)
+            labelsPtr[i / rows] = ElemType(1.0) * (i % rows);
+        if (oneHotLabelsPtr[i + 1] > (ElemType)0.5)
+            labelsPtr[(i + 1) / rows] = ElemType(1.0) * ((i + 1) % rows);
+        if (oneHotLabelsPtr[i + 2] > (ElemType)0.5)
+            labelsPtr[(i + 2) / rows] = ElemType(1.0) * ((i + 2) % rows);
+        if (oneHotLabelsPtr[i + 3] > (ElemType)0.5)
+            labelsPtr[(i + 3) / rows] = ElemType(1.0) * ((i + 3) % rows);
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        if (oneHotLabelsPtr[i] > (ElemType)0.5)
+            labelsPtr[i / rows] = ElemType(1.0) * (i % rows);
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::Scatter(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
+{
+    long minioutputDim = (long)src.GetNumRows();
+    long outputDim = minioutputDim * (long)processNum;
+    long miniblockSize = minioutputDim * (long)minibatchSize;
+    long blockSize = miniblockSize * (long)processNum;
+    long blockOffset = (long)rank * miniblockSize;
+    long numElements = (long)dst.GetNumElements();
+    ElemType* srcPtr = src.Data();
+    ElemType* dstPtr = dst.Data();
+    for (long i(0); i < numElements; ++i)
+    {
+        long row = i % outputDim;
+        long blockIndex = row / minioutputDim;
+        long rowIndex = row % minioutputDim;
+        long colIndex = i / outputDim;
+        dstPtr[i] = srcPtr[blockIndex * blockSize + blockOffset + colIndex * minioutputDim + rowIndex];
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AddColumnVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& columnVector, const CPUMatrix<ElemType>& dst)
+{
+    long num = (long)src.GetNumElements();
+    long rows = (long)columnVector.GetNumRows();
+    ElemType* srcPtr = src.Data();
+    ElemType* dstPtr = dst.Data();
+    ElemType* vecPtr = columnVector.Data();
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        dstPtr[i] = srcPtr[i] + vecPtr[i % rows];
+        dstPtr[i + 1] = srcPtr[i + 1] + vecPtr[(i + 1) % rows];
+        dstPtr[i + 2] = srcPtr[i + 2] + vecPtr[(i + 2) % rows];
+        dstPtr[i + 3] = srcPtr[i + 3] + vecPtr[(i + 3) % rows];
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        dstPtr[i] = srcPtr[i] + vecPtr[i % rows];
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AddRowVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& rowVector, const CPUMatrix<ElemType>& dst)
+{
+    long num = (long)src.GetNumElements();
+    long rows = (long)src.GetNumRows();
+    ElemType* srcPtr = src.Data();
+    ElemType* dstPtr = dst.Data();
+    ElemType* vecPtr = rowVector.Data();
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        dstPtr[i] = srcPtr[i] + vecPtr[i / rows];
+        dstPtr[i + 1] = srcPtr[i + 1] + vecPtr[(i + 1) / rows];
+        dstPtr[i + 2] = srcPtr[i + 2] + vecPtr[(i + 2) / rows];
+        dstPtr[i + 3] = srcPtr[i + 3] + vecPtr[(i + 3) / rows];
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        dstPtr[i] = srcPtr[i] + vecPtr[i / rows];
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::MinusColumnVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& columnVector, const CPUMatrix<ElemType>& dst)
+{
+    long num = (long)src.GetNumElements();
+    long rows = (long)columnVector.GetNumRows();
+    ElemType* srcPtr = src.Data();
+    ElemType* dstPtr = dst.Data();
+    ElemType* vecPtr = columnVector.Data();
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        dstPtr[i] = srcPtr[i] - vecPtr[i % rows];
+        dstPtr[i + 1] = srcPtr[i + 1] - vecPtr[(i + 1) % rows];
+        dstPtr[i + 2] = srcPtr[i + 2] - vecPtr[(i + 2) % rows];
+        dstPtr[i + 3] = srcPtr[i + 3] - vecPtr[(i + 3) % rows];
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        dstPtr[i] = srcPtr[i] - vecPtr[i % rows];
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::MinusRowVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& rowVector, const CPUMatrix<ElemType>& dst)
+{
+    long num = (long)src.GetNumElements();
+    long rows = (long)src.GetNumRows();
+    ElemType* srcPtr = src.Data();
+    ElemType* dstPtr = dst.Data();
+    ElemType* vecPtr = rowVector.Data();
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        dstPtr[i] = srcPtr[i] - vecPtr[i / rows];
+        dstPtr[i + 1] = srcPtr[i + 1] - vecPtr[(i + 1) / rows];
+        dstPtr[i + 2] = srcPtr[i + 2] - vecPtr[(i + 2) / rows];
+        dstPtr[i + 3] = srcPtr[i + 3] - vecPtr[(i + 3) / rows];
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        dstPtr[i] = srcPtr[i] - vecPtr[i / rows];
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AssignExpSum(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& expSum)
+{
+    ElemType* expSumPtr = expSum.Data();
+#pragma omp parallel for
+    foreach_column(j, Y)
+    {
+        ElemType sum = 0;
+        foreach_row(i, Y)
+            sum += exp(Y(i, j));
+        expSumPtr[j] = sum;
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::DistributedSoftmax(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& logSum, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& logSoftmax)
+{
+    long num = (long)Y.GetNumElements();
+    long rows = (long)Y.GetNumRows();
+    ElemType* YPtr = Y.Data();
+    ElemType* logSumPtr = logSum.Data();
+    ElemType* softmaxPtr = softmax.Data();
+    ElemType* logSoftmaxPtr = logSoftmax.Data();
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        logSoftmaxPtr[i] = YPtr[i] - logSumPtr[i / rows];
+        softmaxPtr[i] = exp(logSoftmaxPtr[i]);
+        logSoftmaxPtr[i + 1] = YPtr[i + 1] - logSumPtr[(i + 1) / rows];
+        softmaxPtr[i + 1] = exp(logSoftmaxPtr[i + 1]);
+        logSoftmaxPtr[i + 2] = YPtr[i + 2] - logSumPtr[(i + 2) / rows];
+        softmaxPtr[i + 2] = exp(logSoftmaxPtr[i + 2]);
+        logSoftmaxPtr[i + 3] = YPtr[i + 3] - logSumPtr[(i + 3) / rows];
+        softmaxPtr[i + 3] = exp(logSoftmaxPtr[i + 3]);
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        logSoftmaxPtr[i] = YPtr[i] - logSumPtr[i / rows];
+        softmaxPtr[i] = exp(logSoftmaxPtr[i]);
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::DistributedCrossEntropy(const CPUMatrix<ElemType>& logP, const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    long rows = (long)logP.GetNumRows();
+    long cols = (long)logP.GetNumCols();
+    ElemType* logPPtr = logP.Data();
+    ElemType* labelsPtr = labels.Data();
+    ElemType* valuePtr = value.Data();
+    valuePtr[0] = 0;
+    for (long i = 0; i < cols; ++i)
+    {
+        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex)
+            valuePtr[0] += logPPtr[i * rows + ((int)labelsPtr[i]) - startIndex];
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const CPUMatrix<ElemType>& postGradient, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& gradient, size_t startIndex)
+{
+    long num = (long)softmax.GetNumElements();
+    long rows = (long)softmax.GetNumRows();
+    ElemType postGradientVal = postGradient.Data()[0];
+    ElemType* softmaxPtr = softmax.Data();
+    ElemType* labelsPtr = labels.Data();
+    ElemType* gradientPtr = gradient.Data();
+
+#pragma omp parallel for
+    // four-way unrolling
+    for (long i = 0; i < (num & ~3); i += 4)
+    {
+        gradientPtr[i] = postGradientVal * (((long)labelsPtr[i / rows] == i % rows + startIndex) ? (softmaxPtr[i] - (ElemType)1.0) : softmaxPtr[i]);
+        gradientPtr[i + 1] = postGradientVal * (((long)labelsPtr[(i + 1) / rows] == (i + 1) % rows + startIndex) ? (softmaxPtr[i + 1] - (ElemType)1.0) : softmaxPtr[i + 1]);
+        gradientPtr[i + 2] = postGradientVal * (((long)labelsPtr[(i + 2) / rows] == (i + 2) % rows + startIndex) ? (softmaxPtr[i + 2] - (ElemType)1.0) : softmaxPtr[i + 2]);
+        gradientPtr[i + 3] = postGradientVal * (((long)labelsPtr[(i + 2) / rows] == (i + 3) % rows + startIndex) ? (softmaxPtr[i + 3] - (ElemType)1.0) : softmaxPtr[i + 3]);
+    }
+    // handle remaining stuffs
+    for (long i = num & ~3; i < num; i++)
+    {
+        gradientPtr[i] = postGradientVal * (((long)labelsPtr[i / rows] == i % rows + startIndex) ? (softmaxPtr[i] - (ElemType)1.0) : softmaxPtr[i]);
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::DistributedAssignClassificationError(const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& probs, const CPUMatrix<ElemType>& maxProb, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    long cols = (long)probs.GetNumRows();
+    long rows = (long)probs.GetNumRows();
+    ElemType* labelsPtr = labels.Data();
+    ElemType* probPtr = probs.Data();
+    ElemType* maxProbPtr = maxProb.Data();
+    ElemType* valuePtr = value.Data();
+    valuePtr[0] = 0;
+    for (long i = 0; i < cols; ++i)
+    {
+        size_t label = (size_t)labelsPtr[i];
+        if (label >= startIndex && label <= endIndex && probPtr[i * rows + label - startIndex] < maxProbPtr[i])
+            valuePtr[0] += 1;
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::DistributedLabelAdd(const CPUMatrix<ElemType>& labels, ElemType bias, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    long cols = (long)labels.GetNumCols();
+    long rows = (long)value.GetNumRows();
+    ElemType* labelsPtr = labels.Data();
+    ElemType* valuePtr = value.Data();
+
+    // four-way unrolling
+    for (long i = 0; i < (cols & ~3); i += 4)
+    {
+        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && valuePtr[i * rows + ((long)labelsPtr[i]) - startIndex] > -bias)
+            valuePtr[i * rows + ((long)labelsPtr[i]) - startIndex] += bias;
+        if (labelsPtr[i + 1] >= startIndex && labelsPtr[i + 1] <= endIndex && valuePtr[i * rows + ((long)labelsPtr[i + 1]) - startIndex] > -bias)
+            valuePtr[(i + 1) * rows + ((long)labelsPtr[i + 1]) - startIndex] += bias;
+        if (labelsPtr[i + 2] >= startIndex && labelsPtr[i + 2] <= endIndex && valuePtr[i * rows + ((long)labelsPtr[i + 2]) - startIndex] > -bias)
+            valuePtr[(i + 2) * rows + ((long)labelsPtr[i + 2]) - startIndex] += bias;
+        if (labelsPtr[i + 3] >= startIndex && labelsPtr[i + 3] <= endIndex && valuePtr[i * rows + ((long)labelsPtr[i + 3]) - startIndex] > -bias)
+            valuePtr[(i +3) * rows + ((long)labelsPtr[i + 3]) - startIndex] += bias;
+    }
+    // handle remaining stuffs
+    for (long i = cols & ~3; i < cols; i++)
+    {
+        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && valuePtr[i * rows + ((long)labelsPtr[i]) - startIndex] > -bias)
+            valuePtr[i * rows + ((long)labelsPtr[i]) - startIndex] += bias;
     }
 }
 
