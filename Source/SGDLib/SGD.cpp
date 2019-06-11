@@ -3258,6 +3258,13 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_lrapiInfo.sgdTraceLevel = configAALR(L"sgdTraceLevel", (size_t) 1);
 #pragma endregion
 
+#pragma region BN Momentum
+    bool useBNMomentum = configSGD(L"useBNMomentum", false);
+    double BNMomentum = configSGD(L"BNMomentum", 1.0);
+    Globals::SetUseBNMomentum(useBNMomentum);
+    Globals::SetBNMomentum(BNMomentum);
+#pragma endregion
+
     // TODO: mbSize and truncated should be specified differently for truncated BPTT:
     //       mbSize = total number of samples after which a model update should happen
     //       truncated = truncation length
