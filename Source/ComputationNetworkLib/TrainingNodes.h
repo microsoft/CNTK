@@ -1204,7 +1204,8 @@ public:
         else
             LogicError("This normalizeType is not supported yet.");
 
-        *m_magnitude += (ElemType)1e-12;
+        m_temp1->SetValue((ElemType) 1e-12);
+        Matrix<ElemType>::ScaleAndAdd((ElemType) 1, *m_temp1, *m_magnitude);
         Value().SetValue(X);
         Value().RowElementDivideBy(*m_magnitude);
     }
@@ -4126,7 +4127,7 @@ public:
         {
             // determine drop-out mask for this minibatch
             auto sliceMask = DataFor(*m_maskOfDropout, fr);
-            sliceMask.SetUniformRandomMask((ElemType) GetDropoutRate(), (ElemType)(1.0 / (1.0 - GetDropoutRate())) /*pre-scaled*/, GetRNGHandle());
+            sliceMask.SetUniformRandomMask((ElemType) GetDropoutRate(), (ElemType)1.0, GetRNGHandle());
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
             UpdateRngOffset(GetRngOffset() + sliceMask.GetNumElements());
@@ -4709,7 +4710,9 @@ private: // time-constant conversions
         // Convert to per-minibatch factor. The limit, positive infinity, means that running mean/var parameters are "frozen"
         // that is, do not require updates.
         // The code below special-cases two boundary cases, but those are just the limit cases of the main formula.
-        if (!isfinite(m_normTimeConst))                   // infinite
+        if (Globals::GetUseBNMomentum())
+            return 1.0 - Globals::GetBNMomentum();
+        else if (!isfinite(m_normTimeConst))              // infinite
             return 0;                                     // no new contribution from current minibatch (infinitely long memory)
         else if (m_normTimeConst > 0)                     // not zero
             return -expm1(-numSamples / m_normTimeConst); // interpolate expAvgFactor * MB stats + (1-expAvgFactor) * prev running stats

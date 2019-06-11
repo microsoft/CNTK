@@ -22,4 +22,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     std::size_t Globals::m_processNum(1);
     std::size_t Globals::m_rank(0);
     void* Globals::m_distGradAggPtr(NULL);
+    std::atomic<bool> Globals::m_useBNMomentum(false);
+    std::atomic<double> Globals::m_BNMomentum(1.0);
 }}}

@@ -8,6 +8,7 @@
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 //#define __PROFILE__
+
 #include <cmath>
 const double Pi = acos(-1.0);
 
@@ -74,6 +75,7 @@ template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
 
 using Params = std::normal_distribution<>::param_type;
 normal_distribution<double> normalDist(0, 1);
+
 std::default_random_engine generator;
 
 // -----------------------------------------------------------------------
@@ -359,6 +361,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     auto& learnableNodes = net->LearnableParameterNodes(criterionNodes[0]);
     list<Matrix<ElemType>> smoothedGradients;
     vector<double> smoothedCounts; // currently used by FSAdaGradUpdate()
+	map<wstring, double> optimizerInfo;
     size_t numParameters = 0;
 
     vector<wstring> nodesToUpdateDescriptions; // for logging only
@@ -467,7 +470,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+        {
+            msra::files::make_intermediate_dirs(GetModelNameForEpoch(int(startEpoch) - 1));
             net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
+        }
         if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
             ReleaseDistParams(learnableNodes);
     }
@@ -630,7 +636,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-                    net->Save(m_modelPath);
+                {
+                    msra::files::make_intermediate_dirs(m_modelPath + L"/" + m_modelName);
+                    net->Save(m_modelPath + L"/" + m_modelName);
+                }
                 if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
                     ReleaseDistParams(learnableNodes);
             }
@@ -646,7 +655,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-                    net->Save(m_modelPath);
+                {
+                    msra::files::make_intermediate_dirs(m_modelPath + L"/" + m_modelName);
+                    net->Save(m_modelPath + L"/" + m_modelName);
+                }
                 if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
                     ReleaseDistParams(learnableNodes);
             }
@@ -878,7 +890,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                         // In case of parallel training only the main node should we saving the model to prevent
                         // the parallel training nodes from colliding to write the same file
                         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+                        {
+                            msra::files::make_intermediate_dirs(GetModelNameForEpoch(i, true));
                             net->Save(GetModelNameForEpoch(i, true));
+                        }
                         if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
                             ReleaseDistParams(learnableNodes);
 
@@ -969,7 +984,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     chosenMinibatchSize);
                 auto modelName = GetModelNameForEpoch(i);
                 if (m_traceLevel > 0)
-                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());                
                 net->Save(modelName);
                 if (!m_keepCheckPointFiles)
                 {
@@ -1362,9 +1377,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     learnRatePerSample = m_lrapiInfo.baseLR / m_mbSize[epochNumber] * (1.0 / (1.0 + exp(-m_lrapiInfo.gamma * (m_lrapiInfo.iter - m_lrapiInfo.stepSize))));
                 if (m_lrapiInfo.iter >= m_lrapiInfo.maxIter)
                     m_lrapiInfo.reachMaxIter = true;
-
                 if (m_lrapiInfo.sgdTraceLevel > 0 && 0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToShowLR)
                     fprintf(stderr, "Iteration %d: learning rate per sample = %.8g\n", (int) m_lrapiInfo.iter, learnRatePerSample);
+
+                if (learnRatePerSample < 0)
+                {
+                    fprintf(stderr, "Set learning rate per sample equal to min_learning, because Iteration %d: learning rate per sample = %.8g\n", (int)m_lrapiInfo.iter, learnRatePerSample);
+                    learnRatePerSample = m_minLearnRate;
+                }
             }
 
             // do forward and back propagation
@@ -1551,6 +1571,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++, smoothedCountIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
+				++(*smoothedCountIter); // increase update_step
                 if (node->IsParameterUpdateRequired())
                 {
 #ifdef _DEBUG
@@ -1577,6 +1598,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
             }
         }
+
+		// update additional optimizer information
+		UpdateAdditionalOptimizerInfo();
 
         // aggregation by model averaging or block momentum
         if (useModelAggregation)
@@ -1802,9 +1826,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             AggregateDistParams(learnableNodes);
         if (m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel == 0 && m_lrapiInfo.iter != 0 && ((m_mpi == nullptr) || m_mpi->IsMainNode()))
         {
+            wstring IterModelPath = m_modelPath + L"-Iter" + L"/" + m_modelName + L"-Iter." + to_wstring(m_lrapiInfo.iter);
             if (m_lrapiInfo.sgdTraceLevel > 0)
-                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", (m_modelPath + L"-Iter" + to_wstring(m_lrapiInfo.iter)).c_str());
-            net->Save(m_modelPath + L"-Iter" + to_wstring(m_lrapiInfo.iter));
+                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", IterModelPath.c_str());
+            msra::files::make_intermediate_dirs(IterModelPath);
+            net->Save(IterModelPath);
         }
         if (m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel == 0 && m_lrapiInfo.iter != 0 && m_mpi != nullptr && Globals::GetProcessNum() > 1)
             ReleaseDistParams(learnableNodes);
@@ -1874,6 +1900,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             net, evaluationNodesWhichAccumulateResult, m_gradHeader, m_mpi, epochEvalErrors, evaluationNodes,
             localEpochEvalErrors, ContainsAccumulatedResult, m_packThresholdSizeInBytes);
     }
+
+	//// for DEBUG
+	//for (auto learnableNode : learnableNodes)
+	//{
+	//	learnableNode->PrintSelf(true);
+	//}
 
     return numMBsRun;
 }
@@ -2613,11 +2645,57 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
         auto learningRate = learnRatePerSample * actualMBSize;
         Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
-        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain));
+        smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learningRate, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain), (ElemType)m_epsilon);
 #else
 
-		smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain));
+		smoothedGradientValues.RmsPropUpdate(gradientValues, functionValues, learnRatePerSample, momentum, (ElemType) m_rpi.gamma, (!disableMomentumUnitGain), (ElemType)m_epsilon);
 #endif    
+	}
+    else if (adpType == GradientsUpdateType::Adam)
+	{
+        const auto unitGainFactor = ElemType(disableMomentumUnitGain ? 1.0 : (1.0 - m_adamInfo.beta1));
+		double beta1Pow = m_additionalOptimizerInfo.at(L"beta1_pow");
+		double beta2Pow = m_additionalOptimizerInfo.at(L"beta2_pow");
+
+#ifdef USE_MEAN_GRADIENT
+        auto learningRate = learnRatePerSample * actualMBSize;
+		Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
+        smoothedGradientValues.AdamUpdate(gradientValues, functionValues, beta1Pow, beta2Pow, learningRate, m_adamInfo.beta1, m_adamInfo.beta2, m_epsilon, unitGainFactor);
+#else
+        smoothedGradientValues.AdamUpdate(gradientValues, functionValues, beta1Pow, beta2Pow, learnRatePerSample, m_adamInfo.beta1, m_adamInfo.beta2, m_epsilon, unitGainFactor);
+#endif
+	}
+	else if (adpType == GradientsUpdateType::AdaMax)
+	{
+		const auto unitGainFactor = ElemType(disableMomentumUnitGain ? 1.0 : (1.0 - m_adamInfo.beta1));
+		double beta1Pow = m_additionalOptimizerInfo.at(L"beta1_pow");
+
+#ifdef USE_MEAN_GRADIENT
+		auto learningRate = learnRatePerSample * actualMBSize;
+		Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
+		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, beta1Pow, learningRate, m_adamInfo.beta1, m_adamInfo.beta2, unitGainFactor, m_epsilon);
+#else
+		smoothedGradientValues.AdaMaxUpdate(gradientValues, functionValues, beta1Pow, learnRatePerSample, m_adaMaxInfo.beta1, m_adaMaxInfo.beta2, unitGainFactor, m_epsilon);
+#endif
+	}
+	else if (adpType == GradientsUpdateType::AdaBound)
+	{
+		const auto unitGainFactor = static_cast<ElemType>(disableMomentumUnitGain ? 1.0 : (1.0 - m_adamInfo.beta1));
+		const double beta1Pow = m_additionalOptimizerInfo.at(L"beta1_pow");
+		const double beta2Pow = m_additionalOptimizerInfo.at(L"beta2_pow");
+		double finalLr = 0;
+		if (m_lrapiInfo.adjustType != AdjustType::None)
+			finalLr = m_adaBoundInfo.final_lr * (learnRatePerSample * actualMBSize) / m_lrapiInfo.baseLR;
+		else
+			finalLr = learnRatePerSample * actualMBSize;
+
+#ifdef USE_MEAN_GRADIENT
+		auto learningRate = learnRatePerSample * actualMBSize;
+		Matrix<ElemType>::Scale((ElemType)(1. / actualMBSize), gradientValues);
+		smoothedGradientValues.AdaBoundUpdate(gradientValues, functionValues, beta1Pow, beta2Pow, learningRate, m_adamInfo.beta1, m_adamInfo.beta2, m_epsilon, m_adaBoundInfo.gamma, finalLr, m_adaBoundInfo.amsBound, smoothedCount, unitGainFactor);
+#else
+		smoothedGradientValues.AdaBoundUpdate(gradientValues, functionValues, beta1Pow, beta2Pow, learnRatePerSample, m_adamInfo.beta1, m_adamInfo.beta2, m_epsilon, m_adaBoundInfo.gamma, finalLr / actualMBSize, m_adaBoundInfo.amsBound, smoothedCount, unitGainFactor);
+#endif
 	}
 
     if (noiseStd > 0)
@@ -2704,6 +2782,17 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
 
+			if (!m_additionalOptimizerInfo.empty())
+			{
+				fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BAdditionalOptimizerInfo");
+				fstream << m_additionalOptimizerInfo.size();
+				for (auto additionalItem = m_additionalOptimizerInfo.begin(); additionalItem != m_additionalOptimizerInfo.end(); ++additionalItem)
+				{
+					fstream << additionalItem->first << additionalItem->second;
+				}
+				fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EAdditionalOptimizerInfo");
+			}
+
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"BCount");
 
             for (auto sc : smoothedCounts)
@@ -2747,7 +2836,10 @@ bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
     // gracefully handle if a checkpoint file is missing
     // This means a user wanted to continue training from an older model, but that model had no checkpoint info anymore.
     // This is valid, we just don't get the features that require previous models, such as LR or MBSize control.
-    let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    if (!fexists(checkPointFileName.c_str())) 
+        checkPointFileName = GetCheckPointFileName(int(epochNumber));
+
     if (!fexists(checkPointFileName.c_str()))
     {
         // initialize as if nothing
@@ -2773,7 +2865,9 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
                                        /*out*/ double& prevCriterion,
                                        /*out*/ size_t& minibatchSize)
 {
-    let checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    wstring checkPointFileName = GetCheckPointFileNameForEpoch(int(epochNumber));
+    if (!fexists(checkPointFileName.c_str()))
+        checkPointFileName = GetCheckPointFileName(int(epochNumber));
     //fprintf(stderr, "Loading checkpoint info from %ls\n", checkPointFileName.c_str());
     File fstream(checkPointFileName,
                  FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
@@ -2812,6 +2906,21 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
     }
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
 
+	if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BAdditionalOptimizerInfo"))
+	{
+		size_t numAdditionalItem;
+		fstream >> numAdditionalItem;
+		for (size_t i = 0; i < numAdditionalItem; ++i)
+		{
+			wstring name;
+			double value;
+			fstream >> name;
+			fstream >> value;
+			m_additionalOptimizerInfo[name] = value;
+		}
+		fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EAdditionalOptimizerInfo");
+	}
+
     if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BCount"))
     {
         for (auto& sc : smoothedCounts)
@@ -2848,24 +2957,48 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
     return;
 }
 
+// function return FileNmae path like ../models/modelName.0/modelName.ckp
 template <class ElemType>
 wstring SGD<ElemType>::GetCheckPointFileNameForEpoch(const int epoch)
 {
     return GetModelNameForEpoch(epoch) + L".ckp";
 }
 
+// function return FileNmae path like ../models/modelName.0.ckp
+template <class ElemType>
+wstring SGD<ElemType>::GetCheckPointFileName(const int epoch)
+{
+    return GetModelName(epoch) + L".ckp";
+}
+
+// function return ModelNmae path like ../models/modelName.0/modelName.0
 template <class ElemType>
 wstring SGD<ElemType>::GetModelNameForEpoch(const int epoch, bool bLastModel) const
 {
     int epoch1Base = epoch + 1;
     if (epoch1Base == m_maxEpochs || bLastModel)
     {
-        return m_modelPath;
+        return (m_modelPath + L"/" + m_modelName).c_str();
     }
     else
     {
         wstring w = msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int) epoch1Base);
-        return w;
+        return msra::strfun::wstrprintf(L"%ls.%d", (w + L"/"+ m_modelName).c_str(), (int)epoch1Base);
+    }
+}
+
+// function return ModelNmae path like ../models/modelName.0
+template <class ElemType>
+wstring SGD<ElemType>::GetModelName(const int epoch, bool bLastModel) const
+{
+    int epoch1Base = epoch + 1;
+    if (epoch1Base == m_maxEpochs || bLastModel)
+    {
+        return (m_modelPath).c_str();
+    }
+    else
+    {
+        return msra::strfun::wstrprintf(L"%ls.%d", m_modelPath.c_str(), (int)epoch1Base);
     }
 }
 
@@ -2915,10 +3048,10 @@ int SGD<ElemType>::DetermineStartEpoch(const bool makeMode)
 
     int firstEpoch = -1;
 
-    wstring curEpochFile = GetModelNameForEpoch(int(m_maxEpochs) - 1);
+    wstring curEpochFile = GetModelName(int(m_maxEpochs) - 1);
     for (int e = int(m_maxEpochs) - 1; e >= -1; e--)
     {
-        const wstring prevEpochFile = GetModelNameForEpoch(e - 1);
+        const wstring prevEpochFile = GetModelName(e - 1);
 
         if (msra::files::fuptodate(curEpochFile, prevEpochFile, false))
         {
@@ -2931,7 +3064,7 @@ int SGD<ElemType>::DetermineStartEpoch(const bool makeMode)
         }
     }
     if (firstEpoch == m_maxEpochs)
-        LOGPRINTF(stderr, "Final model exists: %ls\n", GetModelNameForEpoch(firstEpoch - 1).c_str());
+        LOGPRINTF(stderr, "Final model exists: %ls\n", GetModelName(firstEpoch - 1).c_str());
 
     return firstEpoch;
 }
@@ -3064,19 +3197,25 @@ static AdaptationRegType ParseAdaptationRegType(const wstring& s)
 
 static GradientsUpdateType ParseGradUpdateType(const wstring& s)
 {
-    if (EqualCI(s, L"") || EqualCI(s, L"none"))
-        return GradientsUpdateType::None;
-    else if (EqualCI(s, L"adagrad"))
-        return GradientsUpdateType::AdaGrad;
-    else if (EqualCI(s, L"rmsProp"))
-        return GradientsUpdateType::RmsProp;
-    else if (EqualCI(s, L"fsAdagrad"))
-        return GradientsUpdateType::FSAdaGrad;
+	if (EqualCI(s, L"") || EqualCI(s, L"none"))
+		return GradientsUpdateType::None;
+	else if (EqualCI(s, L"adagrad"))
+		return GradientsUpdateType::AdaGrad;
+	else if (EqualCI(s, L"rmsProp"))
+		return GradientsUpdateType::RmsProp;
+	else if (EqualCI(s, L"fsAdagrad"))
+		return GradientsUpdateType::FSAdaGrad;
+	else if (EqualCI(s, L"adam"))
+		return GradientsUpdateType::Adam;
+	else if (EqualCI(s, L"adaMax"))
+		return GradientsUpdateType::AdaMax;
+	else if (EqualCI(s, L"adaBound"))
+		return GradientsUpdateType::AdaBound;
     // legacy, deprecated
     else if (EqualCI(s, L"normal") || EqualCI(s, L"simple"))
         return GradientsUpdateType::None;
     else
-        InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad )");
+        InvalidArgument("ParseGradUpdateType: Invalid Gradient Updating Type. Valid values are (none | adagrad | rmsProp | fsAdagrad | adam | adaMax)");
 }
 
 static ParallelizationMethod ParseParallelizationMethod(const wstring& s)
@@ -3163,7 +3302,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     if (EqualCI(adjustType, L"none") || EqualCI(adjustType, L"None"))
         m_lrapiInfo.adjustType = AdjustType::None;
     else if (EqualCI(adjustType, L"poly") || EqualCI(adjustType, L"Poly"))
-        m_lrapiInfo.adjustType = AdjustType::Poly;
+		m_lrapiInfo.adjustType = AdjustType::Poly;
     else if (EqualCI(adjustType, L"inv") || EqualCI(adjustType, L"Inv"))
         m_lrapiInfo.adjustType = AdjustType::Inv;
     else if (EqualCI(adjustType, L"exp") || EqualCI(adjustType, L"Exp"))
@@ -3204,6 +3343,13 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     if (m_lrapiInfo.numItersToSaveModel < 1)
         LogicError("numItersToSaveModel must be greater than 0.");
     m_lrapiInfo.sgdTraceLevel = configAALR(L"sgdTraceLevel", (size_t) 1);
+#pragma endregion
+
+#pragma region BN Momentum
+    bool useBNMomentum = configSGD(L"useBNMomentum", false);
+    double BNMomentum = configSGD(L"BNMomentum", 1.0);
+    Globals::SetUseBNMomentum(useBNMomentum);
+    Globals::SetBNMomentum(BNMomentum);
 #pragma endregion
 
     // TODO: mbSize and truncated should be specified differently for truncated BPTT:
@@ -3298,12 +3444,38 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_gradType.varianceTimeConstant = configSGD(L"varianceTimeConstant", 2 * 3600 * 100); // default originates from 2h of speech
     m_gradType.targetAdagradAvDenom = configSGD(L"fsAdagradTargetAvDenom", 1.0);          // TODO: deprecated parameter kept for back compat (set to 0.0025 inconjunction with reenabling the static bug)
 
-    // extract RMSProp parameters from config, if they exist. Default to reasonable values.
+	// epsilon
+	m_epsilon = configSGD(L"epsilon", 1.0);
+    
+	// extract RMSProp parameters from config, if they exist. Default to reasonable values.
     m_rpi.dec = configSGD(L"rms_wgt_dec", 0.75);
     m_rpi.inc = configSGD(L"rms_wgt_inc", 1.2);
     m_rpi.min = configSGD(L"rms_wgt_min", 0.1);
     m_rpi.max = configSGD(L"rms_wgt_max", 10.0);
     m_rpi.gamma = configSGD(L"rms_gamma", 0.99);
+
+	if (m_gradType.type == GradientsUpdateType::Adam)
+	{
+		// extract Adam parameters from config, if they exist. Default to reasonable values.
+		m_adamInfo.beta1 = configSGD(L"adam_beta1", 0.9);
+		m_adamInfo.beta2 = configSGD(L"adam_beta2", 0.999);
+	}
+	else if (m_gradType.type == GradientsUpdateType::AdaMax)
+	{
+		// extract AdaMax parameters from config, it they exist. Default to reasonable values.
+		m_adamInfo.beta1 = configSGD(L"adamax_beta1", 0.9);
+		m_adamInfo.beta2 = configSGD(L"adamax_beta2", 0.999);
+	}
+	else if (m_gradType.type == GradientsUpdateType::AdaBound)
+	{
+		// extract AdaBound parameters from config, if they exist. Default to reasonable values.
+		m_adamInfo.beta1 = configSGD(L"adabound_beta1", 0.9);
+		m_adamInfo.beta2 = configSGD(L"adabound_beta2", 0.999);
+		m_adaBoundInfo.gamma = configSGD(L"adabound_gamma", 1 - m_adamInfo.beta2);
+		m_adaBoundInfo.final_lr = configSGD(L"adabound_final_lr", 0.1);
+		m_adaBoundInfo.amsBound = configSGD(L"adabound_using_amsbound", false);
+	}
+
 
     m_needAveMultiplier = configSGD(L"normWithAveMultiplier", true);
     m_L2RegWeight = configSGD(L"L2RegWeight", 0.0);

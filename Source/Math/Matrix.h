@@ -215,10 +215,14 @@ public:
     void FSAdagradUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double targetAdagradAvDenom_x_sqrtAdagradSqrFrames,
                          const double learnRatePerSample, const double meanMomentum, const double varMomentum, ElemType unitGainFactor);
 
-    void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double smoothedCount,
-        const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax = false);
+    void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double beta1Pow, const double beta2Pow,
+        const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, ElemType unitGainFactor, bool adamax=false);
+	void AdaMaxUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double beta1Pow,
+		const double learnRatePerSample, const double meanMomentum, const double varMomentum, ElemType unitGainFactor, const double epsilon=1);
+	void AdaBoundUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double beta1Pow, const double beta2Pow,
+		const double learnRatePerSample, const double meanMomentum, const double varMomentum, const double epsilon, const double gamma, const double finalLr, const bool amsBound, const double updateStep, ElemType unitGainFactor);
 
-    void RmsPropUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double learningRate, const double momentum, ElemType RMS_GAMMA, bool unitGainMomentum = true);
+    void RmsPropUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const double learningRate, const double momentum, ElemType RMS_GAMMA, bool unitGainMomentum = true, ElemType epsilon=1);
 
     template<typename GradType>
     void AdaDeltaUpdate(Matrix<GradType>& gradients, Matrix<ElemType>& functionvalues, ElemType learningRatePerSample, ElemType rho, ElemType epsilon, int* timestamps, int currentTimestamp);

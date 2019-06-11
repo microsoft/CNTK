@@ -68,6 +68,7 @@
         (a) ^= (b); \
     }
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
+#define CLAMP(x, upper, lower) min(upper, max(lower, x))
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #pragma region Helpful Enum Definitions
@@ -1314,8 +1315,13 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
 template <class ElemType>
 void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
+    ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor)
 {
+	// see https://arxiv.org/pdf/1412.6980.pdf
+	// firstMomentDecayRate:	beta_1
+	// secondMomentDecayRate:	beta_2
+	// adaMul:					sqrt(1 - pow(beta_2, t)) / (1 - pow(beta_1, t))
+	// unitGainFactor:			1 - beta_1, set 1 if disable unit gain.
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
     if (IsEmpty() || (GetNumCols() < numColsNeeded))
@@ -1328,30 +1334,107 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
         LogicError("The matrix gradients does not have expected dimensions.");
 
     size_t n = gradients.GetNumElements();
-    ElemType* grad = gradients.Data();
-    ElemType* smoothAda = Data();
-    ElemType* smoothMom = Data() + n;
+    ElemType* gradient = gradients.Data();
+    ElemType* v = Data();					// biased 2nd raw moment estimate, v_t = beta_2 * v_{t-1} + (1 - beta_2) * g_t^2
+    ElemType* m = Data() + n;				// biased 1st raw moment estimate, m_t = beta_1 * g_{t-1} + unitGainFactor * g_t
     ElemType* val = functionValues.Data();
 #pragma omp parallel for
     // TODO: Unroll 4-times for better performance leveraging vectorization
     for (long i = 0; i < n; i++)
     {
-        ElemType g = grad[i];
-        ElemType ada;
-        if (!adamax)
-        {
-            ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
-            smoothAda[i] = adaSqr;
-            ada = sqrt(adaSqr);
-        }
-        else
-            ada = smoothAda[i] = std::max(adaWeight * smoothAda[i], fabs_(g));
-
-        ElemType w = adaMul * (ElemType)( 1.0 / (ada + epsilon));
-        g = momentum * smoothMom[i] + unitGainFactor * g;
-        smoothMom[i] = g;
-        val[i] -= g * w * learnRatePerSample;
+        ElemType g = gradient[i];
+		m[i] = firstMomentDecayRate * m[i] + unitGainFactor * g;
+		v[i] = secondMomentDecayRate * v[i] + (1 - secondMomentDecayRate) * g * g;
+		val[i] -= adaMul * m[i] * learnRatePerSample / (sqrt(v[i]) + epsilon);
     }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AdaMax(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+	ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType unitGainFactor, ElemType epsilon)
+{
+	// see https://arxiv.org/pdf/1412.6980.pdf
+	// firstMomentDecayRate:	beta_1
+	// secondMomentDecayRate:	beta_2
+	// adaMul:					1 / (1 - pow(beta_1, t))
+	// unitGainFactor:			1 - beta_1, set 1 if disable unit gain.
+	size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+	if (IsEmpty() || (GetNumCols() < numColsNeeded))
+	{
+		RequireSize(gradients.GetNumRows(), numColsNeeded);
+		SetValue(0.0);
+	}
+
+	if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+		LogicError("The matrix gradients does not have expected dimensions.");
+
+	size_t n = gradients.GetNumElements();
+	ElemType* gradient = gradients.Data();	// raw gradients, g_t
+	ElemType* u = Data();					// exponentially weighted infinity norm, u_t = max(beta_2 * u_{t-1}, |g_t|), u_0 = 0;
+	ElemType* m = Data() + n;				// first moment, m_t = beta_1 * m_{t-1} + unitGainFactor * g_t
+	ElemType* val = functionValues.Data();
+
+#pragma omp parallel for
+	for (long i = 0; i < n; ++i) 
+	{
+		ElemType g = gradient[i];
+		u[i] = std::max(secondMomentDecayRate * u[i], fabs_(g));
+		m[i] = firstMomentDecayRate * m[i] + unitGainFactor * g;
+		val[i] -= learnRatePerSample * adaMul * m[i] / (u[i] + epsilon);
+	}
+
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::AdaBound(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+	ElemType firstMomentDecayRate, ElemType secondMomentDecayRate, ElemType adaMul, ElemType epsilon, ElemType upperBound, ElemType lowerBound, ElemType unitGainFactor, const bool amsBound)
+{
+	// see https://arxiv.org/abs/1902.09843
+	// firstMomentDecayRate:	beta_1
+	// secondMomentDecayRate:	beta_2
+	// adaMul:					sqrt(1 - pow(beta_2, t)) / (1 - pow(beta_1, t))
+	// unitGainFactor:			1 - beta_1, set 1 if disable unit gain.
+	size_t numColsNeeded = 2 * gradients.GetNumCols();
+	if (amsBound)
+		numColsNeeded = 3 * gradients.GetNumCols();
+
+	if (IsEmpty() || (GetNumCols() < numColsNeeded))
+	{
+		RequireSize(gradients.GetNumRows(), numColsNeeded);
+		SetValue(0.0);
+	}
+
+	if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+		LogicError("The matrix gradients does not have expected dimensions.");
+
+	size_t n = gradients.GetNumElements();
+	ElemType* gradient = gradients.Data();
+	ElemType* v = Data();					// biased 2nd raw moment estimate, v_t = beta_2 * v_{t-1} + (1 - beta_2) * g_t^2
+	ElemType* m = Data() + n;				// biased 1st raw moment estimate, m_t = beta_1 * g_{t-1} + unitGainFactor * g_t
+	ElemType* max_v = nullptr;
+	ElemType denorm = 0;
+	ElemType stepSize = adaMul * learnRatePerSample;
+	if (amsBound)
+		max_v = Data() + 2 * n;
+	ElemType* val = functionValues.Data();
+#pragma omp parallel for
+	// TODO: Unroll 4-times for better performance leveraging vectorization
+	for (long i = 0; i < n; i++)
+	{
+		ElemType g = gradient[i];
+		v[i] = secondMomentDecayRate * v[i] + (1 - secondMomentDecayRate) * g * g;
+		m[i] = firstMomentDecayRate * m[i] + unitGainFactor * g;
+		if (amsBound)
+		{
+			max_v[i] = max(v[i], max_v[i]);
+			denorm = sqrt(max_v[i]) + epsilon;
+		}
+		else
+			denorm = sqrt(v[i]) + epsilon;
+
+		val[i] -=  CLAMP(stepSize / denorm, upperBound, lowerBound) * m[i];
+	}
 }
 
 template <class ElemType>
@@ -1360,9 +1443,9 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
                                       ElemType learningRate, 
                                       ElemType momentum,
                                       ElemType RMS_GAMMA,
-                                      bool unitGainMomentum)
+                                      bool unitGainMomentum,
+									  ElemType epsilon)
 {
-    const ElemType floor = 1.0;
     const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0); 
 
     size_t n = gradients.GetNumElements();
@@ -1386,7 +1469,7 @@ void CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
     for (long i = 0; i < n; i++)
     {
         avars[i] = RMS_GAMMA * avars[i] + ONE_MINUS_GAMMA * (mean_grad[i] * mean_grad[i]);
-        moms[i] = moms[i] * momentum + unitGainFactor * (mean_grad[i] * learningRate) / (Sqrt(avars[i] + floor));
+        moms[i] = moms[i] * momentum + unitGainFactor * (mean_grad[i] * learningRate) / (Sqrt(avars[i] + epsilon));
         val[i] -= moms[i];
 	}
 }

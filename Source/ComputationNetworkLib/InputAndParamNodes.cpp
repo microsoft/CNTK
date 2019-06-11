@@ -97,6 +97,11 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         else  // no pertinent optional arguments given: default to 'uniform'
             initString = L"uniform"; // default is uniform
     }
+
+	// using regularization or not
+    if (configp->Exists(L"disableRegularization") && configp->Get(L"disableRegularization"))
+        SetRegMultiplier(0.f);
+
     // deferred variants
     // Deferred means that this kind of initialization is allowed when some dimensions are unspecified, and thus happens during Validate().
     if (ParseRandomizationType(initString).second != 0) // random init

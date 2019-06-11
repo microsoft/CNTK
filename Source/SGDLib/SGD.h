@@ -55,7 +55,10 @@ enum class GradientsUpdateType : int
     None,
     AdaGrad,
     RmsProp,
-    FSAdaGrad
+    FSAdaGrad,
+    Adam,
+	AdaMax,
+	AdaBound
 };
 
 // modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD 
@@ -104,6 +107,33 @@ struct RMSPropInfo
         max = 10.0;
         min = 0.1;
     }
+};
+
+// configuration parameters associated with Adam learning algorithm
+struct AdamInfo
+{
+    double beta1;
+    double beta2;
+
+    AdamInfo()
+    {
+        beta1 = 0.9;
+        beta2 = 0.999;
+    }
+};
+
+struct AdaBoundInfo
+{
+	double final_lr; // final SGD base learning rate, learningRatePerMB
+	double gamma; // default is (1 - beta2), used for upper_bound and lower_bound for learning rate.
+	bool amsBound; // use amsBound or adaBound.
+
+	AdaBoundInfo()
+	{
+		final_lr = 0.1;
+		gamma = 0.001;
+		amsBound = false;
+	}
 };
 
 struct GradientUpdateInfo
@@ -295,6 +325,8 @@ protected:
 
     GradientUpdateInfo m_gradType;
     RMSPropInfo m_rpi;
+    AdamInfo m_adamInfo;
+	AdaBoundInfo m_adaBoundInfo;
 
     size_t m_numMBsToShowResult = 0;
     size_t m_firstMBsToShowResult = 0;
@@ -371,6 +403,12 @@ protected:
 
 
     LRAPIInfo m_lrapiInfo;
+
+	// currently used by adam to store pow of beta1 and beta2
+	map<wstring, double> m_additionalOptimizerInfo;
+
+	// epsilon
+	double m_epsilon;
 };
 
 template <class ElemType>
@@ -396,6 +434,7 @@ public:
         : SGDParams(configSGD, sizeof(ElemType)),
           // TODO: The next few do not belong into SGD any more than the network or reader we operate on. Either move network and reader in here, or move these out.
           m_modelPath((const wstring&) configSGD(L"modelPath")),
+          m_modelName((const wstring&)configSGD(L"modelName")),
           m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
           m_saveBestModelPerCriterion(configSGD(L"saveBestModelPerCriterion", false)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
@@ -409,6 +448,7 @@ public:
           m_gradHeader(nullptr)
     {
         msra::files::make_intermediate_dirs(m_modelPath);
+		InitializeAdditionalOptimizerInfo();
     }
     // note: This must be in the header, as we cannot properly specialize this constructor in the CPP to make sure all versions are generated.
 
@@ -425,6 +465,28 @@ public:
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::none;
         }
+
+	void InitializeAdditionalOptimizerInfo()
+	{
+		switch (m_gradType.type)
+		{
+		case GradientsUpdateType::Adam: case GradientsUpdateType::AdaMax: case GradientsUpdateType::AdaBound:
+			m_additionalOptimizerInfo[L"beta1_pow"] = m_adamInfo.beta1;
+			m_additionalOptimizerInfo[L"beta2_pow"] = m_adamInfo.beta2;
+			break;
+		}
+	}
+
+	void UpdateAdditionalOptimizerInfo()
+	{
+		switch (m_gradType.type)
+		{
+		case GradientsUpdateType::Adam: case GradientsUpdateType::AdaMax: case GradientsUpdateType::AdaBound:
+			m_additionalOptimizerInfo[L"beta1_pow"] *= m_adamInfo.beta1;
+			m_additionalOptimizerInfo[L"beta2_pow"] *= m_adamInfo.beta2;
+			break;
+		}
+	}
 
     void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
@@ -573,6 +635,7 @@ public:
     int DetermineStartEpoch(const bool makeMode);
 
     wstring GetModelNameForEpoch(const int epoch, bool bLastModel = false) const;
+    wstring GetModelName(const int epoch, bool bLastModel = false) const;
 
 protected:
     void ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const;
@@ -600,6 +663,7 @@ protected:
                             /*out*/ size_t& minibatchSize);
 
     wstring GetCheckPointFileNameForEpoch(const int epoch);
+    wstring GetCheckPointFileName(const int epoch);
 
     GradientsUpdateType GradUpdateType() const
     {
@@ -624,6 +688,7 @@ public:
 
 protected:
     std::wstring m_modelPath;
+    std::wstring m_modelName;
     bool m_keepCheckPointFiles;
     bool m_saveBestModelPerCriterion;
     // Mapping from criterion to the best epoch on validation data set.
