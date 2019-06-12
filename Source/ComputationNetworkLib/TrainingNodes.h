@@ -540,6 +540,7 @@ public:
                 }
             }
             total_items += num_units * num_frames;
+            
         }
 
         /*
