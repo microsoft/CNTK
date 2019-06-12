@@ -148,7 +148,6 @@
     <None Include="GPUWatcher.h">
       <Filter>GPU</Filter>
     </None>
-    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

@@ -129,7 +129,6 @@ xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <ClInclude Include="Convolution.cuh" />
     <ClInclude Include="TensorOps.h" />
     <ClInclude Include="ValueQuantizer.h" />
-    <None Include="cpp.hint" />
     <None Include="GPUWatcher.h">
       <FileType>CppHeader</FileType>
     </None>

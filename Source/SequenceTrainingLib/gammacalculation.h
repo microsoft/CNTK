@@ -551,7 +551,7 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid_gpu);
         m_derivative.TransferToDeviceIfNotThere(m_deviceid_gpu);
         mergedinput.AssignRNNTScore(mergedinput, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
-            uttFrameNum, uttPhoneNum, numParallelSequences,3/*numPhoneParallelSequences*/, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, -1,true);
+            uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, -1,true);
         
         //mergedinput.InplaceExp();
         //m_derivative.AssignElementProductOf(m_derivative, mergedinput);
