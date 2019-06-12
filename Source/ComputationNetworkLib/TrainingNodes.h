@@ -414,6 +414,7 @@ public:
         }
         */
 
+        /*
         // =========================================
         // init 2
         // set each frame to alinment and blank
@@ -489,6 +490,100 @@ public:
             }
             total_items += num_units * num_frames;
         }
+		*/
+
+        // =========================================
+        // init 3
+        // set each frame to alinment and blank
+        // eg, input frames: aaabbcc,
+        //     labels_expended: a--- a--- a--- -b-- -b-- --c- --c-
+        // ==========================================
+        // get crossbonding labels matrix at frist
+        // labels_expended->Resize(InputRef(1).Value());
+        size_t total_items = 0;
+        labels_expended->SetValue((ElemType) 0);              //init
+        for (size_t s = 0; s < utt_frame2chanIdx.size(); ++s) // loop for each utt
+        {
+            size_t num_units = utt_units_num[s];
+            size_t num_frames = utt_frames_num[s];
+
+            // fprintf(stderr, "%.1f\t", (float) num_units);
+            // fprintf(stderr, "%.1f\t", (float) num_frames);
+
+            size_t units_cnt = 0;
+            //size_t u_start = 0;
+
+            for (size_t t = 0; t < num_frames; ++t)
+            {
+                // determine boundary
+                size_t t_idx = (utt_frames_beginIdx[s] + t) * num_labels_para_utts + utt_frame2chanIdx[s]; // col idx of input label
+                if (labels_max_values->GetValue(0, t_idx) == 2 && t != 0)
+                {
+                    ++units_cnt;
+                }
+                for (size_t u = 0; u < num_units; ++u)
+                {
+                    if (u == units_cnt)
+                    {
+                        size_t col_idx = u + t * num_units + total_items;
+                        auto row_idx = labels_max_idxs->GetValue(0, t_idx);
+                        //labels_expended->SetValue((size_t)row_idx, col_idx, (ElemType) 1);
+                        (*labels_expended)((size_t) row_idx, col_idx) = (ElemType) 1;
+                        //++u_start;
+                    }
+                    else
+                    {
+                        size_t col_idx = u + t * num_units + total_items;
+                        auto row_idx = labels_dim - 1;
+                        (*labels_expended)((size_t) row_idx, col_idx) = (ElemType) 1;
+                    }
+                }
+            }
+            total_items += num_units * num_frames;
+        }
+
+		/*
+		// =========================================
+        // init 4
+        // set each frame to alinment and blank
+        // eg, input frames: aaabbcc,
+        //     labels_expended: aaaa aaaa aaaa bbbb bbbb cccc cccc
+        // ==========================================
+        // get crossbonding labels matrix at frist
+        // labels_expended->Resize(InputRef(1).Value());
+        size_t total_items = 0;
+        labels_expended->SetValue((ElemType) 0);              //init
+        for (size_t s = 0; s < utt_frame2chanIdx.size(); ++s) // loop for each utt
+        {
+            size_t num_units = utt_units_num[s];
+            size_t num_frames = utt_frames_num[s];
+
+            // fprintf(stderr, "%.1f\t", (float) num_units);
+            // fprintf(stderr, "%.1f\t", (float) num_frames);
+
+            size_t units_cnt = 0;
+            //size_t u_start = 0;
+
+            for (size_t t = 0; t < num_frames; ++t)
+            {
+                // determine boundary
+                size_t t_idx = (utt_frames_beginIdx[s] + t) * num_labels_para_utts + utt_frame2chanIdx[s]; // col idx of input label
+                if (labels_max_values->GetValue(0, t_idx) == 2 && t != 0)
+                {
+                    ++units_cnt;
+                }
+                for (size_t u = 0; u < num_units; ++u)
+                {
+                    size_t col_idx = u + t * num_units + total_items;
+                    auto row_idx = labels_max_idxs->GetValue(0, t_idx);
+                    //labels_expended->SetValue((size_t)row_idx, col_idx, (ElemType) 1);
+                    (*labels_expended)((size_t) row_idx, col_idx) = (ElemType) 1;
+                    //++u_start;
+                }
+            }
+            total_items += num_units * num_frames;
+        }
+		*/
 
         Value().AssignInnerProductOfMatrices(*labels_expended, *m_logSoftmaxOfRight);
         Value() *= -1;
@@ -504,7 +599,8 @@ public:
 #endif
     }
 
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    virtual void /*ComputationNodeBase::*/
+    Validate(bool isFinalValidationPass) override
     {
         ValidateBinaryReduce(isFinalValidationPass);
     }
@@ -522,8 +618,8 @@ public:
             node->labels_max_values->SetValue(*labels_max_values);
             node->labels_expended->SetValue(*labels_expended);
 
-            // node->labels_expended_max_values->SetValue(*labels_expended_max_values);
-            // node->labels_expended_max_idxs->SetValue(*labels_expended_max_idxs);
+           // node->labels_expended_max_values->SetValue(*labels_expended_max_values);
+           // node->labels_expended_max_idxs->SetValue(*labels_expended_max_idxs);
         }
     }
 
@@ -555,7 +651,7 @@ public:
 
         // ReleaseMatrixToPool(labels_expended_max_values, matrixPool);
         // ReleaseMatrixToPool(labels_expended_max_idxs, matrixPool);
-    }
+	}
 
 protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
@@ -573,8 +669,6 @@ protected:
     std::vector<size_t> utt_frame2chanIdx;
     std::vector<size_t> utt_units_num;
     std::vector<size_t> utt_items_num;
-
-    // std::vector<std::vector<size_t>> utt_units_boud;
 };
 
 template class CrossEntropyWithSoftmaxNode<float>;
