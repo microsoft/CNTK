@@ -490,7 +490,7 @@ public:
             }
             total_items += num_units * num_frames;
         }
-		*/
+        */
 
         // =========================================
         // init 3
@@ -542,8 +542,8 @@ public:
             total_items += num_units * num_frames;
         }
 
-		/*
-		// =========================================
+        /*
+        // =========================================
         // init 4
         // set each frame to alinment and blank
         // eg, input frames: aaabbcc,
@@ -583,7 +583,7 @@ public:
             }
             total_items += num_units * num_frames;
         }
-		*/
+        */
 
         Value().AssignInnerProductOfMatrices(*labels_expended, *m_logSoftmaxOfRight);
         Value() *= -1;
@@ -651,7 +651,7 @@ public:
 
         // ReleaseMatrixToPool(labels_expended_max_values, matrixPool);
         // ReleaseMatrixToPool(labels_expended_max_idxs, matrixPool);
-	}
+    }
 
 protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
