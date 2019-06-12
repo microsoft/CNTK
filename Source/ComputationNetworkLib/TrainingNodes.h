@@ -491,7 +491,7 @@ public:
             total_items += num_units * num_frames;
         }
         */
-
+        /*
         // =========================================
         // init 3
         // set each frame to alinment and blank
@@ -542,8 +542,8 @@ public:
             total_items += num_units * num_frames;
             
         }
+        */
 
-        /*
         // =========================================
         // init 4
         // set each frame to alinment and blank
@@ -584,7 +584,6 @@ public:
             }
             total_items += num_units * num_frames;
         }
-        */
 
         Value().AssignInnerProductOfMatrices(*labels_expended, *m_logSoftmaxOfRight);
         Value() *= -1;
@@ -619,8 +618,8 @@ public:
             node->labels_max_values->SetValue(*labels_max_values);
             node->labels_expended->SetValue(*labels_expended);
 
-           // node->labels_expended_max_values->SetValue(*labels_expended_max_values);
-           // node->labels_expended_max_idxs->SetValue(*labels_expended_max_idxs);
+            // node->labels_expended_max_values->SetValue(*labels_expended_max_values);
+            // node->labels_expended_max_idxs->SetValue(*labels_expended_max_idxs);
         }
     }
 
