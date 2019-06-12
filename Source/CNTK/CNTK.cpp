@@ -739,7 +739,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     {
         LOGPRINTF(stderr, "precision = \"%s\"\n", type.c_str());
     }
-
+    Microsoft::MSR::CNTK::Globals::SetNodeTiming(true);
     if (type == "float")
         DoCommands<float>(config, mpi);
     else if (type == "double")
