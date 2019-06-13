@@ -294,9 +294,16 @@ public:
         for (size_t i = 0; i < m_nodesToCache.size(); i++)
         {
             vector<ElemType> v;
+<<<<<<< HEAD
             oneSeq.nameToNodeValues[m_nodesToCache[i]] = make_shared<PastValueNode<ElemType>>(deviceId, L"test");
         }
         return oneSeq;
+=======
+            oneSeq.nameToNodeValues[m_nodesToCache[i]] = v; 
+        }
+            
+    return oneSeq;
+>>>>>>> 1aeb9cff9... prevent RNN reset
     }
     Sequence newSeq(Sequence& a, DEVICEID_TYPE deviceId)
     {
@@ -308,6 +315,7 @@ public:
         oneSeq.processlength = a.processlength;
         oneSeq.decodeoutput = make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId());
         oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
+<<<<<<< HEAD
         unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
         for (it = a.nameToNodeValues.begin(); it != a.nameToNodeValues.end(); it++)
         {
@@ -324,6 +332,9 @@ public:
 
             it->second->CopyTo(oneSeq.nameToNodeValues[it->first], it->first, CopyNodeFlags::copyNodeAll);
         }
+=======
+        oneSeq.nameToNodeValues = a.nameToNodeValues;
+>>>>>>> 1aeb9cff9... prevent RNN reset
         return oneSeq;
     }
     void deleteSeq(Sequence oneSeq)
@@ -381,8 +392,10 @@ public:
         }
         return nodes;
     }
-    void forward_decode(Sequence& oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, const std::vector<ComputationNodeBasePtr>& decodeOutputNodes,
-                        const std::vector<ComputationNodeBasePtr>& decodeinputNodes, size_t vocabSize, size_t plength)
+
+    void forward_decode(Sequence& oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
+                        std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize, size_t plength)
+
     {
         //        size_t labelLength = oneSeq.length;
         if (oneSeq.processlength + 1 != plength && plength != oneSeq.processlength)
@@ -407,18 +420,40 @@ public:
             if (plength == 1)
             {
                 lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
-            }
+           } 
             else
             {
+                ///lminput->second.pMBLayout->//m_sequences.erase(0);
                 lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, SentinelValueIndicatingUnspecifedSequenceBeginIdx, 1);
             }
+                
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
-            bool shallowCopy = false;
+            //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
 
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
-                if (oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements() > 0)
+
+
+                shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
+                Matrix<ElemType>& mat = pLearnableNode->Value();
+
+                /*wstring fileName = L"D:\\users\\vadimma\\cntk_3\\" + m_nodesToCache[i] + L".txt";
+                std::ofstream out(fileName, std::ios::out);
+                for (size_t m_i = 0; m_i < mat.GetNumRows(); m_i++)
+                {
+                    for (size_t j = 0; j < mat.GetNumCols(); j++)
+                    {
+                        out << mat(m_i, j);
+                    }
+                    out << string("\n");
+                }
+                out.close();*/
+
+                //ElemType* tempArray = nullptr;
+                //size_t tempArraySize = 0;
+                if (oneSeq.nameToNodeValues[m_nodesToCache[i]].size() > 0)
+
                 {
                     oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
                     shallowCopy = true;
@@ -433,10 +468,31 @@ public:
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
-                if (shallowCopy)
-                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
-                else
-                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
+
+
+                shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
+
+                Matrix<ElemType>& mat = pLearnableNode->Value();
+
+                wstring fileName = L"D:\\users\\vadimma\\cntk_3\\After" + m_nodesToCache[i] + L".txt";
+                std::ofstream out(fileName, std::ios::out);
+                for (size_t m_i = 0; m_i < mat.GetNumRows(); m_i++)
+                {
+                    for (size_t j = 0; j < mat.GetNumCols(); j++)
+                    {
+                        out << mat(m_i, j);
+                    }
+                    out << string("\n");
+                }
+                out.close();
+
+                oneSeq.nameToNodeValues[m_nodesToCache[i]].resize(mat.GetNumElements());
+                ElemType* dataPtr = oneSeq.nameToNodeValues[m_nodesToCache[i]].data();
+                size_t valueSize = oneSeq.nameToNodeValues[m_nodesToCache[i]].size();
+                mat.CopyToArray(dataPtr, valueSize);
+                if (valueSize != oneSeq.nameToNodeValues[m_nodesToCache[i]].size())
+                    LogicError("Size mismatch for node"); // %ls", m_nodesToCache[i]
+
             }
             lmin.ReleaseMemory();
         }
@@ -539,6 +595,7 @@ public:
         std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin() + 1, outputNodeNames.begin() + 2);
         std::vector<ComputationNodeBasePtr> decodeOutputNodes = m_net->OutputNodesByName(decodeOutputNodeNames);
         std::list<ComputationNodeBasePtr> pastValueNodes = m_net->PastValueNodesForOutputs(decodeOutputNodes);
+
         std::list<ComputationNodeBasePtr>::iterator it;
         for (it = pastValueNodes.begin(); it != pastValueNodes.end(); ++it)
         {
