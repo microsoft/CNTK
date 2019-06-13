@@ -284,7 +284,13 @@ public:
     Sequence newSeq(size_t numRow, size_t numCol, DEVICEID_TYPE deviceId)
     {
         Sequence oneSeq = {std::vector<size_t>(), 0.0, 0, 0, 0, make_shared<Matrix<ElemType>>(numRow, (size_t) 1, deviceId)};
-        return oneSeq;
+        for (size_t i = 0; i < m_nodesToCache.size(); i++)
+        {
+            vector<ElemType> v;
+            oneSeq.nameToNodeValues[m_nodesToCache[i]] = v; 
+        }
+            
+    return oneSeq;
     }
     Sequence newSeq(Sequence a)
     {
@@ -296,7 +302,7 @@ public:
         oneSeq.processlength = a.processlength;
         oneSeq.decodeoutput = make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId());
         oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
-
+        oneSeq.nameToNodeValues = a.nameToNodeValues;
         return oneSeq;
     }
     void deleteSeq(Sequence oneSeq)
@@ -348,7 +354,7 @@ public:
         return nodes;
     }
 
-    void forward_decode(Sequence oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
+    void forward_decode(Sequence& oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
                         std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize, size_t plength)
     {
         //        size_t labelLength = oneSeq.length;
@@ -369,9 +375,18 @@ public:
             lminput->second.pMBLayout->Init(1, 1);
             //std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
             lminput->second.GetMatrix<ElemType>().SetValue(lmin);
-            lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+            if (plength == 1)
+            {
+                lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+            } 
+            else
+            {
+                ///lminput->second.pMBLayout->//m_sequences.erase(0);
+                lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, SentinelValueIndicatingUnspecifedSequenceBeginIdx, 1);
+            }
+                
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
-            DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+            //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
 
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
@@ -379,6 +394,19 @@ public:
 
                 shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
                 Matrix<ElemType>& mat = pLearnableNode->Value();
+
+                /*wstring fileName = L"D:\\users\\vadimma\\cntk_3\\" + m_nodesToCache[i] + L".txt";
+                std::ofstream out(fileName, std::ios::out);
+                for (size_t m_i = 0; m_i < mat.GetNumRows(); m_i++)
+                {
+                    for (size_t j = 0; j < mat.GetNumCols(); j++)
+                    {
+                        out << mat(m_i, j);
+                    }
+                    out << string("\n");
+                }
+                out.close();*/
+
                 //ElemType* tempArray = nullptr;
                 //size_t tempArraySize = 0;
                 if (oneSeq.nameToNodeValues[m_nodesToCache[i]].size() > 0)
@@ -396,7 +424,21 @@ public:
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
 
                 shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
+
                 Matrix<ElemType>& mat = pLearnableNode->Value();
+
+                wstring fileName = L"D:\\users\\vadimma\\cntk_3\\After" + m_nodesToCache[i] + L".txt";
+                std::ofstream out(fileName, std::ios::out);
+                for (size_t m_i = 0; m_i < mat.GetNumRows(); m_i++)
+                {
+                    for (size_t j = 0; j < mat.GetNumCols(); j++)
+                    {
+                        out << mat(m_i, j);
+                    }
+                    out << string("\n");
+                }
+                out.close();
+
                 oneSeq.nameToNodeValues[m_nodesToCache[i]].resize(mat.GetNumElements());
                 ElemType* dataPtr = oneSeq.nameToNodeValues[m_nodesToCache[i]].data();
                 size_t valueSize = oneSeq.nameToNodeValues[m_nodesToCache[i]].size();
@@ -502,7 +544,6 @@ public:
         std::vector<ComputationNodeBasePtr> decodeOutputNodes = m_net->OutputNodesByName(decodeOutputNodeNames);
         std::list<ComputationNodeBasePtr> pastValueNodes = m_net->PastValueNodesForOutputs(decodeOutputNodes);
 
-        std::vector<ComputationNodeBasePtr> result;
         std::list<ComputationNodeBasePtr>::iterator it;
         for (it = pastValueNodes.begin(); it != pastValueNodes.end(); ++it)
         {
