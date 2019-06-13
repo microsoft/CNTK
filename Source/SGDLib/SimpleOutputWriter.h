@@ -438,18 +438,6 @@ public:
                 shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
                 Matrix<ElemType>& mat = pLearnableNode->Value();
 
-                /*wstring fileName = L"D:\\users\\vadimma\\cntk_3\\" + m_nodesToCache[i] + L".txt";
-                std::ofstream out(fileName, std::ios::out);
-                for (size_t m_i = 0; m_i < mat.GetNumRows(); m_i++)
-                {
-                    for (size_t j = 0; j < mat.GetNumCols(); j++)
-                    {
-                        out << mat(m_i, j);
-                    }
-                    out << string("\n");
-                }
-                out.close();*/
-
                 //ElemType* tempArray = nullptr;
                 //size_t tempArraySize = 0;
                 if (oneSeq.nameToNodeValues[m_nodesToCache[i]].size() > 0)
@@ -458,6 +446,20 @@ public:
                     oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
                     shallowCopy = true;
                 }
+
+                Matrix<ElemType>& mat2 = pLearnableNode->Value();
+
+                wstring fileName = L"D:\\users\\vadimma\\cntk_3\\" + m_nodesToCache[i] + L".txt";
+                std::ofstream out(fileName, std::ios::out);
+                for (size_t m_i = 0; m_i < mat2.GetNumRows(); m_i++)
+                {
+                    for (size_t j = 0; j < mat2.GetNumCols(); j++)
+                    {
+                        out << mat2(m_i, j);
+                    }
+                    out << string("\n");
+                }
+                out.close();
             }
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
