@@ -184,7 +184,7 @@ GroupConvolutionalLayer {numInputChannels,
                          lowerPad = 0, upperPad = 0,
                          dilation = 1,
                          maxTempMemSizeInSamples = 0,
-						 disableRegularization = false} =
+                         disableRegularization = false} =
 {
     outputChannelsShape = _AsArray (numOutputChannels)
     filterRank = Length (filterShape)
