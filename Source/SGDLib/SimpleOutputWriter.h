@@ -45,10 +45,6 @@ class SimpleOutputWriter
         {
             return logP < rhs.logP;
         }
-        ~Sequence()
-        {
-            //TODO: free values;
-        }
         unordered_map<wstring, vector<ElemType>> nameToNodeValues;
     };
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
@@ -290,9 +286,9 @@ public:
             oneSeq.nameToNodeValues[m_nodesToCache[i]] = v; 
         }
             
-    return oneSeq;
+        return oneSeq;
     }
-    Sequence newSeq(Sequence a)
+    Sequence newSeq(Sequence& a)
     {
         Sequence oneSeq;
         oneSeq.labelseq = a.labelseq;
@@ -302,7 +298,11 @@ public:
         oneSeq.processlength = a.processlength;
         oneSeq.decodeoutput = make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId());
         oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
-        oneSeq.nameToNodeValues = a.nameToNodeValues;
+        unordered_map<wstring, vector<ElemType>>::iterator it;
+        for (it = a.nameToNodeValues.begin(); it != a.nameToNodeValues.end(); it++)
+        {
+            oneSeq.nameToNodeValues[it->first] = vector<ElemType> (it->second);
+        }
         return oneSeq;
     }
     void deleteSeq(Sequence oneSeq)
@@ -310,7 +310,7 @@ public:
         oneSeq.decodeoutput->ReleaseMemory();
         vector<size_t>().swap(oneSeq.labelseq);
     }
-    iterator getMaxSeq(vector<Sequence> seqs)
+    iterator getMaxSeq(const vector<Sequence>& seqs)
     {
         double MaxlogP = LOGZERO;
         typename vector<Sequence>::iterator maxIt;
@@ -321,7 +321,7 @@ public:
         }
         return maxIt;
     }
-    iterator getMatchSeq(vector<Sequence> seqs, vector<size_t> labelseq)
+    iterator getMatchSeq(const vector<Sequence>& seqs, const vector<size_t>& labelseq)
     {
         iterator it;
         for (it = seqs.begin(); it != seqs.end(); it++)
@@ -354,8 +354,8 @@ public:
         return nodes;
     }
 
-    void forward_decode(Sequence& oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
-                        std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize, size_t plength)
+    void forward_decode(Sequence& oneSeq, const StreamMinibatchInputs & decodeinputMatrices, DEVICEID_TYPE deviceID, const std::vector<ComputationNodeBasePtr>& decodeOutputNodes,
+                        const std::vector<ComputationNodeBasePtr>& decodeinputNodes, size_t vocabSize, size_t plength)
     {
         //        size_t labelLength = oneSeq.length;
         if (plength != oneSeq.processlength)
@@ -402,7 +402,7 @@ public:
                     mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), oneSeq.nameToNodeValues[m_nodesToCache[i]].data(), matrixFlagNormal, nullptr);
                 }
 
-                Matrix<ElemType>& mat2 = pLearnableNode->Value();
+                /*Matrix<ElemType>& mat2 = pLearnableNode->Value();
 
                 wstring fileName = L"D:\\users\\vadimma\\cntk_3\\" + m_nodesToCache[i] + L".txt";
                 std::ofstream out(fileName, std::ios::out);
@@ -414,7 +414,7 @@ public:
                     }
                     out << string("\n");
                 }
-                out.close();
+                out.close();*/
             }
 
             m_net->ForwardProp(decodeOutputNodes[0]);
@@ -429,7 +429,7 @@ public:
 
                 Matrix<ElemType>& mat = pLearnableNode->Value();
 
-                wstring fileName = L"D:\\users\\vadimma\\cntk_3\\After" + m_nodesToCache[i] + L".txt";
+                /*wstring fileName = L"D:\\users\\vadimma\\cntk_3\\After" + m_nodesToCache[i] + L".txt";
                 std::ofstream out(fileName, std::ios::out);
                 for (size_t m_i = 0; m_i < mat.GetNumRows(); m_i++)
                 {
@@ -439,7 +439,7 @@ public:
                     }
                     out << string("\n");
                 }
-                out.close();
+                out.close();*/
 
                 oneSeq.nameToNodeValues[m_nodesToCache[i]].resize(mat.GetNumElements());
                 ElemType* dataPtr = oneSeq.nameToNodeValues[m_nodesToCache[i]].data();
@@ -447,11 +447,18 @@ public:
                 mat.CopyToArray(dataPtr, valueSize);
                 if (valueSize != oneSeq.nameToNodeValues[m_nodesToCache[i]].size())
                     LogicError("Size mismatch for node"); // %ls", m_nodesToCache[i]
+
             }
+            /*std::stringstream ss;
+            for (size_t ii = 0; ii < oneSeq.labelseq.size(); ii++)
+            {
+                ss << "\t" << oneSeq.labelseq[ii];
+            }
+            fprintf(stderr, "Current log sequcen %s.\n", ss.str().c_str());*/
             lmin.ReleaseMemory();
         }
     }
-    bool compareseq(Sequence a, Sequence b)
+    bool compareseq(const Sequence& a, const Sequence& b)
     {
         return a.logP < b.logP;
     }
@@ -472,7 +479,7 @@ public:
         return datapair;
     }
     //check whether a is the prefix of b
-    bool isPrefix(Sequence a, Sequence b)
+    bool isPrefix(const Sequence& a, const Sequence& b)
     {
         if (a.labelseq == b.labelseq || a.labelseq.size() >= b.labelseq.size())
             return false;
@@ -484,7 +491,7 @@ public:
         return true;
     }
 
-    bool comparekeyword(Sequence a, vector<size_t> keyword)
+    bool comparekeyword(const Sequence& a, const vector<size_t>& keyword)
     {
         if (a.labelseq == keyword || a.labelseq.size() >= keyword.size())
             return false; //finish key word
