@@ -3608,16 +3608,13 @@ public:
     virtual void UpdateFunctionMBSize() override
     {
         if (0 == m_segmentIndex)
-        {
-            m_numCols = InputRef(0).Value().GetNumCols();
-            m_valueGlobalMemoryBlock->resetMinibatchSize(m_numCols);
-        }
+            m_valueGlobalMemoryBlock->resetMinibatchSize(InputRef(0).Value().GetNumCols());
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         if (m_segmentNum - 1 == m_segmentIndex)
-            m_gradientGlobalMemoryBlock->resetMinibatchSize(m_numCols, true);
+            m_gradientGlobalMemoryBlock->resetMinibatchSize(InputRef(0).Gradient().GetNumCols(), true);
 
         FrameRange fr(InputRef(0).GetMBLayout());
         auto X_gradient = InputRef(0).GradientFor(fr);
@@ -3691,7 +3688,6 @@ public:
             node->m_segmentNum = m_segmentNum;
             node->m_startIndex = m_startIndex;
             node->m_numRows = m_numRows;
-            node->m_numCols = m_numCols;
             node->m_dims = m_dims;
             node->m_valueGlobalMemoryBlock = m_valueGlobalMemoryBlock;
             node->m_gradientGlobalMemoryBlock = m_gradientGlobalMemoryBlock;
@@ -3740,7 +3736,6 @@ public:
     size_t m_segmentNum;
     size_t m_startIndex;
     size_t m_numRows;
-    size_t m_numCols;
     SmallVector<size_t> m_dims;
     shared_ptr<GlobalMemoryBlock<ElemType>> m_valueGlobalMemoryBlock;
     shared_ptr<GlobalMemoryBlock<ElemType>> m_gradientGlobalMemoryBlock;
