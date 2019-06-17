@@ -3613,7 +3613,7 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        if (m_segmentNum - 1 == m_segmentIndex)
+        if (m_segmentNum == m_segmentIndex)
             m_gradientGlobalMemoryBlock->resetMinibatchSize(InputRef(0).Gradient().GetNumCols(), true);
 
         FrameRange fr(InputRef(0).GetMBLayout());
@@ -3704,7 +3704,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        if (m_segmentNum - 1 == m_segmentIndex)
+        if (m_segmentNum == m_segmentIndex)
             RequestMatrixFromPool(m_gradientGlobalMemoryBlock->m_globalMemoryMatrix, matrixPool, m_gradientGlobalMemoryBlock->m_memoryLength, true);
     }
 
