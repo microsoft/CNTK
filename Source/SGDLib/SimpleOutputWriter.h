@@ -329,7 +329,7 @@ public:
         insequence.lengthwithblank++;
     }
 
-    void forward_decode(Sequence oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
+    void forward_decode(Sequence &oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
                         std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize, size_t plength)
     {
         //        size_t labelLength = oneSeq.length;
