@@ -7062,7 +7062,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
 }
 
 void CNTKToONNXHelper::SetReduceElementsAttributes(const FunctionPtr src, Node *node,
-                                                   bool isSequenceReduceElement)
+    bool isSequenceReduceElement)
 {
     std::wstring reductionOpName = src->OpName();
     if (reductionOpName == L"ReduceElements")
@@ -7071,10 +7071,13 @@ void CNTKToONNXHelper::SetReduceElementsAttributes(const FunctionPtr src, Node *
     }
 
     //
-    int64_t keepReducedDimensions = 1;
+    int64_t keepReducedDimensions = 0;
     if (src->Attributes().Contains(L"reductionKeepDimensions"))
         keepReducedDimensions = (int64_t)((bool)src->Attributes()[L"reductionKeepDimensions"].Value<bool>() ? 1 : 0);
-    bool forceKeepReducedDimensions = false;
+    else if (src->Inputs()[0].DynamicAxes().size() == src->Outputs()[0].DynamicAxes().size() &&
+        src->Inputs()[0].Shape().Rank() == src->Outputs()[0].Shape().Rank())
+        keepReducedDimensions = 1;
+
 
     std::vector<Axis> reductionAxes;
     if (src->Attributes().Contains(L"axisVec"))
@@ -7082,12 +7085,6 @@ void CNTKToONNXHelper::SetReduceElementsAttributes(const FunctionPtr src, Node *
     else if (src->Attributes().Contains(L"axis"))
         reductionAxes.push_back((Axis)(src->Attributes()[L"axis"].Value<Axis>()));
 
-    // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true.
-    // For ONNX export we need to make sure we export keepdims as 0 (false).
-    // The same applies for AllStaticAxes.
-    if (!forceKeepReducedDimensions &&
-        (reductionAxes.size() == 1 && (reductionAxes[0] == Axis::DefaultBatchAxis() || reductionAxes[0] == Axis::AllStaticAxes() || reductionAxes[0] == Axis::AllAxes())))
-        keepReducedDimensions = 0;
     std::vector<int64_t> axes = ConvertAxesToOnnx(reductionAxes, src->Inputs()[0]);
 
     if (isSequenceReduceElement && axes.size() == 1 && axes[0] == 1 && src->Inputs()[0].DynamicAxes().size() == 1)
@@ -7100,8 +7097,8 @@ void CNTKToONNXHelper::SetReduceElementsAttributes(const FunctionPtr src, Node *
 
     if (reductionOpName == L"Argmax" || reductionOpName == L"Argmin")
         node->AddAttribute("axis", axes[0]);
-    else 
-        if (reductionAxes[0] != Axis::AllAxes()) 
+    else
+        if (reductionAxes[0] != Axis::AllAxes())
             node->AddAttribute("axes", axes);
 
     node->AddAttribute("keepdims", keepReducedDimensions);
