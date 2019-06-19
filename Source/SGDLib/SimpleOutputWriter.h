@@ -304,6 +304,7 @@ public:
             address << oneSeq.nameToNodeValues[m_nodesToCache[i]];
             fprintf(stderr, "Scratch %ls %s \n", m_nodesToCache[i].c_str(), address.str().c_str());*/
             
+        }
 
         return oneSeq;
 
@@ -354,8 +355,9 @@ public:
             {
                 oneSeq.nameToNodeValues[it->first] = make_shared<PastValueNode<ElemType>>(deviceId, it->first);
             }
-
-
+            /*std::ostringstream address;
+            address << oneSeq.nameToNodeValues[it->first];
+            fprintf(stderr, "newSeq %ls %s \n", it->first.c_str(), address.str().c_str());*/
         }
 
         return oneSeq;
@@ -440,7 +442,7 @@ public:
         s.realValues = true;
     }
 
-    void forward_decode(Sequence& oneSeq, const StreamMinibatchInputs & decodeinputMatrices, DEVICEID_TYPE deviceID, const std::vector<ComputationNodeBasePtr>& decodeOutputNodes,
+    void forward_decode(Sequence& oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, const std::vector<ComputationNodeBasePtr>& decodeOutputNodes,
                         const std::vector<ComputationNodeBasePtr>& decodeinputNodes, size_t vocabSize, size_t plength)
 
     {
@@ -449,17 +451,21 @@ public:
             LogicError("Current implementation assumes 1 step difference");
         if (plength != oneSeq.processlength)
         {
+            /*m_logIndex = m_logIndex + 1;
+            wstring fileName = L"D:\\users\\vadimma\\cntk_3\\new_opt" + std::to_wstring(m_logIndex) + L".txt";
+            std::ofstream out(fileName, std::ios::out);
+            out << fixed;
+            out.precision(3);
+            for (size_t li = 0; li < oneSeq.labelseq.size(); li++)
+                out << oneSeq.labelseq[li] << " ";
+
+            out << "\n";*/
 
             Matrix<ElemType> lmin(deviceID);
 
-            //greedyOutput.SetValue(greedyOutputMax.ColumnSlice(0, lmt));
             lmin.Resize(vocabSize, 1);
             lmin.SetValue(0.0);
             lmin(oneSeq.labelseq[plength - 1], 0) = 1.0;
-            /*for (size_t n = 0; n < plength; n++)
-            {
-                lmin(oneSeq.labelseq[n], n) = 1.0;
-            }*/
             auto lminput = decodeinputMatrices.begin();
             lminput->second.pMBLayout->Init(1, 1);
             //std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
@@ -473,6 +479,7 @@ public:
                 ///lminput->second.pMBLayout->//m_sequences.erase(0);
                 lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, SentinelValueIndicatingUnspecifedSequenceBeginIdx, 1);
                 
+
             //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
 
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
@@ -489,23 +496,28 @@ public:
                     oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
                 }
 
-                /*Matrix<ElemType>& mat2 = pLearnableNode->Value();
+                    /*shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
 
-                wstring fileName = L"D:\\users\\vadimma\\cntk_3\\" + m_nodesToCache[i] + L".txt";
-                std::ofstream out(fileName, std::ios::out);
-                for (size_t m_i = 0; m_i < mat2.GetNumRows(); m_i++)
-                {
-                    for (size_t j = 0; j < mat2.GetNumCols(); j++)
+                    pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
+                    Matrix<ElemType>& mat2 = pLearnableNode->Value();
+
+                    for (size_t m_i = 0; m_i < mat2.GetNumRows(); m_i++)
                     {
-                        out << mat2(m_i, j);
+                        for (size_t j = 0; j < mat2.GetNumCols(); j++)
+                        {
+                            out << mat2(m_i, j);
+                        }
                     }
-                    out << string("\n");
+                    out << string("\n");*/
                 }
-                out.close();*/
             }
+
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+
+                //m_net->DumpAllNodesToFile(true, true, L"D:\\users\\vadimma\\cntk_3\\After_model_opt.txt");
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+
             m_net->ForwardProp(decodeOutputNodes[0]);
             //Matrix<ElemType> tempMatrix = *(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value());
             oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())));
@@ -517,30 +529,13 @@ public:
                 if (plength == 1)
                 {
                     nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
-                }
-
-
-                /*wstring fileName = L"D:\\users\\vadimma\\cntk_3\\After" + m_nodesToCache[i] + L".txt";
-                std::ofstream out(fileName, std::ios::out);
-                for (size_t m_i = 0; m_i < mat.GetNumRows(); m_i++)
-                {
-                    for (size_t j = 0; j < mat.GetNumCols(); j++)
-                    {
-                        out << mat(m_i, j);
-                    }
-                    out << string("\n");
-                }
-                out.close();*/
+                }         
 
 
             }
-            /*std::stringstream ss;
-            for (size_t ii = 0; ii < oneSeq.labelseq.size(); ii++)
-            {
-                ss << "\t" << oneSeq.labelseq[ii];
->>>>>>> e8459c373... A running version
-            }
-            fprintf(stderr, "Current log sequcen %s.\n", ss.str().c_str());*/
+
+
+        
             lmin.ReleaseMemory();
         }
     }
@@ -610,6 +605,7 @@ public:
         //decodeOutput.VectorMax(maxIdx, maxVal, true);
         decodeOutput.InplaceLogSoftmax(true);
     }
+
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
                           size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
     {
@@ -652,6 +648,9 @@ public:
                 m_nodesToCache.push_back((*it)->NodeName());
             }
         }
+
+        
+
         std::vector<ComputationNodeBasePtr> decodeinputNodes = m_net->InputNodesForOutputs(decodeOutputNodeNames);
         StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
@@ -680,6 +679,8 @@ public:
         Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
         Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
         Matrix<ElemType> lmin(deviceid);
+		MatrixPool m_matrixPool;
+        m_matrixPool.OptimizedMemoryAllocation();
         Matrix<ElemType> Wm(deviceid), bm(deviceid);
         Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
         bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
@@ -767,31 +768,10 @@ public:
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
-                    vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam, blankId);
-                    /*ElemType* logP = decodeOutput.CopyToArray();
-                    std::priority_queue<std::pair<double, int>> q;
-                    int iLabel;
-                    for (iLabel = 0; iLabel < vocabSize; iLabel++)
-                    {
-                        q.push(std::pair<double, int>((double) logP[iLabel], iLabel));
-                    }
-                    for (iLabel = 0; iLabel < beamSize; iLabel++)
-                    {
-                        auto Elem = q.top();
-                        Sequence seqK = newSeq(tempSeq);
-                        double newlogP = Elem.first + tempSeq.logP;
-                        seqK.logP = newlogP;
+                   vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam, blankId);
+                   
 
-                        if (Elem.second == blankId)
-                        {
-                            nextSequences.push_back(seqK);
-                            q.pop();
-                            continue;
-                        }
-                        extendSeq(seqK, Elem.second, newlogP);
-                        CurSequences.push_back(seqK);
-                        q.pop();
-                    }*/
+                   
 					//expand blank
                     Sequence seqK = newSeq(tempSeq, deviceid);
                     ElemType newlogP = topN[vocabSize].second + tempSeq.logP;
@@ -822,10 +802,17 @@ public:
                         newlogP = topN[iLabel].second + tempSeq.logP;
                         seqK.logP = newlogP;
 
+
                         if (topN[iLabel].first != blankId)
+
+ 
                         {
                         extendSeq(seqK, topN[iLabel].first, newlogP);
+
+                        
+
                         CurSequences.push_back(seqK);
+                  
 }
                     }
                     vector<pair<size_t, ElemType>>().swap(topN);
