@@ -7070,20 +7070,26 @@ void CNTKToONNXHelper::SetReduceElementsAttributes(const FunctionPtr src, Node *
         reductionOpName = src->Attributes()[L"reductionOpName"].Value<wstring>();
     }
 
-    //
-    int64_t keepReducedDimensions = 0;
-    if (src->Attributes().Contains(L"reductionKeepDimensions"))
-        keepReducedDimensions = (int64_t)((bool)src->Attributes()[L"reductionKeepDimensions"].Value<bool>() ? 1 : 0);
-    else if (src->Inputs()[0].DynamicAxes().size() == src->Outputs()[0].DynamicAxes().size() &&
-        src->Inputs()[0].Shape().Rank() == src->Outputs()[0].Shape().Rank())
-        keepReducedDimensions = 1;
-
-
     std::vector<Axis> reductionAxes;
     if (src->Attributes().Contains(L"axisVec"))
         reductionAxes = AsVector<Axis>(src->Attributes()[L"axisVec"].Value<std::vector<DictionaryValue>>());
     else if (src->Attributes().Contains(L"axis"))
         reductionAxes.push_back((Axis)(src->Attributes()[L"axis"].Value<Axis>()));
+
+    //
+    int64_t keepReducedDimensions = 0;
+    if (src->Attributes().Contains(L"reductionKeepDimensions"))
+        keepReducedDimensions = (int64_t)((bool)src->Attributes()[L"reductionKeepDimensions"].Value<bool>() ? 1 : 0);
+    
+    // there are cases where reductionKeepDimensions attribute does not take effect.    
+    if((reductionAxes.size() == 1 && (reductionAxes[0] == Axis::DefaultBatchAxis() || reductionAxes[0] == Axis::AllStaticAxes() || reductionAxes[0] == Axis::AllAxes())))     // Reduction on batch axis in CNTK removes the batch axis, even if keepdims is true.
+        // For ONNX export we need to make sure we export keepdims as 0 (false).
+        // The same applies for AllStaticAxes.
+        keepReducedDimensions = 0;
+
+    if (src->Inputs()[0].DynamicAxes().size() == src->Outputs()[0].DynamicAxes().size() &&
+        src->Inputs()[0].Shape().Rank() == src->Outputs()[0].Shape().Rank())
+        keepReducedDimensions = 1;
 
     std::vector<int64_t> axes = ConvertAxesToOnnx(reductionAxes, src->Inputs()[0]);
 
