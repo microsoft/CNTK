@@ -7077,7 +7077,7 @@ void CNTKToONNXHelper::SetReduceElementsAttributes(const FunctionPtr src, Node *
         reductionAxes.push_back((Axis)(src->Attributes()[L"axis"].Value<Axis>()));
 
     //
-    int64_t keepReducedDimensions = 0;
+    int64_t keepReducedDimensions = 1;
     if (src->Attributes().Contains(L"reductionKeepDimensions"))
         keepReducedDimensions = (int64_t)((bool)src->Attributes()[L"reductionKeepDimensions"].Value<bool>() ? 1 : 0);
     
