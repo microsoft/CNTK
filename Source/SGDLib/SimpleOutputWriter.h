@@ -46,7 +46,7 @@ class SimpleOutputWriter
         {
             return logP < rhs.logP;
         }
-        unordered_map<wstring, vector<ElemType>> nameToNodeValues;
+        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>> nameToNodeValues;
     };
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     typedef typename std::vector<Sequence>::iterator iterator;
@@ -284,12 +284,12 @@ public:
         for (size_t i = 0; i < m_nodesToCache.size(); i++)
         {
             vector<ElemType> v;
-            oneSeq.nameToNodeValues[m_nodesToCache[i]] = v;
+            oneSeq.nameToNodeValues[m_nodesToCache[i]] = make_shared<PastValueNode<ElemType>>(deviceId, L"test");
         }
 
         return oneSeq;
     }
-    Sequence newSeq(Sequence& a)
+    Sequence newSeq(Sequence& a, DEVICEID_TYPE deviceId)
     {
         Sequence oneSeq;
         oneSeq.labelseq = a.labelseq;
@@ -299,10 +299,12 @@ public:
         oneSeq.processlength = a.processlength;
         oneSeq.decodeoutput = make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId());
         oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
-        unordered_map<wstring, vector<ElemType>>::iterator it;
+        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
         for (it = a.nameToNodeValues.begin(); it != a.nameToNodeValues.end(); it++)
         {
-            oneSeq.nameToNodeValues[it->first] = vector<ElemType>(it->second);
+            oneSeq.nameToNodeValues[it->first] = make_shared<PastValueNode<ElemType>>(deviceId, it->first);
+            it->second->CopyTo(oneSeq.nameToNodeValues[it->first], it->first, CopyNodeFlags::copyNodeAll);
+            //oneSeq.nameToNodeValues[it->first] = vector<ElemType>(it->second);
         }
         return oneSeq;
     }
@@ -404,13 +406,12 @@ public:
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
 
                 shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
-                Matrix<ElemType>& mat = pLearnableNode->Value();
+                //Matrix<ElemType>& mat = pLearnableNode->Value();
 
-                //ElemType* tempArray = nullptr;
-                //size_t tempArraySize = 0;
-                if (oneSeq.nameToNodeValues[m_nodesToCache[i]].size() > 0)
+                if (oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements() > 0)
                 {
-                    mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), oneSeq.nameToNodeValues[m_nodesToCache[i]].data(), matrixFlagNormal, nullptr);
+                    oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
+                    //mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), oneSeq.nameToNodeValues[m_nodesToCache[i]].data(), matrixFlagNormal, nullptr);
                 }
 
                 nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
@@ -441,6 +442,7 @@ public:
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
+                nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
 
                 shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
 
@@ -455,12 +457,12 @@ public:
                 }
                 out << string("\n");
 
-                oneSeq.nameToNodeValues[m_nodesToCache[i]].resize(mat.GetNumElements());
-                ElemType* dataPtr = oneSeq.nameToNodeValues[m_nodesToCache[i]].data();
-                size_t valueSize = oneSeq.nameToNodeValues[m_nodesToCache[i]].size();
-                mat.CopyToArray(dataPtr, valueSize);
-                if (valueSize != oneSeq.nameToNodeValues[m_nodesToCache[i]].size())
-                    LogicError("Size mismatch for node"); // %ls", m_nodesToCache[i]
+                //oneSeq.nameToNodeValues[m_nodesToCache[i]].resize(mat.GetNumElements());
+                //ElemType* dataPtr = oneSeq.nameToNodeValues[m_nodesToCache[i]].data();
+                //size_t valueSize = oneSeq.nameToNodeValues[m_nodesToCache[i]].size();
+                //mat.CopyToArray(dataPtr, valueSize);
+                //if (valueSize != oneSeq.nameToNodeValues[m_nodesToCache[i]].size())
+                //    LogicError("Size mismatch for node"); // %ls", m_nodesToCache[i]
             }
 
             for (size_t m_i = 0; m_i < oneSeq.decodeoutput->GetNumRows(); m_i++)
@@ -700,7 +702,7 @@ public:
                     auto maxSeq = std::max_element(CurSequences.begin(), CurSequences.end());
                     //std::max_element()
                     //auto pos = std::find(CurSequences.begin(), CurSequences.end(), maxSeq);
-                    Sequence tempSeq = newSeq(*maxSeq);
+                    Sequence tempSeq = newSeq(*maxSeq, deviceid);
                     deleteSeq(*maxSeq);
                     CurSequences.erase(maxSeq);
                     forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
@@ -743,7 +745,7 @@ public:
                     for (iLabel = 0; iLabel < expandBeam; iLabel++)
                     {
 
-                        Sequence seqK = newSeq(tempSeq);
+                        Sequence seqK = newSeq(tempSeq, deviceid);
                         ElemType newlogP = topN[iLabel].second + tempSeq.logP;
                         seqK.logP = newlogP;
                         std::stringstream ss1;
