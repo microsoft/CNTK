@@ -417,6 +417,9 @@ public:
         size_t maxFrameNum = numCols / numParallelSequences;
         size_t maxPhoneNum = numPhoneCols / numPhoneParallelSequences;
 
+         std::chrono::system_clock::time_point begintime, endtime;
+        std::chrono::duration<float> duration = std::chrono::duration<float>(0);
+
         // Prepare data structures from the reader
         // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
         std::vector<size_t> uttFrameBeginIdx, uttPhoneBeginIdx;
@@ -436,7 +439,12 @@ public:
         uttFrameBeginIdx.reserve(numSequences);
         uttPhoneBeginIdx.reserve(numSequences);
 
+        begintime = std::chrono::system_clock::now();
+        maxIndexes.TransferToDeviceIfNotThere(CPUDEVICE);
+        duration = (std::chrono::system_clock::now() - begintime);
+        printf("transfer time:%07fs\n", duration.count());
 
+        begintime = std::chrono::system_clock::now();
         //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
         size_t seqId = 0;   //frame
         size_t totalframenum = 0, totalphonenum=0;
@@ -478,8 +486,13 @@ public:
             }
             allUttPhoneSeqs.push_back(phoneSeq);
         }
+
+        duration = (std::chrono::system_clock::now() - begintime);
+        printf("time for get phone frame info:%07fs\n", duration.count());
+        
         // for cpu 
-        m_deviceid_gpu = maxIndexes.GetDeviceId();
+        begintime = std::chrono::system_clock::now();
+        m_deviceid_gpu = mergedinput.GetDeviceId();
         m_deviceid = m_deviceid_gpu;
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneSeqs(CPUDEVICE);
         //Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneBounds(CPUDEVICE);
@@ -509,6 +522,10 @@ public:
             uttBeginForOutputditribution.push_back(totalcol);
             totalcol += uttFrameNum[s] * uttPhoneNum[s];            
         }
+
+        duration = (std::chrono::system_clock::now() - begintime);
+        printf("time for get begin and phone seq:%07fs\n", duration.count());
+        
 
         //compute f+g
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixOutputDistribution(m_deviceid_gpu);
@@ -547,11 +564,16 @@ public:
         logsoftmax.InplaceLogSoftmax(true);*/
         //matrixOutputDistribution.Print("prob");
         // forward backward to compute alpha, beta derivaitves
+        
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid_gpu);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid_gpu);
-        m_derivative.TransferToDeviceIfNotThere(m_deviceid_gpu);
+        //m_derivative.TransferToDeviceIfNotThere(m_deviceid_gpu);
+
+       
+        begintime = std::chrono::system_clock::now();
         mergedinput.AssignRNNTScore(mergedinput, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
             uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, -1,true);
+        
         
         //mergedinput.InplaceExp();
         //m_derivative.AssignElementProductOf(m_derivative, mergedinput);
@@ -559,6 +581,8 @@ public:
         ElemType finalscore = 0;
         //m_derivative.Print("RNNT");
         finalscore =  totalScore.Get00Element();
+        duration = (std::chrono::system_clock::now() - begintime);
+        printf("time for AssignRNNTScore:%07fs\n", duration.count());
         //fprintf(stderr, "finalscore:%f\n", finalscore);
         if (finalscore > 50 || finalscore < 0)
         {

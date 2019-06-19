@@ -2177,6 +2177,7 @@ protected:
     {
         TimingPhase_Forward = 0,
         TimingPhase_Backward,
+        TimingPhase_User,
         TimingPhase_Total
     };
 

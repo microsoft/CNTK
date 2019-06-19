@@ -807,6 +807,7 @@ template <class ElemType>
     {
         "Forward",
         "Backward",
+            "User",
     };
 
     if (timing.profilerName.length() != m_nodeName.length() + strlen(postfixes[phase]))
