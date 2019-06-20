@@ -119,7 +119,7 @@ CNTK_API CNTK_StatusCode CNTK_LoadModel(
 //     device [in]: device descriptor.
 //     model [out]: the resulting loaded model
 //
-CNTK_StatusCode CNTKModelCompiler_LoadModel_FromArray(
+CNTK_StatusCode CNTK_LoadModel_FromArray(
     /*[in]*/ const void* modelData,
     /*[in]*/ int modelDataLen,
     /*[in]*/ const CNTK_DeviceDescriptor* device,

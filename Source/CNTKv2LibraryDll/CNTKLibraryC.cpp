@@ -104,7 +104,7 @@ CNTK_StatusCode CNTK_LoadModel(const char* modelFilePath, const CNTK_DeviceDescr
     return ExceptionCatcher::Call([&]() { *handle = new CNTKEvaluatorWrapper(modelFilePath, device); });
 }
 
-CNTK_StatusCode CNTKModelCompiler_LoadModel_FromArray(const void* modelData, int modelDataLen,
+CNTK_StatusCode CNTK_LoadModel_FromArray(const void* modelData, int modelDataLen,
                                                       const CNTK_DeviceDescriptor* device, CNTK_ModelHandle* handle)
 {
     if (!handle)
