@@ -892,6 +892,8 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_WNorm, matrixPool);
         RequestMatrixFromPool(m_temp1, matrixPool, m_inputDim * m_processNum, true);
+        RequestMatrixFromPool(m_flag, matrixPool, m_inputDim * m_processNum, true);
+        RequestMatrixFromPool(m_tempValue, matrixPool, m_inputDim * m_processNum, true);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
         {
             RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool, m_processNum, true);
@@ -911,6 +913,8 @@ public:
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_temp1, matrixPool);
+        ReleaseMatrixToPool(m_flag, matrixPool);
+        ReleaseMatrixToPool(m_tempValue, matrixPool);
         if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
             ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
     }
