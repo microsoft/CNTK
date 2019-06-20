@@ -32,6 +32,14 @@ namespace CNTK
         CNTKEvaluatorWrapper(modelFilePath, GetDeviceDescriptor(device))
     {}
 
+    CNTKEvaluatorWrapper::CNTKEvaluatorWrapper(const void* modelData, int modelDataLen, DeviceDescriptor device) :
+        CNTKEvaluatorWrapper(Function::Load(static_cast<const char*>(modelData), modelDataLen, device), device)
+    {}
+
+    CNTKEvaluatorWrapper::CNTKEvaluatorWrapper(const void* modelData, int modelDataLen, const CNTK_DeviceDescriptor* device) :
+        CNTKEvaluatorWrapper(modelData, modelDataLen, GetDeviceDescriptor(device))
+    {}
+
     void CNTKEvaluatorWrapper::GetModelArgumentsInfo(CNTK_Variable** inputs, uint32_t* numInputs)
     {
         assert(inputs != nullptr);
