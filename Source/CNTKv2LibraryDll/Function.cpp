@@ -2215,11 +2215,10 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::AdditiveFullConnection, operands, std::move(additionalProperties), name), name);
     }
 
-    FunctionPtr ArcMarginProduct(const Variable& features, const Variable& labels, const Variable& weight, size_t outputDimension, double bias, const std::wstring& name)
+    FunctionPtr ArcMarginProduct(const Variable& features, const Variable& labels, const Variable& weight, double bias, const std::wstring& name)
     {
         std::vector<Variable> operands = { features, labels, weight };
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunctionAttribute::AttributeArcMarginProductOutputDimension] = outputDimension;
         additionalProperties[PrimitiveFunctionAttribute::AttributeArcMarginProductBias] = bias;
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ArcMarginProduct, operands, std::move(additionalProperties), name), name);
     }

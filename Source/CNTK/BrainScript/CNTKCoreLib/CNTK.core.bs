@@ -121,7 +121,7 @@ ArcMarginProductLayer {inputDimension, outputDimension, bias=0, init='glorotUnif
 {
     W = ParameterTensor {_ConcatArrays (outputDimension, inputDimension), init=init, initValueScale=initValueScale}
 
-    apply (labelSequence, outProbVectorSequence) = ArcMarginProduct(labelSequence, outProbVectorSequence, W, outputDimension=outputDimension, bias=bias)
+    apply (labelSequence, outProbVectorSequence) = ArcMarginProduct(labelSequence, outProbVectorSequence, W, bias=bias)
 }.apply
 
 # GlobalConcatLayer -- create a concat layer, which uses temporary global memory to save the output

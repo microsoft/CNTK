@@ -154,7 +154,6 @@ namespace CNTK
         CNTK_API static const std::wstring AttributeAdditiveFullConnectionBiasPower;
         CNTK_API static const std::wstring AttributeAdditiveFullConnectionBiasMin;
         CNTK_API static const std::wstring AttributeAdditiveFullConnectionBiasMax;
-        CNTK_API static const std::wstring AttributeArcMarginProductOutputDimension;
         CNTK_API static const std::wstring AttributeArcMarginProductBias;
         CNTK_API static const std::wstring AttributeCenterLossLambda;
         CNTK_API static const std::wstring AttributeCenterLossAlpha;

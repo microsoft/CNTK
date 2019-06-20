@@ -3803,8 +3803,8 @@ __global__ void _arcLabelAdd(CUDA_LONG outputDimension, const ElemType* label, E
 
     if (value[index] > threshold)
     {
-        value[index] = cosf(acosf(value[index]) + bias);
         x[id] = value[index];
+        value[index] = cosf(acosf(value[index]) + bias);
     }
     else
     {
@@ -3837,7 +3837,7 @@ __global__ void _arcLabelAddBackprop(CUDA_LONG outputDimension, const ElemType* 
     CUDA_LONG labelValue = static_cast<CUDA_LONG>(label[id]);
     CUDA_LONG index = id * outputDimension + labelValue;
 
-    gradient[index] *= cosBias + x[id] * sinBias / (sqrtf(1 - x[id] * x[id]) + 1e-12);
+    gradient[index] *= cosBias + sinBias * x[id] / (sqrtf(1 - x[id] * x[id]) + 1e-12);
 }
 
 template <class ElemType>
@@ -4354,8 +4354,8 @@ __global__ void _distributedArcLabelAdd(const ElemType* labels, const ElemType t
     CUDA_LONG index = id * rows + label - startIndex;
     if (value[index] > threshold)
     {
-        value[index] = cosf(acosf(value[index]) + bias);
         x[id] = value[index];
+        value[index] = cosf(acosf(value[index]) + bias);
     }
     else
     {
@@ -4384,14 +4384,11 @@ __global__ void _distributedArcLabelAddBackprop(const ElemType* labels, const El
         return;
 
     CUDA_LONG label = (CUDA_LONG)labels[id];
-    if (label < startIndex || label > endIndex)
-        return;
-
-    if (flag[id] > 0.5)
+    if (label < startIndex || label > endIndex || flag[id] > 0.5f)
         return;
 
     CUDA_LONG index = id * rows + label - startIndex;
-    gradient[index] *= cosBias + x[id] * sinBias / (sqrtf(1 - x[id] * x[id]) + 1e-12);
+    gradient[index] *= cosBias + sinBias * x[id] / (sqrtf(1 - x[id] * x[id]) + 1e-12);
 }
 
 template <class ElemType>

@@ -1222,9 +1222,8 @@ namespace CNTK
                 }
                 case PrimitiveOpType::ArcMarginProduct:
                 {
-                    auto outputDimension = functionConfig[PrimitiveFunctionAttribute::AttributeArcMarginProductOutputDimension].Value<size_t>();
                     auto bias = functionConfig[PrimitiveFunctionAttribute::AttributeArcMarginProductBias].Value<double>();
-                    ASSIGN_NEW_NODE(ArcMarginProductNode, network->GetDeviceId(), internalNodeName, outputDimension, bias);
+                    ASSIGN_NEW_NODE(ArcMarginProductNode, network->GetDeviceId(), internalNodeName, bias);
                     break;
                 }
                 case PrimitiveOpType::CenterLoss:

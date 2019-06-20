@@ -4359,7 +4359,7 @@ namespace CNTK
 
     CNTK_API FunctionPtr AdditiveFullConnection(const Variable& prediction, const Variable& targets, const Variable& weight, size_t outputDimension, bool weightNormalize, double bias, bool annealBias, double biasBase, double biasGamma, double biasPower, double biasMin, double biasMax, const std::wstring& name = L"");
 
-    CNTK_API FunctionPtr ArcMarginProduct(const Variable& prediction, const Variable& targets, const Variable& weight, size_t outputDimension, double bias, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ArcMarginProduct(const Variable& prediction, const Variable& targets, const Variable& weight, double bias, const std::wstring& name = L"");
 
     CNTK_API FunctionPtr CenterLoss(const Variable& prediction, const Variable& targets, double lambda, double alpha, size_t labelDim, bool normalize, const std::wstring& name = L"");
 

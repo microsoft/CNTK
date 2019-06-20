@@ -5450,8 +5450,8 @@ void CPUMatrix<ElemType>::ArcLabelAdd(const CPUMatrix<ElemType>& label, ElemType
 
         if (valuePtr[index] > threshold)
         {
-            valuePtr[index] = cos(acos(valuePtr[index]) + bias);
             xPtr[i] = valuePtr[index];
+            valuePtr[index] = cos(acos(valuePtr[index]) + bias);
         }
         else
         {
@@ -5478,7 +5478,7 @@ void CPUMatrix<ElemType>::ArcLabelAddBackprop(const CPUMatrix<ElemType>& label, 
         {
             labelValue = static_cast<size_t>(labelPtr[i]);
             size_t index = i * outputDimension + labelValue;
-            gradientPtr[index] *= cosBias + xPtr[i] * sinBias / (sqrt(1 - xPtr[i] * xPtr[i]) + 1e-12);
+            gradientPtr[index] *= cosBias +  sinBias * xPtr[i] / (sqrt(1 - xPtr[i] * xPtr[i]) + 1e-12);
         }
     }
 }
@@ -5843,34 +5843,21 @@ void CPUMatrix<ElemType>::DistributedArcLabelAdd(const CPUMatrix<ElemType>& labe
     ElemType* xPtr = x.Data();
     ElemType* valuePtr = value.Data();
 
-    // four-way unrolling
-    for (long i = 0; i < (cols & ~3); i += 4)
+    for (long i = 0; i < cols; i += 4)
     {
         long index = i * rows + ((long)labelsPtr[i]) - (long)startIndex;
-        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && valuePtr[index] > threshold)
+        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex)
         {
-            valuePtr[index] = cos(acos(valuePtr[index]) + bias);
-            xPtr[i] = valuePtr[index];
-        }
-        else
-        {
-            valuePtr[index] -= bias * sinBias;
-            flagPtr[i] = 1.0f;
-        }
-    }
-    // handle remaining stuffs
-    for (long i = cols & ~3; i < cols; i++)
-    {
-        long index = i * rows + ((long)labelsPtr[i]) - (long)startIndex;
-        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && valuePtr[index] > threshold)
-        {
-            valuePtr[index] = cos(acos(valuePtr[index]) + bias);
-            xPtr[i] = valuePtr[index];
-        }
-        else
-        {
-            valuePtr[index] -= bias * sinBias;
-            flagPtr[i] = 1.0f;
+            if (valuePtr[index] > threshold)
+            {
+                xPtr[i] = valuePtr[index];
+                valuePtr[index] = cos(acos(valuePtr[index]) + bias);
+            }
+            else
+            {
+                valuePtr[index] -= bias * sinBias;
+                flagPtr[i] = 1.0f;
+            }
         }
     }
 }
@@ -5885,20 +5872,11 @@ void CPUMatrix<ElemType>::DistributedArcLabelAddBackprop(const CPUMatrix<ElemTyp
     ElemType* xPtr = x.Data();
     ElemType* gradientPtr = gradient.Data();
 
-    // four-way unrolling
-    for (long i = 0; i < (cols & ~3); i += 4)
+    for (long i = 0; i < cols; i += 4)
     {
-        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && flagPtr[i * rows + ((long)labelsPtr[i]) - startIndex] < 0.5f)
+        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && flagPtr[i] < 0.5f)
         {
-            gradientPtr[i * rows + ((long)labelsPtr[i]) - startIndex] *= cosBias + xPtr[i] * sinBias / (sqrt(1 - xPtr[i] * xPtr[i]) + 1e-12);
-        }
-    }
-    // handle remaining stuffs
-    for (long i = cols & ~3; i < cols; i++)
-    {
-        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && flagPtr[i * rows + ((long)labelsPtr[i]) - startIndex] < 0.5f)
-        {
-            gradientPtr[i * rows + ((long)labelsPtr[i]) - startIndex] *= cosBias + xPtr[i] * sinBias / (sqrt(1 - xPtr[i] * xPtr[i]) + 1e-12);
+            gradientPtr[i * rows + ((long)labelsPtr[i]) - startIndex] *= cosBias + sinBias * xPtr[i] / (sqrt(1 - xPtr[i] * xPtr[i]) + 1e-12);
         }
     }
 }

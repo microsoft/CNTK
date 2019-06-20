@@ -392,7 +392,6 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(ArcMarginProductNode))
                 {
                     auto arcMarginProductNode = node->As<ArcMarginProductNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeArcMarginProductOutputDimension] = arcMarginProductNode->m_outputDimension;
                     primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeArcMarginProductBias] = arcMarginProductNode->m_bias;
 
                     opType = PrimitiveOpType::ArcMarginProduct;

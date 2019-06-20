@@ -918,15 +918,13 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_bias;
-        fstream << m_scale;
+        fstream << m_bias << m_scale;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_bias;
-        fstream >> m_scale;
+        fstream >> m_bias >> m_scale;
 
         if (m_bias < 0 || m_bias >= m_PI)
             LogicError("DistributedArcMarginProductNode: bias(%.8g) not in range [0, PI)", m_bias);
@@ -1693,13 +1691,13 @@ class ArcMarginProductNode : public ComputationNodeNonLooping /*ComputationNode*
 
 public:
     ArcMarginProductNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ArcMarginProductNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputDimension"), configp->Get(L"bias"))
+        : ArcMarginProductNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"bias"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-    ArcMarginProductNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputDimension = 0, double bias = 0.0)
-        : Base(deviceId, name), m_outputDimension(outputDimension), m_bias(bias)
+    ArcMarginProductNode(DEVICEID_TYPE deviceId, const wstring& name, double bias = 0.0)
+        : Base(deviceId, name), m_bias(bias)
     {
         if (m_bias < 0 || m_bias >= m_PI)
             LogicError("ArcMarginProductNode: bias(%.8g) not in range [0, PI)", m_bias);
@@ -1711,11 +1709,10 @@ public:
     virtual void UpdateFunctionMBSize() override
     {
         m_minibatchSize = InputRef(0).Value().GetNumCols();
-
         m_label->Resize(1, m_minibatchSize);
         m_tempValue->Resize(1, m_minibatchSize);
         m_flag->Resize(1, m_minibatchSize);
-        m_weightMagnitude->Resize(m_outputDimension, 1); // Matrix(k,1)
+        m_weightMagnitude->Resize(InputRef(2).Value().GetNumRows(), 1);
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
@@ -1783,7 +1780,6 @@ public:
         {
             auto node = dynamic_pointer_cast<ArcMarginProductNode<ElemType>>(nodeP);
             node->m_minibatchSize   = m_minibatchSize;
-            node->m_outputDimension = m_outputDimension;
             node->m_bias            = m_bias;
             node->m_threshold       = m_threshold;
             node->m_cosBias         = m_cosBias;
@@ -1822,13 +1818,13 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_outputDimension << m_bias;
+        fstream << m_bias;
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_outputDimension >> m_bias;
+        fstream >> m_bias;
 
         if (m_bias < 0 || m_bias >= m_PI)
             LogicError("ArcMarginProductNode: bias(%.8g) not in range [0, PI)", m_bias);
@@ -1837,17 +1833,16 @@ public:
         m_sinBias = sin(m_bias);
     }
 
-    size_t m_minibatchSize;   // m
-    size_t m_outputDimension; // k
+    size_t m_minibatchSize;
     double m_bias;
     double m_threshold;
     double m_cosBias;
     double m_sinBias;
 
-    shared_ptr<Matrix<ElemType>> m_label;           // Matrix(1,m)
-    shared_ptr<Matrix<ElemType>> m_tempValue;       // Matrix(1,m)
-    shared_ptr<Matrix<ElemType>> m_flag;            // Matrix(1,m)
-    shared_ptr<Matrix<ElemType>> m_weightMagnitude; // Matrix(k,1)
+    shared_ptr<Matrix<ElemType>> m_label;
+    shared_ptr<Matrix<ElemType>> m_tempValue;
+    shared_ptr<Matrix<ElemType>> m_flag;
+    shared_ptr<Matrix<ElemType>> m_weightMagnitude;
 };
 
 // Implements Center-Loss as described in:
