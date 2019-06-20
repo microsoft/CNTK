@@ -131,11 +131,12 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(DistributedCrossEntropyWithSoftmaxNode))      return New<DistributedCrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DistributedClassificationErrorNode))          return New<DistributedClassificationErrorNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DistributedAdditiveFullConnectionNode))       return New<DistributedAdditiveFullConnectionNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(DistributedArcMarginProductNode))             return New<DistributedArcMarginProductNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(MarginInnerProductNode))               return New<MarginInnerProductNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(FeatureNormalizeNode))                 return New<FeatureNormalizeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(AdditiveFullConnectionNode))           return New<AdditiveFullConnectionNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ArcMarginProductNode))                 return New<ArcMarginProductNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CenterLossNode))                       return New<CenterLossNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ChannelMultiplyNode))                  return New<ChannelMultiplyNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(GlobalConcatNode))                     return New<GlobalConcatNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(LogisticNode))                         return New<LogisticNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SumColumnElementsNode))                return New<SumColumnElementsNode<ElemType>>(forward<_Types>(_Args)...);
@@ -519,6 +520,12 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Distr
 }
 
 template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DistributedArcMarginProduct(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, ElemType bias, ElemType scale, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<DistributedArcMarginProductNode<ElemType>>(net.GetDeviceId(), nodeName, bias, scale), { a, b, c });
+}
+
+template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::MarginInnerProduct(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, size_t outputDimension, ElemType base, ElemType gamma, ElemType power, ElemType lambdaMin, size_t marginCoefficient, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<MarginInnerProductNode<ElemType>>(net.GetDeviceId(), nodeName, outputDimension, base, gamma, power, lambdaMin, marginCoefficient), {a, b, c});
@@ -537,15 +544,15 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Addit
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CenterLoss(const ComputationNodePtr a, const ComputationNodePtr b, double lambda, double alpha, size_t labelDim, bool normalize, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ArcMarginProduct(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, size_t outputDimension, ElemType bias, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<CenterLossNode<ElemType>>(net.GetDeviceId(), nodeName, lambda, alpha, labelDim, normalize), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<ArcMarginProductNode<ElemType>>(net.GetDeviceId(), nodeName, outputDimension, bias), { a, b, c });
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ChannelMultiply(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CenterLoss(const ComputationNodePtr a, const ComputationNodePtr b, double lambda, double alpha, size_t labelDim, bool normalize, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<CenterLossNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<CenterLossNode<ElemType>>(net.GetDeviceId(), nodeName, lambda, alpha, labelDim, normalize), { a, b });
 }
 
 template <class ElemType>

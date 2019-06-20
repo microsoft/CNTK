@@ -361,6 +361,10 @@ template class DistributedAdditiveFullConnectionNode<float>;
 template class DistributedAdditiveFullConnectionNode<double>;
 template class DistributedAdditiveFullConnectionNode<half>;
 
+template class DistributedArcMarginProductNode<float>;
+template class DistributedArcMarginProductNode<double>;
+template class DistributedArcMarginProductNode<half>;
+
 template class MarginInnerProductNode<float>;
 template class MarginInnerProductNode<double>;
 template class MarginInnerProductNode<half>;
@@ -373,13 +377,13 @@ template class AdditiveFullConnectionNode<float>;
 template class AdditiveFullConnectionNode<double>;
 template class AdditiveFullConnectionNode<half>;
 
+template class ArcMarginProductNode<float>;
+template class ArcMarginProductNode<double>;
+template class ArcMarginProductNode<half>;
+
 template class CenterLossNode<float>;
 template class CenterLossNode<double>;
 template class CenterLossNode<half>;
-
-template class ChannelMultiplyNode<float>;
-template class ChannelMultiplyNode<double>;
-template class ChannelMultiplyNode<half>;
 
 template class GlobalMemoryBlock<float>;
 template class GlobalMemoryBlock<double>;

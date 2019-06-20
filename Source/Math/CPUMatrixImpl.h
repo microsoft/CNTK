@@ -5430,6 +5430,61 @@ void CPUMatrix<ElemType>::LabelAdd(const CPUMatrix<ElemType>& label, ElemType bi
 
 #pragma endregion
 
+#pragma region ArcMarginProduct
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ArcLabelAdd(const CPUMatrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& value)
+{
+    size_t minibatchSize = value.GetNumCols();
+    size_t outputDimension = value.GetNumRows();
+    size_t labelValue;
+    ElemType* labelPtr = label.Data();
+    ElemType* flagPtr = flag.Data();
+    ElemType* xPtr = x.Data();
+    ElemType* valuePtr = value.Data();
+
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        labelValue = static_cast<size_t>(labelPtr[i]);
+        size_t index = i * outputDimension + labelValue;
+
+        if (valuePtr[index] > threshold)
+        {
+            valuePtr[index] = cos(acos(valuePtr[index]) + bias);
+            xPtr[i] = valuePtr[index];
+        }
+        else
+        {
+            valuePtr[index] -= bias * sinBias;
+            flagPtr[i] = 1.0f;
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::ArcLabelAddBackprop(const CPUMatrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& gradient)
+{
+    size_t minibatchSize = gradient.GetNumCols();
+    size_t outputDimension = gradient.GetNumRows();
+    size_t labelValue;
+    ElemType* labelPtr = label.Data();
+    ElemType* flagPtr = flag.Data();
+    ElemType* xPtr = x.Data();
+    ElemType* gradientPtr = gradient.Data();
+
+    for (size_t i(0); i < minibatchSize; ++i)
+    {
+        if (flagPtr[i] < 0.5f)
+        {
+            labelValue = static_cast<size_t>(labelPtr[i]);
+            size_t index = i * outputDimension + labelValue;
+            gradientPtr[index] *= cosBias + xPtr[i] * sinBias / (sqrt(1 - xPtr[i] * xPtr[i]) + 1e-12);
+        }
+    }
+}
+
+#pragma endregion
+
 #pragma region CenterLoss
 
 template <class ElemType>
@@ -5452,57 +5507,6 @@ void CPUMatrix<ElemType>::ClassCount(const CPUMatrix<ElemType>& label, const CPU
     {
         size_t id = labelPtr[i];
         counterPtr[i] = mp[id];
-    }
-}
-
-#pragma endregion
-
-#pragma region SqueezeAndExcitation
-
-template <class ElemType>
-void CPUMatrix<ElemType>::ChannelMultiply(const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight, CPUMatrix<ElemType>& value, size_t featureSize)
-{
-    long n = (long)X.GetNumCols();
-    long m = (long)X.GetNumRows();
-
-#pragma omp parallel for
-    for (long j = 0; j < n; j++)
-    {
-        // four-way unrolling
-        for (long i = 0; i < (m & ~3); i += 4)
-        {
-            value(i, j) = X(i, j) * weight(i / featureSize, j);
-            value(i + 1, j) = X(i + 1, j) * weight((i + 1) / featureSize, j);
-            value(i + 2, j) = X(i + 2, j) * weight((i + 2) / featureSize, j);
-            value(i + 3, j) = X(i + 3, j) * weight((i + 3) / featureSize, j);
-        }
-        // handle remaining stuffs
-        for (long i = m & ~3; i < m; i++)
-        {
-            value(i, j) = X(i, j) * weight(i / featureSize, j);
-        }
-    }
-}
-
-template <class ElemType>
-void CPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& X, CPUMatrix<ElemType>& weight_gradient, size_t featureSize)
-{
-    long n = (long)X.GetNumCols();
-    long m = (long)X.GetNumRows();
-
-#pragma omp parallel for
-    for (long j = 0; j < n; j++)
-    {
-        // four-way unrolling
-        for (long i = 0; i < (m & ~3); i += 4)
-        {
-            weight_gradient(i / featureSize, j) += gradient(i, j) * X(i, j);
-        }
-        // handle remaining stuffs
-        for (long i = m & ~3; i < m; i++)
-        {
-            weight_gradient(i / featureSize, j) += gradient(i, j) * X(i, j);
-        }
     }
 }
 
@@ -5826,6 +5830,76 @@ void CPUMatrix<ElemType>::DistributedLabelAdd(const CPUMatrix<ElemType>& labels,
     {
         if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && valuePtr[i * rows + ((long)labelsPtr[i]) - startIndex] > -bias)
             valuePtr[i * rows + ((long)labelsPtr[i]) - startIndex] += bias;
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::DistributedArcLabelAdd(const CPUMatrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    long cols = (long)value.GetNumCols();
+    long rows = (long)value.GetNumRows();
+    ElemType* labelsPtr = labels.Data();
+    ElemType* flagPtr = flag.Data();
+    ElemType* xPtr = x.Data();
+    ElemType* valuePtr = value.Data();
+
+    // four-way unrolling
+    for (long i = 0; i < (cols & ~3); i += 4)
+    {
+        long index = i * rows + ((long)labelsPtr[i]) - (long)startIndex;
+        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && valuePtr[index] > threshold)
+        {
+            valuePtr[index] = cos(acos(valuePtr[index]) + bias);
+            xPtr[i] = valuePtr[index];
+        }
+        else
+        {
+            valuePtr[index] -= bias * sinBias;
+            flagPtr[i] = 1.0f;
+        }
+    }
+    // handle remaining stuffs
+    for (long i = cols & ~3; i < cols; i++)
+    {
+        long index = i * rows + ((long)labelsPtr[i]) - (long)startIndex;
+        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && valuePtr[index] > threshold)
+        {
+            valuePtr[index] = cos(acos(valuePtr[index]) + bias);
+            xPtr[i] = valuePtr[index];
+        }
+        else
+        {
+            valuePtr[index] -= bias * sinBias;
+            flagPtr[i] = 1.0f;
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::DistributedArcLabelAddBackprop(const CPUMatrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& gradient, size_t startIndex, size_t endIndex)
+{
+    long cols = (long)gradient.GetNumCols();
+    long rows = (long)gradient.GetNumRows();
+    ElemType* labelsPtr = labels.Data();
+    ElemType* flagPtr = flag.Data();
+    ElemType* xPtr = x.Data();
+    ElemType* gradientPtr = gradient.Data();
+
+    // four-way unrolling
+    for (long i = 0; i < (cols & ~3); i += 4)
+    {
+        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && flagPtr[i * rows + ((long)labelsPtr[i]) - startIndex] < 0.5f)
+        {
+            gradientPtr[i * rows + ((long)labelsPtr[i]) - startIndex] *= cosBias + xPtr[i] * sinBias / (sqrt(1 - xPtr[i] * xPtr[i]) + 1e-12);
+        }
+    }
+    // handle remaining stuffs
+    for (long i = cols & ~3; i < cols; i++)
+    {
+        if (labelsPtr[i] >= startIndex && labelsPtr[i] <= endIndex && flagPtr[i * rows + ((long)labelsPtr[i]) - startIndex] < 0.5f)
+        {
+            gradientPtr[i * rows + ((long)labelsPtr[i]) - startIndex] *= cosBias + xPtr[i] * sinBias / (sqrt(1 - xPtr[i] * xPtr[i]) + 1e-12);
+        }
     }
 }
 

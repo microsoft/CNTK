@@ -347,6 +347,14 @@ namespace CNTK
 
                     opType = PrimitiveOpType::DistributedAdditiveFullConnection;
                 }
+                else if (node->OperationName() == OperationNameOf(DistributedArcMarginProductNode))
+                {
+                    auto distributedArcMarginProductNode = node->As<DistributedArcMarginProductNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeDistributedArcMarginProductBias] = distributedArcMarginProductNode->m_bias;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeDistributedArcMarginProductScale] = distributedArcMarginProductNode->m_scale;
+
+                    opType = PrimitiveOpType::DistributedArcMarginProduct;
+                }
                 else if (node->OperationName() == OperationNameOf(MarginInnerProductNode))
                 {
                     auto marginInnerProductNode = node->As<MarginInnerProductNode<ElementType>>();
@@ -381,6 +389,14 @@ namespace CNTK
 
                     opType = PrimitiveOpType::AdditiveFullConnection;
                 }
+                else if (node->OperationName() == OperationNameOf(ArcMarginProductNode))
+                {
+                    auto arcMarginProductNode = node->As<ArcMarginProductNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeArcMarginProductOutputDimension] = arcMarginProductNode->m_outputDimension;
+                    primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeArcMarginProductBias] = arcMarginProductNode->m_bias;
+
+                    opType = PrimitiveOpType::ArcMarginProduct;
+                }
                 else if (node->OperationName() == OperationNameOf(CenterLossNode))
                 {
                     auto centerLossNode = node->As<CenterLossNode<ElementType>>();
@@ -391,8 +407,6 @@ namespace CNTK
 
                     opType = PrimitiveOpType::CenterLoss;
                 }
-                else if (node->OperationName() == OperationNameOf(ChannelMultiplyNode))
-                    opType = PrimitiveOpType::ChannelMultiply;
                 else if (node->OperationName() == OperationNameOf(GlobalConcatNode))
                 {
                     auto globalConcatNode = node->As<GlobalConcatNode<ElementType>>();

@@ -628,17 +628,17 @@ public:
 
 #pragma endregion
 
-#pragma region CenterLoss
+#pragma region ArcMarginProduct
 
-    static void ClassCount(const Matrix<ElemType>& label, const Matrix<ElemType>& counter);
+    static void ArcLabelAdd(const Matrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& value);
+
+    static void ArcLabelAddBackprop(const Matrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& gradient);
 
 #pragma endregion
 
-#pragma region SqueezeAndExcitation
+#pragma region CenterLoss
 
-    static void ChannelMultiply(const Matrix<ElemType>& X, const Matrix<ElemType>& weight, const Matrix<ElemType>& value, size_t featureSize);
-
-    static void ChannelMultiplyScaleBackprop(const Matrix<ElemType>& gradient, const Matrix<ElemType>& X, const Matrix<ElemType>& weight_gradient, const Matrix<ElemType>& buffer, size_t featureSize, size_t N);
+    static void ClassCount(const Matrix<ElemType>& label, const Matrix<ElemType>& counter);
 
 #pragma endregion
 
@@ -673,6 +673,10 @@ public:
     static void DistributedAssignClassificationError(const Matrix<ElemType>& labels, const Matrix<ElemType>& probs, const Matrix<ElemType>& maxProb, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex);
 
     static void DistributedLabelAdd(const Matrix<ElemType>& labels, ElemType bias, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedArcLabelAdd(const Matrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedArcLabelAddBackprop(const Matrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& gradient, size_t startIndex, size_t endIndex);
 
 #pragma endregion
 

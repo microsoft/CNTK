@@ -3765,14 +3765,14 @@ template <class ElemType>
 __global__ void _labelAdd(CUDA_LONG outputDimension, const ElemType* label, ElemType bias, ElemType* value, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
-    if (id < numElements)
-    {
-        CUDA_LONG labelValue = static_cast<CUDA_LONG>(label[id]);
-        CUDA_LONG index = id * outputDimension + labelValue;
-        if (value[index] <= -bias)
-            return;
-        value[index] += bias;
-    }
+    if (id >= numElements)
+        return;
+
+    CUDA_LONG labelValue = static_cast<CUDA_LONG>(label[id]);
+    CUDA_LONG index = id * outputDimension + labelValue;
+    if (value[index] <= -bias)
+        return;
+    value[index] += bias;
 }
 
 template <class ElemType>
@@ -3789,6 +3789,70 @@ void GPUMatrix<ElemType>::LabelAdd(const GPUMatrix<ElemType>& label, ElemType bi
 
 #pragma endregion
 
+#pragma region CenterLoss
+
+template <class ElemType>
+__global__ void _arcLabelAdd(CUDA_LONG outputDimension, const ElemType* label, ElemType threshold, ElemType bias, ElemType sinBias, ElemType* flag, ElemType* x, ElemType* value, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id >= numElements)
+        return;
+
+    CUDA_LONG labelValue = static_cast<CUDA_LONG>(label[id]);
+    CUDA_LONG index = id * outputDimension + labelValue;
+
+    if (value[index] > threshold)
+    {
+        value[index] = cosf(acosf(value[index]) + bias);
+        x[id] = value[index];
+    }
+    else
+    {
+        value[index] -= bias * sinBias;
+        flag[id] = 1.0f;
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ArcLabelAdd(const GPUMatrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& value)
+{
+    CUDA_LONG minibatchSize = (CUDA_LONG)value.GetNumCols();
+    CUDA_LONG outputDimension = (CUDA_LONG)value.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * minibatchSize / GridDim::maxThreadsPerBlock);
+    label.PrepareDevice();
+    SyncGuard syncGuard;
+    _arcLabelAdd<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (outputDimension, label.Data(), threshold, bias, sinBias, flag.Data(), x.Data(), value.Data(), minibatchSize);
+}
+
+template <class ElemType>
+__global__ void _arcLabelAddBackprop(CUDA_LONG outputDimension, const ElemType* label, ElemType cosBias, ElemType sinBias, ElemType* flag, ElemType* x, ElemType* gradient, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id >= numElements)
+        return;
+    if (flag[id] > 0.5f)
+        return;
+
+    CUDA_LONG labelValue = static_cast<CUDA_LONG>(label[id]);
+    CUDA_LONG index = id * outputDimension + labelValue;
+
+    gradient[index] *= cosBias + x[id] * sinBias / (sqrtf(1 - x[id] * x[id]) + 1e-12);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ArcLabelAddBackprop(const GPUMatrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& gradient)
+{
+    CUDA_LONG minibatchSize = (CUDA_LONG)gradient.GetNumCols();
+    CUDA_LONG outputDimension = (CUDA_LONG)gradient.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * minibatchSize / GridDim::maxThreadsPerBlock);
+    label.PrepareDevice();
+    SyncGuard syncGuard;
+    _arcLabelAddBackprop<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (outputDimension, label.Data(), cosBias, sinBias, flag.Data(), x.Data(), gradient.Data(), minibatchSize);
+}
+
+#pragma endregion
 
 #pragma region CenterLoss
 
@@ -3814,68 +3878,6 @@ void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPU
     SyncGuard syncGuard;
     GridDim grid(minibatchSize);
     _classCount<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(minibatchSize, label.Data(), counter.Data());
-}
-
-#pragma endregion
-
-#pragma region SqueezeAndExcitation
-
-template <class ElemType>
-__global__ void _channelMultiply(const ElemType* X, const ElemType* weight, ElemType* value, CUDA_LONG featureSize, const CUDA_LONG numElements)
-{
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    if (id >= numElements)
-        return;
-
-    value[id] = X[id] * weight[id / featureSize];
-}
-
-template <class ElemType>
-void GPUMatrix<ElemType>::ChannelMultiply(const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight, const GPUMatrix<ElemType>& value, size_t featureSize)
-{
-    CUDA_LONG numElements = X.GetNumElements();
-
-    SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _channelMultiply<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(X.Data(), weight.Data(), value.Data(), (CUDA_LONG)featureSize, numElements);
-}
-
-template <class ElemType>
-__global__ void _channelMultiplyScaleBackprop(const ElemType* gradient, const ElemType* X, ElemType* weight_gradient, ElemType* buffer, CUDA_LONG featureSize, CUDA_LONG N, const CUDA_LONG numElements)
-{
-    CUDA_LONG id = GridDim::GetLinearThreadId();
-    if (id < numElements)
-    {
-        CUDA_LONG i = id / featureSize; // Channel i
-        CUDA_LONG j = id % featureSize; // Element j
-
-        if (j < N)
-            buffer[id] = gradient[id] * X[id];
-        __syncthreads();
-        if (j >= N)
-            buffer[id - N] += gradient[id] * X[id];
-        __syncthreads();
-
-        for (CUDA_LONG k = N >> 1; k > 0; k >>= 1)
-        {
-            if (j < k)
-                buffer[id] += buffer[id + k];
-            __syncthreads();
-        }
-
-        if (0 == j)
-            weight_gradient[i] = buffer[id];
-    }
-}
-
-template <class ElemType>
-void GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight_gradient, const GPUMatrix<ElemType>& buffer, size_t featureSize, size_t N)
-{
-    CUDA_LONG numElements = gradient.GetNumElements();
-
-    SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _channelMultiplyScaleBackprop<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(gradient.Data(), X.Data(), weight_gradient.Data(), buffer.Data(), (CUDA_LONG)featureSize, (CUDA_LONG)N, numElements);
 }
 
 #pragma endregion
@@ -4318,9 +4320,7 @@ __global__ void _distributedLabelAdd(const ElemType* labels, ElemType bias, Elem
         return;
 
     CUDA_LONG label = (CUDA_LONG)labels[id];
-    if (label < startIndex)
-        return;
-    if (label > endIndex)
+    if (label < startIndex || label > endIndex)
         return;
     if (value[id * rows + label - startIndex] <= -bias)
         return;
@@ -4338,6 +4338,72 @@ void GPUMatrix<ElemType>::DistributedLabelAdd(const GPUMatrix<ElemType>& labels,
     labels.PrepareDevice();
     SyncGuard syncGuard;
     _distributedLabelAdd<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (labels.Data(), bias, value.Data(), rows, (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, cols);
+}
+
+template <class ElemType>
+__global__ void _distributedArcLabelAdd(const ElemType* labels, const ElemType threshold, const ElemType bias, const ElemType sinBias, ElemType* flag, ElemType* x, ElemType* value, CUDA_LONG rows, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    CUDA_LONG label = (CUDA_LONG)labels[id];
+    if (label < startIndex || label > endIndex)
+        return;
+
+    CUDA_LONG index = id * rows + label - startIndex;
+    if (value[index] > threshold)
+    {
+        value[index] = cosf(acosf(value[index]) + bias);
+        x[id] = value[index];
+    }
+    else
+    {
+        value[index] -= bias * sinBias;
+        flag[id] = 1.0f;
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedArcLabelAdd(const GPUMatrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    CUDA_LONG cols = value.GetNumCols();
+    CUDA_LONG rows = value.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * cols / GridDim::maxThreadsPerBlock);
+    labels.PrepareDevice();
+    SyncGuard syncGuard;
+    _distributedArcLabelAdd<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (labels.Data(), threshold, bias, sinBias, flag.Data(), x.Data(), value.Data(), rows, (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, cols);
+}
+
+template <class ElemType>
+__global__ void _distributedArcLabelAddBackprop(const ElemType* labels, const ElemType cosBias, const ElemType sinBias, ElemType* flag, ElemType* x, ElemType* gradient, CUDA_LONG rows, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    CUDA_LONG label = (CUDA_LONG)labels[id];
+    if (label < startIndex || label > endIndex)
+        return;
+
+    if (flag[id] > 0.5)
+        return;
+
+    CUDA_LONG index = id * rows + label - startIndex;
+    gradient[index] *= cosBias + x[id] * sinBias / (sqrtf(1 - x[id] * x[id]) + 1e-12);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedArcLabelAddBackprop(const GPUMatrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& gradient, size_t startIndex, size_t endIndex)
+{
+    CUDA_LONG cols = gradient.GetNumCols();
+    CUDA_LONG rows = gradient.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * cols / GridDim::maxThreadsPerBlock);
+    labels.PrepareDevice();
+    SyncGuard syncGuard;
+    _distributedArcLabelAddBackprop<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (labels.Data(), cosBias, sinBias, flag.Data(), x.Data(), gradient.Data(), rows, (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, cols);
 }
 
 #pragma endregion

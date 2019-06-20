@@ -1729,7 +1729,7 @@ protected:
             {
                 rows = GetSampleMatrixNumRows();
                 cols = GetSampleMatrixNumCols();
-                if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection")
+                if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection" || OperationName() == L"DistributedArcMarginProduct")
                     cols *= Globals::GetProcessNum();
             }
             else
@@ -1856,7 +1856,7 @@ public:
         size_t matrixSize = m_sampleLayout.GetNumElements();
         if (IsValueSharable() && !m_isValueSparse)
         {
-            if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection")
+            if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection" || OperationName() == L"DistributedArcMarginProduct")
                 matrixSize *= Globals::GetProcessNum();
             RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
         }
@@ -1897,7 +1897,7 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         size_t matrixSize = m_sampleLayout.GetNumElements();
-        if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection")
+        if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection" || OperationName() == L"DistributedArcMarginProduct")
             matrixSize *= Globals::GetProcessNum();
         RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout(), /*isWorkSpace*/false, ParentGradientReused() || IsGradientReused());
 

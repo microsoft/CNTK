@@ -31,6 +31,7 @@ static const wstring RandomDistributionTypeGumbel    = L"gumbel";
 static const wstring RandomDistributionTypeBernoulli = L"bernoulli";
 
 
+static const double m_PI = acos(-1.0);
 // Distributed fully connected layer (Y = W'X + b)
 // Input(0): W, Input(1): X, Input(2): b
 // Output is not decomposed
@@ -736,6 +737,222 @@ public:
     shared_ptr<Matrix<ElemType>> m_WNorm;
 };
 
+// Distributed additive angular margin product layer
+// Input(0): labels, Input(1): W, Input(2): X
+// Input and output are both decomposed
+template <class ElemType>
+class DistributedArcMarginProductNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"DistributedArcMarginProduct";
+    }
+
+public:
+    DistributedArcMarginProductNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : DistributedArcMarginProductNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"bias"), configp->Get(L"scale"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    DistributedArcMarginProductNode(DEVICEID_TYPE deviceId, const wstring& name, double bias = 0.0, double scale = 1.0)
+        : Base(deviceId, name), m_bias(bias), m_scale(scale), m_rank(Globals::GetRank()), m_processNum(Globals::GetProcessNum()), m_minibatchSize(0), m_distGradAggPtr(NULL)
+    {
+        if (m_bias < 0 || m_bias >= m_PI)
+            LogicError("DistributedArcMarginProductNode: bias(%.8g) not in range [0, PI)", m_bias);
+        m_threshold = cos(m_PI - m_bias);
+        m_cosBias = cos(m_bias);
+        m_sinBias = sin(m_bias);
+#ifdef CPUONLY
+        LogicError("CPUONLY is not supported in DistributedArcMarginProductNode.");
+#endif
+    }
+
+    ~DistributedArcMarginProductNode()
+    {
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            DistributedGatheredLabels<ElemType>::initializeNodePtr = NULL;
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        size_t minibatchSize = InputRef(0).Value().GetNumCols();
+        if (m_minibatchSize != minibatchSize)
+        {
+            if (1 == m_processNum)
+                LogicError("Multi Gpus and mpi is needed in distributed FC.");
+            m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
+            bool minibatchSizeEqual = m_distGradAggPtr->DistributedCheck(m_minibatchSize, m_processNum);
+            if (!minibatchSizeEqual)
+                LogicError("With AllGather op, minibatch size in each Gpu must be the same.");
+            m_minibatchSize = minibatchSize;
+            m_batchSize = m_minibatchSize * m_processNum;
+        }
+        m_temp1->Resize(m_inputDim, m_batchSize);                 // Aggregated X
+        m_tempValue->Resize(1, m_batchSize);
+        m_flag->Resize(1, m_batchSize);
+        m_WNorm->Resize(1, m_outputDim);
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            DistributedGatheredLabels<ElemType>::setMinibatchSize(m_minibatchSize);
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (1 == inputIndex)      // for W
+        {
+            Matrix<ElemType>::DistributedArcLabelAddBackprop(*DistributedGatheredLabels<ElemType>::m_gatheredLabels, (ElemType)m_cosBias, (ElemType)m_sinBias, *m_flag, *m_tempValue, Gradient(), m_outputDim * m_rank, m_outputDim * (m_rank + 1) - 1);
+
+            Matrix<ElemType>::Scale((ElemType)m_scale, Gradient());
+            auto& W_gradient = InputRef(1).Gradient();
+            Matrix<ElemType>::Multiply(*m_temp1, false, Gradient(), true, W_gradient);
+        }
+        else if (2 == inputIndex) // for X
+        {
+            auto& W = InputRef(1).Value();
+            Matrix<ElemType>::Multiply(W, false, Gradient(), false, *m_temp1);
+            m_distGradAggPtr->DistributedAllReduce(*m_temp1, MPI_SUM);
+            auto& X_gradient = InputRef(2).Gradient();
+            X_gradient.SetValue(m_temp1->ColumnSlice(m_minibatchSize * m_rank, m_minibatchSize));
+        }
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        auto& W = InputRef(1).Value();
+        auto& X = InputRef(2).Value();
+        W.VectorNorm2(*m_WNorm, true);
+        W.RowElementDivideBy(*m_WNorm);
+
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            DistributedGatheredLabels<ElemType>::gatherDistributedLabels(InputRef(0).Value());
+        m_distGradAggPtr->DistributedAllGather(X, *m_temp1, m_inputDim * m_minibatchSize);
+        Matrix<ElemType>::Multiply(W, true, *m_temp1, false, Value());
+        if (Environment().IsTraining())
+        {
+            m_flag->SetValue(0);
+            Matrix<ElemType>::DistributedArcLabelAdd(*DistributedGatheredLabels<ElemType>::m_gatheredLabels, (ElemType)m_threshold, (ElemType)m_bias, (ElemType)m_sinBias, *m_flag, *m_tempValue, Value(), m_outputDim * m_rank, m_outputDim * (m_rank + 1) - 1);
+        }
+        Matrix<ElemType>::Scale((ElemType)m_scale, Value());
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        if (0 == childIndex) // for labels
+            return false;
+        else if (1 == childIndex) // for W
+            return true;
+        else // for X
+            return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        m_inputDim = InputRef(1).Value().GetNumRows();
+        m_outputDim = InputRef(1).Value().GetNumCols();
+        SetDims(TensorShape(m_outputDim), HasMBLayout());
+
+        DistributedGatheredLabels<ElemType>::setInitializeNode(this);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<DistributedArcMarginProductNode<ElemType>>(nodeP);
+            node->m_rank           = m_rank;
+            node->m_processNum     = m_processNum;
+            node->m_inputDim       = m_inputDim;
+            node->m_outputDim      = m_outputDim;
+            node->m_minibatchSize  = m_minibatchSize;
+            node->m_batchSize      = m_batchSize;
+            node->m_bias           = m_bias;
+            node->m_threshold      = m_threshold;
+            node->m_cosBias        = m_cosBias;
+            node->m_sinBias        = m_sinBias;
+            node->m_scale          = m_scale;
+            node->m_distGradAggPtr = m_distGradAggPtr;
+            node->m_temp1->SetValue(*m_temp1);
+            node->m_tempValue->SetValue(*m_tempValue);
+            node->m_flag->SetValue(*m_flag);
+        }
+    }
+
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_WNorm, matrixPool);
+        RequestMatrixFromPool(m_temp1, matrixPool, m_inputDim * m_processNum, true);
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+        {
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool, m_processNum, true);
+            RequestMatrixFromPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool, 1, true);
+        }
+    }
+
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_WNorm, matrixPool);
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_labels, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_temp1, matrixPool);
+        if (DistributedGatheredLabels<ElemType>::isInitializeNode(this))
+            ReleaseMatrixToPool(DistributedGatheredLabels<ElemType>::m_gatheredLabels, matrixPool);
+    }
+
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_bias;
+        fstream << m_scale;
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_bias;
+        fstream >> m_scale;
+
+        if (m_bias < 0 || m_bias >= m_PI)
+            LogicError("DistributedArcMarginProductNode: bias(%.8g) not in range [0, PI)", m_bias);
+        m_threshold = cos(m_PI - m_bias);
+        m_cosBias = cos(m_bias);
+        m_sinBias = sin(m_bias);
+    }
+
+    size_t m_rank;
+    size_t m_processNum;
+    size_t m_inputDim;
+    size_t m_outputDim;
+    size_t m_minibatchSize;
+    size_t m_batchSize;
+    double m_bias;
+    double m_threshold;
+    double m_cosBias;
+    double m_sinBias;
+    double m_scale;
+    IDistGradAggregator<ElemType>* m_distGradAggPtr;
+    shared_ptr<Matrix<ElemType>> m_temp1;
+    shared_ptr<Matrix<ElemType>> m_tempValue; // Matrix(1, m_batchSize)
+    shared_ptr<Matrix<ElemType>> m_flag;      // Matrix(1, m_batchSize)
+    shared_ptr<Matrix<ElemType>> m_WNorm;
+};
+
 // Implements A-Softmax as described in:
 // SphereFace: DeepHypersphereEmbeddingforFaceRecognition [Weiyang Liu, Yandong Wen, Zhiding Yu, Ming Li, Bhiksha Raj, Le Song]
 // https://arxiv.org/abs/1704.08063
@@ -1146,9 +1363,6 @@ public:
     shared_ptr<Matrix<ElemType>> m_tempMatrix; // Matrix(k,m)
 };
 
-// Implements AM-Softmax as described in:
-// Additive Margin Softmax for Face Verification [Feng Wang, Weiyang Liu, Haijun Liu, Jian Cheng]
-// https://arxiv.org/abs/1801.05599
 template <class ElemType>
 class FeatureNormalizeNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<1>
 {
@@ -1269,6 +1483,9 @@ public:
     shared_ptr<Matrix<ElemType>> m_temp1;     // Matrix(1, minibatchSize)
 };
 
+// Implements AM-Softmax as described in:
+// Additive Margin Softmax for Face Verification [Feng Wang, Weiyang Liu, Haijun Liu, Jian Cheng]
+// https://arxiv.org/abs/1801.05599
 template <class ElemType>
 class AdditiveFullConnectionNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
 {
@@ -1461,6 +1678,178 @@ public:
     shared_ptr<Matrix<ElemType>> m_weightMagnitude; // Matrix(k,1)
 };
 
+// Implements additive angular margin product as described in:
+// ArcFace: Additive Angular Margin Loss for Deep Face Recognition [Jiankang Deng, Jia Guo, Niannan Xue, Stefanos Zafeiriou]
+// https://arxiv.org/abs/1801.07698
+template <class ElemType>
+class ArcMarginProductNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ArcMarginProduct";
+    }
+
+public:
+    ArcMarginProductNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ArcMarginProductNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputDimension"), configp->Get(L"bias"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    ArcMarginProductNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputDimension = 0, double bias = 0.0)
+        : Base(deviceId, name), m_outputDimension(outputDimension), m_bias(bias)
+    {
+        if (m_bias < 0 || m_bias >= m_PI)
+            LogicError("ArcMarginProductNode: bias(%.8g) not in range [0, PI)", m_bias);
+        m_threshold = cos(m_PI - m_bias);
+        m_cosBias = cos(m_bias);
+        m_sinBias = sin(m_bias);
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        m_minibatchSize = InputRef(0).Value().GetNumCols();
+
+        m_label->Resize(1, m_minibatchSize);
+        m_tempValue->Resize(1, m_minibatchSize);
+        m_flag->Resize(1, m_minibatchSize);
+        m_weightMagnitude->Resize(m_outputDimension, 1); // Matrix(k,1)
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (1 == inputIndex)
+        {
+            Matrix<ElemType>::ArcLabelAddBackprop(*m_label, (ElemType)m_cosBias, (ElemType)m_sinBias, *m_flag, *m_tempValue, Gradient());
+
+            FrameRange fr(InputRef(1).GetMBLayout());
+            auto X_gradient = InputRef(1).GradientFor(fr);
+            auto& weight = InputRef(2).Value();
+            Matrix<ElemType>::Multiply(weight, true, Gradient(), false, X_gradient);
+        }
+        else if (2 == inputIndex)
+        {
+            FrameRange fr(InputRef(1).GetMBLayout());
+            auto X = InputRef(1).ValueFor(fr);
+            auto& weightGradient = InputRef(2).Gradient();
+            Matrix<ElemType>::Multiply(Gradient(), false, X, true, weightGradient);
+        }
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        InputRef(0).MaskedValueFor(fr).VectorMax(*m_label, *m_tempValue, true /*isColWise*/);
+        auto X = InputRef(1).ValueFor(fr);
+        auto& weight = InputRef(2).Value();
+
+        weight.VectorNorm2(*m_weightMagnitude, false);
+        weight.ColumnElementDivideBy(*m_weightMagnitude);
+
+        Matrix<ElemType>::Multiply(weight, false, X, false, Value());
+
+        if (Environment().IsTraining())
+        {
+            m_flag->SetValue(0);
+            Matrix<ElemType>::ArcLabelAdd(*m_label, (ElemType)m_threshold, (ElemType)m_bias, (ElemType)m_sinBias, *m_flag, *m_tempValue, Value());
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        if (0 == childIndex)
+            return false;
+        return true;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        SetDims(TensorShape(InputRef(2).Value().GetNumRows()), HasMBLayout());
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<ArcMarginProductNode<ElemType>>(nodeP);
+            node->m_minibatchSize   = m_minibatchSize;
+            node->m_outputDimension = m_outputDimension;
+            node->m_bias            = m_bias;
+            node->m_threshold       = m_threshold;
+            node->m_cosBias         = m_cosBias;
+            node->m_sinBias         = m_sinBias;
+            node->m_label->SetValue(*m_label);
+            node->m_tempValue->SetValue(*m_tempValue);
+            node->m_flag->SetValue(*m_flag);
+            node->m_weightMagnitude->SetValue(*m_weightMagnitude);
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_label, matrixPool, 1, true, true, false);
+        RequestMatrixFromPool(m_tempValue, matrixPool, 1, true, true, false);
+        RequestMatrixFromPool(m_flag, matrixPool, 1, true, true, false);
+        RequestMatrixFromPool(m_weightMagnitude, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_weightMagnitude, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_label, matrixPool);
+        ReleaseMatrixToPool(m_tempValue, matrixPool);
+        ReleaseMatrixToPool(m_flag, matrixPool);
+    }
+
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_outputDimension << m_bias;
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_outputDimension >> m_bias;
+
+        if (m_bias < 0 || m_bias >= m_PI)
+            LogicError("ArcMarginProductNode: bias(%.8g) not in range [0, PI)", m_bias);
+        m_threshold = cos(m_PI - m_bias);
+        m_cosBias = cos(m_bias);
+        m_sinBias = sin(m_bias);
+    }
+
+    size_t m_minibatchSize;   // m
+    size_t m_outputDimension; // k
+    double m_bias;
+    double m_threshold;
+    double m_cosBias;
+    double m_sinBias;
+
+    shared_ptr<Matrix<ElemType>> m_label;           // Matrix(1,m)
+    shared_ptr<Matrix<ElemType>> m_tempValue;       // Matrix(1,m)
+    shared_ptr<Matrix<ElemType>> m_flag;            // Matrix(1,m)
+    shared_ptr<Matrix<ElemType>> m_weightMagnitude; // Matrix(k,1)
+};
+
 // Implements Center-Loss as described in:
 // A Discriminative Feature Learning Approach for Deep Face Recognition [Yandong Wen, Kaipeng Zhang, Zhifeng Li, Yu Qiao]
 // https://ydwen.github.io/papers/WenECCV16.pdf
@@ -1623,145 +2012,6 @@ public:
     bool m_normalize;
     size_t m_minibatchSize;
     bool initFlag = true;
-};
-
-// Implements Squeeze-and-Excitation operation as described in:
-// Squeeze-and-Excitation Networks [Jie Hu, Li Shen, Gang Sun]
-// https://arxiv.org/pdf/1709.01507.pdf
-template <class ElemType>
-class ChannelMultiplyNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
-{
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"ChannelMultiply";
-    }
-
-public:
-    ChannelMultiplyNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ChannelMultiplyNode(configp->Get(L"deviceId"), L"<placeholder>")
-    {
-        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
-    }
-
-    ChannelMultiplyNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
-    {
-    }
-
-    virtual void BackpropToNonLooping(size_t inputIndex) override
-    {
-        if (0 == inputIndex)
-        {
-            FrameRange fr(InputRef(0).GetMBLayout());
-            auto X_gradient = InputRef(0).GradientFor(fr);
-            auto weight = InputRef(1).ValueFor(fr);
-
-            Matrix<ElemType>::ChannelMultiply(Gradient(), weight, X_gradient, m_featureSize);
-        }
-        else
-        {
-            FrameRange fr(InputRef(0).GetMBLayout());
-            auto X = InputRef(0).ValueFor(fr);
-            auto weight_gradient = InputRef(1).GradientFor(fr);
-            weight_gradient.SetValue((ElemType)0);
-            m_buffer->Resize(m_featureSize * m_channels, X.GetNumCols());
-
-            Matrix<ElemType>::ChannelMultiplyScaleBackprop(Gradient(), X, weight_gradient, *m_buffer, m_featureSize, m_N);
-        }
-    }
-
-    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
-    {
-        FrameRange fr(InputRef(0).GetMBLayout());
-        auto X = InputRef(0).ValueFor(fr);
-        auto weight = InputRef(1).ValueFor(fr);
-
-        Matrix<ElemType>::ChannelMultiply(X, weight, Value(), m_featureSize);
-    }
-
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
-    {
-        return true;
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-    {
-        Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-        SetDims(Input(0));
-
-        auto dims0 = Input(0)->GetSampleLayout().GetDims();
-        auto dims1 = Input(1)->GetSampleLayout().GetDims();
-        if (dims0.size() != 3)
-            LogicError("ChannelMultiplyNode : input[0] dimension not equals to 3 \n");
-        size_t temp = 1;
-        for (size_t i(0); i < dims1.size(); ++i)
-            temp *= dims1[i];
-        if (dims0[2] != temp)
-            LogicError("ChannelMultiplyNode : input channel not match %d v.s. %d\n", (int)dims0[2], (int)temp);
-
-        m_featureSize = dims0[0] * dims0[1];
-        m_channels = dims0[2];
-
-        size_t featureSize = m_featureSize;
-        m_N = 1;
-        assert(featureSize != 0);
-        while (featureSize)
-        {
-            m_N *= 2;
-            featureSize /= 2;
-        }
-        m_N /= 2;
-    }
-
-    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
-    {
-        Base::CopyTo(nodeP, newName, flags);
-        if (flags & CopyNodeFlags::copyNodeValue)
-        {
-            auto node = dynamic_pointer_cast<ChannelMultiplyNode<ElemType>>(nodeP);
-            node->m_buffer->SetValue(*m_buffer);
-            node->m_featureSize = m_featureSize;
-            node->m_channels = m_channels;
-            node->m_N = m_N;
-        }
-    }
-
-    virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
-    {
-        Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_buffer, matrixPool, m_featureSize * m_channels, true, false, false);
-    }
-
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
-    {
-        Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_buffer, matrixPool);
-    }
-
-    void Save(File& fstream) const override
-    {
-        Base::Save(fstream);
-        fstream << m_featureSize << m_channels;
-    }
-
-    void Load(File& fstream, size_t modelVersion) override
-    {
-        Base::Load(fstream, modelVersion);
-        fstream >> m_featureSize >> m_channels;
-    }
-
-
-    shared_ptr<Matrix<ElemType>> m_buffer;
-    size_t m_featureSize;
-    size_t m_channels;
-    size_t m_N;
 };
 
 
