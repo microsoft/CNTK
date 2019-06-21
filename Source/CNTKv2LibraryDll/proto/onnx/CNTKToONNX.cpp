@@ -3886,12 +3886,23 @@ onnxruntime::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const Funct
     auto outputArgs = node->OutputDefs();
 
     std::string lstmToReshapeNodeArgName = nodeOutputName;
-    onnx::TypeProto typeProto = ToTypeProto(shape, false);
+    std::vector<int64_t> reshapeShape = shape;
+    std::vector<int64_t> outputShape = shape;
+
+    if (reshapeShape[1] == BatchSizeProcessor::FreeBatchSize())
+    {
+        // it is required that batch dimension can be edited after ONNX export.
+        // here shape[1](the batch dimension) is set to 0 to indicate that it shall take input's dimension.
+        // this reshape semantic makes it easier for model editor to change batch size.
+        reshapeShape[1] = 0;
+    }
+
+    onnx::TypeProto typeProto = ToTypeProto(outputShape, false);
     UpdateONNXType(src->Outputs()[0].GetDataType(), typeProto);
     onnxruntime::NodeArg *outputArg = &graph->GetOrCreateNodeArg(lstmToReshapeNodeArgName, &typeProto);
 
     auto reshapeNode = AddReshapeNodeImpl(graph, nodeName + string("_reshape"), 
-        const_cast<NodeArg *>(outputArgs.at(0)), outputArg, shape);
+        const_cast<NodeArg *>(outputArgs.at(0)), outputArg, reshapeShape);
 
     return reshapeNode;
 }
