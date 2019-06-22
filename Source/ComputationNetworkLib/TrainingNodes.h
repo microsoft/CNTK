@@ -585,13 +585,13 @@ public:
             }
             total_items += num_units * num_frames;
         }
-		*/
-		
-		// =========================================
+        */
+        
+        // =========================================
         // init 5
         // set each frame to alinment and ##ZERO##
-		// ZERO is to cancel the CE computation of this node
-		// blank rate is 50%
+        // ZERO is to cancel the CE computation of this node
+        // blank rate is 50%
         // eg, input frames: aaabbcc,
         //     labels_expended: a-00 a-00 a-00 0b-0 0b-0 00c- 00c-
         // ==========================================
@@ -630,16 +630,15 @@ public:
                     }
                     else if (u == units_cnt + 1)
                     {
-						// set blank
-
+                        // set blank
                         size_t col_idx = u + t * num_units + total_items;
                         auto row_idx = labels_dim - 1;
                         (*labels_expended)((size_t) row_idx, col_idx) = (ElemType) 1;
                     }
                     else 
-					{
-						// do nothing to set zero
-					}
+                    {
+                        // do nothing to set zero
+                    }
                 }
             }
             total_items += num_units * num_frames;
