@@ -1758,24 +1758,14 @@ public:
 
         //m_RNNTDerivative->SwitchToMatrixType(m_outputLogDistribution->GetMatrixType(), m_outputLogDistribution->GetFormat(), false);
         //m_RNNTDerivative->Resize(m_outputLogDistribution->GetNumRows(), m_outputLogDistribution->GetNumCols());
-        
-        std::chrono::system_clock::time_point begintime, endtime;
-        std::chrono::duration<float> duration = std::chrono::duration<float>(0);
-        begintime = std::chrono::system_clock::now();
         m_outputDensity->AssignProductOf(InputRef(4).Value(), true, InputRef(3).Value(), false);
         m_outputDensity->AssignSumOf(*m_outputDensity, InputRef(5).Value());
         m_outputDensity->InplaceLogSoftmax(true);
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
-        
-        //endtime = std::chrono::system_clock::now();
-        duration = (std::chrono::system_clock::now() - begintime);
-        printf("time for wx+b:%07fs\n", duration.count());
+
         // compute CTC score
-        begintime = std::chrono::system_clock::now();
         m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId);
-        duration = (std::chrono::system_clock::now() - begintime);
-        printf("time for loss:%07fs\n", duration.count());
         //m_outputDensity->Print("gradient");
 #if NANCHECK
         functionValues.HasNan("RNNTNode");

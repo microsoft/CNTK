@@ -4705,17 +4705,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         // Max number of phones in utterances in this minibatch
         //size_t maxPhoneNum = phoneSeq.GetNumRows();
 
-cudaEvent_t start, stop;
-        float milliseconds = 0;
-        //if (delayConstraint == 1)
-        {
 
-            cudaEventCreate(&start);
-            cudaEventCreate(&stop);
-        }
+
+
         GPUMatrix<ElemType> matrixPhoneSeq(prob.GetComputeDeviceId());
-        if (delayConstraint == 1)
-            cudaEventRecord(start);
         size_t* gpuFrameNum;
         CUDA_CALL(cudaMalloc((void**) &gpuFrameNum, uttNum * sizeof(size_t)));
         CUDA_CALL(cudaMemcpy(gpuFrameNum, uttFrameNum.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
@@ -4746,15 +4739,7 @@ cudaEvent_t start, stop;
 
         ElemType* gpuDerivativeValue;
         CUDA_CALL(cudaMalloc((void**) &gpuDerivativeValue, totalUTNum * sizeof(ElemType)));
-        if (delayConstraint == 1)
-        {
-            cudaEventRecord(stop);
-            cudaEventSynchronize(stop);
 
-            cudaEventElapsedTime(&milliseconds, start, stop);
-
-            printf("time for memcopy:%f\n", milliseconds);
-        }
         cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
         dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
@@ -4763,23 +4748,9 @@ cudaEvent_t start, stop;
         // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances
         //convert phone label to simple format
         //phoneSeq.Print("before convert");
-        if (delayConstraint == 1)
-            cudaEventRecord(start);
-            dim3 block_tail_c((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+        dim3 block_tail_c((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
         matrixPhoneSeq.Resize(maxPhoneNum, uttNum);
             _convertPhoneSeq<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneSeq.Data(), matrixPhoneSeq.Data(), gpuPhoneNum, gpuBeginPhone, gpuPhoneToChanInd, uttNum, numPhoneParallelSequences, maxPhoneNum);
-        //matrixPhoneSeq.Print("after convert");
-            if (delayConstraint == 1)
-            {
-                cudaEventRecord(stop);
-                cudaEventSynchronize(stop);
-
-                cudaEventElapsedTime(&milliseconds, start, stop);
-
-                printf("time for transfer:%f\n", milliseconds);
-            }
-            if (delayConstraint == 1)
-            cudaEventRecord(start);
         int blocksPerGrid = (int) ceil(1.0 * uttNum / GridDim::maxThreadsPerBlock);
         size_t maxTU = maxFrameNum + maxPhoneNum - 1;
         for (size_t tu = 0; tu < maxTU; tu++)
@@ -4798,16 +4769,7 @@ cudaEvent_t start, stop;
                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, uttNum);
         }
 
-if (delayConstraint == 1)
-        {
-            cudaEventRecord(stop);
-            cudaEventSynchronize(stop);
-
-            cudaEventElapsedTime(&milliseconds, start, stop);
-
-            printf("time for fb:%f\n", milliseconds);
-        }
-        //beta.Print("beta");
+       //beta.Print("beta");
         //alpha.Print("alpha");
         ElemType zerVar = 0.0;
         totalScore.SetColumn(&zerVar, 0);
@@ -4818,8 +4780,6 @@ if (delayConstraint == 1)
         // x dimension is for each phone
         // y dimention is for each time
         // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances
-        if (delayConstraint == 1)
-            cudaEventRecord(start);
 
         dim3 block_tail((maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
         for (int s = 0; s < uttNum; s++)
@@ -4835,15 +4795,6 @@ if (delayConstraint == 1)
                                                                           uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s);
         }
 
-        if (delayConstraint == 1)
-        {
-            cudaEventRecord(stop);
-            cudaEventSynchronize(stop);
-            cudaEventElapsedTime(&milliseconds, start, stop);
-
-            printf("time for error cal:%f\n", milliseconds);
-        }
-       // Print("gradient");
         /*for (int s = 0; s < numSequences; s++)
         {
             _assignRNNTScoreS3<<<block_tail, thread_tail, 0, t_stream>>>(Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttFrameNum[s], uttPhoneNum[s], uttFrameBeginIdx[s], uttFrameToChanInd[s],
