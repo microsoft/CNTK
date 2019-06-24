@@ -440,7 +440,8 @@ public:
         uttPhoneBeginIdx.reserve(numSequences);
 
         begintime = std::chrono::system_clock::now();
-        maxIndexes.TransferToDeviceIfNotThere(CPUDEVICE);
+        //maxIndexes.TransferToDeviceIfNotThere(CPUDEVICE);
+        //ElemType* phoneSeqData = maxIndexes.CopyToArray();
         duration = (std::chrono::system_clock::now() - begintime);
         printf("transfer time:%07fs\n", duration.count());
 
@@ -476,15 +477,15 @@ public:
             uttPhoneBeginIdx.push_back(seq.tBegin);
             uttPhoneNum.push_back(numFrames);
             totalphonenum += numFrames;
-            size_t startFrameInd = seq.tBegin * numPhoneParallelSequences + seq.s;
+            /*size_t startFrameInd = seq.tBegin * numPhoneParallelSequences + seq.s;
             size_t endFrameInd = seq.tEnd   * numPhoneParallelSequences + seq.s;
             size_t frameCounter = 0;
             phoneSeq.clear();
             for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numPhoneParallelSequences, frameCounter++)
             {
-                phoneSeq.push_back((size_t)maxIndexes(0, frameInd));                
+                phoneSeq.push_back((size_t) phoneSeqData[frameInd]);                
             }
-            allUttPhoneSeqs.push_back(phoneSeq);
+            allUttPhoneSeqs.push_back(phoneSeq);*/
         }
 
         duration = (std::chrono::system_clock::now() - begintime);
@@ -494,7 +495,7 @@ public:
         begintime = std::chrono::system_clock::now();
         m_deviceid_gpu = mergedinput.GetDeviceId();
         m_deviceid = m_deviceid_gpu;
-        Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneSeqs(CPUDEVICE);
+        /*Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneSeqs(CPUDEVICE);
         //Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneBounds(CPUDEVICE);
         // copy phone seq to matrix
         matrixPhoneSeqs.Resize(maxPhoneNum, numSequences);
@@ -509,7 +510,7 @@ public:
         }
 
         // Once these matrices populated, move them to the active device
-        matrixPhoneSeqs.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
+        matrixPhoneSeqs.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);*/
         //matrixPhoneBounds.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
 
         //calculate the memory need for f*g
@@ -571,10 +572,10 @@ public:
 
        
         begintime = std::chrono::system_clock::now();
-        mergedinput.AssignRNNTScore(mergedinput, alpha, beta, matrixPhoneSeqs, matrixPhoneSeqs, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
-            uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, -1,true);
+        mergedinput.AssignRNNTScore(mergedinput, alpha, beta, maxIndexes, maxIndexes, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
+            uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, 1,true);
         
-        
+        //delete[] phoneSeqData;
         //mergedinput.InplaceExp();
         //m_derivative.AssignElementProductOf(m_derivative, mergedinput);
         //mergedinput.ReleaseMemory();
@@ -584,7 +585,7 @@ public:
         duration = (std::chrono::system_clock::now() - begintime);
         printf("time for AssignRNNTScore:%07fs\n", duration.count());
         //fprintf(stderr, "finalscore:%f\n", finalscore);
-        if (finalscore > 50 || finalscore < 0)
+        /*if (finalscore > 50 || finalscore < 0)
         {
             for (size_t i = 0; i < uttFrameNum.size(); i++)
             {
@@ -592,7 +593,7 @@ public:
             }
             matrixPhoneSeqs.Print("phone seq");
             //matrixPhoneBounds.Print("phone bound");
-        }
+        }*/
         /*alpha.Print("alpha");
         beta.Print("beta");
         prob.Print("prob");*/
