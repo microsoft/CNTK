@@ -1,0 +1,19 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2673 v4 @ 2.30GHz
+    Hardware threads: 16
+    Total Memory: 58719796 kB
+-------------------------------------------------------------------
+Microsoft (R) Test Execution Command Line Tool Version 15.9.1
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Starting test execution, please wait...
+Passed   TestSaveAndLoad
+Passed   TestSaveAndLoadToFile
+Passed   TestSetAndGetRandomSeed
+Passed   TestForceDeterministicAlgorithms
+Passed   TestShapeSpecialDimensions
+Passed   TestUtils
+
+Total tests: 6. Passed: 6. Failed: 0. Skipped: 0.
+Test Run Successful.
+Test execution time: 1.2738 Seconds
