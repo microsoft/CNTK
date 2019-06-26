@@ -286,6 +286,8 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
         for (auto& node : m_nestedNodes)
         {
             node->BeginTiming(false /*backward*/);
+            //if (node->GetName() == L"lstmLayers[1].whh")
+            //    fprintf(stderr,"bla");
             node->ForwardProp(t);
             node->EndTiming(false /*backward*/);
             node->BumpEvalTimeStamp();

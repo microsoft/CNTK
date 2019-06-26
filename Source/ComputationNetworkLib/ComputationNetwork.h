@@ -484,7 +484,7 @@ public:
     void RenameNode(const std::wstring& nodeNameOrig, const std::wstring& nodeNameNew);
     void RenameNode(ComputationNodeBasePtr node, const std::wstring& newNodeName);
     void DeleteNode(const std::wstring& nodeName);
-    void ReplaceNode(wstring nodeName, ComputationNodeBasePtr newNode);
+    void ReplaceNode(wstring nodeName, ComputationNodeBasePtr newNode, bool invalidateNetwork = true);
     void InsertNode(wstring nodeName, ComputationNodeBasePtr newNode, const std::set<std::wstring>& newNodeTags);
     void ReplaceLeafNode(wstring oldNodeName, ComputationNodeBasePtr newNode);
     void ReplaceFinalCriterionNode(wstring oldNodeName, ComputationNodeBasePtr newNode);

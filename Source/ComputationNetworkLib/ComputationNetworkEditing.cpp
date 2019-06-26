@@ -172,14 +172,15 @@ void ComputationNetwork::DeleteNode(const std::wstring& nodeName)
 // 1. Update nodes to quantized versions.
 // 2. The KL-reg based adaptation to reduce feature copy (deprecated)
 // need to update all the mappings as well childrens.
-void ComputationNetwork::ReplaceNode(wstring nodeName, ComputationNodeBasePtr newNode)
+void ComputationNetwork::ReplaceNode(wstring nodeName, ComputationNodeBasePtr newNode, bool invalidateNetwork)
 {
     ComputationNodeBasePtr oldNode = GetNodeFromName(nodeName);
 
     if (newNode->NodeName() != nodeName) // TODO: This was not tested for earlier; I hope no code depends on this.
         InvalidArgument("ChangeNode: newNode must have the same name as the old node.");
-
-    InvalidateCompiledNetwork();
+    
+    if (invalidateNetwork)
+        InvalidateCompiledNetwork();
 
     // change all nodes that have old node as input to point to the new node instead
     ChangeNodeInputs(oldNode, newNode);
@@ -190,7 +191,7 @@ void ComputationNetwork::ReplaceNode(wstring nodeName, ComputationNodeBasePtr ne
         newNode->SetInput(i, oldNode->GetInputs()[i]); // TODO: use AttachInput()?
         //oldNode->SetInput(i, nullptr); // BUGBUG: old node should no longer point into the network
     }
-
+    newNode->LinkToMBLayout(oldNode->GetMBLayout());
     // replace the node in the network
     RemoveNodeFromNet(oldNode);
     AddNodeToNet(newNode);

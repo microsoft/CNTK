@@ -389,10 +389,16 @@ public:
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
                 if (oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements() > 0)
                 {
+                    //m_net->ReplaceNode(m_nodesToCache[i], oneSeq.nameToNodeValues[m_nodesToCache[i]], false);
                     oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
                 }
             }
-
+            /*if (needRecompile)
+            {
+                m_net->CompileNetwork();
+                m_net->AllocateAllMatrices({}, decodeOutputNodes, nullptr);
+            }
+                */
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
 
@@ -402,8 +408,11 @@ public:
 
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
-                auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
-                nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
+                if (oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements() == 0)
+                {
+                    auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
+                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
+                }
             }
 
             lmin.ReleaseMemory();
