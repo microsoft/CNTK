@@ -2941,7 +2941,7 @@ onnxruntime::Node* CNTKToONNXHelper::CreateLSTMNode(const FunctionPtr &src,
     // squeeze direction axis out. This is safe because it is not bi-directional node.
 
     std::vector<int64_t> shape({ (int64_t)NDShape::FreeDimension, BatchSizeProcessor::FreeBatchSize(), hidden_size });
-
+    
     onnxruntime::Node *squeezedLSTMNode = InsertReshapeNodeToCNTKFunction(src, lstmNode, shape, graph, nodeOutputName);
 
     functionNodes.emplace(src, squeezedLSTMNode);
@@ -3883,8 +3883,24 @@ onnxruntime::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const Funct
 
     // We need to name reshape node's output arg with LSTM output name.
     // Thus we need to give LSTM node output a different name.
-    auto outputArgs = node->OutputDefs();
+    auto inputNodeArgs = node->OutputDefs();
 
+    // 1. transpose [seq, dir, batch, feature] to [seq, batch, dir, feature]
+
+    std::vector<int64_t> perm(inputNodeArgs[0]->Shape()->dim_size());
+    std::generate(perm.begin(), perm.end(), [axis = 0]() mutable { return axis++; });
+    std::swap(perm[1], perm[2]);
+
+    std::vector<int64_t> transposeOutputShape = ToINTS(*inputNodeArgs[0]->TypeAsProto());
+    std::swap(transposeOutputShape[1], transposeOutputShape[2]);
+    onnx::TypeProto transposeOutputArgType = ToTypeProto(transposeOutputShape, false);
+    UpdateONNXType(src->Outputs()[0].GetDataType(), transposeOutputArgType);
+
+    Node* transposeNode = AddTransposeNode(const_cast<onnxruntime::NodeArg &>(*inputNodeArgs[0]), 
+        graph, perm, transposeOutputArgType, node->Name() + "_transpose_" + nodeOutputName);
+
+    NodeArg* transposeOutputNodeArg = const_cast<NodeArg *>(transposeNode->OutputDefs().at(0));
+    // 2. reshape [seq, batch, dir, feature] to [seq, batch, dir * feature]
     std::string lstmToReshapeNodeArgName = nodeOutputName;
     std::vector<int64_t> reshapeShape = shape;
     std::vector<int64_t> outputShape = shape;
@@ -3902,7 +3918,7 @@ onnxruntime::Node *CNTKToONNXHelper::InsertReshapeNodeToCNTKFunction(const Funct
     onnxruntime::NodeArg *outputArg = &graph->GetOrCreateNodeArg(lstmToReshapeNodeArgName, &typeProto);
 
     auto reshapeNode = AddReshapeNodeImpl(graph, nodeName + string("_reshape"), 
-        const_cast<NodeArg *>(outputArgs.at(0)), outputArg, reshapeShape);
+        transposeOutputNodeArg, outputArg, reshapeShape);
 
     return reshapeNode;
 }
@@ -7948,11 +7964,28 @@ onnxruntime::Node* CNTKToONNXHelper::CreateONNXNodesForOptimizedRNNStack(const F
                                                    transposeOutputArgType, inputArgs[0]->Name() + "_transpose_out");
     auto transposedOutputArgs = functionNodeTransposed->OutputDefs();
 
-    std::vector<int64_t> newShape = Cast<size_t, int64_t>(src->Output().Shape().Dimensions());
-    newShape.insert(newShape.begin(), BatchSizeProcessor::FreeBatchSize());
-    newShape.insert(newShape.begin(), NDShape::FreeDimension);
+    NodeArg& inputNodeArg = const_cast<NodeArg&>(*transposedOutputArgs.at(0));
+
+    // it is required that batch dimension can be edited after ONNX export.
+    // here shape[1](the batch dimension) is set to 0 to indicate that it shall take input's dimension.
+    // this reshape semantic makes it easier for model editor to change batch size.
+    // output shape shall still be [sequence, 1, feature]
+
+    std::vector<int64_t> reshapeShape = Cast<size_t, int64_t>(src->Output().Shape().Dimensions());
+    // newShape.insert(newShape.begin(), BatchSizeProcessor::FreeBatchSize());
+    reshapeShape.insert(reshapeShape.begin(), 0);
+    reshapeShape.insert(reshapeShape.begin(), NDShape::FreeDimension);
+
+    std::vector<int64_t> reshapeOutputShape = reshapeShape;
+    reshapeOutputShape[1] = BatchSizeProcessor::FreeBatchSize();
     const std::string reshapedOutArgName = finalOutputNodeArgName;
-    auto functionNodeReshaped = AddReshapeNode(const_cast<NodeArg&>(*transposedOutputArgs.at(0)), newShape, reshapedOutArgName, graph);
+    onnx::TypeProto typeProto = ToTypeProto(reshapeOutputShape, false);
+    google::protobuf::int32 elemType = inputNodeArg.TypeAsProto()->tensor_type().elem_type();
+    typeProto.mutable_tensor_type()->set_elem_type(elemType);
+    NodeArg& outputNodeArg = graph->GetOrCreateNodeArg(reshapedOutArgName, &typeProto);
+
+    auto functionNodeReshaped = AddReshapeNodeImpl(graph, inputNodeArg.Name() + string("_reshape_to_") + reshapedOutArgName,
+        &inputNodeArg, &outputNodeArg, reshapeShape);
 
     functionNodes.emplace(src, functionNodeReshaped);
     return functionNodeReshaped;
