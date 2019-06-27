@@ -1,0 +1,19 @@
+Microsoft (R) Test Execution Command Line Tool Version 16.1.0
+Copyright (c) Microsoft Corporation.  All rights reserved.
+
+Starting test execution, please wait...
+  �~H~Z TestSaveAndLoad [69ms]
+  �~H~Z TestSaveAndLoadToFile [8ms]
+  �~H~Z TestSetAndGetRandomSeed [3ms]
+  �~H~Z TestForceDeterministicAlgorithms [< 1ms]
+  �~H~Z TestShapeSpecialDimensions [1ms]
+  �~H~Z TestUtils [8ms]
+  Standard Output Messages:
+ TraceLevel: before: Warning, after Info
+
+
+
+Test Run Successful.
+Total tests: 6
+     Passed: 6
+ Total time: 1.2473 Seconds
