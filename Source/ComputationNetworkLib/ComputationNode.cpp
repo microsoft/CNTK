@@ -483,7 +483,8 @@ void ComputationNodeBase::ValidateBinaryReduce(bool isFinalValidationPass)
         {
             // It is for DistributedCrossEntropyWithSoftmaxNode
             if (Input(0)->OperationName() != L"DistributedFullyConnected_v2"      && Input(1)->OperationName() != L"DistributedFullyConnected_v2" &&
-                Input(0)->OperationName() != L"DistributedAdditiveFullConnection" && Input(1)->OperationName() != L"DistributedAdditiveFullConnection")
+                Input(0)->OperationName() != L"DistributedAdditiveFullConnection" && Input(1)->OperationName() != L"DistributedAdditiveFullConnection" &&
+                Input(0)->OperationName() != L"DistributedArcMarginProduct"       && Input(1)->OperationName() != L"DistributedArcMarginProduct")
             {
                 string s1 = Input(0)->GetSampleLayout();
                 string s2 = Input(1)->GetSampleLayout();

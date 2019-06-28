@@ -154,6 +154,7 @@ namespace CNTK
         CNTK_API static const std::wstring AttributeAdditiveFullConnectionBiasPower;
         CNTK_API static const std::wstring AttributeAdditiveFullConnectionBiasMin;
         CNTK_API static const std::wstring AttributeAdditiveFullConnectionBiasMax;
+        CNTK_API static const std::wstring AttributeArcMarginProductBias;
         CNTK_API static const std::wstring AttributeCenterLossLambda;
         CNTK_API static const std::wstring AttributeCenterLossAlpha;
         CNTK_API static const std::wstring AttributeCenterLossLabelDim;
@@ -165,6 +166,8 @@ namespace CNTK
         CNTK_API static const std::wstring AttributeDistributedAdditiveFullConnectionWeightNormalize;
         CNTK_API static const std::wstring AttributeDistributedAdditiveFullConnectionBias;
         CNTK_API static const std::wstring AttributeDistributedAdditiveFullConnectionScale;
+        CNTK_API static const std::wstring AttributeDistributedArcMarginProductBias;
+        CNTK_API static const std::wstring AttributeDistributedArcMarginProductScale;
 
         CNTK_API static const std::vector<std::wstring> s_rngStateAttributes;
     };

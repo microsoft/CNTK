@@ -135,11 +135,12 @@ namespace CNTK
             (op == PrimitiveOpType::DistributedCrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::DistributedClassificationError) ||
             (op == PrimitiveOpType::DistributedAdditiveFullConnection) ||
+            (op == PrimitiveOpType::DistributedArcMarginProduct) ||
             (op == PrimitiveOpType::MarginInnerProduct) ||
             (op == PrimitiveOpType::FeatureNormalize) ||
             (op == PrimitiveOpType::AdditiveFullConnection) ||
+            (op == PrimitiveOpType::ArcMarginProduct) ||
             (op == PrimitiveOpType::CenterLoss) ||
-            (op == PrimitiveOpType::ChannelMultiply) ||
             (op == PrimitiveOpType::GlobalConcat) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::LatticeSequenceWithSoftmax) ||
@@ -970,6 +971,12 @@ namespace CNTK
                             outputShape = NDShape{};
                             break;
                         }
+                        case PrimitiveOpType::DistributedArcMarginProduct:
+                        {
+                            assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
+                            break;
+                        }
                         case PrimitiveOpType::MarginInnerProduct:
                         {
                             assert(m_inputs.size() == 3);
@@ -988,10 +995,10 @@ namespace CNTK
                             outputShape = NDShape{};
                             break;
                         }
-                        case PrimitiveOpType::ChannelMultiply:
+                        case PrimitiveOpType::ArcMarginProduct:
                         {
-                            assert(m_inputs.size() == 2);
-                            outputShape = m_inputs[0].Shape();
+                            assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
                             break;
                         }
                         case PrimitiveOpType::GlobalConcat:

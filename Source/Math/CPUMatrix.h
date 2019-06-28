@@ -472,17 +472,17 @@ public:
 
 #pragma endregion
 
-#pragma region CenterLoss
+#pragma region ArcMarginProduct
 
-    static void ClassCount(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& counter);
+    static void ArcLabelAdd(const CPUMatrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& value);
+
+    static void ArcLabelAddBackprop(const CPUMatrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& gradient);
 
 #pragma endregion
 
-#pragma region SqueezeAndExcitation
+#pragma region CenterLoss
 
-    static void ChannelMultiply(const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight, CPUMatrix<ElemType>& value, size_t featureSize);
-
-    static void ChannelMultiplyScaleBackprop(const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& X, CPUMatrix<ElemType>& weight_gradient, size_t featureSize);
+    static void ClassCount(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& counter);
 
 #pragma endregion
 
@@ -517,6 +517,10 @@ public:
     static void DistributedAssignClassificationError(const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& probs, const CPUMatrix<ElemType>& maxProb, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
 
     static void DistributedLabelAdd(const CPUMatrix<ElemType>& labels, ElemType bias, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedArcLabelAdd(const CPUMatrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedArcLabelAddBackprop(const CPUMatrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& gradient, size_t startIndex, size_t endIndex);
 
 #pragma endregion
 

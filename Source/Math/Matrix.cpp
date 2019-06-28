@@ -5203,6 +5203,32 @@ template <class ElemType>
 
 #pragma endregion
 
+#pragma region ArcMarginProduct
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ArcLabelAdd(const Matrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& value)
+{
+    DISPATCH_MATRIX_ON_FLAG(&value,
+        &value,
+        CPUMatrix<ElemType>::ArcLabelAdd(*(label.m_CPUMatrix), threshold, bias, sinBias, *(flag.m_CPUMatrix), *(x.m_CPUMatrix), *(value.m_CPUMatrix)),
+        GPUMatrix<ElemType>::ArcLabelAdd(*(label.m_GPUMatrix), threshold, bias, sinBias, *(flag.m_GPUMatrix), *(x.m_GPUMatrix), *(value.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ArcLabelAddBackprop(const Matrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& gradient)
+{
+    DISPATCH_MATRIX_ON_FLAG(&gradient,
+        &gradient,
+        CPUMatrix<ElemType>::ArcLabelAddBackprop(*(label.m_CPUMatrix), cosBias, sinBias, *(flag.m_CPUMatrix), *(x.m_CPUMatrix), *(gradient.m_CPUMatrix)),
+        GPUMatrix<ElemType>::ArcLabelAddBackprop(*(label.m_GPUMatrix), cosBias, sinBias, *(flag.m_GPUMatrix), *(x.m_GPUMatrix), *(gradient.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+#pragma endregion
+
 #pragma region CenterLoss
 
 template <class ElemType>
@@ -5212,32 +5238,6 @@ template <class ElemType>
                             &counter,
                             CPUMatrix<ElemType>::ClassCount(*(label.m_CPUMatrix), *(counter.m_CPUMatrix)),
                             GPUMatrix<ElemType>::ClassCount(*(label.m_GPUMatrix), *(counter.m_GPUMatrix)),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-
-#pragma endregion
-
-#pragma region SqueezeAndExcitation
-
-template <class ElemType>
-/*static*/ void Matrix<ElemType>::ChannelMultiply(const Matrix<ElemType>& X, const Matrix<ElemType>& weight, const Matrix<ElemType>& value, size_t featureSize)
-{
-    DISPATCH_MATRIX_ON_FLAG(&value,
-                            &value,
-                            CPUMatrix<ElemType>::ChannelMultiply(*(X.m_CPUMatrix), *(weight.m_CPUMatrix), *(value.m_CPUMatrix), featureSize),
-                            GPUMatrix<ElemType>::ChannelMultiply(*(X.m_GPUMatrix), *(weight.m_GPUMatrix), *(value.m_GPUMatrix), featureSize),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-
-template <class ElemType>
-/*static*/ void Matrix<ElemType>::ChannelMultiplyScaleBackprop(const Matrix<ElemType>& gradient, const Matrix<ElemType>& X, const Matrix<ElemType>& weight_gradient, const Matrix<ElemType>& buffer, size_t featureSize, size_t N)
-{
-    DISPATCH_MATRIX_ON_FLAG(&weight_gradient,
-                            &weight_gradient,
-                            CPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(*(gradient.m_CPUMatrix), *(X.m_CPUMatrix), *(weight_gradient.m_CPUMatrix), featureSize),
-                            GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(*(gradient.m_GPUMatrix), *(X.m_GPUMatrix), *(weight_gradient.m_GPUMatrix), *(buffer.m_GPUMatrix), featureSize, N),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
@@ -5424,6 +5424,29 @@ template <class ElemType>
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 }
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedArcLabelAdd(const Matrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    DISPATCH_MATRIX_ON_FLAG(&value,
+        &value,
+        CPUMatrix<ElemType>::DistributedArcLabelAdd(*(labels.m_CPUMatrix), threshold, bias, sinBias, *(flag.m_CPUMatrix), *(x.m_CPUMatrix), *(value.m_CPUMatrix), startIndex, endIndex),
+        GPUMatrix<ElemType>::DistributedArcLabelAdd(*(labels.m_GPUMatrix), threshold, bias, sinBias, *(flag.m_GPUMatrix), *(x.m_GPUMatrix), *(value.m_GPUMatrix), startIndex, endIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedArcLabelAddBackprop(const Matrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& gradient, size_t startIndex, size_t endIndex)
+{
+    DISPATCH_MATRIX_ON_FLAG(&gradient,
+        &gradient,
+        CPUMatrix<ElemType>::DistributedArcLabelAddBackprop(*(labels.m_CPUMatrix), cosBias, sinBias, *(flag.m_CPUMatrix), *(x.m_CPUMatrix), *(gradient.m_CPUMatrix), startIndex, endIndex),
+        GPUMatrix<ElemType>::DistributedArcLabelAddBackprop(*(labels.m_GPUMatrix), cosBias, sinBias, *(flag.m_GPUMatrix), *(x.m_GPUMatrix), *(gradient.m_GPUMatrix), startIndex, endIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
 
 #pragma endregion
 

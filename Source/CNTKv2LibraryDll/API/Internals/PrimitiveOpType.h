@@ -110,14 +110,15 @@ namespace CNTK
         MarginInnerProduct = 197,
         FeatureNormalize = 198,
         AdditiveFullConnection = 199,
-        CenterLoss = 200,
-        ChannelMultiply = 201,
+        ArcMarginProduct = 200,
+        CenterLoss = 201,
         GlobalConcat = 202,
         DistributedFullyConnected = 203,
         DistributedFullyConnected_v2 = 204,
         DistributedCrossEntropyWithSoftmax = 205,
         DistributedClassificationError = 206,
         DistributedAdditiveFullConnection = 207,
+        DistributedArcMarginProduct = 208,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

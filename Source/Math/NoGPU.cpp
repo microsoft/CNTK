@@ -2166,24 +2166,24 @@ void GPUMatrix<ElemType>::LabelAdd(const GPUMatrix<ElemType>& label, ElemType bi
 
 #pragma endregion
 
-#pragma region CenterLoss
+#pragma region ArcMarginProduct
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter)
+void GPUMatrix<ElemType>::ArcLabelAdd(const GPUMatrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& value)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ArcLabelAddBackprop(const GPUMatrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& gradient)
 {
 }
 
 #pragma endregion
 
-#pragma region SqueezeAndExcitation
+#pragma region CenterLoss
 
 template <class ElemType>
-void GPUMatrix<ElemType>::ChannelMultiply(const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight, const GPUMatrix<ElemType>& value, size_t featureSize)
-{
-}
-
-template <class ElemType>
-void GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight_gradient, const GPUMatrix<ElemType>& buffer, size_t featureSize, size_t N)
+void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter)
 {
 }
 
@@ -2257,6 +2257,16 @@ void GPUMatrix<ElemType>::DistributedAssignClassificationError(const GPUMatrix<E
 
 template <class ElemType>
 void GPUMatrix<ElemType>::DistributedLabelAdd(const GPUMatrix<ElemType>& labels, ElemType bias, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedArcLabelAdd(const GPUMatrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedArcLabelAddBackprop(const GPUMatrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& gradient, size_t startIndex, size_t endIndex)
 {
 }
 

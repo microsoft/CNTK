@@ -2170,6 +2170,15 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedAdditiveFullConnection, operands, std::move(additionalProperties), name), name);
     }
 
+    FunctionPtr DistributedArcMarginProduct(const Variable& labels, const Variable& weight, const Variable& features, double bias, double scale, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { labels, weight, features };
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunctionAttribute::AttributeDistributedArcMarginProductBias] = bias;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeDistributedArcMarginProductScale] = scale;
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::DistributedArcMarginProduct, operands, std::move(additionalProperties), name), name);
+    }
+
     FunctionPtr MarginInnerProduct(const Variable& features, const Variable& labels, const Variable& weight, size_t outputDimension, double base, double gamma, double power, double lambdaMin, size_t marginCoefficient, const std::wstring& name)
     {
         std::vector<Variable> operands = {features, labels, weight};
@@ -2206,6 +2215,14 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::AdditiveFullConnection, operands, std::move(additionalProperties), name), name);
     }
 
+    FunctionPtr ArcMarginProduct(const Variable& features, const Variable& labels, const Variable& weight, double bias, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { features, labels, weight };
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunctionAttribute::AttributeArcMarginProductBias] = bias;
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ArcMarginProduct, operands, std::move(additionalProperties), name), name);
+    }
+
     FunctionPtr CenterLoss(const Variable& features, const Variable& labels, double lambda, double alpha, size_t labelDim, bool normalize, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -2214,14 +2231,6 @@ namespace CNTK
         additionalProperties[PrimitiveFunctionAttribute::AttributeCenterLossLabelDim] = labelDim;
         additionalProperties[PrimitiveFunctionAttribute::AttributeCenterLossNormalize] = normalize;
         return BinaryOp(PrimitiveOpType::CenterLoss, labels, features, std::move(additionalProperties), name);
-    }
-
-    FunctionPtr ChannelMultiply(const Variable& feature, const Variable& weight, const std::wstring& name)
-    {
-        Variable featureCopy = feature;
-        Variable weightCopy = weight;
-        auto additionalProperties = Dictionary();
-        return BinaryOp(PrimitiveOpType::ChannelMultiply, featureCopy, weightCopy, std::move(additionalProperties), name);
     }
 
     FunctionPtr GlobalConcat(const Variable& feature, size_t blockIndex, size_t growthRate, size_t segmentIndex, size_t segmentNum, const std::wstring& name)

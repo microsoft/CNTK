@@ -1182,6 +1182,13 @@ namespace CNTK
                     ASSIGN_NEW_NODE(DistributedAdditiveFullConnectionNode, network->GetDeviceId(), internalNodeName, weightNormalize, bias, scale);
                     break;
                 }
+                case PrimitiveOpType::DistributedArcMarginProduct:
+                {
+                    auto bias = functionConfig[PrimitiveFunctionAttribute::AttributeDistributedArcMarginProductBias].Value<double>();
+                    auto scale = functionConfig[PrimitiveFunctionAttribute::AttributeDistributedArcMarginProductScale].Value<double>();
+                    ASSIGN_NEW_NODE(DistributedArcMarginProductNode, network->GetDeviceId(), internalNodeName, bias, scale);
+                    break;
+                }
                 case PrimitiveOpType::MarginInnerProduct:
                 {
                     auto outputDimension = functionConfig[PrimitiveFunctionAttribute::AttributeMarginInnerProductOutputDimension].Value<size_t>();
@@ -1213,6 +1220,12 @@ namespace CNTK
                     ASSIGN_NEW_NODE(AdditiveFullConnectionNode, network->GetDeviceId(), internalNodeName, outputDimension, weightNormalize, bias, annealBias, biasBase, biasGamma, biasPower, biasMin, biasMax);
                     break;
                 }
+                case PrimitiveOpType::ArcMarginProduct:
+                {
+                    auto bias = functionConfig[PrimitiveFunctionAttribute::AttributeArcMarginProductBias].Value<double>();
+                    ASSIGN_NEW_NODE(ArcMarginProductNode, network->GetDeviceId(), internalNodeName, bias);
+                    break;
+                }
                 case PrimitiveOpType::CenterLoss:
                 {
                     auto lambda = functionConfig[PrimitiveFunctionAttribute::AttributeCenterLossLambda].Value<double>();
@@ -1220,11 +1233,6 @@ namespace CNTK
                     auto labelDim = functionConfig[PrimitiveFunctionAttribute::AttributeCenterLossLabelDim].Value<size_t>();
                     auto normalize = functionConfig[PrimitiveFunctionAttribute::AttributeCenterLossNormalize].Value<bool>();
                     ASSIGN_NEW_NODE(CenterLossNode, network->GetDeviceId(), internalNodeName, lambda, alpha, labelDim, normalize);
-                    break;
-                }
-                case PrimitiveOpType::ChannelMultiply:
-                {
-                    ASSIGN_NEW_NODE(ChannelMultiplyNode, network->GetDeviceId(), internalNodeName);
                     break;
                 }
                 case PrimitiveOpType::GlobalConcat:
