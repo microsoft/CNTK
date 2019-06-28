@@ -12,7 +12,7 @@
 #include "ImageDeserializerBase.h"
 #include "CustomImageTransformer.h"
 
-#define __TEST_MASK__
+//#define __TEST_MASK__
 #ifdef __TEST_MASK__
 static int _testIndex = 0;
 #endif
@@ -523,7 +523,7 @@ namespace CNTK
                     if (do_mirror)
                         top_index = (crop_width - 1 - w) * img_channels;
                     else
-                        top_index = img_index - 2;
+                        top_index = img_index - 3;
                     transformed_data[top_index] = (maskB - m_mean_values[0] + beta) * scale;
 #ifdef __TEST_MASK__
                     transformed_data[top_index] = transformed_data[top_index] / scale - beta + m_mean_values[0];
@@ -531,7 +531,7 @@ namespace CNTK
                     if (do_mirror)
                         top_index = (crop_width - 1 - w) * img_channels + 1;
                     else
-                        top_index = img_index - 1;
+                        top_index = img_index - 2;
                     transformed_data[top_index] = (maskG - m_mean_values[1] + beta) * scale;
 #ifdef __TEST_MASK__
                     transformed_data[top_index] = transformed_data[top_index] / scale - beta + m_mean_values[1];
@@ -539,7 +539,7 @@ namespace CNTK
                     if (do_mirror)
                         top_index = (crop_width - 1 - w) * img_channels + 2;
                     else
-                        top_index = img_index;
+                        top_index = img_index - 1;
                     transformed_data[top_index] = (maskR - m_mean_values[2] + beta) * scale;
 #ifdef __TEST_MASK__
                     transformed_data[top_index] = transformed_data[top_index] / scale - beta + m_mean_values[2];
