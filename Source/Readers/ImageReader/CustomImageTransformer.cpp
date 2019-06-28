@@ -12,6 +12,11 @@
 #include "ImageDeserializerBase.h"
 #include "CustomImageTransformer.h"
 
+#define __TEST_MASK__
+#ifdef __TEST_MASK__
+static int _testIndex = 0;
+#endif
+
 namespace CNTK
 {
     using namespace Microsoft::MSR::CNTK;
@@ -254,6 +259,55 @@ namespace CNTK
         m_mean_values.push_back(_gmean);
         double _rmean = config(L"R_mean", "128.0");
         m_mean_values.push_back(_rmean);
+
+        m_maskMargin = config(L"maskMargin", 0);
+        m_maskThreshold = config(L"maskThreshold", 0);
+        m_blacklineRate = config(L"blacklineRate", "0.0");
+        m_blacklineMargin = config(L"blacklineMargin", 0);
+        m_blacklineMarginValue.resize(m_blacklineMargin + 1);
+        for (int i(0); i < m_blacklineMarginValue.size(); ++i)
+            m_blacklineMarginValue[i] = i;
+    }
+
+    void getPoint(int region, int height, int width, int z, int& x, int& y)
+    {
+        switch (region)
+        {
+        case 0:
+            x = z;
+            y = 0;
+            break;
+        case 1:
+            x = 0;
+            y = z;
+            break;
+        case 2:
+            x = 0;
+            y = width - z;
+            break;
+        case 3:
+            x = z;
+            y = width;
+            break;
+        case 4:
+            x = height - z;
+            y = width;
+            break;
+        case 5:
+            x = height;
+            y = width - z;
+            break;
+        case 6:
+            x = height;
+            y = z;
+            break;
+        case 7:
+            x = height - z;
+            y = 0;
+            break;
+        default:
+            break;
+        }
     }
 
     void CustomTransformer::GetRandSize(int& img_width, int& img_height, std::mt19937& rng)
@@ -371,6 +425,56 @@ namespace CNTK
         mat = cv_img_resize(mat, crop_width, crop_height);
         ConvertToFloatingPointIfRequired(mat);
         int top_index;
+        bool maskFlag = true;
+        float maskB = 0;
+        float maskG = 0;
+        float maskR = 0;
+        int A = 0;
+        int B = 0;
+        int C = 0;
+        bool sgn1 = false;
+        bool sgn2 = false;
+        bool do_blackline = (m_blacklineRate * (1 << 16)) > Rand(1 << 16, *rng);
+        if (do_blackline && m_blacklineMargin > 0)
+        {
+            int region1 = Rand(8, *rng);
+            int region2 = region1 ^ 1;
+            int tempRand = Rand(4, *rng);
+            if (1 == tempRand)
+            {
+                if (region1 % 2 == 0)
+                    region2 = (region1 + 2) % 8;
+                else
+                    region2 = (region1 + 6) % 8;
+            }
+            else if (2 == tempRand)
+            {
+                if (region1 % 2 == 0)
+                    region2 = (region1 + 3) % 8;
+                else
+                    region2 = (region1 + 5) % 8;
+            }
+            else if (3 == tempRand)
+            {
+                if (region1 % 2 == 0)
+                    region2 = (region1 + 6) % 8;
+                else
+                    region2 = (region1 + 2) % 8;
+            }
+            int _x1 = 0;
+            int _y1 = 0;
+            int _x2 = 0;
+            int _y2 = 0;
+            int z1 = m_blacklineMarginValue[Rand(m_blacklineMargin + 1, *rng)];
+            int z2 = m_blacklineMarginValue[Rand(m_blacklineMargin + 1, *rng)];
+            getPoint(region1, crop_height - 1, crop_width - 1, z1, _x1, _y1);
+            getPoint(region2, crop_height - 1, crop_width - 1, z2, _x2, _y2);
+            A = _y2 - _y1;
+            B = _x1 - _x2;
+            C = _x2 * _y1 - _x1 * _y2;
+            sgn1 = (A * crop_height / 2.0 + B * crop_width / 2.0 + C) > 0;
+        }
+
         for (int h = 0; h < crop_height; ++h)
         {
             const uchar* ptr = cv_rotated_img.ptr<uchar>(h);
@@ -378,6 +482,7 @@ namespace CNTK
             int img_index = 0;
             for (int w = 0; w < crop_width; ++w)
             {
+                maskFlag = true;
                 for (int c = 0; c < img_channels; ++c)
                 {
                     if (do_mirror)
@@ -385,11 +490,68 @@ namespace CNTK
                     else
                         top_index = img_index;
                     float pixel = static_cast<float>(ptr[img_index++]);
-                    transformed_data[top_index] = (pixel - m_mean_values[c] + beta) * scale;
+
+                    if (m_maskMargin > 0 && maskFlag && (h < m_maskMargin || h >= crop_height - m_maskMargin || w < m_maskMargin || w >= crop_width - m_maskMargin) && pixel <= m_maskThreshold)
+                    {
+                        if (0 == c)
+                            maskB = (float)Rand(256, *rng);
+                        else if (1 == c)
+                            maskG = (float)Rand(256, *rng);
+                        else
+                            maskR = (float)Rand(256, *rng);
+                    }
+                    else
+                        maskFlag = false;
+
+                    if (do_blackline && m_blacklineMargin > 0)
+                    {
+                        sgn2 = (A * h + B * w + C) > 0;
+                        if (sgn1 ^ sgn2)
+                            transformed_data[top_index] = (-m_mean_values[c] + beta) * scale;
+                        else
+                            transformed_data[top_index] = (pixel - m_mean_values[c] + beta) * scale;
+                    }
+                    else
+                        transformed_data[top_index] = (pixel - m_mean_values[c] + beta) * scale;
+#ifdef __TEST_MASK__
+                    transformed_data[top_index] = transformed_data[top_index] / scale - beta + m_mean_values[c];
+#endif
+                }
+
+                if (maskFlag)
+                {
+                    if (do_mirror)
+                        top_index = (crop_width - 1 - w) * img_channels;
+                    else
+                        top_index = img_index - 2;
+                    transformed_data[top_index] = (maskB - m_mean_values[0] + beta) * scale;
+#ifdef __TEST_MASK__
+                    transformed_data[top_index] = transformed_data[top_index] / scale - beta + m_mean_values[0];
+#endif
+                    if (do_mirror)
+                        top_index = (crop_width - 1 - w) * img_channels + 1;
+                    else
+                        top_index = img_index - 1;
+                    transformed_data[top_index] = (maskG - m_mean_values[1] + beta) * scale;
+#ifdef __TEST_MASK__
+                    transformed_data[top_index] = transformed_data[top_index] / scale - beta + m_mean_values[1];
+#endif
+                    if (do_mirror)
+                        top_index = (crop_width - 1 - w) * img_channels + 2;
+                    else
+                        top_index = img_index;
+                    transformed_data[top_index] = (maskR - m_mean_values[2] + beta) * scale;
+#ifdef __TEST_MASK__
+                    transformed_data[top_index] = transformed_data[top_index] / scale - beta + m_mean_values[2];
+#endif
                 }
             }
         }
 
         m_rngs.assignTo(indexInBatch, std::move(rng));
+
+#ifdef __TEST_MASK__
+        cv::imwrite("ibug_mask/maskTest-" + to_string(_testIndex++) + ".jpg", mat);
+#endif
     }
 }

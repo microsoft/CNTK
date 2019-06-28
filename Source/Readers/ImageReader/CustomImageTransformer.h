@@ -260,5 +260,11 @@ namespace CNTK
             RandFloat m_hue;
             RandFloat m_saturation;
             RandFloat m_lightness;
+
+            int m_maskMargin;
+            int m_maskThreshold;
+            float m_blacklineRate;
+            int m_blacklineMargin;
+            vector<int> m_blacklineMarginValue;
     };
 }
