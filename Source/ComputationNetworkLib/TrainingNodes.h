@@ -802,9 +802,9 @@ public:
     {
         if (1 == inputIndex)      // for W
         {
+            Matrix<ElemType>::Scale((ElemType)m_scale, Gradient());
             Matrix<ElemType>::DistributedArcLabelAddBackprop(*DistributedGatheredLabels<ElemType>::m_gatheredLabels, (ElemType)m_cosBias, (ElemType)m_sinBias, *m_flag, *m_tempValue, Gradient(), m_outputDim * m_rank, m_outputDim * (m_rank + 1) - 1);
 
-            Matrix<ElemType>::Scale((ElemType)m_scale, Gradient());
             auto& W_gradient = InputRef(1).Gradient();
             Matrix<ElemType>::Multiply(*m_temp1, false, Gradient(), true, W_gradient);
         }
