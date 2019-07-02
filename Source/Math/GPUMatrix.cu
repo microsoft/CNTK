@@ -4705,9 +4705,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         // Max number of phones in utterances in this minibatch
         //size_t maxPhoneNum = phoneSeq.GetNumRows();
 
-
-
-
         GPUMatrix<ElemType> matrixPhoneSeq(prob.GetComputeDeviceId());
         size_t* gpuFrameNum;
         CUDA_CALL(cudaMalloc((void**) &gpuFrameNum, uttNum * sizeof(size_t)));
@@ -4750,7 +4747,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         //phoneSeq.Print("before convert");
         dim3 block_tail_c((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
         matrixPhoneSeq.Resize(maxPhoneNum, uttNum);
-            _convertPhoneSeq<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneSeq.Data(), matrixPhoneSeq.Data(), gpuPhoneNum, gpuBeginPhone, gpuPhoneToChanInd, uttNum, numPhoneParallelSequences, maxPhoneNum);
+        _convertPhoneSeq<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneSeq.Data(), matrixPhoneSeq.Data(), gpuPhoneNum, gpuBeginPhone, gpuPhoneToChanInd, uttNum, numPhoneParallelSequences, maxPhoneNum);
         int blocksPerGrid = (int) ceil(1.0 * uttNum / GridDim::maxThreadsPerBlock);
         size_t maxTU = maxFrameNum + maxPhoneNum - 1;
         for (size_t tu = 0; tu < maxTU; tu++)
@@ -4769,7 +4766,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, uttNum);
         }
 
-       //beta.Print("beta");
+        //beta.Print("beta");
         //alpha.Print("alpha");
         ElemType zerVar = 0.0;
         totalScore.SetColumn(&zerVar, 0);
@@ -4781,12 +4778,17 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         // y dimention is for each time
         // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances
 
-        dim3 block_tail((maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+        dim3 block_tail((maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, uttNum);
+        dim3 thread_tail1(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM, 1);
+        _assignRNNTScoreS1_speed<<<block_tail, thread_tail, 0, t_stream>>>(gpuDerivativeValue, alpha.Data(), beta.Data(), uttNum, gpuFrameNum, gpuPhoneNum,
+                                                                           gpuUttBeginForMergedinput);
+        /*dim3 block_tail((maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+        
         for (int s = 0; s < uttNum; s++)
         {
             _assignRNNTScoreS1<<<block_tail, thread_tail, 0, t_stream>>>(gpuDerivativeValue, alpha.Data(), beta.Data(), uttFrameNum[s], uttPhoneNum[s],
                                                                          uttBeginForOutputditribution[s]);
-        }
+        }*/
 
         /*dim3 block_tail2((totalPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
         for (int s = 0; s < uttNum; s++)
@@ -4796,13 +4798,26 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         }*/
 
         dim3 block_tail2((totalPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, maxPhoneNum);
-        dim3 thread_tail2(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM,1);
+        //dim3 thread_tail2(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM, 1);
         for (int s = 0; s < uttNum; s++)
         {
-            _assignRNNTScoreS2_speed<<<block_tail2, thread_tail2, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNum[s], uttPhoneNum[s],
+            _assignRNNTScoreS2_speed<<<block_tail2, thread_tail1, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNum[s], uttPhoneNum[s],
                                                                           uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s);
         }
+        /*size_t maxYdim = 536870000 / totalPhoneNum; //2147483647/4
+        size_t sumYdim = 0;
+        dim3 block_tail2((totalPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxYdim + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+        //size_t callTimes = 0;
+        while (sumYdim < totalUTNum)
+        {
+            //block_tail2((totalPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxYdim + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+            _assignRNNTScoreS2_speed2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), gpuFrameNum, gpuPhoneNum,
+                                                                                 gpuUttBeginForMergedinput, maxPhoneNum, totalPhoneNum, blankTokenId, uttNum, totalUTNum, sumYdim);
+            sumYdim += maxYdim;
+            
 
+        }*/
+        
         /*for (int s = 0; s < numSequences; s++)
         {
             _assignRNNTScoreS3<<<block_tail, thread_tail, 0, t_stream>>>(Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttFrameNum[s], uttPhoneNum[s], uttFrameBeginIdx[s], uttFrameToChanInd[s],
@@ -4847,14 +4862,16 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
     int BS = in1.GetNumRows();
     RequireSize(BS, totalcol);
 
+    int maxPhoneNum = in2.GetNumCols() / numPhoneParallelSequences;
+
     int numSequences = uttFrameToChanInd.size();
     // the output matrix is of size (nt+1, BS)
 
-    dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+    dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM,1);
     // x dimension is for each phone
     // y dimention is for each time
     // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances
-    dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+    dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, maxPhoneNum);
     in1.PrepareDevice();
     SyncGuard syncGuard;
 

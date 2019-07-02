@@ -6295,48 +6295,30 @@ template <class ElemType>
 __global__ void _assignRNNTScoreS1_speed(ElemType* us,
                                          ElemType* alpha,
                                          ElemType* beta,
-                                         ElemType* phoneSeq,
-                                         const size_t* uttFrameNum,
-                                         const size_t* uttPhoneNum,
-                                         const size_t* uttBeginFrame,
-                                         const size_t* uttChanInd,
-                                         const size_t* uttBeginForMerge,
-                                         const size_t numChannels,
-                                         const size_t maxPhoneNum,   // Maximum length of utterance in this MB
-                                         const size_t totalPhoneNum, // Total number of phones
-                                         const size_t blankTokenId,
-                                         const size_t numSequence)
+                                         const size_t uttNum,
+                                         const size_t* FrameNums,
+                                         const size_t* PhoneNums,
+                                         const size_t* BeginForMerges)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
-    const CUDA_LONG u_utt = blockIdx.x * blockDim.x + threadIdx.x;
-    size_t uttId = (size_t)(u_utt / maxPhoneNum);
-    size_t u = u_utt % maxPhoneNum;
-    //const CUDA_LONG uttId = blockIdx.x;
-    //const CUDA_LONG u = threadIdx.x;
+    const CUDA_LONG u = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    const CUDA_LONG uttID = blockIdx.z * blockDim.z + threadIdx.z;
     ElemType x = LZERO;
-    //printf("uttid :%d\n", (int)uttId);
-    if (uttId < numSequence)
+    if (uttID < uttNum)
     {
-        size_t PhoneNum = uttPhoneNum[uttId];
-        size_t FrameNum = uttFrameNum[uttId];
-
+        size_t PhoneNum = PhoneNums[uttID];
+        size_t FrameNum = FrameNums[uttID];
+        size_t BeginForMerge = BeginForMerges[uttID];
         if (u < PhoneNum && t < FrameNum)
         {
-            size_t BeginFrame = uttBeginFrame[uttId];
-            size_t ChanInd = uttChanInd[uttId];
-            size_t BeginForMerge = uttBeginForMerge[uttId];
-            size_t zeroID, timeId, alphaId, tuID;
-            //long phoneId;
-            zeroID = (BeginFrame * numChannels + ChanInd) * maxPhoneNum; //beta id for (0,0)
-            ElemType P_lx = beta[zeroID];                                //p(y|x)
-            timeId = (t + BeginFrame) * numChannels + ChanInd;           //time ID in MB for t
+            size_t tuID;
+            ElemType P_lx = beta[BeginForMerge]; //p(y|x)
             //printf("t:%d k:%d step0\n", (int) t, (int) k);
             //for (int u = 0; u < PhoneNum; u++)
             {
-                alphaId = maxPhoneNum * timeId + u;        //alpha ID for (t,u)
-                tuID = BeginForMerge + t * PhoneNum + u;   //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
-                x = alpha[alphaId] + beta[alphaId] - P_lx; //log of alpha(t,u)*beta(t,u)/p(y|x)
+                tuID = BeginForMerge + t * PhoneNum + u; //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
+                x = alpha[tuID] + beta[tuID] - P_lx;     //log of alpha(t,u)*beta(t,u)/p(y|x)
                 if (x < LZERO)
                     us[tuID] = 0.0f;
                 else
@@ -6507,6 +6489,105 @@ __global__ void _assignRNNTScoreS2_speed(ElemType* us,
         //printf("t:%d k:%d step4\n", (int) t, (int) k);
     }
 }
+//pass TU instead of T,U,S
+template <class ElemType>
+__global__ void _assignRNNTScoreS2_speed2(ElemType* us,
+                                          ElemType* from,
+                                          ElemType* alpha,
+                                          ElemType* beta,
+                                          ElemType* phoneSeq,
+                                          const size_t* FrameNums,
+                                          const size_t* PhoneNums,
+                                          const size_t* BeginForMerges,
+                                          const size_t maxPhoneNum,   // Maximum length of utterance in this MB
+                                          const size_t totalPhoneNum, // Total number of phones
+                                          const size_t blankTokenId,
+                                          const size_t uttNum,
+                                          const size_t totalUTNum,
+                                          const size_t sumYdim)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG tuIDl = blockIdx.y * blockDim.y + threadIdx.y;
+    size_t tuID = sumYdim + tuIDl;
+    size_t uttID = 0;
+    if (tuID < totalUTNum)
+    {
+        size_t s = 0;
+        for (; s < uttNum; s++)
+        {
+            if (tuID < BeginForMerges[s])
+                break;
+        }
+        uttID = s - 1;
+        size_t FrameNum = FrameNums[uttID];
+        size_t PhoneNum = PhoneNums[uttID];
+        size_t BeginForMerge = BeginForMerges[uttID];
+        ElemType x = LZERO, y = LZERO, z = LZERO;
+        size_t u = (tuID - BeginForMerge) % PhoneNum;
+        size_t t = (tuID - BeginForMerge - u) / PhoneNum;
+        if (k < totalPhoneNum && t < FrameNum && u < PhoneNum)
+        {
+            size_t alphaId,  ktuID, betaId, zeroID;
+            long phoneId;
+            //timeId = (t + BeginFrame) * numChannels + ChanInd;           //time ID in MB for t
+            zeroID = BeginForMerge; //beta id for (0,0)
+            ElemType P_lx = beta[zeroID];
+            //printf("t:%d k:%d step0\n", (int) t, (int) k);
+            //for (int u = 0; u < PhoneNum; u++)
+            {
+
+                //tuID = BeginForMerge + t * PhoneNum + u; //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
+                alphaId = tuID;
+                ktuID = tuID * totalPhoneNum + k; //ID for P(k|t,u)
+                z = from[tuID];
+
+                if (u < PhoneNum - 1) //k == y(u+1)
+                {
+                    phoneId = phoneSeq[uttID * maxPhoneNum + u + 1]; //actual phone ID for u+1
+                    if (k == phoneId)
+                    {
+                        //ktuID = tuID * totalPhoneNum + phoneId; // ID for p(y(u+1)|t,u)
+                        betaId = alphaId + 1; //betaId for (t,u+1)
+                        x = alpha[alphaId] + beta[betaId] - P_lx;
+                        if (x < LZERO)
+                            y = 0.0f;
+                        else
+                            y = exp_((comp_t) x);
+                        z -= y;
+                    }
+                }
+                //printf("t:%d k:%d u%d step2\n", (int) t, (int) k, int(u));
+                if (t < FrameNum - 1 && k == blankTokenId)
+                {
+                    //ktuID = tuID * totalPhoneNum + blankTokenId;
+                    betaId = alphaId + PhoneNum; //beta ID for(t+1,u)
+                    x = alpha[alphaId] + beta[betaId] - P_lx;
+
+                    if (x < LZERO)
+                        y = 0.0f;
+                    else
+                        y = exp_((comp_t) x);
+                    z -= y;
+                }
+                //printf("t:%d k:%d u%d step3\n", (int) t, (int) k, int(u));
+                if (u == PhoneNum - 1 && t == FrameNum - 1 && k == blankTokenId)
+                {
+                    //ktuID = tuID * totalPhoneNum + blankTokenId;
+                    x = alpha[alphaId] - P_lx;
+                    if (x < LZERO)
+                        y = 0.0f;
+                    else
+                        y = exp_((comp_t) x);
+                    z -= y;
+                }
+                y = z * exp_((comp_t) us[ktuID]);
+                us[ktuID] = y;
+            }
+            //printf("t:%d k:%d step4\n", (int) t, (int) k);
+        }
+    }
+}
 template <class ElemType>
 __global__ void _assignRNNTScoreS3(ElemType* us,
                                    ElemType* alpha,
@@ -6585,14 +6666,13 @@ __global__ void _assignRNNTScoreS3(ElemType* us,
     }
 }
 
-
 template <class ElemType>
 __global__ void _convertPhoneSeq(ElemType* in,
                                  ElemType* out,
                                  const size_t* uttPhoneNum,
                                  const size_t* uttBeginPhone,
-                                 const size_t* uttChanInd ,
-                                 size_t uttNum, 
+                                 const size_t* uttChanInd,
+                                 size_t uttNum,
                                  size_t numParallelseq,
                                  size_t maxPhoneNum)
 {
@@ -6622,9 +6702,10 @@ __global__ void _assignUserOp1(ElemType* us,
 {
     const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
-    if (k < BS && t < frameNum)
+    const CUDA_LONG u = blockIdx.z * blockDim.z + threadIdx.z;
+    if (k < BS && t < frameNum && u < phoneNum)
     {
-        for (int u = 0; u < phoneNum; u++)
+        //for (int u = 0; u < phoneNum; u++)
         {
             //printf("K:%d,t:%d,u:%d\n", k,t,u);
             us[IDX2C(k, uttBeginOutId + t * phoneNum + u, BS)] = in1[IDX3C(k, t + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)] +
