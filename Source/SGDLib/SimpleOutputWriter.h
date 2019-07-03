@@ -304,7 +304,6 @@ public:
         {
             oneSeq.nameToNodeValues[it->first] = make_shared<PastValueNode<ElemType>>(deviceId, it->first);
             it->second->CopyTo(oneSeq.nameToNodeValues[it->first], it->first, CopyNodeFlags::copyNodeAll);
-            //oneSeq.nameToNodeValues[it->first] = vector<ElemType>(it->second);
         }
         return oneSeq;
     }
@@ -384,12 +383,14 @@ public:
 
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
 
+            bool shallowCopy = false;
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
                 if (oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements() > 0)
                 {
                     oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
+                    shallowCopy = true;
                 }
             }
 
@@ -403,7 +404,10 @@ public:
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
-                nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
+                if (shallowCopy)
+                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
+                else
+                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
             }
 
             lmin.ReleaseMemory();

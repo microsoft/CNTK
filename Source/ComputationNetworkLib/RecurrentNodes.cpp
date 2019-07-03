@@ -54,7 +54,7 @@ template<class ElemType, int direction>
         auto node = dynamic_pointer_cast<DelayedValueNodeBase<ElemType, direction /*, SequenceStart_or_End*/>>(nodeP);
         node->m_timeStep = m_timeStep;
         node->m_initialStateValue = m_initialStateValue;
-        node->m_initialStateValueMatrix->SetValue(m_initialStateValue);
+        //node->m_initialStateValueMatrix->SetValue(m_initialStateValue);
         node->m_delayedValue->SetValue(*m_delayedValue);
         if (m_delayedActivationMBLayout)
             (node->m_delayedActivationMBLayout = make_shared<MBLayout>())->CopyFrom(m_delayedActivationMBLayout);
@@ -67,10 +67,7 @@ template<class ElemType, int direction>
         node->m_timeStep = m_timeStep;
         node->m_initialStateValue = m_initialStateValue;
         node->m_delayedValue->ShallowCopyFrom(*m_delayedValue);
-        if (m_delayedActivationMBLayout)
-            (node->m_delayedActivationMBLayout = make_shared<MBLayout>())->CopyFrom(m_delayedActivationMBLayout);
-        else
-            node->m_delayedActivationMBLayout = nullptr;
+        node->m_delayedActivationMBLayout = m_delayedActivationMBLayout;
     }
 }
 
