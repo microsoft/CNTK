@@ -7425,7 +7425,7 @@ onnxruntime::Node* CNTKToONNXHelper::AddNode(const FunctionPtr& src, onnxruntime
             // some Times nodes may carry custom attributes that need to be saved in ONNX as NodeProto.doc_string
             std::string customAttrsStr =
                 src->GetCustomAttributes().Size() == 0 ?
-				"" :
+                "" :
                 "{\"custom_attributes\":" + SerializeDictionaryToString(src->GetCustomAttributes()) + "}";
 
             if (reductionRank > 1 || py_api_output_rank_argument > 1) // We need to insert reshape.
