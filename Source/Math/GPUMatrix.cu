@@ -3540,13 +3540,511 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
 }
 
 
+#pragma region DistributedFC
+
+template <class ElemType>
+__global__ void _getDenseLabelsFromOneHot(ElemType* oneHotLabels, ElemType* labels, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    if (oneHotLabels[id] < (ElemType)0.5)
+        return;
+    labels[id / rows] = (ElemType)(id % rows);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::GetDenseLabelsFromOneHot(const GPUMatrix<ElemType>& oneHotLabels, const GPUMatrix<ElemType>& labels)
+{
+    CUDA_LONG numElements = (CUDA_LONG)oneHotLabels.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)oneHotLabels.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    oneHotLabels.PrepareDevice();
+    SyncGuard syncGuard;
+
+    _getDenseLabelsFromOneHot<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (oneHotLabels.Data(), labels.Data(), rows, numElements);
+}
+
+template <class ElemType>
+__global__ void _scatter(ElemType* src, ElemType* dst, CUDA_LONG outputDim, CUDA_LONG minioutputDim, CUDA_LONG blockSize, CUDA_LONG blockOffset, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    CUDA_LONG row = id % outputDim;
+    CUDA_LONG blockIndex = row / minioutputDim;
+    CUDA_LONG rowIndex = row % minioutputDim;
+    CUDA_LONG colIndex = id / outputDim;
+    dst[id] = src[blockIndex * blockSize + blockOffset + colIndex * minioutputDim + rowIndex];
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::Scatter(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
+{
+    CUDA_LONG numElements = (CUDA_LONG)dst.GetNumElements();
+    CUDA_LONG minioutputDim = (CUDA_LONG)src.GetNumRows();
+    CUDA_LONG outputDim = minioutputDim * processNum;
+    CUDA_LONG miniblockSize = (CUDA_LONG)(minioutputDim * minibatchSize);
+    CUDA_LONG blockSize = miniblockSize * processNum;
+    CUDA_LONG blockOffset = rank * miniblockSize;
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    src.PrepareDevice();
+    SyncGuard syncGuard;
+    _scatter<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (src.Data(), dst.Data(), outputDim, minioutputDim, blockSize, blockOffset, numElements);
+}
+
+template <class ElemType>
+__global__ void _addColumnVector(ElemType* src, const ElemType* vec, ElemType* dst, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    dst[id] = src[id] + vec[id % rows];
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AddColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst)
+{
+    CUDA_LONG numElements = (CUDA_LONG)dst.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)columnVector.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    src.PrepareDevice();
+    SyncGuard syncGuard;
+    _addColumnVector<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (src.Data(), columnVector.Data(), dst.Data(), rows, numElements);
+}
+
+template <class ElemType>
+__global__ void _addRowVector(ElemType* src, const ElemType* vec, ElemType* dst, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    dst[id] = src[id] + vec[id / rows];
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AddRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst)
+{
+    CUDA_LONG numElements = (CUDA_LONG)src.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)src.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    src.PrepareDevice();
+    SyncGuard syncGuard;
+    _addRowVector<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), rows, numElements);
+}
+
+template <class ElemType>
+__global__ void _minusColumnVector(ElemType* src, const ElemType* vec, ElemType* dst, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    dst[id] = src[id] - vec[id % rows];
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::MinusColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst)
+{
+    CUDA_LONG numElements = (CUDA_LONG)dst.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)columnVector.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    src.PrepareDevice();
+    SyncGuard syncGuard;
+    _minusColumnVector<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (src.Data(), columnVector.Data(), dst.Data(), rows, numElements);
+}
+
+template <class ElemType>
+__global__ void _minusRowVector(ElemType* src, const ElemType* vec, ElemType* dst, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    dst[id] = src[id] - vec[id / rows];
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::MinusRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst)
+{
+    CUDA_LONG numElements = (CUDA_LONG)src.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)src.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    src.PrepareDevice();
+    SyncGuard syncGuard;
+    _minusRowVector<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (src.Data(), rowVector.Data(), dst.Data(), rows, numElements);
+}
+
+template <class ElemType>
+__global__ void _assignExpSumOf512Threads(const ElemType* Y, ElemType* expSum, CUDA_LONG rows)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partials[512];
+    partials[threadIdx.x] = 0.0f;
+
+    for (int i = threadIdx.x; i < rows; i += 512)
+    {
+        partials[threadIdx.x] += exp_((comp_t)Y[IDX2C(i, blockIdx.x, rows)]);
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 256)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 256];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 128)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 128];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 64)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 64];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 32)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 32];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 16)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 16];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 8)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 8];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 4)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 4];
+    }
+    __syncthreads();
+
+    if (threadIdx.x == 0)
+    {
+        expSum[blockIdx.x] = partials[0] + partials[1] + partials[2] + partials[3];
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::AssignExpSum(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& expSum)
+{
+    CUDA_LONG rows = (CUDA_LONG)Y.GetNumRows();
+    CUDA_LONG cols = (CUDA_LONG)Y.GetNumCols();
+
+    SyncGuard syncGuard;
+    _assignExpSumOf512Threads << <cols, 512, 0, t_stream >> > (Y.Data(), expSum.Data(), rows);
+}
+
+template <class ElemType>
+__global__ void _distributedSoftmax(ElemType* Y, ElemType* logSum, ElemType* softmax, ElemType* logSoftmax, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    logSoftmax[id] = Y[id] - logSum[id / rows];
+    softmax[id] = exp_(logSoftmax[id]);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedSoftmax(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& logSum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax)
+{
+    CUDA_LONG numElements = (CUDA_LONG)Y.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)Y.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    Y.PrepareDevice();
+    SyncGuard syncGuard;
+    _distributedSoftmax<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (Y.Data(), logSum.Data(), softmax.Data(), logSoftmax.Data(), rows, numElements);
+}
+
+template <class ElemType>
+__global__ void _distributedCrossEntropyOf512Threads(const ElemType* logP, const ElemType* labels, ElemType* value, CUDA_LONG rows, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG numElements)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partials[512];
+
+    partials[threadIdx.x] = 0.0f;
+    for (int i = threadIdx.x; i < numElements; i += 512)
+    {
+        CUDA_LONG label = (CUDA_LONG)labels[i];
+        if (label >= startIndex && label <= endIndex)
+            partials[threadIdx.x] += (comp_t)logP[i * rows + label - startIndex];
+    }
+
+    if (threadIdx.x < 256)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 256];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 128)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 128];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 64)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 64];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 32)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 32];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 16)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 16];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 8)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 8];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 4)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 4];
+    }
+    __syncthreads();
+
+    if (threadIdx.x == 0)
+        value[0] = -(partials[0] + partials[1] + partials[2] + partials[3]);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedCrossEntropy(const GPUMatrix<ElemType>& logP, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    CUDA_LONG numElements = (CUDA_LONG)labels.GetNumCols();
+    CUDA_LONG rows = (CUDA_LONG)logP.GetNumRows();
+
+    SyncGuard syncGuard;
+    _distributedCrossEntropyOf512Threads << <1, 512, 0, t_stream >> > (logP.Data(), labels.Data(), value.Data(), rows, (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, numElements);
+}
+
+template <class ElemType>
+__global__ void _distributedSoftmaxWithCrossEntropyBackprop(const ElemType* postGradient, const ElemType* softmax, const ElemType* labels, ElemType* gradient, CUDA_LONG rows, CUDA_LONG startIndex, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    gradient[id] = postGradient[0] * softmax[id];
+    CUDA_LONG label = (CUDA_LONG)labels[id / rows];
+    if (label == startIndex + id % rows)
+        gradient[id] -= postGradient[0];
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const GPUMatrix<ElemType>& postGradient, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& gradient, size_t startIndex)
+{
+    CUDA_LONG numElements = (CUDA_LONG)softmax.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)softmax.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    postGradient.PrepareDevice();
+    SyncGuard syncGuard;
+    _distributedSoftmaxWithCrossEntropyBackprop<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (postGradient.Data(), softmax.Data(), labels.Data(), gradient.Data(), rows, (CUDA_LONG)startIndex, numElements);
+}
+
+template <class ElemType>
+__global__ void _distributedAssignClassificationErrorOf512Threads(const ElemType* labels, const ElemType* prob, const ElemType* maxProb, ElemType* value, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    __shared__ comp_t partials[512];
+
+    partials[threadIdx.x] = 0.0f;
+    for (int i = threadIdx.x; i < numElements; i += 512)
+    {
+        CUDA_LONG label = (CUDA_LONG)labels[i];
+        if (label >= startIndex && label <= endIndex && prob[i * rows + label - startIndex] < maxProb[i])
+            partials[threadIdx.x] += (comp_t)1;
+    }
+
+    if (threadIdx.x < 256)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 256];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 128)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 128];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 64)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 64];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 32)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 32];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 16)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 16];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 8)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 8];
+    }
+    __syncthreads();
+
+    if (threadIdx.x < 4)
+    {
+        partials[threadIdx.x] += partials[threadIdx.x + 4];
+    }
+    __syncthreads();
+
+    if (threadIdx.x == 0)
+        value[0] = partials[0] + partials[1] + partials[2] + partials[3];
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedAssignClassificationError(const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& probs, const GPUMatrix<ElemType>& maxProb, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    CUDA_LONG cols = probs.GetNumCols();
+    CUDA_LONG rows = probs.GetNumRows();
+
+    labels.PrepareDevice();
+    SyncGuard syncGuard;
+    _distributedAssignClassificationErrorOf512Threads<ElemType> << <1, 512, 0, t_stream >> > (labels.Data(), probs.Data(), maxProb.Data(), value.Data(), (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, rows, cols);
+}
+
+template <class ElemType>
+__global__ void _distributedLabelAdd(const ElemType* labels, ElemType bias, ElemType* value, CUDA_LONG rows, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    CUDA_LONG label = (CUDA_LONG)labels[id];
+    if (label < startIndex || label > endIndex)
+        return;
+    if (value[id * rows + label - startIndex] <= -bias)
+        return;
+
+    value[id * rows + label - startIndex] += bias;
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedLabelAdd(const GPUMatrix<ElemType>& labels, ElemType bias, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    CUDA_LONG cols = value.GetNumCols();
+    CUDA_LONG rows = value.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * cols / GridDim::maxThreadsPerBlock);
+    labels.PrepareDevice();
+    SyncGuard syncGuard;
+    _distributedLabelAdd<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (labels.Data(), bias, value.Data(), rows, (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, cols);
+}
+
+template <class ElemType>
+__global__ void _distributedArcLabelAdd(const ElemType* labels, const ElemType threshold, const ElemType bias, const ElemType sinBias, ElemType* flag, ElemType* x, ElemType* value, CUDA_LONG rows, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    CUDA_LONG label = (CUDA_LONG)labels[id];
+    if (label < startIndex || label > endIndex)
+        return;
+
+    CUDA_LONG index = id * rows + label - startIndex;
+    if (value[index] > threshold)
+    {
+        x[id] = value[index];
+        value[index] = cosf(acosf(value[index]) + bias);
+    }
+    else
+    {
+        value[index] -= bias * sinBias;
+        flag[id] = 1.0f;
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedArcLabelAdd(const GPUMatrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    CUDA_LONG cols = value.GetNumCols();
+    CUDA_LONG rows = value.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * cols / GridDim::maxThreadsPerBlock);
+    labels.PrepareDevice();
+    SyncGuard syncGuard;
+    _distributedArcLabelAdd<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (labels.Data(), threshold, bias, sinBias, flag.Data(), x.Data(), value.Data(), rows, (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, cols);
+}
+
+template <class ElemType>
+__global__ void _distributedArcLabelAddBackprop(const ElemType* labels, const ElemType cosBias, const ElemType sinBias, ElemType* flag, ElemType* x, ElemType* gradient, CUDA_LONG rows, CUDA_LONG startIndex, CUDA_LONG endIndex, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    CUDA_LONG label = (CUDA_LONG)labels[id];
+    if (label < startIndex || label > endIndex || flag[id] > 0.5f)
+        return;
+
+    CUDA_LONG index = id * rows + label - startIndex;
+    gradient[index] *= cosBias + sinBias * x[id] / (sqrtf(1 - x[id] * x[id]) + 1e-12);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::DistributedArcLabelAddBackprop(const GPUMatrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& gradient, size_t startIndex, size_t endIndex)
+{
+    CUDA_LONG cols = gradient.GetNumCols();
+    CUDA_LONG rows = gradient.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * cols / GridDim::maxThreadsPerBlock);
+    labels.PrepareDevice();
+    SyncGuard syncGuard;
+    _distributedArcLabelAddBackprop<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (labels.Data(), cosBias, sinBias, flag.Data(), x.Data(), gradient.Data(), rows, (CUDA_LONG)startIndex, (CUDA_LONG)endIndex, cols);
+}
+
+#pragma endregion
+
 #pragma region Asoftmax
 
 template <class ElemType>
 __global__ void _asoftmaxForward2(ElemType lambda, CUDA_LONG outputDimension, const ElemType* label, ElemType* value, const ElemType* inputMagnitude,
-                                  const ElemType* cosThetaQuadratic, const ElemType* sign0, CUDA_LONG numElements)
+    const ElemType* cosThetaQuadratic, const ElemType* sign0, CUDA_LONG numElements)
 {
-    CUDA_LONG id = GridDim::GetLinearThreadId();
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= numElements)
         return;
 
@@ -3557,19 +4055,19 @@ __global__ void _asoftmaxForward2(ElemType lambda, CUDA_LONG outputDimension, co
 
 template <class ElemType>
 void GPUMatrix<ElemType>::AsoftmaxForward2(ElemType lambda, size_t minibatchSize, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& inputMagnitude,
-                                           const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& sign0)
+    const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& sign0)
 {
     SyncGuard syncGuard;
     GridDim grid(minibatchSize);
-    _asoftmaxForward2<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(lambda, (CUDA_LONG) outputDimension, label.Data(), value.Data(), inputMagnitude.Data(),
-                                                                                               cosThetaQuadratic.Data(), sign0.Data(), (CUDA_LONG) minibatchSize);
+    _asoftmaxForward2<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (lambda, (CUDA_LONG)outputDimension, label.Data(), value.Data(), inputMagnitude.Data(),
+        cosThetaQuadratic.Data(), sign0.Data(), (CUDA_LONG)minibatchSize);
 }
 
 template <class ElemType>
 __global__ void _asoftmaxForward3(ElemType lambda, CUDA_LONG outputDimension, const ElemType* label, ElemType* value, const ElemType* inputMagnitude,
-                                  const ElemType* cosTheta, const ElemType* cosThetaCubic, const ElemType* sign1, const ElemType* sign2, CUDA_LONG numElements)
+    const ElemType* cosTheta, const ElemType* cosThetaCubic, const ElemType* sign1, const ElemType* sign2, CUDA_LONG numElements)
 {
-    CUDA_LONG id = GridDim::GetLinearThreadId();
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= numElements)
         return;
 
@@ -3580,19 +4078,19 @@ __global__ void _asoftmaxForward3(ElemType lambda, CUDA_LONG outputDimension, co
 
 template <class ElemType>
 void GPUMatrix<ElemType>::AsoftmaxForward3(ElemType lambda, size_t minibatchSize, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& inputMagnitude,
-                                           const GPUMatrix<ElemType>& cosTheta, const GPUMatrix<ElemType>& cosThetaCubic, const GPUMatrix<ElemType>& sign1, const GPUMatrix<ElemType>& sign2)
+    const GPUMatrix<ElemType>& cosTheta, const GPUMatrix<ElemType>& cosThetaCubic, const GPUMatrix<ElemType>& sign1, const GPUMatrix<ElemType>& sign2)
 {
     SyncGuard syncGuard;
     GridDim grid(minibatchSize);
-    _asoftmaxForward3<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(lambda, (CUDA_LONG) outputDimension, label.Data(), value.Data(), inputMagnitude.Data(),
-                                                                                               cosTheta.Data(), cosThetaCubic.Data(), sign1.Data(), sign2.Data(), (CUDA_LONG) minibatchSize);
+    _asoftmaxForward3<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (lambda, (CUDA_LONG)outputDimension, label.Data(), value.Data(), inputMagnitude.Data(),
+        cosTheta.Data(), cosThetaCubic.Data(), sign1.Data(), sign2.Data(), (CUDA_LONG)minibatchSize);
 }
 
 template <class ElemType>
 __global__ void _asoftmaxForward4(ElemType lambda, CUDA_LONG outputDimension, const ElemType* label, ElemType* value, const ElemType* inputMagnitude,
-                                  const ElemType* cosThetaQuadratic, const ElemType* cosThetaQuartic, const ElemType* sign3, const ElemType* sign4, CUDA_LONG numElements)
+    const ElemType* cosThetaQuadratic, const ElemType* cosThetaQuartic, const ElemType* sign3, const ElemType* sign4, CUDA_LONG numElements)
 {
-    CUDA_LONG id = GridDim::GetLinearThreadId();
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
     if (id >= numElements)
         return;
 
@@ -3603,19 +4101,19 @@ __global__ void _asoftmaxForward4(ElemType lambda, CUDA_LONG outputDimension, co
 
 template <class ElemType>
 void GPUMatrix<ElemType>::AsoftmaxForward4(ElemType lambda, size_t minibatchSize, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& inputMagnitude,
-                                           const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& cosThetaQuartic, const GPUMatrix<ElemType>& sign3, const GPUMatrix<ElemType>& sign4)
+    const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& cosThetaQuartic, const GPUMatrix<ElemType>& sign3, const GPUMatrix<ElemType>& sign4)
 {
     SyncGuard syncGuard;
     GridDim grid(minibatchSize);
-    _asoftmaxForward4<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(lambda, (CUDA_LONG) outputDimension, label.Data(), value.Data(), inputMagnitude.Data(),
-                                                                                               cosThetaQuadratic.Data(), cosThetaQuartic.Data(), sign3.Data(), sign4.Data(), (CUDA_LONG) minibatchSize);
+    _asoftmaxForward4<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (lambda, (CUDA_LONG)outputDimension, label.Data(), value.Data(), inputMagnitude.Data(),
+        cosThetaQuadratic.Data(), cosThetaQuartic.Data(), sign3.Data(), sign4.Data(), (CUDA_LONG)minibatchSize);
 }
 
 template <class ElemType>
 __global__ void _asoftmaxBackward2(ElemType lambda, CUDA_LONG inputDimension, CUDA_LONG outputDimension, const ElemType* label, const ElemType* gradient, ElemType* X_gradient, const ElemType* inputMagnitude, const ElemType* X, const ElemType* weight,
-                                   const ElemType* cosTheta, const ElemType* cosThetaQuadratic, const ElemType* sign0, CUDA_LONG numElements)
+    const ElemType* cosTheta, const ElemType* cosThetaQuadratic, const ElemType* sign0, CUDA_LONG numElements)
 {
-    CUDA_LONG X_id = GridDim::GetLinearThreadId();
+    CUDA_LONG X_id = blockDim.x * blockIdx.x + threadIdx.x;
     if (X_id >= numElements)
         return;
 
@@ -3626,7 +4124,7 @@ __global__ void _asoftmaxBackward2(ElemType lambda, CUDA_LONG inputDimension, CU
     CUDA_LONG index = col * outputDimension + labelValue;
     ElemType coeff_w = 4.0 * sign0[index] * cosTheta[index];
     ElemType coeff_x = -1.0 / inputMagnitude[col] * (2.0 * sign0[index] * cosThetaQuadratic[index] + 1);
-    ElemType coeff_norm = sqrt((float) (coeff_w * coeff_w + coeff_x * coeff_x));
+    ElemType coeff_norm = sqrt((float)(coeff_w * coeff_w + coeff_x * coeff_x));
 
     // From weight
     X_gradient[X_id] += weight[W_id] * gradient[index] / (1.0 + lambda) * (coeff_w / coeff_norm - 1);
@@ -3636,19 +4134,19 @@ __global__ void _asoftmaxBackward2(ElemType lambda, CUDA_LONG inputDimension, CU
 
 template <class ElemType>
 void GPUMatrix<ElemType>::AsoftmaxBackward2(ElemType lambda, size_t inputDimension, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gradient, GPUMatrix<ElemType>& X_gradient, const GPUMatrix<ElemType>& inputMagnitude, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight,
-                                            const GPUMatrix<ElemType>& cosTheta, const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& sign0)
+    const GPUMatrix<ElemType>& cosTheta, const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& sign0)
 {
     SyncGuard syncGuard;
     GridDim grid(X_gradient.GetNumElements());
-    _asoftmaxBackward2<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(lambda, (CUDA_LONG) inputDimension, (CUDA_LONG) outputDimension, label.Data(), gradient.Data(), X_gradient.Data(), inputMagnitude.Data(), X.Data(), weight.Data(),
-                                                                                                cosTheta.Data(), cosThetaQuadratic.Data(), sign0.Data(), grid.m_N);
+    _asoftmaxBackward2<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (lambda, (CUDA_LONG)inputDimension, (CUDA_LONG)outputDimension, label.Data(), gradient.Data(), X_gradient.Data(), inputMagnitude.Data(), X.Data(), weight.Data(),
+        cosTheta.Data(), cosThetaQuadratic.Data(), sign0.Data(), grid.m_N);
 }
 
 template <class ElemType>
 __global__ void _asoftmaxBackward3(ElemType lambda, CUDA_LONG inputDimension, CUDA_LONG outputDimension, const ElemType* label, const ElemType* gradient, ElemType* X_gradient, const ElemType* inputMagnitude, const ElemType* X, const ElemType* weight,
-                                   const ElemType* cosThetaQuadratic, const ElemType* cosThetaCubic, const ElemType* sign1, const ElemType* sign2, CUDA_LONG numElements)
+    const ElemType* cosThetaQuadratic, const ElemType* cosThetaCubic, const ElemType* sign1, const ElemType* sign2, CUDA_LONG numElements)
 {
-    CUDA_LONG X_id = GridDim::GetLinearThreadId();
+    CUDA_LONG X_id = blockDim.x * blockIdx.x + threadIdx.x;
     if (X_id >= numElements)
         return;
 
@@ -3659,7 +4157,7 @@ __global__ void _asoftmaxBackward3(ElemType lambda, CUDA_LONG inputDimension, CU
     CUDA_LONG index = col * outputDimension + labelValue;
     ElemType coeff_w = sign1[index] * (12.0 * cosThetaQuadratic[index] - 3.0);
     ElemType coeff_x = -1.0 / inputMagnitude[col] * (8.0 * sign1[index] * cosThetaCubic[index] - sign2[index]);
-    ElemType coeff_norm = sqrt((float) (coeff_w * coeff_w + coeff_x * coeff_x));
+    ElemType coeff_norm = sqrt((float)(coeff_w * coeff_w + coeff_x * coeff_x));
 
     // From weight
     X_gradient[X_id] += weight[W_id] * gradient[index] / (1.0 + lambda) * (coeff_w / coeff_norm - 1);
@@ -3669,19 +4167,19 @@ __global__ void _asoftmaxBackward3(ElemType lambda, CUDA_LONG inputDimension, CU
 
 template <class ElemType>
 void GPUMatrix<ElemType>::AsoftmaxBackward3(ElemType lambda, size_t inputDimension, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gradient, GPUMatrix<ElemType>& X_gradient, const GPUMatrix<ElemType>& inputMagnitude, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight,
-                                            const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& cosThetaCubic, const GPUMatrix<ElemType>& sign1, const GPUMatrix<ElemType>& sign2)
+    const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& cosThetaCubic, const GPUMatrix<ElemType>& sign1, const GPUMatrix<ElemType>& sign2)
 {
     SyncGuard syncGuard;
     GridDim grid(X_gradient.GetNumElements());
-    _asoftmaxBackward3<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(lambda, (CUDA_LONG) inputDimension, (CUDA_LONG) outputDimension, label.Data(), gradient.Data(), X_gradient.Data(), inputMagnitude.Data(), X.Data(), weight.Data(),
-                                                                                                cosThetaQuadratic.Data(), cosThetaCubic.Data(), sign1.Data(), sign2.Data(), grid.m_N);
+    _asoftmaxBackward3<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (lambda, (CUDA_LONG)inputDimension, (CUDA_LONG)outputDimension, label.Data(), gradient.Data(), X_gradient.Data(), inputMagnitude.Data(), X.Data(), weight.Data(),
+        cosThetaQuadratic.Data(), cosThetaCubic.Data(), sign1.Data(), sign2.Data(), grid.m_N);
 }
 
 template <class ElemType>
 __global__ void _asoftmaxBackward4(ElemType lambda, CUDA_LONG inputDimension, CUDA_LONG outputDimension, const ElemType* label, const ElemType* gradient, ElemType* X_gradient, const ElemType* inputMagnitude, const ElemType* X, const ElemType* weight,
-                                   const ElemType* cosTheta, const ElemType* cosThetaQuadratic, const ElemType* cosThetaCubic, const ElemType* cosThetaQuartic, const ElemType* sign3, const ElemType* sign4, CUDA_LONG numElements)
+    const ElemType* cosTheta, const ElemType* cosThetaQuadratic, const ElemType* cosThetaCubic, const ElemType* cosThetaQuartic, const ElemType* sign3, const ElemType* sign4, CUDA_LONG numElements)
 {
-    CUDA_LONG X_id = GridDim::GetLinearThreadId();
+    CUDA_LONG X_id = blockDim.x * blockIdx.x + threadIdx.x;
     if (X_id >= numElements)
         return;
 
@@ -3692,7 +4190,7 @@ __global__ void _asoftmaxBackward4(ElemType lambda, CUDA_LONG inputDimension, CU
     CUDA_LONG index = col * outputDimension + labelValue;
     ElemType coeff_w = sign3[index] * (32.0 * cosThetaCubic[index] - 16.0 * cosTheta[index]);
     ElemType coeff_x = -1.0 / inputMagnitude[col] * (sign3[index] * (24.0 * cosThetaQuartic[index] - 8.0 * cosThetaQuadratic[index] - 1.0) - sign4[index]);
-    ElemType coeff_norm = sqrt((float) (coeff_w * coeff_w + coeff_x * coeff_x));
+    ElemType coeff_norm = sqrt((float)(coeff_w * coeff_w + coeff_x * coeff_x));
 
     // From weight
     X_gradient[X_id] += weight[W_id] * gradient[index] / (1.0 + lambda) * (coeff_w / coeff_norm - 1);
@@ -3702,12 +4200,41 @@ __global__ void _asoftmaxBackward4(ElemType lambda, CUDA_LONG inputDimension, CU
 
 template <class ElemType>
 void GPUMatrix<ElemType>::AsoftmaxBackward4(ElemType lambda, size_t inputDimension, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gradient, GPUMatrix<ElemType>& X_gradient, const GPUMatrix<ElemType>& inputMagnitude, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight,
-                                            const GPUMatrix<ElemType>& cosTheta, const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& cosThetaCubic, const GPUMatrix<ElemType>& cosThetaQuartic, const GPUMatrix<ElemType>& sign3, const GPUMatrix<ElemType>& sign4)
+    const GPUMatrix<ElemType>& cosTheta, const GPUMatrix<ElemType>& cosThetaQuadratic, const GPUMatrix<ElemType>& cosThetaCubic, const GPUMatrix<ElemType>& cosThetaQuartic, const GPUMatrix<ElemType>& sign3, const GPUMatrix<ElemType>& sign4)
 {
     SyncGuard syncGuard;
     GridDim grid(X_gradient.GetNumElements());
-    _asoftmaxBackward4<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(lambda, (CUDA_LONG) inputDimension, (CUDA_LONG) outputDimension, label.Data(), gradient.Data(), X_gradient.Data(), inputMagnitude.Data(), X.Data(), weight.Data(),
-                                                                                                cosTheta.Data(), cosThetaQuadratic.Data(), cosThetaCubic.Data(), cosThetaQuartic.Data(), sign3.Data(), sign4.Data(), grid.m_N);
+    _asoftmaxBackward4<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (lambda, (CUDA_LONG)inputDimension, (CUDA_LONG)outputDimension, label.Data(), gradient.Data(), X_gradient.Data(), inputMagnitude.Data(), X.Data(), weight.Data(),
+        cosTheta.Data(), cosThetaQuadratic.Data(), cosThetaCubic.Data(), cosThetaQuartic.Data(), sign3.Data(), sign4.Data(), grid.m_N);
+}
+
+#pragma endregion
+
+#pragma region FeatureNormalize
+
+template <class ElemType>
+__global__ void _featureNormalizeL1Backprop(const ElemType* value, const ElemType* gradient, const ElemType* magnitude, const ElemType* alpha, ElemType* X_gradient, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    if (value[id] > 0)
+        X_gradient[id] = (gradient[id] - alpha[id / rows]) / magnitude[id / rows];
+    else
+        X_gradient[id] = (gradient[id] + alpha[id / rows]) / magnitude[id / rows];
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::FeatureNormalizeL1Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient)
+{
+    CUDA_LONG numElements = (CUDA_LONG)X_gradient.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)X_gradient.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    value.PrepareDevice();
+    SyncGuard syncGuard;
+    _featureNormalizeL1Backprop<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (value.Data(), gradient.Data(), magnitude.Data(), alpha.Data(), X_gradient.Data(), rows, numElements);
 }
 
 #pragma endregion
@@ -3715,45 +4242,133 @@ void GPUMatrix<ElemType>::AsoftmaxBackward4(ElemType lambda, size_t inputDimensi
 #pragma region AMsoftmax
 
 template <class ElemType>
+__global__ void _featureNormalizeL2Backprop(const ElemType* value, const ElemType* gradient, const ElemType* magnitude, const ElemType* alpha, ElemType* X_gradient, CUDA_LONG rows, CUDA_LONG numElements)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    X_gradient[id] = (gradient[id] - value[id] * alpha[id / rows]) / magnitude[id / rows];
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::FeatureNormalizeL2Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient)
+{
+    CUDA_LONG numElements = (CUDA_LONG)X_gradient.GetNumElements();
+    CUDA_LONG rows = (CUDA_LONG)X_gradient.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    value.PrepareDevice();
+    SyncGuard syncGuard;
+    _featureNormalizeL2Backprop<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (value.Data(), gradient.Data(), magnitude.Data(), alpha.Data(), X_gradient.Data(), rows, numElements);
+}
+
+template <class ElemType>
 __global__ void _labelAdd(CUDA_LONG outputDimension, const ElemType* label, ElemType bias, ElemType* value, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
-    if (id < numElements)
-    {
-        CUDA_LONG labelValue = static_cast<CUDA_LONG>(label[id]);
-        CUDA_LONG index = id * outputDimension + labelValue;
-        if (value[index] > -bias)
-            value[index] += bias;
-    }
+    if (id >= numElements)
+        return;
+
+    CUDA_LONG labelValue = static_cast<CUDA_LONG>(label[id]);
+    CUDA_LONG index = id * outputDimension + labelValue;
+    if (value[index] <= -bias)
+        return;
+    value[index] += bias;
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::LabelAdd(const GPUMatrix<ElemType>& label, ElemType bias, const GPUMatrix<ElemType>& value)
 {
-    CUDA_LONG minibatchSize = value.GetNumCols();
-    CUDA_LONG outputDimension = value.GetNumRows();
+    CUDA_LONG minibatchSize = (CUDA_LONG)value.GetNumCols();
+    CUDA_LONG outputDimension = (CUDA_LONG)value.GetNumRows();
 
+    int blocksPerGrid = (int)ceil(1.0 * minibatchSize / GridDim::maxThreadsPerBlock);
+    label.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(minibatchSize);
-    _labelAdd<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(outputDimension, label.Data(), bias, value.Data(), minibatchSize);
+    _labelAdd<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (outputDimension, label.Data(), bias, value.Data(), minibatchSize);
 }
 
 #pragma endregion
 
+#pragma region ArcMarginProduct
+
+template <class ElemType>
+__global__ void _arcLabelAdd(CUDA_LONG outputDimension, const ElemType* label, ElemType threshold, ElemType bias, ElemType sinBias, ElemType* flag, ElemType* x, ElemType* value, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id >= numElements)
+        return;
+
+    CUDA_LONG labelValue = static_cast<CUDA_LONG>(label[id]);
+    CUDA_LONG index = id * outputDimension + labelValue;
+
+    if (value[index] > threshold)
+    {
+        x[id] = value[index];
+        value[index] = cosf(acosf(value[index]) + bias);
+    }
+    else
+    {
+        value[index] -= bias * sinBias;
+        flag[id] = 1.0f;
+    }
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ArcLabelAdd(const GPUMatrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& value)
+{
+    CUDA_LONG minibatchSize = (CUDA_LONG)value.GetNumCols();
+    CUDA_LONG outputDimension = (CUDA_LONG)value.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * minibatchSize / GridDim::maxThreadsPerBlock);
+    label.PrepareDevice();
+    SyncGuard syncGuard;
+    _arcLabelAdd<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (outputDimension, label.Data(), threshold, bias, sinBias, flag.Data(), x.Data(), value.Data(), minibatchSize);
+}
+
+template <class ElemType>
+__global__ void _arcLabelAddBackprop(CUDA_LONG outputDimension, const ElemType* label, ElemType cosBias, ElemType sinBias, ElemType* flag, ElemType* x, ElemType* gradient, CUDA_LONG numElements)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id >= numElements)
+        return;
+    if (flag[id] > 0.5f)
+        return;
+
+    CUDA_LONG labelValue = static_cast<CUDA_LONG>(label[id]);
+    CUDA_LONG index = id * outputDimension + labelValue;
+
+    gradient[index] *= cosBias + sinBias * x[id] / (sqrtf(1 - x[id] * x[id]) + 1e-12);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ArcLabelAddBackprop(const GPUMatrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& gradient)
+{
+    CUDA_LONG minibatchSize = (CUDA_LONG)gradient.GetNumCols();
+    CUDA_LONG outputDimension = (CUDA_LONG)gradient.GetNumRows();
+
+    int blocksPerGrid = (int)ceil(1.0 * minibatchSize / GridDim::maxThreadsPerBlock);
+    label.PrepareDevice();
+    SyncGuard syncGuard;
+    _arcLabelAddBackprop<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (outputDimension, label.Data(), cosBias, sinBias, flag.Data(), x.Data(), gradient.Data(), minibatchSize);
+}
+
+#pragma endregion
 
 #pragma region CenterLoss
 
 template <class ElemType>
 __global__ void _classCount(CUDA_LONG minibatchSize, const ElemType* label, ElemType* counter)
 {
-    CUDA_LONG id = GridDim::GetLinearThreadId();
-    if (id < minibatchSize)
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= minibatchSize)
+        return;
+
+    for (CUDA_LONG i = 0; i < minibatchSize; ++i)
     {
-        for (CUDA_LONG i = 0; i < minibatchSize; ++i)
-        {
-            if ((CUDA_LONG)label[i] == (CUDA_LONG)label[id])
-                counter[id] += (ElemType)1;
-        }
+        if ((CUDA_LONG)label[i] == (CUDA_LONG)label[id])
+            counter[id] += (ElemType)1;
     }
 }
 
@@ -3764,69 +4379,7 @@ void GPUMatrix<ElemType>::ClassCount(const GPUMatrix<ElemType>& label, const GPU
 
     SyncGuard syncGuard;
     GridDim grid(minibatchSize);
-    _classCount<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(minibatchSize, label.Data(), counter.Data());
-}
-
-#pragma endregion
-
-#pragma region SqueezeAndExcitation
-
-template <class ElemType>
-__global__ void _channelMultiply(const ElemType* X, const ElemType* weight, ElemType* value, CUDA_LONG featureSize, const CUDA_LONG numElements)
-{
-    CUDA_LONG id = GridDim::GetLinearThreadId();
-    if (id < numElements)
-    {
-        value[id] = X[id] * weight[id / featureSize];
-    }
-}
-
-template <class ElemType>
-void GPUMatrix<ElemType>::ChannelMultiply(const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight, const GPUMatrix<ElemType>& value, size_t featureSize)
-{
-    CUDA_LONG numElements = X.GetNumElements();
-
-    SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _channelMultiply<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(X.Data(), weight.Data(), value.Data(), (CUDA_LONG)featureSize, numElements);
-}
-
-template <class ElemType>
-__global__ void _channelMultiplyScaleBackprop(const ElemType* gradient, const ElemType* X, ElemType* weight_gradient, ElemType* buffer, CUDA_LONG featureSize, CUDA_LONG N, const CUDA_LONG numElements)
-{
-    CUDA_LONG id = GridDim::GetLinearThreadId();
-    if (id < numElements)
-    {
-        CUDA_LONG i = id / featureSize; // Channel i
-        CUDA_LONG j = id % featureSize; // Element j
-
-        if (j < N)
-            buffer[id] = gradient[id] * X[id];
-        __syncthreads();
-        if (j >= N)
-            buffer[id - N] += gradient[id] * X[id];
-        __syncthreads();
-
-        for (CUDA_LONG k = N >> 1; k > 0; k >>= 1)
-        {
-            if (j < k)
-                buffer[id] += buffer[id + k];
-            __syncthreads();
-        }
-
-        if (0 == j)
-            weight_gradient[i] = buffer[id];
-    }
-}
-
-template <class ElemType>
-void GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight_gradient, const GPUMatrix<ElemType>& buffer, size_t featureSize, size_t N)
-{
-    CUDA_LONG numElements = gradient.GetNumElements();
-
-    SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _channelMultiplyScaleBackprop<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> >(gradient.Data(), X.Data(), weight_gradient.Data(), buffer.Data(), (CUDA_LONG)featureSize, (CUDA_LONG)N, numElements);
+    _classCount<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (minibatchSize, label.Data(), counter.Data());
 }
 
 #pragma endregion
@@ -3836,14 +4389,11 @@ void GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(const GPUMatrix<ElemType>
 template <class ElemType>
 __global__ void _labelSmoothing(ElemType* label, ElemType keepRate, ElemType smoothValue, CUDA_LONG numElements)
 {
-    CUDA_LONG id = GridDim::GetLinearThreadId();
-    if (id < numElements)
-    {
-        if (label[id] == (ElemType)0)
-            label[id] = smoothValue;
-        else
-            label[id] = label[id] * keepRate + smoothValue;
-    }
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= numElements)
+        return;
+
+    label[id] = label[id] * keepRate + smoothValue;
 }
 
 template <class ElemType>
@@ -3851,9 +4401,10 @@ void GPUMatrix<ElemType>::LabelSmoothing(const GPUMatrix<ElemType>& label, ElemT
 {
     CUDA_LONG numElements = label.GetNumElements();
 
+    int blocksPerGrid = (int)ceil(1.0 * numElements / GridDim::maxThreadsPerBlock);
+    label.PrepareDevice();
     SyncGuard syncGuard;
-    GridDim grid(numElements);
-    _labelSmoothing<ElemType> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (label.Data(), keepRate, smoothValue, numElements);
+    _labelSmoothing<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (label.Data(), keepRate, smoothValue, numElements);
 }
 
 #pragma endregion

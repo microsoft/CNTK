@@ -371,6 +371,21 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             numParameters += node->GetSampleLayout().GetNumElements();
         }
     }
+
+    size_t bufferSize = 0;
+    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+    {
+        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+        if (node->IsParameterUpdateRequired() && node->m_distribute)
+        {
+            auto paramsNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+            auto& paramsValues = paramsNode->Value();
+            bufferSize = std::max(paramsValues.GetNumRows() * paramsValues.GetNumCols() * Globals::GetProcessNum(), bufferSize);
+            bufferSize = std::max(paramsValues.GetNumRows() * (size_t)m_mbSize[0], bufferSize);
+            bufferSize = std::max(paramsValues.GetNumCols() * (size_t)m_mbSize[0] * Globals::GetProcessNum(), bufferSize);
+        }
+    }
+
     size_t numNeedsGradient = 0;
     for (let node : net->GetEvalOrder(criterionNodes[0]))
     {
@@ -418,6 +433,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         currentNumGradientBits = m_numGradientBits[startEpoch]; // remember so that we can detect a change
         InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel);
+
+        m_distGradAgg->DistributedInit(net->GetDeviceId(), bufferSize);
     }
     else if (GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
              GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD)
@@ -437,6 +454,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             m_mpi->WaitAll();
         }
 
+        if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+            AggregateDistParams(learnableNodes);
         // In case of parallel training only the main node should we saving the model to prevent
         // the parallel training nodes from colliding to write the same file
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
@@ -444,6 +463,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             msra::files::make_intermediate_dirs(GetModelNameForEpoch(int(startEpoch) - 1));
             net->Save(GetModelNameForEpoch(int(startEpoch) - 1));
         }
+        if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+            ReleaseDistParams(learnableNodes);
     }
 
     if (m_saveBestModelPerCriterion)
@@ -548,6 +569,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             currentNumGradientBits = m_numGradientBits[i];
             InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel);
+
+            m_distGradAgg->DistributedInit(net->GetDeviceId(), bufferSize);
         }
 
         Timer timer;
@@ -598,6 +621,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                       i + 1, learnRatePerSample, m_minLearnRate);
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
+                if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                    AggregateDistParams(learnableNodes);
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
@@ -605,6 +630,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     msra::files::make_intermediate_dirs(m_modelPath + L"/" + m_modelName);
                     net->Save(m_modelPath + L"/" + m_modelName);
                 }
+                if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                    ReleaseDistParams(learnableNodes);
             }
             break;
         }
@@ -613,6 +640,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             LOGPRINTF(stderr, "Reach max SGD iteration. Training complete.\n");
             if (m_autoLearnRateSearchType != LearningRateSearchAlgorithm::None)
             {
+                if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                    AggregateDistParams(learnableNodes);
                 // In case of parallel training only the main node should we saving the model to prevent
                 // the parallel training nodes from colliding to write the same file
                 if ((m_mpi == nullptr) || m_mpi->IsMainNode())
@@ -620,6 +649,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     msra::files::make_intermediate_dirs(m_modelPath + L"/" + m_modelName);
                     net->Save(m_modelPath + L"/" + m_modelName);
                 }
+                if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                    ReleaseDistParams(learnableNodes);
             }
             break;
         }
@@ -844,6 +875,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     }
                     else
                     {
+                        if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                            AggregateDistParams(learnableNodes);
                         // In case of parallel training only the main node should we saving the model to prevent
                         // the parallel training nodes from colliding to write the same file
                         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
@@ -851,6 +884,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                             msra::files::make_intermediate_dirs(GetModelNameForEpoch(i, true));
                             net->Save(GetModelNameForEpoch(i, true));
                         }
+                        if (m_mpi != nullptr && Globals::GetProcessNum() > 1)
+                            ReleaseDistParams(learnableNodes);
 
                         LOGPRINTF(stderr, "Finished training and saved final model\n\n");
                         break;
@@ -899,6 +934,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // as rank 0 deleting it below
         SynchronizeWorkers();
 
+        if (m_mpi != nullptr && Globals::GetProcessNum() > 1 && !loadedPrevModel)
+            AggregateDistParams(learnableNodes);
         // Persist model and check-point info
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
         {
@@ -968,6 +1005,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 i -= m_learnRateAdjustInterval;
             }
         }
+        if (m_mpi != nullptr && Globals::GetProcessNum() > 1 && !loadedPrevModel)
+            ReleaseDistParams(learnableNodes);
 
         if (learnRatePerSample < 1e-12)
         {
@@ -1443,7 +1482,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                 {
                     ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                    if (node->IsParameterUpdateRequired())
+                    if (node->IsParameterUpdateRequired() && !node->m_distribute)
                     {
                         Matrix<ElemType>* currParamsGradient = &(node->Gradient()); // TODO: we can use shared_ptrs now
 
@@ -1774,6 +1813,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         ProfilerTimeEnd(profMinibatch, profilerEvtMainMinibatch);
 
 
+        if (m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel == 0 && m_lrapiInfo.iter != 0 && m_mpi != nullptr && Globals::GetProcessNum() > 1)
+            AggregateDistParams(learnableNodes);
         if (0 == m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel && m_lrapiInfo.iter != 0 && ((m_mpi == nullptr) || m_mpi->IsMainNode()))
         {
             wstring IterModelPath = m_modelPath + L"-Iter" + L"/" + m_modelName + L"-Iter." + to_wstring(m_lrapiInfo.iter);
@@ -1782,6 +1823,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             msra::files::make_intermediate_dirs(IterModelPath);
             net->Save(IterModelPath);
         }
+        if (m_lrapiInfo.iter % m_lrapiInfo.numItersToSaveModel == 0 && m_lrapiInfo.iter != 0 && m_mpi != nullptr && Globals::GetProcessNum() > 1)
+            ReleaseDistParams(learnableNodes);
     }
 
     // --- END MAIN MINIBATCH LOOP
@@ -2455,6 +2498,8 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
             m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, m_packThresholdSizeInBytes);
     }
 
+    Globals::SetDistGradAggPtr((void*)m_distGradAgg.get());
+
     m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });
 }
 
@@ -2949,6 +2994,38 @@ wstring SGD<ElemType>::GetModelName(const int epoch, bool bLastModel) const
     }
 }
 
+template <class ElemType>
+void SGD<ElemType>::AggregateDistParams(const std::list<ComputationNodeBasePtr>& learnableNodes)
+{
+    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+    {
+        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+        if (node->IsParameterUpdateRequired() && node->m_distribute)
+        {
+            auto paramsNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+            auto& paramsValues = paramsNode->Value();
+            assert(NULL == paramsNode->m_gatheredParams);
+            paramsNode->m_gatheredParams = new Matrix<ElemType>(paramsValues.GetNumRows(), paramsValues.GetNumCols() * Globals::GetProcessNum(), paramsValues.GetDeviceId());
+            m_distGradAgg->DistributedAllGather(paramsValues, *(paramsNode->m_gatheredParams), paramsValues.GetNumElements());
+        }
+    }
+}
+
+template <class ElemType>
+void SGD<ElemType>::ReleaseDistParams(const std::list<ComputationNodeBasePtr>& learnableNodes)
+{
+    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+    {
+        ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+        if (node->IsParameterUpdateRequired() && node->m_distribute)
+        {
+            auto paramsNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+            delete paramsNode->m_gatheredParams;
+            paramsNode->m_gatheredParams = NULL;
+        }
+    }
+}
+
 // return -1 if nothing exists
 template <class ElemType> // TODO: needed?
 int SGD<ElemType>::DetermineStartEpoch(const bool makeMode)
@@ -3110,20 +3187,20 @@ static AdaptationRegType ParseAdaptationRegType(const wstring& s)
 
 static GradientsUpdateType ParseGradUpdateType(const wstring& s)
 {
-	if (EqualCI(s, L"") || EqualCI(s, L"none"))
-		return GradientsUpdateType::None;
-	else if (EqualCI(s, L"adagrad"))
-		return GradientsUpdateType::AdaGrad;
-	else if (EqualCI(s, L"rmsProp"))
-		return GradientsUpdateType::RmsProp;
-	else if (EqualCI(s, L"fsAdagrad"))
-		return GradientsUpdateType::FSAdaGrad;
-	else if (EqualCI(s, L"adam"))
-		return GradientsUpdateType::Adam;
-	else if (EqualCI(s, L"adaMax"))
-		return GradientsUpdateType::AdaMax;
-	else if (EqualCI(s, L"adaBound"))
-		return GradientsUpdateType::AdaBound;
+    if (EqualCI(s, L"") || EqualCI(s, L"none"))
+        return GradientsUpdateType::None;
+    else if (EqualCI(s, L"adagrad"))
+        return GradientsUpdateType::AdaGrad;
+    else if (EqualCI(s, L"rmsProp"))
+        return GradientsUpdateType::RmsProp;
+    else if (EqualCI(s, L"fsAdagrad"))
+        return GradientsUpdateType::FSAdaGrad;
+    else if (EqualCI(s, L"adam"))
+        return GradientsUpdateType::Adam;
+    else if (EqualCI(s, L"adaMax"))
+        return GradientsUpdateType::AdaMax;
+    else if (EqualCI(s, L"adaBound"))
+        return GradientsUpdateType::AdaBound;
     // legacy, deprecated
     else if (EqualCI(s, L"normal") || EqualCI(s, L"simple"))
         return GradientsUpdateType::None;

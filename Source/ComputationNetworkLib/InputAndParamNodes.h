@@ -9,6 +9,7 @@
 #include "ScriptableObjects.h"
 #include "TensorShape.h"
 #include "Matrix.h"
+#include "Globals.h"
 
 #include <string>
 
@@ -51,11 +52,27 @@ public:
         m_initString = L"fromValue"; // default init is with 0; typically overwritten
         m_initValue = 0;
         m_regMultiplier = 1.0f; // enable reg in update by default
+        m_gatheredParams = NULL;
     }
-    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape) :
+    LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& shape, const ScriptableObjects::IConfigRecordPtr configp = NULL) :
         LearnableParameter(deviceId, name)
     {
-        InitShape(shape);
+        if (configp != NULL && configp->Exists(L"distribute"))
+            this->m_distribute = configp->Get(L"distribute");
+        if (this->m_distribute)
+        {
+            SmallVector<size_t> vec;
+            for (size_t i(0); i < shape.GetRank(); ++i)
+                vec.push_back(shape[i]);
+            m_isVector = (vec.size() == 1);
+            if (vec[shape.GetRank() - 1] % Globals::GetProcessNum() != 0)
+                LogicError("Label num mod process num must be 0. Please check the brainscript config.");
+            vec[shape.GetRank() - 1] /= Globals::GetProcessNum();
+            TensorShape distributedShape(vec);
+            InitShape(distributedShape);
+        }
+        else
+            InitShape(shape);
         LazyInitParameters();
     }
     LearnableParameter(DEVICEID_TYPE deviceId, const wstring& name, size_t rows, size_t cols) :
@@ -99,7 +116,18 @@ private:
     {
         size_t fanOut, fanIn;
         ElemType range;
-        std::tie(fanOut, fanIn, range) = InitRandom(Value(), GetSampleLayout(), type, randomSeed, initValueScale, initFilterRank, initOutputRank, initOnCPUOnly, m_deviceId);
+        if (this->m_distribute)
+        {
+            SmallVector<size_t> vec;
+            auto shape = GetSampleLayout();
+            for (size_t i(0); i < shape.GetRank(); ++i)
+                vec.push_back(shape[i]);
+            vec[shape.GetRank() - 1] *= Globals::GetProcessNum();
+            TensorShape distributedShape(vec);
+            std::tie(fanOut, fanIn, range) = InitRandom(Value(), distributedShape, type, randomSeed + Globals::GetRank(), initValueScale, initFilterRank, initOutputRank, initOnCPUOnly, m_deviceId);
+        }
+        else
+            std::tie(fanOut, fanIn, range) = InitRandom(Value(), GetSampleLayout(), type, randomSeed, initValueScale, initFilterRank, initOutputRank, initOnCPUOnly, m_deviceId);
         if (fanOut == 0) // Shape not yet initialized
             return;
 
@@ -177,6 +205,10 @@ private:
 
     // flags related to gradient update
     float m_regMultiplier; // The multiplier to adjust the L1Reg and L2Reg for Learnable node
+
+public:
+    bool m_isVector;
+    Matrix<ElemType>* m_gatheredParams;
 };
 
 // -----------------------------------------------------------------------

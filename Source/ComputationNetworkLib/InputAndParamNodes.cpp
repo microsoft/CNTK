@@ -63,7 +63,7 @@ static pair<DistributionType, double/*stddev or range*/> ParseRandomizationType(
 static TensorShape ToTensorShape(const ScriptableObjects::ConfigValuePtr& val);
 template <class ElemType>
 LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfigRecordPtr configp) :
-    LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", ToTensorShape(configp->Get(L"shape")))
+    LearnableParameter(configp->Get(L"deviceId"), L"<placeholder>", ToTensorShape(configp->Get(L"shape")), configp)
 {
     AttachInputsFromConfig(configp, this->GetExpectedNumInputs()); // (we have none; this checks that none are provided)
     // Parameter{dims, other optional parameters: learningRateMultiplier=[1|0|float], init=[uniform|gaussian|], initValueScale=[1|float], initValue=[''|float], initFromFilePath=[''|string]}
@@ -477,7 +477,17 @@ void LearnableParameter<ElemType>::Save(File& fstream) const /*override*/
     Base::Save(fstream);
     fstream << m_learningRateMultiplier;
     m_sampleLayout.Save(fstream);
-    fstream << Value();
+    fstream << this->m_distribute;
+    if (!this->m_distribute)
+        fstream << Value();
+    else
+    {
+        fstream << m_isVector;
+        assert(m_gatheredParams != NULL && Value().GetNumCols() * Globals::GetProcessNum() == m_gatheredParams->GetNumCols());
+        if (m_isVector)
+            m_gatheredParams->Resize(m_gatheredParams->GetNumElements(), 1);
+        fstream << (*m_gatheredParams);
+    }
 }
 
 template <class ElemType>
@@ -510,8 +520,34 @@ void LearnableParameter<ElemType>::Load(File& fstream, size_t modelVersion) /*ov
         }
     }
 
-    LoadValue(fstream);
-    SetDims(sampleLayout, false); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
+    fstream >> this->m_distribute;
+    if (!this->m_distribute)
+    {
+        LoadValue(fstream);
+        SetDims(sampleLayout, false); // note: call this after LoadValue() since LoadValue() overwrites m_sampleLayout
+    }
+    else
+    {
+        fstream >> m_isVector;
+        CreateMatrixIfNull(m_value);
+        Matrix<ElemType> temp(this->m_deviceId);
+        fstream >> temp;
+        if (!m_isVector)
+        {
+            if (temp.GetNumCols() % Globals::GetProcessNum() != 0)
+                LogicError("Distributed parameter columns mod Gpu num must be zero");
+            Value().AssignColumnSlice(temp, temp.GetNumCols() / Globals::GetProcessNum() * Globals::GetRank(), temp.GetNumCols() / Globals::GetProcessNum());
+        }
+        else
+        {
+            if (temp.GetNumRows() % Globals::GetProcessNum() != 0)
+                LogicError("Distributed parameter rows mod Gpu num must be zero");
+            Value().Resize(temp.GetNumRows() / Globals::GetProcessNum(), 1);
+            Value().AssignRowSliceValuesOf(temp, temp.GetNumRows() / Globals::GetProcessNum() * Globals::GetRank(), temp.GetNumRows() / Globals::GetProcessNum());
+        }
+        // above reads dimensions, so we must update our own dimensions
+        SetDims(TensorShape(Value().GetNumRows(), Value().GetNumCols()), false);
+    }
     VerifyDataSize(Value());      // sanity check
 
     m_initString.clear(); // deferred initialization not possible after loading

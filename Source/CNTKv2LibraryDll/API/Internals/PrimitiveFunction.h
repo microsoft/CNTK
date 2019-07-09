@@ -125,9 +125,15 @@ namespace CNTK
         {PrimitiveOpType::MarginInnerProduct, L"MarginInnerProduct"},
         {PrimitiveOpType::FeatureNormalize, L"FeatureNormalize"},
         {PrimitiveOpType::AdditiveFullConnection, L"AdditiveFullConnection"},
+        {PrimitiveOpType::ArcMarginProduct, L"ArcMarginProduct" },
         {PrimitiveOpType::CenterLoss, L"CenterLoss" },
-        {PrimitiveOpType::ChannelMultiply, L"ChannelMultiply" },
-        {PrimitiveOpType::GlobalConcat, L"GlobalConcat"}
+        {PrimitiveOpType::GlobalConcat, L"GlobalConcat"},
+        {PrimitiveOpType::DistributedFullyConnected, L"DistributedFullyConnected" },
+        {PrimitiveOpType::DistributedFullyConnected_v2, L"DistributedFullyConnected_v2" },
+        {PrimitiveOpType::DistributedCrossEntropyWithSoftmax, L"DistributedCrossEntropyWithSoftmax" },
+        {PrimitiveOpType::DistributedClassificationError, L"DistributedClassificationError" },
+        {PrimitiveOpType::DistributedAdditiveFullConnection, L"DistributedAdditiveFullConnection" },
+        {PrimitiveOpType::DistributedArcMarginProduct, L"DistributedArcMarginProduct" }
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)

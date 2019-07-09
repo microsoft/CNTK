@@ -53,6 +53,43 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
 }.apply
 
 
+# DistributedFullyConnectedLayer -- create a distributed fully-connected linear projection layer
+# In this layer, we decompose the fc parameters, the input and output tensors are as the same as the 'LinearLayer'
+DistributedFullyConnectedLayer {inDim, outDim, init='glorotUniform', initValueScale=1, initBias=0} =
+{
+    W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
+    b = ParameterTensor {outDim, initValue=initBias, distribute=true}
+    apply (X) = DistributedFullyConnected(W, X, b);
+}.apply
+
+ # DistributedFullyConnectedLayer_v2 -- create a distributed fully-connected linear projection layer
+# In this layer, we decompose the fc parameters, the input tensors are still as the same as the 'LinearLayer'
+# However, the output is decomposed. The next layer must deal with the decomposed output tensors
+DistributedFullyConnectedLayer_v2 {inDim, outDim, init='glorotUniform', initValueScale=1, initBias=0} =
+{
+    W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
+    b = ParameterTensor {outDim, initValue=initBias, distribute=true}
+    apply (X) = DistributedFullyConnected_v2(W, X, b);
+}.apply
+
+# DistributedAdditiveFullConnectionLayer -- create a distributed label-specific-add full connection layer
+# The output is decomposed. The next layer must deal with the decomposed output tensors
+DistributedAdditiveFullConnectionLayer {inDim, outDim, weightNormalize=true, bias=0, scale=1, init='glorotUniform', initValueScale=1} =
+{
+    W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
+
+    apply (labelSequence, outProbVectorSequence) = DistributedAdditiveFullConnection(labelSequence, W, outProbVectorSequence, weightNormalize=weightNormalize, bias=bias, scale=scale)
+}.apply
+
+# DistributedArcMarginProductLayer -- create a distributed arc margin product layer
+# The output is decomposed. The next layer must deal with the decomposed output tensors
+DistributedArcMarginProductLayer {inDim, outDim, bias=0, scale=1, init='glorotUniform', initValueScale=1} =
+{
+    W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
+
+    apply (labelSequence, outProbVectorSequence) = DistributedArcMarginProduct(labelSequence, W, outProbVectorSequence, bias=bias, scale=scale)
+}.apply
+
 # MarginInnerProductLayer -- create a marginInnerProduct projection layer
 # Note: outputDimension may describe a tensor as well.
 MarginInnerProductLayer {inputDimension, outputDimension, base, gamma, power, lambdaMin, coefficient, init='glorotUniform', initValueScale=1} =
@@ -76,6 +113,15 @@ AdditiveFullConnectionLayer {inputDimension, outputDimension, weightNormalize=tr
     W = ParameterTensor {_ConcatArrays (outputDimension, inputDimension), init=init, initValueScale=initValueScale}
 
     apply (labelSequence, outProbVectorSequence) = AdditiveFullConnection(labelSequence, outProbVectorSequence, W, outputDimension=outputDimension, weightNormalize=weightNormalize, bias=bias, annealBias=annealBias, biasBase=biasBase, biasGamma=biasGamma, biasPower=biasPower, biasMin=biasMin, biasMax=biasMax)
+}.apply
+
+# ArcMarginProductLayer -- create a arc margin product layer
+# Note: outputDimension may describe a tensor as well.
+ArcMarginProductLayer {inputDimension, outputDimension, bias=0, init='glorotUniform', initValueScale=1} =
+{
+    W = ParameterTensor {_ConcatArrays (outputDimension, inputDimension), init=init, initValueScale=initValueScale}
+
+     apply (labelSequence, outProbVectorSequence) = ArcMarginProduct(labelSequence, outProbVectorSequence, W, bias=bias)
 }.apply
 
 # GlobalConcatLayer -- create a concat layer, which uses temporary global memory to save the output
@@ -126,7 +172,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     lowerPad = 0, upperPad = 0,
                     dilation = 1,
                     maxTempMemSizeInSamples = 0,
-					disableRegularization = false} =
+                    disableRegularization = false} =
 {
     reductionRank = 1 # TODO: shall become an optional parameter
     outputChannelsShape = _AsArray (numOutputChannels)
@@ -156,7 +202,7 @@ GroupConvolutionalLayer {numInputChannels,
                          lowerPad = 0, upperPad = 0,
                          dilation = 1,
                          maxTempMemSizeInSamples = 0,
-						 disableRegularization = false} =
+                         disableRegularization = false} =
 {
     outputChannelsShape = _AsArray (numOutputChannels)
     filterRank = Length (filterShape)
@@ -427,11 +473,17 @@ Times                   = CNTK2.Times
 Abs                     = CNTK2.Abs
 Ceil                    = CNTK2.Ceil
 CrossEntropyWithSoftmax = CNTK2.CrossEntropyWithSoftmax
+DistributedFullyConnected          = CNTK2.DistributedFullyConnected
+DistributedFullyConnected_v2       = CNTK2.DistributedFullyConnected_v2
+DistributedCrossEntropyWithSoftmax = CNTK2.DistributedCrossEntropyWithSoftmax
+DistributedClassificationError     = CNTK2.DistributedClassificationError
+DistributedAdditiveFullConnection  = CNTK2.DistributedAdditiveFullConnection
+DistributedArcMarginProduct        = CNTK2.DistributedArcMarginProduct
 MarginInnerProduct      = CNTK2.MarginInnerProduct
 FeatureNormalize        = CNTK2.FeatureNormalize
 AdditiveFullConnection  = CNTK2.AdditiveFullConnection
+ArcMarginProduct        = CNTK2.ArcMarginProduct
 CenterLoss              = CNTK2.CenterLoss
-ChannelMultiply         = CNTK2.ChannelMultiply
 GlobalConcat            = CNTK2.GlobalConcat
 Dropout                 = CNTK2.Dropout
 ElementTimes            = CNTK2.ElementTimes
@@ -530,6 +582,42 @@ CNTK2 = [
 
 
     #
+    # Distributed fully connected node
+    #
+    DistributedFullyConnected(W, X, b, tag='') =
+        new ComputationNode [ operation = 'DistributedFullyConnected' ; inputs = _AsNodes (W : X : b) /*plus the function args*/ ]
+
+    #
+    # Distributed fully connected node v2
+    #
+    DistributedFullyConnected_v2(W, X, b, tag='') =
+        new ComputationNode [ operation = 'DistributedFullyConnected_v2' ; inputs = _AsNodes (W : X : b) /*plus the function args*/ ]
+
+    #
+    # Distributed cross entropy with softmax node
+    #
+    DistributedCrossEntropyWithSoftmax(labelSequence, outProbVectorSequence, tag='') =
+        new ComputationNode [ operation = 'DistributedCrossEntropyWithSoftmax' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
+
+    #
+    # Distributed classification error node, the input labels and probability must be decomposed
+    #
+    DistributedClassificationError(labelSequence, outVectorSequence, tag='') =
+        new ComputationNode [ operation = 'DistributedClassificationError' ; inputs = _AsNodes (labelSequence : outVectorSequence) /*plus the function args*/ ]
+
+    #
+    # Distributed additiveFullConnection node, the input labels and probability must be decomposed
+    #
+    DistributedAdditiveFullConnection(labelSequence, W, outProbVectorSequence, weightNormalize=true, bias=0, scale=1, tag='') = 
+        new ComputationNode [ operation = 'DistributedAdditiveFullConnection' ; inputs = _AsNodes (labelSequence : W : outProbVectorSequence) /*plus the function args*/ ]
+
+    #
+    # Distributed arcMarginProduct node, the input labels and probability must be decomposed
+    #
+    DistributedArcMarginProduct(labelSequence, W, outProbVectorSequence, bias=0, scale=1, tag='') = 
+        new ComputationNode [ operation = 'DistributedArcMarginProduct' ; inputs = _AsNodes (labelSequence : W : outProbVectorSequence) /*plus the function args*/ ]
+
+    #
     # MarginInnerProduct node
     #
     MarginInnerProduct(labelSequence, outProbVectorSequence, W, marginInnerProductOutputDimension=0, marginInnerProductBase=0, marginInnerProductGamma=0, marginInnerProductPower=0, marginInnerProductLambdaMin=0, marginCoefficient=2, tag='') = 
@@ -548,17 +636,17 @@ CNTK2 = [
         new ComputationNode [ operation = 'AdditiveFullConnection' ; inputs = _AsNodes (labelSequence : outProbVectorSequence : W) /*plus the function args*/ ]
 
     #
+    # ArcMarginProduct node
+    #
+    ArcMarginProduct(labelSequence, outProbVectorSequence, W, outputDimension=0, bias=0, tag='') = 
+        new ComputationNode [ operation = 'ArcMarginProduct' ; inputs = _AsNodes (labelSequence : outProbVectorSequence : W) /*plus the function args*/ ]
+
+    #
     #CenterLoss node
     #
     CenterLoss(labelSequence, outProbVectorSequence, centerLossLambda, centerLossAlpha, centerLossLabelDim, centerLossNormalize=false, axis=0, tag='') = 
         if axis==0 then new ComputationNode [ operation = 'CenterLoss' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
         else [ tag1 = tag; out = Minus (ReduceLogSum (outProbVectorSequence, axis=axis), ReduceSum (labelSequence .* outProbVectorSequence, axis=axis), tag=tag1) ].out
-
-    #
-    # ChannelMultiply node
-    #
-    ChannelMultiply(feature, weight, tag='') = 
-        new ComputationNode [ operation = 'ChannelMultiply' ; inputs = _AsNodes (feature : weight) /*plus the function args*/ ]
 
     #
     # GlobalConcat node
@@ -681,7 +769,7 @@ Parameter {outputDim, inputDim, learningRateMultiplier = 1.0, init = ''/*|unifor
 LearnableParameter = Parameter  // deprecated
 
 # TODO: make Parameter take tensor dims?
-ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, tag='', disableRegularization = false} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
+ParameterTensor {dims, learningRateMultiplier = 1.0, init = ''/*|uniform|fixedValue|gaussian|fromFile|fromLiteral*/, initValueScale = 1, value = 0, initValue = '', initFilterRank = 0, initOutputRank = 1, initFromFilePath = '', initFromLiteral = '', initOnCPUOnly=true, randomSeed=-1, disableRegularization = false, distribute=false, tag=''} = new ComputationNode [ operation = 'LearnableParameter' ; shape = new TensorShape [ /*dims*/ ] /*plus the function args*/ ]
 ConstantFromString(literal, tag='') = ParameterTensor((0)/*dim, will be inferred*/, initFromLiteral = literal, learningRateMultiplier = 0.0)
 # TODO: Deprecate ConstantFromString() in favor of Constant(array expression)
 DynamicAxis(tag='') = new ComputationNode [ operation = 'DynamicAxis' ; /*plus the function args*/  ]

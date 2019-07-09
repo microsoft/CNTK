@@ -596,6 +596,38 @@ public:
                                     Matrix<StatType>& scaleGrad, Matrix<StatType>& biasGrad) const;
 
 
+#pragma region DistributedFC
+
+    static void GetDenseLabelsFromOneHot(const Matrix<ElemType>& oneHotLabels, const Matrix<ElemType>& labels);
+
+    static void Scatter(const Matrix<ElemType>& src, const Matrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
+
+    static void AddColumnVector(const Matrix<ElemType>& src, const Matrix<ElemType>& columnVector, const Matrix<ElemType>& dst);
+
+    static void AddRowVector(const Matrix<ElemType>& src, const Matrix<ElemType>& rowVector, const Matrix<ElemType>& dst);
+
+    static void MinusColumnVector(const Matrix<ElemType>& src, const Matrix<ElemType>& columnVector, const Matrix<ElemType>& dst);
+
+    static void MinusRowVector(const Matrix<ElemType>& src, const Matrix<ElemType>& rowVector, const Matrix<ElemType>& dst);
+
+    static void AssignExpSum(const Matrix<ElemType>& Y, const Matrix<ElemType>& expSum);
+
+    static void DistributedSoftmax(const Matrix<ElemType>& Y, const Matrix<ElemType>& logSum, const Matrix<ElemType>& softmax, const Matrix<ElemType>& logSoftmax);
+
+    static void DistributedCrossEntropy(const Matrix<ElemType>& logP, const Matrix<ElemType>& labels, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedSoftmaxWithCrossEntropyBackprop(const Matrix<ElemType>& postGradient, const Matrix<ElemType>& softmax, const Matrix<ElemType>& labels, const Matrix<ElemType>& gradient, size_t startIndex);
+
+    static void DistributedAssignClassificationError(const Matrix<ElemType>& labels, const Matrix<ElemType>& probs, const Matrix<ElemType>& maxProb, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedLabelAdd(const Matrix<ElemType>& labels, ElemType bias, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedArcLabelAdd(const Matrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedArcLabelAddBackprop(const Matrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& gradient, size_t startIndex, size_t endIndex);
+
+#pragma endregion
+
 #pragma region Asoftmax
 
     static void AsoftmaxForward2(ElemType lambda, size_t minibatchSize, size_t outputDimension, const Matrix<ElemType>& label, const Matrix<ElemType>& value, const Matrix<ElemType>& inputMagnitude,
@@ -618,23 +650,31 @@ public:
 
 #pragma endregion
 
+#pragma region FeatureNormalize
+
+    static void FeatureNormalizeL1Backprop(const Matrix<ElemType>& value, const Matrix<ElemType>& gradient, const Matrix<ElemType>& magnitude, const Matrix<ElemType>& alpha, const Matrix<ElemType>& X_gradient);
+
+    static void FeatureNormalizeL2Backprop(const Matrix<ElemType>& value, const Matrix<ElemType>& gradient, const Matrix<ElemType>& magnitude, const Matrix<ElemType>& alpha, const Matrix<ElemType>& X_gradient);
+
+#pragma endregion
+
 #pragma region AMsoftmax
 
     static void LabelAdd(const Matrix<ElemType>& label, ElemType bias, const Matrix<ElemType>& value);
 
 #pragma endregion
 
-#pragma region CenterLoss
+#pragma region ArcMarginProduct
 
-    static void ClassCount(const Matrix<ElemType>& label, const Matrix<ElemType>& counter);
+    static void ArcLabelAdd(const Matrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& value);
+
+    static void ArcLabelAddBackprop(const Matrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& gradient);
 
 #pragma endregion
 
-#pragma region SqueezeAndExcitation
+#pragma region CenterLoss
 
-    static void ChannelMultiply(const Matrix<ElemType>& X, const Matrix<ElemType>& weight, const Matrix<ElemType>& value, size_t featureSize);
-
-    static void ChannelMultiplyScaleBackprop(const Matrix<ElemType>& gradient, const Matrix<ElemType>& X, const Matrix<ElemType>& weight_gradient, const Matrix<ElemType>& buffer, size_t featureSize, size_t N);
+    static void ClassCount(const Matrix<ElemType>& label, const Matrix<ElemType>& counter);
 
 #pragma endregion
 

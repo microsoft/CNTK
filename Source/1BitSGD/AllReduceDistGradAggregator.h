@@ -565,6 +565,27 @@ public:
         }
     }
 
+    bool DistributedCheck(size_t minibatchSize, size_t processNum)
+    {
+        LogicError("DistributedCheck not implemented");
+        return true;
+    }
+
+    void DistributedInit(DEVICEID_TYPE deviceId, size_t bufferSize)
+    {
+        LogicError("DistributedInit not implemented");
+    }
+
+    void DistributedAllGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count)
+    {
+        LogicError("DistributedAllGather not implemented");
+    }
+
+    void DistributedAllReduce(const Matrix<ElemType>& distributedMatrix, MPI_Op op)
+    {
+        LogicError("DistributedAllReduce not implemented");
+    }
+
     // Debug helper to print matrix contents
     static void PrintMatrix(const char* printHeader, Matrix<ElemType>* matrixToPrint, bool peek = true)
     {

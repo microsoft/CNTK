@@ -5078,6 +5078,174 @@ void Matrix<ElemType>::BatchNormalizationForward(const Matrix<StatType>& scale, 
 }
 
 
+#pragma region DistributedFC
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::GetDenseLabelsFromOneHot(const Matrix<ElemType>& oneHotLabels, const Matrix<ElemType>& labels)
+{
+    DISPATCH_MATRIX_ON_FLAG(&labels,
+        &labels,
+        CPUMatrix<ElemType>::GetDenseLabelsFromOneHot(*(oneHotLabels.m_CPUMatrix), *(labels.m_CPUMatrix)),
+        GPUMatrix<ElemType>::GetDenseLabelsFromOneHot(*(oneHotLabels.m_GPUMatrix), *(labels.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::Scatter(const Matrix<ElemType>& src, const Matrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum)
+{
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::Scatter(*(src.m_CPUMatrix), *(dst.m_CPUMatrix), minibatchSize, rank, processNum),
+        GPUMatrix<ElemType>::Scatter(*(src.m_GPUMatrix), *(dst.m_GPUMatrix), minibatchSize, rank, processNum),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AddColumnVector(const Matrix<ElemType>& src, const Matrix<ElemType>& columnVector, const Matrix<ElemType>& dst)
+{
+    assert(src.GetNumRows() == dst.GetNumRows() && src.GetNumCols() == src.GetNumCols() && src.GetNumRows() == columnVector.GetNumRows());
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::AddColumnVector(*(src.m_CPUMatrix), *(columnVector.m_CPUMatrix), *(dst.m_CPUMatrix)),
+        GPUMatrix<ElemType>::AddColumnVector(*(src.m_GPUMatrix), *(columnVector.m_GPUMatrix), *(dst.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AddRowVector(const Matrix<ElemType>& src, const Matrix<ElemType>& rowVector, const Matrix<ElemType>& dst)
+{
+    assert(src.GetNumRows() == dst.GetNumRows() && src.GetNumCols() == src.GetNumCols() && src.GetNumCols() == rowVector.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::AddRowVector(*(src.m_CPUMatrix), *(rowVector.m_CPUMatrix), *(dst.m_CPUMatrix)),
+        GPUMatrix<ElemType>::AddRowVector(*(src.m_GPUMatrix), *(rowVector.m_GPUMatrix), *(dst.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::MinusColumnVector(const Matrix<ElemType>& src, const Matrix<ElemType>& columnVector, const Matrix<ElemType>& dst)
+{
+    assert(src.GetNumRows() == dst.GetNumRows() && src.GetNumCols() == src.GetNumCols() && src.GetNumRows() == columnVector.GetNumRows());
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::MinusColumnVector(*(src.m_CPUMatrix), *(columnVector.m_CPUMatrix), *(dst.m_CPUMatrix)),
+        GPUMatrix<ElemType>::MinusColumnVector(*(src.m_GPUMatrix), *(columnVector.m_GPUMatrix), *(dst.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::MinusRowVector(const Matrix<ElemType>& src, const Matrix<ElemType>& rowVector, const Matrix<ElemType>& dst)
+{
+    assert(src.GetNumRows() == dst.GetNumRows() && src.GetNumCols() == src.GetNumCols() && src.GetNumCols() == rowVector.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        CPUMatrix<ElemType>::MinusRowVector(*(src.m_CPUMatrix), *(rowVector.m_CPUMatrix), *(dst.m_CPUMatrix)),
+        GPUMatrix<ElemType>::MinusRowVector(*(src.m_GPUMatrix), *(rowVector.m_GPUMatrix), *(dst.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::AssignExpSum(const Matrix<ElemType>& Y, const Matrix<ElemType>& expSum)
+{
+    assert(Y.GetNumCols() == expSum.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&Y,
+        &Y,
+        CPUMatrix<ElemType>::AssignExpSum(*(Y.m_CPUMatrix), *(expSum.m_CPUMatrix)),
+        GPUMatrix<ElemType>::AssignExpSum(*(Y.m_GPUMatrix), *(expSum.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedSoftmax(const Matrix<ElemType>& Y, const Matrix<ElemType>& logSum, const Matrix<ElemType>& softmax, const Matrix<ElemType>& logSoftmax)
+{
+    assert(Y.GetNumCols() == logSum.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&Y,
+        &Y,
+        CPUMatrix<ElemType>::DistributedSoftmax(*(Y.m_CPUMatrix), *(logSum.m_CPUMatrix), *(softmax.m_CPUMatrix), *(logSoftmax.m_CPUMatrix)),
+        GPUMatrix<ElemType>::DistributedSoftmax(*(Y.m_GPUMatrix), *(logSum.m_GPUMatrix), *(softmax.m_GPUMatrix), *(logSoftmax.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedCrossEntropy(const Matrix<ElemType>& logP, const Matrix<ElemType>& labels, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    assert(logP.GetNumCols() == labels.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&value,
+        &value,
+        CPUMatrix<ElemType>::DistributedCrossEntropy(*(logP.m_CPUMatrix), *(labels.m_CPUMatrix), *(value.m_CPUMatrix), startIndex, endIndex),
+        GPUMatrix<ElemType>::DistributedCrossEntropy(*(logP.m_GPUMatrix), *(labels.m_GPUMatrix), *(value.m_GPUMatrix), startIndex, endIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(const Matrix<ElemType>& postGradient, const Matrix<ElemType>& softmax, const Matrix<ElemType>& labels, const Matrix<ElemType>& gradient, size_t startIndex)
+{
+    assert(gradient.GetNumCols() == labels.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&gradient,
+        &gradient,
+        CPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(*(postGradient.m_CPUMatrix), *(softmax.m_CPUMatrix), *(labels.m_CPUMatrix), *(gradient.m_CPUMatrix), startIndex),
+        GPUMatrix<ElemType>::DistributedSoftmaxWithCrossEntropyBackprop(*(postGradient.m_GPUMatrix), *(softmax.m_GPUMatrix), *(labels.m_GPUMatrix), *(gradient.m_GPUMatrix), startIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedAssignClassificationError(const Matrix<ElemType>& labels, const Matrix<ElemType>& probs, const Matrix<ElemType>& maxProb, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    assert(value.GetNumCols() == labels.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&value,
+        &value,
+        CPUMatrix<ElemType>::DistributedAssignClassificationError(*(labels.m_CPUMatrix), *(probs.m_CPUMatrix), *(maxProb.m_CPUMatrix), *(value.m_CPUMatrix), startIndex, endIndex),
+        GPUMatrix<ElemType>::DistributedAssignClassificationError(*(labels.m_GPUMatrix), *(probs.m_GPUMatrix), *(maxProb.m_GPUMatrix), *(value.m_GPUMatrix), startIndex, endIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedLabelAdd(const Matrix<ElemType>& labels, ElemType bias, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    assert(labels.GetNumCols() == value.GetNumCols());
+    DISPATCH_MATRIX_ON_FLAG(&value,
+        &value,
+        CPUMatrix<ElemType>::DistributedLabelAdd(*(labels.m_CPUMatrix), bias, *(value.m_CPUMatrix), startIndex, endIndex),
+        GPUMatrix<ElemType>::DistributedLabelAdd(*(labels.m_GPUMatrix), bias, *(value.m_GPUMatrix), startIndex, endIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedArcLabelAdd(const Matrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& value, size_t startIndex, size_t endIndex)
+{
+    DISPATCH_MATRIX_ON_FLAG(&value,
+        &value,
+        CPUMatrix<ElemType>::DistributedArcLabelAdd(*(labels.m_CPUMatrix), threshold, bias, sinBias, *(flag.m_CPUMatrix), *(x.m_CPUMatrix), *(value.m_CPUMatrix), startIndex, endIndex),
+        GPUMatrix<ElemType>::DistributedArcLabelAdd(*(labels.m_GPUMatrix), threshold, bias, sinBias, *(flag.m_GPUMatrix), *(x.m_GPUMatrix), *(value.m_GPUMatrix), startIndex, endIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::DistributedArcLabelAddBackprop(const Matrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& gradient, size_t startIndex, size_t endIndex)
+{
+    DISPATCH_MATRIX_ON_FLAG(&gradient,
+        &gradient,
+        CPUMatrix<ElemType>::DistributedArcLabelAddBackprop(*(labels.m_CPUMatrix), cosBias, sinBias, *(flag.m_CPUMatrix), *(x.m_CPUMatrix), *(gradient.m_CPUMatrix), startIndex, endIndex),
+        GPUMatrix<ElemType>::DistributedArcLabelAddBackprop(*(labels.m_GPUMatrix), cosBias, sinBias, *(flag.m_GPUMatrix), *(x.m_GPUMatrix), *(gradient.m_GPUMatrix), startIndex, endIndex),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+#pragma endregion
+
 #pragma region Asoftmax
 
 template <class ElemType>
@@ -5166,6 +5334,32 @@ template <class ElemType>
 
 #pragma endregion
 
+#pragma region FeatureNormalize
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::FeatureNormalizeL1Backprop(const Matrix<ElemType>& value, const Matrix<ElemType>& gradient, const Matrix<ElemType>& magnitude, const Matrix<ElemType>& alpha, const Matrix<ElemType>& X_gradient)
+{
+    DISPATCH_MATRIX_ON_FLAG(&X_gradient,
+        &X_gradient,
+        CPUMatrix<ElemType>::FeatureNormalizeL1Backprop(*(value.m_CPUMatrix), *(gradient.m_CPUMatrix), *(magnitude.m_CPUMatrix), *(alpha.m_CPUMatrix), *(X_gradient.m_CPUMatrix)),
+        GPUMatrix<ElemType>::FeatureNormalizeL1Backprop(*(value.m_GPUMatrix), *(gradient.m_GPUMatrix), *(magnitude.m_GPUMatrix), *(alpha.m_GPUMatrix), *(X_gradient.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::FeatureNormalizeL2Backprop(const Matrix<ElemType>& value, const Matrix<ElemType>& gradient, const Matrix<ElemType>& magnitude, const Matrix<ElemType>& alpha, const Matrix<ElemType>& X_gradient)
+{
+    DISPATCH_MATRIX_ON_FLAG(&X_gradient,
+        &X_gradient,
+        CPUMatrix<ElemType>::FeatureNormalizeL2Backprop(*(value.m_CPUMatrix), *(gradient.m_CPUMatrix), *(magnitude.m_CPUMatrix), *(alpha.m_CPUMatrix), *(X_gradient.m_CPUMatrix)),
+        GPUMatrix<ElemType>::FeatureNormalizeL2Backprop(*(value.m_GPUMatrix), *(gradient.m_GPUMatrix), *(magnitude.m_GPUMatrix), *(alpha.m_GPUMatrix), *(X_gradient.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+#pragma endregion
+
 #pragma region AMsoftmax
 
 template <class ElemType>
@@ -5181,6 +5375,32 @@ template <class ElemType>
 
 #pragma endregion
 
+#pragma region ArcMarginProduct
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ArcLabelAdd(const Matrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& value)
+{
+    DISPATCH_MATRIX_ON_FLAG(&value,
+        &value,
+        CPUMatrix<ElemType>::ArcLabelAdd(*(label.m_CPUMatrix), threshold, bias, sinBias, *(flag.m_CPUMatrix), *(x.m_CPUMatrix), *(value.m_CPUMatrix)),
+        GPUMatrix<ElemType>::ArcLabelAdd(*(label.m_GPUMatrix), threshold, bias, sinBias, *(flag.m_GPUMatrix), *(x.m_GPUMatrix), *(value.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+/*static*/ void Matrix<ElemType>::ArcLabelAddBackprop(const Matrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const Matrix<ElemType>& flag, const Matrix<ElemType>& x, const Matrix<ElemType>& gradient)
+{
+    DISPATCH_MATRIX_ON_FLAG(&gradient,
+        &gradient,
+        CPUMatrix<ElemType>::ArcLabelAddBackprop(*(label.m_CPUMatrix), cosBias, sinBias, *(flag.m_CPUMatrix), *(x.m_CPUMatrix), *(gradient.m_CPUMatrix)),
+        GPUMatrix<ElemType>::ArcLabelAddBackprop(*(label.m_GPUMatrix), cosBias, sinBias, *(flag.m_GPUMatrix), *(x.m_GPUMatrix), *(gradient.m_GPUMatrix)),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+#pragma endregion
+
 #pragma region CenterLoss
 
 template <class ElemType>
@@ -5190,32 +5410,6 @@ template <class ElemType>
                             &counter,
                             CPUMatrix<ElemType>::ClassCount(*(label.m_CPUMatrix), *(counter.m_CPUMatrix)),
                             GPUMatrix<ElemType>::ClassCount(*(label.m_GPUMatrix), *(counter.m_GPUMatrix)),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-
-#pragma endregion
-
-#pragma region SqueezeAndExcitation
-
-template <class ElemType>
-/*static*/ void Matrix<ElemType>::ChannelMultiply(const Matrix<ElemType>& X, const Matrix<ElemType>& weight, const Matrix<ElemType>& value, size_t featureSize)
-{
-    DISPATCH_MATRIX_ON_FLAG(&value,
-                            &value,
-                            CPUMatrix<ElemType>::ChannelMultiply(*(X.m_CPUMatrix), *(weight.m_CPUMatrix), *(value.m_CPUMatrix), featureSize),
-                            GPUMatrix<ElemType>::ChannelMultiply(*(X.m_GPUMatrix), *(weight.m_GPUMatrix), *(value.m_GPUMatrix), featureSize),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
-}
-
-template <class ElemType>
-/*static*/ void Matrix<ElemType>::ChannelMultiplyScaleBackprop(const Matrix<ElemType>& gradient, const Matrix<ElemType>& X, const Matrix<ElemType>& weight_gradient, const Matrix<ElemType>& buffer, size_t featureSize, size_t N)
-{
-    DISPATCH_MATRIX_ON_FLAG(&weight_gradient,
-                            &weight_gradient,
-                            CPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(*(gradient.m_CPUMatrix), *(X.m_CPUMatrix), *(weight_gradient.m_CPUMatrix), featureSize),
-                            GPUMatrix<ElemType>::ChannelMultiplyScaleBackprop(*(gradient.m_GPUMatrix), *(X.m_GPUMatrix), *(weight_gradient.m_GPUMatrix), *(buffer.m_GPUMatrix), featureSize, N),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }

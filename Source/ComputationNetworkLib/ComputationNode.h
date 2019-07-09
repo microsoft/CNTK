@@ -13,6 +13,7 @@
 #include "MatrixPool.h"
 #include "ComputationEnvironment.h"
 #include "Globals.h"
+#include "../SGDLib/IDistGradAggregator.h"
 
 #include <unordered_set>
 #include <map>
@@ -314,7 +315,7 @@ public:
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
         m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0),
         m_gradientInitializedBy(nullptr),
-        m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false)
+        m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false), m_distribute(false)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
         // we store a unique numeric number for every node that is constructed, as a debugging aid
@@ -354,6 +355,8 @@ public:
         }
 
         node->ClearConfigMemberCache();
+
+        node->m_distribute = m_distribute;
     }
 
     virtual ComputationNodeBasePtr Duplicate(const std::wstring& newName = L"", const CopyNodeFlags flags = CopyNodeFlags::copyNodeAll) const = 0;   // (called on here implemented by ComputationNode<ElemType>
@@ -946,6 +949,8 @@ public:
 
     // debugging helper
     size_t m_uniqueNumericId; // (a unique handle for debugging)
+
+    bool m_distribute; // distribute flag
 protected:
 
     // -----------------------------------------------------------------------
@@ -1723,6 +1728,9 @@ protected:
             {
                 rows = GetSampleMatrixNumRows();
                 cols = GetSampleMatrixNumCols();
+
+                if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection" || OperationName() == L"DistributedArcMarginProduct")
+                    cols *= Globals::GetProcessNum();
             }
             else
             {
@@ -1847,7 +1855,11 @@ public:
     {
         size_t matrixSize = m_sampleLayout.GetNumElements();
         if (IsValueSharable() && !m_isValueSparse)
+        {
+            if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection" || OperationName() == L"DistributedArcMarginProduct")
+                matrixSize *= Globals::GetProcessNum();
             RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
+        }
         else
             CreateMatrixIfNull(m_value);
 
@@ -1885,6 +1897,8 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         size_t matrixSize = m_sampleLayout.GetNumElements();
+        if (OperationName() == L"DistributedFullyConnected_v2" || OperationName() == L"DistributedAdditiveFullConnection" || OperationName() == L"DistributedArcMarginProduct")
+            matrixSize *= Globals::GetProcessNum();
         RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout(), /*isWorkSpace*/false, ParentGradientReused() || IsGradientReused());
 
         auto multiOutputNode = dynamic_cast<MultiOutputNode<ElemType>*>(this);
@@ -2244,6 +2258,46 @@ struct WriteFormattingOptions
 // ComputationNodeNonLooping -- abstract base class for computation nodes that do not implement eval/partial for individual frames
 // Such as CRFNode, SequenceDecoderNode, and training criteria.
 // =======================================================================
+
+// Global static class for distributed gathered labels
+template <class ElemType>
+class DistributedGatheredLabels
+{
+public:
+    static void gatherDistributedLabels(const Matrix<ElemType>& oneHotLabels)
+    {
+        Matrix<ElemType>::GetDenseLabelsFromOneHot(oneHotLabels, *m_labels);
+        m_distGradAggPtr->DistributedAllGather(*m_labels, *m_gatheredLabels, m_minibatchSize);
+    }
+
+    static void setMinibatchSize(size_t minibatchSize)
+    {
+        if (m_minibatchSize != minibatchSize)
+        {
+            m_minibatchSize = minibatchSize;
+            m_distGradAggPtr = (IDistGradAggregator<ElemType>*) Globals::GetDistGradAggPtr();
+        }
+        m_gatheredLabels->Resize(1, m_minibatchSize * Globals::GetProcessNum());
+        m_labels->Resize(1, m_minibatchSize);
+    }
+
+    static void setInitializeNode(void* nodePtr)
+    {
+        if (NULL == initializeNodePtr)
+            initializeNodePtr = nodePtr;
+    }
+
+    static bool isInitializeNode(void* nodePtr)
+    {
+        return nodePtr == initializeNodePtr;
+    }
+
+    static IDistGradAggregator<ElemType>* m_distGradAggPtr;
+    static void* initializeNodePtr;
+    static shared_ptr<Matrix<ElemType>> m_gatheredLabels;
+    static shared_ptr<Matrix<ElemType>> m_labels;
+    static size_t m_minibatchSize;
+};
 
 // This will provide default implementations for those two functions that will fail at runtime with a meaningful error.
 // TODO: Most of these are reduce nodes that output a single number, no MBLayout. Maybe abstract those out further
