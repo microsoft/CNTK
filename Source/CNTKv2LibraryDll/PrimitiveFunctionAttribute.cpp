@@ -145,7 +145,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeCenterLossLabelDim = L"centerLossLabelDim";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeCenterLossNormalize = L"centerLossNormalize";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeGlobalConcatBlockIndex = L"globalConcatBlockIndex";
-    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeGlobalConcatGrowthRate = L"globalConcatRate";
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeGlobalConcatGrowthRate = L"globalConcatGrowthRate";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeGlobalConcatSegmentIndex = L"globalConcatSegmentIndex";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeGlobalConcatSegmentNum = L"globalConcatSegmentNum";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeDistributedAdditiveFullConnectionWeightNormalize = L"distributedAdditiveFullConnectionWeightNormalize";
