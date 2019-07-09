@@ -130,11 +130,17 @@ namespace CNTK
         if ((op == PrimitiveOpType::SumAll) ||
             (op == PrimitiveOpType::ReduceElements &&  anyOfAxesInReduction([](const Axis& axis) { return axis == Axis::AllAxes(); })) ||
             (op == PrimitiveOpType::SquaredError) ||
+            (op == PrimitiveOpType::DistributedFullyConnected) ||
+            (op == PrimitiveOpType::DistributedFullyConnected_v2) ||
+            (op == PrimitiveOpType::DistributedCrossEntropyWithSoftmax) ||
+            (op == PrimitiveOpType::DistributedClassificationError) ||
+            (op == PrimitiveOpType::DistributedAdditiveFullConnection) ||
+            (op == PrimitiveOpType::DistributedArcMarginProduct) ||
             (op == PrimitiveOpType::MarginInnerProduct) ||
             (op == PrimitiveOpType::FeatureNormalize) ||
             (op == PrimitiveOpType::AdditiveFullConnection) ||
+            (op == PrimitiveOpType::ArcMarginProduct) ||
             (op == PrimitiveOpType::CenterLoss) ||
-            (op == PrimitiveOpType::ChannelMultiply) ||
             (op == PrimitiveOpType::GlobalConcat) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::LatticeSequenceWithSoftmax) ||
@@ -946,6 +952,31 @@ namespace CNTK
                             outputShape = NDShape({1});
                             break;
                         }
+                        case PrimitiveOpType::DistributedFullyConnected:
+                        {
+                            assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
+                            break;
+                        }
+                        case PrimitiveOpType::DistributedFullyConnected_v2:
+                        {
+                            assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
+                            break;
+                        }
+                        case PrimitiveOpType::DistributedClassificationError:
+                        case PrimitiveOpType::DistributedAdditiveFullConnection:
+                        {
+                            assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
+                            break;
+                        }
+                        case PrimitiveOpType::DistributedArcMarginProduct:
+                        {
+                            assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
+                            break;
+                        }
                         case PrimitiveOpType::MarginInnerProduct:
                         {
                             assert(m_inputs.size() == 3);
@@ -964,10 +995,10 @@ namespace CNTK
                             outputShape = NDShape{};
                             break;
                         }
-                        case PrimitiveOpType::ChannelMultiply:
+                        case PrimitiveOpType::ArcMarginProduct:
                         {
-                            assert(m_inputs.size() == 2);
-                            outputShape = m_inputs[0].Shape();
+                            assert(m_inputs.size() == 3);
+                            outputShape = NDShape{};
                             break;
                         }
                         case PrimitiveOpType::GlobalConcat:
@@ -984,6 +1015,7 @@ namespace CNTK
                             outputShape = NDShape(outputDims);
                             break;
                         }
+                        case PrimitiveOpType::DistributedCrossEntropyWithSoftmax:
                         case PrimitiveOpType::CrossEntropyWithSoftmax:
                         case PrimitiveOpType::Logistic:
                         case PrimitiveOpType::LambdaRank:

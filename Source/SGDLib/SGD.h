@@ -674,6 +674,10 @@ protected:
         return m_gradType.gaussianNoiseInjectStd;
     }
 
+    void AggregateDistParams(const std::list<ComputationNodeBasePtr>& learnableNodes);
+
+    void ReleaseDistParams(const std::list<ComputationNodeBasePtr>& learnableNodes);
+
 public:
 #define EPSILON 1e-5
 

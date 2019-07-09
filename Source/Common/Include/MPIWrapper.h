@@ -105,6 +105,7 @@ public:
     virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status) = 0;
     virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request) = 0;
     virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request) = 0;
+    virtual int Iallgather(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, /*MPI_Comm comm,*/ MPI_Request* request) = 0;
     virtual int Abort(int errorcode) = 0;
     virtual int Error_string(int errorcode, char* string, int* resultlen) = 0;
 

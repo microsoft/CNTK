@@ -556,6 +556,38 @@ public:
                                     GPUMatrix<StatType>& scaleGrad, GPUMatrix<StatType>& biasGrad) const;
 
 
+#pragma region DistributedFC
+
+    static void GetDenseLabelsFromOneHot(const GPUMatrix<ElemType>& oneHotLabels, const GPUMatrix<ElemType>& labels);
+
+    static void Scatter(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
+
+    static void AddColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst);
+
+    static void AddRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst);
+
+    static void MinusColumnVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& columnVector, const GPUMatrix<ElemType>& dst);
+
+    static void MinusRowVector(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& rowVector, const GPUMatrix<ElemType>& dst);
+
+    static void AssignExpSum(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& expSum);
+
+    static void DistributedSoftmax(const GPUMatrix<ElemType>& Y, const GPUMatrix<ElemType>& logSum, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& logSoftmax);
+
+    static void DistributedCrossEntropy(const GPUMatrix<ElemType>& logP, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedSoftmaxWithCrossEntropyBackprop(const GPUMatrix<ElemType>& postGradient, const GPUMatrix<ElemType>& softmax, const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& gradient, size_t startIndex);
+
+    static void DistributedAssignClassificationError(const GPUMatrix<ElemType>& labels, const GPUMatrix<ElemType>& probs, const GPUMatrix<ElemType>& maxProb, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedLabelAdd(const GPUMatrix<ElemType>& labels, ElemType bias, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedArcLabelAdd(const GPUMatrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedArcLabelAddBackprop(const GPUMatrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& gradient, size_t startIndex, size_t endIndex);
+
+#pragma endregion
+
 #pragma region Asoftmax
 
     static void AsoftmaxForward2(ElemType lambda, size_t minibatchSize, size_t outputDimension, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& inputMagnitude,
@@ -578,23 +610,31 @@ public:
 
 #pragma endregion
 
+#pragma region FeatureNormalize
+
+    static void FeatureNormalizeL1Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient);
+
+    static void FeatureNormalizeL2Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient);
+
+#pragma endregion
+
 #pragma region AMsoftmax
 
     static void LabelAdd(const GPUMatrix<ElemType>& label, ElemType bias, const GPUMatrix<ElemType>& value);
 
 #pragma endregion
 
-#pragma region CenterLoss
+#pragma region ArcMarginProduct
 
-    static void ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter);
+    static void ArcLabelAdd(const GPUMatrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& value);
+
+    static void ArcLabelAddBackprop(const GPUMatrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const GPUMatrix<ElemType>& flag, const GPUMatrix<ElemType>& x, const GPUMatrix<ElemType>& gradient);
 
 #pragma endregion
 
-#pragma region SqueezeAndExcitation
+#pragma region CenterLoss
 
-    static void ChannelMultiply(const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight, const GPUMatrix<ElemType>& value, size_t featureSize);
-
-    static void ChannelMultiplyScaleBackprop(const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& X, const GPUMatrix<ElemType>& weight_gradient, const GPUMatrix<ElemType>& buffer, size_t featureSize, size_t N);
+    static void ClassCount(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& counter);
 
 #pragma endregion
 

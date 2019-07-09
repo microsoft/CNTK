@@ -246,6 +246,39 @@ private:
         }
     }
 
+    bool DistributedCheck(size_t minibatchSize, size_t processNum)
+    {
+        size_t* gatherBuffer = new size_t[processNum];
+        m_mpi->AllGather(&minibatchSize, (size_t)1, gatherBuffer, (size_t)1);
+        for (size_t i(1); i < processNum; ++i)
+        {
+            if (gatherBuffer[i] != gatherBuffer[0])
+            {
+                delete[] gatherBuffer;
+                return false;
+            }
+        }
+        delete[] gatherBuffer;
+        return true;
+    }
+
+    void DistributedInit(DEVICEID_TYPE deviceId, size_t bufferSize)
+    {
+        // Since m_nccl is initialized in the constructor, nothing need to do here
+    }
+
+    void DistributedAllGather(const Matrix<ElemType>& distributedMatrix, Matrix<ElemType>& gatheredMatrix, size_t count)
+    {
+        LogicError("DistributedAllGather not implemented");
+    }
+
+    void DistributedAllReduce(const Matrix<ElemType>& distributedMatrix, MPI_Op op)
+    {
+        LogicError("DistributedAllReduce not implemented");
+        ::CNTK::NDShape shape{ distributedMatrix.GetNumElements() };
+        auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(), shape, distributedMatrix.Data(), distributedMatrix.GetNumElements() * sizeof(ElemType), ::CNTK::AsDeviceDescriptor(distributedMatrix.GetDeviceId()));
+    }
+
 private:
     // Perform aysnchronous gradient aggregation using double buffering of the gradient matrices
     bool m_useAsyncAggregation;

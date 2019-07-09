@@ -440,6 +440,39 @@ public:
     void BatchNormalizationBackward(const CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& grad, const CPUMatrix<StatType>& scale, double blendFactor, const CPUMatrix<StatType>& saveMean, const CPUMatrix<StatType>& saveInvStdDev,
                                     CPUMatrix<StatType>& scaleGrad, CPUMatrix<StatType>& biasGrad) const;
 
+
+#pragma region DistributedFC
+
+    static void GetDenseLabelsFromOneHot(const CPUMatrix<ElemType>& oneHotLabels, const CPUMatrix<ElemType>& labels);
+
+    static void Scatter(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& dst, size_t minibatchSize, size_t rank, size_t processNum);
+
+    static void AddColumnVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& columnVector, const CPUMatrix<ElemType>& dst);
+
+    static void AddRowVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& rowVector, const CPUMatrix<ElemType>& dst);
+
+    static void MinusColumnVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& columnVector, const CPUMatrix<ElemType>& dst);
+
+    static void MinusRowVector(const CPUMatrix<ElemType>& src, const CPUMatrix<ElemType>& rowVector, const CPUMatrix<ElemType>& dst);
+
+    static void AssignExpSum(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& expSum);
+
+    static void DistributedSoftmax(const CPUMatrix<ElemType>& Y, const CPUMatrix<ElemType>& logSum, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& logSoftmax);
+
+    static void DistributedCrossEntropy(const CPUMatrix<ElemType>& logP, const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedSoftmaxWithCrossEntropyBackprop(const CPUMatrix<ElemType>& postGradient, const CPUMatrix<ElemType>& softmax, const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& gradient, size_t startIndex);
+
+    static void DistributedAssignClassificationError(const CPUMatrix<ElemType>& labels, const CPUMatrix<ElemType>& probs, const CPUMatrix<ElemType>& maxProb, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedLabelAdd(const CPUMatrix<ElemType>& labels, ElemType bias, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedArcLabelAdd(const CPUMatrix<ElemType>& labels, ElemType threshold, ElemType bias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& value, size_t startIndex, size_t endIndex);
+
+    static void DistributedArcLabelAddBackprop(const CPUMatrix<ElemType>& labels, ElemType cosBias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& gradient, size_t startIndex, size_t endIndex);
+
+#pragma endregion
+
 #pragma region Asoftmax
 
     static void AsoftmaxForward2(ElemType lambda, size_t minibatchSize, size_t outputDimension, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& inputMagnitude,
@@ -462,23 +495,31 @@ public:
 
 #pragma endregion
 
+#pragma region FeatureNormalize
+
+    static void FeatureNormalizeL1Backprop(const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& magnitude, const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& X_gradient);
+
+    static void FeatureNormalizeL2Backprop(const CPUMatrix<ElemType>& value, const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& magnitude, const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& X_gradient);
+
+#pragma endregion
+
 #pragma region AMsoftmax
 
     static void LabelAdd(const CPUMatrix<ElemType>& label, ElemType bias, const CPUMatrix<ElemType>& value);
 
 #pragma endregion
 
-#pragma region CenterLoss
+#pragma region ArcMarginProduct
 
-    static void ClassCount(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& counter);
+    static void ArcLabelAdd(const CPUMatrix<ElemType>& label, ElemType threshold, ElemType bias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& value);
+
+    static void ArcLabelAddBackprop(const CPUMatrix<ElemType>& label, ElemType cosBias, ElemType sinBias, const CPUMatrix<ElemType>& flag, const CPUMatrix<ElemType>& x, const CPUMatrix<ElemType>& gradient);
 
 #pragma endregion
 
-#pragma region SqueezeAndExcitation
+#pragma region CenterLoss
 
-    static void ChannelMultiply(const CPUMatrix<ElemType>& X, const CPUMatrix<ElemType>& weight, CPUMatrix<ElemType>& value, size_t featureSize);
-
-    static void ChannelMultiplyScaleBackprop(const CPUMatrix<ElemType>& gradient, const CPUMatrix<ElemType>& X, CPUMatrix<ElemType>& weight_gradient, size_t featureSize);
+    static void ClassCount(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& counter);
 
 #pragma endregion
 
