@@ -2218,7 +2218,7 @@ void GPUMatrix<ElemType>::AsoftmaxBackward4(ElemType lambda, size_t inputDimensi
 
 #pragma endregion
 
-#pragma region
+#pragma region FeatureNormalize
 
 template <class ElemType>
 void GPUMatrix<ElemType>::FeatureNormalizeL1Backprop(const GPUMatrix<ElemType>& value, const GPUMatrix<ElemType>& gradient, const GPUMatrix<ElemType>& magnitude, const GPUMatrix<ElemType>& alpha, const GPUMatrix<ElemType>& X_gradient)
