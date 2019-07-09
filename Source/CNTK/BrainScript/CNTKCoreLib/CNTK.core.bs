@@ -72,22 +72,22 @@ DistributedFullyConnectedLayer_v2 {inDim, outDim, init='glorotUniform', initValu
     apply (X) = DistributedFullyConnected_v2(W, X, b);
 }.apply
 
- # DistributedAdditiveFullConnectionLayer -- create a distributed label-specific-add full connection layer
+# DistributedAdditiveFullConnectionLayer -- create a distributed label-specific-add full connection layer
 # The output is decomposed. The next layer must deal with the decomposed output tensors
 DistributedAdditiveFullConnectionLayer {inDim, outDim, weightNormalize=true, bias=0, scale=1, init='glorotUniform', initValueScale=1} =
 {
     W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
 
-     apply (labelSequence, outProbVectorSequence) = DistributedAdditiveFullConnection(labelSequence, W, outProbVectorSequence, weightNormalize=weightNormalize, bias=bias, scale=scale)
+    apply (labelSequence, outProbVectorSequence) = DistributedAdditiveFullConnection(labelSequence, W, outProbVectorSequence, weightNormalize=weightNormalize, bias=bias, scale=scale)
 }.apply
 
- # DistributedArcMarginProductLayer -- create a distributed arc margin product layer
+# DistributedArcMarginProductLayer -- create a distributed arc margin product layer
 # The output is decomposed. The next layer must deal with the decomposed output tensors
 DistributedArcMarginProductLayer {inDim, outDim, bias=0, scale=1, init='glorotUniform', initValueScale=1} =
 {
     W = ParameterTensor {_ConcatArrays (inDim, outDim), init=init, initValueScale=initValueScale, distribute=true}
 
-     apply (labelSequence, outProbVectorSequence) = DistributedArcMarginProduct(labelSequence, W, outProbVectorSequence, bias=bias, scale=scale)
+    apply (labelSequence, outProbVectorSequence) = DistributedArcMarginProduct(labelSequence, W, outProbVectorSequence, bias=bias, scale=scale)
 }.apply
 
 # MarginInnerProductLayer -- create a marginInnerProduct projection layer
