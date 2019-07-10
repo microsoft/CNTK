@@ -7423,9 +7423,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
     return *this;
 }
 template<class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& in2, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
-    const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
-    const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& in2, CPUMatrix<ElemType>& uttInfo, const size_t totalcol,
+    const size_t numParallelSequences, const size_t numPhoneParallelSequences)
 {
     
     if (in1.IsEmpty() || in2.IsEmpty())
@@ -7438,7 +7437,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1
     auto& us = *this;
     RequireSize(in1.GetNumRows(), totalcol);
    
-    long numSequences = (long)uttFrameToChanInd.size();
+    /*long numSequences = (long)uttFrameToChanInd.size();
     long n = (long)GetNumRows(); 
 //#pragma omp parallel for
     for (long k =0; k< n; k++)         //loop for every k (i.e. phone)
@@ -7455,6 +7454,30 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1
                 }
             }
             
+        }*/
+    int numSequences = (int) uttInfo.GetNumRows();
+    long n = (long) GetNumRows();
+    //#pragma omp parallel for
+    for (int k = 0; k < n; k++)                //loop for every k (i.e. phone)
+        for (int s = 0; s < numSequences; s++) //loop for every utt
+        {
+            int frameNum = uttInfo(s, 0);
+            int phoneNum = uttInfo(s, 1);
+
+            int uttBeginFrameId = uttInfo(s, 2);
+            int uttBeginPhoneId = uttInfo(s, 3);
+            int uttFrametoChanId = uttInfo(s, 4);
+            int uttPhonetoChanId = uttInfo(s, 5);
+            int uttBeginOutId = uttInfo(s, 6);
+
+            for (long t = 0; t < frameNum; t++) //loop for every t
+            {
+                for (long u = 0; u < phoneNum; u++) //loop for every u
+                {
+                    us(k, uttBeginOutId + t * phoneNum + u) = in1(k, (uttBeginFrameId + t) * numParallelSequences + uttFrametoChanId) +
+                                                                                in2(k, (uttBeginPhoneId + u) * numPhoneParallelSequences + uttPhonetoChanId);
+                }
+            }
         }
     return *this;
 

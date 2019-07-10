@@ -6289,6 +6289,88 @@ __global__ void _assignRNNTScoreS1(ElemType* us,
     }
 }
 
+//calculate  (t,u) related part and part of k related part
+
+template <class ElemType>
+__global__ void _assignRNNTScoreS1_k(ElemType* us,
+                                     ElemType* alpha,
+                                     ElemType* beta,
+                                     ElemType* phoneSeq,
+                                     const size_t FrameNum,
+                                     const size_t PhoneNum,
+                                     const size_t BeginForMerge,
+                                     const size_t uttId,
+                                     const size_t maxPhoneNum)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    const CUDA_LONG u = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    ElemType x = LZERO, y = LZERO;
+    if (u < PhoneNum && t < FrameNum)
+    {
+        size_t tuID;
+        ElemType P_lx = beta[BeginForMerge]; //p(y|x)
+        //printf("t:%d k:%d step0\n", (int) t, (int) k);
+        //for (int u = 0; u < PhoneNum; u++)
+        // (t,u) part
+        size_t alphaId, betaId, ktuID, phoneId;
+        {
+            tuID = BeginForMerge + t * PhoneNum + u; //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
+            x = alpha[tuID] + beta[tuID] - P_lx;     //log of alpha(t,u)*beta(t,u)/p(y|x)
+            ktuID = tuID * 4;
+            if (x < LZERO)
+                y = 0.0f;
+            else
+                y = exp_((comp_t) x);
+            us[ktuID] = y;
+        }
+        // k part of y(u+1)
+
+        alphaId = tuID;
+        if (u < PhoneNum - 1) //k == y(u+1)
+        {
+            phoneId = phoneSeq[uttId * maxPhoneNum + u + 1]; //actual phone ID for u+1
+            //if (k == phoneId)
+            {
+                //ktuID = tuID * totalPhoneNum + phoneId; // ID for p(y(u+1)|t,u)
+                betaId = alphaId + 1; //betaId for (t,u+1)
+                x = alpha[alphaId] + beta[betaId] - P_lx;
+                if (x < LZERO)
+                    y = 0.0f;
+                else
+                    y = exp_((comp_t) x);
+                //ktuID = tuID * 4 + 1;
+                us[ktuID + 1] = y;
+                us[ktuID + 2] = (ElemType) phoneId;
+            }
+        }
+        //k part for "blank"
+        if (t < FrameNum - 1)
+        {
+            //ktuID = tuID * totalPhoneNum + blankTokenId;
+            betaId = alphaId + PhoneNum; //beta ID for(t+1,u)
+            x = alpha[alphaId] + beta[betaId] - P_lx;
+
+            if (x < LZERO)
+                y = 0.0f;
+            else
+                y = exp_((comp_t) x);
+            us[ktuID + 3] = y;
+        }
+        //printf("t:%d k:%d u%d step3\n", (int) t, (int) k, int(u));
+        if (u == PhoneNum - 1 && t == FrameNum - 1)
+        {
+            //ktuID = tuID * totalPhoneNum + blankTokenId;
+            x = alpha[alphaId] - P_lx;
+            if (x < LZERO)
+                y = 0.0f;
+            else
+                y = exp_((comp_t) x);
+            us[ktuID + 3] = y;
+        }
+    }
+}
+
 //calculate  (t,u) related part only, increase the speed
 
 template <class ElemType>
@@ -6400,6 +6482,60 @@ __global__ void _assignRNNTScoreS2(ElemType* us,
                 else
                     y = exp_((comp_t) x);
                 z -= y;
+            }
+            y = z * exp_((comp_t) us[ktuID]);
+            us[ktuID] = y;
+        }
+        //printf("t:%d k:%d step4\n", (int) t, (int) k);
+    }
+}
+
+//calculate  (t,u,k) related part
+template <class ElemType>
+__global__ void _assignRNNTScoreS2_k(ElemType* us,
+                                     ElemType* from,
+                                     const size_t FrameNum,
+                                     const size_t PhoneNum,
+                                     const size_t BeginForMerge,
+                                     const size_t totalPhoneNum, // Total number of phones
+                                     const size_t blankTokenId)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    ElemType x = LZERO, y = LZERO, z = LZERO;
+    if (k < totalPhoneNum && t < FrameNum)
+    {
+        size_t alphaId, tuID, ktuID, betaId, mtuID;
+        long phoneId;
+        //timeId = (t + BeginFrame) * numChannels + ChanInd;           //time ID in MB for t
+        //printf("t:%d k:%d step0\n", (int) t, (int) k);
+        for (int u = 0; u < PhoneNum; u++)
+        {
+
+            tuID = BeginForMerge + t * PhoneNum + u; //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
+            mtuID = tuID * 4;
+            alphaId = tuID;
+            ktuID = tuID * totalPhoneNum + k; //ID for P(k|t,u)
+            z = from[mtuID];
+
+            if (u < PhoneNum - 1) //k == y(u+1)
+            {
+                phoneId = (size_t) from[mtuID + 2]; //actual phone ID for u+1
+                if (k == phoneId)
+                {
+                    z -= from[mtuID + 1];
+                }
+            }
+            //printf("t:%d k:%d u%d step2\n", (int) t, (int) k, int(u));
+            if (t < FrameNum - 1 && k == blankTokenId)
+            {
+                z -= from[mtuID + 3];
+            }
+            //printf("t:%d k:%d u%d step3\n", (int) t, (int) k, int(u));
+            if (u == PhoneNum - 1 && t == FrameNum - 1 && k == blankTokenId)
+            {
+                z -= from[mtuID + 3];
             }
             y = z * exp_((comp_t) us[ktuID]);
             us[ktuID] = y;
@@ -6528,7 +6664,7 @@ __global__ void _assignRNNTScoreS2_speed2(ElemType* us,
         size_t t = (tuID - BeginForMerge - u) / PhoneNum;
         if (k < totalPhoneNum && t < FrameNum && u < PhoneNum)
         {
-            size_t alphaId,  ktuID, betaId, zeroID;
+            size_t alphaId, ktuID, betaId, zeroID;
             long phoneId;
             //timeId = (t + BeginFrame) * numChannels + ChanInd;           //time ID in MB for t
             zeroID = BeginForMerge; //beta id for (0,0)
@@ -6689,27 +6825,161 @@ template <class ElemType>
 __global__ void _assignUserOp1(ElemType* us,
                                ElemType* in1,
                                ElemType* in2,
+                               ElemType* uttinfo,
                                int BS,
-                               int frameNum,
-                               int phoneNum,
-                               int uttFrametoChanId,
-                               int uttPhonetoChanId,
-                               int uttBeginFrameId,
-                               int uttBeginPhoneId,
-                               int uttBeginOutId,
+                               int uttID,
+                               int numSequences,
                                int numParallelSeq,
                                int numPhoneParallelSeq)
 {
     const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
-    const CUDA_LONG u = blockIdx.z * blockDim.z + threadIdx.z;
-    if (k < BS && t < frameNum && u < phoneNum)
+    int frameNum = (int) uttinfo[IDX2C(uttID, 0, numSequences)];
+    int phoneNum = (int) uttinfo[IDX2C(uttID, 1, numSequences)];
+    int uttBeginFrameId = (int) uttinfo[IDX2C(uttID, 2, numSequences)];
+    int uttBeginPhoneId = (int) uttinfo[IDX2C(uttID, 3, numSequences)];
+    int uttFrametoChanId = (int) uttinfo[IDX2C(uttID, 4, numSequences)];
+    int uttPhonetoChanId = (int) uttinfo[IDX2C(uttID, 5, numSequences)];
+    int uttBeginOutId = (int) uttinfo[IDX2C(uttID, 6, numSequences)];
+
+    if (k < BS && t < frameNum)
     {
-        //for (int u = 0; u < phoneNum; u++)
+        for (int u = 0; u < phoneNum; u++)
         {
             //printf("K:%d,t:%d,u:%d\n", k,t,u);
             us[IDX2C(k, uttBeginOutId + t * phoneNum + u, BS)] = in1[IDX3C(k, t + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)] +
                                                                  in2[IDX3C(k, u + uttBeginPhoneId, uttPhonetoChanId, BS, numPhoneParallelSeq)];
+        }
+    }
+}
+
+template <class ElemType>
+__global__ void _assignUserOp1_mergeall(ElemType* us,
+                                        ElemType* in1,
+                                        ElemType* in2,
+                                        ElemType* uttinfo,
+                                        int BS,
+                                        int numSequences,
+                                        int numParallelSeq,
+                                        int numPhoneParallelSeq,
+                                        int sumYdim,
+                                        int totalUTNum)
+{
+    const CUDA_LONG tuIDl = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG k = blockIdx.y * blockDim.y + threadIdx.y;
+    int tuID = sumYdim + tuIDl;
+    int uttID = 0;
+    int uttBeginOutId = 0;
+    //printf("tuID %d\n ", tuID);
+    if (tuID < totalUTNum)
+    {
+        size_t s = 0;
+        for (; s < numSequences; s++)
+        {
+            uttBeginOutId = (int) uttinfo[IDX2C(s, 6, numSequences)];
+            if (tuID < uttBeginOutId)
+                break;
+        }
+        uttID = s - 1;
+        
+       // printf("s %d\n ", uttID);
+        if (uttID < numSequences)
+        {
+            int frameNum = (int) uttinfo[IDX2C(uttID, 0, numSequences)];
+            int phoneNum = (int) uttinfo[IDX2C(uttID, 1, numSequences)];
+            int uttBeginFrameId = (int) uttinfo[IDX2C(uttID, 2, numSequences)];
+            int uttBeginPhoneId = (int) uttinfo[IDX2C(uttID, 3, numSequences)];
+            int uttFrametoChanId = (int) uttinfo[IDX2C(uttID, 4, numSequences)];
+            int uttPhonetoChanId = (int) uttinfo[IDX2C(uttID, 5, numSequences)];
+
+            uttBeginOutId = (int) uttinfo[IDX2C(uttID, 6, numSequences)];
+            int u = (tuID - uttBeginOutId) % phoneNum;
+            int t = (tuID - uttBeginOutId - u) / phoneNum;
+
+            if (k < BS && t < frameNum && u < phoneNum)
+            {
+                //for (int u = 0; u < phoneNum; u++)
+                {
+                    //printf("K:%d,t:%d,u:%d\n", k,t,u);
+                    us[IDX2C(k, uttBeginOutId + t * phoneNum + u, BS)] = in1[IDX3C(k, t + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)] +
+                                                                         in2[IDX3C(k, u + uttBeginPhoneId, uttPhonetoChanId, BS, numPhoneParallelSeq)];
+                }
+            }
+        }
+    }
+}
+
+template <class ElemType>
+__global__ void _assignUserOp1_s(ElemType* us,
+                                 ElemType* in1,
+                                 ElemType* in2,
+                                 ElemType* uttinfo,
+                                 int BS,
+                                 int numSequences,
+                                 int numParallelSeq,
+                                 int numPhoneParallelSeq,
+                                 int maxPhoneNum)
+{
+    const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    const CUDA_LONG u_uttID = blockIdx.z * blockDim.z + threadIdx.z;
+    size_t u = u_uttID % maxPhoneNum;
+    size_t uttID = (u_uttID - u) / maxPhoneNum;
+
+    if (uttID < numSequences)
+    {
+        int frameNum = (int) uttinfo[IDX2C(uttID, 0, numSequences)];
+        int phoneNum = (int) uttinfo[IDX2C(uttID, 1, numSequences)];
+        int uttBeginFrameId = (int) uttinfo[IDX2C(uttID, 2, numSequences)];
+        int uttBeginPhoneId = (int) uttinfo[IDX2C(uttID, 3, numSequences)];
+        int uttFrametoChanId = (int) uttinfo[IDX2C(uttID, 4, numSequences)];
+        int uttPhonetoChanId = (int) uttinfo[IDX2C(uttID, 5, numSequences)];
+        int uttBeginOutId = (int) uttinfo[IDX2C(uttID, 6, numSequences)];
+
+        if (k < BS && t < frameNum && u < phoneNum)
+        {
+            //for (int u = 0; u < phoneNum; u++)
+            {
+                //printf("K:%d,t:%d,u:%d\n", k,t,u);
+                us[IDX2C(k, uttBeginOutId + t * phoneNum + u, BS)] = in1[IDX3C(k, t + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)] +
+                                                                     in2[IDX3C(k, u + uttBeginPhoneId, uttPhonetoChanId, BS, numPhoneParallelSeq)];
+            }
+        }
+    }
+}
+// parallel utt, not u
+template <class ElemType>
+__global__ void _assignUserOp1_u(ElemType* us,
+                                 ElemType* in1,
+                                 ElemType* in2,
+                                 ElemType* uttinfo,
+                                 int BS,
+                                 int numSequences,
+                                 int numParallelSeq,
+                                 int numPhoneParallelSeq)
+{
+    const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    const CUDA_LONG uttID = blockIdx.z * blockDim.z + threadIdx.z;
+
+    if (uttID < numSequences)
+    {
+        int frameNum = (int) uttinfo[IDX2C(uttID, 0, numSequences)];
+        int phoneNum = (int) uttinfo[IDX2C(uttID, 1, numSequences)];
+        int uttBeginFrameId = (int) uttinfo[IDX2C(uttID, 2, numSequences)];
+        int uttBeginPhoneId = (int) uttinfo[IDX2C(uttID, 3, numSequences)];
+        int uttFrametoChanId = (int) uttinfo[IDX2C(uttID, 4, numSequences)];
+        int uttPhonetoChanId = (int) uttinfo[IDX2C(uttID, 5, numSequences)];
+        int uttBeginOutId = (int) uttinfo[IDX2C(uttID, 6, numSequences)];
+
+        if (k < BS && t < frameNum)
+        {
+            for (int u = 0; u < phoneNum; u++)
+            {
+                //printf("K:%d,t:%d,u:%d\n", k,t,u);
+                us[IDX2C(k, uttBeginOutId + t * phoneNum + u, BS)] = in1[IDX3C(k, t + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)] +
+                                                                     in2[IDX3C(k, u + uttBeginPhoneId, uttPhonetoChanId, BS, numPhoneParallelSeq)];
+            }
         }
     }
 }

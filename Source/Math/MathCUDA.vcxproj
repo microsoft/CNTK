@@ -127,6 +127,7 @@ xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <ClInclude Include="half.hpp" />
     <ClInclude Include="latticefunctionskernels.h" />
     <ClInclude Include="Convolution.cuh" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="TensorOps.h" />
     <ClInclude Include="ValueQuantizer.h" />
     <None Include="GPUWatcher.h">
@@ -197,6 +198,9 @@ xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="MathCUDA.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

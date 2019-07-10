@@ -6315,9 +6315,7 @@ alpha._transferToDevice(CPUDEVICE);
 //this one is for RNN T output = input1(k,t) + input2(k,u).
 //inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
-                                                  const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
-                                                  const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
+Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
 {
 
     //in1._transferToDevice(CPUDEVICE);
@@ -6329,10 +6327,8 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<
     //in2.Print("g");
     DISPATCH_MATRIX_ON_FLAG(&in1,
                             this,
-                            this->m_CPUMatrix->AssignUserOp1(*in1.m_CPUMatrix, *in2.m_CPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution,
-                                                             uttFrameNum, uttPhoneNum, totalcol, numParallelSequences, numPhoneParallelSequences),
-                            this->m_GPUMatrix->AssignUserOp1(*in1.m_GPUMatrix, *in2.m_GPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution,
-                                                             uttFrameNum, uttPhoneNum, totalcol, numParallelSequences, numPhoneParallelSequences),
+                            this->m_CPUMatrix->AssignUserOp1(*in1.m_CPUMatrix, *in2.m_CPUMatrix, *uttInfo.m_CPUMatrix, totalcol, numParallelSequences, numPhoneParallelSequences),
+                            this->m_GPUMatrix->AssignUserOp1(*in1.m_GPUMatrix, *in2.m_GPUMatrix, *uttInfo.m_GPUMatrix, totalcol, numParallelSequences, numPhoneParallelSequences),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 

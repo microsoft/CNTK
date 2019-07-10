@@ -205,9 +205,59 @@ public:
             totalcol += uttFrameNum[s] * uttPhoneNum[s];
         }
 
+        //move uttinfo to GPU
+        ElemType* uttdata = new ElemType[numSequences];
+        //GPUMatrix<ElemType> uttInfo(in1.GetComputeDeviceId());
+        m_uttInfo->Resize(numSequences, 7);
+        //frame number
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttFrameNum[s];
+        }
+        m_uttInfo->SetColumn(uttdata, 0);
+        //label length
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttPhoneNum[s];
+        }
+        m_uttInfo->SetColumn(uttdata, 1);
+        //frame begin
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttFrameBeginIdx[s];
+        }
+        m_uttInfo->SetColumn(uttdata, 2);
+
+        //phone begin
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttPhoneBeginIdx[s];
+        }
+        m_uttInfo->SetColumn(uttdata, 3);
+
+        //frame channel
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttFrameToChanInd[s];
+        }
+        m_uttInfo->SetColumn(uttdata, 4);
+
+        //phone channel
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttPhoneToChanInd[s];
+        }
+        m_uttInfo->SetColumn(uttdata, 5);
+
+        //merged begin
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttBeginForOutputditribution[s];
+        }
+        m_uttInfo->SetColumn(uttdata, 6);
+        delete[] uttdata;
         //compute f+g
-        Value().AssignUserOp1(InputRef(0).Value(), InputRef(1).Value(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-                              totalcol, numParallelSequences, numPhoneParallelSequences);
+        Value().AssignUserOp1(InputRef(0).Value(), InputRef(1).Value(), *m_uttInfo, totalcol, numParallelSequences, numPhoneParallelSequences);
 
         //Value().Print("output of plus");
         //m_pMBLayout = nullptr;
@@ -248,6 +298,22 @@ public:
         //m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
         //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
     }
+    //request matrix before forward prop
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_uttInfo, matrixPool);
+       
+    }
+
+   
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_uttInfo, matrixPool);
+        
+    }
 
 protected:
     // Prepare data structures from the reader
@@ -262,7 +328,7 @@ protected:
     size_t totalcol = 0;
     // utt befin for output
     std::vector<size_t> uttBeginForOutputditribution;
-
+    shared_ptr<Matrix<ElemType>> m_uttInfo;
     size_t maxFrameNum;
     size_t maxPhoneNum;
 
