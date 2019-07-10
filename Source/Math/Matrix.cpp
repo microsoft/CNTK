@@ -6339,9 +6339,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<
 //this one is for RNN T output = sum of u of (input1(k,t,u)).
 
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
-                                                  const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
-                                                  const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
+Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
 {
 
     //in1._transferToDevice(CPUDEVICE);
@@ -6351,9 +6349,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const v
 
     DISPATCH_MATRIX_ON_FLAG(&in1,
                             this,
-                            this->m_CPUMatrix->AssignUserOp2(*in1.m_CPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+                            this->m_CPUMatrix->AssignUserOp2(*in1.m_CPUMatrix, *uttInfo.m_CPUMatrix,
                                                              numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx),
-                            this->m_GPUMatrix->AssignUserOp2(*in1.m_GPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
+                            this->m_GPUMatrix->AssignUserOp2(*in1.m_GPUMatrix, *uttInfo.m_GPUMatrix,
                                                              numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);

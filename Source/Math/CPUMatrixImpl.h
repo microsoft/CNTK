@@ -7483,13 +7483,11 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1
 
 }
 template<class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
-    const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
-    const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
 {
 
     size_t nRow = in1.GetNumRows();
-    size_t uttNum = uttFrameToChanInd.size();
+    size_t uttNum = uttInfo.GetNumRows();
     auto& us = *this;
     if (Idx == 0)
         RequireSize(nRow, maxFrameNum*numParallelSequences);
@@ -7503,17 +7501,24 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1
     {
         for (long seqId = 0; seqId < (long)uttNum; seqId++)
         {
-            size_t frameNum = uttFrameNum[seqId];
-            size_t phoneNum = uttPhoneNum[seqId];
-            if (Idx == 0)
+            int frameNum = uttInfo(seqId, 0);
+            int phoneNum = uttInfo(seqId, 1);
+
+            int uttBeginFrameId = uttInfo(seqId, 2);
+            int uttBeginPhoneId = uttInfo(seqId, 3);
+            int uttFrametoChanId = uttInfo(seqId, 4);
+            int uttPhonetoChanId = uttInfo(seqId, 5);
+            int uttBeginOutId = uttInfo(seqId, 6);
+
+             if (Idx == 0)
             {
                 for (long t = 0; t < (long)frameNum; t++)
                 {
-                    size_t timeId = (t + uttFrameBeginIdx[seqId])*numParallelSequences + uttFrameToChanInd[seqId];
+                    size_t timeId = (t + uttBeginFrameId) * numParallelSequences + uttFrametoChanId;
                     
                     for (long u = 0; u < (long)phoneNum; u++)
                     {
-                        size_t tuId = uttBeginForOutputditribution[seqId] + t*phoneNum + u;
+                        size_t tuId = uttBeginOutId + t * phoneNum + u;
                         us(k, timeId) += in1(k, tuId);
                     }
                 }
@@ -7522,10 +7527,10 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1
             {
                 for (long u = 0; u < (long)phoneNum; u++)
                 {                    
-                    size_t timeId = (u + uttPhoneBeginIdx[seqId])*numPhoneParallelSequences + uttPhoneToChanInd[seqId];
+                    size_t timeId = (u + uttBeginPhoneId) * numPhoneParallelSequences + uttPhonetoChanId;
                     for (long t = 0; t < (long)frameNum; t++)
                     {
-                        size_t tuId = uttBeginForOutputditribution[seqId] + t*phoneNum + u;
+                        size_t tuId = uttBeginOutId + t * phoneNum + u;
                         us(k, timeId) += in1(k, tuId);
                     }
                 }

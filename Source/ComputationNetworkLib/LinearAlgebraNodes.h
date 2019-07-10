@@ -270,7 +270,7 @@ public:
         //auto gradient = Gradient();
         //auto inputGradient = InputRef(inputIndex).Gradient();
         FrameRange frameRange(InputRef(inputIndex).GetMBLayout());
-        InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex);
+        InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), *m_uttInfo, numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex);
         InputRef(inputIndex).InvalidateMissingGradientColumns(frameRange);
         //InputRef(inputIndex).Gradient().Print("devirative");
     }
