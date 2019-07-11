@@ -204,8 +204,8 @@ public:
         labels_max_idxs->Resize(1, cols);
         labels_expended->Resize(InputRef(1).Value());
 
-        // labels_expended_max_values->Resize(1, InputRef(1).Value().GetNumRows());
-        // labels_expended_max_idxs->Resize(1, InputRef(1).Value().GetNumRows());
+        labels_expended_max_values->Resize(1, InputRef(1).Value().GetNumRows());
+        labels_expended_max_idxs->Resize(1, InputRef(1).Value().GetNumRows());
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
@@ -587,7 +587,6 @@ public:
         }
         */
 
-        /*
         // =========================================
         // init 5
         // set each frame to alinment and ##ZERO##
@@ -636,7 +635,7 @@ public:
                         auto row_idx = labels_dim - 1;
                         (*labels_expended)((size_t) row_idx, col_idx) = (ElemType) 1;
                     }
-                    else 
+                    else
                     {
                         // do nothing to set zero
                     }
@@ -644,9 +643,21 @@ public:
             }
             total_items += num_units * num_frames;
         }
-*/
 
-/*
+        labels_expended->VectorMax(*labels_expended_max_idxs, *labels_expended_max_values, true);
+        for (size_t l = 0; l < preds_len; ++l)
+        {
+            if (labels_expended_max_values->GetValue(0, l) == (ElemType) 0)
+            {
+                for (size_t k = 0; k < labels_dim; ++k)
+                {
+                    (*m_logSoftmaxOfRight)(k, l) = (ElemType) 0;
+                    (*m_softmaxOfRight)(k, l) = (ElemType) 0;
+                }
+            }
+        }
+
+        /*
         // =========================================
         // init 6
         // set each frame to alinment and ##ZERO##
@@ -711,7 +722,7 @@ public:
         }
 */
 
-
+        /*
         // =========================================
         // init 7
         // set each frame to alinment and ##ZERO##
@@ -761,7 +772,7 @@ public:
             }
             total_items += num_units * num_frames;
         }
-
+*/
 
         Value().AssignInnerProductOfMatrices(*labels_expended, *m_logSoftmaxOfRight);
         Value() *= -1;
@@ -769,8 +780,8 @@ public:
         // labels_expended->Print("labels_expended");
         // Value().Print("Cross entrophy final values");
 
-        // labels_expended->VectorMax(*labels_expended_max_idxs, *labels_expended_max_values, true);
         // labels_expended_max_idxs->Print("labels_expended_max_idxs");
+		// m_softmaxOfRight->Print("m_softmaxOfRight");
 
 #if NANCHECK
         Value().HasNan("CrossEntropyWithSoftmax");
@@ -796,8 +807,8 @@ public:
             node->labels_max_values->SetValue(*labels_max_values);
             node->labels_expended->SetValue(*labels_expended);
 
-            // node->labels_expended_max_values->SetValue(*labels_expended_max_values);
-            // node->labels_expended_max_idxs->SetValue(*labels_expended_max_idxs);
+            node->labels_expended_max_values->SetValue(*labels_expended_max_values);
+            node->labels_expended_max_idxs->SetValue(*labels_expended_max_idxs);
         }
     }
 
@@ -812,8 +823,8 @@ public:
         RequestMatrixFromPool(labels_max_values, matrixPool);
         RequestMatrixFromPool(labels_expended, matrixPool);
 
-        // RequestMatrixFromPool(labels_expended_max_values, matrixPool);
-        // RequestMatrixFromPool(labels_expended_max_idxs, matrixPool);
+        RequestMatrixFromPool(labels_expended_max_values, matrixPool);
+        RequestMatrixFromPool(labels_expended_max_idxs, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -827,8 +838,8 @@ public:
         ReleaseMatrixToPool(labels_max_values, matrixPool);
         ReleaseMatrixToPool(labels_expended, matrixPool);
 
-        // ReleaseMatrixToPool(labels_expended_max_values, matrixPool);
-        // ReleaseMatrixToPool(labels_expended_max_idxs, matrixPool);
+        ReleaseMatrixToPool(labels_expended_max_values, matrixPool);
+        ReleaseMatrixToPool(labels_expended_max_idxs, matrixPool);
     }
 
 protected:
@@ -839,8 +850,8 @@ protected:
     shared_ptr<Matrix<ElemType>> labels_max_values; //used for unit boudary
     shared_ptr<Matrix<ElemType>> labels_expended;
 
-    // shared_ptr<Matrix<ElemType>> labels_expended_max_values;
-    // shared_ptr<Matrix<ElemType>> labels_expended_max_idxs;
+    shared_ptr<Matrix<ElemType>> labels_expended_max_values;
+    shared_ptr<Matrix<ElemType>> labels_expended_max_idxs;
 
     std::vector<size_t> utt_frames_beginIdx;
     std::vector<size_t> utt_frames_num;
