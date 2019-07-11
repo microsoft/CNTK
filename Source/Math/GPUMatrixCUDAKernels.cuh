@@ -6629,36 +6629,43 @@ __global__ void _assignRNNTScoreS2_speed2(ElemType* us,
                                           ElemType* alpha,
                                           ElemType* beta,
                                           ElemType* phoneSeq,
-                                          const size_t* FrameNums,
-                                          const size_t* PhoneNums,
-                                          const size_t* BeginForMerges,
+                                          ElemType* uttinfo,
                                           const size_t maxPhoneNum,   // Maximum length of utterance in this MB
                                           const size_t totalPhoneNum, // Total number of phones
                                           const size_t blankTokenId,
-                                          const size_t uttNum,
+                                          const size_t numSequences,
                                           const size_t totalUTNum,
                                           const size_t sumYdim)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
-    const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
-    const CUDA_LONG tuIDl = blockIdx.y * blockDim.y + threadIdx.y;
+    const CUDA_LONG tuIDl = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG k = blockIdx.y * blockDim.y + threadIdx.y;
     size_t tuID = sumYdim + tuIDl;
     size_t uttID = 0;
     if (tuID < totalUTNum)
     {
         size_t s = 0;
-        for (; s < uttNum; s++)
+        for (; s < numSequences; s++)
         {
-            if (tuID < BeginForMerges[s])
+            size_t BeginForMerge = (size_t) uttinfo[IDX2C(s, 6, numSequences)];
+            if (tuID < BeginForMerge)
                 break;
         }
         uttID = s - 1;
-        size_t FrameNum = FrameNums[uttID];
-        size_t PhoneNum = PhoneNums[uttID];
-        size_t BeginForMerge = BeginForMerges[uttID];
+
+        size_t FrameNum = (size_t) uttinfo[IDX2C(uttID, 0, numSequences)];
+        size_t PhoneNum = (size_t) uttinfo[IDX2C(uttID, 1, numSequences)];
+        size_t BeginForMerge = (size_t) uttinfo[IDX2C(uttID, 6, numSequences)];
+
         ElemType x = LZERO, y = LZERO, z = LZERO;
         size_t u = (tuID - BeginForMerge) % PhoneNum;
         size_t t = (tuID - BeginForMerge - u) / PhoneNum;
+        /*if (tuID == 14603 && k == 0)
+        {
+            printf("t %d\n", (int) t);
+            printf("u %d\n", (int) u);
+            printf("uttID %d\n", (int) uttID);
+        }*/
         if (k < totalPhoneNum && t < FrameNum && u < PhoneNum)
         {
             size_t alphaId, ktuID, betaId, zeroID;
@@ -6674,7 +6681,8 @@ __global__ void _assignRNNTScoreS2_speed2(ElemType* us,
                 alphaId = tuID;
                 ktuID = tuID * totalPhoneNum + k; //ID for P(k|t,u)
                 z = from[tuID];
-
+                /*if (tuID == 14603 && k == 0)
+                    printf("z; %f\n", (double) z);*/
                 if (u < PhoneNum - 1) //k == y(u+1)
                 {
                     phoneId = phoneSeq[uttID * maxPhoneNum + u + 1]; //actual phone ID for u+1
@@ -6715,6 +6723,8 @@ __global__ void _assignRNNTScoreS2_speed2(ElemType* us,
                     z -= y;
                 }
                 y = z * exp_((comp_t) us[ktuID]);
+                /*if (tuID == 14603 && k == 0)
+                    printf("us; %f\n", (double) us[ktuID]);*/
                 us[ktuID] = y;
             }
             //printf("t:%d k:%d step4\n", (int) t, (int) k);
@@ -6810,8 +6820,6 @@ __global__ void _convertPhoneSeq(ElemType* in,
     const CUDA_LONG uttID = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG u = blockIdx.y * blockDim.y + threadIdx.y;
 
-    
-
     if (uttID < numSequences)
     {
         int phoneNum = (int) uttinfo[IDX2C(uttID, 1, numSequences)];
@@ -6884,7 +6892,10 @@ __global__ void _assignUserOp1_mergeall(ElemType* us,
                 break;
         }
         uttID = s - 1;
-
+        /*if (tuID == 1400 && k==0)
+        {
+            printf("userop uttID %d\n", uttID);
+        }*/
         // printf("s %d\n ", uttID);
         if (uttID < numSequences)
         {
