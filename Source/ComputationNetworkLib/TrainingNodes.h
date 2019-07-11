@@ -781,7 +781,7 @@ public:
         // Value().Print("Cross entrophy final values");
 
         // labels_expended_max_idxs->Print("labels_expended_max_idxs");
-		// m_softmaxOfRight->Print("m_softmaxOfRight");
+        // m_softmaxOfRight->Print("m_softmaxOfRight");
 
 #if NANCHECK
         Value().HasNan("CrossEntropyWithSoftmax");
