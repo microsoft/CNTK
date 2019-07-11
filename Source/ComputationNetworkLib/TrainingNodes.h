@@ -659,7 +659,7 @@ public:
         }
 */
 
-
+/*
         // =========================================
         // init 6
         // set each frame to alinment and ##ZERO##
@@ -735,9 +735,9 @@ public:
                 }
             }
         }
+*/
 
 
-        /*
         // =========================================
         // init 7
         // set each frame to alinment and ##ZERO##
@@ -787,7 +787,20 @@ public:
             }
             total_items += num_units * num_frames;
         }
-*/
+
+        labels_expended->VectorMax(*labels_expended_max_idxs, *labels_expended_max_values, true);
+        for (size_t l = 0; l < preds_len; ++l)
+        {
+            if (labels_expended_max_values->GetValue(0, l) == (ElemType) 0)
+            {
+                for (size_t k = 0; k < labels_dim; ++k)
+                {
+                    (*m_logSoftmaxOfRight)(k, l) = (ElemType) 0;
+                    (*m_softmaxOfRight)(k, l) = (ElemType) 0;
+                }
+            }
+        }
+
 
         Value().AssignInnerProductOfMatrices(*labels_expended, *m_logSoftmaxOfRight);
         Value() *= -1;
