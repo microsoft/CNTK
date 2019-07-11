@@ -103,6 +103,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(LabelsToGraphNode))                    return New<LabelsToGraphNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PlusNode))                             return New<PlusNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PlusBroadcastNode))                    return New<PlusBroadcastNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(GetUttInfoNode))                       return New<GetUttInfoNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(BiasAttentionNode))                    return New<BiasAttentionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RandomSampleNode))                     return New<RandomSampleNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RandomSampleInclusionFrequencyNode))   return New<RandomSampleInclusionFrequencyNode<ElemType>>(forward<_Types>(_Args)...);
@@ -854,6 +855,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PlusBroadcast(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<PlusBroadcastNode<ElemType>>(net.GetDeviceId(), nodeName), {a, b});
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::GetUttInfo(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<GetUttInfoNode<ElemType>>(net.GetDeviceId(), nodeName), {a, b});
 }
 
 template <class ElemType>

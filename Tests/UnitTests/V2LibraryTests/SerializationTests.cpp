@@ -362,7 +362,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::PlusBroadcast) == 99 &&
                   static_cast<size_t>(PrimitiveOpType::RNNTError) == 100 &&
                   static_cast<size_t>(PrimitiveOpType::Getbias) == 101 &&
-                  static_cast<size_t>(PrimitiveOpType::BiasAttention) == 102,
+                  static_cast<size_t>(PrimitiveOpType::BiasAttention) == 102 &&
+                      static_cast<size_t>(PrimitiveOpType::GetUttInfo) == 103,
                   "PrimitiveOpType enum value was modified.");
 }
 

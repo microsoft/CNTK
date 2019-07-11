@@ -301,6 +301,7 @@ namespace CNTK
                     // Elementwise operators' shapes are a zip of inputs and can be determined even if some of the input shapes are unknown
                 case PrimitiveOpType::Plus:
                 case PrimitiveOpType::PlusBroadcast:
+                case PrimitiveOpType::GetUttInfo:
                 case PrimitiveOpType::LogPlus:
                 case PrimitiveOpType::Pow:
                 case PrimitiveOpType::Minus:

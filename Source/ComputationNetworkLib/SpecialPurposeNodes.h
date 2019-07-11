@@ -1895,6 +1895,240 @@ template class RNNTNode<float>;
 template class RNNTNode<double>;
 
 // -----------------------------------------------------------------------
+// GetUttInfoNode (prediction, transcription )
+// Get Layout of data in Minibatch. including the data of feature and label
+//
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class GetUttInfoNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"GetUttInfo";
+    }
+
+public:
+    GetUttInfoNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+    GetUttInfoNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : GetUttInfoNode(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilities
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        //no need to do gradient
+        if (inputIndex == 0 || inputIndex == 1) //backprop to transcription f
+        {
+            InputRef(inputIndex).Gradient().SetValue(0.0);
+        }
+        else
+            RuntimeError("GetUttInfoNode criterion expects only two inputs: labels and network output.");
+        //printf("finish back prop\n");
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        size_t maxFrameNum;
+        size_t maxPhoneNum;
+
+        size_t numParallelSequences;
+        size_t numPhoneParallelSequences;
+
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout = InputRef(0).GetMBLayout();
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout = InputRef(1).GetMBLayout();
+
+        //get sequence number and channel number
+        numParallelSequences = pMBLayout->GetNumParallelSequences();
+        numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
+        const auto numSequences = pMBLayout->GetNumSequences();
+        //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
+        assert(numSequences == phoneMBLayout->GetNumSequences());
+
+        //get frame number, phone number and output label number
+        const size_t numRows = InputRef(0).Value().GetNumRows();
+        const size_t numCols = InputRef(0).Value().GetNumCols();
+        const size_t numPhoneCols = InputRef(1).Value().GetNumCols();
+
+        maxFrameNum = numCols / numParallelSequences;
+        maxPhoneNum = numPhoneCols / numPhoneParallelSequences;
+
+        std::vector<size_t> uttFrameBeginIdx, uttPhoneBeginIdx;
+        // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttFrameNum;
+        // the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttPhoneNum;
+        // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttFrameToChanInd, uttPhoneToChanInd;
+        size_t totalcol = 0;
+        // utt befin for output
+        std::vector<size_t> uttBeginForOutputditribution;
+
+        uttFrameNum.clear();
+        uttPhoneNum.clear();
+        uttFrameToChanInd.clear();
+        uttPhoneToChanInd.clear();
+        uttFrameBeginIdx.clear();
+        uttPhoneBeginIdx.clear();
+
+        uttFrameNum.reserve(numSequences);
+        uttPhoneNum.reserve(numSequences);
+        uttFrameToChanInd.reserve(numSequences);
+        uttPhoneToChanInd.reserve(numSequences);
+        uttFrameBeginIdx.reserve(numSequences);
+        uttPhoneBeginIdx.reserve(numSequences);
+
+        //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
+        size_t seqId = 0; //frame
+        size_t totalframenum = 0, totalphonenum = 0;
+        for (const auto& seq : pMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttFrameToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttFrameBeginIdx.push_back(seq.tBegin);
+            uttFrameNum.push_back(numFrames);
+            totalframenum += numFrames;
+        }
+        seqId = 0; //phone
+        for (const auto& seq : phoneMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttPhoneToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttPhoneBeginIdx.push_back(seq.tBegin);
+            uttPhoneNum.push_back(numFrames);
+            totalphonenum += numFrames;
+        }
+
+        //calculate the memory need for f*g
+        uttBeginForOutputditribution.clear();
+        uttBeginForOutputditribution.reserve(numSequences);
+        totalcol = 0;
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttBeginForOutputditribution.push_back(totalcol);
+            totalcol += uttFrameNum[s] * uttPhoneNum[s];
+        }
+
+        //write Layout info to output
+        ElemType* uttdata = new ElemType[numSequences];
+        Value().Resize(numSequences, 8);
+
+        //frame number
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttFrameNum[s];
+        }
+        Value().SetColumn(uttdata, 0);
+        //label length
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttPhoneNum[s];
+        }
+        Value().SetColumn(uttdata, 1);
+        //frame begin
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttFrameBeginIdx[s];
+        }
+        Value().SetColumn(uttdata, 2);
+
+        //phone begin
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttPhoneBeginIdx[s];
+        }
+        Value().SetColumn(uttdata, 3);
+
+        //frame channel
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttFrameToChanInd[s];
+        }
+        Value().SetColumn(uttdata, 4);
+
+        //phone channel
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttPhoneToChanInd[s];
+        }
+        Value().SetColumn(uttdata, 5);
+
+        //merged begin
+        for (size_t s = 0; s < numSequences; s++)
+        {
+            uttdata[s] = (ElemType) uttBeginForOutputditribution[s];
+        }
+        Value().SetColumn(uttdata, 6);
+
+        //total col
+        uttdata[0] = (ElemType) totalcol;
+        Value().SetColumn(uttdata, 7);
+
+        delete[] uttdata;
+
+        Value().Print("uttinfi");
+
+#if DUMPOUTPUT
+            functionValues.Print("GetUttInfoNode");
+#endif
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = nullptr; // no layout
+
+        SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+    }
+
+    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<GetUttInfoNode<ElemType>>(nodeP);
+        }
+    }
+    virtual void EndBackprop()
+    {
+        Base::EndBackprop();
+    }
+
+protected:
+    virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking()
+    {
+        return true;
+    }
+};
+
+template class GetUttInfoNode<float>;
+template class GetUttInfoNode<double>;
+
+// -----------------------------------------------------------------------
 // GetbiasNode (prediction, transcription )
 // Getbias node, get input bias based on the labels. used of KWS training
 // spaceTokens: space token to split word
@@ -2121,7 +2355,6 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
-        
     }
 
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
@@ -2129,7 +2362,6 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_maxIndexes, matrixPool);
         ReleaseMatrixToPool(m_maxValues, matrixPool);
-        
     }
 
     std::vector<size_t> SpaceTokens() const

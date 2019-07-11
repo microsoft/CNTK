@@ -253,6 +253,8 @@ namespace CNTK
                     opType = PrimitiveOpType::SumAll;
                 else if (node->OperationName() == OperationNameOf(PlusNode))
                     opType = PrimitiveOpType::Plus;
+                else if (node->OperationName() == OperationNameOf(GetUttInfoNode))
+                    opType = PrimitiveOpType::GetUttInfo;                
                 else if (node->OperationName() == OperationNameOf(PlusBroadcastNode))
                     opType = PrimitiveOpType::PlusBroadcast;
                 else if (node->OperationName() == OperationNameOf(BiasAttentionNode))

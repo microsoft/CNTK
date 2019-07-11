@@ -2194,6 +2194,11 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
+    FunctionPtr GetUttInfo(const Variable& features, const Variable& labels, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::GetUttInfo, features, labels, Dictionary(), name);
+    }
+
     FunctionPtr RNNTError(const Variable& prediction, const Variable& labels, const Variable& mergedinput, const vector<size_t>& tokensToIgnore, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();

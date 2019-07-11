@@ -4376,6 +4376,11 @@ namespace CNTK
     CNTK_API FunctionPtr Getbias(const Variable& labels, const Variable& bias, const std::vector<size_t>& spaceTokens, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in operation for get utt info for specified operands.
+    ///
+    CNTK_API FunctionPtr GetUttInfo(const Variable& features, const Variable& labels, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operation for sequence with lattice training (typically for speech).
     ///
     CNTK_API FunctionPtr LatticeSequenceWithSoftmax(const Variable& labels, const Variable& prediction, const Variable& scaledLogLikelihood, const Variable& lattice, const std::wstring& symbolListPath, 
