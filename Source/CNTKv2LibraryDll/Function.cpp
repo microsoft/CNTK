@@ -2194,6 +2194,12 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
+    FunctionPtr PlusBroadcast(const Variable& encoder, const Variable& prediction, const Variable& uttinfo,  const std::wstring& name)
+    {
+        std::vector<Variable> operands = {encoder, prediction, uttinfo};
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::PlusBroadcast, operands, Dictionary(),  name), name);
+    }
+
     FunctionPtr GetUttInfo(const Variable& features, const Variable& labels, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::GetUttInfo, features, labels, Dictionary(), name);

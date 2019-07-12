@@ -852,9 +852,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Plus(
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PlusBroadcast(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PlusBroadcast(const ComputationNodePtr encoder, const ComputationNodePtr prediction, const ComputationNodePtr uttinfo, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<PlusBroadcastNode<ElemType>>(net.GetDeviceId(), nodeName), {a, b});
+    return net.AddNodeToNetAndAttachInputs(New<PlusBroadcastNode<ElemType>>(net.GetDeviceId(), nodeName), {encoder, prediction, uttinfo});
 }
 
 template <class ElemType>

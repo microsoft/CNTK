@@ -181,7 +181,7 @@ public:
     ComputationNodePtr PerDimMeanVarDeNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"");
     ComputationNodePtr PerDimMeanVarNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"");
     ComputationNodePtr Plus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
-    ComputationNodePtr PlusBroadcast(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");   
+    ComputationNodePtr PlusBroadcast(const ComputationNodePtr encoder, const ComputationNodePtr prediction, const ComputationNodePtr uttinfo, const std::wstring nodeName = L"");   
     ComputationNodePtr GetUttInfo(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");   
     ComputationNodePtr BiasAttention(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");    
     ComputationNodePtr Reciprocal(const ComputationNodePtr a, const std::wstring nodeName = L"");
