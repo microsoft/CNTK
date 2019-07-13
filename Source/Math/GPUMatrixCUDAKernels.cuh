@@ -6887,7 +6887,7 @@ __global__ void _assignUserOp1_mergeall(ElemType* us,
         size_t s = 0;
         for (; s < numSequences; s++)
         {
-            uttBeginOutId = (int) uttinfo[IDX2C(s, 6, numSequences)];
+            uttBeginOutId = (int) uttinfo[IDX2C( 6,s, 12)];
             if (tuID < uttBeginOutId)
                 break;
         }
@@ -6899,14 +6899,14 @@ __global__ void _assignUserOp1_mergeall(ElemType* us,
         // printf("s %d\n ", uttID);
         if (uttID < numSequences)
         {
-            int frameNum = (int) uttinfo[IDX2C(uttID, 0, numSequences)];
-            int phoneNum = (int) uttinfo[IDX2C(uttID, 1, numSequences)];
-            int uttBeginFrameId = (int) uttinfo[IDX2C(uttID, 2, numSequences)];
-            int uttBeginPhoneId = (int) uttinfo[IDX2C(uttID, 3, numSequences)];
-            int uttFrametoChanId = (int) uttinfo[IDX2C(uttID, 4, numSequences)];
-            int uttPhonetoChanId = (int) uttinfo[IDX2C(uttID, 5, numSequences)];
+            int frameNum = (int) uttinfo[IDX2C(0, uttID, 12)];
+            int phoneNum = (int) uttinfo[IDX2C(1, uttID, 12)];
+            int uttBeginFrameId = (int) uttinfo[IDX2C(2, uttID, 12)];
+            int uttBeginPhoneId = (int) uttinfo[IDX2C(3, uttID, 12)];
+            int uttFrametoChanId = (int) uttinfo[IDX2C(4, uttID, 12)];
+            int uttPhonetoChanId = (int) uttinfo[IDX2C(5, uttID, 12)];
 
-            uttBeginOutId = (int) uttinfo[IDX2C(uttID, 6, numSequences)];
+            uttBeginOutId = (int) uttinfo[IDX2C(6, uttID, 12)];
             int u = (tuID - uttBeginOutId) % phoneNum;
             int t = (tuID - uttBeginOutId - u) / phoneNum;
 
@@ -7058,13 +7058,13 @@ __global__ void _assignUserOp2_all(ElemType* us,
     const CUDA_LONG uttID = blockIdx.z * blockDim.z + threadIdx.z;
     if (uttID < numSequences)
     {
-        int frameNum = (int) uttinfo[IDX2C(uttID, 0, numSequences)];
-        int phoneNum = (int) uttinfo[IDX2C(uttID, 1, numSequences)];
-        int frameBeginId = (int) uttinfo[IDX2C(uttID, 2, numSequences)];
-        int phoneBeginId = (int) uttinfo[IDX2C(uttID, 3, numSequences)];
-        int frameChanId = (int) uttinfo[IDX2C(uttID, 4, numSequences)];
-        int phoneChanId = (int) uttinfo[IDX2C(uttID, 5, numSequences)];
-        int outBeinId = (int) uttinfo[IDX2C(uttID, 6, numSequences)];
+        int frameNum = (int) uttinfo[IDX2C(0, uttID, 12)];
+        int phoneNum = (int) uttinfo[IDX2C( 1, uttID, 12)];
+        int frameBeginId = (int) uttinfo[IDX2C( 2, uttID, 12)];
+        int phoneBeginId = (int) uttinfo[IDX2C( 3, uttID, 12)];
+        int frameChanId = (int) uttinfo[IDX2C( 4, uttID, 12)];
+        int phoneChanId = (int) uttinfo[IDX2C( 5, uttID, 12)];
+        int outBeinId = (int) uttinfo[IDX2C( 6, uttID, 12)];
         if (Idx == 0)
         {
             if (k < nRow && t < frameNum)

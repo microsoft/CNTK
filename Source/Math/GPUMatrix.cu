@@ -4937,7 +4937,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
 
     // int maxPhoneNum = in2.GetNumCols() / numPhoneParallelSequences;
 
-    int numSequences = uttInfo.GetNumRows();
+    int numSequences = uttInfo.GetNumCols();
     // the output matrix is of size (nt+1, BS)
 
     /*//set uttinfo to GPU matrix
@@ -5056,7 +5056,7 @@ template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
 {
     int nRow = in1.GetNumRows();
-    int uttNum = uttInfo.GetNumRows();
+    int uttNum = uttInfo.GetNumCols();
     int nCol;
     if (Idx == 0)
     {

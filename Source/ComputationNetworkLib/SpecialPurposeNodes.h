@@ -1766,7 +1766,7 @@ public:
 
         // compute CTC score
         m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId);
-        //m_outputDensity->Print("gradient");
+        m_outputDensity->Print("gradient");
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
 #endif
@@ -2035,64 +2035,75 @@ public:
 
         //write Layout info to output
         ElemType* uttdata = new ElemType[numSequences];
-        Value().Resize(numSequences, 8);
+        CNTK::Matrix<ElemType> outputMatrix(Value().GetDeviceId());
+        outputMatrix.Resize(numSequences, 12);
 
         //frame number
         for (size_t s = 0; s < numSequences; s++)
         {
             uttdata[s] = (ElemType) uttFrameNum[s];
         }
-        Value().SetColumn(uttdata, 0);
+        outputMatrix.SetColumn(uttdata, 0);
         //label length
         for (size_t s = 0; s < numSequences; s++)
         {
             uttdata[s] = (ElemType) uttPhoneNum[s];
         }
-        Value().SetColumn(uttdata, 1);
+        outputMatrix.SetColumn(uttdata, 1);
         //frame begin
         for (size_t s = 0; s < numSequences; s++)
         {
             uttdata[s] = (ElemType) uttFrameBeginIdx[s];
         }
-        Value().SetColumn(uttdata, 2);
+        outputMatrix.SetColumn(uttdata, 2);
 
         //phone begin
         for (size_t s = 0; s < numSequences; s++)
         {
             uttdata[s] = (ElemType) uttPhoneBeginIdx[s];
         }
-        Value().SetColumn(uttdata, 3);
+        outputMatrix.SetColumn(uttdata, 3);
 
         //frame channel
         for (size_t s = 0; s < numSequences; s++)
         {
             uttdata[s] = (ElemType) uttFrameToChanInd[s];
         }
-        Value().SetColumn(uttdata, 4);
+        outputMatrix.SetColumn(uttdata, 4);
 
         //phone channel
         for (size_t s = 0; s < numSequences; s++)
         {
             uttdata[s] = (ElemType) uttPhoneToChanInd[s];
         }
-        Value().SetColumn(uttdata, 5);
+        outputMatrix.SetColumn(uttdata, 5);
 
         //merged begin
         for (size_t s = 0; s < numSequences; s++)
         {
             uttdata[s] = (ElemType) uttBeginForOutputditribution[s];
         }
-        Value().SetColumn(uttdata, 6);
+        outputMatrix.SetColumn(uttdata, 6);
 
         //total col
-        uttdata[0] = (ElemType) totalcol;
-        uttdata[1] = (ElemType) numParallelSequences;
-        uttdata[2] = (ElemType) numPhoneParallelSequences;
-        uttdata[3] = (ElemType) maxFrameNum;
-        uttdata[4] = (ElemType) maxPhoneNum;
-        Value().SetColumn(uttdata, 7);
+        uttdata[0] = (ElemType) totalcol;       
+        outputMatrix.SetColumn(uttdata, 7);
 
+        uttdata[0] = (ElemType) numParallelSequences;
+        outputMatrix.SetColumn(uttdata, 8);
+
+        uttdata[0] = (ElemType) numPhoneParallelSequences;
+        outputMatrix.SetColumn(uttdata, 9);
+        uttdata[0] = (ElemType) maxFrameNum;
+        outputMatrix.SetColumn(uttdata, 10);
+        uttdata[0] = (ElemType) maxPhoneNum;
+        outputMatrix.SetColumn(uttdata, 11);
+
+        //outputMatrix.Transpose();
         delete[] uttdata;
+        Value().AssignValuesOf(outputMatrix.Transpose());
+        m_pMBLayout->Init(1, numSequences);
+        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, numSequences);
 
         Value().Print("uttinfi");
 
@@ -2104,9 +2115,18 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        m_pMBLayout = nullptr; // no layout
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        if (isFinalValidationPass)
+        {
+            if (m_pMBLayout == InputRef(0).GetMBLayout())
+            {
+                m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+                m_pMBLayout->SetUniqueAxisName(L"uttinfo");
+            }
+        }
 
-        SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+        //size_t uttNum = InputRef(0).GetMBLayout()->GetNumSequences();
+        SetDims(TensorShape(12, Input(0)->GetSampleLayout().GetDim(1)), true);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -2137,9 +2157,9 @@ template class GetUttInfoNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class PlusBroadcastNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
+class PlusBroadcastNode : public ComputationNode<ElemType>, public NumInputs<3>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
+    typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
@@ -2158,31 +2178,30 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
-    virtual void ForwardPropNonLooping() override
+    virtual void ForwardProp(const FrameRange& fr) override
     {
         CNTK::Matrix<ElemType>& uttInfo = InputRef(2).Value();
 
-        size_t uttInfoCol = uttInfo.GetNumCols();
+        //size_t uttInfoRow = uttInfo.GetNumRows();
 
-        
-        numParallelSequences = (size_t) uttInfo.GetValue(1, uttInfoCol-1);
-        numPhoneParallelSequences = (size_t) uttInfo.GetValue(2, uttInfoCol - 1);
+        numParallelSequences = (size_t) uttInfo.GetValue(8, 0);
+        numPhoneParallelSequences = (size_t) uttInfo.GetValue(9, 0);
 
-        maxFrameNum = (size_t) uttInfo.GetValue(3, uttInfoCol - 1);
-        maxPhoneNum = (size_t) uttInfo.GetValue(4, uttInfoCol - 1);
+        maxFrameNum = (size_t) uttInfo.GetValue(10, 0);
+        maxPhoneNum = (size_t) uttInfo.GetValue(11, 0);
 
-        totalcol = (size_t) uttInfo.GetValue(0, uttInfoCol - 1);
+        totalcol = (size_t) uttInfo.GetValue(7, 0);
 
         //compute f+g
         Value().AssignUserOp1(InputRef(0).Value(), InputRef(1).Value(), uttInfo, totalcol, numParallelSequences, numPhoneParallelSequences);
 
-        //Value().Print("output of plus");
+        Value().Print("output of plus");
         //m_pMBLayout = nullptr;
         m_pMBLayout->Init(1, totalcol);
         m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
     }
 
-    virtual void BackpropToNonLooping(size_t inputIndex) override
+    virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         //no need to do gradient
         if (inputIndex == 0 || inputIndex == 1) //backprop to transcription f
@@ -2190,6 +2209,11 @@ public:
             FrameRange frameRange(InputRef(inputIndex).GetMBLayout());
             InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), InputRef(2).Value(), numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex);
             InputRef(inputIndex).InvalidateMissingGradientColumns(frameRange);
+            InputRef(inputIndex).Gradient().Print("plus gredient");
+        }
+        else if (inputIndex == 2)
+        {
+            InputRef(inputIndex).Gradient().SetValue(0.0);
         }
         else
             RuntimeError("PlusBroadcastNode criterion expects only two inputs: labels and network output.");
@@ -2214,6 +2238,7 @@ public:
                 LogicError("The Matrix dimension in the PlusBroadcastNode operation does not match.");
             }
         }
+        SetDims(Input(0));
         //m_pMBLayout->Init(1, totalcol);
         //m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
         //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);

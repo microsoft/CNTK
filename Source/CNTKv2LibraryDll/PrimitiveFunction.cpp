@@ -315,7 +315,10 @@ namespace CNTK
                 case PrimitiveOpType::PastValue:
                 case PrimitiveOpType::FutureValue:
                 {
-                    assert(m_inputs.size() == 2);
+                    if (m_op == PrimitiveOpType::PlusBroadcast)
+                        assert(m_inputs.size() == 3);
+                    else
+                        assert(m_inputs.size() == 2);
                     if ((m_op == PrimitiveOpType::PastValue) || (m_op == PrimitiveOpType::FutureValue))
                     {
                         Variable inputOperandVar = m_inputs[0];

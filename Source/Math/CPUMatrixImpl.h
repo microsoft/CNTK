@@ -7455,20 +7455,20 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1
             }
             
         }*/
-    int numSequences = (int) uttInfo.GetNumRows();
+    int numSequences = (int) uttInfo.GetNumCols();
     long n = (long) GetNumRows();
     //#pragma omp parallel for
     for (int k = 0; k < n; k++)                //loop for every k (i.e. phone)
         for (int s = 0; s < numSequences; s++) //loop for every utt
         {
-            int frameNum = uttInfo(s, 0);
-            int phoneNum = uttInfo(s, 1);
+            int frameNum = uttInfo( 0,s);
+            int phoneNum = uttInfo( 1,s);
 
-            int uttBeginFrameId = uttInfo(s, 2);
-            int uttBeginPhoneId = uttInfo(s, 3);
-            int uttFrametoChanId = uttInfo(s, 4);
-            int uttPhonetoChanId = uttInfo(s, 5);
-            int uttBeginOutId = uttInfo(s, 6);
+            int uttBeginFrameId = uttInfo(2,s);
+            int uttBeginPhoneId = uttInfo(3,s);
+            int uttFrametoChanId = uttInfo(4,s);
+            int uttPhonetoChanId = uttInfo(5,s);
+            int uttBeginOutId = uttInfo(6, s);
 
             for (long t = 0; t < frameNum; t++) //loop for every t
             {
@@ -7487,7 +7487,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1
 {
 
     size_t nRow = in1.GetNumRows();
-    size_t uttNum = uttInfo.GetNumRows();
+    size_t uttNum = uttInfo.GetNumCols();
     auto& us = *this;
     if (Idx == 0)
         RequireSize(nRow, maxFrameNum*numParallelSequences);
@@ -7501,14 +7501,14 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1
     {
         for (long seqId = 0; seqId < (long)uttNum; seqId++)
         {
-            int frameNum = uttInfo(seqId, 0);
-            int phoneNum = uttInfo(seqId, 1);
+            int frameNum = uttInfo(0, seqId);
+            int phoneNum = uttInfo(1, seqId);
 
-            int uttBeginFrameId = uttInfo(seqId, 2);
-            int uttBeginPhoneId = uttInfo(seqId, 3);
-            int uttFrametoChanId = uttInfo(seqId, 4);
-            int uttPhonetoChanId = uttInfo(seqId, 5);
-            int uttBeginOutId = uttInfo(seqId, 6);
+            int uttBeginFrameId = uttInfo(2, seqId);
+            int uttBeginPhoneId = uttInfo(3, seqId);
+            int uttFrametoChanId = uttInfo(4, seqId);
+            int uttPhonetoChanId = uttInfo(5, seqId);
+            int uttBeginOutId = uttInfo(6, seqId);
 
              if (Idx == 0)
             {
