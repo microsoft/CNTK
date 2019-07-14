@@ -107,6 +107,124 @@ template class PlusNode<float>;
 template class PlusNode<double>;
 template class PlusNode<half>;
 
+// -----------------------------------------------------------------------
+// PlusBroadcastNode (summand1, summand2)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class PlusBroadcastNode : public ComputationNode<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"PlusBroadcast";
+    }
+
+public:
+    PlusBroadcastNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    PlusBroadcastNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : PlusBroadcastNode(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void ForwardProp(const FrameRange& fr) override
+    {
+        CNTK::Matrix<ElemType>& uttInfo = InputRef(2).Value();
+
+        //size_t uttInfoRow = uttInfo.GetNumRows();
+
+        numParallelSequences = (size_t) uttInfo.GetValue(8, 0);
+        numPhoneParallelSequences = (size_t) uttInfo.GetValue(9, 0);
+
+        maxFrameNum = (size_t) uttInfo.GetValue(10, 0);
+        maxPhoneNum = (size_t) uttInfo.GetValue(11, 0);
+
+        totalcol = (size_t) uttInfo.GetValue(7, 0);
+
+        //InputRef(0).Value().Print("in1");
+        //InputRef(1).Value().Print("in2");
+        //compute f+g
+        Value().AssignUserOp1(InputRef(0).Value(), InputRef(1).Value(), uttInfo, totalcol, numParallelSequences, numPhoneParallelSequences);
+
+        //Value().Print("output of plus");
+        //m_pMBLayout = nullptr;
+        m_pMBLayout->Init(1, totalcol);
+        m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
+    }
+
+    virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //no need to do gradient
+        if (inputIndex == 0 || inputIndex == 1) //backprop to transcription f
+        {
+            FrameRange frameRange(InputRef(inputIndex).GetMBLayout());
+            InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), InputRef(2).Value(), numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex);
+            InputRef(inputIndex).InvalidateMissingGradientColumns(frameRange);
+           // InputRef(inputIndex).Gradient().Print("plus gredient");
+        }
+        else if (inputIndex == 2)
+        {
+            InputRef(inputIndex).Gradient().SetValue(0.0);
+        }
+        else
+            RuntimeError("PlusBroadcastNode criterion expects only two inputs: labels and network output.");
+    }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+
+        Base::Validate(isFinalValidationPass);
+
+        //m_pMBLayout = nullptr; // no layout
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        if (isFinalValidationPass)
+        {
+            if (m_pMBLayout == InputRef(0).GetMBLayout())
+            {
+                m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+                m_pMBLayout->SetUniqueAxisName(L"PlusBroadcast");
+            }
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows()))
+            {
+                LogicError("The Matrix dimension in the PlusBroadcastNode operation does not match.");
+            }
+        }
+        SetDims(Input(0));
+        //m_pMBLayout->Init(1, totalcol);
+        //m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
+        //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+    }
+    //request matrix before forward prop
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+    }
+
+protected:
+    // Prepare data structures from the reader
+
+    size_t totalcol = 0;
+    size_t maxFrameNum;
+    size_t maxPhoneNum;
+
+    size_t numParallelSequences;
+    size_t numPhoneParallelSequences;
+};
+
+template class PlusBroadcastNode<float>;
+template class PlusBroadcastNode<double>;
 
 // -----------------------------------------------------------------------
 // LogPlusNode (summand1, summand2)
