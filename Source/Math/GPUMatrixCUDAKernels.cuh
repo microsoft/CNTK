@@ -5826,9 +5826,9 @@ __global__ void _assignRNNTAlphaScore2(
     const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
     if (uttId < numSequences && t <= tu)
     {
-        size_t frameNum = (size_t) uttinfo[IDX2C(uttId, 0, numSequences)];
-        size_t phoneNum = (size_t) uttinfo[IDX2C(uttId, 1, numSequences)];
-        size_t uttBeginOutId = (size_t) uttinfo[IDX2C(uttId, 6, numSequences)];
+        size_t frameNum = (size_t) uttinfo[IDX2C( 0, uttId, 12)];
+        size_t phoneNum = (size_t) uttinfo[IDX2C(1, uttId, 12)];
+        size_t uttBeginOutId = (size_t) uttinfo[IDX2C( 6, uttId, 12)];
         // Number of phones and frames in this utterance
         size_t u = tu - t;
         if (t < frameNum && u < phoneNum)
@@ -5909,9 +5909,9 @@ __global__ void _assignRNNTBetaScore2(
     const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
     if (uttId < numSequences && t <= tu)
     { // Number of phones and frames in this utterance
-        size_t frameNum = (size_t) uttinfo[IDX2C(uttId, 0, numSequences)];
-        size_t phoneNum = (size_t) uttinfo[IDX2C(uttId, 1, numSequences)];
-        size_t uttBeginOutId = (size_t) uttinfo[IDX2C(uttId, 6, numSequences)];
+        size_t frameNum = (size_t) uttinfo[IDX2C(0, uttId, 12)];
+        size_t phoneNum = (size_t) uttinfo[IDX2C( 1, uttId, 12)];
+        size_t uttBeginOutId = (size_t) uttinfo[IDX2C( 6, uttId, 12)];
         size_t u = tu - t;
         if (t < frameNum && u < phoneNum)
         {
@@ -6148,8 +6148,8 @@ __global__ void _assignRNNTTotalScore(ElemType* betaScore,
     int uttId = blockDim.x * blockIdx.x + threadIdx.x;
     if (uttId < numSequences)
     {
-        int frameNum = (int) uttinfo[IDX2C(uttId, 0, numSequences)];
-        int uttBeginOutId = (int) uttinfo[IDX2C(uttId, 6, numSequences)];
+        int frameNum = (int) uttinfo[IDX2C(0, uttId, 12)];
+        int uttBeginOutId = (int) uttinfo[IDX2C(6, uttId, 12)];
         //time Index of the current frame in minibatch
         //size_t timeId = (uttBeginFrame[uttId]) * numChannels + uttToChanInd[uttId]; //time id for t = 0
         //size_t alphaId = maxPhoneNum * timeId;                                      // alpha_t(s)
@@ -6386,9 +6386,9 @@ __global__ void _assignRNNTScoreS1_speed(ElemType* us,
     ElemType x = LZERO;
     if (uttID < numSequences)
     {
-        size_t FrameNum = (size_t) uttinfo[IDX2C(uttID, 0, numSequences)];
-        size_t PhoneNum = (size_t) uttinfo[IDX2C(uttID, 1, numSequences)];
-        size_t uttBeginOutId = (size_t) uttinfo[IDX2C(uttID, 6, numSequences)];
+        size_t FrameNum = (size_t) uttinfo[IDX2C( 0, uttID, 12)];
+        size_t PhoneNum = (size_t) uttinfo[IDX2C( 1, uttID, 12)];
+        size_t uttBeginOutId = (size_t) uttinfo[IDX2C( 6, uttID, 12)];
         if (u < PhoneNum && t < FrameNum)
         {
             size_t tuID;
@@ -6647,15 +6647,15 @@ __global__ void _assignRNNTScoreS2_speed2(ElemType* us,
         size_t s = 0;
         for (; s < numSequences; s++)
         {
-            size_t BeginForMerge = (size_t) uttinfo[IDX2C(s, 6, numSequences)];
+            size_t BeginForMerge = (size_t) uttinfo[IDX2C(6,s ,12)];
             if (tuID < BeginForMerge)
                 break;
         }
         uttID = s - 1;
 
-        size_t FrameNum = (size_t) uttinfo[IDX2C(uttID, 0, numSequences)];
-        size_t PhoneNum = (size_t) uttinfo[IDX2C(uttID, 1, numSequences)];
-        size_t BeginForMerge = (size_t) uttinfo[IDX2C(uttID, 6, numSequences)];
+        size_t FrameNum = (size_t) uttinfo[IDX2C( 0, uttID, 12)];
+        size_t PhoneNum = (size_t) uttinfo[IDX2C(1, uttID, 12)];
+        size_t BeginForMerge = (size_t) uttinfo[IDX2C( 6, uttID, 12)];
 
         ElemType x = LZERO, y = LZERO, z = LZERO;
         size_t u = (tuID - BeginForMerge) % PhoneNum;
@@ -6822,9 +6822,9 @@ __global__ void _convertPhoneSeq(ElemType* in,
 
     if (uttID < numSequences)
     {
-        int phoneNum = (int) uttinfo[IDX2C(uttID, 1, numSequences)];
-        int uttBeginPhoneId = (int) uttinfo[IDX2C(uttID, 3, numSequences)];
-        int uttPhonetoChanId = (int) uttinfo[IDX2C(uttID, 5, numSequences)];
+        int phoneNum = (int) uttinfo[IDX2C(1, uttID, 12)];
+        int uttBeginPhoneId = (int) uttinfo[IDX2C( 3, uttID, 12)];
+        int uttPhonetoChanId = (int) uttinfo[IDX2C( 5, uttID, 12)];
         if (u < phoneNum)
         {
             size_t FrameInd = (u + uttBeginPhoneId) * numParallelseq + uttPhonetoChanId;

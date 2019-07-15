@@ -285,7 +285,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
     return forward_backward(graph, features, blankTokenId, delayConstraint, name)
 
 @typemap
-def RNNT(graph, encoder, decoder, mergedinput,blankTokenId, delayConstraint=-1, name=''):
+def RNNT(graph, uttinfo, mergedinput,blankTokenId, delayConstraint=-1, name=''):
     '''
     Criterion node for training methods that rely on forward-backward Viterbi-like passes, e.g. Connectionist Temporal Classification (CTC) training
     The node takes as the input the graph of labels, produced by the labels_to_graph operation that determines the exact forward/backward procedure.
@@ -308,7 +308,7 @@ def RNNT(graph, encoder, decoder, mergedinput,blankTokenId, delayConstraint=-1, 
     decoder = sanitize_input(decoder, get_data_type(decoder))
     mergedinput = sanitize_input(mergedinput, get_data_type(mergedinput))
     graph = sanitize_input(graph, get_data_type(graph))
-    return RNNT(graph, encoder, decoder, mergedinput, blankTokenId, delayConstraint, name)
+    return RNNT(graph,uttinfo, mergedinput, blankTokenId, delayConstraint, name)
 
 
 ##########################################################################

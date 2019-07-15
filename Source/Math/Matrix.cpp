@@ -6273,9 +6273,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob,
 //      delayConstraint=-1 means no constraint
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
-                                                    const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttBeginForOutputditribution,
-                                                    const vector<size_t>& uttPhoneToChanInd, const vector<size_t>& uttPhoneBeginIdx,
-                                                    const vector<size_t>& uttFrameNum, const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
+                                                    const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, const Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
                                                     Matrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
 {
     //DecideAndMoveToRightDevice(prob, *this);
@@ -6299,11 +6297,9 @@ alpha._transferToDevice(CPUDEVICE);
     //SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
     DISPATCH_MATRIX_ON_FLAG(&prob,
                             this,
-                            this->m_CPUMatrix->AssignRNNTScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, uttFrameToChanInd, uttFrameBeginIdx,
-                                                               uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_CPUMatrix, blankTokenId,
+                            this->m_CPUMatrix->AssignRNNTScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, *uttInfo.m_CPUMatrix, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_CPUMatrix, blankTokenId,
                                                                delayConstraint, isColWise),
-                            this->m_GPUMatrix->AssignRNNTScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, uttFrameToChanInd, uttFrameBeginIdx,
-                                                               uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_GPUMatrix, blankTokenId,
+                            this->m_GPUMatrix->AssignRNNTScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, *uttInfo.m_GPUMatrix, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_GPUMatrix, blankTokenId,
                                                                delayConstraint, isColWise),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);

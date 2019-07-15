@@ -410,10 +410,8 @@ public:
     Matrix<ElemType>& AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences);
     Matrix<ElemType>& AssignUserOp2(Matrix<ElemType>& in1, Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx);
     Matrix<ElemType>& AssignRNNTScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq,
-        const Matrix<ElemType>& phoneBoundary, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution,
-        const vector<size_t>& uttPhoneToChanInd, const vector<size_t> & uttPhoneBeginIdx, 
-        const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
-        Matrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+                                      const Matrix<ElemType>& phoneBoundary, const Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, 
+        const size_t maxPhoneNum, const size_t maxFrameNum,  Matrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
 
     Matrix<ElemType>& InplaceSqrt();
     Matrix<ElemType>& AssignSqrtOf(const Matrix<ElemType>& a);

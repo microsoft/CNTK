@@ -993,9 +993,9 @@ namespace CNTK
                         }
                         case PrimitiveOpType::RNNT:
                         {
-                            assert(m_inputs.size() == 4);
-                            if (m_inputs[0].Shape().TotalSize() != m_inputs[1].Shape().TotalSize())
-                                InvalidArgument("RNNT: The shapes of operands '%S' and '%S' must have the same total size.", m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
+                            assert(m_inputs.size() == 5);
+                            //if (m_inputs[0].Shape().TotalSize() != m_inputs[1].Shape().TotalSize())
+                            //    InvalidArgument("RNNT: The shapes of operands '%S' and '%S' must have the same total size.", m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
 
                             outputShape = {};
                             break;

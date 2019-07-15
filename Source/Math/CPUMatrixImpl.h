@@ -7543,9 +7543,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1
 }
 template<class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq,
-    const CPUMatrix<ElemType>& phoneBoundary, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution, 
-    const vector<size_t>& uttPhoneToChanInd, const vector<size_t> & uttPhoneBeginIdx,
-    const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
+                                                          const CPUMatrix<ElemType>& phoneBoundary, const CPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences,
+    const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
     CPUMatrix<ElemType>& totalScore, const size_t blankTokenId,  const int delayConstraint, const bool isColWise)
 
 {
@@ -7553,14 +7552,14 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
     if (isColWise)
     {
         // Total number of phones
-        size_t totalPhoneNum = prob.GetNumRows();
-        size_t uttNum = uttFrameNum.size();
+        //size_t totalPhoneNum = prob.GetNumRows();
+        //size_t uttNum = uttInfo.GetNumCols();
         //fprintf(stderr, "enter AssignRNNTScore\n");
         // Max number of phones in utterances in this minibatch
        // size_t maxPhoneNum = phoneSeq.GetNumRows();
         
         //prob.Print("prob");
-        //for (size_t s = 0; s < uttNum; s++)
+        /*//for (size_t s = 0; s < uttNum; s++)
         {
             for (size_t t = 0; t < maxFrameNum; t++)
             {
@@ -7593,7 +7592,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
             //fprintf(stderr, "%f ", scores[utt]);
             totalScore(0, 0) -= scores[utt];
         }
-        //fprintf(stderr, "\n");
+        //fprintf(stderr, "\n");*/
         //alpha.SetValue(0.0);
         //ElemType score= compute_alphas(prob.Data(), alpha.Data(), (int)maxFrameNum, (int)maxPhoneNum, phoneSeq.Data());
         //CPUMatrix<ElemType> trans_grads, predict_grads;

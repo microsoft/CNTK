@@ -378,9 +378,7 @@ public:
     
     //RNNT
     GPUMatrix<ElemType>& AssignRNNTScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-        const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBoundary, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution,
-        const vector<size_t>& uttPhoneToChanInd, const vector<size_t> & uttPhoneBeginIdx,
-        const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
+                                         const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBoundary, const GPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
         GPUMatrix<ElemType>& totalScore, const size_t blankTokenId,  const int delayConstraint, const bool isColWise);
     GPUMatrix<ElemType>& AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2, GPUMatrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences);
     GPUMatrix<ElemType>& AssignUserOp2(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx);
