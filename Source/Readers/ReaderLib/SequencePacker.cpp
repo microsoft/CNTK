@@ -58,88 +58,12 @@ MBLayoutPtr SequencePacker::CreateBinaryMBLayout(const StreamBatch& batch)
 
 Minibatch SequencePacker::ReadMinibatch()
 {
-   if (!m_readsequences)
-        m_sequences = m_sequenceEnumerator->GetNextSequences(m_globalMinibatchSizeInSamples, m_localMinibatchSizeInSamples);
-    auto sequencedata = m_sequences.m_data;
+    auto sequences = m_sequenceEnumerator->GetNextSequences(m_globalMinibatchSizeInSamples, m_localMinibatchSizeInSamples);
     //get one minibatch
-    size_t totalframelabelsize = 0;
     //select sequences for one minibatch, loop for sequence
-    size_t endIndex = m_sequenceindex;
-    bool found = false;
-    while (!found && endIndex < sequencedata[0].size())
-    {
-        for (; endIndex < sequencedata[0].size(); endIndex++)
-        {
-            totalframelabelsize += sequencedata[0][endIndex]->m_numberOfSamples * sequencedata[1][endIndex]->m_numberOfSamples;
-            if (totalframelabelsize > m_localMinibatchSizeInSamples)
-                break;
-        }
-        if (endIndex == m_sequenceindex)
-        {
-            found = false;
-            m_sequenceindex += 1;
-            endIndex = endIndex + 1;
-            totalframelabelsize = 0;
-        }
-        else
-        {
-            found = true;
-        }
 
-    }
-    
-    std::vector<std::vector<SequenceDataPtr>> mbsequecedata;
-    mbsequecedata.resize(sequencedata.size());
     //loop for stream, put sequence data into batch
-    //did not find data when reach the end of this bit batch
-    if (endIndex == m_sequenceindex && endIndex != 0 )
-    {
-        for (size_t Index2 = 0; Index2 < sequencedata[0].size(); Index2++)
-        {
-            if (sequencedata[0][Index2]->m_numberOfSamples * sequencedata[1][Index2]->m_numberOfSamples < m_localMinibatchSizeInSamples)
-            {
-                for (size_t n = 0; n < sequencedata.size(); n++)
-                {
-                    
-                        mbsequecedata[n].push_back(sequencedata[n][Index2]);
-                    
-                }
-                break;
-            }
-            
 
-        }
-    }
-    else
-    {
-        for (size_t n = 0; n < sequencedata.size(); n++)
-        {
-            for (size_t i = m_sequenceindex; i < endIndex; i++)
-            {
-                mbsequecedata[n].push_back(sequencedata[n][i]);
-            }
-        }
-    }
-    
-
-    Sequences sequences;
-    if (endIndex == sequencedata[0].size())  // read all data in this big batch to minibatch
-    {
-        m_readsequences = false;
-        sequences.m_endOfEpoch = m_sequences.m_endOfEpoch;
-        sequences.m_endOfSweep = m_sequences.m_endOfSweep;     
-        m_sequenceindex = 0;
-    }
-    else        //there is data left in big batch
-    {
-        m_readsequences = true;
-        m_sequenceindex = endIndex;
-        sequences.m_endOfEpoch = false;
-        sequences.m_endOfSweep = false;      
-    }
-    if (mbsequecedata[0].size() == 0)
-        mbsequecedata.clear();
-    sequences.m_data = mbsequecedata;
     const auto& batch = sequences.m_data;
 
     Minibatch minibatch(sequences.m_endOfSweep, sequences.m_endOfEpoch);
