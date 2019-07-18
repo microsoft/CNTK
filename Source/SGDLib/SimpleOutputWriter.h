@@ -50,6 +50,7 @@ class SimpleOutputWriter
     };
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     typedef typename std::vector<Sequence>::iterator iterator;
+    unordered_map<wstring, vector<shared_ptr<PastValueNode<ElemType>>>> m_nameToPastValueNodeCache;
 
 public:
     SimpleOutputWriter(ComputationNetworkPtr net, int verbosity = 0)
@@ -302,13 +303,33 @@ public:
         unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
         for (it = a.nameToNodeValues.begin(); it != a.nameToNodeValues.end(); it++)
         {
-            oneSeq.nameToNodeValues[it->first] = make_shared<PastValueNode<ElemType>>(deviceId, it->first);
+            auto itin = m_nameToPastValueNodeCache.find(it->first);
+            if (itin != m_nameToPastValueNodeCache.end() && m_nameToPastValueNodeCache[it->first].size() > 0)
+            {
+                //vector<shared_ptr<PastValueNode<ElemType>>> mCache = m_nameToPastValueNodeCache[it->first];
+                oneSeq.nameToNodeValues[it->first] = m_nameToPastValueNodeCache[it->first].back();
+                m_nameToPastValueNodeCache[it->first].pop_back();
+            }
+            else
+            {
+                oneSeq.nameToNodeValues[it->first] = make_shared<PastValueNode<ElemType>>(deviceId, it->first);
+            }
+
             it->second->CopyTo(oneSeq.nameToNodeValues[it->first], it->first, CopyNodeFlags::copyNodeAll);
         }
         return oneSeq;
     }
+
     void deleteSeq(Sequence oneSeq)
     {
+        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
+        for (it = oneSeq.nameToNodeValues.begin(); it != oneSeq.nameToNodeValues.end(); it++)
+        {
+            auto itin = m_nameToPastValueNodeCache.find(it->first);
+            if (itin == m_nameToPastValueNodeCache.end())
+                m_nameToPastValueNodeCache[it->first] = vector<shared_ptr<PastValueNode<ElemType>>>();
+            m_nameToPastValueNodeCache[it->first].push_back(oneSeq.nameToNodeValues[it->first]);
+        }
         oneSeq.decodeoutput->ReleaseMemory();
         vector<size_t>().swap(oneSeq.labelseq);
     }
@@ -479,6 +500,7 @@ public:
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
                           size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
     {
+
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
         //size_t beamSize = 10;
@@ -555,6 +577,9 @@ public:
         Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
         Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
         Matrix<ElemType> lmin(deviceid);
+        MatrixPool m_matrixPool;
+        m_matrixPool.OptimizedMemoryAllocation();
+
         //encodeOutput.GetDeviceId
         const size_t numIterationsBeforePrintingProgress = 100;
         //size_t numItersSinceLastPrintOfProgress = 0;
