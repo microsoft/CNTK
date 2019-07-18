@@ -2266,7 +2266,6 @@ void CNTKToONNXHelper::UpdateONNXType(CNTK::DataType dataType, onnx::TypeProto &
 std::string CNTKToONNXHelper::ToOPName(const FunctionPtr& src)
 {
     auto lookup = Operators::CntkToONNXLookup();
-    assert(lookup.count(src->OpName()) != 0);
 
     std::string opName = ToLegacyString(ToUTF8(src->OpName()));
     if (lookup.count(src->OpName()) == 1)
