@@ -152,6 +152,8 @@ namespace CNTK
     public:
         CNTKEvaluatorWrapper(const char* modelFilePath, const CNTK_DeviceDescriptor* device);
         CNTKEvaluatorWrapper(const char* modelFilePath, DeviceDescriptor device);
+        CNTKEvaluatorWrapper(const void* modelData, int modelDataLen, const CNTK_DeviceDescriptor* device);
+        CNTKEvaluatorWrapper(const void* modelData, int modelDataLen, DeviceDescriptor device);
         CNTKEvaluatorWrapper(FunctionPtr model, DeviceDescriptor device);
 
         void GetModelArgumentsInfo(CNTK_Variable** inputs, uint32_t* numInputs) override;

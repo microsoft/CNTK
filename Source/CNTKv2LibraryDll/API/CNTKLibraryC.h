@@ -109,6 +109,22 @@ CNTK_API CNTK_StatusCode CNTK_LoadModel(
     /*[in]*/ const CNTK_DeviceDescriptor* device,
     /*[out]*/ CNTK_ModelHandle* model);
 
+//
+// Loads a model from the specified buffer and returns an opaque handle to the model
+// that should be passed to further operations.
+//
+// Parameters:
+//     modelData [in]: a buffer that holds the CNTK model
+//     modelDataLen [in]: the length of the buffer
+//     device [in]: device descriptor
+//     model [out]: the resulting loaded model
+//
+CNTK_StatusCode CNTK_LoadModel_FromArray(
+    /*[in]*/ const void* modelData,
+    /*[in]*/ int modelDataLen,
+    /*[in]*/ const CNTK_DeviceDescriptor* device,
+    /*[out]*/ CNTK_ModelHandle* model);
+
 enum CNTK_ParameterCloningMethod
 {
     ///

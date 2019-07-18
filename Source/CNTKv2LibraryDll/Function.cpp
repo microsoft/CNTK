@@ -533,7 +533,7 @@ namespace CNTK
         return nullptr;
     }
 
-    /*static*/ FunctionPtr Function::Load(const char *buffer, size_t length, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::Load(const char *buffer, size_t length, const DeviceDescriptor& computeDevice, ModelFormat format)
     {
         if ((buffer == nullptr) || (length <= 0))
             InvalidArgument("The model buffer should not be null and its length should be greater than 0");
@@ -547,15 +547,32 @@ namespace CNTK
             }
         };
 
-        if (Internal::IsLegacyModel(buffer, length))
-            InvalidArgument("Loading a legacy model from byte array is not supported.");
-        else
+        switch (format)
         {
-            modelStreamBuffer buf(buffer, length);
-            std::istream modelStream(&buf);
+        case ModelFormat::CNTKv2:
+        {
+            if (Internal::IsLegacyModel(buffer, length)) {
+                InvalidArgument("Loading a legacy model from byte array is not supported.");
+            }
+            else
+            {
+                modelStreamBuffer buf(buffer, length);
+                std::istream modelStream(&buf);
 
-            return Load(modelStream, computeDevice);
+                return Load(modelStream, computeDevice);
+            }
+            break;
         }
+
+        case ModelFormat::ONNX:
+            return ONNXFormat::Load(static_cast<const void*>(buffer), length, computeDevice);
+            break;
+
+        default:
+            InvalidArgument("unsupported ModelFormat.");
+        }
+
+        return nullptr;
     }
 
     /*static*/ FunctionPtr Function::Load(std::istream& inputStream, const DeviceDescriptor& computeDevice)

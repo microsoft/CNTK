@@ -121,3 +121,23 @@ FunctionPtr ONNXFormat::Load(const std::wstring& filepath, const DeviceDescripto
     FunctionPtr cntkFunction = ONNXToCNTK::CreateGraph(&model->MainGraph(), computeDevice, ToLegacyString(ToUTF8(filepath)));
     return cntkFunction;
 }
+
+FunctionPtr ONNXFormat::Load(const void* model_data, int model_data_len, const DeviceDescriptor& computeDevice)
+{
+    InitializeLotusIR();
+
+    onnx::ModelProto model_proto;
+    const bool result = model_proto.ParseFromArray(model_data, model_data_len);
+    if (!result) {
+        LogicError("protobuf failed to parse model");
+    }
+
+    std::shared_ptr<onnxruntime::Model> model;
+    onnxruntime::common::Status loadStatus = onnxruntime::Model::Load(model_proto, model);
+
+    if (!loadStatus.IsOK())
+        LogicError("Failed to load model: '%s'", loadStatus.ErrorMessage().c_str());
+
+    FunctionPtr cntkFunction = ONNXToCNTK::CreateGraph(&model->MainGraph(), computeDevice);
+    return cntkFunction;
+}
