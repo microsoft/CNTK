@@ -223,7 +223,11 @@ public:
         H.nsamples = 0; // unknown for now, updated in close()
         H.sampperiod = period;
         const int bytesPerValue = sizeof(float); // we do not support compression for now
-        size_t rawsampsize = featdim ;
+        size_t rawsampsize;
+        if (featdim > 16380)
+            rawsampsize = featdim;
+        else
+            rawsampsize = featdim * bytesPerValue;
         H.sampsize = (unsigned short) rawsampsize;
         if (H.sampsize != rawsampsize)
             RuntimeError("htkfeatwriter: sample size overflow");
