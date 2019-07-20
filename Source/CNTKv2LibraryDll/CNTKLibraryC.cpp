@@ -104,6 +104,22 @@ CNTK_StatusCode CNTK_LoadModel(const char* modelFilePath, const CNTK_DeviceDescr
     return ExceptionCatcher::Call([&]() { *handle = new CNTKEvaluatorWrapper(modelFilePath, device); });
 }
 
+CNTK_StatusCode CNTK_LoadModel_FromArray(const void* modelData, int modelDataLen,
+                                         const CNTK_DeviceDescriptor* device, CNTK_ModelHandle* handle)
+{
+    if (!handle)
+        return StatusCode(CNTK_ERROR_NULL_POINTER, "'handle' parameter is not allowed to be null");
+
+    if (!modelData)
+        return StatusCode(CNTK_ERROR_NULL_POINTER, "'modelData' parameter is not allowed to be null");
+
+    if (modelDataLen <= 0)
+        return StatusCode(CNTK_ERROR_INVALID_INPUT, "'modelDataLen' parameter must be greater than zero");
+
+    *handle = nullptr;
+    return ExceptionCatcher::Call([&]() { *handle = new CNTKEvaluatorWrapper(modelData, modelDataLen, device); });
+}
+
 CNTK_StatusCode CNTK_CloneModel(CNTK_ModelHandle model, CNTK_ParameterCloningMethod method, bool flatten, CNTK_ModelHandle* cloned)
 {
     if (model == CNTK_INVALID_MODEL_HANDLE)
