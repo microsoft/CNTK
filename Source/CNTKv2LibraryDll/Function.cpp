@@ -2039,7 +2039,7 @@ namespace CNTK
             NDShape inputShape = input.Shape();
             if (inputShape.Rank() != 3)
                 LogicError("SpaceToDepth: Input operand (shape: %S) must be a 3-dimensional tensor, e.g. a 2D image with channels.", inputShape.AsString().c_str());
-            if ((inputShape[0] % blockSize != 0) || (inputShape[1] % blockSize != 0))
+            if ((inputShape[0] % blockSize != 0 && inputShape[0] != NDShape::FreeDimension) || (inputShape[1] % blockSize != 0 && inputShape[1] != NDShape::FreeDimension))
                 LogicError("SpaceToDepth: All spatial dimensions in the operand (%zu x %zu) must be divisible by blocksize (%zu).", inputShape[0], inputShape[1], blockSize);
         }
 
