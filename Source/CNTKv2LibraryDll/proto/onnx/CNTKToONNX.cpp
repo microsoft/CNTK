@@ -5036,6 +5036,9 @@ bool CompareTensorShapeProtoEqual(const ::onnx::TensorShapeProto& shape0, const 
     return true;
 }
 
+// forward declaration
+static std::string SerializeDictionaryToString(const Dictionary& dict);
+
 // process scan loops. also check if the caller (CreateNode) shall continue node creating process with the input src.
 // caller shall not continue if:
 // - we are still creating a scan op and src is not part of the scan body.
@@ -5163,6 +5166,7 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                 }
 
                 int inputIndex = 0;
+                std::string futureValueCustomAttrStr = ""; 
                 for (auto &scanLoopState : scanLoops[loopIndex].scanLoopStates)
                 {
                     // IMPORTANT TRICK: initial state is usually a scalar. State initializer tensor is prepared
@@ -5277,6 +5281,29 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                             graph->AddInitializedTensor(scanLoopState.m_initialStateTensor);
                     }
                     // else initializer is input.
+
+                    // FutureValue's custom attrubute will be serialized into the Scan node's description
+                    auto fvOp = scanLoopState.m_stateOutput.Owner();
+                    if (fvOp && fvOp->OpName() == L"FutureValue")
+                    {
+                        const Dictionary& dict = fvOp->GetCustomAttributes();
+                        if (dict.Size() > 0)
+                        {
+                            if (futureValueCustomAttrStr == "")
+                            {
+                                futureValueCustomAttrStr = "{custom_attributes:" + SerializeDictionaryToString(dict) + "}";
+                            }
+                            else
+                            {
+                                std::string attrStr = "{custom_attributes:" + SerializeDictionaryToString(dict) + "}";
+                                if (attrStr != futureValueCustomAttrStr)
+                                {
+                                    CNTK::LogicError("Scan node has multiple FutureValue custom attributes from state: %s",
+                                                     scanInitialStateNodeArgName.c_str());
+                                }
+                            }
+                        }
+                    }
                 }
 
                 for (auto &scanInput : scanLoops[loopIndex].m_scanInputs)
@@ -5326,7 +5353,7 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
 
                 scanGraph.SetInputOrder(scanSubgraphOrderedInputs);
                 scanGraph.SetOutputOrder(scanSubgraphOrderedOutputs);
-                Node *scanNode = &graph->AddNode(scanNodeName, "Scan", "", input_args, output_args);
+                Node *scanNode = &graph->AddNode(scanNodeName, "Scan", /*description*/ futureValueCustomAttrStr, input_args, output_args);
 
                 ResolveGraphAndSaveModel(scanSubModel.get());
 
