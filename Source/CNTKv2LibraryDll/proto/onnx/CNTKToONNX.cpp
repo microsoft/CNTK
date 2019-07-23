@@ -5291,11 +5291,11 @@ bool CNTKToONNXHelper::ProcessLoopsAndCheckCNTKNodeContinueCreate(const Function
                         {
                             if (futureValueCustomAttrStr == "")
                             {
-                                futureValueCustomAttrStr = "{custom_attributes:" + SerializeDictionaryToString(dict) + "}";
+                                futureValueCustomAttrStr = "{\"custom_attributes\":" + SerializeDictionaryToString(dict) + "}";
                             }
                             else
                             {
-                                std::string attrStr = "{custom_attributes:" + SerializeDictionaryToString(dict) + "}";
+                                std::string attrStr = "{\"custom_attributes\":" + SerializeDictionaryToString(dict) + "}";
                                 if (attrStr != futureValueCustomAttrStr)
                                 {
                                     CNTK::LogicError("Scan node has multiple FutureValue custom attributes from state: %s",
