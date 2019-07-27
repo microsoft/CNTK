@@ -41,7 +41,7 @@ DelayedValueNodeBase<ElemType, direction>::DelayedValueNodeBase(DEVICEID_TYPE de
     m_initialStateValueMatrix->Resize(1, 1);
     m_initialStateValueMatrix->SetValue(m_initialStateValue);
     m_zeroMatrix->Resize(1, 1);
-    m_zeroMatrix->SetValue((ElemType)0);
+    m_zeroMatrix->SetValue(m_initialStateValue);
     m_timeStep = (int)timeStep;
 }
 
@@ -368,7 +368,7 @@ template<class ElemType, int direction>
         {
             // LogicError("The delay node tries to access future values that are out of bound, possibly because there is no sentence end marker in the MBLayout.");
             // init using inititalMatrix zero init for latency control blstm
-            src = TensorView<ElemType>(m_zeroMatrix, TensorShape(1));
+            src = TensorView<ElemType>(m_initialStateValueMatrix, TensorShape(1));
         }
     }
     else // regular case
