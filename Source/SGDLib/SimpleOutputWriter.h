@@ -799,7 +799,7 @@ public:
                             vector<size_t> subseq(keyNextSequences[n].labelseq.begin(), keyNextSequences[n].labelseq.begin() + maxL);
                             if (subseq == keywords[keyNo])
                             {
-                                ElemType score = exp(keyNextSequences[n].logP / (keyNextSequences[n].lengthwithblank - 1)) ;
+                                ElemType score = exp(keyNextSequences[n].logP / (keyNextSequences[n].labelseq.size() - 1)) * 3;
                                 if (score >= thresh)
                                 {
                                     bestseq = n;
@@ -839,7 +839,7 @@ public:
                         }
                     }
                     if (find)
-                        keyNextSequences[n].logP /= (keyNextSequences[n].lengthwithblank - 1);
+                        keyNextSequences[n].logP /= (keyNextSequences[n].labelseq.size() - 1);
                     else
                         keyNextSequences[n].logP = -1000000;
                     /*if (!find)
