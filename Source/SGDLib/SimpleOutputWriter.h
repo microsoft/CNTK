@@ -259,6 +259,7 @@ public:
 
                     //m_net->ForwardPropFromTo(decodeOutputNodes[0], PlusTransNode);
                     lmt++;
+                    t--;
                     //fprintf(stderr, "lmt: %d\n", (int) lmt);
                 }
 
