@@ -1,0 +1,163 @@
+# Note that BrainScript cannot parse variables from CNTK configs
+
+CTCAttention {nDelay=4,
+              nSkip=1,
+              attnType=3,
+              prevStateType=2,
+              prevAttnType=1,
+              enableDimAttn=1,
+              enableBias=true
+             } =
+{
+
+# load network
+network = BS.Network.Load ("$$/3400hr.letter.ctc.0")
+body1 = BS.Network.CloneFunction (network.features, [ layer5 = network.LSTMoutput5_output], parameters="learnable") # hidden features from the 5th layer of LSTM
+body2 = BS.Network.CloneFunction (network.LSTMoutput5_output, [ HLast = network.LSTMoutputW], parameters="learnable") # "HLast" is the same as logits which is W*(hidden from 5th layer) + b
+
+ColSlice (beginIndex, numCols, input) = Slice(beginIndex, beginIndex + numCols, input, axis = 2)
+		
+Diag(in, beginIndex, endIndex) = 
+{		    
+	d[k:beginIndex..endIndex] = ColSlice(k, 1, RowSlice(k, 1, in));
+	o = RowStack(d)
+}
+
+RowLogSoftmax (x) = x - ReduceLogSum (x, axis=2)
+
+		indim = 1200
+		outdim = 30
+		hiddendim = 512
+		celldim =   512
+		features = Input{indim}
+		letterctclabels = Input{outdim}
+		
+		# This is the hidden features of final (5th layer) LSTM layer
+		z1 = body1(features).layer5
+		
+		nSkipEff  = Max(1, nSkip)
+		attnCtxSize = 2*nDelay + 1
+		
+
+		# Convolution wt matrices (1 weight matrix per time step). Thus, for each time step, W(t) = [hiddendim x hiddendim]
+		attnW[l:0..attnCtxSize-1] = ParameterTensor {(hiddendim:hiddendim), init='uniform', initValueScale=1.0};		
+		attnWW = ParameterTensor {(hiddendim:hiddendim), init='uniform', initValueScale=1.0};
+
+		# Wt matrix to do linear transformation of the previous state
+		attnU = if prevStateType == 0	   then [| |]
+				else if prevStateType == 1 then ParameterTensor {(hiddendim:outdim), init='uniform', initValueScale=1.0}
+				else if prevStateType == 2 then ParameterTensor {(hiddendim:hiddendim), init='uniform', initValueScale=1.0}
+				else Fail("prevStateType = $prevStateType$ not supported")
+
+		# Convolutional Wt matrices for the previous attention weights
+		attnF = if prevAttnType == 0	   then [| |]
+				else if prevAttnType == 1 then ParameterTensor {(hiddendim:attnCtxSize), init='uniform', initValueScale=1.0}
+				#else if prevAttnType == 2 then ParameterTensor {(hiddendim:hiddendim:attnCtxSize), init='uniform', initValueScale=1.0}
+				else Fail("prevAttnType = $prevAttnType$ not supported")
+
+		attnLoc = if prevAttnType == 0	   then [| |]
+				 else if prevAttnType == 1 then ParameterTensor {(hiddendim:hiddendim), init='uniform', initValueScale=1.0}
+				 else Fail("prevAttnType = $prevAttnType$ not supported")
+
+		# Bias		
+		attnb = if enableBias == true
+				then ParameterTensor {(hiddendim), init='uniform', initValueScale=1.0}
+				else [| |]
+
+
+
+		# Stack the past:present:future hidden features in the order (t-4, ..., t-1, t, t+1, ..., t+4). These will be the input to the convolution wt matrices
+		# Thus, hiddenFeats[k] = [hiddendim x 1]
+		hiddenFeats[k:0..attnCtxSize-1] = if k < nDelay  		then PastValue(hiddendim, z1, timeStep=(nDelay-k)*nSkipEff, defaultHiddenActivation=0)
+										else if k == nDelay then z1
+										else FutureValue(hiddendim, z1, timeStep=(k-nDelay)*nSkipEff, defaultHiddenActivation=0)
+
+		# Get the un-normalized softmax o/p, attention wts, and attention weighted hidden feature from the previous time step
+		dz = PastValue(outdim, z, timeStep=1, defaultHiddenActivation=0);
+		dattentionWeights = PastValue(attnCtxSize, attentionWeights, timeStep=1, defaultHiddenActivation=0);
+		dweightedAttentionAverage = PastValue(hiddendim, weightedAttentionAverage, timeStep=1, defaultHiddenActivation=0);
+
+		# Multiply the convolution wt matrix with the feature at each time step and pass it through tanh() non-linearity to get outputs of size [hiddendim x 1]
+		attnWTimesHidden[j:0..attnCtxSize-1] = attnW[j]*hiddenFeats[j];		
+		WhProj[j:0..attnCtxSize-1] = attnWW*attnWTimesHidden[j];
+
+		# Content-based attention: Add previous state to the attention model
+		# 0 = do not include prev state
+		# 1 = simple linear transformation of prev state
+		# 2 = prev state based on hidden output of a pseudo-LM based LSTM
+		dzProj = if prevStateType == 0      then [| |]
+				 else if prevStateType == 1 then attnU*dz
+			 	 else if prevStateType == 2 then {	 	 									
+        											inLSTM =  Splice ((dz:dweightedAttentionAverage), axis=1);        											
+        											indimLSTM = outdim + hiddendim;        
+        											LSTMP = BS.RNNs.RecurrentLSTMP(hiddendim, cellDim=celldim, inLSTM, inputDim=indimLSTM);
+        											o = attnU*LSTMP.h
+			 	 								 }.o
+			 	 else Fail("prevStateType = $prevStateType$ not supported")
+
+		# Location-based attention: Add previous state to the attention model
+		# 0 = do not include prev attention wts
+		# 1 = simple linear transformation of prev attention wts
+		dattentionWeightsConv[j:0..attnCtxSize-1] = if prevAttnType == 0	    then  [| |]
+													else if prevAttnType == 1 	then {
+																						o = if enableDimAttn == 1
+																						then ColSlice(j, 1, attnF).*ColSlice(j, 1, dattentionWeights)
+																						else ColSlice(j, 1, attnF)*RowSlice(j, 1, dattentionWeights)
+																					 }.o													
+							    					else Fail("prevAttnType = $prevAttnType$ not supported")
+
+		dattentionWeightsProj[j:0..attnCtxSize-1] = if prevAttnType == 0	    then  [| |]
+													else attnLoc*dattentionWeightsConv[j]
+													
+		# Note:
+		# content-based attention:  use prevStateType > 0 && prevAttnType = 0
+		# location-based attention: use prevStateType = 0 && prevAttnType > 0
+		# hybrid attention:		    use prevStateType > 0 && prevAttnType > 0
+		#
+		# attnWindow[j] is of size [hiddendim x 1]
+		attnWindow[j:0..attnCtxSize-1] = {  v =  WhProj[j] + dzProj + dattentionWeightsProj[j] + attnb;
+											nv = Tanh(v);
+										 }.nv
+
+		# Stack the attention window vectors column-wise to form a matrix of size [hiddendim x attnCtxSize]
+		attnHidden = Splice(attnWindow, axis = 2);
+
+		# Weights for attention softmax layer. Try matrix = [attnCtxSize x hiddendim] or vector = [1 x hiddendim]
+		V = if enableDimAttn == 1	then [| |]
+			else ParameterTensor {(attnCtxSize:hiddendim),  init='uniform', initValueScale=1}
+			#else ParameterTensor {(1:hiddendim),  init='uniform', initValueScale=1}
+
+		# Un-normalized softmax: Multiply with softmax wts to get a matrix of size [attnCtxSize x attnCtxSize];
+		uMat = if enableDimAttn == 1 then attnHidden
+			   else V*attnHidden
+		
+		# Now compute the attention weights (probabilities) from the un-normalized softmax. Size of attention weights = [attnCtxSize x 1]
+		attentionWeights = if enableDimAttn == 1 then Exp(RowLogSoftmax(uMat))
+						   else {
+						   			u = Diag(uMat, 0, attnCtxSize-1).o;  # if V = [attnCtxSize x hiddendim]						   			
+						   			o = Softmax(u);
+						   		}.o
+						   
+
+		scaleFactor = attnCtxSize;
+
+		# Compute the attention weighted vector (size = [hiddendim x 1]) for different attention schemes
+		# 0 = mean of W*hidden (uniform attention)
+		# 1 = attention weighted hidden
+		# 2 = attention weighted Tanh(W*hidden)
+		# 3 = attention weighted W*hidden
+		# else = vanilla CTC, no attention (simply pass z1, i.e. hidden o/p of final LSTM layer, to the softmax layer)
+		weightedAttentionAverage = if attnType == 0      then scaleFactor .* ReduceMean( Splice(attnWTimesHidden, axis = 2), axis = 2 )
+								   else if attnType == 1 then scaleFactor .* (Splice(hiddenFeats, axis = 2) * attentionWeights)
+								   else if attnType == 2 then scaleFactor .* (attnHidden * attentionWeights)
+								   else if attnType == 3 then {
+								   								o = if enableDimAttn == 1
+								   								then scaleFactor .* ReduceSum( (Splice(attnWTimesHidden, axis = 2) .* attentionWeights), axis = 2)
+								   								else scaleFactor .* (Splice(attnWTimesHidden, axis = 2) * attentionWeights)
+								   							  }.o
+								   else z1
+		        
+        outputRC = weightedAttentionAverage;
+
+	z = DenseLayer {outdim, init='heUniform', initValueScale=1/3} (outputRC)
+}
