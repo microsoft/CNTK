@@ -66,6 +66,8 @@ public:
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true);
         InputRef(1).ValueFor(fr).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
         MaskMissingColumnsToZero(*m_maxIndexes0, InputRef(0).GetMBLayout(), fr);
+        //m_maxIndexes0->Print("ref");
+        //m_maxIndexes1->Print("result");
         MaskMissingColumnsToZero(*m_maxIndexes1, InputRef(1).GetMBLayout(), fr);
         Value().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
 #if NANCHECK

@@ -419,7 +419,7 @@ public:
 
        
         mergedinput.AssignRNNTScore(mergedinput, alpha, beta, maxIndexes, maxIndexes, uttInfo, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, 1,true);
-        
+        //mergedinput.Print("gradient");
         //delete[] phoneSeqData;
         //mergedinput.InplaceExp();
         //m_derivative.AssignElementProductOf(m_derivative, mergedinput);
