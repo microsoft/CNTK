@@ -6332,6 +6332,30 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<
 }
 
 //user defined matrix operation
+//this one is for RNN T output = input1(k,t) + input2(k,u).
+//inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::MatrixTimeReduction(Matrix<ElemType>& in1, Matrix<ElemType>& uttInfo, const size_t factor, const size_t numParallelSequences, bool revert)
+{
+
+    //in1._transferToDevice(CPUDEVICE);
+    //uttInfo._transferToDevice(CPUDEVICE);
+    //_transferToDevice(CPUDEVICE);
+    DecideAndMoveToRightDevice(in1, *this);
+    //SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
+    //in1.Print("f");
+    //in2.Print("g");
+    DISPATCH_MATRIX_ON_FLAG(&in1,
+                            this,
+                            this->m_CPUMatrix->MatrixTimeReduction(*in1.m_CPUMatrix, *uttInfo.m_CPUMatrix, factor, numParallelSequences, revert),
+                            this->m_GPUMatrix->MatrixTimeReduction(*in1.m_GPUMatrix, *uttInfo.m_GPUMatrix, factor, numParallelSequences, revert),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+//user defined matrix operation
 //this one is for RNN T output = sum of u of (input1(k,t,u)).
 
 template <class ElemType>

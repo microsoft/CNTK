@@ -4381,6 +4381,11 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr PlusBroadcast(const Variable& encoder, const Variable& prediction, const Variable& uttinfo, const std::wstring& name = L"");
 
+     ///
+    /// Create an instance of the CNTK built-in operation for time reduction.
+    ///
+    CNTK_API FunctionPtr TimeReduction(const Variable& in, const Variable& uttinfo, const size_t deductionFactor, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in operation for get utt info for specified operands.
     ///

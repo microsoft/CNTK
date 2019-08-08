@@ -227,6 +227,167 @@ template class PlusBroadcastNode<float>;
 template class PlusBroadcastNode<double>;
 
 // -----------------------------------------------------------------------
+// TimeReductionNode (summand1, summand2)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class TimeReductionNode : public ComputationNode<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"TimeReduction";
+    }
+
+public:
+    TimeReductionNode(DEVICEID_TYPE deviceId, const wstring& name, size_t deductionFactor = 2)
+        : Base(deviceId, name), m_reductionFactor(deductionFactor)
+    {
+        m_reductionFactor;
+    }
+
+    TimeReductionNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : TimeReductionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"deductionFactor"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void ForwardProp(const FrameRange& fr) override
+    {
+        CNTK::Matrix<ElemType>& uttInfo = InputRef(1).Value();
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout = InputRef(0).GetMBLayout();
+
+        //size_t uttInfoRow = uttInfo.GetNumRows();
+        numParallelSequences = pMBLayout->GetNumParallelSequences();
+        const auto numSequences = pMBLayout->GetNumSequences();
+
+        //get frame number, phone number and output label number
+        const size_t numCols = InputRef(0).Value().GetNumCols();
+
+        size_t maxFrameNum = numCols / numParallelSequences;
+        size_t outMaxFrameNum = (size_t) ceil((float) maxFrameNum / (float) m_reductionFactor);
+        Value().Resize(InputRef(0).Value().GetNumRows() * m_reductionFactor, outMaxFrameNum * numParallelSequences);
+        InputRef(0).Value().Print("before reduce");
+        //InputRef(0).Value().TransferToDeviceIfNotThere(CPUDEVICE);
+        Value().MatrixTimeReduction(InputRef(0).Value(), uttInfo, m_reductionFactor, numParallelSequences, false);
+        Value().Print("after reduce");
+        //Value().TransferFromDeviceToDevice(CPUDEVICE, InputRef(1).Value().GetDeviceId());
+        // create MBLayout
+        m_pMBLayout->Init(numParallelSequences, outMaxFrameNum);
+        vector<size_t> lastframes;
+        for (size_t s = 0; s < numParallelSequences; s++)
+            lastframes.push_back(0);
+        //size_t outUttID = 0;
+        //size_t seqID = 0;
+        for (const auto& seq : pMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            size_t outtBegin = (size_t) ceil((float) seq.tBegin / (float) m_reductionFactor);
+            size_t numFrames = seq.GetNumTimeSteps();
+            size_t outNumFrames = (size_t) ceil((float) numFrames / (float) m_reductionFactor);
+            m_pMBLayout->AddSequence(seq.seqId, seq.s, (ptrdiff_t) outtBegin, outtBegin + outNumFrames);
+            lastframes[seq.s] = outtBegin + outNumFrames;
+            //seqID++;
+        }
+        for (size_t s = 0; s < numParallelSequences; s++)
+            m_pMBLayout->AddGap(s, lastframes[s], outMaxFrameNum);
+        
+    }
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_reductionFactor;
+        
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_reductionFactor;
+        
+    }
+    virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //no need to do gradient
+        if (inputIndex == 0 ) 
+        {
+            InputRef(inputIndex).Gradient().Resize(InputRef(0).Value().GetNumRows(), InputRef(0).Value().GetNumCols());
+            FrameRange frameRange(InputRef(inputIndex).GetMBLayout());
+            InputRef(inputIndex).Gradient().MatrixTimeReduction(Gradient(), InputRef(1).Value(), m_reductionFactor, numParallelSequences, true);
+            InputRef(inputIndex).InvalidateMissingGradientColumns(frameRange);
+            // InputRef(inputIndex).Gradient().Print("plus gredient");
+        }
+        else if (inputIndex == 1)
+        {
+            InputRef(inputIndex).Gradient().SetValue(0.0);
+        }
+        else
+            RuntimeError("TimeReductionNode criterion expects only two inputs: labels and network output.");
+    }
+    size_t GetReductionFactor() const
+    {
+        return m_reductionFactor;
+    }
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+
+        Base::Validate(isFinalValidationPass);
+
+        //m_pMBLayout = nullptr; // no layout
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        if (isFinalValidationPass)
+        {
+            if (m_pMBLayout == InputRef(0).GetMBLayout())
+            {
+                m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+                m_pMBLayout->SetUniqueAxisName(L"TimeReduction");
+            }
+            
+        }
+        SetDims(Input(0));
+        //m_pMBLayout->Init(1, totalcol);
+        //m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
+        //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+    }
+
+    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<TimeReductionNode<ElemType>>(nodeP);
+            node->m_reductionFactor = m_reductionFactor;
+            
+        }
+    }
+    //request matrix before forward prop
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+    }
+
+protected:
+    // Prepare data structures from the reader
+
+    
+    size_t numParallelSequences;
+    size_t m_reductionFactor;
+};
+
+template class TimeReductionNode<float>;
+template class TimeReductionNode<double>;
+
+// -----------------------------------------------------------------------
 // LogPlusNode (summand1, summand2)
 // Computes ln(exp(summand1) + exp(summand2)) in an overflow safe way.
 // Useful e.g. for computing softmax over sequence.

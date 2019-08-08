@@ -182,6 +182,7 @@ public:
     ComputationNodePtr PerDimMeanVarNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"");
     ComputationNodePtr Plus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr PlusBroadcast(const ComputationNodePtr encoder, const ComputationNodePtr prediction, const ComputationNodePtr uttinfo, const std::wstring nodeName = L"");   
+    ComputationNodePtr TimeReduction(const ComputationNodePtr in1, const ComputationNodePtr uttinfo, const size_t deductionFactor, const std::wstring nodeName = L"");   
     ComputationNodePtr GetUttInfo(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");   
     ComputationNodePtr BiasAttention(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");    
     ComputationNodePtr Reciprocal(const ComputationNodePtr a, const std::wstring nodeName = L"");

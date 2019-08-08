@@ -77,6 +77,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameSquashInputs = L"SquashInputs";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameTokensToIgnore = L"TokensToIgnore";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameSpaceTokens = L"SpaceTokens";
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameReductionFactor = L"ReductionFactor";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameDelayConstraint = L"DelayConstraint";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameBlankTokenId = L"BlankTokenId";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNamePhonePath = L"PhonePath";

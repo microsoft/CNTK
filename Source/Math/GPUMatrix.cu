@@ -4692,11 +4692,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         long totalPhoneNum = prob.GetNumRows();
         long totalUTNum = prob.GetNumCols();
         size_t numSequences = uttInfo.GetNumCols();
-        
 
         GPUMatrix<ElemType> matrixPhoneSeq(prob.GetComputeDeviceId());
-
-        
 
         ElemType* gpuDerivativeValue;
         CUDA_CALL(cudaMalloc((void**) &gpuDerivativeValue, 4 * totalUTNum * sizeof(ElemType)));
@@ -4744,11 +4741,11 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 
         //this->SetValue(0.0);
 
-        //cal loss 
+        //cal loss
         dim3 block_tail((maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, numSequences);
         dim3 thread_tail1(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM, 1);
         _assignRNNTScoreS1_speed<<<block_tail, thread_tail, 0, t_stream>>>(gpuDerivativeValue, alpha.Data(), beta.Data(), numSequences, uttInfo.Data());
-        
+
         size_t maxSTU = MAX_TOTAL_THREAD / totalPhoneNum / DEFAULT_THREAD_PER_DIM * DEFAULT_THREAD_PER_DIM; //2147483647/4
         size_t sumYdim = 0;
         //dim3 block_tail2((totalPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxYdim + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
@@ -4762,7 +4759,6 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
             sumYdim += Ydim;
         }
 
-        
         CUDA_CALL(cudaFree(gpuDerivativeValue));
 
         CUDA_CALL(cudaEventRecord(done));
@@ -4904,6 +4900,54 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
         sumYdim += Ydim;
     }
     //Print("joint value");
+
+    return *this;
+}
+
+//user defined matrix operation
+//this one is for RNN T output = input1(k,t) + input2(k,u).
+//inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::MatrixTimeReduction(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& uttInfo, const size_t factor, const size_t numParallelSequences, bool revert)
+{
+    if (in1.IsEmpty() || uttInfo.IsEmpty())
+        LogicError("MatrixTimeReduction: Matrix is empty.");
+
+    //int nCol1 = in1.GetNumCols();
+    //int maxFrameNum = nCol1 / numParallelSequences;
+    int BS = 0;
+    if(!revert)
+        BS = in1.GetNumRows();
+    else
+        BS = GetNumRows();
+    size_t totalcol = in1.GetNumCols();
+    size_t maxFrameNum = totalcol / numParallelSequences;
+
+    size_t outMaxFrameNum = 0;
+    if(! revert)
+        outMaxFrameNum = (size_t) ceil((float) maxFrameNum / (float) factor);
+    else
+        outMaxFrameNum = in1.GetNumCols();
+    //size_t outputCol = outMaxFrameNum * numParallelSequences;
+
+    //RequireSize(BS * factor, outputCol);
+
+    // int maxPhoneNum = in2.GetNumCols() / numPhoneParallelSequences;
+
+    int numSequences = uttInfo.GetNumCols();
+    // the output matrix is of size (nt+1, BS)
+
+    dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+    // x dimension is for each phone
+    // y dimention is for each time
+    // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances
+    //dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, maxPhoneNum);
+    in1.PrepareDevice();
+    SyncGuard syncGuard;
+
+    dim3 block_tail2((outMaxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, numSequences);
+
+    _matrixTimeReduction<ElemType><<<block_tail2, thread_tail, 0, t_stream>>>(Data(), in1.Data(), uttInfo.Data(), (int) factor, BS, (int) outMaxFrameNum, numSequences, numParallelSequences, revert);
 
     return *this;
 }

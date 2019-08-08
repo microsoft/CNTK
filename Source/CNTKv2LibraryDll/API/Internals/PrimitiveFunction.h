@@ -46,6 +46,7 @@ namespace CNTK
         {PrimitiveOpType::SumAll, L"SumAll"},
         {PrimitiveOpType::Plus, L"Plus"},
         {PrimitiveOpType::PlusBroadcast, L"PlusBroadcast"},
+        {PrimitiveOpType::TimeReduction, L"TimeReduction"},
         {PrimitiveOpType::GetUttInfo, L"GetUttInfo"},
         {PrimitiveOpType::BiasAttention, L"BiasAttention"},
         {PrimitiveOpType::LogPlus, L"LogPlus"},

@@ -1888,7 +1888,7 @@ public:
         //no need to do gradient
         if (inputIndex == 0 || inputIndex == 1) //backprop to transcription f
         {
-            InputRef(inputIndex).Gradient().SetValue(0.0);
+            //InputRef(inputIndex).Gradient().SetValue(0.0);
         }
         else
             RuntimeError("GetUttInfoNode criterion expects only two inputs: labels and network output.");

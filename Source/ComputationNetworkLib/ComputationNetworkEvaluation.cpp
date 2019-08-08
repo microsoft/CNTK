@@ -254,13 +254,13 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
 {
     // take the opportunity to check that layout is shared by all nodes in the loop
     // TODO: we should do this in a constructor.
-    for (auto& node : m_nestedNodes)
+    /*for (auto& node : m_nestedNodes)
     {
         if (node->GetMBLayout() != GetMBLayout())
             LogicError("Evaluate: All nodes inside a recurrent loop must have a layout that is identical; mismatch found for nodes '%ls' (%ls) vs. '%ls' (%ls)",
                        node            ->NodeName().c_str(), node            ->GetMBLayoutAxisString().c_str(),
                        m_nestedNodes[0]->NodeName().c_str(), m_nestedNodes[0]->GetMBLayoutAxisString().c_str());
-    }
+    }*/
 
     // tell all that loop is about to commence
     for (auto& node : m_nestedNodes)
@@ -275,7 +275,7 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
 {
     // get layout associated with this loop
     // All nodes share the same layout.
-    assert(GetMBLayout() == m_nestedNodes[0]->GetMBLayout());
+    //assert(GetMBLayout() == m_nestedNodes[0]->GetMBLayout());
 
     // for every time step run through all nodes in this particular loop (treat the loop like a little ComputationNetwork)
     // Note: Currently, this is limited to linear-time loops. But nothing stops the iteration below to, e.g., be a 2D iteration over an image

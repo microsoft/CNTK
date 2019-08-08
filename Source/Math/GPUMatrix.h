@@ -382,6 +382,7 @@ public:
         GPUMatrix<ElemType>& totalScore, const size_t blankTokenId,  const int delayConstraint, const bool isColWise);
     GPUMatrix<ElemType>& AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2, GPUMatrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences);
     GPUMatrix<ElemType>& AssignUserOp2(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx);
+    GPUMatrix<ElemType>& MatrixTimeReduction(GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& uttInfo, const size_t factor, const size_t numParallelSequences, bool revert);
 
     GPUMatrix<ElemType>& InplaceSqrt();
     GPUMatrix<ElemType>& AssignSqrtOf(const GPUMatrix<ElemType>& a);

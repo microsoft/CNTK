@@ -113,6 +113,7 @@ namespace CNTK
         Getbias = 101,
         BiasAttention = 102,
         GetUttInfo = 103,
+        TimeReduction = 104,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

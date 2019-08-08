@@ -2200,6 +2200,13 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::PlusBroadcast, operands, Dictionary(),  name), name);
     }
 
+    FunctionPtr TimeReduction(const Variable& in, const Variable& uttinfo, const size_t reductionFactor, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameReductionFactor] = reductionFactor;
+        return BinaryOp(PrimitiveOpType::TimeReduction, in, uttinfo, std::move(additionalProperties), name);      
+    }
+
     FunctionPtr GetUttInfo(const Variable& features, const Variable& labels, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::GetUttInfo, features, labels, Dictionary(), name);
