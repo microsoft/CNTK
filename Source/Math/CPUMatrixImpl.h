@@ -7549,6 +7549,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::MatrixTimeReduction(CPUMatrix<ElemType
                         else
                             us(k + n * f, (oututtBeginFrameId + t) * numParallelSequences + uttFrametoChanId) = in1(k, (uttBeginFrameId + t * factor + lastf) * numParallelSequences + uttFrametoChanId);
                     }
+
+
                 }
                 else
                 {

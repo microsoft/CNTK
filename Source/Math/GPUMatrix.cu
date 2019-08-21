@@ -4924,26 +4924,28 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::MatrixTimeReduction(GPUMatrix<ElemType
     size_t maxFrameNum = totalcol / numParallelSequences;
 
     size_t outMaxFrameNum = 0;
-    if(! revert)
+    if (!revert)
         outMaxFrameNum = (size_t) ceil((float) maxFrameNum / (float) factor);
     else
-        outMaxFrameNum = in1.GetNumCols();
-    //size_t outputCol = outMaxFrameNum * numParallelSequences;
+        outMaxFrameNum = maxFrameNum;
+    /*size_t outputCol = outMaxFrameNum * numParallelSequences;
 
-    //RequireSize(BS * factor, outputCol);
-
+    if (!revert)
+        RequireSize(BS * factor, outputCol);
+    else
+        RequireSize(BS , totalcol);*/
     // int maxPhoneNum = in2.GetNumCols() / numPhoneParallelSequences;
 
     int numSequences = uttInfo.GetNumCols();
     // the output matrix is of size (nt+1, BS)
 
-    dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+    dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM, 1);
     // x dimension is for each phone
     // y dimention is for each time
     // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances
     //dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, maxPhoneNum);
     in1.PrepareDevice();
-    SyncGuard syncGuard;
+    SyncGuard syncGuard(true);
 
     dim3 block_tail2((outMaxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, numSequences);
 

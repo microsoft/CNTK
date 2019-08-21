@@ -268,10 +268,10 @@ public:
         size_t maxFrameNum = numCols / numParallelSequences;
         size_t outMaxFrameNum = (size_t) ceil((float) maxFrameNum / (float) m_reductionFactor);
         Value().Resize(InputRef(0).Value().GetNumRows() * m_reductionFactor, outMaxFrameNum * numParallelSequences);
-        InputRef(0).Value().Print("before reduce");
+        //InputRef(0).Value().Print("before reduce");
         //InputRef(0).Value().TransferToDeviceIfNotThere(CPUDEVICE);
         Value().MatrixTimeReduction(InputRef(0).Value(), uttInfo, m_reductionFactor, numParallelSequences, false);
-        Value().Print("after reduce");
+        //Value().Print("after reduce");
         //Value().TransferFromDeviceToDevice(CPUDEVICE, InputRef(1).Value().GetDeviceId());
         // create MBLayout
         m_pMBLayout->Init(numParallelSequences, outMaxFrameNum);
@@ -312,7 +312,7 @@ public:
     }
     virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        //no need to do gradient
+        //split
         if (inputIndex == 0 ) 
         {
             InputRef(inputIndex).Gradient().Resize(InputRef(0).Value().GetNumRows(), InputRef(0).Value().GetNumCols());

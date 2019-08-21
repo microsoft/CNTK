@@ -6878,31 +6878,63 @@ __global__ void _matrixTimeReduction(ElemType* us,
     const CUDA_LONG t = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG k = blockIdx.y * blockDim.y + threadIdx.y;
     const CUDA_LONG uttID = blockIdx.z * blockDim.z + threadIdx.z;
+    //if (t == 0 && k == 0)
+    //    printf("uttID: %d\n", (int) uttID);
+    /*if (uttID == 0)
+    {
+        printf("t: %d\n", (int) t);
+        printf("k: %d\n", (int) k);
+    }*/
     if (uttID < numSequences)
     {
 
-        int frameNum = (int) uttinfo[IDX2C(uttID, 0, numSequences)];
-        int uttBeginFrameId = (int) uttinfo[IDX2C(uttID, 2, numSequences)];
-        int uttFrametoChanId = (int) uttinfo[IDX2C(uttID, 4, numSequences)];
+        int frameNum = (int) uttinfo[IDX2C(0, uttID,  12)];
+        int uttBeginFrameId = (int) uttinfo[IDX2C(2, uttID, 12)];
+        int uttFrametoChanId = (int) uttinfo[IDX2C(4, uttID, 12)];
         int outframeNum = (int) ceil((float) frameNum / (float) factor);
-        int oututtBeginFrameId = (int) ceil((float) uttFrametoChanId / (float) factor);
+        int oututtBeginFrameId = (int) ceil((float) uttBeginFrameId / (float) factor);
 
+        /*if (uttID == 0)
+        {
+            printf("framenum: %d\n", frameNum);
+            printf("uttBeginFrameId: %d\n", uttBeginFrameId);
+            printf("uttFrametoChanId: %d\n", uttFrametoChanId);
+            printf("outframeNum: %d\n", outframeNum);
+            printf("oututtBeginFrameId: %d\n", oututtBeginFrameId);
+        }*/
         int lastf = 0;
         if (k < BS && t < outframeNum)
         {
-            if (!revert)  //merge 
+            if (!revert) //merge
             {
                 lastf = 0;
                 for (int f = 0; f < factor; f++)
                 {
+                    size_t outID = IDX3C(k + f * BS, t + oututtBeginFrameId, uttFrametoChanId, BS * factor, numParallelSeq);
+                    /*if (outID >= 389120)
+                    {
+                        printf("k: %d\n", k);
+                        printf("f: %d\n", f);
+                        printf("oututtBeginFrameId: %d\n", oututtBeginFrameId);
+                        printf("uttFrametoChanId: %d\n", uttFrametoChanId);
+                    }
+                    size_t inID;
+                    printf("outID: %d\n", outID);*/
                     if (t * factor + f < frameNum)
                     //printf("K:%d,t:%d,u:%d\n", k,t,u);
                     {
+                        //inID = IDX3C(k, t * factor + f + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq);
+                        //printf("inID: %d\n", inID);
                         us[IDX3C(k + f * BS, t + oututtBeginFrameId, uttFrametoChanId, BS * factor, numParallelSeq)] = in1[IDX3C(k, t * factor + f + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)];
+
                         lastf = f;
                     }
                     else
+                    {
+                        //inID = IDX3C(k, t * factor + lastf + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq);
+                        //printf("inID: %d\n", inID);
                         us[IDX3C(k + f * BS, t + oututtBeginFrameId, uttFrametoChanId, BS * factor, numParallelSeq)] = in1[IDX3C(k, t * factor + lastf + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)];
+                    }
                 }
             }
             else //split
@@ -6913,9 +6945,8 @@ __global__ void _matrixTimeReduction(ElemType* us,
                     if (t * factor + f < frameNum)
                     //printf("K:%d,t:%d,u:%d\n", k,t,u);
                     {
-                        us[IDX3C(k, t * factor + f + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)] = in1[IDX3C(k + f * BS, t + oututtBeginFrameId, uttFrametoChanId, BS * factor, numParallelSeq)];                        
+                        us[IDX3C(k, t * factor + f + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)] = in1[IDX3C(k + f * BS, t + oututtBeginFrameId, uttFrametoChanId, BS * factor, numParallelSeq)];
                     }
-                    
                 }
             }
         }

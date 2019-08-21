@@ -311,6 +311,11 @@ template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::ForwardProp(const FrameRange& fr) /*override*/
 {
     assert(m_pMBLayout);
+    if (m_pMBLayout != InputRef(0).GetMBLayout())
+    {
+        m_pMBLayout = InputRef(0).GetMBLayout();
+        //m_pMBLayout->SetUniqueAxisName(L"TimeReduction");
+    }
 
     // special case: DelayedValueNodes may be used outside of loops
     // TODO: this should be a bulk operation; this implementation is a quick hack
@@ -511,6 +516,15 @@ template<class ElemType, int direction>
     // if we have a per-sequence initial state, we leverage a scalar init value of 0 in the computation
     if (isFinalValidationPass && GetNumInputs() > 1 && Input(1)->HasMBLayout() && m_initialStateValue != 0)
         InvalidArgument("%ls %ls operation requires the scalar initial value to be 0 if the second input (initial state) has a dynamic axis.", NodeName().c_str(), OperationName().c_str());
+    if (isFinalValidationPass)
+    {
+        if (m_pMBLayout != InputRef(0).GetMBLayout())
+        {
+            m_pMBLayout = InputRef(0).GetMBLayout(); 
+            //m_pMBLayout->SetUniqueAxisName(L"TimeReduction");
+        }
+    }
+    
 }
 
 template<class ElemType, int direction>
