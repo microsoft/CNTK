@@ -4379,7 +4379,7 @@ namespace CNTK
      ///
     /// Create an instance of the CNTK built-in operation for combine encoder and prediction output (RNNT) for specified operands.
     ///
-    CNTK_API FunctionPtr PlusBroadcast(const Variable& encoder, const Variable& prediction, const Variable& uttinfo, const std::wstring& name = L"");
+    CNTK_API FunctionPtr PlusBroadcast(const Variable& encoder, const Variable& prediction, const Variable& uttinfo, const size_t combineMode, const std::wstring& name = L"");
 
      ///
     /// Create an instance of the CNTK built-in operation for time reduction.

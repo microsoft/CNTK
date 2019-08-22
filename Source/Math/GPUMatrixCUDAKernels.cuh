@@ -7013,6 +7013,67 @@ __global__ void _assignUserOp1_mergeall(ElemType* us,
 }
 
 template <class ElemType>
+__global__ void _assignUserOp1_cat(ElemType* us,
+                                        ElemType* in1,
+                                        ElemType* in2,
+                                        ElemType* uttinfo,
+                                        int BS,
+                                        int numSequences,
+                                        int numParallelSeq,
+                                        int numPhoneParallelSeq,
+                                        int sumYdim,
+                                        int totalUTNum)
+{
+    const CUDA_LONG tuIDl = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG k = blockIdx.y * blockDim.y + threadIdx.y;
+    int tuID = sumYdim + tuIDl;
+    int uttID = 0;
+    int uttBeginOutId = 0;
+    //printf("tuID %d\n ", tuID);
+    if (tuID < totalUTNum)
+    {
+        size_t s = 0;
+        for (; s < numSequences; s++)
+        {
+            uttBeginOutId = (int) uttinfo[IDX2C(6, s, 12)];
+            if (tuID < uttBeginOutId)
+                break;
+        }
+        uttID = s - 1;
+        /*if (tuID == 1400 && k==0)
+        {
+            printf("userop uttID %d\n", uttID);
+        }*/
+        // printf("s %d\n ", uttID);
+        if (uttID < numSequences)
+        {
+            int frameNum = (int) uttinfo[IDX2C(0, uttID, 12)];
+            int phoneNum = (int) uttinfo[IDX2C(1, uttID, 12)];
+            int uttBeginFrameId = (int) uttinfo[IDX2C(2, uttID, 12)];
+            int uttBeginPhoneId = (int) uttinfo[IDX2C(3, uttID, 12)];
+            int uttFrametoChanId = (int) uttinfo[IDX2C(4, uttID, 12)];
+            int uttPhonetoChanId = (int) uttinfo[IDX2C(5, uttID, 12)];
+
+            uttBeginOutId = (int) uttinfo[IDX2C(6, uttID, 12)];
+            int u = (tuID - uttBeginOutId) % phoneNum;
+            int t = (tuID - uttBeginOutId - u) / phoneNum;
+
+            if (k < BS && t < frameNum && u < phoneNum)
+            {
+                //for (int u = 0; u < phoneNum; u++)
+                {
+                    //printf("K:%d,t:%d,u:%d\n", k,t,u);
+                    us[IDX2C(k, uttBeginOutId + t * phoneNum + u, 2*BS)] = in1[IDX3C(k, t + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)];
+                    us[IDX2C(k+BS, uttBeginOutId + t * phoneNum + u, 2*BS)] = in2[IDX3C(k, u + uttBeginPhoneId, uttPhonetoChanId, BS, numPhoneParallelSeq)];
+                }
+            }
+        }
+    }
+}
+
+
+
+template <class ElemType>
 __global__ void _assignUserOp1_s(ElemType* us,
                                  ElemType* in1,
                                  ElemType* in2,
@@ -7175,6 +7236,56 @@ __global__ void _assignUserOp2_all(ElemType* us,
                 {
                     int tuId = outBeinId + u * phoneNum + t;
                     us[IDX2C(k, timeId, nRow)] += in1[IDX2C(k, tuId, nRow)];
+                }
+            }
+        }
+    }
+}
+
+
+template <class ElemType>
+__global__ void _assignUserOp2_cat(ElemType* us,
+                                   ElemType* in1,
+                                   ElemType* uttinfo,
+                                   int nRow,
+                                   int numParallelSequences,
+                                   int numPhoneParallelSequences,
+                                   int numSequences,
+                                   int Idx)
+{
+    const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    const CUDA_LONG uttID = blockIdx.z * blockDim.z + threadIdx.z;
+    if (uttID < numSequences)
+    {
+        int frameNum = (int) uttinfo[IDX2C(0, uttID, 12)];
+        int phoneNum = (int) uttinfo[IDX2C(1, uttID, 12)];
+        int frameBeginId = (int) uttinfo[IDX2C(2, uttID, 12)];
+        int phoneBeginId = (int) uttinfo[IDX2C(3, uttID, 12)];
+        int frameChanId = (int) uttinfo[IDX2C(4, uttID, 12)];
+        int phoneChanId = (int) uttinfo[IDX2C(5, uttID, 12)];
+        int outBeinId = (int) uttinfo[IDX2C(6, uttID, 12)];
+        if (Idx == 0)
+        {
+            if (k < nRow/2 && t < frameNum)
+            {
+                int timeId = (t + frameBeginId) * numParallelSequences + frameChanId;
+                for (int u = 0; u < phoneNum; u++)
+                {
+                    int tuId = outBeinId + t * phoneNum + u;
+                    us[IDX2C(k, timeId, nRow/2)] += in1[IDX2C(k, tuId, nRow)];
+                }
+            }
+        }
+        else
+        {
+            if (k < nRow/2 && t < phoneNum)
+            {
+                int timeId = (t + phoneBeginId) * numPhoneParallelSequences + phoneChanId;
+                for (int u = 0; u < frameNum; u++)
+                {
+                    int tuId = outBeinId + u * phoneNum + t;
+                    us[IDX2C(k, timeId, nRow/2)] += in1[IDX2C(k+nRow/2, tuId, nRow)];
                 }
             }
         }

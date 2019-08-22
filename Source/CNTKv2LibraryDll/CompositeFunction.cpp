@@ -1043,15 +1043,18 @@ template <typename ElementType>
                 ASSIGN_NEW_NODE(PlusNode, network->GetDeviceId(), internalNodeName);
                 break;
             case PrimitiveOpType::PlusBroadcast:
-                ASSIGN_NEW_NODE(PlusBroadcastNode, network->GetDeviceId(), internalNodeName);
+            {
+                auto combineMode = functionConfig[PrimitiveFunctionAttribute::AttributeNameCombineMode].Value<size_t>();
+                ASSIGN_NEW_NODE(PlusBroadcastNode, network->GetDeviceId(), internalNodeName, combineMode);
                 break;
+            }
             case PrimitiveOpType::TimeReduction:
             {
-                auto reductionFactor= functionConfig[PrimitiveFunctionAttribute::AttributeNameReductionFactor].Value<size_t>();                
+                auto reductionFactor = functionConfig[PrimitiveFunctionAttribute::AttributeNameReductionFactor].Value<size_t>();
                 ASSIGN_NEW_NODE(TimeReductionNode, network->GetDeviceId(), internalNodeName, reductionFactor);
                 break;
             }
-                
+
             case PrimitiveOpType::GetUttInfo:
                 ASSIGN_NEW_NODE(GetUttInfoNode, network->GetDeviceId(), internalNodeName);
                 break;

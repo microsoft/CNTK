@@ -667,7 +667,7 @@ GMMLogLikelihood(unnormalizedPriorVector, meansAsRows, logStdDevAsRows, dataVect
 InvStdDev(dataVectorSequence, tag='') = new ComputationNode [ operation = 'InvStdDev' ; inputs = _AsNodes (dataVectorSequence) /*plus the function args*/ ]
 KhatriRaoProduct(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'KhatriRaoProduct' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 LogPlus(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'LogPlus' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
-PlusBroadcast(leftMatrix, rightMatrix, uttinfo, tag='') = new ComputationNode [ operation = 'PlusBroadcast' ; inputs = _AsNodes (leftMatrix : rightMatrix : uttinfo) /*plus the function args*/ ]
+PlusBroadcast(leftMatrix, rightMatrix, uttinfo, combineMode=1, tag='') = new ComputationNode [ operation = 'PlusBroadcast' ; inputs = _AsNodes (leftMatrix : rightMatrix : uttinfo) /*plus the function args*/ ]
 TimeReduction(leftMatrix, uttinfo, deductionFactor = 2, tag='') = new ComputationNode [ operation = 'TimeReduction' ; inputs = _AsNodes (leftMatrix : uttinfo) /*plus the function args*/ ]
 GetUttInfo(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'GetUttInfo' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 BiasAttention(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'BiasAttention' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]

@@ -6311,7 +6311,7 @@ alpha._transferToDevice(CPUDEVICE);
 //this one is for RNN T output = input1(k,t) + input2(k,u).
 //inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
+Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t combineMode)
 {
 
     //in1._transferToDevice(CPUDEVICE);
@@ -6323,8 +6323,8 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<
     //in2.Print("g");
     DISPATCH_MATRIX_ON_FLAG(&in1,
                             this,
-                            this->m_CPUMatrix->AssignUserOp1(*in1.m_CPUMatrix, *in2.m_CPUMatrix, *uttInfo.m_CPUMatrix, totalcol, numParallelSequences, numPhoneParallelSequences),
-                            this->m_GPUMatrix->AssignUserOp1(*in1.m_GPUMatrix, *in2.m_GPUMatrix, *uttInfo.m_GPUMatrix, totalcol, numParallelSequences, numPhoneParallelSequences),
+                            this->m_CPUMatrix->AssignUserOp1(*in1.m_CPUMatrix, *in2.m_CPUMatrix, *uttInfo.m_CPUMatrix, totalcol, numParallelSequences, numPhoneParallelSequences, combineMode),
+                            this->m_GPUMatrix->AssignUserOp1(*in1.m_GPUMatrix, *in2.m_GPUMatrix, *uttInfo.m_GPUMatrix, totalcol, numParallelSequences, numPhoneParallelSequences, combineMode),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 
@@ -6359,7 +6359,7 @@ Matrix<ElemType>& Matrix<ElemType>::MatrixTimeReduction(Matrix<ElemType>& in1, M
 //this one is for RNN T output = sum of u of (input1(k,t,u)).
 
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
+Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx, const size_t combineMode)
 {
 
     //in1._transferToDevice(CPUDEVICE);
@@ -6370,9 +6370,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, Matrix<
     DISPATCH_MATRIX_ON_FLAG(&in1,
                             this,
                             this->m_CPUMatrix->AssignUserOp2(*in1.m_CPUMatrix, *uttInfo.m_CPUMatrix,
-                                                             numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx),
+                                                             numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx, combineMode),
                             this->m_GPUMatrix->AssignUserOp2(*in1.m_GPUMatrix, *uttInfo.m_GPUMatrix,
-                                                             numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx),
+                                                             numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx, combineMode),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 

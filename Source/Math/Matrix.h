@@ -407,8 +407,8 @@ public:
     Matrix<ElemType>& AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, Matrix<ElemType>& totalScore,
         const vector<size_t> & extraUttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep,
         const size_t mbSize, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
-    Matrix<ElemType>& AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences);
-    Matrix<ElemType>& AssignUserOp2(Matrix<ElemType>& in1, Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx);
+    Matrix<ElemType>& AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, Matrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t combineMode);
+    Matrix<ElemType>& AssignUserOp2(Matrix<ElemType>& in1, Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx, const size_t combineMode);
     Matrix<ElemType>& AssignRNNTScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq,
                                       const Matrix<ElemType>& phoneBoundary, const Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, 
         const size_t maxPhoneNum, const size_t maxFrameNum,  Matrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise);

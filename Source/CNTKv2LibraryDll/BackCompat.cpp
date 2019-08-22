@@ -255,7 +255,11 @@ private:
         else if (node->OperationName() == OperationNameOf(GetUttInfoNode))
             opType = PrimitiveOpType::GetUttInfo;
         else if (node->OperationName() == OperationNameOf(PlusBroadcastNode))
+        {
+            auto plusBroadcastNode = node->As<PlusBroadcastNode<ElementType>>();
+            primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameCombineMode] = plusBroadcastNode->GetRCombineMode();
             opType = PrimitiveOpType::PlusBroadcast;
+            }
         else if (node->OperationName() == OperationNameOf(TimeReductionNode))
         {
             auto timeReductionNode = node->As<TimeReductionNode<ElementType>>();

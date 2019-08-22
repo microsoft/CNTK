@@ -4777,7 +4777,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 //this one is for RNN T output = input1(k,t) + input2(k,u).
 //inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2, GPUMatrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2, GPUMatrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t combineMode)
 {
     if (in1.IsEmpty() || in2.IsEmpty())
         LogicError("AssignElementProductOf: Matrix is empty.");
@@ -4788,8 +4788,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
     //int nCol1 = in1.GetNumCols();
     //int maxFrameNum = nCol1 / numParallelSequences;
     int BS = in1.GetNumRows();
-    RequireSize(BS, totalcol);
-
+    if (combineMode == 1)
+        RequireSize(BS, totalcol);
+    else if (combineMode == 2)
+        RequireSize(BS*2, totalcol);
+    else
+        LogicError("unsupported combine mode.");
     // int maxPhoneNum = in2.GetNumCols() / numPhoneParallelSequences;
 
     int numSequences = uttInfo.GetNumCols();
@@ -4895,8 +4899,16 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
         int Ydim = (int) min((float) maxSTU, (float) ((int) totalcol - sumYdim + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM * DEFAULT_THREAD_PER_DIM);
         //dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, maxPhoneNum * numSequences);
         dim3 block_tail2((Ydim) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
-        _assignUserOp1_mergeall<ElemType><<<block_tail2, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), uttInfo.Data(), BS, (int) numSequences, (int) numParallelSequences,
-                                                                                     (int) numPhoneParallelSequences, sumYdim, (int) totalcol);
+        if (combineMode == 1)
+            _assignUserOp1_mergeall<ElemType><<<block_tail2, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), uttInfo.Data(), BS, (int) numSequences, (int) numParallelSequences,
+                                                                                         (int) numPhoneParallelSequences, sumYdim, (int) totalcol);
+        else if (combineMode == 2)
+        {
+            _assignUserOp1_cat<ElemType><<<block_tail2, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), uttInfo.Data(), BS, (int) numSequences, (int) numParallelSequences,
+                                                                                    (int) numPhoneParallelSequences, sumYdim, (int) totalcol);
+        }
+        else
+            LogicError("unsupported combine mode.");
         sumYdim += Ydim;
     }
     //Print("joint value");
@@ -4916,7 +4928,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::MatrixTimeReduction(GPUMatrix<ElemType
     //int nCol1 = in1.GetNumCols();
     //int maxFrameNum = nCol1 / numParallelSequences;
     int BS = 0;
-    if(!revert)
+    if (!revert)
         BS = in1.GetNumRows();
     else
         BS = GetNumRows();
@@ -4958,22 +4970,39 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::MatrixTimeReduction(GPUMatrix<ElemType
 //this one is for RNN T output = input1(k,t) + input2(k,u).
 //inpput1 and input2 don't have same dimension. so we couldn't use normal "Plus"
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx, const size_t combineMode)
 {
     int nRow = in1.GetNumRows();
     int uttNum = uttInfo.GetNumCols();
     int nCol;
-    if (Idx == 0)
+    if (combineMode == 1)
     {
-        RequireSize(in1.GetNumRows(), maxFrameNum * numParallelSequences);
-        nCol = maxFrameNum;
+        if (Idx == 0)
+        {
+            RequireSize(nRow, maxFrameNum * numParallelSequences);
+            nCol = maxFrameNum;
+        }
+        else
+        {
+            RequireSize(nRow, maxPhoneNum * numPhoneParallelSequences);
+            nCol = maxPhoneNum;
+        }
+    }
+    else if (combineMode == 2)
+    {
+        if (Idx == 0)
+        {
+            RequireSize(nRow/2, maxFrameNum * numParallelSequences);
+            nCol = maxFrameNum;
+        }
+        else
+        {
+            RequireSize(nRow/2, maxPhoneNum * numPhoneParallelSequences);
+            nCol = maxPhoneNum;
+        }
     }
     else
-    {
-        RequireSize(in1.GetNumRows(), maxPhoneNum * numPhoneParallelSequences);
-        nCol = maxPhoneNum;
-    }
-
+        LogicError("unsupported combine mode.");
     dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM, 1);
     // x dimension is for phone
     // y dimention is for time
@@ -5004,11 +5033,17 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
     CUDA_CALL(cudaMemcpy(gpuUttOutBeginId, uttBeginForOutputditribution.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));*/
 
     //for (int s = 0; s < uttNum; s++)
+    if (combineMode == 1)
     {
 
         _assignUserOp2_all<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), uttInfo.Data(), nRow, numParallelSequences, numPhoneParallelSequences, uttNum, Idx);
     }
-
+    else if (combineMode == 2)
+    {
+        _assignUserOp2_cat<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), uttInfo.Data(), nRow, numParallelSequences, numPhoneParallelSequences, uttNum, Idx);
+    }
+    else
+        LogicError("unsupported combine mode.");
     //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(Data(), a.Data(), b.Data(), nt);
 
     return *this;

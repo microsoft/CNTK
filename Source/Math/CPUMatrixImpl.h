@@ -7443,7 +7443,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
 }
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& in2, CPUMatrix<ElemType>& uttInfo, const size_t totalcol,
-                                                        const size_t numParallelSequences, const size_t numPhoneParallelSequences)
+                                                        const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t combineMode)
 {
 
     if (in1.IsEmpty() || in2.IsEmpty())
@@ -7453,9 +7453,15 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1
         InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
     //in1.Print("F");
     //in2.Print("G");
-    auto& us = *this;
-    RequireSize(in1.GetNumRows(), totalcol);
 
+    size_t BS = in1.GetNumRows();
+    auto& us = *this;
+    if (combineMode == 1)
+        RequireSize(BS, totalcol);
+    else if (combineMode == 2)
+        RequireSize(BS * 2, totalcol);
+    else
+        LogicError("unsupported combine mode.");
     /*long numSequences = (long)uttFrameToChanInd.size();
     long n = (long)GetNumRows(); 
 //#pragma omp parallel for
@@ -7493,8 +7499,14 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1
             {
                 for (long u = 0; u < phoneNum; u++) //loop for every u
                 {
-                    us(k, uttBeginOutId + t * phoneNum + u) = in1(k, (uttBeginFrameId + t) * numParallelSequences + uttFrametoChanId) +
-                                                              in2(k, (uttBeginPhoneId + u) * numPhoneParallelSequences + uttPhonetoChanId);
+                    if (combineMode == 1)
+                        us(k, uttBeginOutId + t * phoneNum + u) = in1(k, (uttBeginFrameId + t) * numParallelSequences + uttFrametoChanId) +
+                                                                  in2(k, (uttBeginPhoneId + u) * numPhoneParallelSequences + uttPhonetoChanId);
+                    else if (combineMode == 2)
+                    {
+                        us(k, uttBeginOutId + t * phoneNum + u) = in1(k, (uttBeginFrameId + t) * numParallelSequences + uttFrametoChanId);
+                        us(k + BS, uttBeginOutId + t * phoneNum + u) = in2(k, (uttBeginPhoneId + u) * numPhoneParallelSequences + uttPhonetoChanId);
+                    }
                 }
             }
         }
@@ -7517,13 +7529,13 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::MatrixTimeReduction(CPUMatrix<ElemType
     else
         n = GetNumRows();
 
-            /*size_t totalcol = in1.GetNumCols();
+    /*size_t totalcol = in1.GetNumCols();
     size_t maxFrameNum = totalcol / numParallelSequences;
     size_t outMaxFrameNum = (size_t) ceil((float) maxFrameNum / (float) factor);
     size_t outputCol = outMaxFrameNum * numParallelSequences;
     RequireSize(n * factor, outputCol);*/
 
-            int numSequences = (int) uttInfo.GetNumCols();
+    int numSequences = (int) uttInfo.GetNumCols();
     //#pragma omp parallel for
     for (int s = 0; s < numSequences; s++) //loop for every utt
     {
@@ -7549,8 +7561,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::MatrixTimeReduction(CPUMatrix<ElemType
                         else
                             us(k + n * f, (oututtBeginFrameId + t) * numParallelSequences + uttFrametoChanId) = in1(k, (uttBeginFrameId + t * factor + lastf) * numParallelSequences + uttFrametoChanId);
                     }
-
-
                 }
                 else
                 {
@@ -7569,18 +7579,30 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::MatrixTimeReduction(CPUMatrix<ElemType
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx, const size_t combineMode)
 {
 
     size_t nRow = in1.GetNumRows();
     size_t uttNum = uttInfo.GetNumCols();
     auto& us = *this;
-    if (Idx == 0)
-        RequireSize(nRow, maxFrameNum * numParallelSequences);
+    if (combineMode == 1)
+    {
+        if (Idx == 0)
+            RequireSize(nRow, maxFrameNum * numParallelSequences);
+        else
+            RequireSize(nRow, maxPhoneNum * numPhoneParallelSequences);
+    }
+    else if (combineMode == 2)
+    {
+        if (Idx == 0)
+            RequireSize(nRow/2, maxFrameNum * numParallelSequences);
+        else
+            RequireSize(nRow/2, maxPhoneNum * numPhoneParallelSequences);
+    }
     else
-        RequireSize(nRow, maxPhoneNum * numPhoneParallelSequences);
+        LogicError("unsupported combine mode.");
 
-    SetValue(0.0);
+            SetValue(0.0);
 
     //#pragma omp parallel for
     for (long k = 0; k < (long) nRow; k++)

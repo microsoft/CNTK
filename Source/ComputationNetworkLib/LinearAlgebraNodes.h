@@ -122,13 +122,13 @@ class PlusBroadcastNode : public ComputationNode<ElemType>, public NumInputs<3>
     }
 
 public:
-    PlusBroadcastNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+    PlusBroadcastNode(DEVICEID_TYPE deviceId, const wstring& name, size_t combineMode = 1)
+        : Base(deviceId, name), m_combineMode(combineMode)
     {
     }
 
     PlusBroadcastNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : PlusBroadcastNode(configp->Get(L"deviceId"), L"<placeholder>")
+        : PlusBroadcastNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"combineMode"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -150,7 +150,7 @@ public:
         //InputRef(0).Value().Print("in1");
         //InputRef(1).Value().Print("in2");
         //compute f+g
-        Value().AssignUserOp1(InputRef(0).Value(), InputRef(1).Value(), uttInfo, totalcol, numParallelSequences, numPhoneParallelSequences);
+        Value().AssignUserOp1(InputRef(0).Value(), InputRef(1).Value(), uttInfo, totalcol, numParallelSequences, numPhoneParallelSequences, m_combineMode);
 
         //Value().Print("output of plus");
         //m_pMBLayout = nullptr;
@@ -164,9 +164,9 @@ public:
         if (inputIndex == 0 || inputIndex == 1) //backprop to transcription f
         {
             FrameRange frameRange(InputRef(inputIndex).GetMBLayout());
-            InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), InputRef(2).Value(), numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex);
+            InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), InputRef(2).Value(), numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex, m_combineMode);
             InputRef(inputIndex).InvalidateMissingGradientColumns(frameRange);
-           // InputRef(inputIndex).Gradient().Print("plus gredient");
+            // InputRef(inputIndex).Gradient().Print("plus gredient");
         }
         else if (inputIndex == 2)
         {
@@ -174,6 +174,11 @@ public:
         }
         else
             RuntimeError("PlusBroadcastNode criterion expects only two inputs: labels and network output.");
+    }
+
+    size_t GetRCombineMode()
+    {
+        return m_combineMode;
     }
 
     virtual void Validate(bool isFinalValidationPass) override
@@ -195,10 +200,29 @@ public:
                 LogicError("The Matrix dimension in the PlusBroadcastNode operation does not match.");
             }
         }
-        SetDims(Input(0));
+        if (m_combineMode == 1)
+            SetDims(Input(0));
+        else if (m_combineMode == 2)
+        {
+            auto dimsA = Input(0)->GetSampleLayout().GetDims();
+            dimsA[0] *= 2;
+            SetDims(TensorShape(dimsA), true);
+        }
         //m_pMBLayout->Init(1, totalcol);
         //m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, totalcol);
         //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_combineMode;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_combineMode;
     }
     //request matrix before forward prop
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
@@ -221,6 +245,8 @@ protected:
 
     size_t numParallelSequences;
     size_t numPhoneParallelSequences;
+
+    size_t m_combineMode;
 };
 
 template class PlusBroadcastNode<float>;
@@ -295,25 +321,22 @@ public:
         }
         for (size_t s = 0; s < numParallelSequences; s++)
             m_pMBLayout->AddGap(s, lastframes[s], outMaxFrameNum);
-        
     }
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
         fstream << m_reductionFactor;
-        
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
         fstream >> m_reductionFactor;
-        
     }
     virtual void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         //split
-        if (inputIndex == 0 ) 
+        if (inputIndex == 0)
         {
             InputRef(inputIndex).Gradient().Resize(InputRef(0).Value().GetNumRows(), InputRef(0).Value().GetNumCols());
             FrameRange frameRange(InputRef(inputIndex).GetMBLayout());
@@ -346,7 +369,6 @@ public:
                 m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
                 m_pMBLayout->SetUniqueAxisName(L"TimeReduction");
             }
-            
         }
         SetDims(Input(0));
         //m_pMBLayout->Init(1, totalcol);
@@ -361,7 +383,6 @@ public:
         {
             auto node = dynamic_pointer_cast<TimeReductionNode<ElemType>>(nodeP);
             node->m_reductionFactor = m_reductionFactor;
-            
         }
     }
     //request matrix before forward prop
@@ -379,7 +400,6 @@ public:
 protected:
     // Prepare data structures from the reader
 
-    
     size_t numParallelSequences;
     size_t m_reductionFactor;
 };

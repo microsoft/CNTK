@@ -380,8 +380,8 @@ public:
     GPUMatrix<ElemType>& AssignRNNTScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
                                          const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBoundary, const GPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
         GPUMatrix<ElemType>& totalScore, const size_t blankTokenId,  const int delayConstraint, const bool isColWise);
-    GPUMatrix<ElemType>& AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2, GPUMatrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences);
-    GPUMatrix<ElemType>& AssignUserOp2(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx);
+    GPUMatrix<ElemType>& AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2, GPUMatrix<ElemType>& uttInfo, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t combineMode);
+    GPUMatrix<ElemType>& AssignUserOp2(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx, const size_t combineMode);
     GPUMatrix<ElemType>& MatrixTimeReduction(GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& uttInfo, const size_t factor, const size_t numParallelSequences, bool revert);
 
     GPUMatrix<ElemType>& InplaceSqrt();
