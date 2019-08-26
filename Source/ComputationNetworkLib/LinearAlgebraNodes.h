@@ -213,6 +213,10 @@ public:
         //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
     }
 
+    size_t getCombineMode()
+    {
+        return m_combineMode;
+    }
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
