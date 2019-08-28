@@ -172,7 +172,18 @@ public:
             for (size_t t = 0; t < encodeOutput.GetNumCols(); t++)
             {
                 decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value()));
-                sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput);
+
+                auto edNode = PlusNode->As<PlusBroadcastNode<ElemType>>();
+                if (edNode->getCombineMode() == 1)
+                    sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput);
+                else if (edNode->getCombineMode() == 2)
+                {
+                    sumofENandDE.Resize(encodeOutput.GetNumRows() + decodeOutput.GetNumRows(), 1);
+                    sumofENandDE.AssignToRowSliceValuesOf(encodeOutput.ColumnSlice(t, 1), 0, encodeOutput.GetNumRows());
+                    sumofENandDE.AssignToRowSliceValuesOf(decodeOutput, encodeOutput.GetNumRows(), decodeOutput.GetNumRows());
+                }
+
+                //sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput);
                 (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
                 ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
                 auto PlusMBlayout = PlusNode->GetMBLayout();
@@ -272,7 +283,7 @@ public:
         insequence.lengthwithblank++;
     }
 
-    void forward_decode(Sequence oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
+    void forward_decode(Sequence &oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, std::vector<ComputationNodeBasePtr> decodeOutputNodes,
                         std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t vocabSize, size_t plength)
     {
         //        size_t labelLength = oneSeq.length;
@@ -347,19 +358,21 @@ public:
         return true;
     }
 
-    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode, ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes)
+    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode, 
+        ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes, Matrix<ElemType>& Wm, Matrix<ElemType>& bm)
     {
-        auto edNode = PlusNode->As<PlusBroadcastNode<ElemType>>();
+        /*auto edNode = PlusNode->As<PlusBroadcastNode<ElemType>>();
         if (edNode->getCombineMode() == 1)
             sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(a.decodeoutput));
         else if (edNode->getCombineMode() == 2)
         {
             sumofENandDE.Resize(encodeOutput.GetNumRows() + (a.decodeoutput)->GetNumRows(), 1);
-            sumofENandDE.AssignToRowSliceValuesOf(encodeOutput, 0, encodeOutput.GetNumRows());
+            sumofENandDE.AssignToRowSliceValuesOf(encodeOutput.ColumnSlice(t, 1), 0, encodeOutput.GetNumRows());
             sumofENandDE.AssignToRowSliceValuesOf(*(a.decodeoutput), encodeOutput.GetNumRows(), (a.decodeoutput)->GetNumRows());
-        }
+        }*/
         //sumofENandDE.InplaceLogSoftmax(true);
-
+        sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(a.decodeoutput));
+        Matrix<ElemType> tempMatrix(encodeOutput.GetDeviceId());
         //plus broadcast
         (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
         //SumMatrix.SetValue(sumofENandDE);
@@ -369,8 +382,11 @@ public:
         PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
         m_net->ForwardPropFromTo(Plusnodes, Plustransnodes);
         decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+        tempMatrix.AssignProductOf(Wm, true, decodeOutput, false);
+        decodeOutput.AssignSumOf(tempMatrix, bm);
         //decodeOutput.VectorMax(maxIdx, maxVal, true);
-        decodeOutput.InplaceLogSoftmax(true);
+        decodeOutput.InplaceLogSoftmax(true);      
+        
     }
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
                           size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
@@ -409,6 +425,11 @@ public:
         //get merged input
         ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
         ComputationNodeBasePtr PlusTransNode = m_net->GetNodeFromName(outputNodeNames[3]);
+        
+        ComputationNodeBasePtr WmNode = m_net->GetNodeFromName(outputNodeNames[4]);
+        ComputationNodeBasePtr bmNode = m_net->GetNodeFromName(outputNodeNames[5]);
+        
+
         //StreamMinibatchInputs PlusinputMatrices =
         std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
         Plusnodes.push_back(PlusNode);
@@ -429,6 +450,13 @@ public:
         Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
         Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
         Matrix<ElemType> lmin(deviceid);
+
+        //for merged RNNT node
+        Matrix<ElemType> Wm(deviceid), bm(deviceid);
+        Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
+        bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
+
+
         //encodeOutput.GetDeviceId
         const size_t numIterationsBeforePrintingProgress = 100;
         //size_t numItersSinceLastPrintOfProgress = 0;
@@ -446,7 +474,7 @@ public:
             dataReader.DataEnd();
 
             //decode forward prop step by step
-            size_t vocabSize = PlusTransNode->GetSampleMatrixNumRows();
+            size_t vocabSize = bm.GetNumRows();
             size_t blankId = vocabSize - 1;
 
             nextSequences.clear();
@@ -508,7 +536,7 @@ public:
                     deleteSeq(*maxSeq);
                     CurSequences.erase(maxSeq);
                     forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
-                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
+                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes,Wm, bm);
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels

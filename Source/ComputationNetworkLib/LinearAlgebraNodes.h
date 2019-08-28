@@ -226,7 +226,7 @@ public:
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_combineMode;
+        //fstream >> m_combineMode;
     }
     //request matrix before forward prop
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
