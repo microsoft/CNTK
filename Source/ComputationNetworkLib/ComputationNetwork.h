@@ -13,6 +13,7 @@
 #include "ComputationNode.h"
 #include "ScriptableObjects.h"
 #include "ComputationEnvironment.h"
+#include "RecurrentNodes.h"
 
 #include <map>
 #include <string>
@@ -628,7 +629,14 @@ public:
         return inputNodes;
     }
 
+    std::list<ComputationNodeBasePtr> PastValueNodesForOutputs(const std::vector<ComputationNodeBasePtr>& outputNodes)
+    {
+        std::list<ComputationNodeBasePtr> evalOrder;
+        ExecutionGraph graph(outputNodes);
+        evalOrder = ::CNTK::PostOrderTraversal(graph, outputNodes);
 
+        return evalOrder;
+    }
     const std::vector<ComputationNodeBasePtr>& RootNodes()           const { return m_allRoots; }
 
     // these are specified as such by the user
