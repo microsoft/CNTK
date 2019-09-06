@@ -930,7 +930,7 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
             continue; // skip this sequence
 
         // get sequence matrix -> seqData, seqRows, seqCols, seqStride
-        let  seqData   = matData + pMBLayout->GetColumnIndex(seqInfo, t0 - tBegin) * matStride;
+        let  seqData   = matData;// + pMBLayout->GetColumnIndex(seqInfo, t0 - tBegin) * matStride;
         auto seqRows   = matRows;
         let  seqCols   = t1 - t0;
         let  seqStride = pMBLayout->GetNumParallelSequences() * matStride;

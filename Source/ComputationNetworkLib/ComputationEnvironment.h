@@ -33,7 +33,10 @@ struct ComputationEnvironment
     bool IsInferring()     const { return networkOperationMode == NetworkOperationMode::inferring; }
     bool IsTraining()      const { return networkOperationMode == NetworkOperationMode::training; }
     bool IsPreComputing()  const { return networkOperationMode == NetworkOperationMode::preComputing; }
-
+    void SetTraceLevel(int trace)
+    {
+        traceLevel = trace;
+    }
     // helper to set new value and return old one
     NetworkOperationMode SetOperationMode(NetworkOperationMode mode)
     {
