@@ -59,6 +59,9 @@
   <PropertyGroup Condition="$(ReleaseBuild)">
     <TargetName>Cntk.Core$(OutputSuffix)-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(RepoRootPath)$(Platform)\$(Configuration)_zr</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="$(IsUWP)">
     <ClCompile>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>

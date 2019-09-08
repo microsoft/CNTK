@@ -684,9 +684,9 @@ public:
                         break;
                     auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
                     auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
-                    if (nextSequences.size() > beamSize && yb->logP > ya->logP)
-                        break;
-                    /*if (nextSequences.size() > beamSize) //                        && yb->logP > ya->logP)
+                    /*if (nextSequences.size() > beamSize && yb->logP > ya->logP)
+                        break;*/
+                    if (nextSequences.size() > beamSize) //                        && yb->logP > ya->logP)
                         {
                             nth_element(nextSequences.begin(), nextSequences.begin() + beamSize, nextSequences.end(),
                                         [](const Sequence& a, const Sequence& b) -> bool {
@@ -694,7 +694,7 @@ public:
                                         });
                             if (nextSequences[beamSize - 1].logP > ya->logP)
                                 break;
-                        }*/
+                        }
                     //break;
                     //std::nth_element(logP, logP + beamSize, )
                 }

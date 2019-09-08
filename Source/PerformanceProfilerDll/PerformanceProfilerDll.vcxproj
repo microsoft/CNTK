@@ -56,6 +56,9 @@
     <LinkIncremental>false</LinkIncremental>
     <TargetName>Cntk.PerformanceProfiler-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(RepoRootPath)$(Platform)\$(Configuration)_zr</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Common\Include;$(MSMPI_INC);$(NvmlInclude)</AdditionalIncludeDirectories>
