@@ -49,6 +49,7 @@ class SimpleOutputWriter
         bool realValues = false;
         unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>> nameToParentNodeValues;
         unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>> nameToNodeValues;
+        long refs = 0;
     };
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     typedef typename std::vector<Sequence>::iterator iterator;
@@ -288,7 +289,10 @@ public:
         {
             vector<ElemType> v;
             oneSeq.nameToNodeValues[m_nodesToCache[i]] = make_shared<PastValueNode<ElemType>>(deviceId, m_nodesToCache[i]);
-            fprintf(stderr, "Scratch %ls %p \n", m_nodesToCache[i].c_str(), &oneSeq.nameToNodeValues[m_nodesToCache[i]]);
+            //oneSeq.nameToParentNodeValues[m_nodesToCache[i]] = make_shared<PastValueNode<ElemType>>(deviceId, m_nodesToCache[i]);
+            /*std::ostringstream address;
+            address << oneSeq.nameToNodeValues[m_nodesToCache[i]];
+            fprintf(stderr, "Scratch %ls %s \n", m_nodesToCache[i].c_str(), address.str().c_str());*/
         }
         return oneSeq;
     }
@@ -309,47 +313,33 @@ public:
             if (oneSeq.processlength > 0)
             {
                 if (it->second->Value().GetNumElements() > 0 && a.realValues)
+                {
                     oneSeq.nameToParentNodeValues[it->first] = it->second;
-                else 
+                    a.refs++;
+                }
+                else
                     oneSeq.nameToParentNodeValues[it->first] = a.nameToParentNodeValues[it->first];
                 /*size_t ab = oneSeq.nameToParentNodeValues[it->first]->Value().GetNumElements();
                 if (ab > 0)
                     fprintf(stderr, "test %ls %zu", it->first.c_str(), ab);*/
             }
+
             auto itin = m_nameToPastValueNodeCache.find(it->first);
             if (itin != m_nameToPastValueNodeCache.end() && m_nameToPastValueNodeCache[it->first].size() > 0)
             {
                 //vector<shared_ptr<PastValueNode<ElemType>>> mCache = m_nameToPastValueNodeCache[it->first];
                 oneSeq.nameToNodeValues[it->first] = m_nameToPastValueNodeCache[it->first].back();
                 m_nameToPastValueNodeCache[it->first].pop_back();
-                /*size_t ab = oneSeq.nameToNodeValues[it->first]->Value().GetNumElements();
-                if (ab > 0)
-                    fprintf(stderr, "test %ls %zu", it->first.c_str(), ab);*/
             }
             else
             {
                 oneSeq.nameToNodeValues[it->first] = make_shared<PastValueNode<ElemType>>(deviceId, it->first);
             }
-            fprintf(stderr, "newSeq %ls %p \n", it->first.c_str(), &oneSeq.nameToNodeValues[it->first]);
+            /*std::ostringstream address;
+            address << oneSeq.nameToNodeValues[it->first];
+            fprintf(stderr, "newSeq %ls %s \n", it->first.c_str(), address.str().c_str());*/
         }
 
-        //unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
-        //for (it = a.nameToNodeValues.begin(); it != a.nameToNodeValues.end(); it++)
-        //{
-        //    auto itin = m_nameToPastValueNodeCache.find(it->first);
-        //    if (itin != m_nameToPastValueNodeCache.end() && m_nameToPastValueNodeCache[it->first].size() > 0)
-        //    {
-        //        //vector<shared_ptr<PastValueNode<ElemType>>> mCache = m_nameToPastValueNodeCache[it->first];
-        //        oneSeq.nameToNodeValues[it->first] = m_nameToPastValueNodeCache[it->first].back();
-        //        m_nameToPastValueNodeCache[it->first].pop_back();
-        //    }
-        //    else
-        //    {
-        //        oneSeq.nameToNodeValues[it->first] = make_shared<PastValueNode<ElemType>>(deviceId, it->first);
-        //    }
-
-        //    it->second->CopyTo(oneSeq.nameToNodeValues[it->first], it->first, CopyNodeFlags::copyNodeAll);
-        //}
         return oneSeq;
     }
 
@@ -361,8 +351,14 @@ public:
             auto itin = m_nameToPastValueNodeCache.find(it->first);
             if (itin == m_nameToPastValueNodeCache.end())
                 m_nameToPastValueNodeCache[it->first] = vector<shared_ptr<PastValueNode<ElemType>>>();
-            m_nameToPastValueNodeCache[it->first].push_back(oneSeq.nameToNodeValues[it->first]);
-            fprintf(stderr, "deleteSeq %ls %p \n", it->first.c_str(), &m_nameToPastValueNodeCache[it->first]);
+            /*long t = oneSeq.nameToNodeValues[it->first].use_count();
+            fprintf(stderr, "use count %lu %lu \n", t, oneSeq.refs);*/
+            if (oneSeq.refs == 0)
+                m_nameToPastValueNodeCache[it->first].push_back(oneSeq.nameToNodeValues[it->first]);
+
+            /*std::ostringstream address;
+            address << oneSeq.nameToNodeValues[it->first];
+            fprintf(stderr, "deleteSeq %ls %s \n", it->first.c_str(), address.str().c_str());*/
         }
         oneSeq.decodeoutput->ReleaseMemory();
         vector<size_t>().swap(oneSeq.labelseq);
@@ -417,33 +413,16 @@ public:
             unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
             for (it = s.nameToParentNodeValues.begin(); it != s.nameToParentNodeValues.end(); it++)
             {
-                it->second->CopyTo(s.nameToNodeValues[it->first], it->first, CopyNodeFlags::copyNodeAll);
-                fprintf(stderr, "prepareSequence %ls %p \n", it->first.c_str(), & s.nameToNodeValues[it->first]);
-                /*size_t ab = s.nameToNodeValues[it->first]->Value().GetNumElements();
-                ab = it->second->Value().GetNumElements();
-                if (ab > 0)
-                    fprintf(stderr, "test %ls %zu", it->first.c_str(), ab);*/
+                if (it->second && it->second->Value().GetNumElements() > 0)
+                {
+                    it->second->CopyTo(s.nameToNodeValues[it->first], it->first, CopyNodeFlags::copyNodeAll);
+                    /*std::ostringstream address;
+                    address << s.nameToNodeValues[it->first];
+                    fprintf(stderr, "prepareSequence %ls %s \n", it->first.c_str(), address.str().c_str());*/
+                }
             }
         }
         s.realValues = true;
-
-        //unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
-        //for (it = a.nameToNodeValues.begin(); it != a.nameToNodeValues.end(); it++)
-        //{
-        //    auto itin = m_nameToPastValueNodeCache.find(it->first);
-        //    if (itin != m_nameToPastValueNodeCache.end() && m_nameToPastValueNodeCache[it->first].size() > 0)
-        //    {
-        //        //vector<shared_ptr<PastValueNode<ElemType>>> mCache = m_nameToPastValueNodeCache[it->first];
-        //        oneSeq.nameToNodeValues[it->first] = m_nameToPastValueNodeCache[it->first].back();
-        //        m_nameToPastValueNodeCache[it->first].pop_back();
-        //    }
-        //    else
-        //    {
-        //        oneSeq.nameToNodeValues[it->first] = make_shared<PastValueNode<ElemType>>(deviceId, it->first);
-        //    }
-
-        //    it->second->CopyTo(oneSeq.nameToNodeValues[it->first], it->first, CopyNodeFlags::copyNodeAll);
-        //}
     }
 
     void forward_decode(Sequence& oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, const std::vector<ComputationNodeBasePtr>& decodeOutputNodes,
@@ -484,7 +463,7 @@ public:
                     auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
                     if (oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements() > 0)
                     {
-                        oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeAll); //copyNodeInputLinks
+                        oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks); //copyNodeInputLinks
                     }
 
                     shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
@@ -505,11 +484,6 @@ public:
 
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
 
-            /* if (oneSeq.realValues)
-            {
-                
-            }*/
-
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
 
@@ -524,16 +498,13 @@ public:
                 if (plength == 1)
                 {
                     nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
-                    /*size_t ab = oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements();
-                    if (ab > 0)
-                        fprintf(stderr, "test %ls %zu", m_nodesToCache[i].c_str(), ab);*/
                 }
                 else
                 {
                     nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll); //copyNodeInputLinks
                 }
 
-                shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
+                shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(oneSeq.nameToNodeValues[m_nodesToCache[i]]);
 
                 Matrix<ElemType>& mat = pLearnableNode->Value();
 
@@ -545,13 +516,7 @@ public:
                     }
                 }
                 out << string("\n");
-
-                /*if (shallowCopy)
-                    
-                else
-                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);*/
             }
-            //oneSeq.realValues = true;
             for (size_t m_i = 0; m_i < oneSeq.decodeoutput->GetNumRows(); m_i++)
             {
                 for (size_t j = 0; j < oneSeq.decodeoutput->GetNumCols(); j++)
@@ -619,9 +584,9 @@ public:
         //plus broadcast
         (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
         //SumMatrix.SetValue(sumofENandDE);
-        ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
         auto PlusMBlayout = PlusNode->GetMBLayout();
         PlusMBlayout->Init(1, 1);
+        ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
         PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
         m_net->ForwardPropFromTo(Plusnodes, Plustransnodes);
         decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
@@ -824,8 +789,8 @@ public:
 
                         CurSequences.push_back(seqK);
 
-                        auto maxSeq1 = std::max_element(CurSequences.begin(), CurSequences.end());
-                        Sequence tempSeq1 = newSeq(*maxSeq1, deviceid);
+                        /*auto maxSeq1 = std::max_element(CurSequences.begin(), CurSequences.end());
+                        Sequence tempSeq1 = newSeq(*maxSeq1, deviceid);*/
                         //fprintf(stderr, "test %zu", tempSeq1.length);
                     }
                     vector<pair<size_t, ElemType>>().swap(topN);
