@@ -433,7 +433,7 @@ public:
             LogicError("Current implementation assumes 1 step difference");
         if (plength != oneSeq.processlength)
         {
-            m_logIndex = m_logIndex + 1;
+            /*m_logIndex = m_logIndex + 1;
             wstring fileName = L"D:\\users\\vadimma\\cntk_3\\new_opt" + std::to_wstring(m_logIndex) + L".txt";
             std::ofstream out(fileName, std::ios::out);
             out << fixed;
@@ -441,7 +441,7 @@ public:
             for (size_t li = 0; li < oneSeq.labelseq.size(); li++)
                 out << oneSeq.labelseq[li] << " ";
 
-            out << "\n";
+            out << "\n";*/
 
             Matrix<ElemType> lmin(deviceID);
 
@@ -466,7 +466,7 @@ public:
                         oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks); //copyNodeInputLinks
                     }
 
-                    shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
+                    /*shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
 
                     pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(nodePtr);
                     Matrix<ElemType>& mat2 = pLearnableNode->Value();
@@ -478,7 +478,7 @@ public:
                             out << mat2(m_i, j);
                         }
                     }
-                    out << string("\n");
+                    out << string("\n");*/
                 }
             }
 
@@ -499,12 +499,12 @@ public:
                 {
                     nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
                 }
-                else
+               /* else
                 {
-                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll); //copyNodeInputLinks
-                }
+                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
+                }*/
 
-                shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(oneSeq.nameToNodeValues[m_nodesToCache[i]]);
+                /*shared_ptr<ComputationNode<ElemType>> pLearnableNode = dynamic_pointer_cast<ComputationNode<ElemType>>(oneSeq.nameToNodeValues[m_nodesToCache[i]]);
 
                 Matrix<ElemType>& mat = pLearnableNode->Value();
 
@@ -515,9 +515,9 @@ public:
                         out << mat(m_i, j);
                     }
                 }
-                out << string("\n");
+                out << string("\n");*/
             }
-            for (size_t m_i = 0; m_i < oneSeq.decodeoutput->GetNumRows(); m_i++)
+            /*for (size_t m_i = 0; m_i < oneSeq.decodeoutput->GetNumRows(); m_i++)
             {
                 for (size_t j = 0; j < oneSeq.decodeoutput->GetNumCols(); j++)
                 {
@@ -526,7 +526,7 @@ public:
             }
             out << string("\n");
 
-            out.close();
+            out.close();*/
 
             lmin.ReleaseMemory();
         }
