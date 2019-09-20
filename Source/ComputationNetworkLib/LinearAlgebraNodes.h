@@ -193,7 +193,7 @@ public:
             if (m_pMBLayout == InputRef(0).GetMBLayout())
             {
                 m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
-                m_pMBLayout->SetUniqueAxisName(L"PlusBroadcast");
+                m_pMBLayout->SetAxisName(L"PlusBroadcast");
             }
             if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows()))
             {
@@ -226,7 +226,7 @@ public:
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        //fstream >> m_combineMode;
+        fstream >> m_combineMode;
     }
     //request matrix before forward prop
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)

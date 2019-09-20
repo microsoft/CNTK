@@ -386,11 +386,12 @@ public:
         return a.logP < b.logP;
     }
 
-    vector<pair<size_t, ElemType>> getTopN(Microsoft::MSR::CNTK::Matrix<ElemType>& prob, size_t N)
+    vector<pair<size_t, ElemType>> getTopN(Microsoft::MSR::CNTK::Matrix<ElemType>& prob, size_t N, size_t& blankid)
     {
         vector<pair<size_t, ElemType>> datapair;
         typedef vector<pair<size_t, ElemType>>::value_type ValueType;
         ElemType* probdata = prob.CopyToArray();
+        
         for (size_t n = 0; n < prob.GetNumRows(); n++)
         {
             datapair.push_back(ValueType(n, probdata[n]));
@@ -398,6 +399,7 @@ public:
         nth_element(datapair.begin(), datapair.begin() + N, datapair.end(), [](ValueType const& x, ValueType const& y) -> bool {
             return y.second < x.second;
         });
+        datapair.push_back(ValueType(blankid, probdata[blankid]));
         delete probdata;
         return datapair;
     }
@@ -618,7 +620,7 @@ public:
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
-                    vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam);
+                    vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam, blankId);
                     /*ElemType* logP = decodeOutput.CopyToArray();
                     std::priority_queue<std::pair<double, int>> q;
                     int iLabel;
@@ -643,38 +645,42 @@ public:
                         CurSequences.push_back(seqK);
                         q.pop();
                     }*/
+                    //expand blank
+                    Sequence seqK = newSeq(tempSeq, deviceid);
+                    ElemType newlogP = topN[vocabSize].second + tempSeq.logP;
+                    seqK.logP = newlogP;
+                    bool existseq = false;
+                    for (auto itseq = nextSequences.begin(); itseq != nextSequences.end(); itseq++)
+                    //for (Sequence seqP : keyNextSequences)  //does not work
+                    {
+                        //merge the score with same sequence
+                        if (seqK.labelseq == itseq->labelseq)
+                        {
+                            existseq = true;
+                            itseq->logP = decodeOutput.LogAdd(seqK.logP, itseq->logP);
+                            //itseq->lengthwithblank = (seqK.lengthwithblank + itseq->lengthwithblank) / 2;
+                            break;
+                        }
+                    }
+                    if (!existseq)
+                    {
+                        nextSequences.push_back(seqK);
+                    }
+
                     int iLabel;
                     for (iLabel = 0; iLabel < expandBeam; iLabel++)
                     {
 
-                        Sequence seqK = newSeq(tempSeq, deviceid);
-                        ElemType newlogP = topN[iLabel].second + tempSeq.logP;
+                        seqK = newSeq(tempSeq, deviceid);
+                        newlogP = topN[iLabel].second + tempSeq.logP;
                         seqK.logP = newlogP;
 
-                        if (topN[iLabel].first == blankId)
+                        if (topN[iLabel].first != blankId)
                         {
-                            bool existseq = false;
-                            for (auto itseq = nextSequences.begin(); itseq != nextSequences.end(); itseq++)
-                            //for (Sequence seqP : keyNextSequences)
-                            {
-                                //merge the score with same sequence
-                                if (seqK.labelseq == itseq->labelseq)
-                                {
-                                    existseq = true;
-                                    itseq->logP = decodeOutput.LogAdd(seqK.logP, itseq->logP);
-                                    //itseq->lengthwithblank = (seqK.lengthwithblank + itseq->lengthwithblank) / 2;
-                                    break;
-                                }
-                            }
-                            if (!existseq)
-                            {
-                                nextSequences.push_back(seqK);
-                            }
-                            //nextSequences.push_back(seqK);
-                            continue;
+                            extendSeq(seqK, topN[iLabel].first, newlogP);
+                            CurSequences.push_back(seqK);    
                         }
-                        extendSeq(seqK, topN[iLabel].first, newlogP);
-                        CurSequences.push_back(seqK);
+                        
                     }
                     vector<pair<size_t, ElemType>>().swap(topN);
                     //delete topN;
@@ -684,9 +690,9 @@ public:
                         break;
                     auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
                     auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
-                    /*if (nextSequences.size() > beamSize && yb->logP > ya->logP)
-                        break;*/
-                    if (nextSequences.size() > beamSize) //                        && yb->logP > ya->logP)
+                    if (nextSequences.size() > beamSize && yb->logP > ya->logP)
+                        break;
+                    /*if (nextSequences.size() > beamSize) //                        && yb->logP > ya->logP)
                         {
                             nth_element(nextSequences.begin(), nextSequences.begin() + beamSize, nextSequences.end(),
                                         [](const Sequence& a, const Sequence& b) -> bool {
@@ -694,7 +700,7 @@ public:
                                         });
                             if (nextSequences[beamSize - 1].logP > ya->logP)
                                 break;
-                        }
+                        }*/
                     //break;
                     //std::nth_element(logP, logP + beamSize, )
                 }

@@ -56,6 +56,9 @@
     <LinkIncremental>false</LinkIncremental>
     <TargetName>Cntk.Eval-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(RepoRootPath)$(Platform)\$(Configuration)_zr\</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API\Internals;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
