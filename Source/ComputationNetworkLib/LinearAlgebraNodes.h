@@ -249,6 +249,7 @@ public:
         //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
     }
 
+
 protected:
     // Prepare data structures from the reader
     // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
