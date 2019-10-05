@@ -220,6 +220,215 @@ public:
         }
     }
 
+
+    //decoding for RNNT 
+    template <class ElemType>
+    void RNNT_decode_greedy(const std::vector<std::wstring>& outputNodeNames, Matrix<ElemType>& encodeInputMatrix, MBLayout& encodeMBLayout, 
+        Matrix<ElemType>& decodeInputMatrix, MBLayout& decodeMBLayout,vector<vector<size_t>> &outputlabels, float groundTruthWeight /*mt19937_64 randGen*/)
+    {
+        if (outputNodeNames.size() == 0)
+            fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
+        std::vector<ComputationNodeBasePtr> outputNodes = OutputNodesByName(outputNodeNames);
+        //AllocateAllMatrices({}, outputNodes, nullptr);
+
+        //encoder related nodes
+        std::vector<std::wstring> encodeOutputNodeNames(outputNodeNames.begin(), outputNodeNames.begin() + 1);
+        std::vector<ComputationNodeBasePtr> encodeOutputNodes = OutputNodesByName(encodeOutputNodeNames);
+        std::vector<ComputationNodeBasePtr> encodeInputNodes = InputNodesForOutputs(encodeOutputNodeNames);
+        //StreamMinibatchInputs encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
+        StartEvaluateMinibatchLoop(encodeOutputNodes[0]);
+
+        //prediction related nodes
+        std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin() + 1, outputNodeNames.begin() + 2);
+        std::vector<ComputationNodeBasePtr> decodeOutputNodes = OutputNodesByName(decodeOutputNodeNames);
+        std::vector<ComputationNodeBasePtr> decodeinputNodes = InputNodesForOutputs(decodeOutputNodeNames);
+        //StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
+
+        //joint nodes
+        ComputationNodeBasePtr PlusNode = GetNodeFromName(outputNodeNames[2]);
+        ComputationNodeBasePtr PlusTransNode = GetNodeFromName(outputNodeNames[3]);
+        ComputationNodeBasePtr WmNode = GetNodeFromName(outputNodeNames[4]);
+        ComputationNodeBasePtr bmNode = GetNodeFromName(outputNodeNames[5]);
+        std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
+        Plusnodes.push_back(PlusNode);
+        Plustransnodes.push_back(PlusTransNode);
+
+        //start eval
+        StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
+        //auto lminput = decodeinputMatrices.begin();
+        size_t deviceid = decodeInputMatrix.GetDeviceId();
+        std::map<std::wstring, void*, nocase_compare> outputMatrices;
+        Matrix<ElemType> encodeOutput(deviceid);
+        Matrix<ElemType> decodeOutput(deviceid), Wm(deviceid), bm(deviceid), tempMatrix(deviceid);
+        Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
+        Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
+        Matrix<ElemType> lmin(deviceid);
+        Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
+        bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
+        const size_t numIterationsBeforePrintingProgress = 100;
+
+        //get MBlayer of encoder input
+        size_t numParallelSequences = encodeMBLayout.GetNumParallelSequences();
+        const auto numSequences = encodeMBLayout.GetNumSequences();
+         //get frame number, phone number and output label number
+        const size_t numRows = encodeInputMatrix.GetNumRows();
+        const size_t numCols = encodeInputMatrix.GetNumCols();
+        
+        //size_t maxFrameNum = numCols / numParallelSequences;
+        
+        std::vector<size_t> uttFrameBeginIdx;
+        // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttFrameNum;
+        // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttFrameToChanInd;
+        //size_t totalcol = 0;
+        
+        uttFrameNum.clear();
+        uttFrameToChanInd.clear();
+        uttFrameBeginIdx.clear();
+        
+        uttFrameNum.reserve(numSequences);
+        uttFrameToChanInd.reserve(numSequences);
+        uttFrameBeginIdx.reserve(numSequences);
+        
+        //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
+        size_t seqId = 0; //frame
+        size_t totalframenum = 0;
+        for (const auto& seq : encodeMBLayout.GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttFrameToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttFrameBeginIdx.push_back(seq.tBegin);
+            uttFrameNum.push_back(numFrames);
+            totalframenum += numFrames;
+        }
+
+        //resize output
+        outputlabels.resize(numSequences);        
+            
+        // forward prop encoder
+        ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes);
+        ForwardProp(encodeOutputNodes[0]);
+        encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
+
+        size_t vocabSize = bm.GetNumRows();
+        size_t blankId = vocabSize - 1;
+
+        for (size_t uttID = 0; uttID < numSequences; uttID ++)
+        {
+            
+            lmin.Resize(vocabSize, 1);
+            lmin.SetValue(0.0);
+            lmin(blankId, 0) = 1;
+            decodeMBLayout.Init(1, 1);
+            std::swap(decodeInputMatrix, lmin);
+            decodeMBLayout.AddSequence(NEW_SEQUENCE_ID, 0, 0, 2000);
+            ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+            ForwardProp(decodeOutputNodes[0]);
+            greedyOutputMax.Resize(vocabSize, 2000);
+            size_t lmt = 0;
+            for (size_t t = 0; t < uttFrameNum[uttID]; t++)
+            {
+                
+                decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value()));
+                //auto edNode = PlusNode->As<PlusBroadcastNode<ElemType>>();
+                size_t tinMB = (t + uttFrameBeginIdx[uttID]) * numParallelSequences + uttFrameToChanInd[uttID];
+                sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(tinMB, 1), decodeOutput);
+                
+
+                //sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput);
+                (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
+                ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
+                auto PlusMBlayout = PlusNode->GetMBLayout();
+                PlusMBlayout->Init(1, 1);
+                PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+                ForwardPropFromTo(Plusnodes, Plustransnodes);
+                decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+                tempMatrix.AssignProductOf(Wm, true, decodeOutput, false);
+                decodeOutput.AssignSumOf(tempMatrix, bm);
+                decodeOutput.VectorMax(maxIdx, maxVal, true);
+                size_t maxId = (size_t)(maxIdx.Get00Element());
+                if (maxId != blankId)
+                {
+                    outputlabels[uttID].push_back(maxId);
+                    lmin.Resize(vocabSize, 1);
+                    lmin.SetValue(0.0);
+                    lmin(maxId, 0) = 1.0;
+                    greedyOutputMax.SetColumn(lmin, lmt);
+                    std::swap(decodeInputMatrix, lmin);
+                    decodeMBLayout.Init(1, 1);
+                    decodeMBLayout.AddSequence(NEW_SEQUENCE_ID, 0, -1 - lmt, 1999 - lmt);
+                    ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+                    //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+                    ForwardProp(decodeOutputNodes[0]);
+                    lmt++;
+                }
+            }
+            
+            if (lmt == 0)
+            {
+                outputlabels[uttID].push_back(blankId);                
+            }
+            //break;
+        }
+
+        //decode
+
+        //make new MBLayout for decoder input
+        MBLayoutPtr newdecodeMBLayout = make_shared<MBLayout>();
+        std::vector<std::pair<size_t, size_t>> placement;
+        std::vector<MBLayout::SequenceInfo> sequences;
+        for (size_t i = 0; i < outputlabels.size(); ++i)
+            sequences.push_back({i, SIZE_MAX, 0, outputlabels[i].size()});
+
+        std::vector<size_t> rowAllocations;
+        newdecodeMBLayout->InitAsPackedSequences(sequences, placement, rowAllocations);
+        
+        decodeInputMatrix.Resize(vocabSize, newdecodeMBLayout->GetNumCols() * newdecodeMBLayout->GetNumParallelSequences());
+        decodeInputMatrix.SetValue(0.0f);
+        //fill the decoder input
+        const auto& sequenceInfos = newdecodeMBLayout->GetAllSequences();
+        for (int i = 0; i < sequenceInfos.size(); ++i)
+        {
+            const auto& sequenceInfo = sequenceInfos[i];
+            // skip gaps
+            if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+
+            //const auto& sequence = batch[sequenceInfo.seqId];
+            size_t numSamples = outputlabels[i].size();
+            assert(numSamples == sequenceInfo.GetNumTimeSteps());
+
+            
+            // Iterate over all samples in the sequence, keep track of the sample offset (which is especially
+            // important for sparse input, where offset == number of preceding nnz elements).
+            for (size_t sampleIndex = 0;sampleIndex < numSamples; ++sampleIndex)
+            {
+                // Compute the offset into the destination buffer, using the layout information
+                // to get the column index corresponding to the given sample.
+                size_t destinationOffset = newdecodeMBLayout->GetColumnIndex(sequenceInfo, sampleIndex) ;
+                // verify that there's enough space left in the buffer to fit a full sample.
+                //assert(destinationOffset <= buffer.m_size - sampleSize);
+                //auto* destination = bufferPtr + destinationOffset;
+                decodeInputMatrix.SetValue(outputlabels[i][sampleIndex], destinationOffset, 1.0f);
+            }
+        }
+
+        //copy the new MBLayout
+        decodeMBLayout.CopyFrom(newdecodeMBLayout);
+         
+        // clean up
+    }
+
+ 
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
     void ResetEvalTimeStamps();
     void SetEvalTimeStampsOutdatedWithRegardToAll();

@@ -47,7 +47,8 @@ enum class LearningRateSearchAlgorithm : int
 enum class AdaptationRegType : int
 {
     None,
-    KL
+    KL,
+    TS
 };
 
 enum class GradientsUpdateType : int
@@ -266,6 +267,7 @@ protected:
     bool m_doGradientCheck;
     double m_gradientCheckSigDigit;
 
+    ConfigArray m_outputNodeNames;
     bool m_doUnitTest;
 
     bool m_useAllDataForPreComputedNode;
@@ -386,7 +388,7 @@ public:
     void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
                IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint);
-    void Adapt(wstring origModelFileName, wstring refNodeName,
+        void Adapt(shared_ptr<ComputationNetwork> net, bool networkLoadedFromCheckpoint, wstring origModelFileName, wstring refNodeName,
                IDataReader* trainSetDataReader,
                IDataReader* validationSetDataReader,
                const DEVICEID_TYPE deviceID, const bool makeMode = true);
@@ -512,7 +514,9 @@ protected:
                          const size_t maxNumberOfSamples = SIZE_MAX,
                          const size_t totalMBsSeenBefore = 0,
                          ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr,
-                         const int startEpoch = 0);
+                         const int startEpoch = 0, const std::vector<std::wstring>& outputNodeNamesVector = <>,
+                         StreamMinibatchInputs* encodeInputMatrices = NULL,
+                         StreamMinibatchInputs* decodeinputMatrices = NULL);
 
     void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);

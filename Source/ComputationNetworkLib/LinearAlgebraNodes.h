@@ -220,7 +220,7 @@ public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_combineMode;
+        //fstream << m_combineMode;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
