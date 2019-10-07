@@ -158,6 +158,7 @@ public:
             ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes);
             m_net->ForwardProp(encodeOutputNodes[0]);
             encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
+            encodeOutput.Print("encode output");
             dataReader.DataEnd();
             size_t vocabSize = bm.GetNumRows();
             size_t blankId = vocabSize - 1;
@@ -175,7 +176,7 @@ public:
             for (size_t t = 0; t < encodeOutput.GetNumCols(); t++)
             {
                 decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value()));
-
+                decodeOutput.Print("decode output");
                 auto edNode = PlusNode->As<PlusBroadcastNode<ElemType>>();
                 if (edNode->getCombineMode() == 1)
                     sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput);
@@ -196,6 +197,7 @@ public:
                 decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
                 tempMatrix.AssignProductOf(Wm, true, decodeOutput, false);
                 decodeOutput.AssignSumOf(tempMatrix, bm);
+                decodeOutput.Print("final output");
                 decodeOutput.VectorMax(maxIdx, maxVal, true);
                 size_t maxId = (size_t)(maxIdx.Get00Element());
                 if (maxId != blankId)
