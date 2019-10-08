@@ -667,6 +667,80 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, startEpoch);
         totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
 
+
+        timer.Stop();
+        double epochTime = timer.ElapsedSeconds();
+
+        if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
+            lrControlCriterion = epochEvalErrors[0].Average();
+        else
+            lrControlCriterion = epochCriterion.Average();
+
+        //RNNT TS
+        StreamMinibatchInputs decodeinputMatrices, encodeInputMatrices;
+        vector<wstring> outputNodeNamesVector;
+        if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::TS && refNet)
+        {
+
+            if (m_outputNodeNames.size() > 0)
+            {
+                // clear out current list of outputNodes
+                while (!refNet->OutputNodes().empty())
+                    refNet->RemoveFromNodeGroup(L"output", refNet->OutputNodes().back());
+                // and insert the desired nodes instead
+                for (wstring name : m_outputNodeNames)
+                {
+                    if (!refNet->NodeNameExists(name))
+                    {
+                        fprintf(stderr, "PatchOutputNodes: No node named '%ls'; skipping\n", name.c_str());
+                        continue;
+                    }
+                    outputNodeNamesVector.push_back(name);
+                    let& node = refNet->GetNodeFromName(name);
+                    refNet->AddToNodeGroup(L"output", node);
+                }
+            }
+            refNet->CompileNetwork();
+
+            //PatchOutputNodes(refNet, m_outputNodeNames, outputNodeNamesVector);
+
+            std::vector<ComputationNodeBasePtr> outputNodes = refNet->OutputNodesByName(outputNodeNamesVector);
+            refNet->AllocateAllMatrices({}, outputNodes, nullptr);
+
+            std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
+            std::vector<ComputationNodeBasePtr> encodeOutputNodes = refNet->OutputNodesByName(encodeOutputNodeNames);
+            std::vector<ComputationNodeBasePtr> encodeInputNodes = refNet->InputNodesForOutputs(encodeOutputNodeNames);
+            encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
+
+            //get decode input matrix
+            std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
+            std::vector<ComputationNodeBasePtr> decodeOutputNodes = refNet->OutputNodesByName(decodeOutputNodeNames);
+            std::vector<ComputationNodeBasePtr> decodeinputNodes = refNet->InputNodesForOutputs(decodeOutputNodeNames);
+            decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
+
+            //DataReaderHelpers::
+
+            //StreamBatch batch;
+        }
+        totalMBsSeen += TrainOneEpoch(net,
+                                      refNet,
+                                      refNode,
+                                      i,
+                                      m_epochSize,
+                                      trainSetDataReader,
+                                      learnRatePerSample,
+                                      chosenMinibatchSize,
+                                      featureNodes,
+                                      labelNodes,
+                                      criterionNodes,
+                                      evaluationNodes,
+                                      inputMatrices,
+                                      learnableNodes, smoothedGradients, smoothedCounts,
+                                      epochCriterion, epochEvalErrors,
+                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, startEpoch,
+                                      outputNodeNamesVector, &encodeInputMatrices, &decodeinputMatrices);
+        totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
+
         timer.Stop();
         double epochTime = timer.ElapsedSeconds();
 
@@ -743,6 +817,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // Loops through criteria (i.e. score) and updates the best one if smaller value is found.
                 UpdateBestEpochs(vScore, cvSetTrainAndEvalNodes, i, m_criteriaBestEpoch);
             }
+
 
             if (m_useCVSetControlLRIfCVExists)
             {
@@ -970,7 +1045,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     delete inputMatrices;
     if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
         m_pASGDHelper.reset();
-}
+} // namespace CNTK
+>>>>>>> 1f90dcb... TS try1
 
 // -----------------------------------------------------------------------
 // TrainOneEpoch() -- train one epoch
@@ -1231,6 +1307,75 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                               dynamic_pointer_cast<ComputationNode<ElemType>>(refNode)->Value(),
                                               (ElemType)(1.0 - m_adaptationRegWeight),
                                               dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[0])->Value());
+            }
+
+            //RNNT TS
+            if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::TS && refNet)
+            {
+                auto reffeainput = (*encodeInputMatrices).begin();
+                auto feainput = (*inputMatrices).begin();
+                reffeainput->second.pMBLayout->CopyFrom(feainput->second.pMBLayout);
+                auto encodeMBLayout = feainput->second.pMBLayout;
+                reffeainput->second.GetMatrix<ElemType>().AssignRowSliceValuesOf(feainput->second.GetMatrix<ElemType>(), 0, 240);
+                //reffeainput->second.GetMatrix<ElemType>().Print("fea");
+                auto reflminput = (*decodeinputMatrices).begin();
+                auto decodeMBLayout = reflminput->second.pMBLayout;
+
+                reffeainput->second.GetMatrix<ElemType>().AssignRowSliceValuesOf(feainput->second.GetMatrix<ElemType>(), 0, 240);
+
+                vector<vector<size_t>> outputlabels;
+                refNet->RNNT_decode_greedy(outputNodeNamesVector, reffeainput->second.GetMatrix<ElemType>(), *encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), *decodeMBLayout, outputlabels, 1.0);
+                //DataReaderHelpers::
+                //make new MBLayout for decoder input
+                auto lminput = (*inputMatrices).GetInput(L"lmin");
+                MBLayoutPtr newdecodeMBLayout = make_shared<MBLayout>();
+                std::vector<std::pair<size_t, size_t>> placement;
+                std::vector<MBLayout::SequenceInfo> sequences;
+                for (size_t i = 0; i < outputlabels.size(); ++i)
+                    sequences.push_back({i, SIZE_MAX, 0, outputlabels[i].size()});
+
+                std::vector<size_t> rowAllocations;
+                newdecodeMBLayout->InitAsPackedSequences(sequences, placement, rowAllocations);
+                size_t vocabSize = lminput.GetMatrix<ElemType>().GetNumRows();
+                lminput.GetMatrix<ElemType>().Resize(vocabSize, newdecodeMBLayout->GetNumCols());
+                lminput.GetMatrix<ElemType>().SetValue(0.0f);
+                Matrix<ElemType> lmin(lminput.GetMatrix<ElemType>().GetDeviceId());
+                lmin.Resize(vocabSize, 1);
+                //fill the decoder input
+                const auto& sequenceInfos = newdecodeMBLayout->GetAllSequences();
+                for (int i = 0; i < sequenceInfos.size(); ++i)
+                {
+                    const auto& sequenceInfo = sequenceInfos[i];
+                    // skip gaps
+                    if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
+                    {
+                        continue;
+                    }
+
+                    //const auto& sequence = batch[sequenceInfo.seqId];
+                    size_t numSamples = outputlabels[i].size();
+                    assert(numSamples == sequenceInfo.GetNumTimeSteps());
+
+                    // Iterate over all samples in the sequence, keep track of the sample offset (which is especially
+                    // important for sparse input, where offset == number of preceding nnz elements).
+                    for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex)
+                    {
+                        // Compute the offset into the destination buffer, using the layout information
+                        // to get the column index corresponding to the given sample.
+                        size_t destinationOffset = newdecodeMBLayout->GetColumnIndex(sequenceInfo, sampleIndex);
+                        lmin.SetValue(0.0);
+                        lmin(outputlabels[i][sampleIndex], 0) = 1.0;
+                
+                        // verify that there's enough space left in the buffer to fit a full sample.
+                        //assert(destinationOffset <= buffer.m_size - sampleSize);
+                        //auto* destination = bufferPtr + destinationOffset;
+                        lminput.GetMatrix<ElemType>().SetColumn(lmin, destinationOffset);
+                    }
+                }
+
+                //copy the new MBLayout
+                lminput.pMBLayout->CopyFrom(newdecodeMBLayout, true);
+                //StreamBatch batch;
             }
 
             // do forward and back propagation

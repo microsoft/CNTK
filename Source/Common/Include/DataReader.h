@@ -184,6 +184,10 @@ public:
     // iterating
     // TODO: Abstract this.
     MapType::iterator begin() { return inputs.begin(); }
+    MapType::iterator second()
+    {
+        return inputs.begin()++;
+    }
     MapType::iterator end()   { return inputs.end(); }
     MapType::iterator find(const std::wstring& nodeName) { return inputs.find(nodeName); }
     MapType::const_iterator begin() const { return inputs.begin(); }
