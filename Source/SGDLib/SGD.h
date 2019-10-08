@@ -514,7 +514,7 @@ protected:
                          const size_t maxNumberOfSamples = SIZE_MAX,
                          const size_t totalMBsSeenBefore = 0,
                          ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr,
-                         const int startEpoch = 0, const std::vector<std::wstring>& outputNodeNamesVector = <>,
+                         const int startEpoch = 0, const std::vector<std::wstring>& outputNodeNamesVector = std::vector<std::wstring>(),
                          StreamMinibatchInputs* encodeInputMatrices = NULL,
                          StreamMinibatchInputs* decodeinputMatrices = NULL);
 
