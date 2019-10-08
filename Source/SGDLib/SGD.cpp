@@ -660,8 +660,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         vector<wstring> outputNodeNamesVector;
         if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::TS && refNet)
         {
-            
-            
+
             if (m_outputNodeNames.size() > 0)
             {
                 // clear out current list of outputNodes
@@ -681,62 +680,61 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 }
             }
             refNet->CompileNetwork();
-      
-        //PatchOutputNodes(refNet, m_outputNodeNames, outputNodeNamesVector);
-        
 
-        std::vector<ComputationNodeBasePtr> outputNodes = refNet->OutputNodesByName(outputNodeNamesVector);
-        refNet->AllocateAllMatrices({}, outputNodes, nullptr);
+            //PatchOutputNodes(refNet, m_outputNodeNames, outputNodeNamesVector);
 
-        std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
-        std::vector<ComputationNodeBasePtr> encodeOutputNodes = refNet->OutputNodesByName(encodeOutputNodeNames);
-        std::vector<ComputationNodeBasePtr> encodeInputNodes = refNet->InputNodesForOutputs(encodeOutputNodeNames);
-        encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
+            std::vector<ComputationNodeBasePtr> outputNodes = refNet->OutputNodesByName(outputNodeNamesVector);
+            refNet->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        //get decode input matrix
-        std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
-        std::vector<ComputationNodeBasePtr> decodeOutputNodes = refNet->OutputNodesByName(decodeOutputNodeNames);
-        std::vector<ComputationNodeBasePtr> decodeinputNodes = refNet->InputNodesForOutputs(decodeOutputNodeNames);
-        decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
+            std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
+            std::vector<ComputationNodeBasePtr> encodeOutputNodes = refNet->OutputNodesByName(encodeOutputNodeNames);
+            std::vector<ComputationNodeBasePtr> encodeInputNodes = refNet->InputNodesForOutputs(encodeOutputNodeNames);
+            encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
 
-        //DataReaderHelpers::
+            //get decode input matrix
+            std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
+            std::vector<ComputationNodeBasePtr> decodeOutputNodes = refNet->OutputNodesByName(decodeOutputNodeNames);
+            std::vector<ComputationNodeBasePtr> decodeinputNodes = refNet->InputNodesForOutputs(decodeOutputNodeNames);
+            decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
-        //StreamBatch batch;
-    }
-    totalMBsSeen += TrainOneEpoch(net,
-                                  refNet,
-                                  refNode,
-                                  i,
-                                  m_epochSize,
-                                  trainSetDataReader,
-                                  learnRatePerSample,
-                                  chosenMinibatchSize,
-                                  featureNodes,
-                                  labelNodes,
-                                  criterionNodes,
-                                  evaluationNodes,
-                                  inputMatrices,
-                                  learnableNodes, smoothedGradients, smoothedCounts,
-                                  epochCriterion, epochEvalErrors,
-                                  "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, startEpoch,
-                                  outputNodeNamesVector, &encodeInputMatrices, &decodeinputMatrices);
-    totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
+            //DataReaderHelpers::
 
-    timer.Stop();
-    double epochTime = timer.ElapsedSeconds();
+            //StreamBatch batch;
+        }
+        totalMBsSeen += TrainOneEpoch(net,
+                                      refNet,
+                                      refNode,
+                                      i,
+                                      m_epochSize,
+                                      trainSetDataReader,
+                                      learnRatePerSample,
+                                      chosenMinibatchSize,
+                                      featureNodes,
+                                      labelNodes,
+                                      criterionNodes,
+                                      evaluationNodes,
+                                      inputMatrices,
+                                      learnableNodes, smoothedGradients, smoothedCounts,
+                                      epochCriterion, epochEvalErrors,
+                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, startEpoch,
+                                      outputNodeNamesVector, &encodeInputMatrices, &decodeinputMatrices);
+        totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
 
-    if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
-        lrControlCriterion = epochEvalErrors[0].Average();
-    else
-        lrControlCriterion = epochCriterion.Average();
+        timer.Stop();
+        double epochTime = timer.ElapsedSeconds();
 
-    LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int) m_maxEpochs);
-    epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
+        if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
+            lrControlCriterion = epochEvalErrors[0].Average();
+        else
+            lrControlCriterion = epochCriterion.Average();
 
-    m_lastFinishedEpochTrainLoss = epochCriterion.Average();
-    for (size_t j = 0; j < epochEvalErrors.size(); j++)
-        epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
-    fprintf(stderr, "totalSamplesSeen = %zu; learningRatePerSample = %.8g; epochTime=%.6gs\n", totalTrainingSamplesSeen, learnRatePerSample, epochTime);
+        LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Training] ", i + 1, (int) m_maxEpochs);
+        epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
+
+        m_lastFinishedEpochTrainLoss = epochCriterion.Average();
+        for (size_t j = 0; j < epochEvalErrors.size(); j++)
+            epochEvalErrors[j].LogCriterion(evaluationNodes[j]->NodeName());
+        fprintf(stderr, "totalSamplesSeen = %zu; learningRatePerSample = %.8g; epochTime=%.6gs\n", totalTrainingSamplesSeen, learnRatePerSample, epochTime);
 #if 0
         // TODO: This was only printed if >1 eval criterion. Why? Needed?
         LOGPRINTF(stderr, "Finished Epoch[%2d of %d]:     Criterion Node [%ls] Per Sample = %.8g\n",
@@ -749,282 +747,282 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
 #endif
 
-    if (tensorBoardWriter)
-    {
-        tensorBoardWriter->WriteValue(L"summary/" + criterionNodes[0]->NodeName(), (float) epochCriterion.Average(), i + 1);
-        for (size_t j = 0; j < epochEvalErrors.size(); j++)
-        {
-            tensorBoardWriter->WriteValue(L"summary/" + evaluationNodes[0]->NodeName(), (float) epochEvalErrors[j].Average(), i + 1);
-        }
-
-        tensorBoardWriter->Flush();
-    }
-
-    if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
-    {
-        // TODO(dataASGD) making evaluator becoming nondistributed one when using ASGD, since Multiverso has another background thread using MPI.
-        //                Making the evaluation serial (non-distributed) will slowdown training especially when validation set is large.
-        SimpleEvaluator<ElemType> evalforvalidation(net, UsingAsyncGradientAggregation(i + 1) ? nullptr : m_mpi, m_enableDistributedMBReading);
-        vector<wstring> cvSetTrainAndEvalNodes;
-        if (criterionNodes.size() > 0)
-        {
-            cvSetTrainAndEvalNodes.push_back(criterionNodes[0]->NodeName());
-        }
-        for (let node : evaluationNodes)
-        {
-            cvSetTrainAndEvalNodes.push_back(node->NodeName());
-        }
-
-        // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
-        let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, UsingAsyncGradientAggregation(i + 1) ? m_mbSize[i] / m_mpi->NumNodesInUse() : m_mbSize[i]);
-        LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate] ", i + 1, (int) m_maxEpochs);
-        for (size_t k = 0; k < vScore.size() /*&& k < 2*/; k++)
-            vScore[k].LogCriterion(cvSetTrainAndEvalNodes[k], /*addSemicolon=*/k + 1 < vScore.size());
-        //fprintf(stderr, "%s %ls = %.8f * %d", k ? ";" : "", cvSetTrainAndEvalNodes[k].c_str(), vScore[k].Average(), (int)vScore[k].second);
-        fprintf(stderr, "\n");
-
         if (tensorBoardWriter)
         {
-            for (size_t k = 0; k < vScore.size(); k++)
+            tensorBoardWriter->WriteValue(L"summary/" + criterionNodes[0]->NodeName(), (float) epochCriterion.Average(), i + 1);
+            for (size_t j = 0; j < epochEvalErrors.size(); j++)
             {
-                tensorBoardWriter->WriteValue(L"summary/test_" + cvSetTrainAndEvalNodes[k], (float) vScore[k].Average(), i + 1);
+                tensorBoardWriter->WriteValue(L"summary/" + evaluationNodes[0]->NodeName(), (float) epochEvalErrors[j].Average(), i + 1);
             }
 
             tensorBoardWriter->Flush();
         }
 
-        if (m_saveBestModelPerCriterion)
+        if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
         {
-            // Loops through criteria (i.e. score) and updates the best one if smaller value is found.
-            UpdateBestEpochs(vScore, cvSetTrainAndEvalNodes, i, m_criteriaBestEpoch);
-        }
-
-        if (m_useCVSetControlLRIfCVExists)
-        {
-            if (m_useEvalCriterionControlLR && vScore.size() > 1)
-                lrControlCriterion = vScore[1].Average(); // use the first of possibly multiple eval criteria
-            else
-                lrControlCriterion = vScore[0].Average(); // the first one is the training criterion
-        }
-    }
-
-    // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
-    if ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
-         GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
-        (m_mpi->NumNodesInUse() > 1))
-    {
-        m_mpi->Bcast(&epochCriterion.first, 1, m_mpi->MainNodeRank());
-        m_mpi->Bcast(&epochCriterion.second, 1, m_mpi->MainNodeRank());
-        m_mpi->Bcast(&lrControlCriterion, 1, m_mpi->MainNodeRank());
-    }
-
-    bool loadedPrevModel = false;
-    size_t epochsSinceLastLearnRateAdjust = i % m_learnRateAdjustInterval + 1;
-    if (avgCriterion == numeric_limits<double>::infinity())
-    {
-        avgCriterion = lrControlCriterion;
-    }
-    else
-    {
-        avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion) *
-                            avgCriterion +
-                        lrControlCriterion) /
-                       (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
-    }
-
-    if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
-        m_learningRatesParam.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
-    {
-        if (std::isnan(avgCriterion) || (prevCriterion - avgCriterion < 0 && prevCriterion != numeric_limits<double>::infinity()))
-        {
-            if (m_loadBestModel)
+            // TODO(dataASGD) making evaluator becoming nondistributed one when using ASGD, since Multiverso has another background thread using MPI.
+            //                Making the evaluation serial (non-distributed) will slowdown training especially when validation set is large.
+            SimpleEvaluator<ElemType> evalforvalidation(net, UsingAsyncGradientAggregation(i + 1) ? nullptr : m_mpi, m_enableDistributedMBReading);
+            vector<wstring> cvSetTrainAndEvalNodes;
+            if (criterionNodes.size() > 0)
             {
-                // roll back
-                auto bestModelPath = GetModelNameForEpoch(i - m_learnRateAdjustInterval);
-                LOGPRINTF(stderr, "Loading (rolling back to) previous model with best training-criterion value: %ls.\n", bestModelPath.c_str());
-                net->RereadPersistableParameters<ElemType>(bestModelPath);
-                LoadCheckPointInfo(i - m_learnRateAdjustInterval,
-                                   /*out*/ totalTrainingSamplesSeen,
-                                   /*out*/ learnRatePerSample,
-                                   smoothedGradients,
-                                   smoothedCounts,
-                                   /*out*/ prevCriterion,
-                                   /*out*/ m_prevChosenMinibatchSize);
-                loadedPrevModel = true;
+                cvSetTrainAndEvalNodes.push_back(criterionNodes[0]->NodeName());
             }
-        }
-
-        if (m_continueReduce)
-        {
-            if (std::isnan(avgCriterion) ||
-                (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
-                 prevCriterion != numeric_limits<double>::infinity()))
+            for (let node : evaluationNodes)
             {
-                if (learnRateReduced == false)
+                cvSetTrainAndEvalNodes.push_back(node->NodeName());
+            }
+
+            // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
+            let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, UsingAsyncGradientAggregation(i + 1) ? m_mbSize[i] / m_mpi->NumNodesInUse() : m_mbSize[i]);
+            LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate] ", i + 1, (int) m_maxEpochs);
+            for (size_t k = 0; k < vScore.size() /*&& k < 2*/; k++)
+                vScore[k].LogCriterion(cvSetTrainAndEvalNodes[k], /*addSemicolon=*/k + 1 < vScore.size());
+            //fprintf(stderr, "%s %ls = %.8f * %d", k ? ";" : "", cvSetTrainAndEvalNodes[k].c_str(), vScore[k].Average(), (int)vScore[k].second);
+            fprintf(stderr, "\n");
+
+            if (tensorBoardWriter)
+            {
+                for (size_t k = 0; k < vScore.size(); k++)
                 {
-                    learnRateReduced = true;
+                    tensorBoardWriter->WriteValue(L"summary/test_" + cvSetTrainAndEvalNodes[k], (float) vScore[k].Average(), i + 1);
                 }
+
+                tensorBoardWriter->Flush();
+            }
+
+            if (m_saveBestModelPerCriterion)
+            {
+                // Loops through criteria (i.e. score) and updates the best one if smaller value is found.
+                UpdateBestEpochs(vScore, cvSetTrainAndEvalNodes, i, m_criteriaBestEpoch);
+            }
+
+            if (m_useCVSetControlLRIfCVExists)
+            {
+                if (m_useEvalCriterionControlLR && vScore.size() > 1)
+                    lrControlCriterion = vScore[1].Average(); // use the first of possibly multiple eval criteria
                 else
-                {
-                    // In case of parallel training only the main node should we saving the model to prevent
-                    // the parallel training nodes from colliding to write the same file
-                    if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-                        net->Save(GetModelNameForEpoch(i, true));
+                    lrControlCriterion = vScore[0].Average(); // the first one is the training criterion
+            }
+        }
 
-                    LOGPRINTF(stderr, "Finished training and saved final model\n\n");
-                    break;
+        // broadcast epochCriterion to make sure each processor will have the same learning rate schedule
+        if ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
+             GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
+            (m_mpi->NumNodesInUse() > 1))
+        {
+            m_mpi->Bcast(&epochCriterion.first, 1, m_mpi->MainNodeRank());
+            m_mpi->Bcast(&epochCriterion.second, 1, m_mpi->MainNodeRank());
+            m_mpi->Bcast(&lrControlCriterion, 1, m_mpi->MainNodeRank());
+        }
+
+        bool loadedPrevModel = false;
+        size_t epochsSinceLastLearnRateAdjust = i % m_learnRateAdjustInterval + 1;
+        if (avgCriterion == numeric_limits<double>::infinity())
+        {
+            avgCriterion = lrControlCriterion;
+        }
+        else
+        {
+            avgCriterion = ((epochsSinceLastLearnRateAdjust - 1 - epochsNotCountedInAvgCriterion) *
+                                avgCriterion +
+                            lrControlCriterion) /
+                           (epochsSinceLastLearnRateAdjust - epochsNotCountedInAvgCriterion);
+        }
+
+        if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch &&
+            m_learningRatesParam.size() <= i && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+        {
+            if (std::isnan(avgCriterion) || (prevCriterion - avgCriterion < 0 && prevCriterion != numeric_limits<double>::infinity()))
+            {
+                if (m_loadBestModel)
+                {
+                    // roll back
+                    auto bestModelPath = GetModelNameForEpoch(i - m_learnRateAdjustInterval);
+                    LOGPRINTF(stderr, "Loading (rolling back to) previous model with best training-criterion value: %ls.\n", bestModelPath.c_str());
+                    net->RereadPersistableParameters<ElemType>(bestModelPath);
+                    LoadCheckPointInfo(i - m_learnRateAdjustInterval,
+                                       /*out*/ totalTrainingSamplesSeen,
+                                       /*out*/ learnRatePerSample,
+                                       smoothedGradients,
+                                       smoothedCounts,
+                                       /*out*/ prevCriterion,
+                                       /*out*/ m_prevChosenMinibatchSize);
+                    loadedPrevModel = true;
                 }
             }
 
-            if (learnRateReduced)
+            if (m_continueReduce)
             {
-                learnRatePerSample *= m_learnRateDecreaseFactor;
-                LOGPRINTF(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
-            }
-        }
-        else
-        {
-            if (std::isnan(avgCriterion) ||
-                (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
-                 prevCriterion != numeric_limits<double>::infinity()))
-            {
-
-                learnRatePerSample *= m_learnRateDecreaseFactor;
-                LOGPRINTF(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
-            }
-            else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan * prevCriterion &&
-                     prevCriterion != numeric_limits<double>::infinity())
-            {
-                learnRatePerSample *= m_learnRateIncreaseFactor;
-                LOGPRINTF(stderr, "learnRatePerSample increased to %.8g\n", learnRatePerSample);
-            }
-        }
-    }
-    else
-    {
-        if (std::isnan(avgCriterion))
-            RuntimeError("The training criterion is not a number (NAN).");
-    }
-
-    // not loading previous values then set them
-    if (!loadedPrevModel && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
-    {
-        prevCriterion = avgCriterion;
-        epochsNotCountedInAvgCriterion = 0;
-    }
-
-    // Synchronize all ranks before proceeding to ensure that
-    // nobody tries reading the checkpoint file at the same time
-    // as rank 0 deleting it below
-    SynchronizeWorkers();
-
-    // Persist model and check-point info
-    if ((m_mpi == nullptr) || m_mpi->IsMainNode())
-    {
-        if (loadedPrevModel)
-        {
-            // If previous best model is loaded, we will first remove epochs that lead to worse results
-            for (int j = 1; j < m_learnRateAdjustInterval; j++)
-            {
-                int epochToDelete = i - j;
-                LOGPRINTF(stderr, "SGD: removing model and checkpoint files for epoch %d after rollback to epoch %lu\n", epochToDelete + 1, (unsigned long) (i - m_learnRateAdjustInterval) + 1); // report 1 based epoch number
-                _wunlink(GetModelNameForEpoch(epochToDelete).c_str());
-                _wunlink(GetCheckPointFileNameForEpoch(epochToDelete).c_str());
-            }
-
-            // Set i back to the loaded model
-            i -= m_learnRateAdjustInterval;
-            LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i + 1); // report 1 based epoch number
-            SaveCheckPointInfo(
-                i,
-                totalTrainingSamplesSeen,
-                learnRatePerSample,
-                smoothedGradients,
-                smoothedCounts,
-                prevCriterion,
-                chosenMinibatchSize);
-        }
-        else
-        {
-            SaveCheckPointInfo(
-                i,
-                totalTrainingSamplesSeen,
-                learnRatePerSample,
-                smoothedGradients,
-                smoothedCounts,
-                prevCriterion,
-                chosenMinibatchSize);
-            auto modelName = GetModelNameForEpoch(i);
-            if (m_traceLevel > 0)
-                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
-            net->Save(modelName);
-            if (!m_keepCheckPointFiles)
-            {
-                // delete previous checkpoint file to save space
-                if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_loadBestModel)
+                if (std::isnan(avgCriterion) ||
+                    (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
+                     prevCriterion != numeric_limits<double>::infinity()))
                 {
-                    if (epochsSinceLastLearnRateAdjust != 1)
+                    if (learnRateReduced == false)
+                    {
+                        learnRateReduced = true;
+                    }
+                    else
+                    {
+                        // In case of parallel training only the main node should we saving the model to prevent
+                        // the parallel training nodes from colliding to write the same file
+                        if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+                            net->Save(GetModelNameForEpoch(i, true));
+
+                        LOGPRINTF(stderr, "Finished training and saved final model\n\n");
+                        break;
+                    }
+                }
+
+                if (learnRateReduced)
+                {
+                    learnRatePerSample *= m_learnRateDecreaseFactor;
+                    LOGPRINTF(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
+                }
+            }
+            else
+            {
+                if (std::isnan(avgCriterion) ||
+                    (prevCriterion - avgCriterion <= m_reduceLearnRateIfImproveLessThan * prevCriterion &&
+                     prevCriterion != numeric_limits<double>::infinity()))
+                {
+
+                    learnRatePerSample *= m_learnRateDecreaseFactor;
+                    LOGPRINTF(stderr, "learnRatePerSample reduced to %.8g\n", learnRatePerSample);
+                }
+                else if (prevCriterion - avgCriterion > m_increaseLearnRateIfImproveMoreThan * prevCriterion &&
+                         prevCriterion != numeric_limits<double>::infinity())
+                {
+                    learnRatePerSample *= m_learnRateIncreaseFactor;
+                    LOGPRINTF(stderr, "learnRatePerSample increased to %.8g\n", learnRatePerSample);
+                }
+            }
+        }
+        else
+        {
+            if (std::isnan(avgCriterion))
+                RuntimeError("The training criterion is not a number (NAN).");
+        }
+
+        // not loading previous values then set them
+        if (!loadedPrevModel && epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+        {
+            prevCriterion = avgCriterion;
+            epochsNotCountedInAvgCriterion = 0;
+        }
+
+        // Synchronize all ranks before proceeding to ensure that
+        // nobody tries reading the checkpoint file at the same time
+        // as rank 0 deleting it below
+        SynchronizeWorkers();
+
+        // Persist model and check-point info
+        if ((m_mpi == nullptr) || m_mpi->IsMainNode())
+        {
+            if (loadedPrevModel)
+            {
+                // If previous best model is loaded, we will first remove epochs that lead to worse results
+                for (int j = 1; j < m_learnRateAdjustInterval; j++)
+                {
+                    int epochToDelete = i - j;
+                    LOGPRINTF(stderr, "SGD: removing model and checkpoint files for epoch %d after rollback to epoch %lu\n", epochToDelete + 1, (unsigned long) (i - m_learnRateAdjustInterval) + 1); // report 1 based epoch number
+                    _wunlink(GetModelNameForEpoch(epochToDelete).c_str());
+                    _wunlink(GetCheckPointFileNameForEpoch(epochToDelete).c_str());
+                }
+
+                // Set i back to the loaded model
+                i -= m_learnRateAdjustInterval;
+                LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i + 1); // report 1 based epoch number
+                SaveCheckPointInfo(
+                    i,
+                    totalTrainingSamplesSeen,
+                    learnRatePerSample,
+                    smoothedGradients,
+                    smoothedCounts,
+                    prevCriterion,
+                    chosenMinibatchSize);
+            }
+            else
+            {
+                SaveCheckPointInfo(
+                    i,
+                    totalTrainingSamplesSeen,
+                    learnRatePerSample,
+                    smoothedGradients,
+                    smoothedCounts,
+                    prevCriterion,
+                    chosenMinibatchSize);
+                auto modelName = GetModelNameForEpoch(i);
+                if (m_traceLevel > 0)
+                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+                net->Save(modelName);
+                if (!m_keepCheckPointFiles)
+                {
+                    // delete previous checkpoint file to save space
+                    if (m_autoLearnRateSearchType == LearningRateSearchAlgorithm::AdjustAfterEpoch && m_loadBestModel)
+                    {
+                        if (epochsSinceLastLearnRateAdjust != 1)
+                        {
+                            _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
+                        }
+                        if (epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
+                        {
+                            _wunlink(GetCheckPointFileNameForEpoch(i - m_learnRateAdjustInterval).c_str());
+                        }
+                    }
+                    else
                     {
                         _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
                     }
-                    if (epochsSinceLastLearnRateAdjust == m_learnRateAdjustInterval)
-                    {
-                        _wunlink(GetCheckPointFileNameForEpoch(i - m_learnRateAdjustInterval).c_str());
-                    }
-                }
-                else
-                {
-                    _wunlink(GetCheckPointFileNameForEpoch(i - 1).c_str());
                 }
             }
         }
-    }
-    else
-    {
-        if (loadedPrevModel)
+        else
         {
-            // Set i back to the loaded model
-            i -= m_learnRateAdjustInterval;
+            if (loadedPrevModel)
+            {
+                // Set i back to the loaded model
+                i -= m_learnRateAdjustInterval;
+            }
+        }
+
+        if (learnRatePerSample < 1e-12)
+        {
+            LOGPRINTF(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n",
+                      learnRatePerSample);
+        }
+    }
+    // --- END OF MAIN EPOCH LOOP
+
+    // Check if we need to save best model per criterion and this is the main node as well.
+    if (m_saveBestModelPerCriterion && ((m_mpi == nullptr) || m_mpi->IsMainNode()))
+    {
+        // For each criterion copies the best epoch to the new file with criterion name appended.
+        CopyBestEpochs(m_criteriaBestEpoch, *this, m_maxEpochs - 1);
+    }
+
+    // Synchronize all ranks before proceeding to ensure that
+    // rank 0 has finished writing the model file
+    // TODO[DataASGD]: should othet other rank waiting in async-mode
+    SynchronizeWorkers();
+
+    // progress tracing for compute cluster management
+    ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0, true);
+    ProgressTracing::TraceTrainLoss(m_lastFinishedEpochTrainLoss);
+
+    // since we linked feature nodes. we need to remove it from the deletion
+    if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
+    {
+        for (size_t i = 0; i < refFeatureNodes.size(); i++)
+        {
+            // note we need to handle deletion carefully
+            refNet->ReplaceNode(refFeatureNodes[i]->NodeName(), refFeatureNodes[i]);
         }
     }
 
-    if (learnRatePerSample < 1e-12)
-    {
-        LOGPRINTF(stderr, "learnRate per sample is reduced to %.8g which is below 1e-12. stop training.\n",
-                  learnRatePerSample);
-    }
-}
-// --- END OF MAIN EPOCH LOOP
-
-// Check if we need to save best model per criterion and this is the main node as well.
-if (m_saveBestModelPerCriterion && ((m_mpi == nullptr) || m_mpi->IsMainNode()))
-{
-    // For each criterion copies the best epoch to the new file with criterion name appended.
-    CopyBestEpochs(m_criteriaBestEpoch, *this, m_maxEpochs - 1);
-}
-
-// Synchronize all ranks before proceeding to ensure that
-// rank 0 has finished writing the model file
-// TODO[DataASGD]: should othet other rank waiting in async-mode
-SynchronizeWorkers();
-
-// progress tracing for compute cluster management
-ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0, true);
-ProgressTracing::TraceTrainLoss(m_lastFinishedEpochTrainLoss);
-
-// since we linked feature nodes. we need to remove it from the deletion
-if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::KL && refNode != nullptr)
-{
-    for (size_t i = 0; i < refFeatureNodes.size(); i++)
-    {
-        // note we need to handle deletion carefully
-        refNet->ReplaceNode(refFeatureNodes[i]->NodeName(), refFeatureNodes[i]);
-    }
-}
-
-delete inputMatrices;
-if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
-    m_pASGDHelper.reset();
+    delete inputMatrices;
+    if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
+        m_pASGDHelper.reset();
 } // namespace CNTK
 
 // -----------------------------------------------------------------------
@@ -1231,8 +1229,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     //RNNT TS
     if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::TS && refNet)
     {
-
-        
     }
     //Microsoft::MSR::CNTK::StartProfiler();
     for (;;)
@@ -1311,16 +1307,64 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 reffeainput->second.pMBLayout->CopyFrom(feainput->second.pMBLayout);
                 auto encodeMBLayout = feainput->second.pMBLayout;
                 reffeainput->second.GetMatrix<ElemType>().AssignRowSliceValuesOf(feainput->second.GetMatrix<ElemType>(), 0, 240);
-
-                auto lminput = (*decodeinputMatrices).begin();
-                auto decodeMBLayout = lminput->second.pMBLayout;
+                //reffeainput->second.GetMatrix<ElemType>().Print("fea");
+                auto reflminput = (*decodeinputMatrices).begin();
+                auto decodeMBLayout = reflminput->second.pMBLayout;
 
                 reffeainput->second.GetMatrix<ElemType>().AssignRowSliceValuesOf(feainput->second.GetMatrix<ElemType>(), 0, 240);
 
                 vector<vector<size_t>> outputlabels;
-                refNet->RNNT_decode_greedy(outputNodeNamesVector, reffeainput->second.GetMatrix<ElemType>(), *encodeMBLayout, reffeainput->second.GetMatrix<ElemType>(), *decodeMBLayout, outputlabels, 1.0);
+                refNet->RNNT_decode_greedy(outputNodeNamesVector, reffeainput->second.GetMatrix<ElemType>(), *encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), *decodeMBLayout, outputlabels, 1.0);
                 //DataReaderHelpers::
+                //make new MBLayout for decoder input
+                auto lminput = (*inputMatrices).GetInput(L"lmin");
+                MBLayoutPtr newdecodeMBLayout = make_shared<MBLayout>();
+                std::vector<std::pair<size_t, size_t>> placement;
+                std::vector<MBLayout::SequenceInfo> sequences;
+                for (size_t i = 0; i < outputlabels.size(); ++i)
+                    sequences.push_back({i, SIZE_MAX, 0, outputlabels[i].size()});
 
+                std::vector<size_t> rowAllocations;
+                newdecodeMBLayout->InitAsPackedSequences(sequences, placement, rowAllocations);
+                size_t vocabSize = lminput.GetMatrix<ElemType>().GetNumRows();
+                lminput.GetMatrix<ElemType>().Resize(vocabSize, newdecodeMBLayout->GetNumCols());
+                lminput.GetMatrix<ElemType>().SetValue(0.0f);
+                Matrix<ElemType> lmin(lminput.GetMatrix<ElemType>().GetDeviceId());
+                lmin.Resize(vocabSize, 1);
+                //fill the decoder input
+                const auto& sequenceInfos = newdecodeMBLayout->GetAllSequences();
+                for (int i = 0; i < sequenceInfos.size(); ++i)
+                {
+                    const auto& sequenceInfo = sequenceInfos[i];
+                    // skip gaps
+                    if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
+                    {
+                        continue;
+                    }
+
+                    //const auto& sequence = batch[sequenceInfo.seqId];
+                    size_t numSamples = outputlabels[i].size();
+                    assert(numSamples == sequenceInfo.GetNumTimeSteps());
+
+                    // Iterate over all samples in the sequence, keep track of the sample offset (which is especially
+                    // important for sparse input, where offset == number of preceding nnz elements).
+                    for (size_t sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex)
+                    {
+                        // Compute the offset into the destination buffer, using the layout information
+                        // to get the column index corresponding to the given sample.
+                        size_t destinationOffset = newdecodeMBLayout->GetColumnIndex(sequenceInfo, sampleIndex);
+                        lmin.SetValue(0.0);
+                        lmin(outputlabels[i][sampleIndex], 0) = 1.0;
+                
+                        // verify that there's enough space left in the buffer to fit a full sample.
+                        //assert(destinationOffset <= buffer.m_size - sampleSize);
+                        //auto* destination = bufferPtr + destinationOffset;
+                        lminput.GetMatrix<ElemType>().SetColumn(lmin, destinationOffset);
+                    }
+                }
+
+                //copy the new MBLayout
+                lminput.pMBLayout->CopyFrom(newdecodeMBLayout, true);
                 //StreamBatch batch;
             }
             // do forward and back propagation
@@ -3465,6 +3509,6 @@ void SGDParams::InitializeAndCheckBlockMomentumSGDParameters()
 // register SGD<> with the ScriptableObject system
 ScriptableObjects::ConfigurableRuntimeTypeRegister::AddFloatDouble<SGD<float>, SGD<double>> registerSGDOptimizer(L"SGDOptimizer");
 
+} // namespace CNTK
 } // namespace MSR
-} // namespace Microsoft
 } // namespace Microsoft

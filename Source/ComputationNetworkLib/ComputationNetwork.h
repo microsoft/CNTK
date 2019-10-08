@@ -33,7 +33,12 @@
 
 #include "ComputationGraphAlgorithms.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 inline std::wstring ToString(const ComputationNodeBasePtr& node)
 {
@@ -44,10 +49,9 @@ inline std::wstring ToString(const ComputationNodeBasePtr& node)
 // ComputationNetwork -- computation graph and operations
 // ===========================================================================
 
-class ComputationNetwork :
-    public ScriptableObjects::Object,
-    public ScriptableObjects::HasToString,
-    public ScriptableObjects::CustomConfigRecord
+class ComputationNetwork : public ScriptableObjects::Object,
+                           public ScriptableObjects::HasToString,
+                           public ScriptableObjects::CustomConfigRecord
 {
 public:
     typedef shared_ptr<ComputationNetwork> ComputationNetworkPtr;
@@ -56,18 +60,18 @@ public:
     // construction
     // -----------------------------------------------------------------------
 
-    ComputationNetwork() :
-        m_randomSeedOffset(0),
-        m_isCompiled(false),
-        m_areMatricesAllocated(false),
-        m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, ComputationNodeBase::DefaultDynamicAxisName)),
-        m_environment(make_shared<ComputationEnvironment>())
+    ComputationNetwork()
+        : m_randomSeedOffset(0),
+          m_isCompiled(false),
+          m_areMatricesAllocated(false),
+          m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, ComputationNodeBase::DefaultDynamicAxisName)),
+          m_environment(make_shared<ComputationEnvironment>())
     {
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");
     }
 
-    ComputationNetwork(DEVICEID_TYPE deviceId) :
-        ComputationNetwork()
+    ComputationNetwork(DEVICEID_TYPE deviceId)
+        : ComputationNetwork()
     {
         SetDeviceId(deviceId);
     }
@@ -86,7 +90,10 @@ public:
         m_deviceId = deviceId;
     }
 
-    DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
+    DEVICEID_TYPE GetDeviceId() const
+    {
+        return m_deviceId;
+    }
 
     void PrintNodeTiming();
 
@@ -110,8 +117,10 @@ public:
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
-    template <class ElemType> void Read(const std::wstring& fileName);
-    template <class ElemType> void Load(const std::wstring& fileName)
+    template <class ElemType>
+    void Read(const std::wstring& fileName);
+    template <class ElemType>
+    void Load(const std::wstring& fileName)
     {
         Read<ElemType>(fileName);
         // perform all further post-processing, caching, etc.
@@ -131,13 +140,11 @@ public:
     void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
 
 private:
-
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
-    
+
     static size_t GetModelVersion(File& fstream);
 
 public:
-
     // -----------------------------------------------------------------------
     // evaluation
     // -----------------------------------------------------------------------
@@ -205,8 +212,7 @@ public:
         TravserseInSortedGlobalEvalOrder(nodesTo, [&](const ComputationNodeBasePtr& node) {
             for (const ComputationNodeBasePtr& input : node->GetInputs())
             {
-                if (std::find(nodesFrom.begin(), nodesFrom.end(), input) != nodesFrom.end()
-                    || nodesToForward.find(input) != nodesToForward.end())
+                if (std::find(nodesFrom.begin(), nodesFrom.end(), input) != nodesFrom.end() || nodesToForward.find(input) != nodesToForward.end())
                 {
                     nodesToForward.insert(node);
                 }
@@ -220,11 +226,10 @@ public:
         }
     }
 
-
-    //decoding for RNNT 
+    //decoding for RNNT
     template <class ElemType>
-    void RNNT_decode_greedy(const std::vector<std::wstring>& outputNodeNames, Matrix<ElemType>& encodeInputMatrix, MBLayout& encodeMBLayout, 
-        Matrix<ElemType>& decodeInputMatrix, MBLayout& decodeMBLayout,vector<vector<size_t>> &outputlabels, float groundTruthWeight /*mt19937_64 randGen*/)
+    void RNNT_decode_greedy(const std::vector<std::wstring>& outputNodeNames, Matrix<ElemType>& encodeInputMatrix, MBLayout& encodeMBLayout,
+                            Matrix<ElemType>& decodeInputMatrix, MBLayout& decodeMBLayout, vector<vector<size_t>>& outputlabels, float groundTruthWeight /*mt19937_64 randGen*/)
     {
         if (outputNodeNames.size() == 0)
             fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
@@ -270,27 +275,27 @@ public:
         //get MBlayer of encoder input
         size_t numParallelSequences = encodeMBLayout.GetNumParallelSequences();
         const auto numSequences = encodeMBLayout.GetNumSequences();
-         //get frame number, phone number and output label number
+        //get frame number, phone number and output label number
         const size_t numRows = encodeInputMatrix.GetNumRows();
         const size_t numCols = encodeInputMatrix.GetNumCols();
-        
+
         //size_t maxFrameNum = numCols / numParallelSequences;
-        
+
         std::vector<size_t> uttFrameBeginIdx;
         // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
         std::vector<size_t> uttFrameNum;
         // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
         std::vector<size_t> uttFrameToChanInd;
         //size_t totalcol = 0;
-        
+
         uttFrameNum.clear();
         uttFrameToChanInd.clear();
         uttFrameBeginIdx.clear();
-        
+
         uttFrameNum.reserve(numSequences);
         uttFrameToChanInd.reserve(numSequences);
         uttFrameBeginIdx.reserve(numSequences);
-        
+
         //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
         size_t seqId = 0; //frame
         size_t totalframenum = 0;
@@ -310,19 +315,19 @@ public:
         }
 
         //resize output
-        outputlabels.resize(numSequences);        
-            
+        outputlabels.resize(numSequences);
+
         // forward prop encoder
         ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes);
         ForwardProp(encodeOutputNodes[0]);
         encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
-
+        //encodeOutput.Print("encode output");
         size_t vocabSize = bm.GetNumRows();
         size_t blankId = vocabSize - 1;
 
-        for (size_t uttID = 0; uttID < numSequences; uttID ++)
+        for (size_t uttID = 0; uttID < numSequences; uttID++)
         {
-            
+
             lmin.Resize(vocabSize, 1);
             lmin.SetValue(0.0);
             lmin(blankId, 0) = 1;
@@ -333,14 +338,15 @@ public:
             ForwardProp(decodeOutputNodes[0]);
             greedyOutputMax.Resize(vocabSize, 2000);
             size_t lmt = 0;
+            outputlabels[uttID].push_back(blankId) ;
             for (size_t t = 0; t < uttFrameNum[uttID]; t++)
             {
-                
+
                 decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value()));
+                //decodeOutput.Print("decode output");
                 //auto edNode = PlusNode->As<PlusBroadcastNode<ElemType>>();
                 size_t tinMB = (t + uttFrameBeginIdx[uttID]) * numParallelSequences + uttFrameToChanInd[uttID];
                 sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(tinMB, 1), decodeOutput);
-                
 
                 //sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput);
                 (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
@@ -352,6 +358,7 @@ public:
                 decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
                 tempMatrix.AssignProductOf(Wm, true, decodeOutput, false);
                 decodeOutput.AssignSumOf(tempMatrix, bm);
+                //decodeOutput.Print("final output");
                 decodeOutput.VectorMax(maxIdx, maxVal, true);
                 size_t maxId = (size_t)(maxIdx.Get00Element());
                 if (maxId != blankId)
@@ -370,65 +377,19 @@ public:
                     lmt++;
                 }
             }
-            
+
             if (lmt == 0)
             {
-                outputlabels[uttID].push_back(blankId);                
+                outputlabels[uttID].push_back(blankId);
             }
             //break;
         }
 
         //decode
 
-        //make new MBLayout for decoder input
-        MBLayoutPtr newdecodeMBLayout = make_shared<MBLayout>();
-        std::vector<std::pair<size_t, size_t>> placement;
-        std::vector<MBLayout::SequenceInfo> sequences;
-        for (size_t i = 0; i < outputlabels.size(); ++i)
-            sequences.push_back({i, SIZE_MAX, 0, outputlabels[i].size()});
-
-        std::vector<size_t> rowAllocations;
-        newdecodeMBLayout->InitAsPackedSequences(sequences, placement, rowAllocations);
-        
-        decodeInputMatrix.Resize(vocabSize, newdecodeMBLayout->GetNumCols() * newdecodeMBLayout->GetNumParallelSequences());
-        decodeInputMatrix.SetValue(0.0f);
-        //fill the decoder input
-        const auto& sequenceInfos = newdecodeMBLayout->GetAllSequences();
-        for (int i = 0; i < sequenceInfos.size(); ++i)
-        {
-            const auto& sequenceInfo = sequenceInfos[i];
-            // skip gaps
-            if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
-            {
-                continue;
-            }
-
-            //const auto& sequence = batch[sequenceInfo.seqId];
-            size_t numSamples = outputlabels[i].size();
-            assert(numSamples == sequenceInfo.GetNumTimeSteps());
-
-            
-            // Iterate over all samples in the sequence, keep track of the sample offset (which is especially
-            // important for sparse input, where offset == number of preceding nnz elements).
-            for (size_t sampleIndex = 0;sampleIndex < numSamples; ++sampleIndex)
-            {
-                // Compute the offset into the destination buffer, using the layout information
-                // to get the column index corresponding to the given sample.
-                size_t destinationOffset = newdecodeMBLayout->GetColumnIndex(sequenceInfo, sampleIndex) ;
-                // verify that there's enough space left in the buffer to fit a full sample.
-                //assert(destinationOffset <= buffer.m_size - sampleSize);
-                //auto* destination = bufferPtr + destinationOffset;
-                decodeInputMatrix.SetValue(outputlabels[i][sampleIndex], destinationOffset, 1.0f);
-            }
-        }
-
-        //copy the new MBLayout
-        decodeMBLayout.CopyFrom(newdecodeMBLayout);
-         
         // clean up
     }
 
- 
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
     void ResetEvalTimeStamps();
     void SetEvalTimeStampsOutdatedWithRegardToAll();
@@ -472,9 +433,16 @@ private:
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
     void CollectInputAndLearnableParametersRec(const ComputationNodeBasePtr& node, set<ComputationNodeBasePtr>& visited, list<ComputationNodeBasePtr>& inputs, list<ComputationNodeBasePtr>& learnableParameters);
     void ResetMBLayouts();
-    bool IsCompiled() const { return m_isCompiled; }
-    bool AreMatricesAllocated() const { return m_areMatricesAllocated; }
+    bool IsCompiled() const
+    {
+        return m_isCompiled;
+    }
+    bool AreMatricesAllocated() const
+    {
+        return m_areMatricesAllocated;
+    }
     void VerifyIsCompiled(const char* where) const;
+
 public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
@@ -524,7 +492,7 @@ public:
         }
         else // this creates a subset of the global eval order of all nodes that rootNode depends on
         {
-            auto rawTraversalForRoot = ::CNTK::PostOrderTraversal(graph, { rootNode });// traverse to find the set (we ignore the order)
+            auto rawTraversalForRoot = ::CNTK::PostOrderTraversal(graph, {rootNode}); // traverse to find the set (we ignore the order)
             set<ComputationNodeBasePtr> rawSet(rawTraversalForRoot.begin(), rawTraversalForRoot.end());
             for (const auto& node : GetEvalOrder(nullptr)) // iterate over global one and pull out everything that is included in the set for rootNode
             {
@@ -598,7 +566,10 @@ public:
 
     // Note: this is also used to copy MBLayouts into our existing MBLayout instance, which is a somewhat questionable design.
     // BUGBUG (Issue #95): This function will conflict once we have multiple input layouts in the network.
-    const MBLayoutPtr& GetMBLayoutPtrOfNetwork() { return m_pMBLayoutOfNetwork; }
+    const MBLayoutPtr& GetMBLayoutPtrOfNetwork()
+    {
+        return m_pMBLayoutOfNetwork;
+    }
 
     // determine the actual MB size from the feature nodes
     // This returns max number of columns over the feature nodes.
@@ -738,7 +709,10 @@ public:
     // environment properties
     // -----------------------------------------------------------------------
 
-    ComputationEnvironment& Environment() const { return *m_environment; }
+    ComputationEnvironment& Environment() const
+    {
+        return *m_environment;
+    }
 
     // -----------------------------------------------------------------------
     // functions to pass on specific SGD options to nodes
@@ -748,9 +722,9 @@ public:
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
 
     static void SetIRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
-    
+
     template <class ElemType>
-    static void SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, 
+    static void SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode,
                                                    double normalizationTimeConstant, double& prevNormalizationTimeConstant,
                                                    double blendTimeConstant, double& prevBlendTimeConstant);
 
@@ -798,7 +772,7 @@ public:
         return m_namedCriterionNodes[criterionNodeName];
     }
 
-    std::vector<ComputationNodeBasePtr> OutputNodesByName(const std::vector<std::wstring>& outputNodeNames) 
+    std::vector<ComputationNodeBasePtr> OutputNodesByName(const std::vector<std::wstring>& outputNodeNames)
     {
         std::vector<ComputationNodeBasePtr> outputNodes;
 
@@ -846,25 +820,49 @@ public:
 
         return evalOrder;
     }
-    const std::vector<ComputationNodeBasePtr>& RootNodes()           const { return m_allRoots; }
+    const std::vector<ComputationNodeBasePtr>& RootNodes() const
+    {
+        return m_allRoots;
+    }
 
     // these are specified as such by the user
-    const std::vector<ComputationNodeBasePtr>& FeatureNodes()        const { return m_featureNodes   ; }
-    const std::vector<ComputationNodeBasePtr>& LabelNodes()          const { return m_labelNodes     ; }
-    const std::vector<ComputationNodeBasePtr>& FinalCriterionNodes() const { return m_criterionNodes ; }
-    const std::vector<ComputationNodeBasePtr>& EvaluationNodes()     const { return m_evaluationNodes; }
-    const std::vector<ComputationNodeBasePtr>& OutputNodes()         const { return m_outputNodes    ; }
+    const std::vector<ComputationNodeBasePtr>& FeatureNodes() const
+    {
+        return m_featureNodes;
+    }
+    const std::vector<ComputationNodeBasePtr>& LabelNodes() const
+    {
+        return m_labelNodes;
+    }
+    const std::vector<ComputationNodeBasePtr>& FinalCriterionNodes() const
+    {
+        return m_criterionNodes;
+    }
+    const std::vector<ComputationNodeBasePtr>& EvaluationNodes() const
+    {
+        return m_evaluationNodes;
+    }
+    const std::vector<ComputationNodeBasePtr>& OutputNodes() const
+    {
+        return m_outputNodes;
+    }
 
 private:
     // determine the node-group array by the group tag
     std::vector<ComputationNodeBasePtr>& GetNodeGroup(const std::wstring& groupTag)
     {
-        if      (groupTag == L"feature"   ) return m_featureNodes;
-        else if (groupTag == L"label"     ) return m_labelNodes;
-        else if (groupTag == L"criterion" ) return m_criterionNodes;
-        else if (groupTag == L"evaluation") return m_evaluationNodes;
-        else if (groupTag == L"output"    ) return m_outputNodes;
-        else InvalidArgument("Invalid group tag '%ls', must be one of 'feature', 'label', 'criterion', 'evaluation', 'output'.", groupTag.c_str());
+        if (groupTag == L"feature")
+            return m_featureNodes;
+        else if (groupTag == L"label")
+            return m_labelNodes;
+        else if (groupTag == L"criterion")
+            return m_criterionNodes;
+        else if (groupTag == L"evaluation")
+            return m_evaluationNodes;
+        else if (groupTag == L"output")
+            return m_outputNodes;
+        else
+            InvalidArgument("Invalid group tag '%ls', must be one of 'feature', 'label', 'criterion', 'evaluation', 'output'.", groupTag.c_str());
     }
 
 public:
@@ -999,9 +997,8 @@ public:
     template <typename T>
     std::list<ComputationNodeBasePtr> GetNodesWithType(const ComputationNodeBasePtr& rootNode = nullptr) const
     {
-        std::function<bool(const ComputationNodeBasePtr&)> predicate = [](const ComputationNodeBasePtr& node) 
-        { 
-            return (dynamic_cast<T*>(node.get()) != nullptr); 
+        std::function<bool(const ComputationNodeBasePtr&)> predicate = [](const ComputationNodeBasePtr& node) {
+            return (dynamic_cast<T*>(node.get()) != nullptr);
         };
 
         return GetNodesWhere(predicate, rootNode);
@@ -1071,7 +1068,6 @@ public:
     // -----------------------------------------------------------------------
 
 protected:
-
     // Copy constructor, should never be called.
 #pragma warning(push)
 #pragma warning(disable : 4702) // this function is flagged but unclear why
@@ -1126,16 +1122,16 @@ public:
     // Returns false if the node was already there.
     // If the network already contains a different node with the same name,
     //  - then the function will fail
-    //  - unless 'makeUniqueName=true', in which case it will patch the node's name to a unique name. 
+    //  - unless 'makeUniqueName=true', in which case it will patch the node's name to a unique name.
     bool AddNodeToNetIfNotYet(const ComputationNodeBasePtr& node, bool makeUniqueName = false)
     {
         auto result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
         // if there's already one under this name, it better be node
         // unless user requested 'makeUniqueName', then we will modify the name
-        while (!result.second/*if already there*/ && result.first->second != node)
+        while (!result.second /*if already there*/ && result.first->second != node)
         {
             if (!makeUniqueName || node->NodeName().find_first_of(L".[]") == wstring::npos)
-                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation (%d vs. %d).", node->NodeName().c_str(), node->OperationName().c_str(), (int)node->m_uniqueNumericId, (int)result.first->second->m_uniqueNumericId);
+                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation (%d vs. %d).", node->NodeName().c_str(), node->OperationName().c_str(), (int) node->m_uniqueNumericId, (int) result.first->second->m_uniqueNumericId);
             node->SetName(L"_" + node->NodeName());
             result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
         }
@@ -1153,6 +1149,7 @@ public:
         m_nameToNodeMap.erase(node->NodeName());
         return node;
     }
+
 public:
     // -----------------------------------------------------------------------
     // evaluation
@@ -1179,19 +1176,28 @@ public:
     {
         m_environment->trackGapNans = enable;
     }
-    bool GetTrackGapNaNs() const { return m_environment->trackGapNans; }
+    bool GetTrackGapNaNs() const
+    {
+        return m_environment->trackGapNans;
+    }
 
     void SetIsV2Library(bool enable)
     {
         m_environment->isV2Library = enable;
     }
-    bool GetIsV2Library() const { return m_environment->isV2Library; }
+    bool GetIsV2Library() const
+    {
+        return m_environment->isV2Library;
+    }
 
     void SetTraceLevel(int traceLevel)
     {
         m_environment->traceLevel = traceLevel;
     }
-    int TraceLevel() const { return m_environment->traceLevel; }
+    int TraceLevel() const
+    {
+        return m_environment->traceLevel;
+    }
 
     // call EnableNodeTracing() on the given nodes for real, category, and sparse printing
     void EnableNodeTracing(const std::vector<std::wstring>& traceNodeNamesReal,
@@ -1200,12 +1206,12 @@ public:
     {
         for (const auto& name : traceNodeNamesReal)
             if (NodeNameExists(name))
-                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/true,  /*asCategoryLabel=*/false, /*asSparse=*/false);
+                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/true, /*asCategoryLabel=*/false, /*asSparse=*/false);
             else
                 fprintf(stderr, "EnableNodeTracing: No node named '%ls'; skipping\n", name.c_str());
         for (const auto& name : traceNodeNamesCategory)
             if (NodeNameExists(name))
-                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/false, /*asCategoryLabel=*/true,  /*asSparse=*/false);
+                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/false, /*asCategoryLabel=*/true, /*asSparse=*/false);
             else
                 fprintf(stderr, "EnableNodeTracing: No node named '%ls'; skipping\n", name.c_str());
         for (const auto& name : traceNodeNamesSparse)
@@ -1455,11 +1461,11 @@ private:
     // node groups
     // These are specified by the user by means of tags or explicitly listing the node groups.
     // TODO: Are these meant to be disjoint?
-    std::vector<ComputationNodeBasePtr> m_featureNodes;    // tag="feature"
-    std::vector<ComputationNodeBasePtr> m_labelNodes;      // tag="label"
-    std::vector<ComputationNodeBasePtr> m_criterionNodes;  // tag="criterion"
-    std::vector<ComputationNodeBasePtr> m_evaluationNodes; // tag="evaluation"
-    std::vector<ComputationNodeBasePtr> m_outputNodes;     // tag="output"
+    std::vector<ComputationNodeBasePtr> m_featureNodes;             // tag="feature"
+    std::vector<ComputationNodeBasePtr> m_labelNodes;               // tag="label"
+    std::vector<ComputationNodeBasePtr> m_criterionNodes;           // tag="criterion"
+    std::vector<ComputationNodeBasePtr> m_evaluationNodes;          // tag="evaluation"
+    std::vector<ComputationNodeBasePtr> m_outputNodes;              // tag="output"
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups() // get all groups to allow to iterate over all of them ...continue
     {
         return vector<std::vector<ComputationNodeBasePtr>*>{&m_featureNodes, &m_labelNodes, &m_criterionNodes, &m_evaluationNodes, &m_outputNodes};
@@ -1487,7 +1493,7 @@ private:
     std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> m_allSEQNodes; // [loopId] cached set of SEQTraversalFlowControlNodes to allow sharing and idempotence of FormRecurrentLoops()
 
     // cache for evaluation ordering:
-    bool m_isCompiled; // CompileNetwork has been called
+    bool m_isCompiled;           // CompileNetwork has been called
     bool m_areMatricesAllocated; // AllocateAllMatrices has been called
 
     // cached network iterations
@@ -1509,7 +1515,8 @@ private:
         std::vector<ComputationNodeBasePtr> m_roots;
 
     public:
-        ExecutionGraph(const std::vector<ComputationNodeBasePtr>& roots) : m_roots(roots) {}
+        ExecutionGraph(const std::vector<ComputationNodeBasePtr>& roots)
+            : m_roots(roots) {}
 
         std::vector<ComputationNodeBasePtr> Predecessors(const ComputationNodeBasePtr& node) const override
         {
@@ -1525,10 +1532,23 @@ private:
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 
 // helper that returns 'float' or 'double' depending on ElemType
-template <typename ElemType> static inline const wchar_t* ElemTypeName();
-template <> /*static*/ inline const wchar_t* ElemTypeName<float>()  { return L"float"; }
-template <> /*static*/ inline const wchar_t* ElemTypeName<double>() { return L"double"; }
-template <> /*static*/ inline const wchar_t* ElemTypeName<half>() { return L"half"; }
+template <typename ElemType>
+static inline const wchar_t* ElemTypeName();
+template <>
+/*static*/ inline const wchar_t* ElemTypeName<float>()
+{
+    return L"float";
+}
+template <>
+/*static*/ inline const wchar_t* ElemTypeName<double>()
+{
+    return L"double";
+}
+template <>
+/*static*/ inline const wchar_t* ElemTypeName<half>()
+{
+    return L"half";
+}
 
 // The following emits the class and enables the BaseMatrix<double> to be available (used by EvalDll)
 // The corresponding Matrix<float> is emitted in the SetDeviceId function above.
@@ -1539,4 +1559,6 @@ template class Matrix<half>;
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
 //  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
 
-} } }
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft
