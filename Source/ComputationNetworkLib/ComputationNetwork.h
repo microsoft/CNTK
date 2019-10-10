@@ -265,9 +265,9 @@ public:
         std::map<std::wstring, void*, nocase_compare> outputMatrices;
         Matrix<ElemType> encodeOutput(deviceid);
         Matrix<ElemType> decodeOutput(deviceid), Wm(deviceid), bm(deviceid), tempMatrix(deviceid);
-        Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
+        Matrix<ElemType> greedyOutput(deviceid);
         Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
-        Matrix<ElemType> lmin(deviceid);
+        
         Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
         bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
         const size_t numIterationsBeforePrintingProgress = 100;
@@ -324,21 +324,22 @@ public:
         //encodeOutput.Print("encode output");
         size_t vocabSize = bm.GetNumRows();
         size_t blankId = vocabSize - 1;
-
+        ElemType* lmin;
+        decodeInputMatrix.Resize(vocabSize, 1);
+        lmin = new ElemType[vocabSize];
         for (size_t uttID = 0; uttID < numSequences; uttID++)
         {
-
-            lmin.Resize(vocabSize, 1);
-            lmin.SetValue(0.0);
-            lmin(blankId, 0) = 1;
+            memset(lmin, 0, vocabSize* sizeof(ElemType));
+            lmin[blankId] = 1.0;
+            decodeInputMatrix.SetColumn(lmin, 0);
             decodeMBLayout.Init(1, 1);
-            std::swap(decodeInputMatrix, lmin);
+            //std::swap(decodeInputMatrix, lmin);
             decodeMBLayout.AddSequence(NEW_SEQUENCE_ID, 0, 0, 2000);
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
             ForwardProp(decodeOutputNodes[0]);
-            greedyOutputMax.Resize(vocabSize, 2000);
+            //greedyOutputMax.Resize(vocabSize, 2000);
             size_t lmt = 0;
-            outputlabels[uttID].push_back(blankId) ;
+            outputlabels[uttID].push_back(blankId);
             for (size_t t = 0; t < uttFrameNum[uttID]; t++)
             {
 
@@ -364,11 +365,9 @@ public:
                 if (maxId != blankId)
                 {
                     outputlabels[uttID].push_back(maxId);
-                    lmin.Resize(vocabSize, 1);
-                    lmin.SetValue(0.0);
-                    lmin(maxId, 0) = 1.0;
-                    greedyOutputMax.SetColumn(lmin, lmt);
-                    std::swap(decodeInputMatrix, lmin);
+                    memset(lmin, 0, vocabSize * sizeof(ElemType));
+                    lmin[maxId] = 1.0;
+                    decodeInputMatrix.SetColumn(lmin, 0);
                     decodeMBLayout.Init(1, 1);
                     decodeMBLayout.AddSequence(NEW_SEQUENCE_ID, 0, -1 - lmt, 1999 - lmt);
                     ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
@@ -382,9 +381,17 @@ public:
             {
                 outputlabels[uttID].push_back(blankId);
             }
+
+            //pring decoding output for debug
+            /*fprintf(stderr, "frame num: %d ", (int) uttFrameNum[uttID]);
+            for (size_t i = 0; i < outputlabels[uttID].size(); i++)
+            {
+                fprintf(stderr, "%d ", (int) outputlabels[uttID][i]);
+            }
+            fprintf(stderr, "\n");*/
             //break;
         }
-
+        delete lmin;
         //decode
 
         // clean up
