@@ -1338,9 +1338,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 newdecodeMBLayout->InitAsPackedSequences(sequences, placement, rowAllocations);
                 size_t vocabSize = lminput.GetMatrix<ElemType>().GetNumRows();
                 lminput.GetMatrix<ElemType>().Resize(vocabSize, newdecodeMBLayout->GetNumCols());
-                lminput.GetMatrix<ElemType>().SetValue(0.0f);
-                Matrix<ElemType> lmin(lminput.GetMatrix<ElemType>().GetDeviceId());
-                lmin.Resize(vocabSize, 1);
+                //lminput.GetMatrix<ElemType>().SetValue(0.0f);
+                Matrix<ElemType> lmin(CPUDEVICE);
+                lmin.Resize(vocabSize, newdecodeMBLayout->GetNumCols());
+                lmin.SetValue(0.0);
                 //fill the decoder input
                 const auto& sequenceInfos = newdecodeMBLayout->GetAllSequences();
                 for (int i = 0; i < sequenceInfos.size(); ++i)
@@ -1363,16 +1364,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         // Compute the offset into the destination buffer, using the layout information
                         // to get the column index corresponding to the given sample.
                         size_t destinationOffset = newdecodeMBLayout->GetColumnIndex(sequenceInfo, sampleIndex);
-                        lmin.SetValue(0.0);
-                        lmin(outputlabels[i][sampleIndex], 0) = 1.0;
-                
-                        // verify that there's enough space left in the buffer to fit a full sample.
-                        //assert(destinationOffset <= buffer.m_size - sampleSize);
-                        //auto* destination = bufferPtr + destinationOffset;
-                        lminput.GetMatrix<ElemType>().SetColumn(lmin, destinationOffset);
+                        lmin(outputlabels[i][sampleIndex], destinationOffset) = 1.0;
+                        
                     }
                 }
 
+                lminput.GetMatrix<ElemType>().SetValue(lmin);
                 //copy the new MBLayout
                 lminput.pMBLayout->CopyFrom(newdecodeMBLayout, true);
                 //StreamBatch batch;
