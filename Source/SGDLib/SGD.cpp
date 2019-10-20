@@ -7,7 +7,7 @@
 //
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
-//#define __PROFILE__
+#define __PROFILE__
 
 #include <cmath>
 const double Pi = acos(-1.0);

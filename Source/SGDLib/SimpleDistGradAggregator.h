@@ -6,7 +6,7 @@
 
 #pragma once
 
-//#define __PROFILE__
+#define __PROFILE__
 
 #undef _SCL_SECURE_NO_WARNINGS
 #include "Constants.h"

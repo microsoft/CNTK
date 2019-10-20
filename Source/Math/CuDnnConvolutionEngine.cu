@@ -26,7 +26,7 @@ const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
 // CNTK with cuDNN by default uses NCHW formats for both inputs/outputs and kernels.
 #define TENSOR_FORMAT CUDNN_TENSOR_NCHW
 #define FILTER_FORMAT CUDNN_TENSOR_NCHW
-//#define __PROFILE__
+#define __PROFILE__
 
 
 namespace Microsoft { namespace MSR { namespace CNTK {
