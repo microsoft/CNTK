@@ -56,6 +56,7 @@ namespace CNTK {
         uint32_t m_firstFrame;     // start frame
         uint32_t m_numFrames;      // number of frames
         ClassIdType m_classId;     // numeric state id
+        uint32_t m_wordbegin;        // word begin mark
 
     public:
         // Parses format with original HTK state align MLF format and state list and builds an MLFFrameRange.
@@ -64,6 +65,10 @@ namespace CNTK {
         ClassIdType ClassId() const { return m_classId;    }
         uint32_t FirstFrame() const { return m_firstFrame; }
         uint32_t NumFrames()  const { return m_numFrames;  }
+        uint32_t wordBegin() const
+        {
+            return m_wordbegin;
+        }
 
         // Note: preserving logic of the old speech reader.
         // Parse the time range.
@@ -73,7 +78,7 @@ namespace CNTK {
         static std::pair<size_t, size_t> ParseFrameRange(const std::vector<boost::iterator_range<char*>>& tokens, size_t byteOffset);
         void Save(unsigned int firstFrame, unsigned int numFrames, size_t uid);
     private:
-        void VerifyAndSaveRange(const std::pair<size_t, size_t>& frameRange, size_t uid, size_t byteOffset);
+        void VerifyAndSaveRange(const std::pair<size_t, size_t>& frameRange, size_t uid, size_t byteOffset, bool wordbegin);
     };
 
     // Utility class for parsing an MLF utterance.

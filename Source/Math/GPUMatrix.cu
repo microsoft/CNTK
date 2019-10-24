@@ -4694,6 +4694,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         size_t numSequences = uttInfo.GetNumCols();
 
         GPUMatrix<ElemType> matrixPhoneSeq(prob.GetComputeDeviceId());
+        GPUMatrix<ElemType> matrixPhoneBoundary(prob.GetComputeDeviceId());
 
         ElemType* gpuDerivativeValue;
         CUDA_CALL(cudaMalloc((void**) &gpuDerivativeValue, 4 * totalUTNum * sizeof(ElemType)));
@@ -4708,8 +4709,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         //phoneSeq.Print("before convert");
         dim3 block_tail_c((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
         matrixPhoneSeq.Resize(maxPhoneNum, numSequences);
+        matrixPhoneBoundary.Resize(maxPhoneNum, numSequences);
+        //phoneBoundary.Print("phone boundary");
         _convertPhoneSeq<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneSeq.Data(), matrixPhoneSeq.Data(), uttInfo.Data(), numSequences, numPhoneParallelSequences, maxPhoneNum);
-        //matrixPhoneSeq.Print("phones seq");
+        _convertPhoneBoundary<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneBoundary.Data(), matrixPhoneBoundary.Data(), uttInfo.Data(), numSequences, numPhoneParallelSequences, maxPhoneNum, delayConstraint);
+        //phoneBoundary.Print("phone boundary");
+        //    matrixPhoneBoundary.Print("phones seq");
         //uttInfo.Print("uttinf");
 
         //cal alpha and beta
@@ -4719,14 +4724,14 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         {
             dim3 block_tail3((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (tu + DEFAULT_THREAD_PER_DIM) / DEFAULT_THREAD_PER_DIM);
 
-            _assignRNNTAlphaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob.Data(), alpha.Data(), matrixPhoneSeq.Data(),
+            _assignRNNTAlphaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob.Data(), alpha.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                               uttInfo.Data(), tu,
                                                                               maxPhoneNum, totalPhoneNum, blankTokenId, numSequences);
         }
         for (int tu = maxTU - 1; tu >= 0; tu--)
         {
             dim3 block_tail3((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (tu + DEFAULT_THREAD_PER_DIM) / DEFAULT_THREAD_PER_DIM);
-            _assignRNNTBetaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob.Data(), beta.Data(), matrixPhoneSeq.Data(),
+            _assignRNNTBetaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob.Data(), beta.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                              uttInfo.Data(), tu,
                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, numSequences);
         }
@@ -4791,7 +4796,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
     if (combineMode == 1)
         RequireSize(BS, totalcol);
     else if (combineMode == 2)
-        RequireSize(BS*2, totalcol);
+        RequireSize(BS * 2, totalcol);
     else
         LogicError("unsupported combine mode.");
     // int maxPhoneNum = in2.GetNumCols() / numPhoneParallelSequences;
@@ -4992,12 +4997,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
     {
         if (Idx == 0)
         {
-            RequireSize(nRow/2, maxFrameNum * numParallelSequences);
+            RequireSize(nRow / 2, maxFrameNum * numParallelSequences);
             nCol = maxFrameNum;
         }
         else
         {
-            RequireSize(nRow/2, maxPhoneNum * numPhoneParallelSequences);
+            RequireSize(nRow / 2, maxPhoneNum * numPhoneParallelSequences);
             nCol = maxPhoneNum;
         }
     }

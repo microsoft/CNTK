@@ -1576,7 +1576,7 @@ template class CustomProxyOpNode<float>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class RNNTNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<5>
+class RNNTNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<6>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -1587,12 +1587,12 @@ class RNNTNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<5>
 
 public:
     RNNTNode(DEVICEID_TYPE deviceId, const wstring& name, size_t blankTokenId = SIZE_MAX, int delayConstraint = -1)
-        : Base(deviceId, name), m_blankTokenId(blankTokenId)
+        : Base(deviceId, name), m_blankTokenId(blankTokenId), m_delayConstraint(delayConstraint)
     {
     }
 
     RNNTNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RNNTNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"))
+        : RNNTNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"), configp->Get(L"delayConstraint"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -1726,7 +1726,7 @@ public:
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
 
         // compute CTC score
-        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(),  *m_outputDensity, *m_maxIndexes,  m_blankTokenId);
+        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), *m_outputDensity, *m_maxIndexes, InputRef(5).Value(), m_blankTokenId, m_delayConstraint);
        // m_outputDensity->Print("gradient");
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
