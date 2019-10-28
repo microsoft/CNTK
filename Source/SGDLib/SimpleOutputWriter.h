@@ -394,7 +394,7 @@ public:
         vector<pair<size_t, ElemType>> datapair;
         typedef vector<pair<size_t, ElemType>>::value_type ValueType;
         ElemType* probdata = prob.CopyToArray();
-        
+
         for (size_t n = 0; n < prob.GetNumRows(); n++)
         {
             datapair.push_back(ValueType(n, probdata[n]));
@@ -431,8 +431,10 @@ public:
         return true;
     }
 
-    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode, 
-        ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes, Matrix<ElemType>& Wm, Matrix<ElemType>& Wm2, Matrix<ElemType>& bm)
+
+    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode,
+                       ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes, Matrix<ElemType>& Wm, Matrix<ElemType>& bm)
+
     {
         /*auto edNode = PlusNode->As<PlusBroadcastNode<ElemType>>();
         if (edNode->getCombineMode() == 1)
@@ -456,14 +458,14 @@ public:
         m_net->ForwardPropFromTo(Plusnodes, Plustransnodes);
         decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
         tempMatrix.AssignProductOf(Wm, true, decodeOutput, false);
-        tempMatrix2.AssignProductOf(Wm2, true, tempMatrix, false);
-        decodeOutput.AssignSumOf(tempMatrix2, bm);
+        decodeOutput.AssignSumOf(tempMatrix, bm);
+
         //decodeOutput.VectorMax(maxIdx, maxVal, true);
-        decodeOutput.InplaceLogSoftmax(true);      
-        
+        decodeOutput.InplaceLogSoftmax(true);
     }
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
-                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
+                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68,
+        size_t rightsplice = 20, size_t encoderdim = 640)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -509,11 +511,12 @@ public:
         //get merged input
         ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
         ComputationNodeBasePtr PlusTransNode = m_net->GetNodeFromName(outputNodeNames[3]);
-        
+
         ComputationNodeBasePtr WmNode = m_net->GetNodeFromName(outputNodeNames[4]);
-        ComputationNodeBasePtr Wm2Node = m_net->GetNodeFromName(outputNodeNames[5]);
-        ComputationNodeBasePtr bmNode = m_net->GetNodeFromName(outputNodeNames[6]);
-        
+
+
+        ComputationNodeBasePtr bmNode = m_net->GetNodeFromName(outputNodeNames[5]);
+
 
         //StreamMinibatchInputs PlusinputMatrices =
         std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
@@ -539,9 +542,7 @@ public:
         //for merged RNNT node
         Matrix<ElemType> Wm(deviceid), Wm2(deviceid), bm(deviceid);
         Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
-        Wm2.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(Wm2Node)->Value()));
         bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
-
 
         //encodeOutput.GetDeviceId
         const size_t numIterationsBeforePrintingProgress = 100;
@@ -550,12 +551,51 @@ public:
         vector<Sequence> CurSequences, nextSequences;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
         {
+
             //encode forward prop for whole utterance
             ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes);
-
+            /*auto InputMBLayout = encodeInputNodes[0]->GetMBLayout();
+            int rightsplice = InputMBLayout->RightSplice();
+            fprintf(stderr, "right splice :%d\n", rightsplice);
+            InputMBLayout->setRightSplice(20);*/
             //forward prop encoder network
             m_net->ForwardProp(encodeOutputNodes[0]);
-            encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
+
+            //do truncated
+            size_t step = rightsplice;
+            size_t curt = 0;
+            
+            auto feainput = encodeInputMatrices.begin();
+            Matrix<ElemType> FeaMatrix(deviceid);
+            //auto InputTruncatedMatrix = ;
+            FeaMatrix.SetValue(feainput->second.GetMatrix<ElemType>());
+            
+            size_t frameNum = FeaMatrix.GetNumCols();
+            size_t numRows = FeaMatrix.GetNumRows();
+
+            encodeOutput.Resize(encoderdim, frameNum);
+            while (curt < frameNum)
+            {
+                m_net->ResetEvalTimeStamps();
+                //m_net->ResetMBLayouts();
+                size_t actualSize = min(curt+step*2, frameNum );
+                feainput->second.GetMatrix<ElemType>().Resize(numRows, actualSize);
+                feainput->second.pMBLayout->Init(1, actualSize);
+                feainput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, actualSize);
+                feainput->second.GetMatrix<ElemType>().SetValue(FeaMatrix.ColumnSlice(0, actualSize));
+                ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes);
+                
+                m_net->ForwardProp(encodeOutputNodes[0]);
+                Matrix<ElemType> encodeOutputSlice = (&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value())->ColumnSlice(curt, min(step, frameNum - curt));
+                
+                encodeOutput.SetColumnSlice(encodeOutputSlice, curt, min(step, frameNum - curt));
+                curt += step;
+                //
+            }
+
+            
+            
+            //encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
             //encodeOutput.Print("encodeoutput");
             dataReader.DataEnd();
 
@@ -622,7 +662,9 @@ public:
                     deleteSeq(*maxSeq);
                     CurSequences.erase(maxSeq);
                     forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
-                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes,Wm, Wm2, bm);
+
+                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm);
+
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
@@ -684,9 +726,8 @@ public:
                         if (topN[iLabel].first != blankId)
                         {
                             extendSeq(seqK, topN[iLabel].first, newlogP);
-                            CurSequences.push_back(seqK);    
+                            CurSequences.push_back(seqK);
                         }
-                        
                     }
                     vector<pair<size_t, ElemType>>().swap(topN);
                     //delete topN;
