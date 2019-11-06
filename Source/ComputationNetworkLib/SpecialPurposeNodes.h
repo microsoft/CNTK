@@ -580,8 +580,8 @@ public:
 #endif
         //gammaFromLatticeTeacher.Print("teacher gamma");
         //gammaFromLattice.Print("student gamma");
-        inputGradientValues.AssignScaledDifference(gradientValues.Get00Element(), gammaFromLattice, gammaFromLatticeTeacher, inputGradientValues);
-        
+        //inputGradientValues.AssignScaledDifference(gradientValues.Get00Element(), gammaFromLattice, gammaFromLatticeTeacher, inputGradientValues);
+        inputGradientValues.AssignScaledDifference(gradientValues.Get00Element(), gammaFromLatticeTeacher, gammaFromLattice, inputGradientValues);
         //inputGradientValues.DropFrame(inputFunctionValues, gammaFromLattice, (ElemType) frameDropThresh);
 #if DUMPOUTPUT
         inputGradientValues.Print("SequenceWithSoftmaxNode Partial-Right");
