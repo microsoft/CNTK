@@ -184,6 +184,9 @@
     <ClInclude Include="..\Common\Include\EnvironmentUtil.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
+    <ClInclude Include="..\SGDLib\JointOutputWriter.h">
+      <Filter>from SGDLib\SGD</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">

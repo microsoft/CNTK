@@ -17,6 +17,7 @@
 #include "Config.h"
 #include "SimpleEvaluator.h"
 #include "SimpleOutputWriter.h"
+#include "JointOutputWriter.h"
 #include "Criterion.h"
 #include "BestGpu.h"
 #include "ScriptableObjects.h"
@@ -65,8 +66,8 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
     int traceLevel = config(L"traceLevel", 0);
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
     size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
-    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
-    size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
+    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t) SIZE_MAX);
+    size_t numSubminiBatches = config(L"numSubminibatches", (size_t) 1);
 
     bool enableDistributedMBReading = config(L"distributedMBReading", GetDistributedMBReadingDefaultValue(config, reader));
 
@@ -75,11 +76,11 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
     let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"evalNodeNames", evalNodeNamesVector);
 
     // set tracing flags
-    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+    net->EnableNodeTracing(config(L"traceNodeNamesReal", ConfigParameters::Array(stringargvector())),
                            config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
-                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
+                           config(L"traceNodeNamesSparse", ConfigParameters::Array(stringargvector())));
 
-    SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult, 
+    SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
                                    firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
     eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
@@ -131,8 +132,8 @@ void DoCrossValidate(const ConfigParameters& config)
     int traceLevel = config(L"traceLevel", 0);
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
     size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
-    size_t maxSamplesInRAM    = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
-    size_t numSubminiBatches  = config(L"numSubminibatches", (size_t)1);
+    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t) SIZE_MAX);
+    size_t numSubminiBatches = config(L"numSubminibatches", (size_t) 1);
 
     ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
@@ -170,7 +171,7 @@ void DoCrossValidate(const ConfigParameters& config)
         // BUGBUG: ^^ Should use GetModelFromConfig()
 
         SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
-            firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
+                                       firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
 
         fprintf(stderr, "Model %ls --> \n", cvModelPath.c_str());
         auto evalErrors = eval.Evaluate(&cvDataReader, evalNodeNamesVector, mbSize[0], epochSize);
@@ -184,7 +185,7 @@ void DoCrossValidate(const ConfigParameters& config)
         LogicError("No model is evaluated.");
 
     vector<double> minErrors;
-    vector<int>    minErrIds;
+    vector<int> minErrIds;
     vector<EpochCriterion> evalErrors = cvErrorResults[0];
     for (int i = 0; i < evalErrors.size(); ++i)
     {
@@ -221,6 +222,12 @@ template void DoCrossValidate<double>(const ConfigParameters& config);
 template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config)
 {
+    if (config(L"joint", "false"))
+    {
+        DoWriteOutputJoint<ElemType>(config);
+        return;
+    }
+
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
 
@@ -240,9 +247,9 @@ void DoWriteOutput(const ConfigParameters& config)
     let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"outputNodeNames", outputNodeNamesVector);
 
     // set tracing flags
-    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+    net->EnableNodeTracing(config(L"traceNodeNamesReal", ConfigParameters::Array(stringargvector())),
                            config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
-                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
+                           config(L"traceNodeNamesSparse", ConfigParameters::Array(stringargvector())));
 
     SimpleOutputWriter<ElemType> writer(net, 1);
 
@@ -256,15 +263,14 @@ void DoWriteOutput(const ConfigParameters& config)
         string indictfile = writerConfig(L"DictFile", L"");
         ElemType thresh = writerConfig(L"Thresh", 0.68f);
         DataWriter testDataWriter(writerConfig);
-       // ConfigParameters
+        // ConfigParameters
         if (decodeType == 0)
             writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         else if (decodeType == 1)
             writer.WriteOutput_greedy(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         else if (decodeType == 2)
-            writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile,thresh);
-            //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
-        
+            writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh);
+        //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
     }
     else if (config.Exists("outputPath"))
     {
@@ -280,3 +286,90 @@ void DoWriteOutput(const ConfigParameters& config)
 
 template void DoWriteOutput<float>(const ConfigParameters& config);
 template void DoWriteOutput<double>(const ConfigParameters& config);
+
+// ===========================================================================
+// DoWriteOutputJoint() - implements joint decoding and system combination
+// ===========================================================================
+
+template <typename ElemType>
+void DoWriteOutputJoint(const ConfigParameters& config)
+{
+    ConfigParameters readerConfig(config(L"reader"));
+    readerConfig.Insert("randomize", "None"); // we don't want randomization when output results
+
+    DataReader testDataReader(readerConfig);
+
+    ConfigArray minibatchSize = config(L"minibatchSize", "2048");
+    intargvector mbSize = minibatchSize;
+
+    size_t epochSize = config(L"epochSize", "0");
+    if (epochSize == 0)
+    {
+        epochSize = requestDataSize;
+    }
+
+    vector<wstring> outputNodeNamesVector;
+
+    size_t numModels = config(L"numModels", "1");
+
+    vector<ComputationNetworkPtr> nets(numModels);
+    vector<ElemType> combination_weights(numModels);
+    for (int i = 0; i < numModels; i++)
+    {
+        wstringstream modelPathToken;
+        modelPathToken << L"modelPath" << i;
+        nets[i] = GetModelFromConfig<ConfigParameters, ElemType>(config, L"outputNodeNames", outputNodeNamesVector, modelPathToken.str());
+
+        // set tracing flags
+        nets[i]->EnableNodeTracing(config(L"traceNodeNamesReal", ConfigParameters::Array(stringargvector())),
+                                   config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+                                   config(L"traceNodeNamesSparse", ConfigParameters::Array(stringargvector())));
+
+		wstringstream combinationWeightToken;
+        combinationWeightToken << L"combinationWeight" << i;
+        combination_weights[i] = (ElemType) config(combinationWeightToken.str().c_str(), 1.0 / ((ElemType) numModels));
+    }
+
+	int combination_method = config(L"combinationMethod", 0);
+
+    JointOutputWriter<ElemType> writer(nets, combination_weights, 1, combination_method);
+
+    if (config.Exists("writer"))
+    {
+        ConfigParameters writerConfig(config(L"writer"));
+        bool writerUnittest = writerConfig(L"unittest", "false");
+        size_t decodeType = writerConfig(L"decode_type", 0);
+        size_t decodeBeam = writerConfig(L"decode_beam", 10);
+        size_t decodeExpandBeam = writerConfig(L"decode_expand_beam", 20);
+        string indictfile = writerConfig(L"DictFile", L"");
+        ElemType thresh = writerConfig(L"Thresh", 0.68f);
+        DataWriter testDataWriter(writerConfig);
+        // ConfigParameters
+        if (decodeType == 0)
+            InvalidArgument("decode_type=0 has not yet been implemented for Joint decoding");
+        //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
+        else if (decodeType == 1)
+            InvalidArgument("decode_type=1 has not yet been implemented for Joint decoding");
+            //writer.WriteOutput_greedy(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
+        else if (decodeType == 2)
+        {
+			writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh);
+		}
+        else
+            InvalidArgument("Invalid decode_type");
+    }
+    else if (config.Exists("outputPath"))
+    {
+        wstring outputPath = config(L"outputPath");
+        //bool writeSequenceKey = config(L"writeSequenceKey", false);
+        WriteFormattingOptions formattingOptions(config);
+        //bool nodeUnitTest = config(L"nodeUnitTest", "false");
+        InvalidArgument("WriteOutput has not yet been implemented for Joint decoding");
+        //writer.WriteOutput(testDataReader, mbSize[0], outputPath, outputNodeNamesVector, formattingOptions, epochSize, nodeUnitTest, writeSequenceKey);
+    }
+    else
+        InvalidArgument("write command: You must specify either 'writer'or 'outputPath'");
+}
+
+template void DoWriteOutputJoint<float>(const ConfigParameters& config);
+template void DoWriteOutputJoint<double>(const ConfigParameters& config);

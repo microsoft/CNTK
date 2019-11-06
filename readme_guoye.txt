@@ -1,0 +1,1 @@
+call "%VS2017INSTALLDIR%\VC\Auxiliary\Build\vcvarsall.bat" amd64 -vcvars_ver=14.11

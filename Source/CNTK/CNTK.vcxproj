@@ -186,6 +186,7 @@
     <ClInclude Include="..\Readers\ReaderLib\StringToIdMap.h" />
     <ClInclude Include="..\Readers\ReaderLib\Transformer.h" />
     <ClInclude Include="..\SGDLib\DataReaderHelpers.h" />
+    <ClInclude Include="..\SGDLib\JointOutputWriter.h" />
     <ClInclude Include="..\SGDLib\SGD.h" />
     <ClInclude Include="..\SGDLib\SimpleEvaluator.h" />
     <ClInclude Include="..\SGDLib\SimpleOutputWriter.h" />

@@ -11,7 +11,6 @@
 #include "CommonMatrix.h"
 #include "ComputationNetwork.h"
 
-
 // ===========================================================================
 // implementations of all the commands of CNTK
 // ===========================================================================
@@ -31,7 +30,7 @@ template <class ConfigRecordType, typename ElemType>
 function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRecordType& config);
 
 template <class ConfigRecordType, typename ElemType>
-ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, const std::wstring& outputNodeNameConfig, std::vector<std::wstring>& outputNodeNamesVector);
+ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, const std::wstring& outputNodeNameConfig, std::vector<std::wstring>& outputNodeNamesVector, std::wstring modelPathToken = L"modelPath");
 
 // training (TrainActions.cpp)
 template <class ConfigRecordType, typename ElemType>
@@ -53,6 +52,10 @@ void DoCrossValidate(const ConfigParameters& config);
 template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config);
 
+// Joint decoding, system combination
+template <typename ElemType>
+void DoWriteOutputJoint(const ConfigParameters& config);
+
 // misc (OtherActions.cpp)
 template <typename ElemType>
 void DoCreateLabelMap(const ConfigParameters& config);
@@ -66,5 +69,5 @@ void DoTopologyPlot(const ConfigParameters& config);
 // special purpose (SpecialPurposeActions.cpp)
 template <typename ElemType>
 void DoConvertFromDbn(const ConfigParameters& config);
-template<typename ElemType>
+template <typename ElemType>
 void DoExportToDbn(const ConfigParameters& config);

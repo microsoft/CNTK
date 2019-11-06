@@ -148,7 +148,7 @@ static void PatchOutputNodes(const ComputationNetworkPtr& net, const ConfigArray
 }
 
 template <class ConfigRecordType, typename ElemType>
-ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, const wstring& outputNodeNamesConfig, vector<wstring>& outputNodeNamesVector)
+ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, const wstring& outputNodeNamesConfig, vector<wstring>& outputNodeNamesVector, wstring modelPathToken)
 {
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
 
@@ -173,7 +173,7 @@ ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, const w
     }
     else // no NetworkBuilder given: load from 'modelPath'
     {
-        wstring modelPath = config(L"modelPath");
+        wstring modelPath = config(modelPathToken);
 
         // We don't use CreateFromFile() here since the user might specify OutputNodeNames in the config.
         // By not compiling the network before patching, we avoid double log output for validation.
@@ -192,5 +192,5 @@ template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<Script
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ScriptableObjects::IConfigRecord, double>(const ScriptableObjects::IConfigRecord& config);
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ConfigParameters, float>(const ConfigParameters& config);
 template function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory<ConfigParameters, double>(const ConfigParameters& config);
-template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, float> (const ConfigParameters& config, const wstring&, vector<wstring>& outputNodeNamesVector);
-template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, double>(const ConfigParameters& config, const wstring&, vector<wstring>& outputNodeNamesVector);
+template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, float>(const ConfigParameters& config, const wstring&, vector<wstring>& outputNodeNamesVector, wstring modelPathToken);
+template ComputationNetworkPtr GetModelFromConfig<ConfigParameters, double>(const ConfigParameters& config, const wstring&, vector<wstring>& outputNodeNamesVector, wstring modelPathToken);

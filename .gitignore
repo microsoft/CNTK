@@ -352,3 +352,6 @@ cscope.out
 /Source/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-operators-ml.pb.cc
 /Source/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-ml.pb.h
 /Source/CNTKv2LibraryDll/proto/onnx/onnx/protobuf/onnx-ml.pb.cc
+
+profiler*
+profiler/
