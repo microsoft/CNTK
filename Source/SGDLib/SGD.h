@@ -48,7 +48,8 @@ enum class AdaptationRegType : int
 {
     None,
     KL,
-    TS
+    TS,
+    SS
 };
 
 enum class GradientsUpdateType : int
@@ -268,6 +269,9 @@ protected:
     double m_gradientCheckSigDigit;
 
     ConfigArray m_outputNodeNames;
+    float SS_weight;
+    float SS_maxweight;
+
     bool m_doUnitTest;
 
     bool m_useAllDataForPreComputedNode;

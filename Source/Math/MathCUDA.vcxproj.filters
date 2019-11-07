@@ -137,7 +137,6 @@
     <ClInclude Include="half.hpp">
       <Filter>GPU</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
@@ -184,8 +183,5 @@
     <Filter Include="GPU\RNN">
       <UniqueIdentifier>{da8154d0-d1f4-44a5-b64a-5e955ead56fa}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="MathCUDA.rc" />
   </ItemGroup>
 </Project>

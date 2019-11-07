@@ -30,7 +30,7 @@
 #include <chrono>
 #include <unordered_map>
 #include <set>
-
+#include <random>
 #include "ComputationGraphAlgorithms.h"
 
 namespace Microsoft
@@ -267,7 +267,7 @@ public:
         Matrix<ElemType> decodeOutput(deviceid), Wm(deviceid), bm(deviceid), tempMatrix(deviceid);
         Matrix<ElemType> greedyOutput(deviceid);
         Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
-        
+
         Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
         bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
         const size_t numIterationsBeforePrintingProgress = 100;
@@ -329,7 +329,7 @@ public:
         lmin = new ElemType[vocabSize];
         for (size_t uttID = 0; uttID < numSequences; uttID++)
         {
-            memset(lmin, 0, vocabSize* sizeof(ElemType));
+            memset(lmin, 0, vocabSize * sizeof(ElemType));
             lmin[blankId] = 1.0;
             decodeInputMatrix.SetColumn(lmin, 0);
             decodeMBLayout.Init(1, 1);
@@ -396,6 +396,235 @@ public:
 
         // clean up
     }
+
+    template <class ElemType>
+    void RNNT_decode_greedy_SS(const std::vector<std::wstring>& outputNodeNames, Matrix<ElemType>& encodeOutput, MBLayoutPtr& encodeMBLayout,
+                               Matrix<ElemType>& decodeInputMatrix, MBLayoutPtr& decodeMBLayout, std::vector<ComputationNodeBasePtr> decodeinputNodes, float groundTruthWeight /*mt19937_64 randGen*/)
+    {
+        if (outputNodeNames.size() == 0)
+            fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
+        std::vector<ComputationNodeBasePtr> outputNodes = OutputNodesByName(outputNodeNames);
+        //AllocateAllMatrices({}, outputNodes, nullptr);
+
+        //prediction related nodes
+        std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin() + 1, outputNodeNames.begin() + 2);
+        std::vector<ComputationNodeBasePtr> decodeOutputNodes = OutputNodesByName(decodeOutputNodeNames);
+        // std::vector<ComputationNodeBasePtr> decodeinputNodes = InputNodesForOutputs(decodeOutputNodeNames);
+
+        //joint nodes
+        ComputationNodeBasePtr PlusNode = GetNodeFromName(outputNodeNames[2]);
+        ComputationNodeBasePtr PlusTransNode = GetNodeFromName(outputNodeNames[3]);
+        ComputationNodeBasePtr WmNode = GetNodeFromName(outputNodeNames[4]);
+        ComputationNodeBasePtr bmNode = GetNodeFromName(outputNodeNames[5]);
+        std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
+        Plusnodes.push_back(PlusNode);
+        Plustransnodes.push_back(PlusTransNode);
+
+        FormEvalOrder(PlusTransNode);
+        //start eval
+        //StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
+        //auto lminput = decodeinputMatrices.begin();
+        size_t deviceid = decodeInputMatrix.GetDeviceId();
+        std::map<std::wstring, void*, nocase_compare> outputMatrices;
+        Matrix<ElemType> decodeOutput(deviceid), Wm(deviceid), bm(deviceid), tempMatrix(deviceid);
+        Matrix<ElemType> greedyOutput(deviceid);
+        Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
+
+        Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
+        bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
+        const size_t numIterationsBeforePrintingProgress = 100;
+
+        //get MBlayer of encoder input
+        size_t numParallelSequences = encodeMBLayout->GetNumParallelSequences();
+        size_t numParallelPhoneSequences = decodeMBLayout->GetNumParallelSequences();
+        const auto numSequences = encodeMBLayout->GetNumSequences();
+
+        std::vector<size_t> uttFrameBeginIdx, uttPhoneBeginIdx;
+        // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttFrameNum, uttPhoneNum;
+        // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttFrameToChanInd, uttPhoneToChanInd;
+        //size_t totalcol = 0;
+
+        uttFrameNum.clear();
+        uttFrameToChanInd.clear();
+        uttFrameBeginIdx.clear();
+
+        uttFrameNum.reserve(numSequences);
+        uttFrameToChanInd.reserve(numSequences);
+        uttFrameBeginIdx.reserve(numSequences);
+
+        uttPhoneNum.clear();
+        uttPhoneToChanInd.clear();
+        uttPhoneBeginIdx.clear();
+
+        uttPhoneNum.reserve(numSequences);
+        uttPhoneToChanInd.reserve(numSequences);
+        uttPhoneBeginIdx.reserve(numSequences);
+
+        //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
+        size_t seqId = 0; //frame
+        size_t totalframenum = 0;
+        for (const auto& seq : encodeMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttFrameToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttFrameBeginIdx.push_back(seq.tBegin);
+            uttFrameNum.push_back(numFrames);
+            totalframenum += numFrames;
+        }
+
+        //get utt information for prediction input....
+        seqId = 0; //frame
+
+        for (const auto& seq : decodeMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttPhoneToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttPhoneBeginIdx.push_back(seq.tBegin);
+            uttPhoneNum.push_back(numFrames);
+        }
+
+        //get phone sequene
+        CNTK::Matrix<ElemType> maxIndex(deviceid), maxValue(deviceid);
+        decodeInputMatrix.VectorMax(maxIndex, maxValue, true);
+        maxIndex.TransferToDeviceIfNotThere(CPUDEVICE);
+
+        //backup decoding input matrix and MBlayout
+        MBLayoutPtr decodebackupMBlayout;
+        decodebackupMBlayout = make_shared<MBLayout>();
+        decodebackupMBlayout->CopyFrom(decodeMBLayout);
+
+        Matrix<ElemType> decodeInputMatrixBackup(deviceid);
+        decodeInputMatrixBackup.SetValue(decodeInputMatrix);
+
+        std::vector<std::vector<size_t>> phoneSeqs;
+        phoneSeqs.resize(numSequences);
+        for (size_t utt = 0; utt < numSequences; utt++)
+        {
+            //phoneSeqs[utt].resize(uttPhoneNum[utt]);
+            for (size_t u = 0; u < uttPhoneNum[utt]; u++)
+            {
+                size_t uID = (u + uttPhoneBeginIdx[utt]) * numParallelPhoneSequences + uttPhoneToChanInd[utt];
+                phoneSeqs[utt].push_back((size_t)(maxIndex(0, uID)));
+            }
+        }
+        //resize output
+        //outputlabels.resize(numSequences);
+
+        //forward prop prediction step by step
+        /*FrameRangeIteration range(decodeMBLayout, 1);
+        auto t = range.begin();
+        ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+        ForwardProp(decodeOutputNodes[0], t);
+        t++;
+        for (; t != range.end(); t++)
+        {
+            auto colrange = ColumnRangeWithMBLayoutFor(1, t, decodeMBLayout);
+            
+            ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+            ForwardProp(decodeOutputNodes[0], t);
+        }*/
+        //encodeOutput.Print("encode output");
+
+        size_t vocabSize = bm.GetNumRows();
+        size_t blankId = vocabSize - 1;
+        ElemType* lmin;
+        decodeInputMatrix.Resize(vocabSize, 1);
+        lmin = new ElemType[vocabSize];
+        for (size_t uttID = 0; uttID < numSequences; uttID++)
+        {
+            memset(lmin, 0, vocabSize * sizeof(ElemType));
+            lmin[blankId] = 1.0;
+            decodeInputMatrix.SetColumn(lmin, 0);
+            decodeMBLayout->Init(1, 1);
+            //std::swap(decodeInputMatrix, lmin);
+            decodeMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 2000);
+            ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+            ForwardProp(decodeOutputNodes[0]);
+            //greedyOutputMax.Resize(vocabSize, 2000);
+            size_t lmt = 0;
+            //outputlabels[uttID].push_back(blankId);
+            for (size_t t = 0; t < uttFrameNum[uttID]; t++)
+            {
+
+                decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value()));
+                //decodeOutput.Print("decode output");
+                //auto edNode = PlusNode->As<PlusBroadcastNode<ElemType>>();
+                size_t tinMB = (t + uttFrameBeginIdx[uttID]) * numParallelSequences + uttFrameToChanInd[uttID];
+                sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(tinMB, 1), decodeOutput);
+
+                //sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), decodeOutput);
+                (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
+                ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
+                auto PlusMBlayout = PlusNode->GetMBLayout();
+                PlusMBlayout->Init(1, 1);
+                PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+                ForwardPropFromTo(Plusnodes, Plustransnodes);
+                decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+                tempMatrix.AssignProductOf(Wm, true, decodeOutput, false);
+                decodeOutput.AssignSumOf(tempMatrix, bm);
+                //decodeOutput.Print("final output");
+                decodeOutput.VectorMax(maxIdx, maxVal, true);
+                size_t maxId = (size_t)(maxIdx.Get00Element());
+
+                if (maxId != blankId)
+                {
+                    size_t rand1 = randGen();
+
+                    if (rand1 > groundTruthWeight) //use groundtruth
+                        maxId = phoneSeqs[uttID][lmt + 1];
+
+                    //outputlabels[uttID].push_back(maxId);
+                    memset(lmin, 0, vocabSize * sizeof(ElemType));
+                    lmin[maxId] = 1.0;
+
+                    if (rand1 <= groundTruthWeight) //use decoding result
+                    {
+                        if (maxId != phoneSeqs[uttID][lmt + 1])
+                        {
+
+                            fprintf(stderr, "rand %zu\n", rand1);
+                        fprintf(stderr, "uttid: %zu, framenu:%zu, phoneid %zu, labelID %zu\n", uttID, uttFrameNum[uttID], lmt + 1, maxId);
+                        for (size_t u = 0; u < phoneSeqs[uttID].size(); u++)
+                            fprintf(stderr, "phoneid:%zu ", phoneSeqs[uttID][u]);
+                        fprintf(stderr, "\n");
+                        }
+                        size_t uInMB = (lmt + 1 + uttPhoneBeginIdx[uttID]) * numParallelPhoneSequences + uttPhoneToChanInd[uttID];
+                        decodeInputMatrixBackup.SetColumn(lmin, uInMB);
+                    }
+                    decodeInputMatrix.SetColumn(lmin, 0);
+                    decodeMBLayout->Init(1, 1);
+                    decodeMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, -1 - lmt, 1999 - lmt);
+                    ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+                    //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+                    ForwardProp(decodeOutputNodes[0]);
+                    lmt++;
+                }
+                if (lmt + 1 >= phoneSeqs[uttID].size())
+                    break;
+            }
+        }
+
+        decodeInputMatrix.SetValue(decodeInputMatrixBackup);
+        //decodeInputMatrix.Print("after ss");
+        decodeMBLayout->CopyFrom(decodebackupMBlayout);
+        delete lmin;
+    }
+
+    mt19937_64 randGen;
 
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
     void ResetEvalTimeStamps();
