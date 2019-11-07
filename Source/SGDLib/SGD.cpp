@@ -121,7 +121,7 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
 
     ComputationNetworkPtr refNet;
     m_needAdaptRegularization = m_adaptationRegType != AdaptationRegType::None && m_adaptationRegWeight > 0;
-    if (m_needAdaptRegularization)
+    if (m_needAdaptRegularization && m_adaptationRegType != AdaptationRegType::TS && m_adaptationRegType != AdaptationRegType::SS)
     {
         LOGPRINTF(stderr, "Load reference Network From the original model file %ls.\n", origModelFileName.c_str());
         refNet = ComputationNetwork::CreateFromFile<ElemType>(deviceId, origModelFileName);
@@ -721,6 +721,25 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             //DataReaderHelpers::
 
             //StreamBatch batch;
+        }
+        else if (m_adaptationRegType == AdaptationRegType::SS)
+        {
+            if (m_outputNodeNames.size() > 0)
+            {
+
+                for (wstring name : m_outputNodeNames)
+                {
+                    if (!net->NodeNameExists(name))
+                    {
+                        fprintf(stderr, "PatchOutputNodes: No node named '%ls'; skipping\n", name.c_str());
+                        continue;
+                    }
+                    outputNodeNamesVector.push_back(name);
+                    let& node = net->GetNodeFromName(name);
+                    net->AddToNodeGroup(L"output", node);
+                }
+                //net->CompileNetwork();
+            }
         }
         totalMBsSeen += TrainOneEpoch(net,
                                       refNet,
@@ -1365,7 +1384,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         // to get the column index corresponding to the given sample.
                         size_t destinationOffset = newdecodeMBLayout->GetColumnIndex(sequenceInfo, sampleIndex);
                         lmin(outputlabels[i][sampleIndex], destinationOffset) = 1.0;
-                        
                     }
                 }
 
@@ -1374,7 +1392,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 lminput.pMBLayout->CopyFrom(newdecodeMBLayout, true);
                 //StreamBatch batch;
             }
-
             // do forward and back propagation
 
             // We optionally break the minibatch into sub-minibatches.
@@ -1395,6 +1412,47 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                 // compute eval node first since when gradient is computed the forward function values
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
+                if (m_adaptationRegType == AdaptationRegType::SS)
+                {
+                    //net->CompileNetwork();
+                    std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
+                    std::vector<ComputationNodeBasePtr> encodeOutputNodes = net->OutputNodesByName(encodeOutputNodeNames);
+                    net->FormEvalOrder(encodeOutputNodes[0]);
+                    //net->CollectInputAndLearnableParameters(encodeOutputNodes[0]);
+                    std::list<ComputationNodeBasePtr> InputNodesList = net->InputNodes(criterionNodes[0]);
+                    std::vector<std::wstring> encodeInputNodeNames(outputNodeNamesVector.begin() + 6, outputNodeNamesVector.begin() + 7);
+                    std::vector<ComputationNodeBasePtr> encodeInputNodes = net->OutputNodesByName(encodeInputNodeNames);
+                    *encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
+
+                    //get decode input matrix
+                    std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
+                    std::vector<ComputationNodeBasePtr> decodeOutputNodes = net->OutputNodesByName(decodeOutputNodeNames);
+                    net->FormEvalOrder(decodeOutputNodes[0]);
+                    net->FormNestedNetwork(decodeOutputNodes[0]);
+                    //net->CollectInputAndLearnableParameters(decodeOutputNodes[0]);
+                    std::vector<std::wstring> decodeInputNodeNames(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
+                    std::vector<ComputationNodeBasePtr> decodeinputNodes = net->OutputNodesByName(decodeInputNodeNames);
+                    *decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
+
+                    //form eval order for RELU
+
+                    auto reffeainput = (*encodeInputMatrices).begin();
+                    auto encodeMBLayout = reffeainput->second.pMBLayout;
+                    auto reflminput = (*decodeinputMatrices).begin();
+                    auto decodeMBLayout = reflminput->second.pMBLayout;
+
+                    net->ForwardProp(encodeOutputNodes);
+
+                    Matrix<ElemType> encodeOutput(net->GetDeviceId());
+                    encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
+
+                    net->RNNT_decode_greedy_SS(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, SIZE_MAX*min(SS_maxweight, numMBsRun * SS_weight));
+                    //net->BumpEvalTimeStamp(decodeinputNodes);
+                    //net->FormEvalOrder(forwardPropRoots[0]);
+                    net->ResetEvalTimeStamps();
+                    //net->ForwardPropFromTo(decodeinputNodes, forwardPropRoots);
+                }
+                //else
                 net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
 
                 // ===========================================================
@@ -2995,6 +3053,10 @@ static AdaptationRegType ParseAdaptationRegType(const wstring& s)
         return AdaptationRegType::None;
     else if (EqualCI(s, L"kl") || EqualCI(s, L"klReg"))
         return AdaptationRegType::KL;
+    else if (EqualCI(s, L"ts"))
+        return AdaptationRegType::TS;
+    else if (EqualCI(s, L"ss"))
+        return AdaptationRegType::SS;
     else
         InvalidArgument("ParseAdaptationRegType: Invalid Adaptation Regularization Type. Valid values are (none | kl)");
 }
@@ -3207,6 +3269,11 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     // gradient check setup
     m_doGradientCheck = configSGD(L"gradientcheck", false);
     m_gradientCheckSigDigit = configSGD(L"sigFigs", 6.0); // TODO: why is this a double?
+
+    //RNNT TS
+    m_outputNodeNames = configSGD(L"OutputNodeNames", ConfigArray(""));
+    SS_weight = configSGD(L"SS_weight", 0.0f);
+    SS_maxweight = configSGD(L"SS_maxweight", 0.0f);
 
     if (m_doGradientCheck && sizeofElemType != sizeof(double))
     {

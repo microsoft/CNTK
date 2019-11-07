@@ -47,7 +47,9 @@ enum class LearningRateSearchAlgorithm : int
 enum class AdaptationRegType : int
 {
     None,
-    KL
+    KL,
+    TS,
+    SS
 };
 
 enum class GradientsUpdateType : int
@@ -265,6 +267,10 @@ protected:
 
     bool m_doGradientCheck;
     double m_gradientCheckSigDigit;
+
+    ConfigArray m_outputNodeNames;
+    float SS_weight;
+    float SS_maxweight;
 
     bool m_doUnitTest;
 
