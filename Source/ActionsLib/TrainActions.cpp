@@ -195,7 +195,31 @@ void DoAdapt(const ConfigParameters& config)
     SGD<ElemType> sgd(configSGD);
 
     sgd.InitMPI(MPIWrapper::GetInstance());
-    sgd.Adapt(origModelFileName, refNodeName, dataReader.get(), cvDataReader.get(), deviceId, makeMode);
+
+    //for RNNT TS
+    int startEpoch = sgd.DetermineStartEpoch(makeMode);
+    if (startEpoch == sgd.GetMaxEpochs())
+    {
+        LOGPRINTF(stderr, "No further training is necessary.\n");
+        return;
+    }
+    wstring modelFileName =sgd.GetModelNameForEpoch(int(startEpoch) - 1);
+    bool loadNetworkFromCheckpoint = startEpoch >= 0;
+    if (loadNetworkFromCheckpoint)
+        LOGPRINTF(stderr, "\nStarting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
+    else 
+        LOGPRINTF(stderr, "\nCreating virgin network.\n");
+
+    // determine the network-creation function
+    // We have several ways to create that network.
+    function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn;
+
+    createNetworkFn = GetNetworkFactory<ConfigParameters, ElemType>(config);
+
+    // create or load from checkpoint
+    shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+
+    sgd.Adapt(net, loadNetworkFromCheckpoint, origModelFileName, refNodeName, dataReader.get(), cvDataReader.get(), deviceId, makeMode);
 }
 
 template void DoAdapt<float>(const ConfigParameters& config);

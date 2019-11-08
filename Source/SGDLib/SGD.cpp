@@ -90,7 +90,7 @@ void SGD<ElemType>::Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE devi
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
+void SGD<ElemType>::Adapt(shared_ptr<ComputationNetwork> net, bool networkLoadedFromCheckpoint, wstring origModelFileName, wstring refNodeName,
                           IDataReader* trainSetDataReader,
                           IDataReader* validationSetDataReader,
                           const DEVICEID_TYPE deviceId, const bool makeMode)
@@ -102,7 +102,7 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
         return;
     }
 
-    ComputationNetworkPtr net;
+    /*ComputationNetworkPtr net;
     bool networkLoadedFromCheckpoint = false;
     if (startEpoch >= 0)
     {
@@ -115,7 +115,7 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
     {
         LOGPRINTF(stderr, "Load Network From the original model file %ls.\n", origModelFileName.c_str());
         net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, origModelFileName);
-    }
+    }*/
 
     startEpoch = max(startEpoch, 0);
 
@@ -125,6 +125,11 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
     {
         LOGPRINTF(stderr, "Load reference Network From the original model file %ls.\n", origModelFileName.c_str());
         refNet = ComputationNetwork::CreateFromFile<ElemType>(deviceId, origModelFileName);
+    }
+    else if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::TS)
+    {
+        refNet = make_shared<ComputationNetwork>(deviceId);
+        refNet->Read<ElemType>(origModelFileName);
     }
 
     ComputationNodeBasePtr refNode;
@@ -649,32 +654,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         EpochCriterion epochCriterion; // criterion values are returned in this
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
-        totalMBsSeen += TrainOneEpoch(net,
-                                      refNet,
-                                      refNode,
-                                      i,
-                                      m_epochSize,
-                                      trainSetDataReader,
-                                      learnRatePerSample,
-                                      chosenMinibatchSize,
-                                      featureNodes,
-                                      labelNodes,
-                                      criterionNodes,
-                                      evaluationNodes,
-                                      inputMatrices,
-                                      learnableNodes, smoothedGradients, smoothedCounts,
-                                      epochCriterion, epochEvalErrors,
-                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, startEpoch);
-        totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
-
-
-        timer.Stop();
-        double epochTime = timer.ElapsedSeconds();
-
-        if (m_useEvalCriterionControlLR && epochEvalErrors.size() > 0)
-            lrControlCriterion = epochEvalErrors[0].Average();
-        else
-            lrControlCriterion = epochCriterion.Average();
 
         //RNNT TS
         StreamMinibatchInputs decodeinputMatrices, encodeInputMatrices;
@@ -1065,7 +1044,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
         m_pASGDHelper.reset();
 } // namespace CNTK
->>>>>>> 1f90dcb... TS try1
+
 
 // -----------------------------------------------------------------------
 // TrainOneEpoch() -- train one epoch
@@ -1093,9 +1072,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const size_t maxNumberOfSamples,
                                     const size_t totalMBsSeenBefore,
                                     ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter,
-                                    const int startEpoch)
+                                    const int startEpoch,
+                                    const std::vector<std::wstring>& outputNodeNamesVector,
+                                    StreamMinibatchInputs* encodeInputMatrices,
+                                    StreamMinibatchInputs* decodeinputMatrices)
 {
     PROFILE_SCOPE(profilerEvtMainEpoch);
+    //for schedule sampling
+    std::random_device rd;
+    std::mt19937_64 randGen{rd()};
 
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
@@ -2415,12 +2400,12 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                                                     std::string prefixMsg,
                                                     const size_t maxNumOfSamples)
 {
-    TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
-                  trainSetDataReader, learnRatePerSample, minibatchSize, featureNodes,
-                  labelNodes, criterionNodes, evaluationNodes,
-                  inputMatrices, learnableNodes, smoothedGradients, smoothedCounts,
-                  /*out*/ epochCriterion, /*out*/ epochEvalErrors,
-                  "  " + prefixMsg, maxNumOfSamples); // indent log msg by 2 (that is 1 more than the Finished message below)
+    //TrainOneEpoch(net, refNet, refNode, epochNumber, epochSize,
+    //             trainSetDataReader, learnRatePerSample, minibatchSize, featureNodes,
+    //            labelNodes, criterionNodes, evaluationNodes,
+    //           inputMatrices, learnableNodes, smoothedGradients, smoothedCounts,
+    //          /*out*/ epochCriterion, /*out*/ epochEvalErrors,
+    //         "  " + prefixMsg, maxNumOfSamples); // indent log msg by 2 (that is 1 more than the Finished message below)
 
     LOGPRINTF(stderr, " Finished Mini-Epoch[%d]: ", (int) epochNumber + 1);
     epochCriterion.LogCriterion(criterionNodes[0]->NodeName());
