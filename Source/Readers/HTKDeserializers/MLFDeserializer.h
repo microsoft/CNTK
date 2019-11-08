@@ -180,7 +180,9 @@ public:
                     sequencePhoneBoundaries[i] = utterance[i].FirstFrame();
             }
             size_t numberOfSamples = 0;
-            if (m_deserializer.m_squashLabel)
+            if (m_deserializer.m_squashLabel && m_deserializer.m_EOSInEnd)
+                numberOfSamples = utterance.size() + 2;
+            else if (m_deserializer.m_squashLabel)
                 numberOfSamples = utterance.size() + 1;
             else
                 numberOfSamples = sequence.m_numberOfSamples;
@@ -215,7 +217,11 @@ public:
                 fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID));
                 startRange += 1;
             }
-
+            else if (m_deserializer.m_EOSInEnd)
+            {
+                fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID-1));
+                startRange += 1;
+            }
             result.push_back(s);
         }
 
@@ -410,6 +416,7 @@ public:
     bool m_squashLabel;
     size_t m_blankID;
     bool m_blankInFront;
+    bool m_EOSInEnd;
     size_t m_maxLabelLen;
 
     StateTablePtr m_stateTable;

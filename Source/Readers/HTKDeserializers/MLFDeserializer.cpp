@@ -72,7 +72,7 @@ MLFDeserializer::MLFDeserializer(CorpusDescriptorPtr corpus, const ConfigParamet
     m_blankID = labelConfig(L"blankID", g_64MB);
     m_blankInFront = labelConfig(L"blankInFront", true);
     m_maxLabelLen = labelConfig(L"maxLabelLength", g_64MB);
-
+    m_EOSInEnd = labelConfig(L"EOSInEnd", false);
 
     wstring labelMappingFile = labelConfig(L"labelMappingFile", L"");
     InitializeStream(name);
@@ -187,6 +187,7 @@ wstring MLFDeserializer::InitializeReaderParams(const ConfigParameters& cfg, boo
     m_blankID = streamConfig(L"blankID", g_64MB);
     m_blankInFront = streamConfig(L"blankInFront", true);
     m_maxLabelLen = streamConfig(L"maxLabelLength", g_64MB);
+    m_EOSInEnd = streamConfig(L"EOSInEnd", false);
     if (m_frameMode && m_withPhoneBoundaries)
         LogicError("frameMode and phoneBoundaries are mutually exclusive options.");
 
@@ -300,4 +301,4 @@ bool MLFDeserializer::GetSequenceInfoByKey(const SequenceKey& key, SequenceInfo&
     }
     return true;
 }
-}
+} // namespace CNTK
