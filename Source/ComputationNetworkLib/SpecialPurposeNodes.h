@@ -1656,7 +1656,8 @@ public:
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
         //Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, *m_tmpMatrix);
-        Matrix<ElemType>::VectorSum(RNNTDerivative, inputGradientValues, false);
+        Matrix<ElemType>::VectorSum(RNNTDerivative, *m_tmpMatrix, false);
+        inputGradientValues.AddWithScaleOf(gradientValues.Get00Element(), *m_tmpMatrix);
         //inputGradientValues.Print("gradient");
         /*printf("back to F\n");
         if (gradientValues.GetDeviceId() != CPUDEVICE)
@@ -1679,7 +1680,8 @@ public:
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
         //Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, *m_tmpMatrix);
-        inputGradientValues.AssignProductOf(inputValue, false, RNNTDerivative, true);
+        //inputGradientValues.AssignProductOf(inputValue, false, RNNTDerivative, true);
+        inputGradientValues.MultiplyAndWeightedAdd(gradientValues.Get00Element(), inputValue, false, RNNTDerivative, true, 1.0, inputGradientValues);
         //inputGradientValues.Print("gradient");
         /*printf("back to F\n");
         if (gradientValues.GetDeviceId() != CPUDEVICE)
@@ -1702,7 +1704,8 @@ public:
         //m_tmpMatrix->TransferFromDeviceToDevice(CPUDEVICE, InputRef(0).Value().GetDeviceId());
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
         //Matrix<ElemType>::Scale(gradientValues.Get00Element(), RNNTDerivative, *m_tmpMatrix);
-        inputGradientValues.AssignProductOf(inputValue, false, RNNTDerivative, false);
+        //inputGradientValues.AssignProductOf(inputValue, false, RNNTDerivative, false);
+        inputGradientValues.MultiplyAndWeightedAdd(gradientValues.Get00Element(), inputValue, false, RNNTDerivative, false, 1.0, inputGradientValues);
         //inputGradientValues.Print("gradient");
         /*printf("back to F\n");
         if (gradientValues.GetDeviceId() != CPUDEVICE)

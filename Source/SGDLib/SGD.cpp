@@ -1402,7 +1402,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     //net->CompileNetwork();
                     std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
                     std::vector<ComputationNodeBasePtr> encodeOutputNodes = net->OutputNodesByName(encodeOutputNodeNames);
-                    net->FormEvalOrder(encodeOutputNodes[0]);
+                    //net->FormEvalOrder(encodeOutputNodes[0]);
                     //net->CollectInputAndLearnableParameters(encodeOutputNodes[0]);
                     std::list<ComputationNodeBasePtr> InputNodesList = net->InputNodes(criterionNodes[0]);
                     std::vector<std::wstring> encodeInputNodeNames(outputNodeNamesVector.begin() + 6, outputNodeNamesVector.begin() + 7);
@@ -1412,8 +1412,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     //get decode input matrix
                     std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
                     std::vector<ComputationNodeBasePtr> decodeOutputNodes = net->OutputNodesByName(decodeOutputNodeNames);
-                    net->FormEvalOrder(decodeOutputNodes[0]);
-                    net->FormNestedNetwork(decodeOutputNodes[0]);
+                    //net->FormEvalOrder(decodeOutputNodes[0]);
+                    //net->FormNestedNetwork(decodeOutputNodes[0]);
                     //net->CollectInputAndLearnableParameters(decodeOutputNodes[0]);
                     std::vector<std::wstring> decodeInputNodeNames(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
                     std::vector<ComputationNodeBasePtr> decodeinputNodes = net->OutputNodesByName(decodeInputNodeNames);

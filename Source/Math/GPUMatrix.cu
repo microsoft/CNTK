@@ -4877,7 +4877,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
     dim3 block_tail((nRow + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (nCol + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
     in1.PrepareDevice();
     SyncGuard syncGuard;
-    SetValue(0.0);
+    //SetValue(0.0);
     //move necessary resources to GPU
     /*size_t *gpuFrameNum;
     CUDA_CALL(cudaMalloc((void **)&gpuFrameNum, uttNum * sizeof(size_t)));
