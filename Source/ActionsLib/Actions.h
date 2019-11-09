@@ -52,7 +52,7 @@ void DoCrossValidate(const ConfigParameters& config);
 template <typename ElemType>
 void DoWriteOutput(const ConfigParameters& config);
 
-// Joint decoding, system combination
+// Joint decoding, system combination (EvalActions.cpp)
 template <typename ElemType>
 void DoWriteOutputJoint(const ConfigParameters& config);
 

@@ -469,6 +469,8 @@ public:
                     }
 
                     //CombinedOutput.Print(NULL, 0, 10, 0, 1);
+                    //if (t == 10)
+                    //    exit(1);
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels

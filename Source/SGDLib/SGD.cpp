@@ -998,7 +998,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const size_t maxNumberOfSamples,
                                     const size_t totalMBsSeenBefore,
                                     ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter,
-                                    const int startEpoch)
+                                    const int startEpoch,
+									bool doTS,
+									std::vector<ComputationNetworkPtr> teacher_net)
 {
     PROFILE_SCOPE(profilerEvtMainEpoch);
 
