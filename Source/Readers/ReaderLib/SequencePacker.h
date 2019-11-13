@@ -55,9 +55,6 @@ protected:
     size_t m_globalMinibatchSizeInSamples;
 
     //sequences for mutli minibatch
-    Sequences m_sequences; 
-    bool m_readsequences = false;
-    size_t m_sequenceindex = 0;
 
 };
 
