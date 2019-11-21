@@ -419,7 +419,7 @@ public:
         Plusnodes.push_back(PlusNode);
         Plustransnodes.push_back(PlusTransNode);
 
-        FormEvalOrder(PlusTransNode);
+        //FormEvalOrder(PlusTransNode);
         //start eval
         //StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
         //auto lminput = decodeinputMatrices.begin();

@@ -816,7 +816,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 UpdateBestEpochs(vScore, cvSetTrainAndEvalNodes, i, m_criteriaBestEpoch);
             }
 
-
             if (m_useCVSetControlLRIfCVExists)
             {
                 if (m_useEvalCriterionControlLR && vScore.size() > 1)
@@ -1045,7 +1044,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         m_pASGDHelper.reset();
 } // namespace CNTK
 
-
 // -----------------------------------------------------------------------
 // TrainOneEpoch() -- train one epoch
 // -----------------------------------------------------------------------
@@ -1245,6 +1243,32 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     bool noMoreSamplesToProcess = false;
     bool isFirstMinibatch = true;
+    //RNNT SS
+    std::vector<ComputationNodeBasePtr> encodeInputNodes, decodeinputNodes, encodeOutputNodes, decodeOutputNodes;
+    if (m_adaptationRegType == AdaptationRegType::SS)
+    {
+
+        //net->CompileNetwork();
+        std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
+        encodeOutputNodes = net->OutputNodesByName(encodeOutputNodeNames);
+        net->FormEvalOrder(encodeOutputNodes[0]);
+        //net->CollectInputAndLearnableParameters(encodeOutputNodes[0]);
+        std::list<ComputationNodeBasePtr> InputNodesList = net->InputNodes(criterionNodes[0]);
+        std::vector<std::wstring> encodeInputNodeNames(outputNodeNamesVector.begin() + 6, outputNodeNamesVector.begin() + 7);
+        encodeInputNodes = net->OutputNodesByName(encodeInputNodeNames);
+
+        //get decode input matrix
+        std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
+        decodeOutputNodes = net->OutputNodesByName(decodeOutputNodeNames);
+        net->FormEvalOrder(decodeOutputNodes[0]);
+        net->FormNestedNetwork(decodeOutputNodes[0]);
+        //net->CollectInputAndLearnableParameters(decodeOutputNodes[0]);
+        std::vector<std::wstring> decodeInputNodeNames(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
+        decodeinputNodes = net->OutputNodesByName(decodeInputNodeNames);
+
+        ComputationNodeBasePtr PlusTransNode = net->GetNodeFromName(outputNodeNamesVector[3]);
+        net->FormEvalOrder(PlusTransNode);
+    }
     for (;;)
     {
         auto profMinibatch = ProfilerTimeBegin();
@@ -1289,7 +1313,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // TODO: original code did not call this for actualMBSize == 0
         ComputationNetwork::BumpEvalTimeStamp(featureNodes);
         ComputationNetwork::BumpEvalTimeStamp(labelNodes);
-
+        
         if (actualMBSize > 0)
         {
             assert(wasDataRead);
@@ -1314,6 +1338,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
 
             //RNNT TS
+            
             if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::TS && refNet)
             {
                 auto reffeainput = (*encodeInputMatrices).begin();
@@ -1377,11 +1402,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 lminput.pMBLayout->CopyFrom(newdecodeMBLayout, true);
                 //StreamBatch batch;
             }
-            // do forward and back propagation
+            
+                // do forward and back propagation
 
-            // We optionally break the minibatch into sub-minibatches.
-            // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
-            size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
+                // We optionally break the minibatch into sub-minibatches.
+                // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
+                size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
                 if (actualNumSubminibatches > 1)
@@ -1399,24 +1425,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
                 if (m_adaptationRegType == AdaptationRegType::SS)
                 {
-                    //net->CompileNetwork();
-                    std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
-                    std::vector<ComputationNodeBasePtr> encodeOutputNodes = net->OutputNodesByName(encodeOutputNodeNames);
-                    net->FormEvalOrder(encodeOutputNodes[0]);
-                    //net->CollectInputAndLearnableParameters(encodeOutputNodes[0]);
-                    std::list<ComputationNodeBasePtr> InputNodesList = net->InputNodes(criterionNodes[0]);
-                    std::vector<std::wstring> encodeInputNodeNames(outputNodeNamesVector.begin() + 6, outputNodeNamesVector.begin() + 7);
-                    std::vector<ComputationNodeBasePtr> encodeInputNodes = net->OutputNodesByName(encodeInputNodeNames);
+                   
                     *encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
-
-                    //get decode input matrix
-                    std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
-                    std::vector<ComputationNodeBasePtr> decodeOutputNodes = net->OutputNodesByName(decodeOutputNodeNames);
-                    net->FormEvalOrder(decodeOutputNodes[0]);
-                    net->FormNestedNetwork(decodeOutputNodes[0]);
-                    //net->CollectInputAndLearnableParameters(decodeOutputNodes[0]);
-                    std::vector<std::wstring> decodeInputNodeNames(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
-                    std::vector<ComputationNodeBasePtr> decodeinputNodes = net->OutputNodesByName(decodeInputNodeNames);
                     *decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
                     //form eval order for RELU
@@ -1431,7 +1441,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     Matrix<ElemType> encodeOutput(net->GetDeviceId());
                     encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
 
-                    net->RNNT_decode_greedy_SS(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, SIZE_MAX*min(SS_maxweight, numMBsRun * SS_weight));
+                    net->RNNT_decode_greedy_SS(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, SIZE_MAX * min(SS_maxweight, numMBsRun * SS_weight));
                     //net->BumpEvalTimeStamp(decodeinputNodes);
                     //net->FormEvalOrder(forwardPropRoots[0]);
                     net->ResetEvalTimeStamps();
@@ -1584,7 +1594,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     double p_norm = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().FrobeniusNorm();
                     //long m = (long) GetNumElements();
                     totalNorm += p_norm * p_norm;
-
                 }
             }
             totalNorm = sqrt(totalNorm);
