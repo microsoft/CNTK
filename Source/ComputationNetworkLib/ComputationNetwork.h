@@ -543,6 +543,7 @@ public:
         ElemType* lmin;
         decodeInputMatrix.Resize(vocabSize, 1);
         lmin = new ElemType[vocabSize];
+        fprintf(stderr, "inside decoder: before utt loop\n");
         for (size_t uttID = 0; uttID < numSequences; uttID++)
         {
             memset(lmin, 0, vocabSize * sizeof(ElemType));
@@ -556,6 +557,7 @@ public:
             //greedyOutputMax.Resize(vocabSize, 2000);
             size_t lmt = 0;
             //outputlabels[uttID].push_back(blankId);
+            fprintf(stderr, "inside decoder: before frame loop\n");
             for (size_t t = 0; t < uttFrameNum[uttID]; t++)
             {
 
@@ -615,8 +617,9 @@ public:
                 if (lmt + 1 >= phoneSeqs[uttID].size())
                     break;
             }
+            fprintf(stderr, "inside decoder: after frame loop\n");
         }
-
+        fprintf(stderr, "inside decoder: after utt loop\n");
         decodeInputMatrix.SetValue(decodeInputMatrixBackup);
         //decodeInputMatrix.Print("after ss");
         decodeMBLayout->CopyFrom(decodebackupMBlayout);

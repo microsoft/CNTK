@@ -1425,7 +1425,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
                 if (m_adaptationRegType == AdaptationRegType::SS)
                 {
-                   
+                    fprintf(stderr, "before set input\n");
                     *encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
                     *decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
 
@@ -1440,20 +1440,22 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     Matrix<ElemType> encodeOutput(net->GetDeviceId());
                     encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
-
+                    fprintf(stderr, "before decode\n");
                     net->RNNT_decode_greedy_SS(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, SIZE_MAX * min(SS_maxweight, numMBsRun * SS_weight));
                     //net->BumpEvalTimeStamp(decodeinputNodes);
                     //net->FormEvalOrder(forwardPropRoots[0]);
+                    fprintf(stderr, "after decode\n");
                     net->ResetEvalTimeStamps();
                     //net->ForwardPropFromTo(decodeinputNodes, forwardPropRoots);
                 }
                 //else
+                fprintf(stderr, "before forward\n");
                 net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
 
                 // ===========================================================
                 // backprop
                 // ===========================================================
-
+                fprintf(stderr, "before backprop\n");
                 if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                     net->Backprop(criterionNodes[0]);
 
