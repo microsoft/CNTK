@@ -14,7 +14,7 @@ dependencies:
 - pandoc=1.19.2.1
 - pillow=4.0.0=py36_0
 - pip=9.0.1=py36_1
-- python=3.6.0=0
+- python=3.6
 - pyyaml=3.12=py36_0
 - scikit-image=0.12.3=np111py36_1
 - scikit-learn=0.18.1=np111py36_0

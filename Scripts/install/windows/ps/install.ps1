@@ -39,7 +39,7 @@
 
  .PARAMETER PyVersion
  This is an optional parameter and can be used to specify the Python version used in the CNTK Python environment.
- Supported values for this parameter are 27, 35, or 36. The default values is 35 (for a CNTK Python 35 environment).
+ Supported values for this parameter are 35 or 36. The default values is 35 (for a CNTK Python 35 environment).
 
   .PARAMETER WheelBaseUrl
  This is an internal test-only parameter and should be ignored.
@@ -61,7 +61,7 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.3.1-Windows-x86_64",
-    [Parameter(Mandatory=$false)] [ValidateSet("27", "35", "36")] [string] $PyVersion = "35",
+    [Parameter(Mandatory=$false)] [ValidateSet("35", "36")] [string] $PyVersion = "35",
     [Parameter(Mandatory=$false)] [switch] $Execute = $true,
     [Parameter(Mandatory=$false)] [switch] $NoConfirm,
     [Parameter(Mandatory=$false)] [string] $WheelBaseUrl = "https://cntk.ai/PythonWheel")
