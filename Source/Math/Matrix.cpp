@@ -6178,8 +6178,11 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
 
     DISPATCH_MATRIX_ON_FLAG(this,
                             this,
-                            m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
-                            m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
+//                            m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *gamma.m_CPUMatrix, alpha),
+//                            m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *label.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *gamma.m_GPUMatrix, alpha),
+// chaojunl: experimental: swap label and gamma
+                            m_CPUMatrix->AssignSequenceError(hsmoothingWeight, *gamma.m_CPUMatrix, *dnnoutput.m_CPUMatrix, *label.m_CPUMatrix, alpha),
+                            m_GPUMatrix->AssignSequenceError(hsmoothingWeight, *gamma.m_GPUMatrix, *dnnoutput.m_GPUMatrix, *label.m_GPUMatrix, alpha),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
     return *this;
