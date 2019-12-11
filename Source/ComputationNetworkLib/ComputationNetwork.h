@@ -543,7 +543,7 @@ public:
         ElemType* lmin;
         decodeInputMatrix.Resize(vocabSize, 1);
         lmin = new ElemType[vocabSize];
-        fprintf(stderr, "inside decoder: before utt loop\n");
+        //fprintf(stderr, "inside decoder: before utt loop\n");
         for (size_t uttID = 0; uttID < numSequences; uttID++)
         {
             memset(lmin, 0, vocabSize * sizeof(ElemType));
@@ -557,7 +557,7 @@ public:
             //greedyOutputMax.Resize(vocabSize, 2000);
             size_t lmt = 0;
             //outputlabels[uttID].push_back(blankId);
-            fprintf(stderr, "inside decoder: before frame loop\n");
+            //fprintf(stderr, "inside decoder: before frame loop\n");
             for (size_t t = 0; t < uttFrameNum[uttID]; t++)
             {
 
@@ -584,7 +584,9 @@ public:
                 if (maxId != blankId)
                 {
                     size_t rand1 = randGen();
-
+                    double frand = (double) rand1 / (double) (randGen.max());
+                    //printf("%zu %zu", maxv, SIZE_MAX);
+                    //printf("%f ", frand);
                     if (rand1 > groundTruthWeight) //use groundtruth
                         maxId = phoneSeqs[uttID][lmt + 1];
 
@@ -592,16 +594,16 @@ public:
                     memset(lmin, 0, vocabSize * sizeof(ElemType));
                     lmin[maxId] = 1.0;
 
-                    if (rand1 <= groundTruthWeight) //use decoding result
+                    if (frand <= groundTruthWeight) //use decoding result
                     {
                         if (maxId != phoneSeqs[uttID][lmt + 1])
                         {
 
                             fprintf(stderr, "rand %zu\n", rand1);
-                        fprintf(stderr, "uttid: %zu, framenu:%zu, phoneid %zu, labelID %zu\n", uttID, uttFrameNum[uttID], lmt + 1, maxId);
-                        for (size_t u = 0; u < phoneSeqs[uttID].size(); u++)
-                            fprintf(stderr, "phoneid:%zu ", phoneSeqs[uttID][u]);
-                        fprintf(stderr, "\n");
+                            fprintf(stderr, "uttid: %zu, framenu:%zu, phoneid %zu, labelID %zu\n", uttID, uttFrameNum[uttID], lmt + 1, maxId);
+                            for (size_t u = 0; u < phoneSeqs[uttID].size(); u++)
+                                fprintf(stderr, "phoneid:%zu ", phoneSeqs[uttID][u]);
+                            fprintf(stderr, "\n");
                         }
                         size_t uInMB = (lmt + 1 + uttPhoneBeginIdx[uttID]) * numParallelPhoneSequences + uttPhoneToChanInd[uttID];
                         decodeInputMatrixBackup.SetColumn(lmin, uInMB);
@@ -617,9 +619,10 @@ public:
                 if (lmt + 1 >= phoneSeqs[uttID].size())
                     break;
             }
-            fprintf(stderr, "inside decoder: after frame loop\n");
-        }
-        fprintf(stderr, "inside decoder: after utt loop\n");
+            //fprintf(stderr, "inside decoder: after frame loop\n");
+        };
+        
+      //fprintf(stderr, "inside decoder: after utt loop\n");
         decodeInputMatrix.SetValue(decodeInputMatrixBackup);
         //decodeInputMatrix.Print("after ss");
         decodeMBLayout->CopyFrom(decodebackupMBlayout);
@@ -1050,8 +1053,10 @@ public:
         return inputNodes;
     }
 
-
-    const std::vector<ComputationNodeBasePtr>& RootNodes()           const { return m_allRoots; }
+    const std::vector<ComputationNodeBasePtr>& RootNodes() const
+    {
+        return m_allRoots;
+    }
 
     // these are specified as such by the user
     const std::vector<ComputationNodeBasePtr>& FeatureNodes() const
