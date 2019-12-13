@@ -414,7 +414,8 @@ public:
         ComputationNodeBasePtr PlusNode = GetNodeFromName(outputNodeNames[2]);
         ComputationNodeBasePtr PlusTransNode = GetNodeFromName(outputNodeNames[3]);
         ComputationNodeBasePtr WmNode = GetNodeFromName(outputNodeNames[4]);
-        ComputationNodeBasePtr bmNode = GetNodeFromName(outputNodeNames[5]);
+        ComputationNodeBasePtr Wm2Node = GetNodeFromName(outputNodeNames[5]);
+        ComputationNodeBasePtr bmNode = GetNodeFromName(outputNodeNames[6]);
         std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
         Plusnodes.push_back(PlusNode);
         Plustransnodes.push_back(PlusTransNode);
@@ -425,11 +426,12 @@ public:
         //auto lminput = decodeinputMatrices.begin();
         size_t deviceid = decodeInputMatrix.GetDeviceId();
         std::map<std::wstring, void*, nocase_compare> outputMatrices;
-        Matrix<ElemType> decodeOutput(deviceid), Wm(deviceid), bm(deviceid), tempMatrix(deviceid);
+        Matrix<ElemType> decodeOutput(deviceid), Wm(deviceid), bm(deviceid), tempMatrix(deviceid), Wm2(deviceid), tempMatrix2(deviceid);
         Matrix<ElemType> greedyOutput(deviceid);
         Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
 
         Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
+        Wm2.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(Wm2Node)->Value()));
         bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
         const size_t numIterationsBeforePrintingProgress = 100;
 
@@ -576,7 +578,9 @@ public:
                 ForwardPropFromTo(Plusnodes, Plustransnodes);
                 decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
                 tempMatrix.AssignProductOf(Wm, true, decodeOutput, false);
-                decodeOutput.AssignSumOf(tempMatrix, bm);
+                tempMatrix2.AssignProductOf(Wm2, true, tempMatrix, false);
+                decodeOutput.AssignSumOf(tempMatrix2, bm);
+                
                 //decodeOutput.Print("final output");
                 decodeOutput.VectorMax(maxIdx, maxVal, true);
                 size_t maxId = (size_t)(maxIdx.Get00Element());
@@ -587,19 +591,19 @@ public:
                     double frand = (double) rand1 / (double) (randGen.max());
                     //printf("%zu %zu", maxv, SIZE_MAX);
                     //printf("%f ", frand);
-                    if (rand1 > groundTruthWeight) //use groundtruth
+                    if (frand > groundTruthWeight) //use groundtruth
                         maxId = phoneSeqs[uttID][lmt + 1];
-
+                    //maxId = 5;
                     //outputlabels[uttID].push_back(maxId);
                     memset(lmin, 0, vocabSize * sizeof(ElemType));
                     lmin[maxId] = 1.0;
-
+                    
                     if (frand <= groundTruthWeight) //use decoding result
                     {
                         if (maxId != phoneSeqs[uttID][lmt + 1])
                         {
 
-                            fprintf(stderr, "rand %zu\n", rand1);
+                            fprintf(stderr, "rand %f\n", frand);
                             fprintf(stderr, "uttid: %zu, framenu:%zu, phoneid %zu, labelID %zu\n", uttID, uttFrameNum[uttID], lmt + 1, maxId);
                             for (size_t u = 0; u < phoneSeqs[uttID].size(); u++)
                                 fprintf(stderr, "phoneid:%zu ", phoneSeqs[uttID][u]);
@@ -627,6 +631,7 @@ public:
         //decodeInputMatrix.Print("after ss");
         decodeMBLayout->CopyFrom(decodebackupMBlayout);
         delete lmin;
+
     }
 
     mt19937_64 randGen;

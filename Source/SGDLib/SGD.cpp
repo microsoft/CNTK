@@ -1244,7 +1244,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool noMoreSamplesToProcess = false;
     bool isFirstMinibatch = true;
     //RNNT SS
-    std::vector<ComputationNodeBasePtr> encodeInputNodes, decodeinputNodes, encodeOutputNodes, decodeOutputNodes;
+    std::vector<ComputationNodeBasePtr> encodeInputNodes, decodeinputNodes, encodeOutputNodes, decodeOutputNodes, graphNodes;
     if (m_adaptationRegType == AdaptationRegType::SS)
     {
 
@@ -1254,7 +1254,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         net->FormEvalOrder(encodeOutputNodes[0]);
         //net->CollectInputAndLearnableParameters(encodeOutputNodes[0]);
         std::list<ComputationNodeBasePtr> InputNodesList = net->InputNodes(criterionNodes[0]);
-        std::vector<std::wstring> encodeInputNodeNames(outputNodeNamesVector.begin() + 6, outputNodeNamesVector.begin() + 7);
+        std::vector<std::wstring> encodeInputNodeNames(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
         encodeInputNodes = net->OutputNodesByName(encodeInputNodeNames);
 
         //get decode input matrix
@@ -1263,9 +1263,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         net->FormEvalOrder(decodeOutputNodes[0]);
         net->FormNestedNetwork(decodeOutputNodes[0]);
         //net->CollectInputAndLearnableParameters(decodeOutputNodes[0]);
-        std::vector<std::wstring> decodeInputNodeNames(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
+        std::vector<std::wstring> decodeInputNodeNames(outputNodeNamesVector.begin() + 8, outputNodeNamesVector.begin() + 9);
         decodeinputNodes = net->OutputNodesByName(decodeInputNodeNames);
 
+        std::vector<std::wstring> graphNodeNames(outputNodeNamesVector.begin() + 9, outputNodeNamesVector.begin() + 10);
+        graphNodes = net->OutputNodesByName(graphNodeNames);
+        net->FormEvalOrder(graphNodes[0]);
         ComputationNodeBasePtr PlusTransNode = net->GetNodeFromName(outputNodeNamesVector[3]);
         net->FormEvalOrder(PlusTransNode);
     }
@@ -1313,7 +1316,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // TODO: original code did not call this for actualMBSize == 0
         ComputationNetwork::BumpEvalTimeStamp(featureNodes);
         ComputationNetwork::BumpEvalTimeStamp(labelNodes);
-        
+
         if (actualMBSize > 0)
         {
             assert(wasDataRead);
@@ -1338,7 +1341,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
 
             //RNNT TS
-            
+
             if (m_needAdaptRegularization && m_adaptationRegType == AdaptationRegType::TS && refNet)
             {
                 auto reffeainput = (*encodeInputMatrices).begin();
@@ -1350,7 +1353,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 auto reflminput = (*decodeinputMatrices).begin();
                 auto decodeMBLayout = reflminput->second.pMBLayout;
 
-                reffeainput->second.GetMatrix<ElemType>().AssignRowSliceValuesOf(feainput->second.GetMatrix<ElemType>(), 0, 240);
+                //reffeainput->second.GetMatrix<ElemType>().AssignRowSliceValuesOf(feainput->second.GetMatrix<ElemType>(), 0, 640);
 
                 vector<vector<size_t>> outputlabels;
                 refNet->RNNT_decode_greedy(outputNodeNamesVector, reffeainput->second.GetMatrix<ElemType>(), *encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), *decodeMBLayout, outputlabels, 1.0);
@@ -1402,12 +1405,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 lminput.pMBLayout->CopyFrom(newdecodeMBLayout, true);
                 //StreamBatch batch;
             }
-            
-                // do forward and back propagation
 
-                // We optionally break the minibatch into sub-minibatches.
-                // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
-                size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
+            // do forward and back propagation
+
+            // We optionally break the minibatch into sub-minibatches.
+            // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
+            size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
                 if (actualNumSubminibatches > 1)
@@ -1438,6 +1441,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     net->ForwardProp(encodeOutputNodes);
 
+                    //shared_ptr<InputValue<ElemType>> GroundTruthNode = make_shared<InputValue<ElemType>>(net->GetDeviceId(), L"truelmin");
+                    //GroundTruthNode->
+                    
+                    //ComputationNodeBasePtr GroundTruthNode = decodeinputNodes[0]->Duplicate(L"truelmin", copyNodeAll);
+                    //GroundTruthNode->
+                        //decodeinputNodes[0]->CopyTo(dynamic_pointer_cast<shared_ptr<ComputationNodeBasePtr>>(GroundTruthNode), L"truelmin", copyNodeAll);
+                   // graphNodes[0]->ForwardProp();
+                    net->ForwardProp(graphNodes);
+
                     Matrix<ElemType> encodeOutput(net->GetDeviceId());
                     encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
                     //fprintf(stderr, "before decode\n");
@@ -1446,6 +1458,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     //net->FormEvalOrder(forwardPropRoots[0]);
                     //fprintf(stderr, "after decode\n");
                     net->ResetEvalTimeStamps();
+                    graphNodes[0]->BumpEvalTimeStamp();
                     //net->ForwardPropFromTo(decodeinputNodes, forwardPropRoots);
                 }
                 //else
