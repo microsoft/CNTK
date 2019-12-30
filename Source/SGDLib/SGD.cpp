@@ -38,7 +38,7 @@
 
 #include <map>
 #include <set>
-
+#include "ComputationNetwork.h"
 namespace Microsoft
 {
 namespace MSR
@@ -649,6 +649,44 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         EpochCriterion epochCriterion; // criterion values are returned in this
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
+        StreamMinibatchInputs decodeinputMatrices, encodeInputMatrices;
+
+        // EMBR
+        vector<wstring> outputNodeNamesVector;
+        vector<string> vt_labels;
+        vt_labels.clear();
+
+        if (m_doMBR)
+        {
+            if (m_outputNodeNames.size() > 0)
+            {
+                for (wstring name : m_outputNodeNames)
+                {
+                    if (!net->NodeNameExists(name))
+                    {
+                        fprintf(stderr, "PatchOutputNodes: No node named '%ls'; skipping\n", name.c_str());
+                        continue;
+                    }
+                    outputNodeNamesVector.push_back(name);
+                    let& node = net->GetNodeFromName(name);
+                    net->AddToNodeGroup(L"output", node);
+                }
+                //net->CompileNetwork();
+            }
+            // read the labels (i.e., mixed units), noitce the labels are also used in data reader indicating duplicating calls to read the file.
+            // However, since this is simple for coding, i decided to read it again here.
+            auto_file_ptr f(fopenOrDie(m_labelMappingFile, L"rbS"));
+            char buf[1024];
+            while (!feof(f))
+            {
+                fgetline(f, buf);
+                std::string label = std::string(buf);
+                if (label.size() != 0)
+                    vt_labels.push_back(label);
+            }
+            fclose(f);
+        }
+
         totalMBsSeen += TrainOneEpoch(net,
                                       refNet,
                                       refNode,
@@ -664,7 +702,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       inputMatrices,
                                       learnableNodes, smoothedGradients, smoothedCounts,
                                       epochCriterion, epochEvalErrors,
-                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, startEpoch);
+                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, startEpoch,
+                                      outputNodeNamesVector, &encodeInputMatrices, &decodeinputMatrices,
+                                      m_doMBR, m_numBestMBR, m_trainMethodMBR, m_wordPathPosteriorFromDecodeMBR, m_lengthNorm, vt_labels);
         totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
 
         timer.Stop();
@@ -998,7 +1038,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const size_t maxNumberOfSamples,
                                     const size_t totalMBsSeenBefore,
                                     ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter,
-                                    const int startEpoch)
+                                    const int startEpoch,
+                                    const std::vector<std::wstring>& outputNodeNamesVector,
+                                    StreamMinibatchInputs* encodeInputMatrices,
+                                    StreamMinibatchInputs* decodeinputMatrices,
+                                    bool doMBR,
+                                    size_t numBestMBR,     // number of nbest
+                                    string trainMethodMBR, // can be Viterbi or BaumWelch
+                                    bool wordPathPosteriorFromDecodeMBR,
+                                    bool lengthNorm,
+                                    const vector<string>& vt_labels)
 {
     PROFILE_SCOPE(profilerEvtMainEpoch);
 
@@ -1234,6 +1283,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                               dynamic_pointer_cast<ComputationNode<ElemType>>(labelNodes[0])->Value());
             }
 
+            /* guoye: start */
+
             // do forward and back propagation
 
             // We optionally break the minibatch into sub-minibatches.
@@ -1248,28 +1299,180 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     ComputationNetwork::BumpEvalTimeStamp(labelNodes);
                 }
 
+                if (doMBR)
+                {
+                    //net->CompileNetwork();
+                    std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
+                    std::vector<ComputationNodeBasePtr> encodeOutputNodes = net->OutputNodesByName(encodeOutputNodeNames);
+                    net->FormEvalOrder(encodeOutputNodes[0]);
+                    //net->CollectInputAndLearnableParameters(encodeOutputNodes[0]);
+                    std::list<ComputationNodeBasePtr> InputNodesList = net->InputNodes(criterionNodes[0]);
+                    std::vector<std::wstring> encodeInputNodeNames(outputNodeNamesVector.begin() + 6, outputNodeNamesVector.begin() + 7);
+                    std::vector<ComputationNodeBasePtr> encodeInputNodes = net->OutputNodesByName(encodeInputNodeNames);
+                    *encodeInputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(encodeInputNodes);
+
+                    //get decode input matrix
+                    std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
+                    std::vector<ComputationNodeBasePtr> decodeOutputNodes = net->OutputNodesByName(decodeOutputNodeNames);
+                    net->FormEvalOrder(decodeOutputNodes[0]);
+                    net->FormNestedNetwork(decodeOutputNodes[0]);
+                    //net->CollectInputAndLearnableParameters(decodeOutputNodes[0]);
+                    std::vector<std::wstring> decodeInputNodeNames(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
+                    std::vector<ComputationNodeBasePtr> decodeinputNodes = net->OutputNodesByName(decodeInputNodeNames);
+                    *decodeinputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(decodeinputNodes);
+
+                    //form eval order for RELU
+
+                    auto reffeainput = (*encodeInputMatrices).begin();
+                    auto encodeMBLayout = reffeainput->second.pMBLayout;
+                    auto reflminput = (*decodeinputMatrices).begin();
+                    auto decodeMBLayout = reflminput->second.pMBLayout;
+
+                    net->ForwardProp(encodeOutputNodes);
+
+                    Matrix<ElemType> encodeOutput(net->GetDeviceId());
+                    encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
+
+                    vector<vector<PathInfo>> uttPathsInfo;
+                    uttPathsInfo.clear();
+
+                    // ComputationNodeBasePtr PlusTransNode = net->GetNodeFromName(outputNodeNamesVector[3]);
+                    // net->FormEvalOrder(Plustransnodes[0]);
+                 
+
+                    net->RNNT_decode_nbest_MBR(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo);
+                    fprintf(stderr, "decode SGD v0 .\n");
+
+                    
+                    //net->BumpEvalTimeStamp(decodeinputNodes);
+                    //net->FormEvalOrder(forwardPropRoots[0]);
+                    net->ResetEvalTimeStamps();
+                    //net->ForwardPropFromTo(decodeinputNodes, forwardPropRoots);
+                    auto cNode = criterionNodes[0]->As<RNNTMWERNode<ElemType>>();
+
+                    size_t seqId = 0; //frame
+                    size_t fea_dim = reffeainput->second.GetMatrix<ElemType>().GetNumRows();
+                    auto deviceID = net->GetDeviceId();
+                    Matrix<ElemType> refFeaMatBackup(deviceID);
+                    refFeaMatBackup.SetValue(reffeainput->second.GetMatrix<ElemType>());
+                    size_t numParallelSequences = encodeMBLayout->GetNumParallelSequences();
+
+                    for (const auto& seq : encodeMBLayout->GetAllSequences())
+                    {
+                        if (seq.seqId == GAP_SEQUENCE_ID)
+                        {
+                            continue;
+                        }
+                        if (uttPathsInfo[seqId].size() <= 1) // contain 0 or 1 Best, MWER will take no effect
+                        {
+                            continue;
+                        }
+                        cNode->SetMWERInfo(uttPathsInfo[seqId], lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR);
+
+                        // get the feature MBLayout
+                        size_t numFrames = seq.GetNumTimeSteps();
+                        reffeainput->second.pMBLayout->Init(1, numFrames); // 1 channel, 1 utterance
+
+                        Matrix<ElemType> fea(deviceID);
+                        fea.Resize(fea_dim, numFrames);
+
+                        size_t uttFrameToChanInd = seq.s;
+                        size_t uttFrameBeginIdx = seq.tBegin;
+
+                        for (size_t t = 0; t < numFrames; t++)
+                        {
+
+                            size_t uID = (t + uttFrameBeginIdx) * numParallelSequences + uttFrameToChanInd;
+
+                            fea.SetColumn(refFeaMatBackup.ColumnSlice(uID, 1), t);
+                        }
+                        reffeainput->second.GetMatrix<ElemType>().SetValue(fea);
+                        reffeainput->second.pMBLayout->AddSequence(0, 0, 0, numFrames); // guoye: first 0 is for utterance ID, second 0 means 0th channel, lenght is 0 to numFrames
+
+                        // guoye: the below 2 commands reset the state, to make sure ForwardProb always get carried out
+                        ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes); // guoy: update the time stamp before you do forward prob
+                        //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, encodeinputMatrices);
+
+                        // set MB for decode matrix
+
+                        size_t vocSize = vt_labels.size();
+                        size_t nBest = uttPathsInfo[seqId].size();
+                        size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
+
+                        for (size_t n = 1; n < nBest; n++)
+                        {
+                            if (uttPathsInfo[seqId][n].label_seq.size() > maxPhoneSeqLen)
+                                maxPhoneSeqLen = uttPathsInfo[seqId][n].label_seq.size();
+                        }
+
+                        reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
+
+                        Matrix<ElemType> lmin(deviceID);
+                        lmin.Resize(vocSize, nBest * maxPhoneSeqLen);
+                        lmin.SetValue(0.0);
+
+                        size_t uttPhoneBeginIdx = 0;
+
+                        for (size_t n = 0; n < nBest; n++)
+                        {
+                            size_t uttPhoneToChanInd = n;
+                            size_t phoneSeqLen = uttPathsInfo[seqId][n].label_seq.size();
+                            for (size_t p = 0; p < phoneSeqLen; p++)
+                            {
+                                size_t uID = (p + uttPhoneBeginIdx) * nBest + uttPhoneToChanInd;
+                                size_t labID = uttPathsInfo[seqId][n].label_seq[p];
+                                lmin(labID, uID) = 1.0;
+                            }
+
+                            reflminput->second.pMBLayout->AddSequence(n, n, 0, phoneSeqLen);
+                            // guoye: first n is for seq ID, second n means nth channel, lenght is 0 to phoneSeqLen
+                            if (phoneSeqLen < maxPhoneSeqLen)
+                                reflminput->second.pMBLayout->AddSequence(GAP_SEQUENCE_ID, n, phoneSeqLen, maxPhoneSeqLen); // length is phoneSeqLen to maxPhoneSeqLen
+                        }
+
+                        reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
+
+                        ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes); 
+                        net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
+
+                        // ===========================================================
+                        // backprop
+                        // ===========================================================
+
+                        if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+                            net->Backprop(criterionNodes[0]);
+                        
+                        seqId++;
+                    }
+                    
+                }
                 // ===========================================================
                 // forward prop for evaluate eval nodes
                 // ===========================================================
+                else
+                {
+                    // compute eval node first since when gradient is computed the forward function values
+                    // may be changed and need to be recomputed when gradient and function value share the same matrix
+                    net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
 
-                // compute eval node first since when gradient is computed the forward function values
-                // may be changed and need to be recomputed when gradient and function value share the same matrix
-                net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
+                    // ===========================================================
+                    // backprop
+                    // ===========================================================
 
-               
-                // ===========================================================
-                // backprop
-                // ===========================================================
-
-                if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
-                    net->Backprop(criterionNodes[0]);
-
+                    if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
+                        net->Backprop(criterionNodes[0]);
+                }
+                fprintf(stderr, "decode SGD v1 .\n");
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
                     smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
+                fprintf(stderr, "decode SGD v2 .\n");
             }                                                        // end sub-minibatch loop
+
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
+            fprintf(stderr, "decode SGD v3 .\n");
+            /* guoye: end */
         } // if (actualMBSize > 0)
         // WARNING: If actualMBSize == 0, then criterion nodes have NOT been updated, and contain garbage (last MB's) values.
 
@@ -1401,7 +1604,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     double p_norm = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().FrobeniusNorm();
                     //long m = (long) GetNumElements();
                     totalNorm += p_norm * p_norm;
-
                 }
             }
             totalNorm = sqrt(totalNorm);
@@ -1717,7 +1919,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     }
 
     return numMBsRun;
-}
+} // namespace CNTK
 
 // -----------------------------------------------------------------------
 // subroutines and helpers follow below
@@ -1807,7 +2009,6 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
         net->ForwardProp(nodes);
 
         numItersSinceLastPrintOfProgress = ProgressTracing::TraceFakeProgress(numIterationsBeforePrintingProgress, numItersSinceLastPrintOfProgress);
-
     }
 
     // finalize
@@ -3068,6 +3269,15 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     // gradient check setup
     m_doGradientCheck = configSGD(L"gradientcheck", false);
     m_gradientCheckSigDigit = configSGD(L"sigFigs", 6.0); // TODO: why is this a double?
+
+    // RNNT MBR
+    m_outputNodeNames = configSGD(L"OutputNodeNames", ConfigArray(""));
+    m_wordPathPosteriorFromDecodeMBR = configSGD(L"WordPathPosteriorFromDecodeMBR", true);
+    m_numBestMBR = configSGD(L"NumBestMBR", (size_t) 8);
+    m_trainMethodMBR = configSGD(L"TrainMethodMBR", "BaumWelch");
+    m_doMBR = configSGD(L"DoMBR", true);
+    m_labelMappingFile = configSGD(L"labelMappingFile", L"");
+    m_lengthNorm = configSGD(L"LengthNorm", true);
 
     if (m_doGradientCheck && sizeofElemType != sizeof(double))
     {

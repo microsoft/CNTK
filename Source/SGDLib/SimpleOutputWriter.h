@@ -20,7 +20,8 @@
 #include "ComputationNetworkBuilder.h"
 #include "RecurrentNodes.h"
 #include <algorithm>
-
+#include "SimpleOutputWriter.h"
+// #include "ComputationNetworkEvaluation.cpp"
 using namespace std;
 
 namespace Microsoft
@@ -33,24 +34,9 @@ namespace CNTK
 template <class ElemType>
 class SimpleOutputWriter
 {
-    struct Sequence
-    {
-        //shared_ptr<Matrix<ElemType>> LabelMatrix;
-        std::vector<size_t> labelseq;
-        ElemType logP;
-        size_t length;
-        size_t processlength;
-        size_t lengthwithblank;
-        shared_ptr<Matrix<ElemType>> decodeoutput;
-        bool operator<(const Sequence& rhs) const
-        {
-            return logP < rhs.logP;
-        }
-        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>> nameToNodeValues;
-    };
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
-    typedef typename std::vector<Sequence>::iterator iterator;
-    unordered_map<wstring, vector<shared_ptr<PastValueNode<ElemType>>>> m_nameToPastValueNodeCache;
+    typedef typename std::vector<typename RNNTDecodeFunctions<ElemType>::Sequence>::iterator iterator;
+
 
 public:
     SimpleOutputWriter(ComputationNetworkPtr net, int verbosity = 0)
@@ -71,7 +57,7 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices({}, outputNodes, nullptr);
 
-        StreamMinibatchInputs inputMatrices = DataReaderHelpers::RetrieveInputMatrices(inputNodes);
+        StreamMinibatchInputs inputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(inputNodes);
 
         // evaluate with minibatches
         dataReader.StartMinibatchLoop(mbSize, 0, inputMatrices.GetStreamDescriptions(), numOutputSamples);
@@ -134,7 +120,7 @@ public:
         std::vector<std::wstring> encodeOutputNodeNames(outputNodeNames.begin(), outputNodeNames.begin() + 1);
         std::vector<ComputationNodeBasePtr> encodeOutputNodes = m_net->OutputNodesByName(encodeOutputNodeNames);
         std::vector<ComputationNodeBasePtr> encodeInputNodes = m_net->InputNodesForOutputs(encodeOutputNodeNames);
-        StreamMinibatchInputs encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
+        StreamMinibatchInputs encodeInputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(encodeInputNodes);
 
         //start encode network
         dataReader.StartMinibatchLoop(mbSize, 0, encodeInputMatrices.GetStreamDescriptions(), numOutputSamples);
@@ -146,7 +132,7 @@ public:
         std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin() + 1, outputNodeNames.begin() + 2);
         std::vector<ComputationNodeBasePtr> decodeOutputNodes = m_net->OutputNodesByName(decodeOutputNodeNames);
         std::vector<ComputationNodeBasePtr> decodeinputNodes = m_net->InputNodesForOutputs(decodeOutputNodeNames);
-        StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
+        StreamMinibatchInputs decodeinputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(decodeinputNodes);
 
         //get merged input
         ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
@@ -215,7 +201,7 @@ public:
             std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
             lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 2000);
             ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
-            DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+            DataReaderHelpersFunctions::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
             m_net->ForwardProp(decodeOutputNodes[0]);
 
             greedyOutputMax.Resize(vocabSize, 2000);
@@ -243,7 +229,7 @@ public:
                 decodeOutput.AssignSumOf(tempMatrix, bm);
                 decodeOutput.VectorMax(maxIdx, maxVal, true);
                 //maxVal.Print("maxVal");
-                    size_t maxId = (size_t)(maxIdx.Get00Element());
+                size_t maxId = (size_t)(maxIdx.Get00Element());
                 if (maxId != blankId)
                 {
                     //fprintf(stderr, "maxid: %d\n", (int) maxId);
@@ -257,7 +243,7 @@ public:
                     lminput->second.pMBLayout->Init(1, 1);
                     lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, -1 - lmt, 1999 - lmt);
                     ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
-                    DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+                    DataReaderHelpersFunctions::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
                     m_net->ForwardProp(decodeOutputNodes[0]);
 
                     //m_net->ForwardPropFromTo(decodeOutputNodes[0], PlusTransNode);
@@ -288,61 +274,10 @@ public:
         // clean up
     }
 
-    Sequence newSeq(size_t numRow, size_t numCol, DEVICEID_TYPE deviceId)
-    {
-        Sequence oneSeq = {std::vector<size_t>(), 0.0, 0, 0, 0, make_shared<Matrix<ElemType>>(numRow, (size_t) 1, deviceId)};
-        for (size_t i = 0; i < m_nodesToCache.size(); i++)
-        {
-            vector<ElemType> v;
-            oneSeq.nameToNodeValues[m_nodesToCache[i]] = make_shared<PastValueNode<ElemType>>(deviceId, L"test");
-        }
-        return oneSeq;
-    }
-    Sequence newSeq(Sequence& a, DEVICEID_TYPE deviceId)
-    {
-        Sequence oneSeq;
-        oneSeq.labelseq = a.labelseq;
-        oneSeq.logP = a.logP;
-        oneSeq.length = a.length;
-        oneSeq.lengthwithblank = a.lengthwithblank;
-        oneSeq.processlength = a.processlength;
-        oneSeq.decodeoutput = make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId());
-        oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
-        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
-        for (it = a.nameToNodeValues.begin(); it != a.nameToNodeValues.end(); it++)
-        {
-            auto itin = m_nameToPastValueNodeCache.find(it->first);
-            if (itin != m_nameToPastValueNodeCache.end() && m_nameToPastValueNodeCache[it->first].size() > 0)
-            {
-                oneSeq.nameToNodeValues[it->first] = m_nameToPastValueNodeCache[it->first].back();
-                m_nameToPastValueNodeCache[it->first].pop_back();
-            }
-            else
-            {
-                oneSeq.nameToNodeValues[it->first] = make_shared<PastValueNode<ElemType>>(deviceId, it->first);
-            }
-
-            it->second->CopyTo(oneSeq.nameToNodeValues[it->first], it->first, CopyNodeFlags::copyNodeAll);
-        }
-        return oneSeq;
-    }
-    void deleteSeq(Sequence oneSeq)
-    {
-        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
-        for (it = oneSeq.nameToNodeValues.begin(); it != oneSeq.nameToNodeValues.end(); it++)
-        {
-            auto itin = m_nameToPastValueNodeCache.find(it->first);
-            if (itin == m_nameToPastValueNodeCache.end())
-                m_nameToPastValueNodeCache[it->first] = vector<shared_ptr<PastValueNode<ElemType>>>();
-            m_nameToPastValueNodeCache[it->first].push_back(oneSeq.nameToNodeValues[it->first]);
-        }
-        oneSeq.decodeoutput->ReleaseMemory();
-        vector<size_t>().swap(oneSeq.labelseq);
-    }
-    iterator getMaxSeq(const vector<Sequence>& seqs)
+    iterator getMaxSeq(const vector<typename RNNTDecodeFunctions<ElemType>::Sequence>& seqs)
     {
         double MaxlogP = LOGZERO;
-        typename vector<Sequence>::iterator maxIt;
+        typename vector<typename RNNTDecodeFunctions<ElemType>::Sequence>::iterator maxIt;
         for (auto it = seqs.begin(); it != seqs.end(); it++)
         {
             if (it->logP > MaxlogP)
@@ -350,7 +285,7 @@ public:
         }
         return maxIt;
     }
-    iterator getMatchSeq(const vector<Sequence>& seqs, const vector<size_t>& labelseq)
+    iterator getMatchSeq(const vector<typename RNNTDecodeFunctions<ElemType>::Sequence>& seqs, const vector<size_t>& labelseq)
     {
         iterator it;
         for (it = seqs.begin(); it != seqs.end(); it++)
@@ -361,13 +296,6 @@ public:
         return it;
     }
 
-    void extendSeq(Sequence& insequence, size_t labelId, ElemType logP)
-    {
-        insequence.labelseq.push_back(labelId);
-        insequence.logP = logP;
-        insequence.length++;
-        insequence.lengthwithblank++;
-    }
 
     std::vector<ComputationNodeBasePtr> GetNodesByNames(const std::vector<std::wstring>& names) const
     {
@@ -381,84 +309,13 @@ public:
         }
         return nodes;
     }
-    void forward_decode(Sequence& oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, const std::vector<ComputationNodeBasePtr>& decodeOutputNodes,
-                        const std::vector<ComputationNodeBasePtr>& decodeinputNodes, size_t vocabSize, size_t plength)
-    {
-        //        size_t labelLength = oneSeq.length;
-        if (oneSeq.processlength + 1 != plength && plength != oneSeq.processlength)
-            LogicError("Current implementation assumes 1 step difference");
-        if (plength != oneSeq.processlength)
-        {
-
-            Matrix<ElemType> lmin(deviceID);
-
-            //greedyOutput.SetValue(greedyOutputMax.ColumnSlice(0, lmt));
-            lmin.Resize(vocabSize, 1);
-            lmin.SetValue(0.0);
-            lmin(oneSeq.labelseq[plength - 1], 0) = 1.0;
-            auto lminput = decodeinputMatrices.begin();
-            lminput->second.pMBLayout->Init(1, 1);
-            //std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
-            lminput->second.GetMatrix<ElemType>().SetValue(lmin);
-            if (plength == 1)
-            {
-                lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
-            }
-            else
-            {
-                lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, SentinelValueIndicatingUnspecifedSequenceBeginIdx, 1);
-            }
-            ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
-            bool shallowCopy = false;
-            for (size_t i = 0; i < m_nodesToCache.size(); i++)
-            {
-                auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
-                if (oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements() > 0)
-                {
-                    oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
-                    shallowCopy = true;
-                }
-            }
-            ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
-            DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
-            m_net->ForwardProp(decodeOutputNodes[0]);
-            //Matrix<ElemType> tempMatrix = *(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value());
-            oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())));
-            oneSeq.processlength = plength;
-            for (size_t i = 0; i < m_nodesToCache.size(); i++)
-            {
-                auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
-                if (shallowCopy)
-                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
-                else
-                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
-            }
-            lmin.ReleaseMemory();
-        }
-    }
-    bool compareseq(const Sequence& a, const Sequence& b)
+    bool compareseq(const typename RNNTDecodeFunctions<ElemType>::Sequence& a, const typename RNNTDecodeFunctions<ElemType>::Sequence& b)
     {
         return a.logP < b.logP;
     }
 
-    vector<pair<size_t, ElemType>> getTopN(Microsoft::MSR::CNTK::Matrix<ElemType>& prob, size_t N, size_t& blankid)
-    {
-        vector<pair<size_t, ElemType>> datapair;
-        typedef vector<pair<size_t, ElemType>>::value_type ValueType;
-        ElemType* probdata = prob.CopyToArray();
-        for (size_t n = 0; n < prob.GetNumRows(); n++)
-        {
-            datapair.push_back(ValueType(n, probdata[n]));
-        }
-        nth_element(datapair.begin(), datapair.begin() + N, datapair.end(), [](ValueType const& x, ValueType const& y) -> bool {
-            return y.second < x.second;
-        });
-        datapair.push_back(ValueType(blankid, probdata[blankid]));
-        delete probdata;
-        return datapair;
-    }
     //check whether a is the prefix of b
-    bool isPrefix(const Sequence& a, const Sequence& b)
+    bool isPrefix(const typename RNNTDecodeFunctions<ElemType>::Sequence& a, const typename RNNTDecodeFunctions<ElemType>::Sequence& b)
     {
         if (a.labelseq == b.labelseq || a.labelseq.size() >= b.labelseq.size())
             return false;
@@ -470,7 +327,7 @@ public:
         return true;
     }
 
-    bool comparekeyword(const Sequence& a, const vector<size_t>& keyword)
+    bool comparekeyword(const typename RNNTDecodeFunctions<ElemType>::Sequence& a, const vector<size_t>& keyword)
     {
         if (a.labelseq == keyword || a.labelseq.size() >= keyword.size())
             return false; //finish key word
@@ -482,30 +339,11 @@ public:
         return true;
     }
 
-    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode, 
-        ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes, Matrix<ElemType>& Wm, Matrix<ElemType>& bm)
-    {
-        sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(a.decodeoutput));
-        //sumofENandDE.InplaceLogSoftmax(true);
-        Matrix<ElemType> tempMatrix(encodeOutput.GetDeviceId());
-        //plus broadcast
-        (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
-        //SumMatrix.SetValue(sumofENandDE);
-        ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
-        auto PlusMBlayout = PlusNode->GetMBLayout();
-        PlusMBlayout->Init(1, 1);
-        PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
-        m_net->ForwardPropFromTo(Plusnodes, Plustransnodes);
-        decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
-        tempMatrix.AssignProductOf(Wm, true, decodeOutput, false);
-        decodeOutput.AssignSumOf(tempMatrix, bm);
-        //decodeOutput.VectorMax(maxIdx, maxVal, true);
-        decodeOutput.InplaceLogSoftmax(true);
-    }
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
                           size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
+        RNNTDecodeFunctions<ElemType> rnntdfs;
 
         //size_t beamSize = 10;
         if (outputNodeNames.size() == 0 && m_verbosity > 0)
@@ -522,7 +360,7 @@ public:
         std::vector<std::wstring> encodeOutputNodeNames(outputNodeNames.begin(), outputNodeNames.begin() + 1);
         std::vector<ComputationNodeBasePtr> encodeOutputNodes = m_net->OutputNodesByName(encodeOutputNodeNames);
         std::vector<ComputationNodeBasePtr> encodeInputNodes = m_net->InputNodesForOutputs(encodeOutputNodeNames);
-        StreamMinibatchInputs encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
+        StreamMinibatchInputs encodeInputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(encodeInputNodes);
 
         //start encode network
         dataReader.StartMinibatchLoop(mbSize, 0, encodeInputMatrices.GetStreamDescriptions(), numOutputSamples);
@@ -534,17 +372,19 @@ public:
         std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin() + 1, outputNodeNames.begin() + 2);
         std::vector<ComputationNodeBasePtr> decodeOutputNodes = m_net->OutputNodesByName(decodeOutputNodeNames);
         std::list<ComputationNodeBasePtr> pastValueNodes = m_net->PastValueNodesForOutputs(decodeOutputNodes);
+
         std::list<ComputationNodeBasePtr>::iterator it;
         for (it = pastValueNodes.begin(); it != pastValueNodes.end(); ++it)
         {
             auto pastValueNode = dynamic_pointer_cast<PastValueNode<ElemType>>(*it); //DelayedValueNodeBase
             if (pastValueNode || !(*it)->NodeName().compare(0, 5, L"Loop_"))
             {
-                m_nodesToCache.push_back((*it)->NodeName());
+                rnntdfs.m_nodesToCache.push_back((*it)->NodeName());
             }
         }
+
         std::vector<ComputationNodeBasePtr> decodeinputNodes = m_net->InputNodesForOutputs(decodeOutputNodeNames);
-        StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
+        StreamMinibatchInputs decodeinputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(decodeinputNodes);
 
         //get merged input
         ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
@@ -571,6 +411,8 @@ public:
         Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
         Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
         Matrix<ElemType> lmin(deviceid);
+        MatrixPool m_matrixPool;
+        m_matrixPool.OptimizedMemoryAllocation();
         Matrix<ElemType> Wm(deviceid), bm(deviceid);
         Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
         bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
@@ -578,7 +420,7 @@ public:
         const size_t numIterationsBeforePrintingProgress = 100;
         //size_t numItersSinceLastPrintOfProgress = 0;
         size_t actualMBSize;
-        vector<Sequence> CurSequences, nextSequences;
+        vector<typename RNNTDecodeFunctions<ElemType>::Sequence> CurSequences, nextSequences;
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
         {
             //encode forward prop for whole utterance
@@ -597,8 +439,8 @@ public:
             nextSequences.clear();
 
             //initialize with blank ID
-            Sequence oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
-            extendSeq(oneSeq, blankId, 0.0);
+            typename RNNTDecodeFunctions<ElemType>::Sequence oneSeq = rnntdfs.newSeq(vocabSize, (size_t) 50, deviceid);
+            rnntdfs.extendSeq(oneSeq, blankId, 0.0);
             nextSequences.push_back(oneSeq);
 
             // loop for each frame
@@ -606,12 +448,12 @@ public:
             {
                 for (size_t n = 0; n < CurSequences.size(); n++)
                 {
-                    deleteSeq(CurSequences[n]);
+                    rnntdfs.deleteSeq(CurSequences[n]);
                 }
-                vector<Sequence>().swap(CurSequences);
+                vector<RNNTDecodeFunctions<ElemType>::Sequence>().swap(CurSequences);
                 CurSequences = nextSequences;
 
-                vector<Sequence>().swap(nextSequences);
+                vector<RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
                 //deal with the same prefix
                 /*sort(CurSequences.begin(), CurSequences.end(),
                      [](const Sequence& a, const Sequence& b) -> bool {
@@ -649,41 +491,19 @@ public:
                     auto maxSeq = std::max_element(CurSequences.begin(), CurSequences.end());
                     //std::max_element()
                     //auto pos = std::find(CurSequences.begin(), CurSequences.end(), maxSeq);
-                    Sequence tempSeq = newSeq(*maxSeq, deviceid);
-                    deleteSeq(*maxSeq);
+                    typename RNNTDecodeFunctions<ElemType>::Sequence tempSeq = rnntdfs.newSeq(*maxSeq, deviceid);
+                    rnntdfs.deleteSeq(*maxSeq);
                     CurSequences.erase(maxSeq);
-                    forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
-                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes,Wm, bm);
+                    rnntdfs.prepareSequence(tempSeq);
+                    rnntdfs.forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size(), *m_net);
+                    rnntdfs.forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm, *m_net);
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
-                    vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam, blankId);
-                    /*ElemType* logP = decodeOutput.CopyToArray();
-                    std::priority_queue<std::pair<double, int>> q;
-                    int iLabel;
-                    for (iLabel = 0; iLabel < vocabSize; iLabel++)
-                    {
-                        q.push(std::pair<double, int>((double) logP[iLabel], iLabel));
-                    }
-                    for (iLabel = 0; iLabel < beamSize; iLabel++)
-                    {
-                        auto Elem = q.top();
-                        Sequence seqK = newSeq(tempSeq);
-                        double newlogP = Elem.first + tempSeq.logP;
-                        seqK.logP = newlogP;
+                    vector<pair<size_t, ElemType>> topN = rnntdfs.getTopN(decodeOutput, expandBeam, blankId);
 
-                        if (Elem.second == blankId)
-                        {
-                            nextSequences.push_back(seqK);
-                            q.pop();
-                            continue;
-                        }
-                        extendSeq(seqK, Elem.second, newlogP);
-                        CurSequences.push_back(seqK);
-                        q.pop();
-                    }*/
-					//expand blank
-                    Sequence seqK = newSeq(tempSeq, deviceid);
+                    //expand blank
+                    typename RNNTDecodeFunctions<ElemType>::Sequence seqK = rnntdfs.newSeq(tempSeq, deviceid);
                     ElemType newlogP = topN[vocabSize].second + tempSeq.logP;
                     seqK.logP = newlogP;
                     bool existseq = false;
@@ -703,24 +523,26 @@ public:
                     {
                         nextSequences.push_back(seqK);
                     }
-					
+
                     int iLabel;
                     for (iLabel = 0; iLabel < expandBeam; iLabel++)
                     {
 
-                        seqK = newSeq(tempSeq, deviceid);
+                        seqK = rnntdfs.newSeq(tempSeq, deviceid);
                         newlogP = topN[iLabel].second + tempSeq.logP;
                         seqK.logP = newlogP;
 
                         if (topN[iLabel].first != blankId)
+
                         {
-                        extendSeq(seqK, topN[iLabel].first, newlogP);
-                        CurSequences.push_back(seqK);
-}
+                            rnntdfs.extendSeq(seqK, topN[iLabel].first, newlogP);
+
+                            CurSequences.push_back(seqK);
+                        }
                     }
                     vector<pair<size_t, ElemType>>().swap(topN);
                     //delete topN;
-                    deleteSeq(tempSeq);
+                    rnntdfs.deleteSeq(tempSeq);
 
                     if (CurSequences.size() == 0)
                         break;
@@ -746,7 +568,7 @@ public:
                 {
                     for (size_t n = beamSize; n < nextSequences.size(); n++)
                     {
-                        deleteSeq(nextSequences[n]);
+                        rnntdfs.deleteSeq(nextSequences[n]);
                     }
                 }
                 for (size_t iseq = nextSequences.size(); iseq > beamSize; iseq--)
@@ -786,14 +608,300 @@ public:
 
             for (size_t n = 0; n < CurSequences.size(); n++)
             {
-                deleteSeq(CurSequences[n]);
+                rnntdfs.deleteSeq(CurSequences[n]);
             }
-            vector<Sequence>().swap(CurSequences);
+            vector<typename RNNTDecodeFunctions<ElemType>::Sequence>().swap(CurSequences);
             for (size_t n = 0; n < nextSequences.size(); n++)
             {
-                deleteSeq(nextSequences[n]);
+                rnntdfs.deleteSeq(nextSequences[n]);
             }
-            vector<Sequence>().swap(nextSequences);
+            vector<typename RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
+            dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
+            //break;
+        }
+
+        //decode
+
+        // clean up
+    }
+    /* guoye: start */
+    void WriteOutput_beam_viterbi(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
+                                  size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
+    {
+        ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
+        RNNTDecodeFunctions<ElemType> rnntdfs;
+
+        //size_t beamSize = 10;
+        if (outputNodeNames.size() == 0 && m_verbosity > 0)
+            fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
+
+        std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
+
+        // allocate memory for forward computation
+        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+
+        //vector "hey cortana"
+        //vector<size_t> keywords {}
+        //get encode input matrix
+        std::vector<std::wstring> encodeOutputNodeNames(outputNodeNames.begin(), outputNodeNames.begin() + 1);
+        std::vector<ComputationNodeBasePtr> encodeOutputNodes = m_net->OutputNodesByName(encodeOutputNodeNames);
+        std::vector<ComputationNodeBasePtr> encodeInputNodes = m_net->InputNodesForOutputs(encodeOutputNodeNames);
+        StreamMinibatchInputs encodeInputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(encodeInputNodes);
+
+        //start encode network
+        dataReader.StartMinibatchLoop(mbSize, 0, encodeInputMatrices.GetStreamDescriptions(), numOutputSamples);
+        if (!dataWriter.SupportMultiUtterances())
+            dataReader.SetNumParallelSequences(1);
+        m_net->StartEvaluateMinibatchLoop(encodeOutputNodes[0]);
+
+        //get decode input matrix
+        std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin() + 1, outputNodeNames.begin() + 2);
+        std::vector<ComputationNodeBasePtr> decodeOutputNodes = m_net->OutputNodesByName(decodeOutputNodeNames);
+        std::list<ComputationNodeBasePtr> pastValueNodes = m_net->PastValueNodesForOutputs(decodeOutputNodes);
+
+        std::list<ComputationNodeBasePtr>::iterator it;
+        for (it = pastValueNodes.begin(); it != pastValueNodes.end(); ++it)
+        {
+            auto pastValueNode = dynamic_pointer_cast<PastValueNode<ElemType>>(*it); //DelayedValueNodeBase
+            if (pastValueNode || !(*it)->NodeName().compare(0, 5, L"Loop_"))
+            {
+                rnntdfs.m_nodesToCache.push_back((*it)->NodeName());
+            }
+        }
+
+        std::vector<ComputationNodeBasePtr> decodeinputNodes = m_net->InputNodesForOutputs(decodeOutputNodeNames);
+        StreamMinibatchInputs decodeinputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(decodeinputNodes);
+
+        //get merged input
+        ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
+        ComputationNodeBasePtr PlusTransNode = m_net->GetNodeFromName(outputNodeNames[3]);
+        ComputationNodeBasePtr WmNode = m_net->GetNodeFromName(outputNodeNames[4]);
+        ComputationNodeBasePtr bmNode = m_net->GetNodeFromName(outputNodeNames[5]);
+        //StreamMinibatchInputs PlusinputMatrices =
+        std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
+        Plusnodes.push_back(PlusNode);
+        Plustransnodes.push_back(PlusTransNode);
+
+        //start decode network
+        m_net->StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
+        auto lminput = decodeinputMatrices.begin();
+        //dataReader.StartMinibatchLoop(1, 0, decodeinputMatrices.GetStreamDescriptions(), numOutputSamples);
+
+        //(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeinputNodes[0])->Value()).SetValue();
+
+        DEVICEID_TYPE deviceid = lminput->second.GetMatrix<ElemType>().GetDeviceId();
+        //size_t totalEpochSamples = 0;
+        std::map<std::wstring, void*, nocase_compare> outputMatrices;
+        Matrix<ElemType> encodeOutput(deviceid);
+        Matrix<ElemType> decodeOutput(deviceid);
+        Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
+        Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
+        Matrix<ElemType> lmin(deviceid);
+        MatrixPool m_matrixPool;
+        m_matrixPool.OptimizedMemoryAllocation();
+        Matrix<ElemType> Wm(deviceid), bm(deviceid);
+        Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
+        bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
+        //encodeOutput.GetDeviceId
+        const size_t numIterationsBeforePrintingProgress = 100;
+        //size_t numItersSinceLastPrintOfProgress = 0;
+        size_t actualMBSize;
+        vector<typename RNNTDecodeFunctions<ElemType>::Sequence> CurSequences, nextSequences;
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
+        {
+            //encode forward prop for whole utterance
+            ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes);
+
+            //forward prop encoder network
+            m_net->ForwardProp(encodeOutputNodes[0]);
+            encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
+            //encodeOutput.Print("encodeoutput");
+            dataReader.DataEnd();
+
+            //decode forward prop step by step
+            size_t vocabSize = bm.GetNumRows();
+            size_t blankId = vocabSize - 1;
+
+            nextSequences.clear();
+
+            //initialize with blank ID
+            typename RNNTDecodeFunctions<ElemType>::Sequence oneSeq = rnntdfs.newSeq(vocabSize, (size_t) 50, deviceid);
+            rnntdfs.extendSeq(oneSeq, blankId, 0.0);
+            nextSequences.push_back(oneSeq);
+
+            // loop for each frame
+            for (size_t t = 0; t < encodeOutput.GetNumCols(); t++)
+            {
+                for (size_t n = 0; n < CurSequences.size(); n++)
+                {
+                    rnntdfs.deleteSeq(CurSequences[n]);
+                }
+                vector<typename RNNTDecodeFunctions<ElemType>::Sequence>().swap(CurSequences);
+                CurSequences = nextSequences;
+
+                vector<typename RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
+                //deal with the same prefix
+                /*sort(CurSequences.begin(), CurSequences.end(),
+                     [](const Sequence& a, const Sequence& b) -> bool {
+                         return a.labelseq.size() > b.labelseq.size();
+                     });
+                for (size_t n = 0; n < CurSequences.size() - 1; n++)
+                {
+                    for (size_t h = n + 1; h < CurSequences.size(); h++)
+                    {
+                        if (isPrefix(CurSequences[h], CurSequences[n]))
+                        {
+                            //forward_prop the prefix
+                            forward_decode(CurSequences[h], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, CurSequences[h].labelseq.size());
+
+                            forwardmerged(CurSequences[h], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
+
+                            size_t idx = CurSequences[h].labelseq.size();
+                            ElemType curlogp = CurSequences[h].logP + decodeOutput(CurSequences[n].labelseq[idx], 0);
+                            for (size_t k = idx; k < CurSequences[n].labelseq.size() - 1; k++)
+                            {
+                                forward_decode(CurSequences[n], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, k + 1);
+                                forwardmerged(CurSequences[n], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
+
+                                curlogp += decodeOutput(CurSequences[n].labelseq[k + 1], 0);
+                            }
+                            CurSequences[n].logP = decodeOutput.LogAdd(curlogp, CurSequences[n].logP);
+                        }
+                    }
+                }*/
+                //nextSequences.clear();
+                while (true)
+                {
+
+                    //auto maxSeq = getMaxSeq(CurSequences);
+                    auto maxSeq = std::max_element(CurSequences.begin(), CurSequences.end());
+                    //std::max_element()
+                    //auto pos = std::find(CurSequences.begin(), CurSequences.end(), maxSeq);
+                    typename RNNTDecodeFunctions<ElemType>::Sequence tempSeq = rnntdfs.newSeq(*maxSeq, deviceid);
+                    rnntdfs.deleteSeq(*maxSeq);
+                    CurSequences.erase(maxSeq);
+                    rnntdfs.prepareSequence(tempSeq);
+                    rnntdfs.forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size(), *m_net);
+                    rnntdfs.forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm, *m_net);
+
+                    //sumofENandDE.Print("sum");
+                    //sort log posterior and get best N labels
+                    vector<pair<size_t, ElemType>> topN = rnntdfs.getTopN(decodeOutput, expandBeam, blankId);
+
+                    //expand blank
+                    typename RNNTDecodeFunctions<ElemType>::Sequence seqK = rnntdfs.newSeq(tempSeq, deviceid);
+                    ElemType newlogP = topN[vocabSize].second + tempSeq.logP;
+                    seqK.logP = newlogP;
+                    bool existseq = false;
+                    for (auto itseq = nextSequences.begin(); itseq != nextSequences.end(); itseq++)
+                    //for (Sequence seqP : keyNextSequences)  //does not work
+                    {
+                        //merge the score with same sequence
+                        if (seqK.labelseq == itseq->labelseq)
+                        {
+                            existseq = true;
+                            itseq->logP = std::max(seqK.logP, itseq->logP); // guoye: this is the only change for Viterbi decoding
+                            //itseq->lengthwithblank = (seqK.lengthwithblank + itseq->lengthwithblank) / 2;
+                            break;
+                        }
+                    }
+                    if (!existseq)
+                    {
+                        nextSequences.push_back(seqK);
+                    }
+
+                    int iLabel;
+                    for (iLabel = 0; iLabel < expandBeam; iLabel++)
+                    {
+
+                        seqK = rnntdfs.newSeq(tempSeq, deviceid);
+                        newlogP = topN[iLabel].second + tempSeq.logP;
+                        seqK.logP = newlogP;
+
+                        if (topN[iLabel].first != blankId)
+
+                        {
+                            rnntdfs.extendSeq(seqK, topN[iLabel].first, newlogP);
+
+                            CurSequences.push_back(seqK);
+                        }
+                    }
+                    vector<pair<size_t, ElemType>>().swap(topN);
+                    //delete topN;
+                    rnntdfs.deleteSeq(tempSeq);
+
+                    if (CurSequences.size() == 0)
+                        break;
+                    auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
+                    auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
+                    if (nextSequences.size() > beamSize && yb->logP > ya->logP)
+                        break;
+                    /*if (nextSequences.size() > beamSize) //                        && yb->logP > ya->logP)
+                        {
+                            nth_element(nextSequences.begin(), nextSequences.begin() + beamSize, nextSequences.end(),
+                                        [](const Sequence& a, const Sequence& b) -> bool {
+                                            return a.logP > b.logP;
+                                        });
+                            if (nextSequences[beamSize - 1].logP > ya->logP)
+                                break;
+                        }*/
+                    //break;
+                    //std::nth_element(logP, logP + beamSize, )
+                }
+                std::sort(nextSequences.begin(), nextSequences.end());
+                std::reverse(nextSequences.begin(), nextSequences.end());
+                if (nextSequences.size() > beamSize)
+                {
+                    for (size_t n = beamSize; n < nextSequences.size(); n++)
+                    {
+                        rnntdfs.deleteSeq(nextSequences[n]);
+                    }
+                }
+                for (size_t iseq = nextSequences.size(); iseq > beamSize; iseq--)
+                    nextSequences.pop_back();
+                //break;
+            }
+
+            //nbest output
+            for (size_t n = 0; n < nextSequences.size(); n++)
+            {
+                nextSequences[n].logP /= nextSequences[n].labelseq.size() - 1;
+            }
+            auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
+            size_t lmt = yb->length - 1;
+            greedyOutput.Resize(vocabSize, lmt);
+            greedyOutput.SetValue(0.0);
+            for (size_t n = 0; n < lmt; n++)
+            {
+                greedyOutput(yb->labelseq[n + 1], n) = 1.0;
+            }
+            //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
+            //greedyOutput.Print("greedy output");
+            outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
+
+            //the first candidates, file no ++
+            if (lmt == 0)
+            {
+                greedyOutput.Resize(vocabSize, 1);
+                lmin.Resize(vocabSize, 1);
+                lmin.SetValue(0.0);
+                lmin(blankId, 0) = 1;
+                greedyOutput.SetColumn(lmin, 0);
+                lmt = 1;
+            }
+            //greedyOutput.SetValue(yb->LabelMatrix->ColumnSlice(0, lmt));
+            //greedyOutput.Print("greedy output");
+
+            for (size_t n = 0; n < CurSequences.size(); n++)
+            {
+                rnntdfs.deleteSeq(CurSequences[n]);
+            }
+            vector<typename RNNTDecodeFunctions<ElemType>::Sequence>().swap(CurSequences);
+            for (size_t n = 0; n < nextSequences.size(); n++)
+            {
+                rnntdfs.deleteSeq(nextSequences[n]);
+            }
+            vector<typename RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
             dataWriter.SaveData(0, outputMatrices, lmt, lmt, 0);
             //break;
         }
@@ -803,6 +911,7 @@ public:
         // clean up
     }
 
+    /* guoye: end */
     // Perform a single forward pass to obtain the output values from a network
     void WriteOutput(IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames, size_t numOutputSamples = requestDataSize, bool doUnitTest = false)
     {
@@ -900,7 +1009,7 @@ public:
             m_net->AllocateAllMatrices({}, outputNodes, outputNodes[0]);
         }
 
-        StreamMinibatchInputs inputMatrices = DataReaderHelpers::RetrieveInputMatrices(inputNodes);
+        StreamMinibatchInputs inputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(inputNodes);
 
         // load a label mapping if requested
         std::vector<std::string> labelMapping;
@@ -999,8 +1108,8 @@ public:
     }
 
 private:
+    int m_logIndex = 0;
     ComputationNetworkPtr m_net;
-    std::vector<wstring> m_nodesToCache;
     int m_verbosity;
     void operator=(const SimpleOutputWriter&); // (not assignable)
 };

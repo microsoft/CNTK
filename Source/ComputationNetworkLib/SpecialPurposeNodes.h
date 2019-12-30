@@ -1765,7 +1765,9 @@ public:
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
 
         // compute CTC score
-        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId);
+        vector<float> vt_nulf;
+        vector<size_t> vt_nuli;
+        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_nulf, vt_nulf, vt_nuli); // the last 3 inputs vt_nul are place holders just to make the function happy
         //m_outputDensity->Print("gradient");
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
@@ -1893,7 +1895,117 @@ protected:
 
 template class RNNTNode<float>;
 template class RNNTNode<double>;
+/* guoye: start */
+// Node for RNNT MWER
+template <class ElemType>
+class RNNTMWERNode : public RNNTNode<ElemType>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"RNNTMWER";
+    }
 
+public:
+    RNNTMWERNode(DEVICEID_TYPE deviceId, const wstring& name, size_t blankTokenId = SIZE_MAX, int delayConstraint = -1)
+        : RNNTNode(deviceId, name, blankTokenId, delayConstraint)
+    {
+    }
+
+    RNNTMWERNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RNNTMWERNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+
+        m_outputDensity->AssignProductOf(InputRef(4).Value(), true, InputRef(3).Value(), false);
+        m_outputDensity->AssignSumOf(*m_outputDensity, InputRef(5).Value());
+        m_outputDensity->InplaceLogSoftmax(true);
+        FrameRange fr(InputRef(0).GetMBLayout());
+        InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
+
+        // compute RNNT score
+        //PathInfo is not recognized in many files, so we use the regular data structures
+        vector<float> vt_probs, vt_wer;
+        
+        vector<size_t> vt_labseqlen;
+        vt_probs.clear();  vt_wer.clear();  vt_labseqlen.clear();
+        for (size_t i = 0; i < vt_pathinfos.size(); i++)
+        {
+            vt_probs.push_back(vt_pathinfos[i].prob);
+            vt_wer.push_back(vt_pathinfos[i].WER);
+            vt_labseqlen.push_back(vt_pathinfos[i].label_seq.size());
+        }
+        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR);
+#if NANCHECK
+        functionValues.HasNan("RNNTMWERNode");
+#endif
+#if DUMPOUTPUT
+        functionValues.Print("RNNTMWERNode");
+#endif
+    }
+
+    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<RNNTMWERNode<ElemType>>(nodeP);
+
+            node->m_derivative->SetValue(*m_derivative);
+            node->m_maxIndexes->SetValue(*m_maxIndexes);
+            node->m_maxValues->SetValue(*m_maxValues);
+            node->m_outputDensity->SetValue(*m_outputDensity);
+            node->m_delayConstraint = m_delayConstraint;
+            node->m_tmpMatrix->SetValue(*m_tmpMatrix);
+        }
+    }
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_outputDensity, matrixPool);
+        RequestMatrixFromPool(m_derivative, matrixPool);
+        RequestMatrixFromPool(m_maxIndexes, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
+        RequestMatrixFromPool(m_tmpMatrix, matrixPool);
+    }
+
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_outputDensity, matrixPool);
+        ReleaseMatrixToPool(m_derivative, matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes, matrixPool);
+        ReleaseMatrixToPool(m_maxValues, matrixPool);
+        ReleaseMatrixToPool(m_tmpMatrix, matrixPool);
+    }
+
+    void SetMWERInfo(vector<PathInfo> vt_pi,
+                     bool ln,
+                     bool post_from_decode, bool mbr)
+    {
+        vt_pathinfos = vt_pi;
+        lengthNorm = ln;
+        wordPathPosteriorFromDecodeMBR = post_from_decode;
+        doMBR = mbr;
+    }
+
+protected:
+    vector<PathInfo> vt_pathinfos;
+    bool lengthNorm;
+    bool wordPathPosteriorFromDecodeMBR;
+    bool doMBR = false;
+};
+
+template class RNNTMWERNode<float>;
+template class RNNTMWERNode<double>;
+
+/* guoye: end */
 // -----------------------------------------------------------------------
 // GetbiasNode (prediction, transcription )
 // Getbias node, get input bias based on the labels. used of KWS training
@@ -2121,7 +2233,6 @@ public:
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_maxIndexes, matrixPool);
         RequestMatrixFromPool(m_maxValues, matrixPool);
-        
     }
 
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
@@ -2129,7 +2240,6 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_maxIndexes, matrixPool);
         ReleaseMatrixToPool(m_maxValues, matrixPool);
-        
     }
 
     std::vector<size_t> SpaceTokens() const

@@ -269,6 +269,14 @@ protected:
     bool m_doUnitTest;
 
     bool m_useAllDataForPreComputedNode;
+    //guoye: RNNT MBR
+    ConfigArray m_outputNodeNames;
+    size_t m_numBestMBR;                   // number of nbest
+    string m_trainMethodMBR;               // can be Viterbi or BaumWelch
+    bool m_wordPathPosteriorFromDecodeMBR; // false if we get the posteriror from decode, true if we get it from the forward phase of training
+    bool m_doMBR; // true to do MBR, false not
+    wstring m_labelMappingFile; // 
+    bool m_lengthNorm; // true to do length Norm, false, not. It will be used when computing the posterior
 
     // Parallel training
     MPIWrapperPtr m_mpi;
@@ -512,7 +520,16 @@ protected:
                          const size_t maxNumberOfSamples = SIZE_MAX,
                          const size_t totalMBsSeenBefore = 0,
                          ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr,
-                         const int startEpoch = 0);
+                         const int startEpoch = 0, 
+						 const std::vector<std::wstring>& outputNodeNamesVector = std::vector<std::wstring>(),
+                         StreamMinibatchInputs* encodeInputMatrices = NULL,
+                         StreamMinibatchInputs* decodeinputMatrices = NULL,
+                         bool doMBR = true,
+                         size_t numBestMBR = 8,               // number of nbest
+                         string trainMethodMBR = "BaumWelch", // can be Viterbi or BaumWelch
+                         bool wordPathPosteriorFromDecodeMBR = true,
+                         bool lengthNorm = true,
+                         const vector<string>& vt_labels = vector<string>()); // 
 
     void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);

@@ -32,9 +32,23 @@
 #include <set>
 
 #include "ComputationGraphAlgorithms.h"
+#include "DataReader.h"
+// #include "..\SGDlib\SimpleOutputWriter.h"
 
-namespace Microsoft { namespace MSR { namespace CNTK {
-
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
+/*
+struct PathInfo
+{
+    float WER;
+    float prob;
+    vector<size_t> label_seq;
+};
+*/
 inline std::wstring ToString(const ComputationNodeBasePtr& node)
 {
     return node->NodeName();
@@ -43,31 +57,285 @@ inline std::wstring ToString(const ComputationNodeBasePtr& node)
 // ===========================================================================
 // ComputationNetwork -- computation graph and operations
 // ===========================================================================
+// move the shared function/data structure from SimpleOutputWriter.h to this file
+template <class ElemType>
 
-class ComputationNetwork :
-    public ScriptableObjects::Object,
-    public ScriptableObjects::HasToString,
-    public ScriptableObjects::CustomConfigRecord
+class RNNTDecodeFunctions
 {
 public:
+    unordered_map<wstring, vector<shared_ptr<PastValueNode<ElemType>>>> m_nameToPastValueNodeCache;
+    vector<shared_ptr<Matrix<ElemType>>> m_decodeOutputCache;
+    std::vector<wstring> m_nodesToCache;
+
+    struct Sequence
+    {
+        //shared_ptr<Matrix<ElemType>> LabelMatrix;
+        std::vector<size_t> labelseq;
+        ElemType logP;
+        size_t length;
+        size_t processlength;
+        size_t lengthwithblank;
+        shared_ptr<Matrix<ElemType>> decodeoutput;
+        bool operator<(const Sequence& rhs) const
+        {
+            return logP < rhs.logP;
+        }
+        bool realValues = false;
+        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>> nameToParentNodeValues;
+        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>> nameToNodeValues;
+        long refs = 0;
+    };
+
+    Sequence newSeq(size_t numRow, size_t numCol, DEVICEID_TYPE deviceId)
+    {
+        Sequence oneSeq = {std::vector<size_t>(), 0.0, 0, 0, 0, make_shared<Matrix<ElemType>>(numRow, (size_t) 1, deviceId)};
+
+        for (size_t i = 0; i < m_nodesToCache.size(); i++)
+        {
+            vector<ElemType> v;
+            oneSeq.nameToNodeValues[m_nodesToCache[i]] = make_shared<PastValueNode<ElemType>>(deviceId, m_nodesToCache[i]);
+        }
+
+        return oneSeq;
+    }
+
+    Sequence newSeq(Sequence& a, DEVICEID_TYPE deviceId)
+    {
+        Sequence oneSeq;
+        oneSeq.labelseq = a.labelseq;
+        oneSeq.logP = a.logP;
+        oneSeq.length = a.length;
+        oneSeq.lengthwithblank = a.lengthwithblank;
+        oneSeq.processlength = a.processlength;
+        if (m_decodeOutputCache.size() > 0)
+        {
+            oneSeq.decodeoutput = m_decodeOutputCache.back();
+            m_decodeOutputCache.pop_back();
+        }
+        else
+        {
+            oneSeq.decodeoutput = make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId());
+        }
+        oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
+
+        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
+        for (it = a.nameToNodeValues.begin(); it != a.nameToNodeValues.end(); it++)
+        {
+            if (oneSeq.processlength > 0)
+            {
+                if (it->second->Value().GetNumElements() > 0 && a.realValues)
+                {
+                    oneSeq.nameToParentNodeValues[it->first] = it->second;
+                    a.refs++;
+                }
+                else
+                    oneSeq.nameToParentNodeValues[it->first] = a.nameToParentNodeValues[it->first];
+                /*size_t ab = oneSeq.nameToParentNodeValues[it->first]->Value().GetNumElements();
+                if (ab > 0)
+                    fprintf(stderr, "test %ls %zu", it->first.c_str(), ab);*/
+            }
+            auto itin = m_nameToPastValueNodeCache.find(it->first);
+            if (itin != m_nameToPastValueNodeCache.end() && m_nameToPastValueNodeCache[it->first].size() > 0)
+            {
+                oneSeq.nameToNodeValues[it->first] = m_nameToPastValueNodeCache[it->first].back();
+                m_nameToPastValueNodeCache[it->first].pop_back();
+            }
+            else
+            {
+                oneSeq.nameToNodeValues[it->first] = make_shared<PastValueNode<ElemType>>(deviceId, it->first);
+            }
+            /*std::ostringstream address;
+            address << oneSeq.nameToNodeValues[it->first];
+            fprintf(stderr, "newSeq %ls %s \n", it->first.c_str(), address.str().c_str());*/
+        }
+
+        return oneSeq;
+    }
+
+    void deleteSeq(Sequence oneSeq)
+    {
+        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
+        for (it = oneSeq.nameToNodeValues.begin(); it != oneSeq.nameToNodeValues.end(); it++)
+        {
+            auto itin = m_nameToPastValueNodeCache.find(it->first);
+            if (itin == m_nameToPastValueNodeCache.end())
+                m_nameToPastValueNodeCache[it->first] = vector<shared_ptr<PastValueNode<ElemType>>>();
+            if (oneSeq.refs == 0)
+                m_nameToPastValueNodeCache[it->first].push_back(oneSeq.nameToNodeValues[it->first]);
+        }
+        m_decodeOutputCache.push_back(oneSeq.decodeoutput);
+
+        vector<size_t>().swap(oneSeq.labelseq);
+    }
+
+    void extendSeq(Sequence& insequence, size_t labelId, ElemType logP)
+    {
+        insequence.labelseq.push_back(labelId);
+        insequence.logP = logP;
+        insequence.length++;
+        insequence.lengthwithblank++;
+    }
+    vector<pair<size_t, ElemType>> getTopN(Microsoft::MSR::CNTK::Matrix<ElemType>& prob, size_t N, size_t& blankid)
+    {
+        vector<pair<size_t, ElemType>> datapair;
+        typedef vector<pair<size_t, ElemType>>::value_type ValueType;
+        ElemType* probdata = prob.CopyToArray();
+        for (size_t n = 0; n < prob.GetNumRows(); n++)
+        {
+            datapair.push_back(ValueType(n, probdata[n]));
+        }
+        nth_element(datapair.begin(), datapair.begin() + N, datapair.end(), [](ValueType const& x, ValueType const& y) -> bool {
+            return y.second < x.second;
+        });
+        datapair.push_back(ValueType(blankid, probdata[blankid]));
+        delete probdata;
+        return datapair;
+    }
+
+    void prepareSequence(Sequence& s)
+    {
+        if (s.nameToNodeValues.size() > 0)
+        {
+            unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
+            for (it = s.nameToParentNodeValues.begin(); it != s.nameToParentNodeValues.end(); it++)
+            {
+                if (it->second && it->second->Value().GetNumElements() > 0)
+                {
+                    it->second->CopyTo(s.nameToNodeValues[it->first], it->first, CopyNodeFlags::copyNodeAll);
+                    /*std::ostringstream address;
+                address << s.nameToNodeValues[it->first];
+                    fprintf(stderr, "prepareSequence %ls %s \n", it->first.c_str(), address.str().c_str());*/
+                }
+            }
+        }
+        s.realValues = true;
+    }
+
+    void forward_decode(Sequence& oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, const std::vector<ComputationNodeBasePtr>& decodeOutputNodes,
+                        const std::vector<ComputationNodeBasePtr>& decodeinputNodes, size_t vocabSize, size_t plength, ComputationNetwork& cn)
+
+    {
+
+        //        size_t labelLength = oneSeq.length;
+        if (oneSeq.processlength + 1 != plength && plength != oneSeq.processlength)
+            LogicError("Current implementation assumes 1 step difference");
+        if (plength != oneSeq.processlength)
+        {
+            /*m_logIndex = m_logIndex + 1;
+            wstring fileName = L"D:\\users\\vadimma\\cntk_3\\new_opt" + std::to_wstring(m_logIndex) + L".txt";
+            std::ofstream out(fileName, std::ios::out);
+            out << fixed;
+            out.precision(3);
+            for (size_t li = 0; li < oneSeq.labelseq.size(); li++)
+                out << oneSeq.labelseq[li] << " ";
+
+            out << "\n";*/
+
+            Matrix<ElemType> lmin(deviceID);
+
+            lmin.Resize(vocabSize, 1);
+            lmin.SetValue(0.0);
+            lmin(oneSeq.labelseq[plength - 1], 0) = 1.0;
+            auto lminput = decodeinputMatrices.begin();
+            lminput->second.pMBLayout->Init(1, 1);
+            //std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
+            lminput->second.GetMatrix<ElemType>().SetValue(lmin);
+            if (plength == 1)
+            {
+                lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+            }
+            else
+            {
+                ///lminput->second.pMBLayout->//m_sequences.erase(0);
+                lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, SentinelValueIndicatingUnspecifedSequenceBeginIdx, 1);
+
+                //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+
+                for (size_t i = 0; i < m_nodesToCache.size(); i++)
+                {
+                    auto nodePtr = cn.GetNodeFromName(m_nodesToCache[i]);
+
+                    if (oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements() > 0)
+
+                    {
+                        oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
+                    }
+                }
+            }
+
+            // cn.BumpEvalTimeStamp(decodeinputNodes);
+
+            //m_net->DumpAllNodesToFile(true, true, L"D:\\users\\vadimma\\cntk_3\\After_model_opt.txt");
+            cn.BumpEvalTimeStamp(decodeinputNodes);
+            // NotifyChangedNodes<ElemType>(m_net, decodeinputMatrices);
+
+            cn.ForwardProp(decodeOutputNodes[0]);
+            //Matrix<ElemType> tempMatrix = *(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value());
+            oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())));
+            oneSeq.processlength = plength;
+
+            for (size_t i = 0; i < m_nodesToCache.size(); i++)
+            {
+                auto nodePtr = cn.GetNodeFromName(m_nodesToCache[i]);
+
+                if (plength == 1)
+                {
+                    nodePtr->CopyTo(oneSeq.nameToNodeValues[m_nodesToCache[i]], m_nodesToCache[i], CopyNodeFlags::copyNodeAll);
+                }
+            }
+
+            lmin.ReleaseMemory();
+        }
+    }
+    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode,
+                       ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes, Matrix<ElemType>& Wm, Matrix<ElemType>& bm, ComputationNetwork& cn)
+    {
+
+        sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(a.decodeoutput));
+        //sumofENandDE.InplaceLogSoftmax(true);
+        Matrix<ElemType> tempMatrix(encodeOutput.GetDeviceId());
+        //plus broadcast
+        (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
+        //SumMatrix.SetValue(sumofENandDE);
+        ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
+        auto PlusMBlayout = PlusNode->GetMBLayout();
+        PlusMBlayout->Init(1, 1);
+        PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+        // cn.FormEvalOrder(Plustransnodes[0]);
+        cn.ForwardPropFromTo(Plusnodes, Plustransnodes);
+        decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+        tempMatrix.AssignProductOf(Wm, true, decodeOutput, false);
+        decodeOutput.AssignSumOf(tempMatrix, bm);
+        //decodeOutput.VectorMax(maxIdx, maxVal, true);
+        decodeOutput.InplaceLogSoftmax(true);
+    }
+};
+
+class ComputationNetwork : public ScriptableObjects::Object,
+                           public ScriptableObjects::HasToString,
+                           public ScriptableObjects::CustomConfigRecord
+{
+public:
+    // we have to give template <class ElemType> for each function and struct, rather than put in on top of class ComputationNetwork, because if we do so, we have to pass the ElemType for each occurence that uses computationnetwork
+
     typedef shared_ptr<ComputationNetwork> ComputationNetworkPtr;
 
     // -----------------------------------------------------------------------
     // construction
     // -----------------------------------------------------------------------
 
-    ComputationNetwork() :
-        m_randomSeedOffset(0),
-        m_isCompiled(false),
-        m_areMatricesAllocated(false),
-        m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, ComputationNodeBase::DefaultDynamicAxisName)),
-        m_environment(make_shared<ComputationEnvironment>())
+    ComputationNetwork()
+        : m_randomSeedOffset(0),
+          m_isCompiled(false),
+          m_areMatricesAllocated(false),
+          m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, ComputationNodeBase::DefaultDynamicAxisName)),
+          m_environment(make_shared<ComputationEnvironment>())
     {
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");
     }
 
-    ComputationNetwork(DEVICEID_TYPE deviceId) :
-        ComputationNetwork()
+    ComputationNetwork(DEVICEID_TYPE deviceId)
+        : ComputationNetwork()
     {
         SetDeviceId(deviceId);
     }
@@ -86,7 +354,10 @@ public:
         m_deviceId = deviceId;
     }
 
-    DEVICEID_TYPE GetDeviceId() const { return m_deviceId; }
+    DEVICEID_TYPE GetDeviceId() const
+    {
+        return m_deviceId;
+    }
 
     void PrintNodeTiming();
 
@@ -110,8 +381,10 @@ public:
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
-    template <class ElemType> void Read(const std::wstring& fileName);
-    template <class ElemType> void Load(const std::wstring& fileName)
+    template <class ElemType>
+    void Read(const std::wstring& fileName);
+    template <class ElemType>
+    void Load(const std::wstring& fileName)
     {
         Read<ElemType>(fileName);
         // perform all further post-processing, caching, etc.
@@ -131,13 +404,11 @@ public:
     void SaveEdited(const std::wstring& fileName, const FileOptions fileFormat = FileOptions::fileOptionsBinary);
 
 private:
-
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
-    
+
     static size_t GetModelVersion(File& fstream);
 
 public:
-
     // -----------------------------------------------------------------------
     // evaluation
     // -----------------------------------------------------------------------
@@ -205,8 +476,7 @@ public:
         TravserseInSortedGlobalEvalOrder(nodesTo, [&](const ComputationNodeBasePtr& node) {
             for (const ComputationNodeBasePtr& input : node->GetInputs())
             {
-                if (std::find(nodesFrom.begin(), nodesFrom.end(), input) != nodesFrom.end()
-                    || nodesToForward.find(input) != nodesToForward.end())
+                if (std::find(nodesFrom.begin(), nodesFrom.end(), input) != nodesFrom.end() || nodesToForward.find(input) != nodesToForward.end())
                 {
                     nodesToForward.insert(node);
                 }
@@ -218,6 +488,391 @@ public:
         {
             ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(node, FrameRange(nullptr));
         }
+    }
+    // decode nbest for RNNT
+
+    void convert_word_sequence_string_2_vector(string word_sequence, vector<string>& vt_words, char separator)
+    {
+        if (word_sequence == "")
+            return;
+        size_t lp, rp;
+        rp = 0;
+        while (true)
+        {
+            lp = word_sequence.find_first_not_of(separator, rp);
+            rp = word_sequence.find_first_of(separator, lp);
+            if (rp == string::npos)
+            {
+                vt_words.push_back(word_sequence.substr(lp));
+                break;
+            }
+            else
+                vt_words.push_back(word_sequence.substr(lp, rp - lp));
+        }
+    }
+
+    float compute_wer(vector<string>& ref, vector<string>& rec)
+    {
+        short** mat;
+        size_t i, j;
+
+        mat = new short*[rec.size() + 1];
+        for (i = 0; i <= rec.size(); i++)
+            mat[i] = new short[ref.size() + 1];
+
+        for (i = 0; i <= rec.size(); i++)
+            mat[i][0] = short(i);
+        for (j = 1; j <= ref.size(); j++)
+            mat[0][j] = short(j);
+
+        for (i = 1; i <= rec.size(); i++)
+            for (j = 1; j <= ref.size(); j++)
+            {
+                mat[i][j] = mat[i - 1][j - 1];
+
+                if (rec[i - 1] != ref[j - 1])
+                {
+
+                    if ((mat[i - 1][j]) < mat[i][j])
+                        mat[i][j] = mat[i - 1][j];
+                    if ((mat[i][j - 1]) < mat[i][j])
+                        mat[i][j] = mat[i][j - 1];
+                    mat[i][j]++;
+                }
+            }
+        float wer = float(mat[rec.size()][ref.size()]) / ref.size();
+        for (i = 0; i <= rec.size(); i++)
+            delete[] mat[i];
+        delete[] mat;
+        return wer;
+    }
+
+    template <class ElemType>
+
+    void RNNT_decode_nbest_MBR(const std::vector<std::wstring>& outputNodeNames, Matrix<ElemType>& encodeOutput, MBLayoutPtr& encodeMBLayout,
+                               Matrix<ElemType>& decodeInputMatrix, MBLayoutPtr& decodeMBLayout, std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t numBestMBR, bool lengthNorm, const vector<string>& vt_labels, vector<vector<PathInfo>>& uttPathsInfo)
+    {
+        if (outputNodeNames.size() == 0)
+            fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
+        std::vector<ComputationNodeBasePtr> outputNodes = OutputNodesByName(outputNodeNames);
+
+        RNNTDecodeFunctions<ElemType> rnntdfs;
+
+        //prediction related nodes
+        std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin() + 1, outputNodeNames.begin() + 2);
+        std::vector<ComputationNodeBasePtr> decodeOutputNodes = OutputNodesByName(decodeOutputNodeNames);
+
+        std::list<ComputationNodeBasePtr> pastValueNodes = PastValueNodesForOutputs(decodeOutputNodes);
+
+        std::list<ComputationNodeBasePtr>::iterator it;
+        for (it = pastValueNodes.begin(); it != pastValueNodes.end(); ++it)
+        {
+            auto pastValueNode = dynamic_pointer_cast<PastValueNode<ElemType>>(*it); //DelayedValueNodeBase
+            if (pastValueNode || !(*it)->NodeName().compare(0, 5, L"Loop_"))
+            {
+                rnntdfs.m_nodesToCache.push_back((*it)->NodeName());
+            }
+        }
+        //joint nodes
+        ComputationNodeBasePtr PlusNode = GetNodeFromName(outputNodeNames[2]);
+        ComputationNodeBasePtr PlusTransNode = GetNodeFromName(outputNodeNames[3]);
+        ComputationNodeBasePtr WmNode = GetNodeFromName(outputNodeNames[4]);
+        ComputationNodeBasePtr bmNode = GetNodeFromName(outputNodeNames[5]);
+        std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
+        Plusnodes.push_back(PlusNode);
+        Plustransnodes.push_back(PlusTransNode);
+
+        size_t deviceid = decodeInputMatrix.GetDeviceId();
+        std::map<std::wstring, void*, nocase_compare> outputMatrices;
+        Matrix<ElemType> decodeOutput(deviceid), Wm(deviceid), bm(deviceid), tempMatrix(deviceid);
+        Matrix<ElemType> greedyOutput(deviceid);
+        Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
+
+        Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
+        bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
+        const size_t numIterationsBeforePrintingProgress = 100;
+
+        //get MBlayer of encoder input
+        size_t numParallelSequences = encodeMBLayout->GetNumParallelSequences();
+        size_t numParallelPhoneSequences = decodeMBLayout->GetNumParallelSequences();
+        const auto numSequences = encodeMBLayout->GetNumSequences();
+
+        std::vector<size_t> uttFrameBeginIdx, uttPhoneBeginIdx;
+        // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttFrameNum, uttPhoneNum;
+        // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttFrameToChanInd, uttPhoneToChanInd;
+
+        uttFrameNum.clear();
+        uttFrameToChanInd.clear();
+        uttFrameBeginIdx.clear();
+
+        uttFrameNum.reserve(numSequences);
+        uttFrameToChanInd.reserve(numSequences);
+        uttFrameBeginIdx.reserve(numSequences);
+
+        uttPhoneNum.clear();
+        uttPhoneToChanInd.clear();
+        uttPhoneBeginIdx.clear();
+
+        uttPhoneNum.reserve(numSequences);
+        uttPhoneToChanInd.reserve(numSequences);
+        uttPhoneBeginIdx.reserve(numSequences);
+        uttPathsInfo.clear();
+        uttPathsInfo.resize(numSequences);
+        //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
+        size_t seqId = 0; //frame
+        size_t totalframenum = 0;
+        for (const auto& seq : encodeMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttFrameToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttFrameBeginIdx.push_back(seq.tBegin);
+            uttFrameNum.push_back(numFrames);
+            totalframenum += numFrames;
+        }
+
+        //get utt information for prediction input....
+        seqId = 0; //frame
+
+        for (const auto& seq : decodeMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+            {
+                continue;
+            }
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttPhoneToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttPhoneBeginIdx.push_back(seq.tBegin);
+            uttPhoneNum.push_back(numFrames);
+        }
+
+        //get phone sequene
+        CNTK::Matrix<ElemType> maxIndex(deviceid), maxValue(deviceid);
+        decodeInputMatrix.VectorMax(maxIndex, maxValue, true);
+        maxIndex.TransferToDeviceIfNotThere(CPUDEVICE);
+
+        //backup decoding input matrix and MBlayout
+        MBLayoutPtr decodebackupMBlayout;
+        decodebackupMBlayout = make_shared<MBLayout>();
+        decodebackupMBlayout->CopyFrom(decodeMBLayout);
+
+        Matrix<ElemType> decodeInputMatrixBackup(deviceid);
+        decodeInputMatrixBackup.SetValue(decodeInputMatrix);
+
+        std::vector<std::vector<size_t>> phoneSeqs;
+        phoneSeqs.resize(numSequences);
+        for (size_t utt = 0; utt < numSequences; utt++)
+        {
+            //phoneSeqs[utt].resize(uttPhoneNum[utt]);
+            for (size_t u = 0; u < uttPhoneNum[utt]; u++)
+            {
+                size_t uID = (u + uttPhoneBeginIdx[utt]) * numParallelPhoneSequences + uttPhoneToChanInd[utt];
+                phoneSeqs[utt].push_back((size_t)(maxIndex(0, uID)));
+            }
+        }
+        // convert the phoneSeqs to word sequence, as reference, convert a string of "_ab_cdef_g" to word sequence of "ab cdef g".
+        std::vector<std::vector<string>> wordSeqs;
+        wordSeqs.resize(numSequences);
+        for (size_t uttID = 0; uttID < numSequences; uttID++)
+        {
+            string word_sequence = "";
+            for (size_t i = 0; i < phoneSeqs[uttID].size(); i++)
+            {
+                size_t labelID = phoneSeqs[uttID][i];
+                if (labelID != (vt_labels.size() - 1)) // it is not <blank>
+                {
+                    string wordpiece = vt_labels[labelID];
+                    word_sequence += wordpiece;
+                }
+            }
+            convert_word_sequence_string_2_vector(word_sequence, wordSeqs[uttID], '_');
+
+            fprintf(stderr, "word sequence for uttID = %d .\n", int(uttID));
+            for (size_t i = 0; i < wordSeqs[uttID].size(); i++)
+            {
+                fprintf(stderr, "%s ", wordSeqs[uttID][i].c_str());
+            }
+            fprintf(stderr, "\n");
+        }
+
+        // the data structure for phone sequence
+
+        // do decoding for the utterances, and feed in the data structure,
+
+        size_t vocabSize = bm.GetNumRows();
+        size_t blankId = vocabSize - 1;
+        vector<RNNTDecodeFunctions<ElemType>::Sequence> CurSequences, nextSequences;
+        // sanity check
+        if (vt_labels.size() != vocabSize)
+        {
+            RuntimeError("RNNT_decode_nbest_MBR: size not match, vt_labels.size() = %d, and vocabSize = %d.", vt_labels.size(), vocabSize);
+        }
+
+        StreamMinibatchInputs decodeinputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(decodeinputNodes);
+
+        this->FormEvalOrder(Plustransnodes[0]);
+
+        for (size_t uttID = 0; uttID < numSequences; uttID++)
+        {
+            fprintf(stderr, "decode v0 uttID = %d .\n", int(uttID));
+            nextSequences.clear();
+            //initialize with blank ID
+            RNNTDecodeFunctions<ElemType>::Sequence oneSeq = rnntdfs.newSeq(vocabSize, (size_t) 50, deviceid);
+            rnntdfs.extendSeq(oneSeq, blankId, 0.0);
+            nextSequences.push_back(oneSeq);
+
+            // loop for each frame
+            for (size_t t = 0; t < uttFrameNum[uttID]; t++)
+            {
+                for (size_t n = 0; n < CurSequences.size(); n++)
+                {
+                    rnntdfs.deleteSeq(CurSequences[n]);
+                }
+                vector<RNNTDecodeFunctions<ElemType>::Sequence>().swap(CurSequences);
+                CurSequences = nextSequences;
+
+                vector<RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
+                //deal with the same prefix
+                while (true)
+                {
+
+                    auto maxSeq = std::max_element(CurSequences.begin(), CurSequences.end());
+                    RNNTDecodeFunctions<ElemType>::Sequence tempSeq = rnntdfs.newSeq(*maxSeq, deviceid);
+                    rnntdfs.deleteSeq(*maxSeq);
+                    CurSequences.erase(maxSeq);
+                    rnntdfs.prepareSequence(tempSeq);
+                    rnntdfs.forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size(), *this);
+
+                    size_t tinMB = (t + uttFrameBeginIdx[uttID]) * numParallelSequences + uttFrameToChanInd[uttID];
+                    rnntdfs.forwardmerged(tempSeq, tinMB, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm, *this);
+
+                    //sort log posterior and get best N labels
+                    vector<pair<size_t, ElemType>> topN = rnntdfs.getTopN(decodeOutput, numBestMBR, blankId);
+
+                    //expand blank
+                    RNNTDecodeFunctions<ElemType>::Sequence seqK = rnntdfs.newSeq(tempSeq, deviceid);
+                    ElemType newlogP = topN[vocabSize].second + tempSeq.logP;
+                    seqK.logP = newlogP;
+                    bool existseq = false;
+                    for (auto itseq = nextSequences.begin(); itseq != nextSequences.end(); itseq++)
+                    {
+                        //merge the score with same sequence
+                        if (seqK.labelseq == itseq->labelseq)
+                        {
+                            existseq = true;
+                            itseq->logP = decodeOutput.LogAdd(seqK.logP, itseq->logP);
+                            break;
+                        }
+                    }
+                    if (!existseq)
+                    {
+                        nextSequences.push_back(seqK);
+                    }
+
+                    int iLabel;
+                    for (iLabel = 0; iLabel < numBestMBR; iLabel++)
+                    {
+
+                        seqK = rnntdfs.newSeq(tempSeq, deviceid);
+                        newlogP = topN[iLabel].second + tempSeq.logP;
+                        seqK.logP = newlogP;
+
+                        if (topN[iLabel].first != blankId)
+
+                        {
+                            rnntdfs.extendSeq(seqK, topN[iLabel].first, newlogP);
+
+                            CurSequences.push_back(seqK);
+                        }
+                    }
+                    vector<pair<size_t, ElemType>>().swap(topN);
+                    rnntdfs.deleteSeq(tempSeq);
+
+                    if (CurSequences.size() == 0)
+                        break;
+                    auto ya = std::max_element(CurSequences.begin(), CurSequences.end());
+                    auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
+                    if (nextSequences.size() > numBestMBR && yb->logP > ya->logP)
+                        break;
+                }
+                std::sort(nextSequences.begin(), nextSequences.end());
+                std::reverse(nextSequences.begin(), nextSequences.end());
+                if (nextSequences.size() > numBestMBR)
+                {
+                    for (size_t n = numBestMBR; n < nextSequences.size(); n++)
+                    {
+                        rnntdfs.deleteSeq(nextSequences[n]);
+                    }
+                }
+                for (size_t iseq = nextSequences.size(); iseq > numBestMBR; iseq--)
+                    nextSequences.pop_back();
+            }
+
+            //nbest output
+
+            if (nextSequences.size() != 0)
+            {
+                float totalProb = 0;
+                for (size_t n = 0; n < nextSequences.size(); n++)
+                {
+                    if (lengthNorm)
+                        nextSequences[n].logP /= nextSequences[n].labelseq.size();
+
+                    nextSequences[n].logP = exp(nextSequences[n].logP); // the logP actually becomes P
+                    totalProb += float(nextSequences[n].logP);
+                }
+
+                for (size_t n = 0; n < nextSequences.size(); n++)
+                {
+                    PathInfo pi;
+                    pi.prob = float(nextSequences[n].logP / totalProb);
+
+                    string word_sequence = "";
+                    for (size_t k = 0; k < nextSequences[n].length - 1; k++)
+                    {
+                        size_t labelID = nextSequences[n].labelseq[k + 1];
+                        if (labelID != (vt_labels.size() - 1)) // it is not <blank>
+                        {
+
+                            string wordpiece = vt_labels[labelID];
+                            word_sequence += wordpiece;
+                        }
+                    }
+
+                    vector<string> vt_words;
+                    convert_word_sequence_string_2_vector(word_sequence, vt_words, '_');
+
+                    pi.WER = compute_wer(wordSeqs[uttID], vt_words);
+                    pi.label_seq = nextSequences[n].labelseq;
+
+                    uttPathsInfo[uttID].push_back(pi);
+                }
+            }
+            for (size_t n = 0; n < CurSequences.size(); n++)
+            {
+                rnntdfs.deleteSeq(CurSequences[n]);
+            }
+            vector<RNNTDecodeFunctions<ElemType>::Sequence>().swap(CurSequences);
+            for (size_t n = 0; n < nextSequences.size(); n++)
+            {
+                rnntdfs.deleteSeq(nextSequences[n]);
+            }
+            vector<RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
+            // end here
+
+        } // end of for loop
+        decodeInputMatrix.SetValue(decodeInputMatrixBackup);
+        //decodeInputMatrix.Print("after ss");
+        decodeMBLayout->CopyFrom(decodebackupMBlayout);
     }
 
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
@@ -263,9 +918,16 @@ private:
     void CollectInputAndLearnableParameters(const ComputationNodeBasePtr& rootNode);
     void CollectInputAndLearnableParametersRec(const ComputationNodeBasePtr& node, set<ComputationNodeBasePtr>& visited, list<ComputationNodeBasePtr>& inputs, list<ComputationNodeBasePtr>& learnableParameters);
     void ResetMBLayouts();
-    bool IsCompiled() const { return m_isCompiled; }
-    bool AreMatricesAllocated() const { return m_areMatricesAllocated; }
+    bool IsCompiled() const
+    {
+        return m_isCompiled;
+    }
+    bool AreMatricesAllocated() const
+    {
+        return m_areMatricesAllocated;
+    }
     void VerifyIsCompiled(const char* where) const;
+
 public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
 
@@ -315,7 +977,7 @@ public:
         }
         else // this creates a subset of the global eval order of all nodes that rootNode depends on
         {
-            auto rawTraversalForRoot = ::CNTK::PostOrderTraversal(graph, { rootNode });// traverse to find the set (we ignore the order)
+            auto rawTraversalForRoot = ::CNTK::PostOrderTraversal(graph, {rootNode}); // traverse to find the set (we ignore the order)
             set<ComputationNodeBasePtr> rawSet(rawTraversalForRoot.begin(), rawTraversalForRoot.end());
             for (const auto& node : GetEvalOrder(nullptr)) // iterate over global one and pull out everything that is included in the set for rootNode
             {
@@ -389,7 +1051,10 @@ public:
 
     // Note: this is also used to copy MBLayouts into our existing MBLayout instance, which is a somewhat questionable design.
     // BUGBUG (Issue #95): This function will conflict once we have multiple input layouts in the network.
-    const MBLayoutPtr& GetMBLayoutPtrOfNetwork() { return m_pMBLayoutOfNetwork; }
+    const MBLayoutPtr& GetMBLayoutPtrOfNetwork()
+    {
+        return m_pMBLayoutOfNetwork;
+    }
 
     // determine the actual MB size from the feature nodes
     // This returns max number of columns over the feature nodes.
@@ -529,7 +1194,10 @@ public:
     // environment properties
     // -----------------------------------------------------------------------
 
-    ComputationEnvironment& Environment() const { return *m_environment; }
+    ComputationEnvironment& Environment() const
+    {
+        return *m_environment;
+    }
 
     // -----------------------------------------------------------------------
     // functions to pass on specific SGD options to nodes
@@ -539,9 +1207,9 @@ public:
     static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
 
     static void SetIRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
-    
+
     template <class ElemType>
-    static void SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, 
+    static void SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode,
                                                    double normalizationTimeConstant, double& prevNormalizationTimeConstant,
                                                    double blendTimeConstant, double& prevBlendTimeConstant);
 
@@ -589,7 +1257,7 @@ public:
         return m_namedCriterionNodes[criterionNodeName];
     }
 
-    std::vector<ComputationNodeBasePtr> OutputNodesByName(const std::vector<std::wstring>& outputNodeNames) 
+    std::vector<ComputationNodeBasePtr> OutputNodesByName(const std::vector<std::wstring>& outputNodeNames)
     {
         std::vector<ComputationNodeBasePtr> outputNodes;
 
@@ -637,25 +1305,49 @@ public:
 
         return evalOrder;
     }
-    const std::vector<ComputationNodeBasePtr>& RootNodes()           const { return m_allRoots; }
+    const std::vector<ComputationNodeBasePtr>& RootNodes() const
+    {
+        return m_allRoots;
+    }
 
     // these are specified as such by the user
-    const std::vector<ComputationNodeBasePtr>& FeatureNodes()        const { return m_featureNodes   ; }
-    const std::vector<ComputationNodeBasePtr>& LabelNodes()          const { return m_labelNodes     ; }
-    const std::vector<ComputationNodeBasePtr>& FinalCriterionNodes() const { return m_criterionNodes ; }
-    const std::vector<ComputationNodeBasePtr>& EvaluationNodes()     const { return m_evaluationNodes; }
-    const std::vector<ComputationNodeBasePtr>& OutputNodes()         const { return m_outputNodes    ; }
+    const std::vector<ComputationNodeBasePtr>& FeatureNodes() const
+    {
+        return m_featureNodes;
+    }
+    const std::vector<ComputationNodeBasePtr>& LabelNodes() const
+    {
+        return m_labelNodes;
+    }
+    const std::vector<ComputationNodeBasePtr>& FinalCriterionNodes() const
+    {
+        return m_criterionNodes;
+    }
+    const std::vector<ComputationNodeBasePtr>& EvaluationNodes() const
+    {
+        return m_evaluationNodes;
+    }
+    const std::vector<ComputationNodeBasePtr>& OutputNodes() const
+    {
+        return m_outputNodes;
+    }
 
 private:
     // determine the node-group array by the group tag
     std::vector<ComputationNodeBasePtr>& GetNodeGroup(const std::wstring& groupTag)
     {
-        if      (groupTag == L"feature"   ) return m_featureNodes;
-        else if (groupTag == L"label"     ) return m_labelNodes;
-        else if (groupTag == L"criterion" ) return m_criterionNodes;
-        else if (groupTag == L"evaluation") return m_evaluationNodes;
-        else if (groupTag == L"output"    ) return m_outputNodes;
-        else InvalidArgument("Invalid group tag '%ls', must be one of 'feature', 'label', 'criterion', 'evaluation', 'output'.", groupTag.c_str());
+        if (groupTag == L"feature")
+            return m_featureNodes;
+        else if (groupTag == L"label")
+            return m_labelNodes;
+        else if (groupTag == L"criterion")
+            return m_criterionNodes;
+        else if (groupTag == L"evaluation")
+            return m_evaluationNodes;
+        else if (groupTag == L"output")
+            return m_outputNodes;
+        else
+            InvalidArgument("Invalid group tag '%ls', must be one of 'feature', 'label', 'criterion', 'evaluation', 'output'.", groupTag.c_str());
     }
 
 public:
@@ -790,9 +1482,8 @@ public:
     template <typename T>
     std::list<ComputationNodeBasePtr> GetNodesWithType(const ComputationNodeBasePtr& rootNode = nullptr) const
     {
-        std::function<bool(const ComputationNodeBasePtr&)> predicate = [](const ComputationNodeBasePtr& node) 
-        { 
-            return (dynamic_cast<T*>(node.get()) != nullptr); 
+        std::function<bool(const ComputationNodeBasePtr&)> predicate = [](const ComputationNodeBasePtr& node) {
+            return (dynamic_cast<T*>(node.get()) != nullptr);
         };
 
         return GetNodesWhere(predicate, rootNode);
@@ -862,8 +1553,7 @@ public:
     // -----------------------------------------------------------------------
 
 protected:
-
-    // Copy constructor, should never be called.
+// Copy constructor, should never be called.
 #pragma warning(push)
 #pragma warning(disable : 4702) // this function is flagged but unclear why
     ComputationNetwork(const ComputationNetwork& /*deepCopyFrom*/)
@@ -917,16 +1607,16 @@ public:
     // Returns false if the node was already there.
     // If the network already contains a different node with the same name,
     //  - then the function will fail
-    //  - unless 'makeUniqueName=true', in which case it will patch the node's name to a unique name. 
+    //  - unless 'makeUniqueName=true', in which case it will patch the node's name to a unique name.
     bool AddNodeToNetIfNotYet(const ComputationNodeBasePtr& node, bool makeUniqueName = false)
     {
         auto result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
         // if there's already one under this name, it better be node
         // unless user requested 'makeUniqueName', then we will modify the name
-        while (!result.second/*if already there*/ && result.first->second != node)
+        while (!result.second /*if already there*/ && result.first->second != node)
         {
             if (!makeUniqueName || node->NodeName().find_first_of(L".[]") == wstring::npos)
-                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation (%d vs. %d).", node->NodeName().c_str(), node->OperationName().c_str(), (int)node->m_uniqueNumericId, (int)result.first->second->m_uniqueNumericId);
+                RuntimeError("AddNodeToNetIfNotYet: Duplicated name for %ls %ls operation (%d vs. %d).", node->NodeName().c_str(), node->OperationName().c_str(), (int) node->m_uniqueNumericId, (int) result.first->second->m_uniqueNumericId);
             node->SetName(L"_" + node->NodeName());
             result = m_nameToNodeMap.insert(make_pair(node->NodeName(), node));
         }
@@ -944,6 +1634,7 @@ public:
         m_nameToNodeMap.erase(node->NodeName());
         return node;
     }
+
 public:
     // -----------------------------------------------------------------------
     // evaluation
@@ -970,19 +1661,28 @@ public:
     {
         m_environment->trackGapNans = enable;
     }
-    bool GetTrackGapNaNs() const { return m_environment->trackGapNans; }
+    bool GetTrackGapNaNs() const
+    {
+        return m_environment->trackGapNans;
+    }
 
     void SetIsV2Library(bool enable)
     {
         m_environment->isV2Library = enable;
     }
-    bool GetIsV2Library() const { return m_environment->isV2Library; }
+    bool GetIsV2Library() const
+    {
+        return m_environment->isV2Library;
+    }
 
     void SetTraceLevel(int traceLevel)
     {
         m_environment->traceLevel = traceLevel;
     }
-    int TraceLevel() const { return m_environment->traceLevel; }
+    int TraceLevel() const
+    {
+        return m_environment->traceLevel;
+    }
 
     // call EnableNodeTracing() on the given nodes for real, category, and sparse printing
     void EnableNodeTracing(const std::vector<std::wstring>& traceNodeNamesReal,
@@ -991,12 +1691,12 @@ public:
     {
         for (const auto& name : traceNodeNamesReal)
             if (NodeNameExists(name))
-                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/true,  /*asCategoryLabel=*/false, /*asSparse=*/false);
+                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/true, /*asCategoryLabel=*/false, /*asSparse=*/false);
             else
                 fprintf(stderr, "EnableNodeTracing: No node named '%ls'; skipping\n", name.c_str());
         for (const auto& name : traceNodeNamesCategory)
             if (NodeNameExists(name))
-                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/false, /*asCategoryLabel=*/true,  /*asSparse=*/false);
+                GetNodeFromName(name)->EnableNodeTracing(/*asReal=*/false, /*asCategoryLabel=*/true, /*asSparse=*/false);
             else
                 fprintf(stderr, "EnableNodeTracing: No node named '%ls'; skipping\n", name.c_str());
         for (const auto& name : traceNodeNamesSparse)
@@ -1246,11 +1946,11 @@ private:
     // node groups
     // These are specified by the user by means of tags or explicitly listing the node groups.
     // TODO: Are these meant to be disjoint?
-    std::vector<ComputationNodeBasePtr> m_featureNodes;    // tag="feature"
-    std::vector<ComputationNodeBasePtr> m_labelNodes;      // tag="label"
-    std::vector<ComputationNodeBasePtr> m_criterionNodes;  // tag="criterion"
-    std::vector<ComputationNodeBasePtr> m_evaluationNodes; // tag="evaluation"
-    std::vector<ComputationNodeBasePtr> m_outputNodes;     // tag="output"
+    std::vector<ComputationNodeBasePtr> m_featureNodes;             // tag="feature"
+    std::vector<ComputationNodeBasePtr> m_labelNodes;               // tag="label"
+    std::vector<ComputationNodeBasePtr> m_criterionNodes;           // tag="criterion"
+    std::vector<ComputationNodeBasePtr> m_evaluationNodes;          // tag="evaluation"
+    std::vector<ComputationNodeBasePtr> m_outputNodes;              // tag="output"
     vector<std::vector<ComputationNodeBasePtr>*> GetAllNodeGroups() // get all groups to allow to iterate over all of them ...continue
     {
         return vector<std::vector<ComputationNodeBasePtr>*>{&m_featureNodes, &m_labelNodes, &m_criterionNodes, &m_evaluationNodes, &m_outputNodes};
@@ -1278,7 +1978,7 @@ private:
     std::vector<std::shared_ptr<SEQTraversalFlowControlNode>> m_allSEQNodes; // [loopId] cached set of SEQTraversalFlowControlNodes to allow sharing and idempotence of FormRecurrentLoops()
 
     // cache for evaluation ordering:
-    bool m_isCompiled; // CompileNetwork has been called
+    bool m_isCompiled;           // CompileNetwork has been called
     bool m_areMatricesAllocated; // AllocateAllMatrices has been called
 
     // cached network iterations
@@ -1300,7 +2000,8 @@ private:
         std::vector<ComputationNodeBasePtr> m_roots;
 
     public:
-        ExecutionGraph(const std::vector<ComputationNodeBasePtr>& roots) : m_roots(roots) {}
+        ExecutionGraph(const std::vector<ComputationNodeBasePtr>& roots)
+            : m_roots(roots) {}
 
         std::vector<ComputationNodeBasePtr> Predecessors(const ComputationNodeBasePtr& node) const override
         {
@@ -1312,14 +2013,58 @@ private:
             return m_roots;
         }
     };
-};
+}; // namespace CNTK
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 
+class DataReaderHelpersFunctions
+{
+public:
+    /* start:  move from datareaderhelpers to here */
+    template <class ElemType>
+    static void NotifyChangedNodes(ComputationNetworkPtr net, StreamMinibatchInputs& inputMatrices)
+    {
+        // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
+        // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
+        std::set<MatrixBasePtr> matrices;
+        for (const auto& iter : inputMatrices)
+            matrices.insert(iter.second.matrix);
+        for (auto& node : net->FeatureNodes())
+            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
+                node->NotifyFunctionValuesMBSizeModified();
+        for (auto& node : net->LabelNodes())
+            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
+                node->NotifyFunctionValuesMBSizeModified();
+    }
+
+    // get StreamMinibatchInputs for a given set of input nodes
+    static StreamMinibatchInputs RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
+    {
+        StreamMinibatchInputs inputMatrices;
+        for (auto& node : inputNodes)
+            inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
+        return inputMatrices;
+    }
+    /* end:  move from datareaderhelpers to here */
+};
+
 // helper that returns 'float' or 'double' depending on ElemType
-template <typename ElemType> static inline const wchar_t* ElemTypeName();
-template <> /*static*/ inline const wchar_t* ElemTypeName<float>()  { return L"float"; }
-template <> /*static*/ inline const wchar_t* ElemTypeName<double>() { return L"double"; }
-template <> /*static*/ inline const wchar_t* ElemTypeName<half>() { return L"half"; }
+template <typename ElemType>
+static inline const wchar_t* ElemTypeName();
+template <>
+/*static*/ inline const wchar_t* ElemTypeName<float>()
+{
+    return L"float";
+}
+template <>
+/*static*/ inline const wchar_t* ElemTypeName<double>()
+{
+    return L"double";
+}
+template <>
+/*static*/ inline const wchar_t* ElemTypeName<half>()
+{
+    return L"half";
+}
 
 // The following emits the class and enables the BaseMatrix<double> to be available (used by EvalDll)
 // The corresponding Matrix<float> is emitted in the SetDeviceId function above.
@@ -1330,4 +2075,6 @@ template class Matrix<half>;
 //  - automatic inference of time window w.r.t. delay nodes (and related nodes such as a temporal pooling)
 //  - have overrides of RuntimeError etc. in ComputationNode, which prepend the error string with the node name and operation
 
-} } }
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft

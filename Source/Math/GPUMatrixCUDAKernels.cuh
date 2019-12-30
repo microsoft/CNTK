@@ -6358,7 +6358,8 @@ __global__ void _assignRNNTScoreS2(ElemType* us,
                                    const size_t maxPhoneNum,   // Maximum length of utterance in this MB
                                    const size_t totalPhoneNum, // Total number of phones
                                    const size_t blankTokenId,
-                                   const size_t uttId)
+                                   const size_t uttId,
+                                   const float weight)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     const CUDA_LONG k = blockIdx.x * blockDim.x + threadIdx.x;
@@ -6420,7 +6421,7 @@ __global__ void _assignRNNTScoreS2(ElemType* us,
                 z -= y;
             }
             y = z * exp_((comp_t) us[ktuID]);
-            us[ktuID] = y;
+            us[ktuID] = (y * weight);
         }
         //printf("t:%d k:%d step4\n", (int) t, (int) k);
     }

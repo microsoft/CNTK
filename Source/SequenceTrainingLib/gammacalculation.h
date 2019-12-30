@@ -7,7 +7,6 @@
 #include "ssematrix.h"
 #include "Matrix.h"
 #include "CUDAPageLockedMemAllocator.h"
-
 #include <memory>
 #include <vector>
 
@@ -395,21 +394,29 @@ public:
     //      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
     //      delayConstraint=-1 means no constraint
     void twodimForwardBackward(Microsoft::MSR::CNTK::Matrix<ElemType>& totalScore,
-        Microsoft::MSR::CNTK::Matrix<ElemType>& F,
-        Microsoft::MSR::CNTK::Matrix<ElemType>& G,
-        Microsoft::MSR::CNTK::Matrix<ElemType>& mergedinput,
-        const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
-        Microsoft::MSR::CNTK::Matrix<ElemType>& m_derivative,
-        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
-        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout,
-        size_t blankTokenId)
+                               Microsoft::MSR::CNTK::Matrix<ElemType>& F,
+                               Microsoft::MSR::CNTK::Matrix<ElemType>& G,
+                               Microsoft::MSR::CNTK::Matrix<ElemType>& mergedinput,
+                               const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
+                               Microsoft::MSR::CNTK::Matrix<ElemType>& m_derivative,
+                               const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
+                               const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> phoneMBLayout,
+                               size_t blankTokenId,
+                               std::vector<float>& vt_probs,
+                               const std::vector<float>& vt_wer,
+                               const std::vector<size_t>& vt_labseqlen, 
+        bool lengthNorm = false, 
+        bool wordPathPosteriorFromDecodeMBR = false,
+        bool doMBR = false)
 
     {
         const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
         const auto numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
         const auto numSequences = pMBLayout->GetNumSequences();
+
+        const auto numPhoneSequences = phoneMBLayout->GetNumSequences();
         //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
-        assert(numSequences==phoneMBLayout->GetNumSequences());
+        assert(numSequences == numPhoneSequences || numSequences == 1);
         const size_t numRows = F.GetNumRows();
         const size_t numCols = F.GetNumCols();
         const size_t numPhoneCols = G.GetNumCols();
@@ -430,11 +437,11 @@ public:
         std::vector<std::vector<size_t>> allUttPhoneSeqs;
 
         uttFrameNum.reserve(numSequences);
-        uttPhoneNum.reserve(numSequences);
+        uttPhoneNum.reserve(numPhoneSequences);
         uttFrameToChanInd.reserve(numSequences);
-        uttPhoneToChanInd.reserve(numSequences);
+        uttPhoneToChanInd.reserve(numPhoneSequences);
         uttFrameBeginIdx.reserve(numSequences);
-        uttPhoneBeginIdx.reserve(numSequences);
+        uttPhoneBeginIdx.reserve(numPhoneSequences);
 
 
         //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
@@ -504,10 +511,12 @@ public:
         uttBeginForOutputditribution.reserve(numSequences);
         
         size_t totalcol = 0;
-        for (size_t s = 0; s < numSequences; s++)
+        for (size_t s = 0; s < numPhoneSequences; s++)
         {
             uttBeginForOutputditribution.push_back(totalcol);
-            totalcol += uttFrameNum[s] * uttPhoneNum[s];            
+            if (numSequences == 1)
+                totalcol += uttFrameNum[0] * uttPhoneNum[s];            
+            else totalcol += uttFrameNum[s] * uttPhoneNum[s];            
         }
 
         //compute f+g
@@ -554,8 +563,10 @@ public:
 
        
         mergedinput.AssignRNNTScore(mergedinput, alpha, beta, maxIndexes, maxIndexes, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
-            uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, 1,true);
+            uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, 1,true, 
+            vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR);
         
+
         //delete[] phoneSeqData;
         //mergedinput.InplaceExp();
         //m_derivative.AssignElementProductOf(m_derivative, mergedinput);

@@ -264,7 +264,10 @@ void DoWriteOutput(const ConfigParameters& config)
         else if (decodeType == 2)
             writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile,thresh);
             //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
-        
+        /* guoye: start */
+        else if (decodeType == 3)
+            writer.WriteOutput_beam_viterbi(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh);
+        /* guoye: end */
     }
     else if (config.Exists("outputPath"))
     {

@@ -70,7 +70,12 @@
 // TODO: Make this a trace option, e.g. enabled by the ComputeEnvironment.
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-
+struct PathInfo
+{
+    float WER;
+    float prob;
+    vector<size_t> label_seq;
+};
 enum CopyNodeFlags // flags to be passed to the CopyTo() function
 {
     copyNodeValue          = 1, // copy everything except for the input links

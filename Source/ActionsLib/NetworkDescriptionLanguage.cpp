@@ -174,6 +174,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ForwardBackwardNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RNNTNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(RNNTMWERNode))) ret = true; // guoye
     else if (EqualInsensitive(nodeType, OperationNameOf(LabelsToGraphNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LessEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LessNode))) ret = true;

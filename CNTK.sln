@@ -1636,6 +1636,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CNTKLibraryCSTrainingTest",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CNTKLibraryCSEvalExamplesTest", "Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest\CNTKLibraryCSEvalExamplesTest.csproj", "{069DB9BE-7AD0-4BE5-B52E-EEED23EBEC6D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Multiverso", "Source\Multiverso\src\Multiverso.vcxproj", "{16F14058-B116-49D9-8BA0-209F3AFFE849}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|Any CPU = Debug_CpuOnly|Any CPU
@@ -2901,6 +2903,29 @@ Global
 		{069DB9BE-7AD0-4BE5-B52E-EEED23EBEC6D}.Release|Any CPU.ActiveCfg = Release|x64
 		{069DB9BE-7AD0-4BE5-B52E-EEED23EBEC6D}.Release|x64.ActiveCfg = Release|x64
 		{069DB9BE-7AD0-4BE5-B52E-EEED23EBEC6D}.Release|x64.Build.0 = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_CpuOnly|Any CPU.ActiveCfg = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_UWP|Any CPU.ActiveCfg = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_UWP|Any CPU.Build.0 = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_UWP|x64.ActiveCfg = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug_UWP|x64.Build.0 = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug|x64.ActiveCfg = Debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Debug|x64.Build.0 = Debug|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_CpuOnly|Any CPU.ActiveCfg = Release_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_NoOpt|Any CPU.ActiveCfg = Release_NoOpt|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_UWP|Any CPU.ActiveCfg = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_UWP|Any CPU.Build.0 = Debug_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_UWP|x64.ActiveCfg = Release_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_UWP|x64.Build.0 = Release_CpuOnly|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|Any CPU.ActiveCfg = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|x64.ActiveCfg = Release|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -15,6 +15,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 /*static*/ struct DataReaderHelpers
 {
+    /*
     template <class ElemType>
     static void NotifyChangedNodes(ComputationNetworkPtr net, StreamMinibatchInputs& inputMatrices)
     {
@@ -30,7 +31,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
                 node->NotifyFunctionValuesMBSizeModified();
     }
-
+    */
     // -------------------------------------------------------------------
     // GetMinibatchIntoNetwork() -- get one minibatch from Reader (this->trainSetDataReader) into Network (this->net)
     // Returns false if no data is read. In that case, no other return value can be expected to contain meaningful values (e.g. actualMBSize will be unchanged).
@@ -112,7 +113,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 #endif
 
-        NotifyChangedNodes<ElemType>(net, inputMatrices);
+        DataReaderHelpersFunctions::NotifyChangedNodes<ElemType>(net, inputMatrices);
 
         // get MB size and tell Network to update its nodes' buffers based on what's in the input matrices
         // Note: Decimation may have reduced this to 0 frames. We still must return 'true'.
@@ -122,7 +123,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         return true;
     }
-
+    /*
     // get StreamMinibatchInputs for a given set of input nodes
     static StreamMinibatchInputs RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
     {
@@ -131,7 +132,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
         return inputMatrices;
     }
-
+    */
 
     // -------------------------------------------------------------------
     // DecimateMinibatch - decimate minibatch for parallelization

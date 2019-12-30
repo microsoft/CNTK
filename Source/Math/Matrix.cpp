@@ -6276,7 +6276,13 @@ Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob
                                                     const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttBeginForOutputditribution,
                                                     const vector<size_t>& uttPhoneToChanInd, const vector<size_t>& uttPhoneBeginIdx,
                                                     const vector<size_t>& uttFrameNum, const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
-                                                    Matrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+                                                    Matrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise,
+                                                    std::vector<float>& vt_probs,
+                                                    const std::vector<float>& vt_wer,
+                                                    const std::vector<size_t>& vt_labseqlen,
+                                                    bool lengthNorm,
+                                                    bool wordPathPosteriorFromDecodeMBR,
+                                                    bool doMBR)
 {
     //DecideAndMoveToRightDevice(prob, *this);
 
@@ -6304,7 +6310,8 @@ alpha._transferToDevice(CPUDEVICE);
                                                                delayConstraint, isColWise),
                             this->m_GPUMatrix->AssignRNNTScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, uttFrameToChanInd, uttFrameBeginIdx,
                                                                uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_GPUMatrix, blankTokenId,
-                                                               delayConstraint, isColWise),
+                                                               delayConstraint, isColWise, 
+                                vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 

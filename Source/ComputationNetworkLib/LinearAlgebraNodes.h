@@ -138,8 +138,9 @@ public:
         numParallelSequences = pMBLayout->GetNumParallelSequences();
         numPhoneParallelSequences = phoneMBLayout->GetNumParallelSequences();
         const auto numSequences = pMBLayout->GetNumSequences();
+        const auto numPhoneSequences = phoneMBLayout->GetNumSequences();
         //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
-        assert(numSequences == phoneMBLayout->GetNumSequences());
+        assert(numSequences == numPhoneSequences || numSequences == 1); // numSequences == 1: the input for encoder is one utteranc, for MWER training
 
         //get frame number, phone number and output label number
         const size_t numRows = InputRef(0).Value().GetNumRows();
@@ -156,11 +157,11 @@ public:
         uttPhoneBeginIdx.clear();
 
         uttFrameNum.reserve(numSequences);
-        uttPhoneNum.reserve(numSequences);
+        uttPhoneNum.reserve(numPhoneSequences);
         uttFrameToChanInd.reserve(numSequences);
-        uttPhoneToChanInd.reserve(numSequences);
+        uttPhoneToChanInd.reserve(numPhoneSequences);
         uttFrameBeginIdx.reserve(numSequences);
-        uttPhoneBeginIdx.reserve(numSequences);
+        uttPhoneBeginIdx.reserve(numPhoneSequences);
 
         //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
         size_t seqId = 0; //frame
@@ -197,12 +198,16 @@ public:
 
         //calculate the memory need for f*g
         uttBeginForOutputditribution.clear();
-        uttBeginForOutputditribution.reserve(numSequences);
+        uttBeginForOutputditribution.reserve(numPhoneSequences);
         totalcol = 0;
-        for (size_t s = 0; s < numSequences; s++)
+        for (size_t s = 0; s < numPhoneSequences; s++)
         {
             uttBeginForOutputditribution.push_back(totalcol);
-            totalcol += uttFrameNum[s] * uttPhoneNum[s];
+            
+            if (numSequences == 1)
+                totalcol += uttFrameNum[0] * uttPhoneNum[s];
+
+            else totalcol += uttFrameNum[s] * uttPhoneNum[s];
         }
 
         //compute f+g

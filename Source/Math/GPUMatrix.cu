@@ -4683,7 +4683,13 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                           GPUMatrix<ElemType>& totalScore,
                                                           const size_t blankTokenId,
                                                           const int delayConstraint,
-                                                          const bool isColWise)
+                                                          const bool isColWise,
+                                                          std::vector<float>& vt_probs,
+                                                          const std::vector<float>& vt_wer,
+                                                          const std::vector<size_t>& vt_labseqlen,
+                                                          bool lengthNorm,
+                                                          bool wordPathPosteriorFromDecodeMBR,
+                                                          bool doMBR)
 {
     delayConstraint;
     uttFrameBeginIdx;
@@ -4700,18 +4706,35 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         // Total number of phones
         long totalPhoneNum = prob.GetNumRows();
         long totalUTNum = prob.GetNumCols();
-        size_t uttNum = uttFrameNum.size();
+        size_t uttFNum = uttFrameNum.size();
+        size_t uttPNum = uttPhoneNum.size();
+
+        size_t uttNum = uttPNum;
+
+        vector<size_t> uttFrameNumExtend;
+        uttFrameNumExtend.resize(uttNum);
+
+        if (uttFNum != uttPNum)
+        {
+            assert(uttFNum == 1);
+            for (size_t i = 0; i < uttPNum; i++)
+                uttFrameNumExtend[i] = (uttFrameNum[0]);
+        }
+        else
+        {
+            for (size_t i = 0; i < uttPNum; i++)
+                uttFrameNumExtend[i] = (uttFrameNum[i]);
+        }
+
         //int numSequences = uttFrameToChanInd.size();
         // Max number of phones in utterances in this minibatch
         //size_t maxPhoneNum = phoneSeq.GetNumRows();
 
-
-
-
         GPUMatrix<ElemType> matrixPhoneSeq(prob.GetComputeDeviceId());
+
         size_t* gpuFrameNum;
         CUDA_CALL(cudaMalloc((void**) &gpuFrameNum, uttNum * sizeof(size_t)));
-        CUDA_CALL(cudaMemcpy(gpuFrameNum, uttFrameNum.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
+        CUDA_CALL(cudaMemcpy(gpuFrameNum, uttFrameNumExtend.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));
 
         size_t* gpuPhoneNum;
         CUDA_CALL(cudaMalloc((void**) &gpuPhoneNum, uttNum * sizeof(size_t)));
@@ -4748,9 +4771,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances
         //convert phone label to simple format
         //phoneSeq.Print("before convert");
+
         dim3 block_tail_c((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
         matrixPhoneSeq.Resize(maxPhoneNum, uttNum);
-            _convertPhoneSeq<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneSeq.Data(), matrixPhoneSeq.Data(), gpuPhoneNum, gpuBeginPhone, gpuPhoneToChanInd, uttNum, numPhoneParallelSequences, maxPhoneNum);
+        _convertPhoneSeq<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneSeq.Data(), matrixPhoneSeq.Data(), gpuPhoneNum, gpuBeginPhone, gpuPhoneToChanInd, uttNum, numPhoneParallelSequences, maxPhoneNum);
         int blocksPerGrid = (int) ceil(1.0 * uttNum / GridDim::maxThreadsPerBlock);
         size_t maxTU = maxFrameNum + maxPhoneNum - 1;
         for (size_t tu = 0; tu < maxTU; tu++)
@@ -4761,6 +4785,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                                               gpuFrameNum, gpuPhoneNum, gpuUttBeginForMergedinput, tu,
                                                                               maxPhoneNum, totalPhoneNum, blankTokenId, uttNum);
         }
+
         for (int tu = maxTU - 1; tu >= 0; tu--)
         {
             dim3 block_tail3((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (tu + DEFAULT_THREAD_PER_DIM) / DEFAULT_THREAD_PER_DIM);
@@ -4768,8 +4793,51 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                                              gpuFrameNum, gpuPhoneNum, gpuUttBeginForMergedinput, tu,
                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, uttNum);
         }
+        size_t num_row, num_col;
+        num_row = beta.GetNumRows();
+        num_col = beta.GetNumCols();
 
-       //beta.Print("beta");
+        assert(num_row == 1);
+        vector<ElemType> cpubeta(num_col);
+        CUDA_CALL(cudaMemcpy(cpubeta.data(), beta.Data(), num_col * sizeof(ElemType), cudaMemcpyDeviceToHost));
+
+        if (doMBR)
+        {
+            if (!wordPathPosteriorFromDecodeMBR)
+            {
+                //logadd is not supported in this file, so change to regular add
+
+                float totalProb = 0;
+                for (size_t s = 0; s < uttNum; s++)
+                {
+                    size_t zeroID = uttBeginForOutputditribution[s]; //beta id for (0,0)
+
+                    vt_probs[s] = (float) (cpubeta[zeroID]);
+                    if (lengthNorm)
+                        vt_probs[s] /= vt_labseqlen[s];
+
+                    vt_probs[s] = exp(vt_probs[s]);
+                    totalProb += vt_probs[s];
+                }
+
+                for (size_t s = 0; s < uttNum; s++)
+                {
+                    vt_probs[s] /= totalProb;
+                }
+            }
+            float avg_wer = 0;
+            for (size_t s = 0; s < uttNum; s++)
+            {
+                avg_wer += vt_probs[s] * vt_wer[s];
+            }
+
+            for (size_t s = 0; s < uttNum; s++)
+            {
+                vt_probs[s] = (avg_wer - vt_wer[s]) * vt_probs[s]; // now vt_probs[s] stores the weight
+            }
+        }
+
+        //beta.Print("beta");
         //alpha.Print("alpha");
         ElemType zerVar = 0.0;
         totalScore.SetColumn(&zerVar, 0);
@@ -4784,22 +4852,28 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         dim3 block_tail((maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
         for (int s = 0; s < uttNum; s++)
         {
-            _assignRNNTScoreS1<<<block_tail, thread_tail, 0, t_stream>>>(gpuDerivativeValue, alpha.Data(), beta.Data(), uttFrameNum[s], uttPhoneNum[s],
+            _assignRNNTScoreS1<<<block_tail, thread_tail, 0, t_stream>>>(gpuDerivativeValue, alpha.Data(), beta.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
                                                                          uttBeginForOutputditribution[s]);
         }
 
         dim3 block_tail2((totalPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+
+        // num_row = GetNumRows();
+        // num_col = GetNumCols();
+        // vector<ElemType> cpudata(num_row * num_col);
+
         for (int s = 0; s < uttNum; s++)
         {
-            _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNum[s], uttPhoneNum[s],
-                                                                          uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s);
+            if (doMBR)
+            {
+                _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
+                                                                              uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, vt_probs[s]);
+                // CUDA_CALL(cudaMemcpy(cpudata.data(), Data(), num_row * 5.3num_col * sizeof(ElemType), cudaMemcpyDeviceToHost));
+            }
+            else
+                _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
+                                                                              uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, 1);
         }
-
-        /*for (int s = 0; s < numSequences; s++)
-        {
-            _assignRNNTScoreS3<<<block_tail, thread_tail, 0, t_stream>>>(Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttFrameNum[s], uttPhoneNum[s], uttFrameBeginIdx[s], uttFrameToChanInd[s],
-                                                                         uttBeginForOutputditribution[s], numParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId, s);
-        }*/
 
         CUDA_CALL(cudaFree(gpuFrameNum));
         CUDA_CALL(cudaFree(gpuPhoneNum));
@@ -4840,8 +4914,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
     RequireSize(BS, totalcol);
 
     int numSequences = uttFrameToChanInd.size();
+    int numPhoneSequences = uttPhoneToChanInd.size();
     // the output matrix is of size (nt+1, BS)
-
+    assert(numSequences == numPhoneSequences || numSequences == 1);
     dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
     // x dimension is for each phone
     // y dimention is for each time
@@ -4850,10 +4925,14 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
     in1.PrepareDevice();
     SyncGuard syncGuard;
 
-    for (int s = 0; s < numSequences; s++)
+    for (int s = 0; s < numPhoneSequences; s++)
     {
-        _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, (int) uttFrameNum[s], (int) uttPhoneNum[s], (int) uttFrameToChanInd[s],
-                                                                           (int) uttPhoneToChanInd[s], (int) uttFrameBeginIdx[s], (int) uttPhoneBeginIdx[s], (int) uttBeginForOutputditribution[s], (int) numParallelSequences, (int) numPhoneParallelSequences);
+        if (numSequences == 1)
+            _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, (int) uttFrameNum[0], (int) uttPhoneNum[s], (int) uttFrameToChanInd[0],
+                                                                               (int) uttPhoneToChanInd[s], (int) uttFrameBeginIdx[0], (int) uttPhoneBeginIdx[s], (int) uttBeginForOutputditribution[s], (int) numParallelSequences, (int) numPhoneParallelSequences);
+        else
+            _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, (int) uttFrameNum[s], (int) uttPhoneNum[s], (int) uttFrameToChanInd[s],
+                                                                               (int) uttPhoneToChanInd[s], (int) uttFrameBeginIdx[s], (int) uttPhoneBeginIdx[s], (int) uttBeginForOutputditribution[s], (int) numParallelSequences, (int) numPhoneParallelSequences);
     }
 
     return *this;
@@ -4868,7 +4947,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
                                                         const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
 {
     int nRow = in1.GetNumRows();
-    int uttNum = uttFrameToChanInd.size();
+    int numSequences = uttFrameToChanInd.size();
+    int numPhoneSequences = uttPhoneToChanInd.size();
     int nCol;
     if (Idx == 0)
     {
@@ -4881,6 +4961,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
         nCol = maxPhoneNum;
     }
 
+    assert(numSequences == numPhoneSequences || numSequences == 1);
     dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
     // x dimension is for phone
     // y dimention is for time
@@ -4910,13 +4991,24 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
     CUDA_CALL(cudaMalloc((void **)&gpuUttOutBeginId, uttNum * sizeof(size_t)));
     CUDA_CALL(cudaMemcpy(gpuUttOutBeginId, uttBeginForOutputditribution.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));*/
 
-    for (int s = 0; s < uttNum; s++)
+    for (int s = 0; s < numPhoneSequences; s++)
     {
-        int frameNum = (int) uttFrameNum[s];
+        int frameNum, frameBeginId, frameChanId;
+        if (numSequences == 1)
+        {
+            frameNum = (int) uttFrameNum[0];
+            frameBeginId = (int) uttFrameBeginIdx[0];
+            frameChanId = (int) uttFrameToChanInd[0];
+        }
+        else
+        {
+            frameNum = (int) uttFrameNum[s];
+            frameBeginId = (int) uttFrameBeginIdx[s];
+            frameChanId = (int) uttFrameToChanInd[s];
+        }
+
         int phoneNum = (int) uttPhoneNum[s];
-        int frameBeginId = (int) uttFrameBeginIdx[s];
         int phoneBeginId = (int) uttPhoneBeginIdx[s];
-        int frameChanId = (int) uttFrameToChanInd[s];
         int phoneChanId = (int) uttPhoneToChanInd[s];
         int outBeginId = (int) uttBeginForOutputditribution[s];
 
