@@ -600,7 +600,7 @@ public:
                     
                     if (frand <= groundTruthWeight) //use decoding result
                     {
-                        if (maxId != phoneSeqs[uttID][lmt + 1])
+                        /*if (maxId != phoneSeqs[uttID][lmt + 1])
                         {
 
                             fprintf(stderr, "rand %f\n", frand);
@@ -608,7 +608,7 @@ public:
                             for (size_t u = 0; u < phoneSeqs[uttID].size(); u++)
                                 fprintf(stderr, "phoneid:%zu ", phoneSeqs[uttID][u]);
                             fprintf(stderr, "\n");
-                        }
+                        }*/
                         size_t uInMB = (lmt + 1 + uttPhoneBeginIdx[uttID]) * numParallelPhoneSequences + uttPhoneToChanInd[uttID];
                         decodeInputMatrixBackup.SetColumn(lmin, uInMB);
                     }
@@ -705,6 +705,7 @@ public:
     // -----------------------------------------------------------------------
 
     void FormNestedNetwork(const ComputationNodeBasePtr& rootNode);
+    void ComputationNetwork::ClearNestedNetwork(const ComputationNodeBasePtr& rootNode);
     ComputationNodeBasePtr GetNestedNetwork(const ComputationNodeBasePtr& rootNode);
 
 private:
@@ -776,6 +777,10 @@ public:
         m_evalOrders[rootNode] = nodes;
     }
 
+    void ClearEvalOrder(const ComputationNodeBasePtr& rootNode)
+    {
+        m_evalOrders.erase(rootNode);
+    }
     bool EvalOrderExists(const ComputationNodeBasePtr& rootNode) const
     {
         return m_evalOrders.find(rootNode) != m_evalOrders.end();

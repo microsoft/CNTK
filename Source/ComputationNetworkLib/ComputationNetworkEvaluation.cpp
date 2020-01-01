@@ -97,6 +97,13 @@ void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNod
     m_nestedNetworks[rootNode] = make_shared<PARTraversalFlowControlNode>(m_allSEQNodes, GetEvalOrder(rootNode));
 }
 
+void ComputationNetwork::ClearNestedNetwork(const ComputationNodeBasePtr& rootNode)
+{
+    
+
+    m_nestedNetworks.erase(rootNode);
+}
+
 ComputationNodeBasePtr ComputationNetwork::GetNestedNetwork(const ComputationNodeBasePtr& rootNode)
 {
     if (m_nestedNetworks.find(rootNode) == m_nestedNetworks.end())
@@ -596,8 +603,8 @@ void ComputationNetwork::DetermineSetOfAllRoots()
         allKnownRoots.insert(node);
     for (const auto& node : EvaluationNodes())
         allKnownRoots.insert(node);
-    for (const auto& node : OutputNodes())
-        allKnownRoots.insert(node);
+    /*for (const auto& node : OutputNodes())
+        allKnownRoots.insert(node);*/
     for (const auto& iter : m_nameToNodeMap) // PreComputeNodes
     {
         auto node = iter.second;

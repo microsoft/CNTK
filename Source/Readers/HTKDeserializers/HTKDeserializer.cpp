@@ -30,7 +30,7 @@ HTKDeserializer::HTKDeserializer(
 {
     // TODO: This should be read in one place, potentially given by SGD.
     m_frameMode = (ConfigValue) cfg("frameMode", "true");
-
+    m_reduceFrame = cfg(L"reduceFrame", 0);
     m_verbosity = cfg(L"verbosity", 0);
 
     ConfigParameters input = cfg(L"input");
@@ -447,7 +447,7 @@ public:
 
     inline void reduceframe(size_t numframe)
     {
-        if (m_numColumns > 10)
+        if (m_numColumns > 10 && m_numColumns > numframe)
             m_numColumns -= numframe;
     }
 
@@ -596,7 +596,7 @@ void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<Seq
         }
     }
 
-    features.reduceframe(3);
+    features.reduceframe(m_reduceFrame);
 
     // Copy features to the sequence depending on the type.
     DenseSequenceDataPtr result;

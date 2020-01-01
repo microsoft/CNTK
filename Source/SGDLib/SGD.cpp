@@ -715,7 +715,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     }
                     outputNodeNamesVector.push_back(name);
                     let& node = net->GetNodeFromName(name);
-                    net->AddToNodeGroup(L"output", node);
+                    if (wcscmp(name.c_str(), L"features") != 0 && wcscmp(name.c_str(), L"lmin") != 0)
+                        net->AddToNodeGroup(L"output", node);
+                    else 
+                        net->RemoveFromNodeGroup(L"output", node);
                 }
                 //net->CompileNetwork();
             }
@@ -1247,29 +1250,40 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     std::vector<ComputationNodeBasePtr> encodeInputNodes, decodeinputNodes, encodeOutputNodes, decodeOutputNodes, graphNodes;
     if (m_adaptationRegType == AdaptationRegType::SS)
     {
+        /*auto sortedNodes = GlobalEvaluationSort(graph, strongComponents);
+
+        // Update global eval order in m_evalOrder.
+        // TODO: Get rid of this after-the-fact patch./*
+        UpdateEvalOrder(nullptr, std::list<ComputationNodeBasePtr>(sortedNodes.begin(), sortedNodes.end()));*/
 
         //net->CompileNetwork();
         std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
         encodeOutputNodes = net->OutputNodesByName(encodeOutputNodeNames);
+        //net->ClearEvalOrder(encodeOutputNodes[0]);
         net->FormEvalOrder(encodeOutputNodes[0]);
         //net->CollectInputAndLearnableParameters(encodeOutputNodes[0]);
         std::list<ComputationNodeBasePtr> InputNodesList = net->InputNodes(criterionNodes[0]);
         std::vector<std::wstring> encodeInputNodeNames(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
         encodeInputNodes = net->OutputNodesByName(encodeInputNodeNames);
 
+        std::vector<std::wstring> graphNodeNames(outputNodeNamesVector.begin() + 9, outputNodeNamesVector.begin() + 10);
+        graphNodes = net->OutputNodesByName(graphNodeNames);
+        //net->ClearEvalOrder(graphNodes[0]);
+        net->FormEvalOrder(graphNodes[0]);
+
         //get decode input matrix
         std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
         decodeOutputNodes = net->OutputNodesByName(decodeOutputNodeNames);
+        //net->ClearEvalOrder(decodeOutputNodes[0]);
         net->FormEvalOrder(decodeOutputNodes[0]);
+        //net->ClearNestedNetwork(decodeOutputNodes[0]);
         net->FormNestedNetwork(decodeOutputNodes[0]);
         //net->CollectInputAndLearnableParameters(decodeOutputNodes[0]);
         std::vector<std::wstring> decodeInputNodeNames(outputNodeNamesVector.begin() + 8, outputNodeNamesVector.begin() + 9);
         decodeinputNodes = net->OutputNodesByName(decodeInputNodeNames);
 
-        std::vector<std::wstring> graphNodeNames(outputNodeNamesVector.begin() + 9, outputNodeNamesVector.begin() + 10);
-        graphNodes = net->OutputNodesByName(graphNodeNames);
-        net->FormEvalOrder(graphNodes[0]);
         ComputationNodeBasePtr PlusTransNode = net->GetNodeFromName(outputNodeNamesVector[3]);
+        //net->ClearEvalOrder(PlusTransNode);
         net->FormEvalOrder(PlusTransNode);
     }
     for (;;)
@@ -1428,6 +1442,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
                 if (m_adaptationRegType == AdaptationRegType::SS)
                 {
+                    net->ResetEvalTimeStamps();
                     //fprintf(stderr, "before set input\n");
                     *encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
                     *decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
@@ -1443,17 +1458,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     //shared_ptr<InputValue<ElemType>> GroundTruthNode = make_shared<InputValue<ElemType>>(net->GetDeviceId(), L"truelmin");
                     //GroundTruthNode->
-                    
+
                     //ComputationNodeBasePtr GroundTruthNode = decodeinputNodes[0]->Duplicate(L"truelmin", copyNodeAll);
                     //GroundTruthNode->
-                        //decodeinputNodes[0]->CopyTo(dynamic_pointer_cast<shared_ptr<ComputationNodeBasePtr>>(GroundTruthNode), L"truelmin", copyNodeAll);
-                   // graphNodes[0]->ForwardProp();
+                    //decodeinputNodes[0]->CopyTo(dynamic_pointer_cast<shared_ptr<ComputationNodeBasePtr>>(GroundTruthNode), L"truelmin", copyNodeAll);
+                    // graphNodes[0]->ForwardProp();
                     net->ForwardProp(graphNodes);
 
                     Matrix<ElemType> encodeOutput(net->GetDeviceId());
                     encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
                     //fprintf(stderr, "before decode\n");
-                    net->RNNT_decode_greedy_SS(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, min(SS_maxweight, (totalMBsSeenBefore  + numMBsRun) * SS_weight));
+                    net->RNNT_decode_greedy_SS(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, min(SS_maxweight, (totalMBsSeenBefore + SS_baseMBNum + numMBsRun) * SS_weight));
                     //net->BumpEvalTimeStamp(decodeinputNodes);
                     //net->FormEvalOrder(forwardPropRoots[0]);
                     //fprintf(stderr, "after decode\n");
@@ -3283,6 +3298,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_outputNodeNames = configSGD(L"OutputNodeNames", ConfigArray(""));
     SS_weight = configSGD(L"SS_weight", 0.0f);
     SS_maxweight = configSGD(L"SS_maxweight", 0.0f);
+    SS_baseMBNum = configSGD(L"SS_baseMBNum", 0);
 
     if (m_doGradientCheck && sizeofElemType != sizeof(double))
     {

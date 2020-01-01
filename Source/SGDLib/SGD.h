@@ -271,6 +271,7 @@ protected:
     ConfigArray m_outputNodeNames;
     float SS_weight;
     float SS_maxweight;
+    int SS_baseMBNum;
 
     bool m_doUnitTest;
 
