@@ -705,7 +705,7 @@ public:
     // -----------------------------------------------------------------------
 
     void FormNestedNetwork(const ComputationNodeBasePtr& rootNode);
-    void ComputationNetwork::ClearNestedNetwork(const ComputationNodeBasePtr& rootNode);
+    void ClearNestedNetwork(const ComputationNodeBasePtr& rootNode);
     ComputationNodeBasePtr GetNestedNetwork(const ComputationNodeBasePtr& rootNode);
 
 private:
