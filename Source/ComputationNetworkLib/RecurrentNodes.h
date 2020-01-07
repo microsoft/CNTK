@@ -31,6 +31,7 @@ class DelayedValueNodeBase : public ComputationNode<ElemType>, public IRecurrent
 
 private:
     TensorView<ElemType> GetMaskTensor(size_t rank, const FrameRange& fr) const;
+    TensorView<ElemType> GetMaskTensorBack(size_t rank, const FrameRange& fr) const;
 
 protected:
     DelayedValueNodeBase(DEVICEID_TYPE deviceId, const wstring& name, ElemType fixedInitialStateScalarValue, const TensorShape& sampleLayout, size_t timeStep);
@@ -82,11 +83,12 @@ protected:
 
     function<void()> m_attachInputsFn;                      // for late expansion of inputs (scripting)
 
-    vector<ElemType> m_inputInvalidMatrixTemp;              // [j] CPU-side buffer for constructing the mask matrix
-    vector<bool> m_inputAnySeqValid, m_inputAllSeqValid;    // [t] denotes whether there are any valid frames at a time step, and if all are valid
+    vector<ElemType> m_inputInvalidMatrixTemp, m_inputInvalidMatrixBackTemp; // [j] CPU-side buffer for constructing the mask matrix
+    vector<bool> m_inputAnySeqValid, m_inputAllSeqValid, m_inputAnySeqValidBack, m_inputAllSeqValidBack; // [t] denotes whether there are any valid frames at a time step, and if all are valid
 
     shared_ptr<Matrix<ElemType>> m_initialStateValueMatrix; // potentially GPU-side versions
     shared_ptr<Matrix<ElemType>> m_inputInvalidMatrix;      // [0,j] contains 1 if matrix column belongs to an frame with boundary condition or a gap frame
+    shared_ptr<Matrix<ElemType>> m_inputInvalidMatrixBack;      // [0,j] contains 1 if matrix column belongs to an frame with boundary condition or a gap frame for backprop                             
     shared_ptr<Matrix<ElemType>> m_zeroMatrix;              // constant [1]-dimensional 0 used for backprop  --TODO: could use a static map[deviceId]
     shared_ptr<Matrix<ElemType>> m_packedIndexMatrix;       // index mapping for DoGatherColumnsOf() in case of per-sequence initial state
     bool m_packedIndexHaveDups;                              // whether indices in m_packedIndexMatrix has dups
