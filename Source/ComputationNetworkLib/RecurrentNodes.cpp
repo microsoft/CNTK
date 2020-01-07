@@ -555,10 +555,10 @@ template <class ElemType, int direction>
             auto tgt = InputRef(inputIndex).GradientTensorFor(rank, frDelayed); // target is outgoing gradient to input
             TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
 
-            if (m_inputAllSeqValidBack[fr.t()]) // all valid: just jam it over in one go
+            if (m_inputAllSeqValid[fr.t()]) // all valid: just jam it over in one go
                 tgt.AddCopyOf(src);
-            else if (m_inputAnySeqValidBack[fr.t()])                   // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
-                tgt.AddCondOf(GetMaskTensorBack(rank, fr), zero, src); // now add either source or zero value, based on the mask
+            else if (m_inputAnySeqValid[fr.t()])                   // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
+                tgt.AddCondOf(GetMaskTensor(rank, fr), zero, src); // now add either source or zero value, based on the mask
             else                                                   // none valid: nothing to back-prop
                 ;
         }
