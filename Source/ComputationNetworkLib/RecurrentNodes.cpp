@@ -203,7 +203,7 @@ template <class ElemType, int direction>
         FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
         //FrameRange frDelayedBack = fr.WithTimeOffset(-1* direction * m_timeStep);
         // first check in bulk for the frame--if all frames are good (most frequent case), take the quick path
-        if (/*!m_pMBLayout->IsBeyondStartOrEnd(frDelayed) &&*/
+        if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed) &&
             !m_pMBLayout->IsGap(fr))
         {
             m_inputAnySeqValid[t] = true; // no special case: just copy all
@@ -215,7 +215,7 @@ template <class ElemType, int direction>
             for (size_t s = 0; s < S; s++)
             {
                 // source frame is either invalid or valid (or target frame is a gap, in which case we consider everything valid)
-            if (/*!m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)) &&*/
+            if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)) &&
                     !m_pMBLayout->IsGap(fr.Sequence(s)))
                 {
                     m_inputAnySeqValid[t] = true;
