@@ -208,15 +208,10 @@ template <class ElemType, int direction>
         {
             m_inputAnySeqValid[t] = true; // no special case: just copy all
             assert(m_inputAllSeqValid[t]);
-            //continue;
+            continue;
         }
-        if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed) && !m_pMBLayout->IsGap(fr))
-        {
-            m_inputAnySeqValidBack[t] = true;
-            assert(m_inputAllSeqValidBack[t]);
-        }
-        if (m_pMBLayout->IsGap(fr) /*|| m_pMBLayout->IsBeyondStartOrEnd(frDelayed)*/)
-        { // determine each sequence for the current frame that has a boundary condition or is a gap:
+
+        // determine each sequence for the current frame that has a boundary condition or is a gap:
             for (size_t s = 0; s < S; s++)
             {
                 // source frame is either invalid or valid (or target frame is a gap, in which case we consider everything valid)
@@ -233,25 +228,6 @@ template <class ElemType, int direction>
                 }
             }
         
-            }
-        if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed) || m_pMBLayout->IsGap(fr))
-            {
-            for (size_t s = 0; s < S; s++)
-            {
-                // source frame is either invalid or valid (or target frame is a gap, in which case we consider everything valid)
-                if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)) &&
-                    !m_pMBLayout->IsGap(fr.Sequence(s)))
-                {
-                    m_inputAnySeqValidBack[t] = true;
-                }
-                else
-                {
-                    m_inputAllSeqValidBack[t] = false;
-                    let j = fr.t() * S + s;
-                    m_inputInvalidMatrixBackTemp[j] = 1; // invalid: exclude this in copy/backprop
-                }
-            }
-        }
     }
     // move to GPU
     // TODO: move this to the MBLayout where this can be done together with the creation of the other mask and is likely to further improve performance.
@@ -475,16 +451,16 @@ template <class ElemType, int direction>
     //    This condition includes full-sequence mode.
     // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
     //m_delayedValue->SetValue(InputRef(0).Value());
-    size_t Mseq = m_pMBLayout->GetMaxSequence();
+    /*size_t Mseq = m_pMBLayout->GetMaxSequence();
     FrameRange frDelayed(m_pMBLayout);
     frDelayed.m_timeOffset = direction * m_timeStep;
     frDelayed.seqIndex = Mseq;
     frDelayed.timeIdxInSeq = m_pMBLayout->GetNumTimeSteps();
     m_delayedValue->SetValue(DataWithMBLayoutFor(InputRef(0).Value(), frDelayed, m_pMBLayout));
-    //m_delayedValue->SetValue(0.0);
+    m_delayedValue->SetValue(0.0);
     if (!m_delayedActivationMBLayout)
         m_delayedActivationMBLayout = make_shared<MBLayout>();
-    m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
+    m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);*/
     // Perf BUGBUG: ^^ This copies a matrix from CPU to GPU at each MB; we should short-circuit it
 
     Base::EndForwardProp();
