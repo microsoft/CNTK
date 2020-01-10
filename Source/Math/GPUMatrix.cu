@@ -4835,14 +4835,21 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
             {
                 vt_probs[s] = (avg_wer - vt_wer[s]) * vt_probs[s]; // now vt_probs[s] stores the weight
             }
+
+            ElemType var = ElemType(avg_wer);
+            totalScore.SetColumn(&var, 0);
         }
 
         //beta.Print("beta");
         //alpha.Print("alpha");
-        ElemType zerVar = 0.0;
-        totalScore.SetColumn(&zerVar, 0);
-        _assignRNNTTotalScore<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(beta.Data(), totalScore.Data(), uttNum, gpuFrameNum, gpuUttBeginForMergedinput);
-
+        if (!doMBR)
+        {
+            ElemType zerVar = 0.0;
+            totalScore.SetColumn(&zerVar, 0);
+            _assignRNNTTotalScore<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(beta.Data(), totalScore.Data(), uttNum, gpuFrameNum, gpuUttBeginForMergedinput);
+        }
+        vector<ElemType> cputotalscore(1);
+        CUDA_CALL(cudaMemcpy(cputotalscore.data(), totalScore.Data(), 1 * sizeof(ElemType), cudaMemcpyDeviceToHost));
         //this->SetValue(0.0);
 
         // x dimension is for each phone

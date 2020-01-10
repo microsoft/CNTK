@@ -44,7 +44,10 @@ struct EpochCriterion : public std::pair<double, size_t>
     EpochCriterion(const std::pair<double, size_t>& other) : std::pair<double, size_t>(other) { }
 
     // main way of reading this out: compute the actual average criterion value from the aggregate and sample count
-    double Average() const { return second > 0 ? first / second : 0.0; } // compute the epoch-average
+    double Average() const 
+    { 
+        return second > 0 ? first / second : 0.0; 
+    } // compute the epoch-average
 
     // a few more handy operations that occurred multiple times
     bool IsNan() const { return std::isnan(first); }
@@ -108,6 +111,13 @@ struct CriterionAccumulator
             return EpochCriterion(0, 0); // avoid unnecessary GPU access
         else
             return EpochCriterion(m_aggregateCriterionValues->GetValue(0, i), m_aggregateSampleCounts[i]);
+    }
+
+    void SetCriterionValue(ElemType val) const
+    {
+        // BUGBUG: For unknown reasons, this (or the other below) check makes a difference for MPI configs.
+        //         If it is left out, then training and test configs end up being scaled by the same factor close to 1.
+        m_aggregateCriterionValues->SetValue(val);
     }
 
 private:

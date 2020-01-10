@@ -37,7 +37,6 @@ class SimpleOutputWriter
     typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
     typedef typename std::vector<typename RNNTDecodeFunctions<ElemType>::Sequence>::iterator iterator;
 
-
 public:
     SimpleOutputWriter(ComputationNetworkPtr net, int verbosity = 0)
         : m_net(net), m_verbosity(verbosity)
@@ -296,7 +295,6 @@ public:
         return it;
     }
 
-
     std::vector<ComputationNodeBasePtr> GetNodesByNames(const std::vector<std::wstring>& names) const
     {
         std::vector<ComputationNodeBasePtr> nodes;
@@ -340,7 +338,7 @@ public:
     }
 
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
-                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
+                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68, bool isSVD = true)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
         RNNTDecodeFunctions<ElemType> rnntdfs;
@@ -389,8 +387,22 @@ public:
         //get merged input
         ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
         ComputationNodeBasePtr PlusTransNode = m_net->GetNodeFromName(outputNodeNames[3]);
-        ComputationNodeBasePtr WmNode = m_net->GetNodeFromName(outputNodeNames[4]);
-        ComputationNodeBasePtr bmNode = m_net->GetNodeFromName(outputNodeNames[5]);
+
+        ComputationNodeBasePtr WmNode, WmuNode, WmvNode, bmNode;
+        WmNode;
+        WmuNode;
+        WmvNode;
+        if (isSVD)
+        {
+            WmuNode = m_net->GetNodeFromName(outputNodeNames[4]);
+            WmvNode = m_net->GetNodeFromName(outputNodeNames[5]);
+            bmNode = m_net->GetNodeFromName(outputNodeNames[6]);
+        }
+        else
+        {
+            WmNode = m_net->GetNodeFromName(outputNodeNames[4]);
+            bmNode = m_net->GetNodeFromName(outputNodeNames[5]);
+        }
         //StreamMinibatchInputs PlusinputMatrices =
         std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
         Plusnodes.push_back(PlusNode);
@@ -413,8 +425,14 @@ public:
         Matrix<ElemType> lmin(deviceid);
         MatrixPool m_matrixPool;
         m_matrixPool.OptimizedMemoryAllocation();
-        Matrix<ElemType> Wm(deviceid), bm(deviceid);
-        Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
+        Matrix<ElemType> Wm(deviceid), Wmu(deviceid), Wmv(deviceid), bm(deviceid);
+        if (isSVD)
+        {
+            Wmu.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmuNode)->Value()));
+            Wmv.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmvNode)->Value()));
+        }
+        else Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
+
         bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
         //encodeOutput.GetDeviceId
         const size_t numIterationsBeforePrintingProgress = 100;
@@ -496,7 +514,9 @@ public:
                     CurSequences.erase(maxSeq);
                     rnntdfs.prepareSequence(tempSeq);
                     rnntdfs.forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size(), *m_net);
-                    rnntdfs.forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm, *m_net);
+                    if (isSVD)
+                        rnntdfs.forwardmergedSVD(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wmu, Wmv, bm, *m_net);
+                    else rnntdfs.forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm, *m_net);
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels

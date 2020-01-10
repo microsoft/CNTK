@@ -1768,7 +1768,7 @@ public:
         vector<float> vt_nulf;
         vector<size_t> vt_nuli;
         m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_nulf, vt_nulf, vt_nuli); // the last 3 inputs vt_nul are place holders just to make the function happy
-        //m_outputDensity->Print("gradient");
+                                                                                                                                                                                                                                              //m_outputDensity->Print("gradient");
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
 #endif
@@ -1931,9 +1931,11 @@ public:
         // compute RNNT score
         //PathInfo is not recognized in many files, so we use the regular data structures
         vector<float> vt_probs, vt_wer;
-        
+
         vector<size_t> vt_labseqlen;
-        vt_probs.clear();  vt_wer.clear();  vt_labseqlen.clear();
+        vt_probs.clear();
+        vt_wer.clear();
+        vt_labseqlen.clear();
         for (size_t i = 0; i < vt_pathinfos.size(); i++)
         {
             vt_probs.push_back(vt_pathinfos[i].prob);
@@ -1941,6 +1943,14 @@ public:
             vt_labseqlen.push_back(vt_pathinfos[i].label_seq.size());
         }
         m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR);
+        if (doMBR)
+        {
+            criterionValue = Value().Get00Element();
+            criterionValue *= numWords;
+            Value().SetColumn(&criterionValue, 0);
+            criterionValue = Value().Get00Element();
+            criterionValue;
+        }
 #if NANCHECK
         functionValues.HasNan("RNNTMWERNode");
 #endif
@@ -1987,12 +1997,19 @@ public:
 
     void SetMWERInfo(vector<PathInfo> vt_pi,
                      bool ln,
-                     bool post_from_decode, bool mbr)
+                     bool post_from_decode, bool mbr, size_t nw)
     {
         vt_pathinfos = vt_pi;
         lengthNorm = ln;
         wordPathPosteriorFromDecodeMBR = post_from_decode;
         doMBR = mbr;
+        numWords = nw;
+    }
+
+    void GetMWERInfo(ElemType& cr, size_t& nw)
+    {
+        cr = criterionValue;
+        nw = numWords;
     }
 
 protected:
@@ -2000,6 +2017,8 @@ protected:
     bool lengthNorm;
     bool wordPathPosteriorFromDecodeMBR;
     bool doMBR = false;
+    size_t numWords;
+    ElemType criterionValue;
 };
 
 template class RNNTMWERNode<float>;

@@ -704,7 +704,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                       epochCriterion, epochEvalErrors,
                                       "", SIZE_MAX, totalMBsSeen, tensorBoardWriter, startEpoch,
                                       outputNodeNamesVector, &encodeInputMatrices, &decodeinputMatrices,
-                                      m_doMBR, m_numBestMBR, m_trainMethodMBR, m_wordPathPosteriorFromDecodeMBR, m_lengthNorm, vt_labels);
+                                      m_doMBR, m_numBestMBR, m_trainMethodMBR, m_wordPathPosteriorFromDecodeMBR, m_lengthNorm, vt_labels, m_showWERMode, m_isSVD);
         totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
 
         timer.Stop();
@@ -1047,7 +1047,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     string trainMethodMBR, // can be Viterbi or BaumWelch
                                     bool wordPathPosteriorFromDecodeMBR,
                                     bool lengthNorm,
-                                    const vector<string>& vt_labels)
+                                    const vector<string>& vt_labels,
+                                    string showWERMode,
+                                    bool SVD)
 {
     PROFILE_SCOPE(profilerEvtMainEpoch);
 
@@ -1215,13 +1217,24 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool noMoreSamplesToProcess = false;
     bool isFirstMinibatch = true;
     //Microsoft::MSR::CNTK::StartProfiler();
+    bool ordered;
+    ordered = false;
+
+    double accumCRMBR;
+    size_t accumSampleNumMBR;
+    accumCRMBR = 0;
+    accumSampleNumMBR = 0;
+
     for (;;)
     {
+        epochCriterion;
         auto profMinibatch = ProfilerTimeBegin();
 
         // get minibatch
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
         size_t actualMBSize = 0;
+        size_t numSamplesWithLabelOfNetworkMBR;
+        numSamplesWithLabelOfNetworkMBR = 0;
 
         auto profGetMinibatch = ProfilerTimeBegin();
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
@@ -1304,22 +1317,40 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     //net->CompileNetwork();
                     std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
                     std::vector<ComputationNodeBasePtr> encodeOutputNodes = net->OutputNodesByName(encodeOutputNodeNames);
-                    net->FormEvalOrder(encodeOutputNodes[0]);
+
+                    //
                     //net->CollectInputAndLearnableParameters(encodeOutputNodes[0]);
                     std::list<ComputationNodeBasePtr> InputNodesList = net->InputNodes(criterionNodes[0]);
-                    std::vector<std::wstring> encodeInputNodeNames(outputNodeNamesVector.begin() + 6, outputNodeNamesVector.begin() + 7);
+                    std::vector<std::wstring> encodeInputNodeNames;
+
+                    if (SVD) encodeInputNodeNames.assign(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
+                    else encodeInputNodeNames.assign(outputNodeNamesVector.begin() + 6, outputNodeNamesVector.begin() + 7);
+
                     std::vector<ComputationNodeBasePtr> encodeInputNodes = net->OutputNodesByName(encodeInputNodeNames);
                     *encodeInputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(encodeInputNodes);
 
                     //get decode input matrix
                     std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
                     std::vector<ComputationNodeBasePtr> decodeOutputNodes = net->OutputNodesByName(decodeOutputNodeNames);
-                    net->FormEvalOrder(decodeOutputNodes[0]);
-                    net->FormNestedNetwork(decodeOutputNodes[0]);
+
                     //net->CollectInputAndLearnableParameters(decodeOutputNodes[0]);
-                    std::vector<std::wstring> decodeInputNodeNames(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
+                    std::vector<std::wstring> decodeInputNodeNames;
+                    if (SVD) decodeInputNodeNames.assign(outputNodeNamesVector.begin() + 8, outputNodeNamesVector.begin() + 9);
+                    else decodeInputNodeNames.assign(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
                     std::vector<ComputationNodeBasePtr> decodeinputNodes = net->OutputNodesByName(decodeInputNodeNames);
                     *decodeinputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(decodeinputNodes);
+
+                    if (!ordered)
+                    {
+                        ordered = true;
+                        net->FormEvalOrder(encodeOutputNodes[0]);
+                        net->FormEvalOrder(decodeOutputNodes[0]);
+                        net->FormNestedNetwork(decodeOutputNodes[0]);
+
+                        std::vector<std::wstring> plusTransNodeNames(outputNodeNamesVector.begin() + 3, outputNodeNamesVector.begin() + 4);
+                        std::vector<ComputationNodeBasePtr> Plustransnodes = net->OutputNodesByName(plusTransNodeNames);
+                        net->FormEvalOrder(Plustransnodes[0]);
+                    }
 
                     //form eval order for RELU
 
@@ -1335,15 +1366,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     vector<vector<PathInfo>> uttPathsInfo;
                     uttPathsInfo.clear();
+                    vector<size_t> vt_nws;
+                    vt_nws.clear();
+                    vector<float> vt_onebest_wer;
+                    vt_onebest_wer.clear();
 
-                    // ComputationNodeBasePtr PlusTransNode = net->GetNodeFromName(outputNodeNamesVector[3]);
-                    // net->FormEvalOrder(Plustransnodes[0]);
-                 
+                    // time_t my_time = time(NULL);
+                    // fprintf(stderr, "start time = %s", ctime(&my_time)); 
+                    net->RNNT_decode_nbest_MBR(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo, vt_nws, vt_onebest_wer, SVD);
+                    // my_time = time(NULL);
+                    // fprintf(stderr,  "end time = %s", ctime(&my_time)); 
+                    //fprintf(stderr, "decode SGD v0 .\n");
 
-                    net->RNNT_decode_nbest_MBR(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo);
-                    fprintf(stderr, "decode SGD v0 .\n");
-
-                    
                     //net->BumpEvalTimeStamp(decodeinputNodes);
                     //net->FormEvalOrder(forwardPropRoots[0]);
                     net->ResetEvalTimeStamps();
@@ -1367,10 +1401,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         {
                             continue;
                         }
-                        cNode->SetMWERInfo(uttPathsInfo[seqId], lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR);
+                        cNode->SetMWERInfo(uttPathsInfo[seqId], lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR, vt_nws[seqId]);
 
                         // get the feature MBLayout
                         size_t numFrames = seq.GetNumTimeSteps();
+                        numSamplesWithLabelOfNetworkMBR += numFrames;
+
                         reffeainput->second.pMBLayout->Init(1, numFrames); // 1 channel, 1 utterance
 
                         Matrix<ElemType> fea(deviceID);
@@ -1432,7 +1468,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
 
-                        ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes); 
+                        ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
                         net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
 
                         // ===========================================================
@@ -1441,10 +1477,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                             net->Backprop(criterionNodes[0]);
-                        
+
+                        ElemType localCR;
+                        size_t localSampleNum;
+                        cNode->GetMWERInfo(localCR, localSampleNum);
+                        if (showWERMode == "onebest")
+                            localCR = (vt_onebest_wer[seqId] * localSampleNum);
+
+                        accumCRMBR += double(localCR);
+                        accumSampleNumMBR += localSampleNum;
+
                         seqId++;
                     }
-                    
                 }
                 // ===========================================================
                 // forward prop for evaluate eval nodes
@@ -1462,16 +1506,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                         net->Backprop(criterionNodes[0]);
                 }
-                fprintf(stderr, "decode SGD v1 .\n");
+                // fprintf(stderr, "decode SGD v1 .\n");
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
                     smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
-                fprintf(stderr, "decode SGD v2 .\n");
-            }                                                        // end sub-minibatch loop
+                // fprintf(stderr, "decode SGD v2 .\n");
+            } // end sub-minibatch loop
 
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
-            fprintf(stderr, "decode SGD v3 .\n");
+            // fprintf(stderr, "decode SGD v3 .\n");
             /* guoye: end */
         } // if (actualMBSize > 0)
         // WARNING: If actualMBSize == 0, then criterion nodes have NOT been updated, and contain garbage (last MB's) values.
@@ -1489,7 +1533,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
         // #samples according to the default dynamic axis, for use with criterion nodes that do not have an MBLayout
-        size_t numSamplesWithLabelOfNetwork = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0; // (0 for empty MB)
+        size_t numSamplesWithLabelOfNetwork;
+
+        if (!doMBR)
+            numSamplesWithLabelOfNetwork = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0; // (0 for empty MB)
+        else
+            numSamplesWithLabelOfNetwork = wasDataRead ? numSamplesWithLabelOfNetworkMBR : 0; // (0 for empty MB), when do MBR, we go through N forward/backward in a minibatch, with N be the number of utterances. If we do in the !doMBR to get numSamplesWithLabelOfNetwork, we will only get the number of samples of the last utterance.
+
         // Note: All accumulation into an EpochCriterion uses 'numSamplesWithLabelOfNetwork' as the generic,
         // fallback minibatch size. If that is 0, then nodes are considered containing zero samples,
         // independent of their actual content (which is considered outdated).
@@ -1504,7 +1554,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // accumulate criterion values (objective, eval)
             assert(wasDataRead || numSamplesWithLabelOfNetwork == 0);
             // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-            localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
+            if (!doMBR)
+            {
+                epochCriterion = localEpochCriterion.GetCriterion(0);
+                localEpochCriterion.Add(0, numSamplesWithLabelOfNetwork);
+                epochCriterion = localEpochCriterion.GetCriterion(0);
+            }
+            else
+            {
+                localEpochCriterion.Assign(0, accumSampleNumMBR); // since accumSampleNumMBR is already accumualted across minibatch, we use assign rather than add to do overwrite
+                localEpochCriterion.SetCriterionValue(ElemType(accumCRMBR));
+            }
             for (size_t i = 0; i < evaluationNodes.size(); i++)
                 localEpochEvalErrors.Add(i, numSamplesWithLabelOfNetwork);
         }
@@ -1536,7 +1596,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
 
             // hoist the criterion into CPU space for all-reduce
-            localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
+            if (!doMBR)
+                localEpochCriterion.Assign(0, numSamplesWithLabelOfNetwork);
+            else
+                localEpochCriterion.Assign(0, accumSampleNumMBR);
+
             for (size_t i = 0; i < evaluationNodes.size(); i++)
                 localEpochEvalErrors.Assign(i, numSamplesWithLabelOfNetwork);
 
@@ -1690,6 +1754,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // if no aggregation, we directly get the values from the minibatch accumulators
             timer.Restart();
             epochCriterion = localEpochCriterion.GetCriterion(0);
+
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
                 epochEvalErrors[i] = localEpochEvalErrors.GetCriterion(i);
             timer.Stop();
@@ -1705,7 +1770,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // epochCriterion aggregates over entire epoch, but we only show difference to last time we logged
             EpochCriterion epochCriterionSinceLastLogged = epochCriterion - epochCriterionLastLogged;
             let trainLossSinceLastLogged = epochCriterionSinceLastLogged.Average(); // TODO: Check whether old trainSamplesSinceLastLogged matches this ^^ difference
-            let trainSamplesSinceLastLogged = (int) epochCriterionSinceLastLogged.second;
+            // trainSamplesSinceLastLogged = (int) epochCriterionSinceLastLogged.second;
+            // for MBR, epochCriterionSinceLastLogged.second stores the #words rather than #frames
+            let trainSamplesSinceLastLogged = (doMBR ? (int) (epochEvalErrors[0].second - epochEvalErrorsLastLogged[0].second) : (int) epochCriterionSinceLastLogged.second);
 
             // determine progress in percent
             int mbProgNumPrecision = 2;
@@ -3278,6 +3345,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_doMBR = configSGD(L"DoMBR", true);
     m_labelMappingFile = configSGD(L"labelMappingFile", L"");
     m_lengthNorm = configSGD(L"LengthNorm", true);
+    m_showWERMode = configSGD(L"showWERMode", "average");
+    m_isSVD = configSGD(L"SVD", true);
 
     if (m_doGradientCheck && sizeofElemType != sizeof(double))
     {
@@ -3291,7 +3360,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     {
         if (m_epochSize != requestDataSize && m_epochSize < m_mbSize[i])
         {
-            InvalidArgument("epoch size must be larger than mbsize.");
+            // InvalidArgument("epoch size must be larger than mbsize."); // guoye: mask it for temporarily debug purpose
         }
     }
 

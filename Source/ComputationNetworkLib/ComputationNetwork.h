@@ -309,6 +309,30 @@ public:
         //decodeOutput.VectorMax(maxIdx, maxVal, true);
         decodeOutput.InplaceLogSoftmax(true);
     }
+
+    void forwardmergedSVD(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode,
+                          ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes, Matrix<ElemType>& Wmu, Matrix<ElemType>& Wmv, Matrix<ElemType>& bm, ComputationNetwork& cn)
+    {
+
+        sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(a.decodeoutput));
+        //sumofENandDE.InplaceLogSoftmax(true);
+        Matrix<ElemType> tempMatrix(encodeOutput.GetDeviceId()), tempMatrix1(encodeOutput.GetDeviceId());
+        //plus broadcast
+        (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
+        //SumMatrix.SetValue(sumofENandDE);
+        ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
+        auto PlusMBlayout = PlusNode->GetMBLayout();
+        PlusMBlayout->Init(1, 1);
+        PlusMBlayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
+        // cn.FormEvalOrder(Plustransnodes[0]);
+        cn.ForwardPropFromTo(Plusnodes, Plustransnodes);
+        decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+        tempMatrix.AssignProductOf(Wmu, true, decodeOutput, false);
+        tempMatrix1.AssignProductOf(Wmv, true, tempMatrix, false);
+        decodeOutput.AssignSumOf(tempMatrix1, bm);
+        //decodeOutput.VectorMax(maxIdx, maxVal, true);
+        decodeOutput.InplaceLogSoftmax(true);
+    }
 };
 
 class ComputationNetwork : public ScriptableObjects::Object,
@@ -550,7 +574,8 @@ public:
     template <class ElemType>
 
     void RNNT_decode_nbest_MBR(const std::vector<std::wstring>& outputNodeNames, Matrix<ElemType>& encodeOutput, MBLayoutPtr& encodeMBLayout,
-                               Matrix<ElemType>& decodeInputMatrix, MBLayoutPtr& decodeMBLayout, std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t numBestMBR, bool lengthNorm, const vector<string>& vt_labels, vector<vector<PathInfo>>& uttPathsInfo)
+                               Matrix<ElemType>& decodeInputMatrix, MBLayoutPtr& decodeMBLayout, std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t numBestMBR, bool lengthNorm, const vector<string>& vt_labels, vector<vector<PathInfo>>& uttPathsInfo, vector<size_t>& vt_nws, vector<float>& vt_onebest_wer,
+                               bool SVD)
     {
         if (outputNodeNames.size() == 0)
             fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
@@ -576,19 +601,41 @@ public:
         //joint nodes
         ComputationNodeBasePtr PlusNode = GetNodeFromName(outputNodeNames[2]);
         ComputationNodeBasePtr PlusTransNode = GetNodeFromName(outputNodeNames[3]);
-        ComputationNodeBasePtr WmNode = GetNodeFromName(outputNodeNames[4]);
-        ComputationNodeBasePtr bmNode = GetNodeFromName(outputNodeNames[5]);
+        ComputationNodeBasePtr WmNode, WmuNode, WmvNode, bmNode;
+        WmNode;
+        WmuNode;
+        WmvNode;
+        if (SVD)
+        {
+            WmuNode = GetNodeFromName(outputNodeNames[4]);
+            WmvNode = GetNodeFromName(outputNodeNames[5]);
+            bmNode = GetNodeFromName(outputNodeNames[6]);
+        }
+        else
+        {
+            WmNode = GetNodeFromName(outputNodeNames[4]);
+            bmNode = GetNodeFromName(outputNodeNames[5]);
+        }
         std::vector<ComputationNodeBasePtr> Plusnodes, Plustransnodes;
         Plusnodes.push_back(PlusNode);
         Plustransnodes.push_back(PlusTransNode);
 
         size_t deviceid = decodeInputMatrix.GetDeviceId();
         std::map<std::wstring, void*, nocase_compare> outputMatrices;
-        Matrix<ElemType> decodeOutput(deviceid), Wm(deviceid), bm(deviceid), tempMatrix(deviceid);
+        Matrix<ElemType> decodeOutput(deviceid), Wm(deviceid), Wmu(deviceid), Wmv(deviceid), bm(deviceid), tempMatrix(deviceid);
         Matrix<ElemType> greedyOutput(deviceid);
         Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
+        Wmu;
+        Wmv;
+        Wm;
+        if (SVD)
+        {
+            Wmu.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmuNode)->Value()));
+            Wmv.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmvNode)->Value()));
+        }
+        else
+            Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
 
-        Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
         bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
         const size_t numIterationsBeforePrintingProgress = 100;
 
@@ -620,9 +667,18 @@ public:
         uttPhoneBeginIdx.reserve(numSequences);
         uttPathsInfo.clear();
         uttPathsInfo.resize(numSequences);
+
+        vt_nws.clear();
+        vt_nws.resize(numSequences);
+
+        vt_onebest_wer.clear();
+        vt_onebest_wer.resize(numSequences);
         //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
         size_t seqId = 0; //frame
         size_t totalframenum = 0;
+
+        // this->FormEvalOrder(Plustransnodes[0]);
+
         for (const auto& seq : encodeMBLayout->GetAllSequences())
         {
             if (seq.seqId == GAP_SEQUENCE_ID)
@@ -696,12 +752,15 @@ public:
             }
             convert_word_sequence_string_2_vector(word_sequence, wordSeqs[uttID], '_');
 
+            vt_nws[uttID] = wordSeqs[uttID].size();
+            /*
             fprintf(stderr, "word sequence for uttID = %d .\n", int(uttID));
             for (size_t i = 0; i < wordSeqs[uttID].size(); i++)
             {
                 fprintf(stderr, "%s ", wordSeqs[uttID][i].c_str());
             }
             fprintf(stderr, "\n");
+            */
         }
 
         // the data structure for phone sequence
@@ -719,15 +778,16 @@ public:
 
         StreamMinibatchInputs decodeinputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(decodeinputNodes);
 
-        this->FormEvalOrder(Plustransnodes[0]);
+        // this->FormEvalOrder(Plustransnodes[0]);
 
         for (size_t uttID = 0; uttID < numSequences; uttID++)
         {
-            fprintf(stderr, "decode v0 uttID = %d .\n", int(uttID));
+            // fprintf(stderr, "decode v0 uttID = %d .\n", int(uttID));
             nextSequences.clear();
             //initialize with blank ID
             RNNTDecodeFunctions<ElemType>::Sequence oneSeq = rnntdfs.newSeq(vocabSize, (size_t) 50, deviceid);
             rnntdfs.extendSeq(oneSeq, blankId, 0.0);
+
             nextSequences.push_back(oneSeq);
 
             // loop for each frame
@@ -741,9 +801,13 @@ public:
                 CurSequences = nextSequences;
 
                 vector<RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
+                //fprintf(stderr, "t = %d .\n", int(t));
+
                 //deal with the same prefix
+                //int count = 0;
                 while (true)
                 {
+                    // fprintf(stderr, "count = %d .\n", int(count++));
 
                     auto maxSeq = std::max_element(CurSequences.begin(), CurSequences.end());
                     RNNTDecodeFunctions<ElemType>::Sequence tempSeq = rnntdfs.newSeq(*maxSeq, deviceid);
@@ -753,7 +817,10 @@ public:
                     rnntdfs.forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size(), *this);
 
                     size_t tinMB = (t + uttFrameBeginIdx[uttID]) * numParallelSequences + uttFrameToChanInd[uttID];
-                    rnntdfs.forwardmerged(tempSeq, tinMB, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm, *this);
+                    if (SVD)
+                        rnntdfs.forwardmergedSVD(tempSeq, tinMB, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wmu, Wmv, bm, *this);
+                    else
+                        rnntdfs.forwardmerged(tempSeq, tinMB, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm, *this);
 
                     //sort log posterior and get best N labels
                     vector<pair<size_t, ElemType>> topN = rnntdfs.getTopN(decodeOutput, numBestMBR, blankId);
@@ -777,7 +844,6 @@ public:
                     {
                         nextSequences.push_back(seqK);
                     }
-
                     int iLabel;
                     for (iLabel = 0; iLabel < numBestMBR; iLabel++)
                     {
@@ -822,14 +888,34 @@ public:
             if (nextSequences.size() != 0)
             {
                 float totalProb = 0;
+
+                ElemType onebest_lnLogP = ElemType(nextSequences[0].logP / nextSequences[0].labelseq.size());
+                size_t onebest_index = 0;
+
+                ElemType lnLogP;
                 for (size_t n = 0; n < nextSequences.size(); n++)
                 {
+                    if (n == 0)
+                    {
+                        lnLogP = onebest_lnLogP;
+                    }
+                    else
+                    {
+                        lnLogP = ElemType(nextSequences[n].logP / nextSequences[n].labelseq.size());
+                        if (lnLogP > onebest_lnLogP)
+                        {
+                            onebest_lnLogP = lnLogP;
+                            onebest_index = n;
+                        }
+                    }
+
                     if (lengthNorm)
-                        nextSequences[n].logP /= nextSequences[n].labelseq.size();
+                        nextSequences[n].logP = lnLogP;
 
                     nextSequences[n].logP = exp(nextSequences[n].logP); // the logP actually becomes P
                     totalProb += float(nextSequences[n].logP);
                 }
+
 
                 for (size_t n = 0; n < nextSequences.size(); n++)
                 {
@@ -852,10 +938,12 @@ public:
                     convert_word_sequence_string_2_vector(word_sequence, vt_words, '_');
 
                     pi.WER = compute_wer(wordSeqs[uttID], vt_words);
+
                     pi.label_seq = nextSequences[n].labelseq;
 
                     uttPathsInfo[uttID].push_back(pi);
                 }
+                vt_onebest_wer[uttID] = uttPathsInfo[uttID][onebest_index].WER;
             }
             for (size_t n = 0; n < CurSequences.size(); n++)
             {

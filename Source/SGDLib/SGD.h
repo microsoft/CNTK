@@ -23,17 +23,26 @@
 #include <map>
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
-#define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
-#define CNTK_CHECKPOINT_VERSION_2 2      
+#define CNTK_CHECKPOINT_VERSION_1 1 // 1 -> no version number
+#define CNTK_CHECKPOINT_VERSION_2 2
 #define CURRENT_CNTK_CHECKPOINT_VERSION CNTK_CHECKPOINT_VERSION_2
 
-namespace CNTK { namespace Internal {
-    // Forward declarations.
-    class TensorBoardFileWriter;
-    typedef std::shared_ptr<TensorBoardFileWriter> TensorBoardFileWriterPtr;
-}}
+namespace CNTK
+{
+namespace Internal
+{
+// Forward declarations.
+class TensorBoardFileWriter;
+typedef std::shared_ptr<TensorBoardFileWriter> TensorBoardFileWriterPtr;
+} // namespace Internal
+} // namespace CNTK
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 struct BestEpoch;
 
@@ -58,9 +67,9 @@ enum class GradientsUpdateType : int
     FSAdaGrad
 };
 
-// modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD 
+// modelParallelSGD can be combined with dataParallelSGD/modelAveragingSGD/blockMomentumSGD
 // but dataParallelSGD/modelAveragingSGD/blockMomentumSGD are mutually exclusive (at least at the moment)
-// we assign the lower 8 bits to the enumerate data parallelization methods 
+// we assign the lower 8 bits to the enumerate data parallelization methods
 // and next 8 bits to model parallelization methods
 enum class ParallelizationMethod : int
 {
@@ -123,7 +132,10 @@ struct SGDParams : public ScriptableObjects::Object
 
     // SGDParams(SGDParams&&) = default; // (does not compile in VS 2013; not critical)
 
-    size_t GetMaxEpochs() { return m_maxEpochs; }
+    size_t GetMaxEpochs()
+    {
+        return m_maxEpochs;
+    }
 
 protected:
     // learning rate per sample provided outside
@@ -142,7 +154,7 @@ protected:
     size_t FixUpEffectiveMBSize(size_t specifiedMBSize, size_t numParallelSequences) const
     {
         // remedy the bug that truncation size is incorrectly passed as MB size
-        if (m_truncated && specifiedMBSize > 1)      // currently only happens in this mode
+        if (m_truncated && specifiedMBSize > 1) // currently only happens in this mode
         {
             if (numParallelSequences == 0)
             {
@@ -274,10 +286,11 @@ protected:
     size_t m_numBestMBR;                   // number of nbest
     string m_trainMethodMBR;               // can be Viterbi or BaumWelch
     bool m_wordPathPosteriorFromDecodeMBR; // false if we get the posteriror from decode, true if we get it from the forward phase of training
-    bool m_doMBR; // true to do MBR, false not
-    wstring m_labelMappingFile; // 
-    bool m_lengthNorm; // true to do length Norm, false, not. It will be used when computing the posterior
-
+    bool m_doMBR;                          // true to do MBR, false not
+    wstring m_labelMappingFile;            //
+    bool m_lengthNorm;                     // true to do length Norm, false, not. It will be used when computing the posterior
+    string m_showWERMode;
+    bool m_isSVD;
     // Parallel training
     MPIWrapperPtr m_mpi;
 
@@ -286,10 +299,10 @@ protected:
     // indicates if we're using default value of the m_enableDistributedMBReading flag
     // (in which case, it can potentially be overriden).
     // This flag is only relevant for the new (V2) readers. It exist because of
-    // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs 
+    // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs
     // in the same minibatch have different layouts, which is something only V2 readers can
-    // produce. 
-    bool m_enableDistributedMBReadingNotSpecified; 
+    // produce.
+    bool m_enableDistributedMBReadingNotSpecified;
     int m_parallelizationStartEpochNum;
 
     // decide if/how often we measure and show sync performance stats (seconds spend on sync, seconds since last sync etc.) ?
@@ -305,16 +318,16 @@ protected:
 
     // Parallel training related with MA / BM
     size_t m_modelAggregationBlockSize;
-    bool   m_resetSGDMomentum; 
-    bool   m_useNesterovBlockMomentum;
-    double m_blockLearningRate; 
+    bool m_resetSGDMomentum;
+    bool m_useNesterovBlockMomentum;
+    double m_blockLearningRate;
     double m_blockMomentumAsTimeConstant;
 
     bool m_needAveMultiplier;
     double m_L2RegWeight;
     double m_L1RegWeight;
 
-    // Parallel training related with ASGD 
+    // Parallel training related with ASGD
     intargvector m_nSyncSamplesPerWorker;
     bool m_isAsyncBufferEnabled;
     bool m_isSimulateMA;
@@ -331,7 +344,7 @@ protected:
     double m_seqGammarCalcWP;
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
-    
+
     // decide whether should apply regularization into BatchNormalizationNode
     // true: disable Regularization
     // false: enable Regularization (default)
@@ -364,10 +377,10 @@ public:
           m_keepCheckPointFiles(configSGD(L"keepCheckPointFiles", false)),
           m_saveBestModelPerCriterion(configSGD(L"saveBestModelPerCriterion", false)),
           m_trainCriterionNodeName((const wstring&) configSGD(L"trainCriterionNodeName", L"")),
-          m_evalCriterionNodeName ((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
-          m_traceNodeNamesReal    (configSGD(L"traceNodeNamesReal",     ConfigRecordType::Array(stringargvector()))),
+          m_evalCriterionNodeName((const wstring&) configSGD(L"evalCriterionNodeName", L"")),
+          m_traceNodeNamesReal(configSGD(L"traceNodeNamesReal", ConfigRecordType::Array(stringargvector()))),
           m_traceNodeNamesCategory(configSGD(L"traceNodeNamesCategory", ConfigRecordType::Array(stringargvector()))),
-          m_traceNodeNamesSparse  (configSGD(L"traceNodeNamesSparse",   ConfigRecordType::Array(stringargvector()))),
+          m_traceNodeNamesSparse(configSGD(L"traceNodeNamesSparse", ConfigRecordType::Array(stringargvector()))),
           m_prevChosenMinibatchSize(0),
           m_lastFinishedEpochTrainLoss(0.0),
           m_distGradAgg(nullptr),
@@ -389,7 +402,7 @@ public:
 
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::none;
-        }
+    }
 
     void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
@@ -400,7 +413,6 @@ public:
                const DEVICEID_TYPE deviceID, const bool makeMode = true);
 
 protected:
-
     const std::vector<ComputationNodeBasePtr>& GetTrainCriterionNodes(ComputationNetworkPtr net);
     const std::vector<ComputationNodeBasePtr>& GetEvalCriterionNodes(ComputationNetworkPtr net);
 
@@ -412,7 +424,6 @@ protected:
                            IDataReader* validationSetDataReader);
 
 protected:
-
     // return true if precomputation is executed.
     bool PreCompute(ComputationNetworkPtr net,
                     IDataReader* trainSetDataReader,
@@ -520,8 +531,8 @@ protected:
                          const size_t maxNumberOfSamples = SIZE_MAX,
                          const size_t totalMBsSeenBefore = 0,
                          ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter = nullptr,
-                         const int startEpoch = 0, 
-						 const std::vector<std::wstring>& outputNodeNamesVector = std::vector<std::wstring>(),
+                         const int startEpoch = 0,
+                         const std::vector<std::wstring>& outputNodeNamesVector = std::vector<std::wstring>(),
                          StreamMinibatchInputs* encodeInputMatrices = NULL,
                          StreamMinibatchInputs* decodeinputMatrices = NULL,
                          bool doMBR = true,
@@ -529,10 +540,13 @@ protected:
                          string trainMethodMBR = "BaumWelch", // can be Viterbi or BaumWelch
                          bool wordPathPosteriorFromDecodeMBR = true,
                          bool lengthNorm = true,
-                         const vector<string>& vt_labels = vector<string>()); // 
+                         const vector<string>& vt_labels = vector<string>(),
+                         string showWERMode = "average",
+                         bool SVD = true); //
 
     void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
+
 public:
     // UpdateWeights() - actual weight update, implementing various update rules
     void UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
@@ -654,4 +668,6 @@ private:
     }
 };
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft
