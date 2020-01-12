@@ -1371,11 +1371,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     vector<float> vt_onebest_wer;
                     vt_onebest_wer.clear();
 
-                    // time_t my_time = time(NULL);
-                    // fprintf(stderr, "start time = %s", ctime(&my_time)); 
+                    time_t my_time = time(NULL);
+                    fprintf(stderr, "SGD time 1 = %s", ctime(&my_time)); 
                     net->RNNT_decode_nbest_MBR(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo, vt_nws, vt_onebest_wer, SVD);
-                    // my_time = time(NULL);
-                    // fprintf(stderr,  "end time = %s", ctime(&my_time)); 
+                    my_time = time(NULL);
+                    fprintf(stderr,  "SGD time 2 = %s", ctime(&my_time)); 
                     //fprintf(stderr, "decode SGD v0 .\n");
 
                     //net->BumpEvalTimeStamp(decodeinputNodes);
@@ -1391,6 +1391,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     refFeaMatBackup.SetValue(reffeainput->second.GetMatrix<ElemType>());
                     size_t numParallelSequences = encodeMBLayout->GetNumParallelSequences();
 
+                    my_time = time(NULL);
+                    fprintf(stderr, "SGD time 3 = %s", ctime(&my_time)); 
                     for (const auto& seq : encodeMBLayout->GetAllSequences())
                     {
                         if (seq.seqId == GAP_SEQUENCE_ID)
@@ -1489,6 +1491,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         seqId++;
                     }
+
+                    my_time = time(NULL);
+                    fprintf(stderr, "SGD time 4 = %s", ctime(&my_time)); 
                 }
                 // ===========================================================
                 // forward prop for evaluate eval nodes

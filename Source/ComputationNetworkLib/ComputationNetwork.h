@@ -58,6 +58,8 @@ inline std::wstring ToString(const ComputationNodeBasePtr& node)
 // ComputationNetwork -- computation graph and operations
 // ===========================================================================
 // move the shared function/data structure from SimpleOutputWriter.h to this file
+
+class ComputationNetwork; //declaration of class for RNNTDecodeFunctions to avoid the error: invalid use of incomplete type when compiling CNTK for Philly
 template <class ElemType>
 
 class RNNTDecodeFunctions
@@ -118,7 +120,7 @@ public:
         }
         oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
 
-        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
+        typename unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
         for (it = a.nameToNodeValues.begin(); it != a.nameToNodeValues.end(); it++)
         {
             if (oneSeq.processlength > 0)
@@ -154,7 +156,7 @@ public:
 
     void deleteSeq(Sequence oneSeq)
     {
-        unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
+        typename unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
         for (it = oneSeq.nameToNodeValues.begin(); it != oneSeq.nameToNodeValues.end(); it++)
         {
             auto itin = m_nameToPastValueNodeCache.find(it->first);
@@ -178,7 +180,7 @@ public:
     vector<pair<size_t, ElemType>> getTopN(Microsoft::MSR::CNTK::Matrix<ElemType>& prob, size_t N, size_t& blankid)
     {
         vector<pair<size_t, ElemType>> datapair;
-        typedef vector<pair<size_t, ElemType>>::value_type ValueType;
+        typedef typename vector<pair<size_t, ElemType>>::value_type ValueType;
         ElemType* probdata = prob.CopyToArray();
         for (size_t n = 0; n < prob.GetNumRows(); n++)
         {
@@ -196,7 +198,7 @@ public:
     {
         if (s.nameToNodeValues.size() > 0)
         {
-            unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
+            typename unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>>::iterator it;
             for (it = s.nameToParentNodeValues.begin(); it != s.nameToParentNodeValues.end(); it++)
             {
                 if (it->second && it->second->Value().GetNumElements() > 0)
@@ -577,6 +579,9 @@ public:
                                Matrix<ElemType>& decodeInputMatrix, MBLayoutPtr& decodeMBLayout, std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t numBestMBR, bool lengthNorm, const vector<string>& vt_labels, vector<vector<PathInfo>>& uttPathsInfo, vector<size_t>& vt_nws, vector<float>& vt_onebest_wer,
                                bool SVD)
     {
+        time_t my_time = time(NULL);
+        fprintf(stderr, "RNNT_decode_nbest_MBR time 1 = %s", ctime(&my_time));
+
         if (outputNodeNames.size() == 0)
             fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
         std::vector<ComputationNodeBasePtr> outputNodes = OutputNodesByName(outputNodeNames);
@@ -780,6 +785,8 @@ public:
 
         // this->FormEvalOrder(Plustransnodes[0]);
 
+        my_time = time(NULL);
+        fprintf(stderr, "RNNT_decode_nbest_MBR time 2 = %s", ctime(&my_time));
         for (size_t uttID = 0; uttID < numSequences; uttID++)
         {
             // fprintf(stderr, "decode v0 uttID = %d .\n", int(uttID));
@@ -916,7 +923,6 @@ public:
                     totalProb += float(nextSequences[n].logP);
                 }
 
-
                 for (size_t n = 0; n < nextSequences.size(); n++)
                 {
                     PathInfo pi;
@@ -961,6 +967,8 @@ public:
         decodeInputMatrix.SetValue(decodeInputMatrixBackup);
         //decodeInputMatrix.Print("after ss");
         decodeMBLayout->CopyFrom(decodebackupMBlayout);
+        my_time = time(NULL);
+        fprintf(stderr, "RNNT_decode_nbest_MBR time 3 = %s", ctime(&my_time));
     }
 
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
