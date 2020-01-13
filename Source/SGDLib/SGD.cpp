@@ -1373,7 +1373,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     time_t my_time = time(NULL);
                     fprintf(stderr, "SGD time 1 = %s", ctime(&my_time)); 
-                    net->RNNT_decode_nbest_MBR(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo, vt_nws, vt_onebest_wer, SVD);
+                     RNNTDecodeFunctions<ElemType> rnntdfs;
+                    rnntdfs.RNNT_decode_nbest_MBR(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo, vt_nws, vt_onebest_wer, SVD, *net);
                     my_time = time(NULL);
                     fprintf(stderr,  "SGD time 2 = %s", ctime(&my_time)); 
                     //fprintf(stderr, "decode SGD v0 .\n");
