@@ -468,10 +468,10 @@ public:
                 {
                     rnntdfs.deleteSeq(CurSequences[n]);
                 }
-                vector<RNNTDecodeFunctions<ElemType>::Sequence>().swap(CurSequences);
+                vector<typename RNNTDecodeFunctions<ElemType>::Sequence>().swap(CurSequences);
                 CurSequences = nextSequences;
 
-                vector<RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
+                vector<typename RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
                 //deal with the same prefix
                 /*sort(CurSequences.begin(), CurSequences.end(),
                      [](const Sequence& a, const Sequence& b) -> bool {

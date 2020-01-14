@@ -1948,7 +1948,7 @@ public:
         // sanity check
         if (vt_labels.size() != vocabSize)
         {
-            RuntimeError("RNNT_decode_nbest_MBR: size not match, vt_labels.size() = %d, and vocabSize = %d.", vt_labels.size(), vocabSize);
+            RuntimeError("RNNT_decode_nbest_MBR: size not match, vt_labels.size() = %d, and vocabSize = %d.", int(vt_labels.size()), int(vocabSize));
         }
 
         StreamMinibatchInputs decodeinputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(decodeinputNodes);

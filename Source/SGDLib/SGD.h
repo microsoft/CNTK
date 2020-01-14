@@ -287,7 +287,7 @@ protected:
     string m_trainMethodMBR;               // can be Viterbi or BaumWelch
     bool m_wordPathPosteriorFromDecodeMBR; // false if we get the posteriror from decode, true if we get it from the forward phase of training
     bool m_doMBR;                          // true to do MBR, false not
-    wstring m_labelMappingFile;            //
+    string m_labelMappingFile;            //
     bool m_lengthNorm;                     // true to do length Norm, false, not. It will be used when computing the posterior
     string m_showWERMode;
     bool m_isSVD;

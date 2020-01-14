@@ -675,7 +675,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             }
             // read the labels (i.e., mixed units), noitce the labels are also used in data reader indicating duplicating calls to read the file.
             // However, since this is simple for coding, i decided to read it again here.
-            auto_file_ptr f(fopenOrDie(m_labelMappingFile, L"rbS"));
+            auto_file_ptr f(fopenOrDie(m_labelMappingFile, "rbS"));
             char buf[1024];
             while (!feof(f))
             {
@@ -3349,7 +3349,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_numBestMBR = configSGD(L"NumBestMBR", (size_t) 8);
     m_trainMethodMBR = configSGD(L"TrainMethodMBR", "BaumWelch");
     m_doMBR = configSGD(L"DoMBR", true);
-    m_labelMappingFile = configSGD(L"labelMappingFile", L"");
+    m_labelMappingFile = configSGD(L"labelMappingFile", "");
     m_lengthNorm = configSGD(L"LengthNorm", true);
     m_showWERMode = configSGD(L"showWERMode", "average");
     m_isSVD = configSGD(L"SVD", true);
