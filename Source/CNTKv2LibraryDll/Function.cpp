@@ -2253,17 +2253,6 @@ FunctionPtr RNNT(const Variable& graph, const Variable& transcription, const Var
 
     //return BinaryOp(PrimitiveOpType::RNNT, graph,transcription, prediction, std::move(additionalProperties), name);
 }
-/* guoye: start */
-FunctionPtr RNNTMWER(const Variable& graph, const Variable& transcription, const Variable& prediction, const Variable& mergedinput, const Variable& W, const Variable& b, size_t blankTokenId, int delayConstraint, const std::wstring& name)
-{
-    auto additionalProperties = Dictionary();
-    additionalProperties[PrimitiveFunctionAttribute::AttributeNameBlankTokenId] = blankTokenId;
-    additionalProperties[PrimitiveFunctionAttribute::AttributeNameDelayConstraint] = delayConstraint;
-
-    std::vector<Variable> operands = {graph, transcription, prediction, mergedinput, W, b};
-    return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::RNNTMWER, operands, std::move(additionalProperties), name), name);
-}
-/* guoye: end */
 FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name)
 {
     return UnaryOp(PrimitiveOpType::LabelsToGraph, labels, Dictionary(), name);

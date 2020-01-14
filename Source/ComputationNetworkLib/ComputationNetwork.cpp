@@ -489,7 +489,6 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
         nodePtr->OperationName() == OperationNameOf(ClassificationErrorNode) ||
         nodePtr->OperationName() == OperationNameOf(ForwardBackwardNode) ||
         nodePtr->OperationName() == OperationNameOf(RNNTNode) ||
-        nodePtr->OperationName() == OperationNameOf(RNNTMWERNode) || // guoye
 #ifdef COMING_SOON
         nodePtr->OperationName() == OperationNameOf(CRFNode) ||
 #endif

@@ -131,7 +131,6 @@ namespace CNTK
         (op == PrimitiveOpType::ClassificationError) ||
         (op == PrimitiveOpType::ForwardBackward) ||
         (op == PrimitiveOpType::RNNT) ||
-        (op == PrimitiveOpType::RNNTMWER) || // guoye
         (op == PrimitiveOpType::Logistic) ||
         (op == PrimitiveOpType::LambdaRank) ||
         (op == PrimitiveOpType::NDCG) ||
@@ -993,17 +992,6 @@ void PrimitiveFunction::InferOutputs(std::vector<Variable>& outputs)
                         outputShape = {};
                         break;
                     }
-                    /* guoye: start */
-                    case PrimitiveOpType::RNNTMWER:
-                    {
-                        assert(m_inputs.size() == 4);
-                        if (m_inputs[0].Shape().TotalSize() != m_inputs[1].Shape().TotalSize())
-                            InvalidArgument("RNNTMWER: The shapes of operands '%S' and '%S' must have the same total size.", m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
-
-                        outputShape = {};
-                        break;
-                    }
-                    /* guoye: end */
                     case PrimitiveOpType::ReduceElements:
                     {
                         assert(m_inputs.size() == 1);

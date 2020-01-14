@@ -1383,7 +1383,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     //net->FormEvalOrder(forwardPropRoots[0]);
                     net->ResetEvalTimeStamps();
                     //net->ForwardPropFromTo(decodeinputNodes, forwardPropRoots);
-                    auto cNode = criterionNodes[0]->As<RNNTMWERNode<ElemType>>();
+                    auto cNode = criterionNodes[0]->As<RNNTNode<ElemType>>();
 
                     size_t seqId = 0; //frame
                     size_t fea_dim = reffeainput->second.GetMatrix<ElemType>().GetNumRows();

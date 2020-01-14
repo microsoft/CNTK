@@ -1764,10 +1764,36 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
 
-        // compute CTC score
-        vector<float> vt_nulf;
-        vector<size_t> vt_nuli;
-        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_nulf, vt_nulf, vt_nuli); // the last 3 inputs vt_nul are place holders just to make the function happy
+        // compute RNNT score
+        if (doMBR)
+        {
+            //PathInfo is not recognized in many files, so we use the regular data structures
+            vector<float> vt_probs, vt_wer;
+            vector<size_t> vt_labseqlen;
+            vt_probs.clear();
+            vt_wer.clear();
+            vt_labseqlen.clear();
+            for (size_t i = 0; i < vt_pathinfos.size(); i++)
+            {
+                vt_probs.push_back(vt_pathinfos[i].prob);
+                vt_wer.push_back(vt_pathinfos[i].WER);
+                vt_labseqlen.push_back(vt_pathinfos[i].label_seq.size());
+            }
+            m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR);
+
+            criterionValue = Value().Get00Element();
+            criterionValue *= numWords;
+            Value().SetColumn(&criterionValue, 0);
+            criterionValue = Value().Get00Element();
+            criterionValue;
+        }
+        else
+        {
+            // compute CTC score
+            vector<float> vt_nulf;
+            vector<size_t> vt_nuli;
+            m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_nulf, vt_nulf, vt_nuli); // the last 3 inputs vt_nul are place holders just to make the function happy
+        }
                                                                                                                                                                                                                                               //m_outputDensity->Print("gradient");
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
@@ -1876,125 +1902,6 @@ public:
         return m_blankTokenId;
     }
 
-protected:
-    virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking()
-    {
-        return true;
-    }
-    shared_ptr<Matrix<ElemType>> m_outputDensity;
-    // shared_ptr<Matrix<ElemType>> m_outputDistribution;
-    shared_ptr<Matrix<ElemType>> m_derivative;
-    shared_ptr<Matrix<ElemType>> m_maxIndexes;
-    shared_ptr<Matrix<ElemType>> m_maxValues;
-    shared_ptr<Matrix<ElemType>> m_tmpMatrix;
-
-    msra::lattices::GammaCalculation<ElemType> m_GammaCal;
-    size_t m_blankTokenId;
-    int m_delayConstraint;
-};
-
-template class RNNTNode<float>;
-template class RNNTNode<double>;
-/* guoye: start */
-// Node for RNNT MWER
-template <class ElemType>
-class RNNTMWERNode : public RNNTNode<ElemType>
-{
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"RNNTMWER";
-    }
-
-public:
-    RNNTMWERNode(DEVICEID_TYPE deviceId, const wstring& name, size_t blankTokenId = SIZE_MAX, int delayConstraint = -1)
-        : RNNTNode(deviceId, name, blankTokenId, delayConstraint)
-    {
-    }
-
-    RNNTMWERNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RNNTMWERNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"))
-    {
-        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
-    }
-
-    virtual void ForwardPropNonLooping() override
-    {
-
-        m_outputDensity->AssignProductOf(InputRef(4).Value(), true, InputRef(3).Value(), false);
-        m_outputDensity->AssignSumOf(*m_outputDensity, InputRef(5).Value());
-        m_outputDensity->InplaceLogSoftmax(true);
-        FrameRange fr(InputRef(0).GetMBLayout());
-        InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
-
-        // compute RNNT score
-        //PathInfo is not recognized in many files, so we use the regular data structures
-        vector<float> vt_probs, vt_wer;
-
-        vector<size_t> vt_labseqlen;
-        vt_probs.clear();
-        vt_wer.clear();
-        vt_labseqlen.clear();
-        for (size_t i = 0; i < vt_pathinfos.size(); i++)
-        {
-            vt_probs.push_back(vt_pathinfos[i].prob);
-            vt_wer.push_back(vt_pathinfos[i].WER);
-            vt_labseqlen.push_back(vt_pathinfos[i].label_seq.size());
-        }
-        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR);
-        if (doMBR)
-        {
-            criterionValue = Value().Get00Element();
-            criterionValue *= numWords;
-            Value().SetColumn(&criterionValue, 0);
-            criterionValue = Value().Get00Element();
-            criterionValue;
-        }
-#if NANCHECK
-        functionValues.HasNan("RNNTMWERNode");
-#endif
-#if DUMPOUTPUT
-        functionValues.Print("RNNTMWERNode");
-#endif
-    }
-
-    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
-    {
-        Base::CopyTo(nodeP, newName, flags);
-        if (flags & CopyNodeFlags::copyNodeValue)
-        {
-            auto node = dynamic_pointer_cast<RNNTMWERNode<ElemType>>(nodeP);
-
-            node->m_derivative->SetValue(*m_derivative);
-            node->m_maxIndexes->SetValue(*m_maxIndexes);
-            node->m_maxValues->SetValue(*m_maxValues);
-            node->m_outputDensity->SetValue(*m_outputDensity);
-            node->m_delayConstraint = m_delayConstraint;
-            node->m_tmpMatrix->SetValue(*m_tmpMatrix);
-        }
-    }
-    // request matrices needed to do node function value evaluation
-    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
-    {
-        Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_outputDensity, matrixPool);
-        RequestMatrixFromPool(m_derivative, matrixPool);
-        RequestMatrixFromPool(m_maxIndexes, matrixPool);
-        RequestMatrixFromPool(m_maxValues, matrixPool);
-        RequestMatrixFromPool(m_tmpMatrix, matrixPool);
-    }
-
-    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
-    {
-        Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_outputDensity, matrixPool);
-        ReleaseMatrixToPool(m_derivative, matrixPool);
-        ReleaseMatrixToPool(m_maxIndexes, matrixPool);
-        ReleaseMatrixToPool(m_maxValues, matrixPool);
-        ReleaseMatrixToPool(m_tmpMatrix, matrixPool);
-    }
-
     void SetMWERInfo(vector<PathInfo> vt_pi,
                      bool ln,
                      bool post_from_decode, bool mbr, size_t nw)
@@ -2019,12 +1926,25 @@ protected:
     bool doMBR = false;
     size_t numWords;
     ElemType criterionValue;
+
+    virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking()
+    {
+        return true;
+    }
+    shared_ptr<Matrix<ElemType>> m_outputDensity;
+    // shared_ptr<Matrix<ElemType>> m_outputDistribution;
+    shared_ptr<Matrix<ElemType>> m_derivative;
+    shared_ptr<Matrix<ElemType>> m_maxIndexes;
+    shared_ptr<Matrix<ElemType>> m_maxValues;
+    shared_ptr<Matrix<ElemType>> m_tmpMatrix;
+
+    msra::lattices::GammaCalculation<ElemType> m_GammaCal;
+    size_t m_blankTokenId;
+    int m_delayConstraint;
 };
 
-template class RNNTMWERNode<float>;
-template class RNNTMWERNode<double>;
-
-/* guoye: end */
+template class RNNTNode<float>;
+template class RNNTNode<double>;
 // -----------------------------------------------------------------------
 // GetbiasNode (prediction, transcription )
 // Getbias node, get input bias based on the labels. used of KWS training

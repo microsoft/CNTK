@@ -542,16 +542,6 @@ private:
 
             opType = PrimitiveOpType::RNNT;
         }
-        /* guoye: start */
-        else if (node->OperationName() == OperationNameOf(RNNTMWERNode))
-        {
-            auto edNode = node->As<RNNTMWERNode<ElementType>>();
-            primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameDelayConstraint] = edNode->DelayConstraint();
-            primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameBlankTokenId] = edNode->BlankTokenId();
-
-            opType = PrimitiveOpType::RNNTMWER;
-        }
-        /* guoye: end */
         else if (node->OperationName() == OperationNameOf(CosDistanceWithNegativeSamplesNode))
         {
             opType = PrimitiveOpType::CosDistanceWithNegativeSamples;

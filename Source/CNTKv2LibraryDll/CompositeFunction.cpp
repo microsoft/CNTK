@@ -1219,15 +1219,6 @@ template <typename ElementType>
                 ASSIGN_NEW_NODE(RNNTNode, network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
                 break;
             }
-            /* guoye: start */
-            case PrimitiveOpType::RNNTMWER:
-            {
-                auto delayContraint = functionConfig[PrimitiveFunctionAttribute::AttributeNameDelayConstraint].Value<int>();
-                auto blankTokenId = functionConfig[PrimitiveFunctionAttribute::AttributeNameBlankTokenId].Value<size_t>();
-                ASSIGN_NEW_NODE(RNNTMWERNode, network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
-                break;
-            }
-            /* guoye: end */
             case PrimitiveOpType::LambdaRank:
                 ASSIGN_NEW_NODE(LambdaRankNode, network->GetDeviceId(), internalNodeName);
                 break;

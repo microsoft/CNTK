@@ -189,8 +189,6 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
         return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RNNTNode))
         return New<RNNTNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(RNNTMWERNode))
-        return New<RNNTMWERNode<ElemType>>(forward<_Types>(_Args)...); // guoye
     else if (nodeType == OperationNameOf(RowRepeatNode))
         return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowStackNode))
@@ -680,14 +678,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RNNT(
 {
     return net.AddNodeToNetAndAttachInputs(New<RNNTNode<ElemType>>(net.GetDeviceId(), nodeName, blankTokenId, delayConstraint), {graph, transcription, prediction, mergedinput, W, b});
 }
-/* guoye: start */
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RNNTMWER(const ComputationNodePtr graph, const ComputationNodePtr transcription, const ComputationNodePtr prediction, const ComputationNodePtr mergedinput,
-                                                                                const ComputationNodePtr W, const ComputationNodePtr b, int blankTokenId, int delayConstraint, const std::wstring nodeName)
-{
-    return net.AddNodeToNetAndAttachInputs(New<RNNTMWERNode<ElemType>>(net.GetDeviceId(), nodeName, blankTokenId, delayConstraint), {graph, transcription, prediction, mergedinput, W, b});
-}
-/* guoye: end */
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::NoiseContrastiveEstimation(const ComputationNodePtr label, const ComputationNodePtr prediction,
                                                                                                       const ComputationNodePtr input_weight,

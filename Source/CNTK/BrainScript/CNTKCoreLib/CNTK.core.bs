@@ -597,8 +597,6 @@ RNNTError(leftInput, rightInput, mergedinput,  tokensToIgnore=[||], tag='') = ne
 LatticeSequenceWithSoftmax(labels, evaluation, scaledLogLikelihood, lattice, symListPath, phonePath, stateListPath, transProbPath, latticeConfigPath = "LatticeNode.config", hSmoothingWeight = 0.95, frameDropThresh = 1e-10, doReferenceAlign = false, seqGammarUsesMBR = false, seqGammarAMF = 14.0, seqGammarLMF = 14.0, seqGammarBMMIFactor = 0.0, seqGammarWordPen = 0.0, tag='') = new ComputationNode [ operation = 'LatticeSequenceWithSoftmax' ; inputs = _AsNodes (labels : evaluation : scaledLogLikelihood : lattice) /*plus the function args*/ ]
 ForwardBackward(graph, features, blankTokenId, delayConstraint=-1, tag='') = new ComputationNode [ operation = 'ForwardBackward' ; inputs = _AsNodes (graph : features) /*plus the function args*/ ]
 RNNT(graph, transcription, prediction,mergedinput, W, b, blankTokenId,delayConstraint=-1, tag='') = new ComputationNode [ operation = 'RNNT' ; inputs = _AsNodes (graph : transcription: prediction: mergedinput: W: b) /*plus the function args*/ ]
-# guoye
-RNNTMWER(graph, transcription, prediction,mergedinput, W, b, blankTokenId,delayConstraint=-1, tag='') = new ComputationNode [ operation = 'RNNTMWER' ; inputs = _AsNodes (graph : transcription: prediction: mergedinput: W: b) /*plus the function args*/ ] 
 LabelsToGraph(labels, tag='') = new ComputationNode [ operation = 'LabelsToGraph' ; inputs = _AsNodes (labels) /*plus the function args*/ ]
 StopGradient(input, tag='') = new ComputationNode [ operation = 'StopGradient' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 Slice(beginIndex, endIndex, input, axis=1, tag='') =
