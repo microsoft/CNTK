@@ -203,53 +203,28 @@ template <class ElemType, int direction>
         FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep);
         //FrameRange frDelayedBack = fr.WithTimeOffset(-1* direction * m_timeStep);
         // first check in bulk for the frame--if all frames are good (most frequent case), take the quick path
-        if (/*!m_pMBLayout->IsBeyondStartOrEnd(frDelayed) &&*/
+        if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed) &&
             !m_pMBLayout->IsGap(fr))
         {
-            m_inputAnySeqValid[t] = true; // no special case: just copy all
+            m_inputAnySeqValid[t] = true;                  // no special case: just copy all
             assert(m_inputAllSeqValid[t]);
-            //continue;
+            continue;
         }
-        if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed) && !m_pMBLayout->IsGap(fr))
+
+        // determine each sequence for the current frame that has a boundary condition or is a gap:
+        for (size_t s = 0; s < S; s++)
         {
-            m_inputAnySeqValidBack[t] = true;
-            assert(m_inputAllSeqValidBack[t]);
-        }
-        if (m_pMBLayout->IsGap(fr) /*|| m_pMBLayout->IsBeyondStartOrEnd(frDelayed)*/)
-        { // determine each sequence for the current frame that has a boundary condition or is a gap:
-            for (size_t s = 0; s < S; s++)
+            // source frame is either invalid or valid (or target frame is a gap, in which case we consider everything valid)
+            if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)) &&
+                !m_pMBLayout->IsGap(fr.Sequence(s)))
             {
-                // source frame is either invalid or valid (or target frame is a gap, in which case we consider everything valid)
-            if (/*!m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)) &&*/
-                    !m_pMBLayout->IsGap(fr.Sequence(s)))
-                {
-                    m_inputAnySeqValid[t] = true;
-                }
-                else
-                {
-                    m_inputAllSeqValid[t] = false;
-                    let j = fr.t() * S + s;
-                    m_inputInvalidMatrixTemp[j] = 1; // invalid: exclude this in copy/backprop
-                }
+                m_inputAnySeqValid[t] = true;
             }
-        
-            }
-        if (m_pMBLayout->IsBeyondStartOrEnd(frDelayed) || m_pMBLayout->IsGap(fr))
+            else
             {
-            for (size_t s = 0; s < S; s++)
-            {
-                // source frame is either invalid or valid (or target frame is a gap, in which case we consider everything valid)
-                if (!m_pMBLayout->IsBeyondStartOrEnd(frDelayed.Sequence(s)) &&
-                    !m_pMBLayout->IsGap(fr.Sequence(s)))
-                {
-                    m_inputAnySeqValidBack[t] = true;
-                }
-                else
-                {
-                    m_inputAllSeqValidBack[t] = false;
-                    let j = fr.t() * S + s;
-                    m_inputInvalidMatrixBackTemp[j] = 1; // invalid: exclude this in copy/backprop
-                }
+                m_inputAllSeqValid[t] = false;
+                let j = fr.t() * S + s;
+                m_inputInvalidMatrixTemp[j] = 1; // invalid: exclude this in copy/backprop
             }
         }
     }
@@ -343,21 +318,6 @@ template <class ElemType, int direction>
     return TensorView<ElemType>(m_inputInvalidMatrix, tensorShape);
 }
 
-// retrieve the mask tensor for the current frame for backprop in continuous mode
-// This function mimics GetTensorSliceFor().
-template <class ElemType, int direction>
-/*private*/ TensorView<ElemType> DelayedValueNodeBase<ElemType, direction>::GetMaskTensorBack(size_t rank, const FrameRange& fr) const
-{
-    // tensorShape of m_inputInvalidMatrix is [1 x S x T]
-    auto tensorShape = TensorShape();
-    tensorShape.AppendInPlace(rank++, GetMBLayout()->GetNumParallelSequences());
-    tensorShape.AppendInPlace(rank++, GetMBLayout()->GetNumTimeSteps());
-
-    let slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
-    tensorShape.NarrowTo(slice);
-
-    return TensorView<ElemType>(m_inputInvalidMatrixBack, tensorShape);
-}
 // This function assumes EndForwardProp() to be called after the iteration loop.
 template <class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType, direction>::ForwardProp(const FrameRange& fr) /*override*/
@@ -397,31 +357,20 @@ template <class ElemType, int direction>
             size_t T_delayedActivation = m_delayedActivationMBLayout ? m_delayedActivationMBLayout->GetNumTimeSteps() : 0; // (note: should never happen in full-sequence mode)
             auto tensorShape = GetTensorShape(rank);
 
-            size_t nRow = 1, nCol = 1;
             // Make sure we properly have the sequence length from the previous minibatch.
             if (T_delayedActivation > 0 && HasMBLayout())
             {
                 auto dims = tensorShape.GetDims();
-                dims[dims.size() - 1] = 1;
-                nRow = dims[0];
-                nCol = dims[dims.size() - 2];
-
+                dims[dims.size() - 1] = T_delayedActivation;
                 tensorShape = TensorShape(dims);
             }
 
-            auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed /*<0*/ + latency + T_delayedActivation), m_delayedActivationMBLayout);
+            auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), FrameRange(m_delayedActivationMBLayout, t_delayed/*<0*/ + latency + T_delayedActivation), m_delayedActivationMBLayout);
             tensorShape.NarrowTo(slice);
-            shared_ptr<Matrix<ElemType>> tempDelayedValue;
-            tempDelayedValue = make_shared<Matrix<ElemType>>(m_deviceId);
-
-            tempDelayedValue->Resize(nRow, nCol);
-            tempDelayedValue->CopyColumnsStrided(*m_delayedValue, nCol, 0, 1);
-            //tempDelayedValue->SetValue(0.0);
-            src = TensorView<ElemType>(tempDelayedValue, tensorShape);
+            src = TensorView<ElemType>(m_delayedValue, tensorShape);
         }
         else
-            //LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
-            src = TensorView<ElemType>(m_initialStateValueMatrix, TensorShape(1));
+            LogicError("The delay node tries to access past values that are out of bound, possibly because there is no sentence start marker in the MBLayout.");
     }
     else if (t_delayed >= GetNumTimeSteps())
     {
@@ -474,17 +423,10 @@ template <class ElemType, int direction>
     //  - we don't need to keep anything if all sequences are closed (sentence end)
     //    This condition includes full-sequence mode.
     // TODO: Can we optimize this and only copy if there is a sequence spanning across the end of the MB? And add a check to BeginForwardProp() to make sure we got one if there is a boundary at the start?
-    //m_delayedValue->SetValue(InputRef(0).Value());
-    /*size_t Mseq = m_pMBLayout->GetMaxSequence();
-    FrameRange frDelayed(m_pMBLayout);
-    frDelayed.m_timeOffset = direction * m_timeStep;
-    frDelayed.seqIndex = Mseq;
-    frDelayed.timeIdxInSeq = m_pMBLayout->GetNumTimeSteps();
-    m_delayedValue->SetValue(DataWithMBLayoutFor(InputRef(0).Value(), frDelayed, m_pMBLayout));
-    m_delayedValue->SetValue(0.0);
+    m_delayedValue->SetValue(InputRef(0).Value());
     if (!m_delayedActivationMBLayout)
         m_delayedActivationMBLayout = make_shared<MBLayout>();
-    m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);*/
+    m_delayedActivationMBLayout->CopyFrom(m_pMBLayout);
     // Perf BUGBUG: ^^ This copies a matrix from CPU to GPU at each MB; we should short-circuit it
 
     Base::EndForwardProp();
@@ -555,11 +497,11 @@ template <class ElemType, int direction>
             auto tgt = InputRef(inputIndex).GradientTensorFor(rank, frDelayed); // target is outgoing gradient to input
             TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
 
-            if (m_inputAllSeqValidBack[fr.t()]) // all valid: just jam it over in one go
+            if (m_inputAllSeqValid[fr.t()]) // all valid: just jam it over in one go
                 tgt.AddCopyOf(src);
-            else if (m_inputAnySeqValidBack[fr.t()])                   // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
-                tgt.AddCondOf(GetMaskTensorBack(rank, fr), zero, src); // now add either source or zero value, based on the mask
-            else                                                   // none valid: nothing to back-prop
+            else if (m_inputAnySeqValid[fr.t()]) // some are valid, some are not: use a OpCond tgt select 'src' for valid and 'zero' for invalid frames
+                tgt.AddCondOf(GetMaskTensor(rank, fr), zero, src); // now add either source or zero value, based on the mask
+            else // none valid: nothing to back-prop
                 ;
         }
     }
