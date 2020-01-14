@@ -1392,8 +1392,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     refFeaMatBackup.SetValue(reffeainput->second.GetMatrix<ElemType>());
                     size_t numParallelSequences = encodeMBLayout->GetNumParallelSequences();
 
-                    my_time = time(NULL);
-                    fprintf(stderr, "SGD time 3 = %s", ctime(&my_time)); 
+                    //my_time = time(NULL);
+                    //fprintf(stderr, "SGD time 3 = %s", ctime(&my_time)); 
                     for (const auto& seq : encodeMBLayout->GetAllSequences())
                     {
                         if (seq.seqId == GAP_SEQUENCE_ID)
@@ -1493,8 +1493,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         seqId++;
                     }
 
-                    my_time = time(NULL);
-                    fprintf(stderr, "SGD time 4 = %s", ctime(&my_time)); 
+                    //my_time = time(NULL);
+                    //fprintf(stderr, "SGD time 4 = %s", ctime(&my_time)); 
                 }
                 // ===========================================================
                 // forward prop for evaluate eval nodes
