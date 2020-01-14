@@ -1750,8 +1750,8 @@ public:
                                Matrix<ElemType>& decodeInputMatrix, MBLayoutPtr& decodeMBLayout, std::vector<ComputationNodeBasePtr> decodeinputNodes, size_t numBestMBR, bool lengthNorm, const vector<string>& vt_labels, vector<vector<PathInfo>>& uttPathsInfo, vector<size_t>& vt_nws, vector<float>& vt_onebest_wer,
                                bool SVD, ComputationNetwork& cn)
     {
-        time_t my_time = time(NULL);
-        fprintf(stderr, "RNNT_decode_nbest_MBR time 1 = %s", ctime(&my_time));
+        //time_t my_time = time(NULL);
+        //fprintf(stderr, "RNNT_decode_nbest_MBR time 1 = %s", ctime(&my_time));
 
         if (outputNodeNames.size() == 0)
             fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
@@ -1955,8 +1955,8 @@ public:
 
         // this->FormEvalOrder(Plustransnodes[0]);
 
-        my_time = time(NULL);
-        fprintf(stderr, "RNNT_decode_nbest_MBR time 2 = %s", ctime(&my_time));
+        //my_time = time(NULL);
+        //fprintf(stderr, "RNNT_decode_nbest_MBR time 2 = %s", ctime(&my_time));
         for (size_t uttID = 0; uttID < numSequences; uttID++)
         {
             // fprintf(stderr, "decode v0 uttID = %d .\n", int(uttID));
@@ -2137,8 +2137,8 @@ public:
         decodeInputMatrix.SetValue(decodeInputMatrixBackup);
         //decodeInputMatrix.Print("after ss");
         decodeMBLayout->CopyFrom(decodebackupMBlayout);
-        my_time = time(NULL);
-        fprintf(stderr, "RNNT_decode_nbest_MBR time 3 = %s", ctime(&my_time));
+        //my_time = time(NULL);
+        //fprintf(stderr, "RNNT_decode_nbest_MBR time 3 = %s", ctime(&my_time));
     }
 };
 
