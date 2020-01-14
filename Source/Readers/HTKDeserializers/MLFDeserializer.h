@@ -60,6 +60,11 @@ struct MLFSequenceData : SparseSequenceData
         return m_values.data();
     }
 
+    const void* GetIndexBuffer() override
+    {
+        return m_indexBuffer.data();
+    }
+
     const NDShape& GetSampleShape() override
     {
         return m_frameShape;
@@ -149,6 +154,46 @@ public:
                 return GetSequence<double>(sequenceIndex, result);
             }
         }
+        
+        void MergeTwoSequences(vector<SequenceDataPtr>& indata, vector<SequenceDataPtr>& outdata) override
+        {
+            vector<size_t> sequencePhoneBoundaries(m_deserializer.m_withPhoneBoundaries ? 1 : 0);
+            for (size_t i = 0; i < indata.size(); i++)
+            {
+                if (i + 1 < indata.size())
+                {
+                    size_t numberOfSamples = indata[i]->m_numberOfSamples + indata[i + 1]->m_numberOfSamples - 1;
+                    auto s = make_shared<MLFSequenceData<float>>(numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout);
+                    auto* labelData = indata[i]->GetIndexBuffer();
+                    IndexType* Indexdata = (IndexType*) labelData;
+                    //auto* startRange = indata[i]->m_indices;
+                    //std::shared_ptr<MLFSequenceData<float>> s1 = indata[i];
+                    //auto index = ((MLFSequenceData<float>*) (indata[i]))->m_indexBuffer;
+                    auto* startRange = s->m_indices;
+                    //auto labelData = indata[i]->GetDataBuffer();
+                    //auto* inS = static_cast<SparseSequenceDataPtr>(indata[i]);
+                    for (size_t nLabel = 0; nLabel < indata[i]->m_numberOfSamples; nLabel++)
+                    {
+                        fill(startRange, startRange + 1, Indexdata[nLabel]);
+                        startRange += 1;
+                    }
+                    labelData = indata[i + 1]->GetIndexBuffer();
+                    Indexdata = (IndexType*) labelData;
+                    for (size_t nLabel = 1; nLabel < indata[i + 1]->m_numberOfSamples; nLabel++)
+                    {
+                        fill(startRange, startRange + 1, Indexdata[nLabel]);
+                        startRange += 1;
+                    }
+                    i = i + 1;
+                    outdata.push_back(s);
+                }
+                else
+                    outdata.push_back(indata[i]);
+                
+            }
+            
+            
+        }
 
         template <class ElementType>
         void GetSequence(size_t sequenceIndex, vector<SequenceDataPtr>& result)
@@ -219,7 +264,7 @@ public:
             }
             else if (m_deserializer.m_EOSInEnd)
             {
-                fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID-1));
+                fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID - 1));
                 startRange += 1;
             }
             result.push_back(s);

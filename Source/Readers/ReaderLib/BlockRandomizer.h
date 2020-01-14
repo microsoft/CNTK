@@ -53,7 +53,7 @@ public:
     // Global sample count - number of samples on a global timeline
     // Local sample count - number of samples on a global timeline beloning to this worker.
     virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override;
-
+    virtual Sequences MergeTwoSequences(Sequences insequence) override;
     // Gets stream descriptions.
     virtual std::vector<StreamInformation> GetStreamDescriptions() const override
     {

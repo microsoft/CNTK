@@ -179,7 +179,7 @@ template <class ElemType, int direction>
     }
 
     m_inputInvalidMatrix->SetValue(0);
-    m_inputInvalidMatrixBack->SetValue(0);
+
     // --- create the mask for invalid sequences
     // The mask stores for every time step of every sequence whether that location is invalid; that is, when
     //  - the delayed time crosses a boundary, or
@@ -189,10 +189,6 @@ template <class ElemType, int direction>
     m_inputAnySeqValid.assign(GetNumTimeSteps(), false); // start with assumptions which we update in the loop below
     m_inputAllSeqValid.assign(GetNumTimeSteps(), true);
     m_inputInvalidMatrixTemp.assign(m_inputInvalidMatrix->GetNumCols(), 0);
-    //for backprop in continous mode
-    m_inputAnySeqValidBack.assign(GetNumTimeSteps(), false); // start with assumptions which we update in the loop below
-    m_inputAllSeqValidBack.assign(GetNumTimeSteps(), true);
-    m_inputInvalidMatrixBackTemp.assign(m_inputInvalidMatrixBack->GetNumCols(), 0);
 
     let S = GetNumParallelSequences();
     int dir = direction; // (this avoids a 'conditional expression is constant' warning)

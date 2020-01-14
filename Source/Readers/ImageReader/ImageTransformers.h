@@ -40,7 +40,18 @@ struct ImageSequenceData : DenseSequenceData
 
         return m_image.ptr();
     }
+    const void* GetIndexBuffer() override
+    {
+        if (!m_image.isContinuous())
+        {
+            // According to the contract, dense sequence data
+            // should return continuous data buffer.
+            // TODO: This is potentially an expensive operation. Need to do some logging.
+            m_image = m_image.clone();
+        }
 
+        return m_image.ptr();
+    }
     const NDShape& GetSampleShape() override
     {
         return m_sampleShape;

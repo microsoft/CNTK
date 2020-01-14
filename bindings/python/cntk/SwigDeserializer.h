@@ -62,6 +62,10 @@ namespace CNTK
         }
 
         virtual const void* GetDataBuffer() { return m_data; }
+        virtual const void* GetIndexBuffer()
+        {
+            return m_data;
+        }
         virtual const NDShape& GetSampleShape() { LogicError("All sequences have the same shape, please use stream.shape instead."); }
 
     private:
@@ -84,6 +88,10 @@ namespace CNTK
         }
 
         virtual const void* GetDataBuffer() { return m_data; }
+        virtual const void* GetIndexBuffer()
+        {
+            return m_data;
+        }
         virtual const NDShape& GetSampleShape() { LogicError("All sequences have the same shape, please use stream.shape instead."); }
 
     private:

@@ -10,7 +10,8 @@
 #include "DataDeserializer.h"
 #include "ReaderUtil.h"
 
-namespace CNTK {
+namespace CNTK
+{
 
 // Base class for randomizers that perform randomization on a local timeline.
 // The inherited class should redefine the following methods:
@@ -18,8 +19,8 @@ namespace CNTK {
 //   - RefillSequenceWindow - to refill the current window with next sequences.
 //   - Get/SetState - for checkpointing.
 //
-// Given a prefetched windows of sequences, this class is responsible for picking 
-// a set of sequences for the next minibatch. It also keeps track whether the end 
+// Given a prefetched windows of sequences, this class is responsible for picking
+// a set of sequences for the next minibatch. It also keeps track whether the end
 // of data (as specified in the confguration) is reached.
 class LocalTimelineRandomizerBase : public SequenceEnumerator
 {
@@ -28,11 +29,15 @@ public:
 
     void SetConfiguration(const ReaderConfiguration& config) override
     {
-        *((ReaderConfiguration*)&m_config) = config;
+        *((ReaderConfiguration*) &m_config) = config;
     }
 
     virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override;
+    virtual Sequences MergeTwoSequences(Sequences insequence) override
+    {
+        return insequence;
 
+    }
     virtual std::vector<StreamInformation> GetStreamDescriptions() const override
     {
         return m_deserializer->StreamInfos();
@@ -52,7 +57,8 @@ protected:
     // that are currently processed.
     struct SequenceWindow
     {
-        SequenceWindow() : m_sequencePosition(0) {}
+        SequenceWindow()
+            : m_sequencePosition(0) {}
 
         std::map<ChunkIdType, ChunkPtr> m_dataChunks;
         std::vector<SequenceInfo> m_sequences;
@@ -79,8 +85,8 @@ protected:
     inline static bool IsEndOfSweep(const SequenceInfo& sequence)
     {
         return sequence.m_indexInChunk == s_endOfSweep.m_indexInChunk &&
-            sequence.m_chunkId == s_endOfSweep.m_chunkId &&
-            sequence.m_numberOfSamples == s_endOfSweep.m_numberOfSamples;
+               sequence.m_chunkId == s_endOfSweep.m_chunkId &&
+               sequence.m_numberOfSamples == s_endOfSweep.m_numberOfSamples;
     }
 
     inline size_t ValueFrom(const std::map<std::wstring, size_t>& state, const std::wstring& key)
@@ -163,4 +169,4 @@ private:
     size_t m_sampleCount;
 };
 
-}
+} // namespace CNTK

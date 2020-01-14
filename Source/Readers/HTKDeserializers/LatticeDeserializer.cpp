@@ -28,6 +28,10 @@ struct LatticeFloatSequenceData : DenseSequenceData
     {
         return m_buffer;
     }
+    const void* GetIndexBuffer() override
+    {
+        return m_buffer;
+    }
 
     const NDShape& GetSampleShape() override
     {
@@ -105,7 +109,10 @@ public:
     {
         return GetSequence<float>(sequenceIndex, result);
     }
-
+    void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
+    {
+        outdata = indata;
+    }
     template<class ElementType>
     void GetSequence(size_t sequenceIndex, vector<SequenceDataPtr>& result)
     {

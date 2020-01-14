@@ -82,7 +82,7 @@ namespace CNTK {
 
         // Returns a pointer to internal data buffer.
         virtual const void* GetDataBuffer() = 0;
-
+        virtual const void* GetIndexBuffer() = 0;
         unsigned int m_numberOfSamples;  /// Number of samples in the sequence
 
         DataType m_elementType;   /// Sequence element type.
@@ -148,7 +148,7 @@ namespace CNTK {
         /// deserializer that produced this chunk.
         ///
         virtual void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) = 0;
-
+        virtual void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) = 0;
         ///
         /// Returns meta information about sequences that this chunk has.
         /// This allows deserialization of sequences on several threads afterwords.

@@ -56,7 +56,10 @@ private:
         {
             return m_buffer.data();
         }
-
+        const void* GetIndexBuffer() override
+        {
+            return m_buffer.data();
+        }
         const NDShape& GetSampleShape() override
         {
             return m_sampleShape;
@@ -77,6 +80,10 @@ private:
         }
 
         const void* GetDataBuffer() override
+        {
+            return m_buffer.data();
+        }
+        const void* GetIndexBuffer() override
         {
             return m_buffer.data();
         }

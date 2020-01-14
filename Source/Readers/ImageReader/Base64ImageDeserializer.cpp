@@ -53,7 +53,10 @@ namespace CNTK {
         {
             return m_deserializer.m_corpus->IdToKey(s.m_key);
         }
-
+        void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
+        {
+            outdata = indata;
+        }
         void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
         {
             const size_t innerSequenceIndex = m_deserializer.m_multiViewCrop ? sequenceIndex / ImageDeserializerBase::NumMultiViewCopies : sequenceIndex;

@@ -25,6 +25,11 @@ namespace CNTK {
             return m_data;
         }
 
+        const void* GetIndexBuffer() override
+        {
+            return m_data;
+        }
+
         const NDShape& GetSampleShape() override
         {
             return m_sampleShape;
@@ -52,6 +57,11 @@ namespace CNTK {
         }
 
         const void* GetDataBuffer() override
+        {
+            return m_buffer.data();
+        }
+
+        const void* GetIndexBuffer() override
         {
             return m_buffer.data();
         }
@@ -93,6 +103,10 @@ namespace CNTK {
 
         virtual const NDShape& GetSampleShape() { NOT_IMPLEMENTED; }
         virtual const void* GetDataBuffer() { NOT_IMPLEMENTED; }
+        virtual const void* GetIndexBuffer()
+        {
+            NOT_IMPLEMENTED;
+        }
     };
 
 }

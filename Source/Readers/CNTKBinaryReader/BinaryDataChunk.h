@@ -63,6 +63,10 @@ public:
             result[i] = m_data[i].at(sequenceIdx);
     }
 
+    void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
+    {
+        outdata = indata;
+    }
     uint32_t GetNumSamples(size_t sequenceIdx)
     {
         uint32_t numSamples = 0;

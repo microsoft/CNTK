@@ -57,7 +57,7 @@ public:
 
     // Gets next sequences up to a maximum count of local and global samples.
     virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) = 0;
-
+    virtual Sequences MergeTwoSequences(Sequences insequence) = 0;
     virtual ~SequenceEnumerator()
     {
     }

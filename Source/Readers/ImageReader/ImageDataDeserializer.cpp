@@ -42,6 +42,10 @@ public:
 
         m_deserializer.PopulateSequenceData(cvImage, m_description.m_classId, m_description.m_copyId, m_description.m_key, result);
     }
+    void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
+    {
+        outdata = indata;
+    }
 
 private:
     DataType ConvertImageToSupportedDataType(cv::Mat& image)

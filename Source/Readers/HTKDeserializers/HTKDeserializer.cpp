@@ -390,7 +390,10 @@ public:
     {
         m_parent->GetSequenceById(m_chunkId, sequenceId, result);
     }
-
+    void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
+    {
+        m_parent->MergeSequence(indata,outdata);
+    }
     // Unloads the data from memory.
     ~HTKChunk()
     {
@@ -477,7 +480,10 @@ struct HTKFloatSequenceData : DenseSequenceData
     {
         return m_buffer.GetData();
     }
-
+    const void* GetIndexBuffer() override
+    {
+        return m_buffer.GetData();
+    }
     const NDShape& GetSampleShape() override
     {
         return m_frameShape;
@@ -504,7 +510,10 @@ struct HTKDoubleSequenceData : DenseSequenceData
     {
         return m_buffer.data();
     }
-
+    const void* GetIndexBuffer() override
+    {
+        return m_buffer.data();
+    }
     const NDShape& GetSampleShape() override
     {
         return m_frameShape;
@@ -609,6 +618,29 @@ void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<Seq
 
     result->m_key.m_sequence = utterance->GetId();
     r.push_back(result);
+}
+
+// Sequence ids are guaranteed to be unique inside a chunk.
+void HTKDeserializer::MergeSequence(vector<SequenceDataPtr>& indata,vector<SequenceDataPtr>& outdata)
+{
+    FeatureMatrix mergeFeature(m_dimension, indata[0]->m_numberOfSamples + indata[1]->m_numberOfSamples);
+    mergeFeature.GetData();
+    size_t dataSize = indata[0]->m_numberOfSamples * sizeof(m_elementType) * indata[0]->GetSampleShape()[0];
+    memcpy_s(mergeFeature.GetData(), dataSize, indata[0]->GetDataBuffer(), dataSize);
+    size_t dataSize2 = indata[1]->m_numberOfSamples * sizeof(m_elementType) * indata[1]->GetSampleShape()[0];
+    memcpy_s(mergeFeature.GetData() + dataSize / sizeof(m_elementType), dataSize2, indata[1]->GetDataBuffer(), dataSize2);
+
+    DenseSequenceDataPtr result;
+    if (m_elementType == DataType::Double)
+        result = make_shared<HTKDoubleSequenceData>(mergeFeature, m_streams.front().m_sampleLayout);
+    else if (m_elementType == DataType::Float)
+        result = make_shared<HTKFloatSequenceData>(std::move(mergeFeature), m_streams.front().m_sampleLayout);
+    else
+        LogicError("Currently, HTK Deserializer supports only double and float types.");
+
+    
+    outdata.push_back(result);
+    
 }
 
 // Gets sequence description by its key.

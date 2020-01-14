@@ -59,12 +59,13 @@ MBLayoutPtr SequencePacker::CreateBinaryMBLayout(const StreamBatch& batch)
 Minibatch SequencePacker::ReadMinibatch()
 {
     auto sequences = m_sequenceEnumerator->GetNextSequences(m_globalMinibatchSizeInSamples, m_localMinibatchSizeInSamples);
+    auto mergedsequence = m_sequenceEnumerator->MergeTwoSequences(sequences);
     //get one minibatch
     //select sequences for one minibatch, loop for sequence
 
     //loop for stream, put sequence data into batch
 
-    const auto& batch = sequences.m_data;
+    const auto& batch = mergedsequence.m_data;
 
     Minibatch minibatch(sequences.m_endOfSweep, sequences.m_endOfEpoch);
     if (batch.empty())

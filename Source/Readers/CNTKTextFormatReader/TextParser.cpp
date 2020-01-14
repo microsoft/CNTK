@@ -45,7 +45,10 @@ public:
 
     // Gets sequences by id.
     void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override;
-
+    void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
+    {
+        outdata = indata;
+    }
     // A map from sequence ids to the sequence data.
     std::vector<SequenceBuffer> m_sequenceMap;
 

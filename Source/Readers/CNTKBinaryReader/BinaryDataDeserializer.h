@@ -105,7 +105,10 @@ protected:
         {
             return m_data;
         }
-
+        const void* GetIndexBuffer() override
+        {
+            return m_data;
+        }
         const NDShape& GetSampleShape() override
         {
             return m_sampleShape;
@@ -124,6 +127,10 @@ protected:
         }
 
         const void* GetDataBuffer() override
+        {
+            return m_data;
+        }
+        const void* GetIndexBuffer() override
         {
             return m_data;
         }

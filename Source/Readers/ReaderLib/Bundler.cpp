@@ -353,6 +353,21 @@ public:
             m_innerChunks[currentIndex + i]->GetSequence(originalSequenceId, result);
         }
     }
+
+    virtual void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
+    {
+        outdata.reserve(m_numberOfInputs);
+        for (int i = 0; i < m_parent->m_deserializers.size(); ++i)
+        {
+            auto first = indata.begin()+i*2;
+            auto last = indata.begin() + i * 2 + 2;
+            std::vector<SequenceDataPtr> newVec(first, last);
+            m_innerChunks[i]->MergeTwoSequences(newVec, outdata);
+            
+
+            
+        }
+    }
 };
 
 // Get chunk data by id.

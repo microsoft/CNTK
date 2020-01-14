@@ -49,6 +49,7 @@ private:
 
     // Gets sequence by its chunk id and id inside the chunk.
     void GetSequenceById(ChunkIdType chunkId, size_t id, std::vector<SequenceDataPtr>&);
+    void MergeSequence(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata);
 
     // Dimension of features.
     size_t m_dimension;

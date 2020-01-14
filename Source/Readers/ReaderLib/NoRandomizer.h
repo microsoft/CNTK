@@ -26,6 +26,10 @@ public:
 
     virtual void StartEpoch(const EpochConfiguration& config) override;
     virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override;
+    virtual Sequences MergeTwoSequences(Sequences insequence) override
+    {
+        return insequence;
+    }
     virtual std::vector<StreamInformation> GetStreamDescriptions() const override
     {
         return m_deserializer->StreamInfos();

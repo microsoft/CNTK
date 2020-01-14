@@ -106,6 +106,11 @@ public:
         }
         return sequences;
     }
+    virtual Sequences MergeTwoSequences(Sequences insequence) override
+    {
+        return insequence;
+    }
+
 
     void SetConfiguration(const ReaderConfiguration& config) override
     {
