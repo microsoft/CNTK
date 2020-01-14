@@ -1381,6 +1381,37 @@ private:
 }; // namespace CNTK
 typedef ComputationNetwork::ComputationNetworkPtr ComputationNetworkPtr;
 
+class DataReaderHelpersFunctions
+{
+public:
+    /* start:  move from datareaderhelpers to here */
+    template <class ElemType>
+    static void NotifyChangedNodes(ComputationNetworkPtr net, StreamMinibatchInputs& inputMatrices)
+    {
+        // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
+        // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
+        std::set<MatrixBasePtr> matrices;
+        for (const auto& iter : inputMatrices)
+            matrices.insert(iter.second.matrix);
+        for (auto& node : net->FeatureNodes())
+            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
+                node->NotifyFunctionValuesMBSizeModified();
+        for (auto& node : net->LabelNodes())
+            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
+                node->NotifyFunctionValuesMBSizeModified();
+    }
+
+    // get StreamMinibatchInputs for a given set of input nodes
+    static StreamMinibatchInputs RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
+    {
+        StreamMinibatchInputs inputMatrices;
+        for (auto& node : inputNodes)
+            inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
+        return inputMatrices;
+    }
+    /* end:  move from datareaderhelpers to here */
+};
+
 template <class ElemType>
 
 class RNNTDecodeFunctions
@@ -2109,36 +2140,6 @@ public:
         my_time = time(NULL);
         fprintf(stderr, "RNNT_decode_nbest_MBR time 3 = %s", ctime(&my_time));
     }
-};
-class DataReaderHelpersFunctions
-{
-public:
-    /* start:  move from datareaderhelpers to here */
-    template <class ElemType>
-    static void NotifyChangedNodes(ComputationNetworkPtr net, StreamMinibatchInputs& inputMatrices)
-    {
-        // reader will have resized input node's m_value directly. Nodes must be notified to do necessary internal state updates from that.
-        // TODO: This is a stopgap. SGD will at some point change from sets of matrices to sets of nodes. Then this will become much simpler.
-        std::set<MatrixBasePtr> matrices;
-        for (const auto& iter : inputMatrices)
-            matrices.insert(iter.second.matrix);
-        for (auto& node : net->FeatureNodes())
-            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
-                node->NotifyFunctionValuesMBSizeModified();
-        for (auto& node : net->LabelNodes())
-            if (matrices.find(node->As<ComputationNode<ElemType>>()->ValuePtr()) != matrices.end())
-                node->NotifyFunctionValuesMBSizeModified();
-    }
-
-    // get StreamMinibatchInputs for a given set of input nodes
-    static StreamMinibatchInputs RetrieveInputMatrices(const std::vector<ComputationNodeBasePtr>& inputNodes)
-    {
-        StreamMinibatchInputs inputMatrices;
-        for (auto& node : inputNodes)
-            inputMatrices.AddInput(node->NodeName(), node->ValuePtr(), node->GetMBLayout(), node->GetSampleLayout());
-        return inputMatrices;
-    }
-    /* end:  move from datareaderhelpers to here */
 };
 
 // helper that returns 'float' or 'double' depending on ElemType
