@@ -96,6 +96,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
                 s->m_sampleShape = m_sampleShape;
                 result.push_back(s);
             }
+            void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
+            {
+                outdata = indata;
+            }
         };
         typedef std::shared_ptr<SequentialChunk> SequentialChunkPtr;
 

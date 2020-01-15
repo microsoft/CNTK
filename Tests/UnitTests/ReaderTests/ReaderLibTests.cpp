@@ -71,7 +71,10 @@ public:
         data->m_key.m_sequence = sequenceId;
         result.push_back(data);
     }
-    
+    void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
+    {
+        outdata = indata;
+    }
     virtual void SequenceInfos(std::vector<SequenceInfo>& sequenceToFill) override 
     {
         unsigned int numberOfSamples = 1;
