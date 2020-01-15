@@ -425,6 +425,11 @@ namespace CNTK
             result.insert(result.end(), offset, offset + m_streamInfos.size());
         }
 
+        void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
+        {
+            outdata = indata;
+        }
+
         // Get property of python object by name.
         PyObjectPtr GetProperty(PyObject* object, const std::string& propertyName)
         {
