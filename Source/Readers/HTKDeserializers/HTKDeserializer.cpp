@@ -9,6 +9,7 @@
 #include "Basics.h"
 #include "StringUtil.h"
 #include <unordered_set>
+#include <random>
 
 namespace CNTK
 {
@@ -31,6 +32,15 @@ HTKDeserializer::HTKDeserializer(
     // TODO: This should be read in one place, potentially given by SGD.
     m_frameMode = (ConfigValue) cfg("frameMode", "true");
     m_reduceFrame = cfg(L"reduceFrame", 0);
+
+    //spec augment
+    m_numFmask = cfg(L"numFmask", 0);
+    m_numTmask = cfg(L"numTmask", 0);
+    m_F = cfg(L"maskF", 0);
+    m_T = cfg(L"maskT", 0);
+    m_startF = cfg(L"startF", 480);
+    m_totalF = cfg(L"totalF", 640);
+
     m_verbosity = cfg(L"verbosity", 0);
 
     ConfigParameters input = cfg(L"input");
@@ -392,7 +402,7 @@ public:
     }
     void MergeTwoSequences(std::vector<SequenceDataPtr>& indata, std::vector<SequenceDataPtr>& outdata) override
     {
-        m_parent->MergeSequence(indata,outdata);
+        m_parent->MergeSequence(indata, outdata);
     }
     // Unloads the data from memory.
     ~HTKChunk()
@@ -454,6 +464,92 @@ public:
             m_numColumns -= numframe;
     }
 
+    inline void getMean()
+    {
+        Matrix<float> fea(CPUDEVICE);
+        feaMeanRow = make_shared<Matrix<float>>(CPUDEVICE);
+        feaMeanCol = make_shared<Matrix<float>>(CPUDEVICE);
+        fea.Resize(m_numRows, m_numColumns);
+        fea.SetValue(m_numRows, m_numColumns, CPUDEVICE, m_data.data());
+
+        //fea.Print("original");
+        //mean for f
+        feaMeanRow->Resize(m_numRows, 1);
+        feaMeanRow->SetValue(0.0f);
+        fea.VectorSum(fea, *feaMeanRow, false);
+        //feaMeanRow->AssignProductOf(1 / (float) m_numColumns, *feaMeanRow);
+        //feaMeanRow->Print("mean row");
+        //mean for t
+        feaMeanCol->Resize(1, 1);
+        feaMeanCol->SetValue(0.0f);
+        feaMeanCol->VectorSum(*feaMeanRow, *feaMeanCol, true);
+        feaMeanCol->AssignProductOf(1 / ((float) m_numRows*(float)m_numColumns), *feaMeanCol);
+        //feaMeanCol->Print("mean col");
+
+    }
+    inline void freq_mask(size_t num_mask, size_t F, size_t Fstart, size_t totalFNum)
+    {
+
+        size_t rand, randF, randStart, randEnd;
+        double frand;
+        for (size_t mask = 0; mask < num_mask; mask++)
+        {
+            rand = randGen();
+            frand = (double) rand / (double) (randGen.max());
+            randF = (size_t)(frand * (totalFNum - F));
+            randStart = Fstart + randF;
+
+            rand = randGen();
+            frand = (double) rand / (double) (randGen.max());
+            randF = (size_t)(frand * F);
+            randEnd = randStart + randF;
+
+            if (randStart != randEnd)
+            {
+                for (size_t f = randStart; f < randEnd; f++)
+                {
+                    for (size_t t = 0; t < m_numColumns; t++)
+                        m_data[t * m_numRows + f] = feaMeanCol->GetValue(0, 0);
+                }
+            }
+        }
+        feaMeanRow->SetValue(m_numRows, m_numColumns, CPUDEVICE, m_data.data());
+        //feaMeanRow->Print("after freq mask");
+    }
+
+    inline void time_mask(size_t num_mask, size_t T)
+    {
+
+        size_t rand, randF, randStart, randEnd;
+        double frand;
+        for (size_t mask = 0; mask < num_mask; mask++)
+        {
+            rand = randGen();
+            frand = (double) rand / (double) (randGen.max());
+            randStart = (size_t)(frand * (m_numColumns - T));
+
+            rand = randGen();
+            frand = (double) rand / (double) (randGen.max());
+            randF = (size_t)(frand * T);
+            randEnd = randStart + randF;
+
+            if (randStart != randEnd)
+            {
+                for (size_t t = randStart; t < randEnd; t++)
+                {
+                    for (size_t f = 0; f < m_numRows; f++)
+                        m_data[t * m_numRows + f] = feaMeanCol->GetValue(0, 0);
+                }
+            }
+        }
+        feaMeanRow->SetValue(m_numRows, m_numColumns, CPUDEVICE, m_data.data());
+        //feaMeanRow->Print("after time mask");
+    }
+
+    shared_ptr<Matrix<float>> feaMeanCol, feaMeanRow;
+    //Matrix<float> feaMeanCol(1,1,CPUDEVICE);
+    //Matrix<float> feaMeanRow(1, 1, CPUDEVICE);
+
 private:
     // Features
     std::vector<float> m_data;
@@ -461,6 +557,8 @@ private:
     size_t m_numRows;
     // Number of columns = number of samples in utterance.
     size_t m_numColumns;
+
+    mt19937_64 randGen;
 };
 
 // This class stores sequence data for HTK for floats.
@@ -607,6 +705,16 @@ void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<Seq
 
     features.reduceframe(m_reduceFrame);
 
+
+    //spec augment
+    if ((m_numFmask != 0  && m_F != 0) || (m_numTmask != 0 && m_T !=0))
+    {
+        features.getMean();
+        if (m_numFmask != 0 && m_F != 0 )
+            features.freq_mask(m_numFmask, m_F, m_startF, m_totalF);
+        if (m_numTmask != 0 && m_T != 0 && features.GetNumberOfColumns() > m_T)
+            features.time_mask(m_numTmask,m_T);
+    }
     // Copy features to the sequence depending on the type.
     DenseSequenceDataPtr result;
     if (m_elementType == DataType::Double)
@@ -621,7 +729,7 @@ void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<Seq
 }
 
 // Sequence ids are guaranteed to be unique inside a chunk.
-void HTKDeserializer::MergeSequence(vector<SequenceDataPtr>& indata,vector<SequenceDataPtr>& outdata)
+void HTKDeserializer::MergeSequence(vector<SequenceDataPtr>& indata, vector<SequenceDataPtr>& outdata)
 {
     FeatureMatrix mergeFeature(m_dimension, indata[0]->m_numberOfSamples + indata[1]->m_numberOfSamples);
     mergeFeature.GetData();
@@ -638,9 +746,7 @@ void HTKDeserializer::MergeSequence(vector<SequenceDataPtr>& indata,vector<Seque
     else
         LogicError("Currently, HTK Deserializer supports only double and float types.");
 
-    
     outdata.push_back(result);
-    
 }
 
 // Gets sequence description by its key.

@@ -179,8 +179,8 @@ Sequences BlockRandomizer::MergeTwoSequences(Sequences insequence)
         outdata.resize(m_streams.size(), std::vector<SequenceDataPtr>(outSize));
     }
     std::vector<SequenceDataPtr> tempSeqData, tempoutData;
-
-    auto it = m_chunks.find(0);
+    const auto& description = m_sequenceBuffer[0];
+    auto it = m_chunks.find(description.m_chunk->m_original->m_id);
     if (it == m_chunks.end())
     {
         LogicError("Invalid chunk requested.");
