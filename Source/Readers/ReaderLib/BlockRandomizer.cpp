@@ -168,12 +168,14 @@ Sequences BlockRandomizer::MergeTwoSequences(Sequences insequence)
     auto& outdata = result.m_data;
     result.m_endOfEpoch = insequence.m_endOfEpoch;
     result.m_endOfSweep = insequence.m_endOfSweep;
-    size_t outSize;
+    size_t halfSize,outSize;
+    halfSize = m_sequenceBuffer.size()/4;
 
-    if (m_sequenceBuffer.size() % 2 == 0)
+    outSize = halfSize + (m_sequenceBuffer.size() - halfSize * 2);
+    /*if (m_sequenceBuffer.size() % 2 == 0)
         outSize = m_sequenceBuffer.size() / 2;
     else
-        outSize = m_sequenceBuffer.size() / 2 + 1;
+        outSize = m_sequenceBuffer.size() / 2 + 1;*/
     if (outdata.empty())
     {
         outdata.resize(m_streams.size(), std::vector<SequenceDataPtr>(outSize));
@@ -188,7 +190,7 @@ Sequences BlockRandomizer::MergeTwoSequences(Sequences insequence)
     size_t outi = 0;
     for (size_t i = 0; i < m_sequenceBuffer.size(); i++)
     {
-        if (i + 1 < m_sequenceBuffer.size())
+        if (i + 1 < halfSize*2)
         {
             for (int j = 0; j < m_streams.size(); ++j)
             {
@@ -214,8 +216,9 @@ Sequences BlockRandomizer::MergeTwoSequences(Sequences insequence)
         for (int j = 0; j < m_streams.size(); ++j)
         {
             outdata[j][outi] = data[j][i];
+            
         }
-        
+        outi++;
     }
 
 }
