@@ -291,6 +291,7 @@ protected:
     bool m_lengthNorm;                     // true to do length Norm, false, not. It will be used when computing the posterior
     string m_showWERMode;
     bool m_isSVD;
+    size_t m_maxFrameNumPerMinibatchMBR;
     // Parallel training
     MPIWrapperPtr m_mpi;
 

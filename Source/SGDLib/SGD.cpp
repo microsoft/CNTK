@@ -1225,6 +1225,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     accumCRMBR = 0;
     accumSampleNumMBR = 0;
 
+    std::vector<Matrix<ElemType>> accumGradientsMBR;
+
+    accumGradientsMBR.clear();
+
     for (;;)
     {
         epochCriterion;
@@ -1323,8 +1327,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     std::list<ComputationNodeBasePtr> InputNodesList = net->InputNodes(criterionNodes[0]);
                     std::vector<std::wstring> encodeInputNodeNames;
 
-                    if (SVD) encodeInputNodeNames.assign(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
-                    else encodeInputNodeNames.assign(outputNodeNamesVector.begin() + 6, outputNodeNamesVector.begin() + 7);
+                    if (SVD)
+                        encodeInputNodeNames.assign(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
+                    else
+                        encodeInputNodeNames.assign(outputNodeNamesVector.begin() + 6, outputNodeNamesVector.begin() + 7);
 
                     std::vector<ComputationNodeBasePtr> encodeInputNodes = net->OutputNodesByName(encodeInputNodeNames);
                     *encodeInputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(encodeInputNodes);
@@ -1335,8 +1341,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     //net->CollectInputAndLearnableParameters(decodeOutputNodes[0]);
                     std::vector<std::wstring> decodeInputNodeNames;
-                    if (SVD) decodeInputNodeNames.assign(outputNodeNamesVector.begin() + 8, outputNodeNamesVector.begin() + 9);
-                    else decodeInputNodeNames.assign(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
+                    if (SVD)
+                        decodeInputNodeNames.assign(outputNodeNamesVector.begin() + 8, outputNodeNamesVector.begin() + 9);
+                    else
+                        decodeInputNodeNames.assign(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
                     std::vector<ComputationNodeBasePtr> decodeinputNodes = net->OutputNodesByName(decodeInputNodeNames);
                     *decodeinputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(decodeinputNodes);
 
@@ -1372,11 +1380,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     vt_onebest_wer.clear();
 
                     // time_t my_time = time(NULL);
-                    // fprintf(stderr, "SGD time 1 = %s", ctime(&my_time)); 
-                     RNNTDecodeFunctions<ElemType> rnntdfs;
+                    // fprintf(stderr, "SGD time 1 = %s", ctime(&my_time));
+                    RNNTDecodeFunctions<ElemType> rnntdfs;
                     rnntdfs.RNNT_decode_nbest_MBR(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo, vt_nws, vt_onebest_wer, SVD, *net);
                     //my_time = time(NULL);
-                    //fprintf(stderr,  "SGD time 2 = %s", ctime(&my_time)); 
+                    //fprintf(stderr,  "SGD time 2 = %s", ctime(&my_time));
                     //fprintf(stderr, "decode SGD v0 .\n");
 
                     //net->BumpEvalTimeStamp(decodeinputNodes);
@@ -1393,9 +1401,20 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     size_t numParallelSequences = encodeMBLayout->GetNumParallelSequences();
 
                     //my_time = time(NULL);
-                    //fprintf(stderr, "SGD time 3 = %s", ctime(&my_time)); 
+                    //fprintf(stderr, "SGD time 3 = %s", ctime(&my_time));
+
                     for (const auto& seq : encodeMBLayout->GetAllSequences())
                     {
+                        /*
+                        if (seqId == 1)
+                        {
+                            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                            {
+                                ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+                                node->force_gradient_accumulate(true);
+                            }
+                        }
+                        */
                         if (seq.seqId == GAP_SEQUENCE_ID)
                         {
                             continue;
@@ -1404,12 +1423,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         {
                             continue;
                         }
+
+                        //if (firstdebug)
                         cNode->SetMWERInfo(uttPathsInfo[seqId], lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR, vt_nws[seqId]);
 
                         // get the feature MBLayout
                         size_t numFrames = seq.GetNumTimeSteps();
                         numSamplesWithLabelOfNetworkMBR += numFrames;
 
+                        // if (firstdebug)
                         reffeainput->second.pMBLayout->Init(1, numFrames); // 1 channel, 1 utterance
 
                         Matrix<ElemType> fea(deviceID);
@@ -1425,8 +1447,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                             fea.SetColumn(refFeaMatBackup.ColumnSlice(uID, 1), t);
                         }
-                        reffeainput->second.GetMatrix<ElemType>().SetValue(fea);
-                        reffeainput->second.pMBLayout->AddSequence(0, 0, 0, numFrames); // guoye: first 0 is for utterance ID, second 0 means 0th channel, lenght is 0 to numFrames
+                        //if (firstdebug)
+                        {
+                            reffeainput->second.GetMatrix<ElemType>().SetValue(fea);
+                            reffeainput->second.pMBLayout->AddSequence(0, 0, 0, numFrames); // guoye: first 0 is for utterance ID, second 0 means 0th channel, lenght is 0 to numFrames
+                        }
 
                         // guoye: the below 2 commands reset the state, to make sure ForwardProb always get carried out
                         ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes); // guoy: update the time stamp before you do forward prob
@@ -1436,6 +1461,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         size_t vocSize = vt_labels.size();
                         size_t nBest = uttPathsInfo[seqId].size();
+                        if (nBest > (m_maxFrameNumPerMinibatchMBR / numFrames))
+                        {
+                            // reset nBest to make the MB size framenum with budget
+                            nBest = (m_maxFrameNumPerMinibatchMBR / numFrames);
+                        }    
                         size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
 
                         for (size_t n = 1; n < nBest; n++)
@@ -1443,7 +1473,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             if (uttPathsInfo[seqId][n].label_seq.size() > maxPhoneSeqLen)
                                 maxPhoneSeqLen = uttPathsInfo[seqId][n].label_seq.size();
                         }
-
+                        //if (firstdebug)
                         reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
 
                         Matrix<ElemType> lmin(deviceID);
@@ -1462,14 +1492,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 size_t labID = uttPathsInfo[seqId][n].label_seq[p];
                                 lmin(labID, uID) = 1.0;
                             }
-
+                            // if (firstdebug)
                             reflminput->second.pMBLayout->AddSequence(n, n, 0, phoneSeqLen);
                             // guoye: first n is for seq ID, second n means nth channel, lenght is 0 to phoneSeqLen
                             if (phoneSeqLen < maxPhoneSeqLen)
+                                //if (firstdebug)
                                 reflminput->second.pMBLayout->AddSequence(GAP_SEQUENCE_ID, n, phoneSeqLen, maxPhoneSeqLen); // length is phoneSeqLen to maxPhoneSeqLen
                         }
-
-                        reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
+                        //if (firstdebug)
+                        {
+                            reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
+                            // firstdebug = false;
+                        }
 
                         ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
                         net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
@@ -1480,6 +1514,47 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                             net->Backprop(criterionNodes[0]);
+
+                        size_t count = 0;
+
+                        for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                        {
+                            ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
+                            if (node->IsParameterUpdateRequired())
+                            {
+                                // Matrix<ElemType> currNodeGradient(node->Gradient().GetNumRows(), node->Gradient().GetNumCols(), net->GetDeviceId());
+                                /*
+                                currNodeGradient.SetValue(node->Gradient());
+                                */
+                                if (seqId == 0)
+                                {
+
+                                    accumGradientsMBR.push_back(Matrix<ElemType>(node->Gradient().GetNumRows(), node->Gradient().GetNumCols(), node->Gradient().GetDeviceId()));
+                                    accumGradientsMBR[count].SetValue(node->Gradient());
+                                }
+                                else
+                                {
+                                    accumGradientsMBR[count].AddWithScaleOf(1, node->Gradient());
+                                }
+                                // fprintf(stderr, "Count = %d, AccumNorm = %f \n", int(count), accumGradientsMBR[count].FrobeniusNorm());
+                                count++;
+                            }
+                        }
+
+                        /*
+                        count = 0;
+                        for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                        {
+                            ComputationNodeBasePtr node = *nodeIter;
+                            if (node->IsParameterUpdateRequired())
+                            {
+                                //node->show_gradient_accumulate();
+                                double p_norm = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().FrobeniusNorm();
+                                fprintf(stderr, "Count = %d, NodeName = %ls, Norm = %f \n", int(count), node->NodeName().c_str(), p_norm);
+                                count++;
+                            }
+                        }
+                        */
 
                         ElemType localCR;
                         size_t localSampleNum;
@@ -1493,8 +1568,23 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         seqId++;
                     }
 
+                    int count = 0;
+                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                    {
+                        ComputationNodeBasePtr node = *nodeIter;
+                        if (node->IsParameterUpdateRequired())
+                        {
+                            //node->show_gradient_accumulate();
+                            dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().SetValue(accumGradientsMBR[count]);
+                            // double p_norm = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().FrobeniusNorm();
+
+                            // fprintf(stderr, "Final Count = %d, NodeName = %ls, Norm = %f \n", int(count), node->NodeName().c_str(), p_norm);
+                            count++;
+                        }
+                    }
+
                     //my_time = time(NULL);
-                    //fprintf(stderr, "SGD time 4 = %s", ctime(&my_time)); 
+                    //fprintf(stderr, "SGD time 4 = %s", ctime(&my_time));
                 }
                 // ===========================================================
                 // forward prop for evaluate eval nodes
@@ -1678,6 +1768,21 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
             totalNorm = sqrt(totalNorm);
             m_normFactor = m_clippingThresholdPerSample / totalNorm;
+
+            /*
+            int count = 0;
+            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+            {
+                ComputationNodeBasePtr node = *nodeIter;
+                if (node->IsParameterUpdateRequired())
+                {
+                    double p_norm = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().FrobeniusNorm();
+
+                    fprintf(stderr, "Before Update Weight Count = %d, NodeName = %ls, Norm = %f \n", int(count), node->NodeName().c_str(), p_norm);
+                    count++;
+                }
+            }
+            */
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++, smoothedCountIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
@@ -1685,13 +1790,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 {
 #ifdef _DEBUG
                     if (smoothedGradientIter->HasNan("TrainOneEpoch/UpdateWeights(): "))
-                        LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
+                        LogicError("
+                            %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
                     double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
                     double nodeDependentRegMultiplier = dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->GetRegMultiplier();
                     double momentumPerSample = GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences());
                     // TODO: Check why l2Factor is not applied to L1. Bug?
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
+
                     UpdateWeights(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
                                   dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
                                   *smoothedGradientIter, *smoothedCountIter,
@@ -3354,6 +3461,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_showWERMode = configSGD(L"showWERMode", "average");
     m_isSVD = configSGD(L"SVD", true);
 
+    m_maxFrameNumPerMinibatchMBR = configSGD(L"MaxFrameNumPerMinibatchMBR", (size_t) 2000);
     if (m_doGradientCheck && sizeofElemType != sizeof(double))
     {
         LogicError("Gradient check needs to use precision = 'double'.");
