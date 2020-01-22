@@ -501,6 +501,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix,
         CUSPARSE_CALL(cusparsedense2cscHelper(cusparseHandle, (int) GetNumRows(), (int) GetNumCols(), descr, denseMatrix.Data(),
                                               (int) GetNumRows(), nnzPerRowOrCol, Data(), RowLocation(), ColLocation()));
     }
+    TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), nnzPerRowOrCol);
 }
 
 ///
