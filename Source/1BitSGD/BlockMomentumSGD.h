@@ -95,7 +95,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
         /*virtual*/ void OnEpochEnd(const std::list<ComputationNodeBasePtr>& LearnableNodes, 
             std::list<Matrix<ElemType>>&                smoothedGradient,
-            size_t                                      samplesSinceLastSync) override
+            size_t                                      samplesSinceLastSync)
         {
             Base::OnEpochEnd(LearnableNodes, smoothedGradient, samplesSinceLastSync);
         }
@@ -105,7 +105,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<Matrix<ElemType>>& smoothedGradient,
             size_t& totalSamplesProcessed,
             float& secondsOnCommunication
-            ) override
+            )
         {
             //----------------------------------------
             // 1. communicate with other nodes to negotiate contribution weights

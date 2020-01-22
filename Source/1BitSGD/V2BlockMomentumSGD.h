@@ -110,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             const std::list<ComputationNodeBasePtr>& learnableNodes,        /* input/output: */
             std::list<Matrix<ElemType>>& smoothedGradient,                  /* input/output: under some setup, it will reset to zero*/
             size_t  samplesSinceLastSync                                    /* input:  samples processed since last sync on this worker only */
-            ) override
+            )
         {
             if (m_someWorkerHasFinished)
                 return false;
@@ -136,7 +136,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         /*virtual*/ void OnEpochEnd(const std::list<ComputationNodeBasePtr>& learnableNodes,
             std::list<Matrix<ElemType>>& smoothedGradient,
-            size_t samplesSinceLastSync) override
+            size_t samplesSinceLastSync)
         {
             if (!m_someWorkerHasFinished)
             {
@@ -161,7 +161,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             std::list<Matrix<ElemType>>& smoothedGradient,
             size_t&                                   /*totalSamplesProcessed*/,   /* out */
             float&                                    secondsOnCommunication   /* out */
-            ) override
+            )
         {
             ElemType blockMomentum = (ElemType)BlockMomentumSGD<double>::TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_syncPeriodPerWorker);
             Timer commTimer;
