@@ -760,9 +760,9 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
             auto lowerPad = geometry->GetLowerPad(i);
             auto upperPad = geometry->GetUpperPad(i);
             auto stride = geometry->GetStride(i);
-            if (kernel[i] % 2 == 0 && lowerPad < upperPad && stride < input[i])
+            if (lowerPad < upperPad && stride < input[i])
             {
-                fprintf(stderr, "WARNING: Detected asymmetric padding issue with even kernel size and lowerPad (%d) < higherPad (%d) (i=%d), cuDNN will not be able to produce correct result. Switch to reference engine (VERY SLOW). \n", lowerPad, upperPad, i);
+                fprintf(stderr, "WARNING: Detected asymmetric padding issue with lowerPad (%d) < higherPad (%d) (i=%d), cuDNN will not be able to produce correct result. Switch to reference engine (VERY SLOW). \n", lowerPad, upperPad, i);
                 retVal = false;
                 break;
             }
