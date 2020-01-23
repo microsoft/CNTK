@@ -247,7 +247,7 @@ public:
                 decodeOutput.AssignSumOf(tempMatrix, bm);
                 decodeOutput.VectorMax(maxIdx, maxVal, true);
                 //maxVal.Print("maxVal");
-                    size_t maxId = (size_t)(maxIdx.Get00Element());
+                size_t maxId = (size_t)(maxIdx.Get00Element());
                 if (maxId != blankId)
                 {
                     //fprintf(stderr, "maxid: %d\n", (int) maxId);
@@ -443,8 +443,7 @@ public:
     }
 
     void forward_decode(Sequence& oneSeq, StreamMinibatchInputs decodeinputMatrices, DEVICEID_TYPE deviceID, const std::vector<ComputationNodeBasePtr>& decodeOutputNodes,
-                        const std::vector<ComputationNodeBasePtr>& decodeinputNodes, size_t vocabSize, size_t plength)
-
+                        const std::vector<ComputationNodeBasePtr>& decodeinputNodes, size_t vocabSize, size_t plength, bool reset, bool withEOS, size_t blankId, size_t EOSId)
     {
         //        size_t labelLength = oneSeq.length;
         if (oneSeq.processlength + 1 != plength && plength != oneSeq.processlength)
@@ -465,12 +464,20 @@ public:
 
             lmin.Resize(vocabSize, 1);
             lmin.SetValue(0.0);
-            lmin(oneSeq.labelseq[plength - 1], 0) = 1.0;
+            bool isEOS = false;
+            if (withEOS && oneSeq.labelseq[plength - 1] == EOSId)
+                isEOS = true;
+            if (isEOS)
+            {                
+                lmin(blankId, 0) = 1.0;
+            }
+            else
+                lmin(oneSeq.labelseq[plength - 1], 0) = 1.0;
             auto lminput = decodeinputMatrices.begin();
             lminput->second.pMBLayout->Init(1, 1);
             //std::swap(lminput->second.GetMatrix<ElemType>(), lmin);
             lminput->second.GetMatrix<ElemType>().SetValue(lmin);
-            if (plength == 1)
+            if (plength == 1 || (isEOS && reset))
             {
                 lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, 0, 0, 1);
            } 
@@ -485,13 +492,7 @@ public:
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
                 auto nodePtr = m_net->GetNodeFromName(m_nodesToCache[i]);
-
-
-
-                //ElemType* tempArray = nullptr;
-                //size_t tempArraySize = 0;
-                    if (oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements() > 0)
-
+                if (oneSeq.nameToNodeValues[m_nodesToCache[i]]->Value().GetNumElements() > 0 )
                 {
                     oneSeq.nameToNodeValues[m_nodesToCache[i]]->CopyTo(nodePtr, m_nodesToCache[i], CopyNodeFlags::copyNodeInputLinks);
                 }
@@ -585,8 +586,8 @@ public:
         return true;
     }
 
-    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode, 
-        ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes, Matrix<ElemType>& Wm, Matrix<ElemType>& bm)
+    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode,
+                       ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes, Matrix<ElemType>& Wm, Matrix<ElemType>& bm)
     {
         sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(a.decodeoutput));
 
@@ -607,7 +608,8 @@ public:
     }
 
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
-                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
+                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, bool reset = false, bool withEOS = false,
+                          string dictfile = L"", ElemType thresh = 0.0)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -706,6 +708,7 @@ public:
             //decode forward prop step by step
             size_t vocabSize = bm.GetNumRows();
             size_t blankId = vocabSize - 1;
+            size_t EOSId = vocabSize - 2;
 
             nextSequences.clear();
 
@@ -715,7 +718,7 @@ public:
             nextSequences.push_back(oneSeq);
 
             // loop for each frame
-            for (size_t t = 0; t < encodeOutput.GetNumCols()-(size_t)(thresh); t++)
+            for (size_t t = 0; t < encodeOutput.GetNumCols() - (size_t)(thresh); t++)
             {
                 for (size_t n = 0; n < CurSequences.size(); n++)
                 {
@@ -766,16 +769,14 @@ public:
                     deleteSeq(*maxSeq);
                     CurSequences.erase(maxSeq);
                     prepareSequence(tempSeq);
-                    forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
-                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes,Wm, bm);
+                    forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size(), reset,withEOS,blankId,EOSId);
+                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm);
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
                    vector<pair<size_t, ElemType>> topN = getTopN(decodeOutput, expandBeam, blankId);
                    
-
-                   
-					//expand blank
+                    //expand blank
                     Sequence seqK = newSeq(tempSeq, deviceid);
                     ElemType newlogP = topN[vocabSize].second + tempSeq.logP;
                     seqK.logP = newlogP;
@@ -796,7 +797,7 @@ public:
                     {
                         nextSequences.push_back(seqK);
                     }
-					
+
                     int iLabel;
                     for (iLabel = 0; iLabel < expandBeam; iLabel++)
                     {
@@ -806,17 +807,15 @@ public:
                         seqK.logP = newlogP;
 
 
-                        if (topN[iLabel].first != blankId)
-
- 
+                        if (topN[iLabel].first != blankId )
                         {
-                        extendSeq(seqK, topN[iLabel].first, newlogP);
-
-                        
-
-                        CurSequences.push_back(seqK);
-                  
-}
+                            
+                            if ((!withEOS) || tempSeq.labelseq[tempSeq.length - 1] != EOSId || topN[iLabel].first != EOSId)
+                            {                               
+                                extendSeq(seqK, topN[iLabel].first, newlogP);
+                                CurSequences.push_back(seqK);
+                            }
+                        }
                     }
                     vector<pair<size_t, ElemType>>().swap(topN);
                     //delete topN;
