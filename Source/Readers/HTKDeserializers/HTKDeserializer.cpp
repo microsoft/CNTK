@@ -685,8 +685,8 @@ void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<Seq
         // Getting the number of samples we have to extend to from the primary/first deserializer.
         utteranceLength = r.front()->m_numberOfSamples;
     }
-
-    FeatureMatrix features(m_dimension, utteranceLength);
+    size_t realLen = utteranceLength - m_reduceFrame;
+    FeatureMatrix features(m_dimension, realLen);
     if (m_frameMode)
     {
         // For frame mode augment a single frame.
@@ -696,14 +696,14 @@ void HTKDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector<Seq
     }
     else
     {
-        for (size_t resultingIndex = 0; resultingIndex < utteranceLength; ++resultingIndex)
+        for (size_t resultingIndex = 0; resultingIndex < realLen; ++resultingIndex)
         {
             auto fillIn = features.col(resultingIndex);
             AugmentNeighbors(utteranceFramesWrapper, m_expandToPrimary ? 0 : resultingIndex, m_augmentationWindow.first, m_augmentationWindow.second, fillIn);
         }
     }
 
-    features.reduceframe(m_reduceFrame);
+    //features.reduceframe(m_reduceFrame);
 
 
     //spec augment
