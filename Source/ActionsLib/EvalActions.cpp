@@ -254,7 +254,7 @@ void DoWriteOutput(const ConfigParameters& config)
         size_t decodeBeam = writerConfig(L"decode_beam", 10);
         size_t decodeExpandBeam = writerConfig(L"decode_expand_beam", 20);
         string indictfile = writerConfig(L"DictFile", L"");
-        ElemType thresh = writerConfig(L"Thresh", 0.68f);
+        ElemType thresh = writerConfig(L"Thresh", 0.0f);
         bool reset = writerConfig(L"reset", false);
         bool withEOS = writerConfig(L"withEOS", false);
         DataWriter testDataWriter(writerConfig);
