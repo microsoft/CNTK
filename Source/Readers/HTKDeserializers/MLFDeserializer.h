@@ -236,7 +236,7 @@ public:
             auto* startRange = s->m_indices;
             if (m_deserializer.m_squashLabel && m_deserializer.m_blankInFront)
             {
-                fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID));
+                fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID-1));
                 startRange += 1;
             }
             for (const auto& range : utterance)
