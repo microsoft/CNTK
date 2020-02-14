@@ -1012,6 +1012,7 @@ static const std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWr
     { L"LUSequenceWriter",      L"Cntk.Reader.LUSequence" },
     { L"LMSequenceWriter",      L"Cntk.Reader.LMSequence" },
     { L"Kaldi2Writer",          L"Cntk.Reader.Kaldi2" },
+    { L"NbestWriter",		    L"Cntk.Reader.Nbest" },
 
     // New type of readers/writers
     { L"CompositeDataReader",   L"Cntk.Composite" },

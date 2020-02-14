@@ -776,6 +776,20 @@ __global__ void _assignElementProductOf(
 }
 
 template <class ElemType>
+__global__ void _assignElementMaxOf(
+    ElemType* us,
+    const ElemType* a,
+    const ElemType* b,
+    const CUDA_LONG N)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    us[id] = max((comp_t) a[id], (comp_t) b[id]);
+}
+
+template <class ElemType>
 __global__ void _assignKhatriRaoProductOf(
     ElemType* us,
     const ElemType* a,

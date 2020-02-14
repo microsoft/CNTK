@@ -81,6 +81,11 @@ bool DataWriter::SaveData(size_t recordStart, const std::map<std::wstring, void*
     return m_dataWriter->SaveData(recordStart, matrices, numRecords, datasetSize, byteVariableSized);
 }
 
+std::wstring DataWriter::GetCurOutputFile(std::wstring outputName)
+{
+    return m_dataWriter->GetCurOutputFile(outputName);
+}
+
 // SaveMapping - save a map into the file
 // saveId - name of the section to save into (section:subsection format)
 // labelMapping - map we are saving to the file

@@ -20,8 +20,13 @@
 #include "ComputationNetworkBuilder.h"
 #include "RecurrentNodes.h"
 #include <algorithm>
+#include <iostream>
+#include <filesystem>
+#include <regex>
+#include <fstream>
 
 using namespace std;
+namespace fs = std::experimental::filesystem;
 
 namespace Microsoft
 {
@@ -243,7 +248,7 @@ public:
                 decodeOutput.AssignSumOf(tempMatrix, bm);
                 decodeOutput.VectorMax(maxIdx, maxVal, true);
                 //maxVal.Print("maxVal");
-                    size_t maxId = (size_t)(maxIdx.Get00Element());
+                size_t maxId = (size_t)(maxIdx.Get00Element());
                 if (maxId != blankId)
                 {
                     //fprintf(stderr, "maxid: %d\n", (int) maxId);
@@ -424,6 +429,7 @@ public:
             m_net->ForwardProp(decodeOutputNodes[0]);
             //Matrix<ElemType> tempMatrix = *(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value());
             oneSeq.decodeoutput->SetValue((*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())));
+            //oneSeq.decodeoutput->Print("decodeOutput", 0, 10, 0, 10);
             oneSeq.processlength = plength;
             for (size_t i = 0; i < m_nodesToCache.size(); i++)
             {
@@ -482,13 +488,14 @@ public:
         return true;
     }
 
-    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode, 
-        ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes, Matrix<ElemType>& Wm, Matrix<ElemType>& bm)
+    void forwardmerged(Sequence a, size_t t, Matrix<ElemType>& sumofENandDE, Matrix<ElemType>& encodeOutput, Matrix<ElemType>& decodeOutput, ComputationNodeBasePtr PlusNode,
+                       ComputationNodeBasePtr PlusTransNode, std::vector<ComputationNodeBasePtr> Plusnodes, std::vector<ComputationNodeBasePtr> Plustransnodes, Matrix<ElemType>& Wm, Matrix<ElemType>& bm)
     {
         sumofENandDE.AssignSumOf(encodeOutput.ColumnSlice(t, 1), *(a.decodeoutput));
         //sumofENandDE.InplaceLogSoftmax(true);
         Matrix<ElemType> tempMatrix(encodeOutput.GetDeviceId());
         //plus broadcast
+        //sumofENandDE.Print("sumofENandDE", 0, 10, 0, 10);
         (&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusNode)->Value())->SetValue(sumofENandDE);
         //SumMatrix.SetValue(sumofENandDE);
         ComputationNetwork::BumpEvalTimeStamp(Plusnodes);
@@ -502,8 +509,28 @@ public:
         //decodeOutput.VectorMax(maxIdx, maxVal, true);
         decodeOutput.InplaceLogSoftmax(true);
     }
+
+    void WriteNbestToFile(vector<Sequence>& sequences, wstring outputDir, wstring uttName)
+    {
+        ofstream fileStream;
+        wstring outFile = outputDir + wstring(L"\\") + uttName + wstring(L".txt");
+        fs::create_directory(fs::path(outputDir));
+        fileStream.open(outFile);
+        for (size_t n = 0; n < sequences.size(); n++)
+        {
+            fileStream << sequences[n].logP;
+            for (size_t i = 0; i < sequences[n].labelseq.size(); i++)
+            {
+                fileStream << " " << sequences[n].labelseq[i];
+            }
+            fileStream << "\n";
+        }
+        fileStream.close();
+    }
+
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
-                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
+                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68,
+                          std::wstring* nbestOutputDir = NULL)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -587,7 +614,7 @@ public:
             //forward prop encoder network
             m_net->ForwardProp(encodeOutputNodes[0]);
             encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
-            //encodeOutput.Print("encodeoutput");
+            //encodeOutput.Print("encodeoutput", 0, 10, 0, 10);
             dataReader.DataEnd();
 
             //decode forward prop step by step
@@ -653,7 +680,9 @@ public:
                     deleteSeq(*maxSeq);
                     CurSequences.erase(maxSeq);
                     forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size());
-                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes,Wm, bm);
+                    forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm);
+
+                    //decodeOutput.Print("jointOutput", 0, 10, 0, 10);
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
@@ -682,7 +711,7 @@ public:
                         CurSequences.push_back(seqK);
                         q.pop();
                     }*/
-					//expand blank
+                    //expand blank
                     Sequence seqK = newSeq(tempSeq, deviceid);
                     ElemType newlogP = topN[vocabSize].second + tempSeq.logP;
                     seqK.logP = newlogP;
@@ -703,7 +732,7 @@ public:
                     {
                         nextSequences.push_back(seqK);
                     }
-					
+
                     int iLabel;
                     for (iLabel = 0; iLabel < expandBeam; iLabel++)
                     {
@@ -714,9 +743,9 @@ public:
 
                         if (topN[iLabel].first != blankId)
                         {
-                        extendSeq(seqK, topN[iLabel].first, newlogP);
-                        CurSequences.push_back(seqK);
-}
+                            extendSeq(seqK, topN[iLabel].first, newlogP);
+                            CurSequences.push_back(seqK);
+                        }
                     }
                     vector<pair<size_t, ElemType>>().swap(topN);
                     //delete topN;
@@ -754,10 +783,17 @@ public:
                 //break;
             }
 
+            // Write nbest list to file
+            if (nbestOutputDir != NULL)
+            {
+                WriteNbestToFile(nextSequences, *nbestOutputDir, fs::path(dataWriter.GetCurOutputFile(decodeOutputNodeNames[0])).filename());
+            }
+
             //nbest output
             for (size_t n = 0; n < nextSequences.size(); n++)
             {
-                nextSequences[n].logP /= nextSequences[n].labelseq.size() - 1;
+                if (nextSequences[n].labelseq.size() - 1 >= 1)
+                    nextSequences[n].logP /= nextSequences[n].labelseq.size() - 1;
             }
             auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
             size_t lmt = yb->length - 1;
@@ -996,6 +1032,314 @@ public:
         // flush all files (where we can catch errors) so that we can then destruct the handle cleanly without error
         for (auto& iter : outputStreams)
             iter.second->Flush();
+    }
+
+    void ReadNbest(std::wstring filename, vector<Sequence>* nbest)
+    {
+        std::wifstream file(filename);
+        std::wstring s;
+        while (std::getline(file, s))
+        {
+            std::wcmatch match;
+            if (!std::regex_match(s.c_str(), match, std::wregex(L"^\\s*(-?\\d+\\.?\\d*)\\s+(\\d+.*)\\s*$")))
+                break;
+            if (match.size() != 3)
+                break;
+            nbest->push_back(Sequence());
+            nbest->back().logP = (ElemType) std::stod(std::wstring(match[1]));
+            std::wstring labelString(match[2]);
+            while (std::regex_match(labelString.c_str(), match, std::wregex(L"^\\s*(\\d+)(\\s+\\d+.*)?\\s*$")))
+            {
+                size_t token = std::stoi(std::wstring(match[1]));
+                nbest->back().labelseq.push_back(token);
+                nbest->back().length += 1;
+                if (match.size() == 3)
+                    labelString = std::wstring(match[2]);
+            }
+        }
+        file.close();
+
+        // Print N-best list
+        /*
+        for (size_t i = 0; i < nbest->size(); i++)
+        {
+            cout << (*nbest)[i].logP;
+            for (size_t j = 0; j < (*nbest)[i].labelseq.size(); j++)
+            {
+                cout << " " << (*nbest)[i].labelseq[j];
+            }
+            cout << "\n";
+        }
+		*/
+    }
+
+    /*
+    void WriteNbest(std::wstring filename, const vector<Sequence>& nbest)
+    {
+        std::wofstream file(filename);
+        for (size_t n = 0; n < nbest.size(); n++)
+        {
+            file << nbest[n].logP;
+            for (size_t i = 0; i < nbest[n].labelseq.size(); i++)
+            {
+                file << " " << nbest[n].labelseq[i];
+            }
+            file << "\n";
+        }
+        file.close();
+    }
+	*/
+
+    void RescoreNbest(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
+                      std::wstring nbestInputDir, std::wstring nbestOutputDir,
+                      size_t numOutputSamples = requestDataSize)
+    {
+        ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
+
+        if (outputNodeNames.size() == 0 && m_verbosity > 0)
+            fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
+
+        std::vector<ComputationNodeBasePtr> outputNodes = m_net->OutputNodesByName(outputNodeNames);
+
+        // allocate memory for forward computation
+        m_net->AllocateAllMatrices({}, outputNodes, nullptr);
+
+        //vector "hey cortana"
+        //vector<size_t> keywords {}
+        //get encode input matrix
+        std::vector<std::wstring> encodeOutputNodeNames(outputNodeNames.begin(), outputNodeNames.begin() + 1);
+        std::vector<ComputationNodeBasePtr> encodeOutputNodes = m_net->OutputNodesByName(encodeOutputNodeNames);
+        std::vector<ComputationNodeBasePtr> encodeInputNodes = m_net->InputNodesForOutputs(encodeOutputNodeNames);
+        StreamMinibatchInputs encodeInputMatrices = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes);
+
+        //start encode network
+        dataReader.StartMinibatchLoop(mbSize, 0, encodeInputMatrices.GetStreamDescriptions(), numOutputSamples);
+        if (!dataWriter.SupportMultiUtterances())
+            dataReader.SetNumParallelSequences(1);
+        m_net->StartEvaluateMinibatchLoop(encodeOutputNodes[0]);
+
+        //get decode input matrix
+        std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin() + 1, outputNodeNames.begin() + 2);
+        std::vector<ComputationNodeBasePtr> decodeOutputNodes = m_net->OutputNodesByName(decodeOutputNodeNames);
+        std::list<ComputationNodeBasePtr> pastValueNodes = m_net->PastValueNodesForOutputs(decodeOutputNodes);
+        std::list<ComputationNodeBasePtr>::iterator it;
+        for (it = pastValueNodes.begin(); it != pastValueNodes.end(); ++it)
+        {
+            auto pastValueNode = dynamic_pointer_cast<PastValueNode<ElemType>>(*it); //DelayedValueNodeBase
+            if (pastValueNode || !(*it)->NodeName().compare(0, 5, L"Loop_"))
+            {
+                m_nodesToCache.push_back((*it)->NodeName());
+            }
+        }
+        std::vector<ComputationNodeBasePtr> decodeinputNodes = m_net->InputNodesForOutputs(decodeOutputNodeNames);
+        StreamMinibatchInputs decodeinputMatrices = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes);
+
+        //get merged input
+        ComputationNodeBasePtr PlusNode = m_net->GetNodeFromName(outputNodeNames[2]);
+        ComputationNodeBasePtr PlusTransNode = m_net->GetNodeFromName(outputNodeNames[3]);
+        ComputationNodeBasePtr WmNode = m_net->GetNodeFromName(outputNodeNames[4]);
+        ComputationNodeBasePtr bmNode = m_net->GetNodeFromName(outputNodeNames[5]);
+        //StreamMinibatchInputs PlusinputMatrices =
+        std::vector<ComputationNodeBasePtr> ENandDEnodes, Plustransnodes;
+        Plustransnodes.push_back(PlusTransNode);
+        ENandDEnodes.push_back(encodeOutputNodes[0]);
+        ENandDEnodes.push_back(decodeOutputNodes[0]);
+
+        //start decode network
+        m_net->StartEvaluateMinibatchLoop(decodeOutputNodes[0]);
+        auto lminput = decodeinputMatrices.begin();
+        //dataReader.StartMinibatchLoop(1, 0, decodeinputMatrices.GetStreamDescriptions(), numOutputSamples);
+
+        //(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeinputNodes[0])->Value()).SetValue();
+
+        DEVICEID_TYPE deviceid = lminput->second.GetMatrix<ElemType>().GetDeviceId();
+        //size_t totalEpochSamples = 0;
+        std::map<std::wstring, void*, nocase_compare> outputMatrices;
+        Matrix<ElemType> encodeOutput(deviceid);
+        Matrix<ElemType> decodeOutput(deviceid);
+        Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
+        Matrix<ElemType> maxIdx(deviceid), maxVal(deviceid);
+        Matrix<ElemType> lmin(deviceid);
+        Matrix<ElemType> Wm(deviceid), bm(deviceid);
+        Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
+        bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
+        //encodeOutput.GetDeviceId
+        const size_t numIterationsBeforePrintingProgress = 100;
+        //size_t numItersSinceLastPrintOfProgress = 0;
+        size_t actualMBSize;
+        vector<Sequence> CurSequences, nextSequences;
+        while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, encodeInputMatrices, actualMBSize, nullptr))
+        {
+            //get current utterance name
+            std::wstring uttName = fs::path(dataWriter.GetCurOutputFile(decodeOutputNodeNames[0])).filename();
+            //wcout << uttName << L"\n";
+
+            //read N-best list
+            vector<Sequence> nbest;
+            wstring nbestFilename = nbestInputDir + wstring(L"\\") + uttName + wstring(L".txt");
+            ReadNbest(nbestFilename, &nbest);
+            size_t nbestSize = nbest.size();
+            size_t maxSeqLen = 0;
+            for (size_t n = 0; n < nbestSize; n++)
+            {
+                if (nbest[n].labelseq.size() > maxSeqLen)
+                    maxSeqLen = nbest[n].labelseq.size();
+            }
+
+            //encode forward prop for whole utterance
+            ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes);
+
+            //forward prop encoder network
+            m_net->ForwardProp(encodeOutputNodes[0]);
+            encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
+            //encodeOutput.Print("encodeoutput");
+            dataReader.DataEnd();
+
+            //encodeOutput.Print("encodeOutput", 0, 10, 0, 10);
+
+            size_t vocabSize = bm.GetNumRows();
+            size_t blankId = vocabSize - 1;
+
+            //forward prop prediction network
+            lmin.Resize(vocabSize, maxSeqLen * nbestSize);
+            lmin.SetValue(0.0);
+            for (size_t i = 0; i < maxSeqLen; i++)
+            {
+                for (size_t n = 0; n < nbestSize; n++)
+                {
+                    if (i < nbest[n].labelseq.size())
+                        lmin(nbest[n].labelseq[i], i * nbestSize + n) = 1.0;
+                }
+            }
+            lminput->second.pMBLayout->Init(nbestSize, maxSeqLen);
+            lminput->second.GetMatrix<ElemType>().SetValue(lmin);
+            for (size_t n = 0; n < nbestSize; n++)
+            {
+                lminput->second.pMBLayout->AddSequence(NEW_SEQUENCE_ID, n, 0, maxSeqLen);
+            }
+            m_net->ForwardProp(decodeOutputNodes[0]);
+            decodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value()));
+
+            //decodeOutput.Print("decodeOutput", 0, 10, 0, 30);
+
+            for (size_t n = 0; n < nbestSize; n++)
+            {
+                // Copy decode network outputs for this N-best element
+                Matrix<ElemType> thisDecodeOutput(deviceid);
+                thisDecodeOutput.Resize(decodeOutput.GetNumRows(), nbest[n].labelseq.size());
+                for (size_t i = 0; i < nbest[n].labelseq.size(); i++)
+                {
+                    thisDecodeOutput.SetColumn(decodeOutput.ColumnSlice(i * nbestSize + n, 1), i);
+                }
+                //thisDecodeOutput.Print("decodeOutput", 0, 10, 0, 10);
+
+                // Get seqId from encoder MBLayout
+                //const auto& encoderSequences = encodeOutputNodes[0]->GetMBLayout()->GetAllSequences();
+                //assert(encoderSequences.size() == 1);
+                //size_t thisSeqId = encoderSequences[0].seqId;
+                //cout << "here1 " << thisSeqId << "\n";
+
+                // Set seqId of encoder to 0, otherwise PlusBroadcastNode will crash
+                auto encodeOutputNodeMBLayout = encodeOutputNodes[0]->GetMBLayout();
+                encodeOutputNodeMBLayout->Init(1, encodeOutput.GetNumCols());
+                encodeOutputNodeMBLayout->AddSequence(0, 0, 0, encodeOutput.GetNumCols());
+
+                auto decodeOutputNodeMBlayout = decodeOutputNodes[0]->GetMBLayout();
+                decodeOutputNodeMBlayout->Init(1, nbest[n].labelseq.size());
+                decodeOutputNodeMBlayout->AddSequence(0, 0, 0, nbest[n].labelseq.size());
+                (&dynamic_pointer_cast<ComputationNode<ElemType>>(decodeOutputNodes[0])->Value())->SetValue(thisDecodeOutput);
+                m_net->ResetEvalTimeStamps();
+                m_net->ForwardPropFromTo(ENandDEnodes, Plustransnodes);
+                Matrix<ElemType> jointOutput(deviceid), tempMatrix(deviceid);
+                jointOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(PlusTransNode)->Value()));
+                tempMatrix.AssignProductOf(Wm, true, jointOutput, false);
+                jointOutput.AssignSumOf(tempMatrix, bm);
+                jointOutput.InplaceLogSoftmax(true);
+                //jointOutput.Print("jointOutput", 0, 10, 0, 10);
+
+                msra::lattices::GammaCalculation<ElemType> gammaCal;
+                Matrix<ElemType> totalScore(deviceid), derivative(deviceid);
+                totalScore.Resize(1, 1);
+                totalScore.SetValue(0.0);
+                /*
+                Matrix<ElemType> maxIndexes(deviceid); // one-hot encoding of the current N-best element label sequence
+                maxIndexes.Resize(vocabSize, nbest[n].labelseq.size());
+                maxIndexes.SetValue(0.0);
+                for (size_t i = 0; i < nbest[n].labelseq.size(); i++)
+                {
+                    // For some reason, this step transfers maxIndexes to CPU
+                    maxIndexes(nbest[n].labelseq[i], i) = 1.0;
+                }
+                // Need to transfer maxIndexes back to GPU
+                maxIndexes.TransferToDeviceIfNotThere(deviceid);
+                maxIndexes.Print("maxIndexes", 0, 10, 0, 10);
+				*/
+                Matrix<ElemType> maxIndexes(deviceid);
+                maxIndexes.Resize(1, nbest[n].labelseq.size());
+                for (size_t i = 0; i < nbest[n].labelseq.size(); i++)
+                {
+                    maxIndexes(0, i) = (ElemType) nbest[n].labelseq[i];
+                }
+                maxIndexes.TransferToDeviceIfNotThere(deviceid);
+                //maxIndexes.Print("maxIndexes", 0, 10, 0, 10);
+
+                // Compute score for N-best element
+                gammaCal.twodimForwardBackward(totalScore, encodeOutput, thisDecodeOutput, jointOutput, maxIndexes, derivative, encodeOutputNodes[0]->GetMBLayout(), decodeOutputNodeMBlayout, blankId);
+
+                nbest[n].logP = -totalScore(0, 0) * encodeOutput.GetNumCols();
+
+                /*
+                for (size_t i = 0; i < nbest[n].labelseq.size(); i++)
+                {
+                    cout << " " << nbest[n].labelseq[i];
+                }
+                cout << " " << totalScore(0, 0) << " " << nbest[n].logP << "\n";
+				*/
+            }
+
+            // Write re-scored N-best list
+            WriteNbestToFile(nbest, nbestOutputDir, uttName);
+            //wstring outNbestFilename = nbestOutputDir + wstring(L"\\") + uttName + wstring(L".txt");
+            //WriteNbest(outNbestFilename, nbest);
+
+			// Scale logP by length
+			for (size_t n = 0; n < nbest.size(); n++)
+			{
+                if (nbest[n].labelseq.size() - 1 >= 1)
+					nbest[n].logP /= nbest[n].labelseq.size() - 1;
+			}
+
+            // Write the 1-best of the re-scored N-best list to file
+            // This will cause dataWriter to move to the next file name
+            size_t topIndex = 0;
+            for (size_t n = 0; n < nbest.size(); n++)
+            {
+                if (nbest[n].logP > nbest[topIndex].logP)
+                {
+                    topIndex = n;
+                }
+            }
+            if (nbest[topIndex].labelseq.size() > 1)
+            {
+                greedyOutput.Resize(vocabSize, nbest[topIndex].labelseq.size() - 1);
+                greedyOutput.SetValue(0.0);
+                for (size_t i = 1; i < nbest[topIndex].labelseq.size(); i++)
+                {
+                    greedyOutput(nbest[topIndex].labelseq[i], i - 1) = 1.0;
+                }
+            }
+            else // Blank labelseq
+            {
+                greedyOutput.Resize(vocabSize, 1);
+                greedyOutput.SetValue(0.0);
+                greedyOutput(blankId, 0) = 1.0;
+            }
+            outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
+
+            dataWriter.SaveData(0, outputMatrices, greedyOutput.GetNumCols(), greedyOutput.GetNumCols(), 0);
+
+            //exit(1);
+        }
     }
 
 private:

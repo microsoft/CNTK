@@ -80,4 +80,9 @@ void DataWriter::SaveMapping(std::wstring saveId, const std::map<LabelIdType, La
     m_dataWriter->SaveMapping(saveId, labelMapping);
 }
 
+std::wstring DataWriter::GetCurOutputFile(std::wstring outputName)
+{
+    return m_dataWriter->GetCurOutputFile(outputName);
+}
+
 }}}

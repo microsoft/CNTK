@@ -1,0 +1,6 @@
+------------------------------------
+../tools\cross_wer.py --dir decode\result\cross_wer_gru_eltgru --hyp-mlfs .\decode\result\gru.mlf,./decode/result/eltgru.mlf
+------------------------------------
+------------------------------------
+../tools\cross_wer.py --dir decode\result\cross_wer_gru_eltgru --hyp-mlfs ..\decode\result\gru.mlf,../decode/result/eltgru.mlf
+------------------------------------

@@ -212,6 +212,9 @@ public:
     CPUMatrix<ElemType>& AssignElementDivisionOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
     CPUMatrix<ElemType>& ElementDivideBy(const CPUMatrix<ElemType>& a);
 
+	CPUMatrix<ElemType>& ElementMaxWith(const CPUMatrix<ElemType>& a);
+    CPUMatrix<ElemType>& AssignElementMaxOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b);
+
     CPUMatrix<ElemType>& ColumnElementMultiplyWith(const CPUMatrix<ElemType>& a);
     CPUMatrix<ElemType>& RowElementMultiplyWith(const CPUMatrix<ElemType>& a);
 

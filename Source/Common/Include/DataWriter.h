@@ -29,7 +29,12 @@
 #include <map>
 #include <string>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 // type of data in this section
 enum SectionType
@@ -55,13 +60,21 @@ public:
     virtual void Init(const ConfigParameters& writerConfig) = 0;
     virtual void Init(const ScriptableObjects::IConfigRecord& writerConfig) = 0;
     virtual void Destroy() = 0;
-protected: public: // BUGBUG: This is accessed by a wrapper class.
-    virtual ~IDataWriter() { }
+
+protected:
+public: // BUGBUG: This is accessed by a wrapper class.
+    virtual ~IDataWriter() {}
+
 public:
     virtual void GetSections(std::map<std::wstring, SectionType, nocase_compare>& sections) = 0;
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized) = 0;
     virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping) = 0;
     virtual bool SupportMultiUtterances() const = 0;
+    virtual std::wstring GetCurOutputFile(std::wstring outputName)
+	{
+        RuntimeError("IDataWriter: GetCurOutputFile() for child class not yet implemented");
+		return std::wstring(L"");
+	};
 };
 typedef std::shared_ptr<IDataWriter> IDataWriterPtr;
 
@@ -157,14 +170,18 @@ public:
     // byteVariableSized - for variable sized data, size of current block to be written, zero when not used, or ignored if not variable sized data
     virtual bool SaveData(size_t recordStart, const std::map<std::wstring, void*, nocase_compare>& matrices, size_t numRecords, size_t datasetSize, size_t byteVariableSized = 0);
 
+    virtual std::wstring GetCurOutputFile(std::wstring outputName);
+
     // SaveMapping - save a map into the file
     // saveId - name of the section to save into (section:subsection format)
     // labelMapping - map we are saving to the file
     virtual void SaveMapping(std::wstring saveId, const std::map<LabelIdType, LabelType>& labelMapping);
-    virtual bool SupportMultiUtterances() const 
+    virtual bool SupportMultiUtterances() const
     {
         return false;
     };
 };
 
-} } }
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft

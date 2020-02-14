@@ -32,6 +32,55 @@ namespace CNTK
 {
 
 template <class ElemType>
+void PrintMatrixToFile(Matrix<ElemType>& mat, string filename, bool append = true, bool transpose = false)
+{
+    stringstream ss;
+    ss << "[";
+    if (!transpose)
+    {
+        for (int i = 0; i < mat.GetNumRows(); i++)
+        {
+            for (int j = 0; j < mat.GetNumCols(); j++)
+            {
+                ss << mat(i, j) << " ";
+            }
+            if (i < mat.GetNumRows() - 1)
+            {
+                ss << "\n";
+            }
+        }
+        ss << "]\n";
+    }
+    else
+    {
+        for (int i = 0; i < mat.GetNumCols(); i++)
+        {
+            for (int j = 0; j < mat.GetNumRows(); j++)
+            {
+                ss << mat(j, i) << " ";
+            }
+            if (i < mat.GetNumCols() - 1)
+            {
+                ss << "\n";
+            }
+        }
+        ss << "]\n";
+    }
+
+    ofstream file_stream;
+    if (append)
+    {
+        file_stream.open(filename, std::ios_base::app);
+    }
+    else
+    {
+        file_stream.open(filename);
+    }
+    file_stream << ss.str();
+    file_stream.close();
+}
+
+template <class ElemType>
 class JointOutputWriter : public SimpleOutputWriter<ElemType>
 {
     struct SequenceJoint
@@ -54,8 +103,8 @@ class JointOutputWriter : public SimpleOutputWriter<ElemType>
     vector<unordered_map<wstring, vector<shared_ptr<PastValueNode<ElemType>>>>> m_nameToPastValueNodeCache;
 
 public:
-    JointOutputWriter(vector<ComputationNetworkPtr> nets, vector<ElemType> combination_weights, int verbosity = 0, int combination_method = 0)
-        : SimpleOutputWriter(NULL, verbosity), combination_method(combination_method), m_nets(nets), combination_weights(combination_weights), m_verbosity(verbosity)
+    JointOutputWriter(vector<ComputationNetworkPtr> nets, vector<ElemType> combination_weights, int verbosity = 0, int combination_method = 0, bool renormalize_after_combination = false)
+        : SimpleOutputWriter(NULL, verbosity), combination_method(combination_method), m_nets(nets), combination_weights(combination_weights), renormalize_after_combination(renormalize_after_combination), m_verbosity(verbosity)
     {
         for (int i = 0; i < m_nets.size(); i++)
         {
@@ -253,7 +302,7 @@ public:
         }
     }
 
-    void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
+    void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::vector<std::wstring>>& outputNodeNames,
                           size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68)
     {
         for (int i = 0; i < m_nets.size(); i++)
@@ -262,13 +311,13 @@ public:
         }
 
         //size_t beamSize = 10;
-        if (outputNodeNames.size() == 0 && m_verbosity > 0)
+        if (outputNodeNames[0].size() == 0 && m_verbosity > 0)
             fprintf(stderr, "OutputNodeNames are not specified, using the default outputnodes.\n");
 
         std::vector<std::vector<ComputationNodeBasePtr>> outputNodes(m_nets.size());
         for (int i = 0; i < m_nets.size(); i++)
         {
-            outputNodes[i] = m_nets[i]->OutputNodesByName(outputNodeNames);
+            outputNodes[i] = m_nets[i]->OutputNodesByName(outputNodeNames[i]);
 
             // allocate memory for forward computation
             m_nets[i]->AllocateAllMatrices({}, outputNodes[i], nullptr);
@@ -277,14 +326,18 @@ public:
         //vector "hey cortana"
         //vector<size_t> keywords {}
         //get encode input matrix
-        std::vector<std::wstring> encodeOutputNodeNames(outputNodeNames.begin(), outputNodeNames.begin() + 1);
+        std::vector<std::vector<std::wstring>> encodeOutputNodeNames;
+		for (size_t i = 0; i < m_nets.size(); i++)
+		{
+            encodeOutputNodeNames.push_back(std::vector<std::wstring> (outputNodeNames[i].begin(), outputNodeNames[i].begin() + 1));
+		}
         std::vector<std::vector<ComputationNodeBasePtr>> encodeOutputNodes(m_nets.size());
         std::vector<std::vector<ComputationNodeBasePtr>> encodeInputNodes(m_nets.size());
         std::vector<StreamMinibatchInputs> encodeInputMatrices(m_nets.size());
         for (int i = 0; i < m_nets.size(); i++)
         {
-            encodeOutputNodes[i] = m_nets[i]->OutputNodesByName(encodeOutputNodeNames);
-            encodeInputNodes[i] = m_nets[i]->InputNodesForOutputs(encodeOutputNodeNames);
+            encodeOutputNodes[i] = m_nets[i]->OutputNodesByName(encodeOutputNodeNames[i]);
+            encodeInputNodes[i] = m_nets[i]->InputNodesForOutputs(encodeOutputNodeNames[i]);
             encodeInputMatrices[i] = DataReaderHelpers::RetrieveInputMatrices(encodeInputNodes[i]);
         }
 
@@ -298,12 +351,16 @@ public:
         }
 
         //get decode input matrix
-        std::vector<std::wstring> decodeOutputNodeNames(outputNodeNames.begin() + 1, outputNodeNames.begin() + 2);
+        std::vector<std::vector<std::wstring>> decodeOutputNodeNames;
+		for (size_t i = 0; i < m_nets.size(); i++)
+		{
+            decodeOutputNodeNames.push_back(std::vector<std::wstring> (outputNodeNames[i].begin() + 1, outputNodeNames[i].begin() + 2));
+		}
         std::vector<std::vector<ComputationNodeBasePtr>> decodeOutputNodes(m_nets.size());
         std::vector<std::list<ComputationNodeBasePtr>> pastValueNodes(m_nets.size());
         for (int i = 0; i < m_nets.size(); i++)
         {
-            decodeOutputNodes[i] = m_nets[i]->OutputNodesByName(decodeOutputNodeNames);
+            decodeOutputNodes[i] = m_nets[i]->OutputNodesByName(decodeOutputNodeNames[i]);
             pastValueNodes[i] = m_nets[i]->PastValueNodesForOutputs(decodeOutputNodes[i]);
         }
         std::list<ComputationNodeBasePtr>::iterator it;
@@ -323,7 +380,7 @@ public:
         std::vector<StreamMinibatchInputs> decodeinputMatrices(m_nets.size());
         for (int i = 0; i < m_nets.size(); i++)
         {
-            decodeinputNodes[i] = m_nets[i]->InputNodesForOutputs(decodeOutputNodeNames);
+            decodeinputNodes[i] = m_nets[i]->InputNodesForOutputs(decodeOutputNodeNames[i]);
             decodeinputMatrices[i] = DataReaderHelpers::RetrieveInputMatrices(decodeinputNodes[i]);
         }
 
@@ -336,10 +393,10 @@ public:
         std::vector<std::vector<ComputationNodeBasePtr>> Plustransnodes(m_nets.size());
         for (int i = 0; i < m_nets.size(); i++)
         {
-            PlusNode[i] = m_nets[i]->GetNodeFromName(outputNodeNames[2]);
-            PlusTransNode[i] = m_nets[i]->GetNodeFromName(outputNodeNames[3]);
-            WmNode[i] = m_nets[i]->GetNodeFromName(outputNodeNames[4]);
-            bmNode[i] = m_nets[i]->GetNodeFromName(outputNodeNames[5]);
+            PlusNode[i] = m_nets[i]->GetNodeFromName(outputNodeNames[i][2]);
+            PlusTransNode[i] = m_nets[i]->GetNodeFromName(outputNodeNames[i][3]);
+            WmNode[i] = m_nets[i]->GetNodeFromName(outputNodeNames[i][4]);
+            bmNode[i] = m_nets[i]->GetNodeFromName(outputNodeNames[i][5]);
             Plusnodes[i].push_back(PlusNode[i]);
             Plustransnodes[i].push_back(PlusTransNode[i]);
         }
@@ -413,6 +470,14 @@ public:
             extendSeq(oneSeq, blankId, 0.0);
             nextSequences.push_back(oneSeq);
 
+            for (int i = 0; i < m_nets.size(); i++)
+            {
+                stringstream ss;
+                ss << "//ccpsofsep/am_s3/users/jewong/rnnt/decode/features_tmp/" << i << ".txt";
+                remove(ss.str().c_str());
+            }
+            remove("//ccpsofsep/am_s3/users/jewong/rnnt/decode/features_tmp/combine.txt");
+
             // loop for each frame
             for (size_t t = 0; t < encodeOutput[0].GetNumCols(); t++)
             {
@@ -439,6 +504,14 @@ public:
                     // Do system combination
                     Matrix<ElemType> CombinedOutput(deviceid);
                     CombinedOutput.Resize(decodeOutput[0]);
+                    //Matrix<ElemType> col_sum(deviceid);
+                    //col_sum.Resize(1, CombinedOutput.GetNumCols());
+                    //ElemType tmp_sum;
+                    /*
+                    stringstream argmax_ss;
+                    argmax_ss << "here1 " << t << " " << decodeOutput[0].GetNumRows() << " " << decodeOutput[0].GetNumCols() << " ";
+					*/
+                    //fprintf(stderr, "here1\n");
                     switch (combination_method)
                     {
                     case 0: // sum
@@ -447,10 +520,36 @@ public:
                         {
                             decodeOutput[i].InplaceExp();
                             CombinedOutput += (decodeOutput[i] * combination_weights[i]);
+                            //Matrix<ElemType> col_sum(deviceid);
+                            //col_sum.Resize(1, decodeOutput[i].GetNumCols());
+                            //decodeOutput[i].VectorNorm1(col_sum, true);
+                            //ElemType tmp_sum = col_sum(0, 0);
+                            //cout << "here " << tmp_sum << "\n";
+
+                            /*
+                            stringstream ss;
+                            ss << "//ccpsofsep/am_s3/users/jewong/rnnt/decode/features_tmp/" << i << ".txt";
+                            //if (t == 0)
+                            //    PrintMatrixToFile(decodeOutput[i], ss.str(), false, true);
+                            //else
+                            PrintMatrixToFile(decodeOutput[i], ss.str(), true, true);
+
+                            Matrix<ElemType> max_index(deviceid), max_value(deviceid);
+                            decodeOutput[i].VectorMax(max_index, max_value, true);
+                            //cout << max_index.GetNumRows() << " " << max_index.GetNumCols() << "\n";
+                            argmax_ss << max_index(0, 0) << " ";
+
+                            //Matrix<ElemType> tmp(decodeOutput[i], deviceid);
+                            //tmp.Transpose();
+                            //tmp.Print();
+							*/
                         }
+                        //CombinedOutput.VectorNorm1(col_sum, true);
+                        //tmp_sum = col_sum(0, 0);
+                        //cout << "here " << tmp_sum << "\n";
                         CombinedOutput += (ElemType) 1e-20; // numerical stability
                         CombinedOutput.InplaceLog();
-                        CombinedOutput.InplaceLogSoftmax(true); // log-softmax of a log will normalise the posteriors, to compensate for numerical inaccuracies in the sum combination
+                        //CombinedOutput.InplaceLogSoftmax(true); // log-softmax of a log will normalise the posteriors, to compensate for numerical inaccuracies in the sum combination
                         break;
                     case 1: // product
                         CombinedOutput.SetValue(0.0);
@@ -459,7 +558,44 @@ public:
                             //decodeOutput[i].Print(NULL, 0, 10, 0, 1);
                             CombinedOutput += (decodeOutput[i] * combination_weights[i]);
                         }
-                        CombinedOutput.InplaceLogSoftmax(true); // log-softmax of a log will normalise the posteriors
+                        //CombinedOutput.InplaceLogSoftmax(true); // log-softmax of a log will normalise the posteriors
+                        break;
+                    case 2: // max
+                        CombinedOutput.AssignValuesOf(decodeOutput[0]);
+
+                        /*
+						{
+                            stringstream ss;
+                            ss << "//ccpsofsep/am_s3/users/jewong/rnnt/decode/features_tmp/0.txt";
+                            //if (t == 0)
+                            //    PrintMatrixToFile(decodeOutput[0], ss.str(), false, true);
+                            //else
+                                PrintMatrixToFile(decodeOutput[0], ss.str(), true, true);
+
+							Matrix<ElemType> max_index(deviceid), max_value(deviceid);
+							decodeOutput[0].VectorMax(max_index, max_value, true);
+							argmax_ss << max_index(0, 0) << " ";
+						}
+						*/
+
+                        for (int i = 1; i < m_nets.size(); i++)
+                        {
+                            CombinedOutput.ElementMaxWith(decodeOutput[i]);
+
+                            /*
+							stringstream ss;
+                            ss << "//ccpsofsep/am_s3/users/jewong/rnnt/decode/features_tmp/" << i << ".txt";
+                            //if (t == 0)
+                            //    PrintMatrixToFile(decodeOutput[i], ss.str(), false, true);
+                            //else
+                                PrintMatrixToFile(decodeOutput[i], ss.str(), true, true);
+
+                            Matrix<ElemType> max_index(deviceid), max_value(deviceid);
+                            decodeOutput[i].VectorMax(max_index, max_value, true);
+                            //cout << max_index.GetNumRows() << " " << max_index.GetNumCols() << "\n";
+                            argmax_ss << max_index(0, 0) << " ";
+							*/
+                        }
                         break;
                     default:
                         stringstream msg;
@@ -467,6 +603,29 @@ public:
                         InvalidArgument(msg.str().c_str());
                         break;
                     }
+                    /*
+                    //Matrix<ElemType> tmp(CombinedOutput, deviceid);
+                    //tmp.Transpose();
+                    //tmp.Print();
+                    stringstream ss;
+                    ss << "//ccpsofsep/am_s3/users/jewong/rnnt/decode/features_tmp/combine.txt";
+                    //if (t == 0)
+                    //    PrintMatrixToFile(CombinedOutput, ss.str(), false, true);
+                    //else
+                        PrintMatrixToFile(CombinedOutput, ss.str(), true, true);
+					*/
+
+                    if (renormalize_after_combination)
+                    {
+                        CombinedOutput.InplaceLogSoftmax(true);
+                    }
+
+                    /*
+					Matrix<ElemType> max_index(deviceid), max_value(deviceid);
+                    CombinedOutput.VectorMax(max_index, max_value, true);
+                    argmax_ss << max_index(0, 0) << "\n";
+                    cout << argmax_ss.str();
+					*/
 
                     //CombinedOutput.Print(NULL, 0, 10, 0, 1);
                     //if (t == 10)
@@ -540,7 +699,8 @@ public:
             //nbest output
             for (size_t n = 0; n < nextSequences.size(); n++)
             {
-                nextSequences[n].logP /= nextSequences[n].labelseq.size() - 1;
+                if (nextSequences[n].labelseq.size() - 1 >= 1)
+                    nextSequences[n].logP /= nextSequences[n].labelseq.size() - 1;
             }
             auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
             size_t lmt = yb->length - 1;
@@ -550,7 +710,7 @@ public:
             {
                 greedyOutput(yb->labelseq[n + 1], n) = 1.0;
             }
-            outputMatrices[decodeOutputNodeNames[0]] = (void*) (&greedyOutput);
+            outputMatrices[decodeOutputNodeNames[0][0]] = (void*) (&greedyOutput);
 
             //the first candidates, file no ++
             if (lmt == 0)
@@ -586,6 +746,7 @@ private:
     int combination_method;
     std::vector<ComputationNetworkPtr> m_nets;
     std::vector<ElemType> combination_weights;
+    bool renormalize_after_combination;
     std::vector<std::vector<wstring>> m_nodesToCache;
     int m_verbosity;
     void operator=(const JointOutputWriter&); // (not assignable)

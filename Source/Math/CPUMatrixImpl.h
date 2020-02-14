@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <numeric>
 #pragma warning(push)
-#pragma warning(disable:4244) // 'conversion' conversion from 'type1' to 'type2', possible loss of data
+#pragma warning(disable : 4244) // 'conversion' conversion from 'type1' to 'type2', possible loss of data
 #include <boost/random/normal_distribution.hpp>
 #pragma warning(pop)
 #include <boost/random/uniform_real_distribution.hpp>
@@ -44,7 +44,6 @@
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 #pragma warning(disable : 4244) // unreachable code; triggered for unknown reasons
 #pragma warning(disable : 4702) // conversion from 'double' to 'float'
-
 
 #ifdef USE_MKL
 // requires MKLML 0.11 and above
@@ -68,7 +67,12 @@
         (a) ^= (b); \
     }
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 #pragma region Helpful Enum Definitions
 enum class MatrixOrder
@@ -655,15 +659,15 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
     auto& us = *this;
     // race-condition consideration: Since this loops over independent output columns, this has no race condition. Cf. DoScatterColumnsOf().
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
-    foreach_column(jOut, us)
+    foreach_column (jOut, us)
     {
         auto jInF = idx(0, jOut);         // this is the column we need to get
         if (std::isnan(jInF) || jInF < 0) // negative index means gap
             continue;
-        size_t jIn = (size_t)jInF;
+        size_t jIn = (size_t) jInF;
         if (jIn >= a.GetNumCols())
-            InvalidArgument("DoGatherColumnsOf: Map out of bounds. %ld >= %ld", (long int)jIn, (long int)a.GetNumCols());
-        ScaleAndAddColumn(beta, &us(0,jOut), &a(0,jIn), us.GetNumRows(), alpha);
+            InvalidArgument("DoGatherColumnsOf: Map out of bounds. %ld >= %ld", (long int) jIn, (long int) a.GetNumCols());
+        ScaleAndAddColumn(beta, &us(0, jOut), &a(0, jIn), us.GetNumRows(), alpha);
     }
 
     return *this;
@@ -733,7 +737,7 @@ void CPUMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, E
         RuntimeError("MaskColumnsValue: Matrix number of columns must equal 'column mask number of columns * numColsPerMaskEntry'.");
 
     auto& us = *this;
-    long n = (long)columnsMask.GetNumCols(), m = (long) GetNumRows();
+    long n = (long) columnsMask.GetNumCols(), m = (long) GetNumRows();
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
@@ -745,7 +749,7 @@ void CPUMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, E
             // four-way unrolling
             for (size_t i = 0; i < (m & ~3); i += 4)
             {
-                us(i,     (j * numColsPerMaskEntry) + k) = val;
+                us(i, (j * numColsPerMaskEntry) + k) = val;
                 us(i + 1, (j * numColsPerMaskEntry) + k) = val;
                 us(i + 2, (j * numColsPerMaskEntry) + k) = val;
                 us(i + 3, (j * numColsPerMaskEntry) + k) = val;
@@ -869,7 +873,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, const size_t matrixFlags)
 {
     if (pArray == nullptr && numRows * numCols > 0)
-        InvalidArgument("Invalid pArray. pArray == nullptr, but matrix is of size %d * %d = %d.", (int)numRows, (int)numCols, (int)(numRows * numCols));
+        InvalidArgument("Invalid pArray. pArray == nullptr, but matrix is of size %d * %d = %d.", (int) numRows, (int) numCols, (int) (numRows * numCols));
 
     SetFormat(matrixFormatDense);
     SetComputeDeviceId(CPUDEVICE);
@@ -1009,25 +1013,24 @@ void CPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
 
     std::mt19937_64 generator;
     generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-    boost::random::uniform_real_distribution<double> r((double)low, (double)high);
+    boost::random::uniform_real_distribution<double> r((double) low, (double) high);
 
     ElemType* bufPtr = Data();
     long m = (long) GetNumElements();
     // four-way unrolling
     for (long i = 0; i < (m & ~3); i += 4)
     {
-        bufPtr[i]     = (ElemType)r(generator);
-        bufPtr[i + 1] = (ElemType)r(generator);
-        bufPtr[i + 2] = (ElemType)r(generator);
-        bufPtr[i + 3] = (ElemType)r(generator);
+        bufPtr[i] = (ElemType) r(generator);
+        bufPtr[i + 1] = (ElemType) r(generator);
+        bufPtr[i + 2] = (ElemType) r(generator);
+        bufPtr[i + 3] = (ElemType) r(generator);
     }
     // handle remaining stuffs
     for (long i = m & ~3; i < m; i++)
     {
-        bufPtr[i] = (ElemType)r(generator);
+        bufPtr[i] = (ElemType) r(generator);
     }
 }
-
 
 template <class ElemType>
 void CPUMatrix<ElemType>::SetUniformRandomValue(RNGHandle& rngHandle, const ElemType low, const ElemType high)
@@ -1039,8 +1042,8 @@ void CPUMatrix<ElemType>::SetUniformRandomValue(RNGHandle& rngHandle, const Elem
     if (cpuRNGHandle == nullptr)
         LogicError("rngHandle must be a CPURNGHandle.");
 
-    boost::random::uniform_real_distribution<double> r((double)low, (double)high);
-    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r]() {return (ElemType)r(cpuRNGHandle->Generator()); });
+    boost::random::uniform_real_distribution<double> r((double) low, (double) high);
+    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r]() { return (ElemType) r(cpuRNGHandle->Generator()); });
 }
 
 template <class ElemType>
@@ -1053,9 +1056,9 @@ void CPUMatrix<ElemType>::SetGaussianRandomValue(RNGHandle& rngHandle, const Ele
     if (cpuRNGHandle == nullptr)
         LogicError("rngHandle must be a CPURNGHandle.");
 
-    boost::random::normal_distribution<double> r((double)mean, (double)stdev);
+    boost::random::normal_distribution<double> r((double) mean, (double) stdev);
     auto n = AsMultipleOf(GetNumElements(), 2);
-    std::generate(Data(), Data() + n, [&cpuRNGHandle, &r]() {return (ElemType)r(cpuRNGHandle->Generator()); });
+    std::generate(Data(), Data() + n, [&cpuRNGHandle, &r]() { return (ElemType) r(cpuRNGHandle->Generator()); });
 }
 
 template <class ElemType>
@@ -1069,9 +1072,8 @@ void CPUMatrix<ElemType>::SetGumbelRandomValue(RNGHandle& rngHandle, const ElemT
         LogicError("rngHandle must be a CPURNGHandle.");
 
     boost::random::uniform_real_distribution<double> r(0, 1);
-    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r, loc, scale]() {return (ElemType)(loc - scale * log(-log1p(-r(cpuRNGHandle->Generator())))); });
+    std::generate(Data(), Data() + GetNumElements(), [&cpuRNGHandle, &r, loc, scale]() { return (ElemType)(loc - scale * log(-log1p(-r(cpuRNGHandle->Generator())))); });
 }
-
 
 template <class ElemType>
 void CPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const ElemType sigma, unsigned long seed)
@@ -1085,12 +1087,12 @@ void CPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
     auto& us = *this;
 
     std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-    boost::random::normal_distribution<double> r((double)mean, (double)sigma);
+    boost::random::normal_distribution<double> r((double) mean, (double) sigma);
 
     // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
     foreach_coord (i, j, us)
     {
-        us(i, j) = (ElemType)r(generator);
+        us(i, j) = (ElemType) r(generator);
     }
 }
 
@@ -1105,18 +1107,18 @@ void CPUMatrix<ElemType>::SetTruncatedNormalRandomValue(const ElemType mean, con
 
     auto& us = *this;
 
-    std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long)time(NULL) : seed);
-    boost::random::normal_distribution<double> r((double)mean, (double)sigma);
+    std::mt19937_64 generator(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
+    boost::random::normal_distribution<double> r((double) mean, (double) sigma);
 
     const ElemType high = mean + 2 * sigma;
     const ElemType low = mean - 2 * sigma;
     // #pragma omp parallel for is not thread safe. Also the results would not be deterministic
-    foreach_coord(i, j, us)
+    foreach_coord (i, j, us)
     {
         ElemType tmp = 0;
         do
-            tmp = (ElemType)r(generator);
-        while (tmp < low || tmp > high ); // Rejection sampling is fine here because the acceptance probability is about 0.9545
+            tmp = (ElemType) r(generator);
+        while (tmp < low || tmp > high); // Rejection sampling is fine here because the acceptance probability is about 0.9545
         us(i, j) = tmp;
     }
 }
@@ -1134,7 +1136,7 @@ void CPUMatrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const Elem
 
     std::mt19937_64 generator;
     generator.seed(seed == USE_TIME_BASED_SEED ? (unsigned long) time(NULL) : seed);
-    boost::random::normal_distribution<double> r((double)mean, (double)sigma);
+    boost::random::normal_distribution<double> r((double) mean, (double) sigma);
 
     long m = (long) GetNumRows(), n = (long) GetNumCols();
     for (long j = 0; j < n; j++)
@@ -1142,10 +1144,10 @@ void CPUMatrix<ElemType>::AddGaussianRandomValue(const ElemType mean, const Elem
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
         {
-            us(i, j)     = (ElemType)r(generator);
-            us(i + 1, j) = (ElemType)r(generator);
-            us(i + 2, j) = (ElemType)r(generator);
-            us(i + 3, j) = (ElemType)r(generator);
+            us(i, j) = (ElemType) r(generator);
+            us(i + 1, j) = (ElemType) r(generator);
+            us(i + 2, j) = (ElemType) r(generator);
+            us(i + 3, j) = (ElemType) r(generator);
         }
         // handle remaining stuffs
         for (long i = m & ~3; i < m; i++)
@@ -1176,20 +1178,20 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
         {
-            v = (ElemType)r(cpuRNGHandle->Generator());
-            us(i, j) = v <= maskRate ? (ElemType)0 : scaleValue;
+            v = (ElemType) r(cpuRNGHandle->Generator());
+            us(i, j) = v <= maskRate ? (ElemType) 0 : scaleValue;
             v = r(cpuRNGHandle->Generator());
-            us(i + 1, j) = v <= maskRate ? (ElemType)0 : scaleValue;
+            us(i + 1, j) = v <= maskRate ? (ElemType) 0 : scaleValue;
             v = r(cpuRNGHandle->Generator());
-            us(i + 2, j) = v <= maskRate ? (ElemType)0 : scaleValue;
+            us(i + 2, j) = v <= maskRate ? (ElemType) 0 : scaleValue;
             v = r(cpuRNGHandle->Generator());
-            us(i + 3, j) = v <= maskRate ? (ElemType)0 : scaleValue;
+            us(i + 3, j) = v <= maskRate ? (ElemType) 0 : scaleValue;
         }
         // handle remaining stuffs
         for (long i = m & ~3; i < m; i++)
         {
-            v = (ElemType)r(cpuRNGHandle->Generator());
-            us(i, j) = v <= maskRate ? (ElemType)0 : scaleValue;
+            v = (ElemType) r(cpuRNGHandle->Generator());
+            us(i, j) = v <= maskRate ? (ElemType) 0 : scaleValue;
         }
     }
 }
@@ -1314,7 +1316,7 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
 template <class ElemType>
 void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
+                               ElemType momentum, ElemType adaWeight, ElemType adaMul, ElemType epsilon, ElemType unitGainFactor, bool adamax)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1347,7 +1349,7 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
         else
             ada = smoothAda[i] = std::max(adaWeight * smoothAda[i], fabs_(g));
 
-        ElemType w = adaMul * (ElemType)( 1.0 / (ada + epsilon));
+        ElemType w = adaMul * (ElemType)(1.0 / (ada + epsilon));
         g = momentum * smoothMom[i] + unitGainFactor * g;
         smoothMom[i] = g;
         val[i] -= g * w * learnRatePerSample;
@@ -1476,7 +1478,7 @@ void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<GradType>& gradients, CPUMatrix<Ele
     // TODO: Unroll 4-times for better performance leveraging vectorization
     for (long i = 0; i < n; i++)
     {
-        ElemType g = (ElemType)grad[i];
+        ElemType g = (ElemType) grad[i];
         ElemType adaSqr = rho * smoothAda[i] + (1 - rho) * g * g;
         smoothAda[i] = adaSqr;
         ElemType x2 = smoothX2[i];
@@ -1491,7 +1493,7 @@ void CPUMatrix<ElemType>::AdaDeltaFlushTimestamps(size_t cols, ElemType rho, int
 {
     // Sets all timestamps to 0 and updates the two logical buffers that this object holds
     // so that their values are the same as if a dense implementation of adadelta had been used.
-    // This basically means that the values of these buffers are set to decay * original value 
+    // This basically means that the values of these buffers are set to decay * original value
     // where decay is rho ** (currentTimestamp - timestamp for that column)
     auto rows = GetNumRows();
     auto smoothAda = Data();
@@ -1560,8 +1562,8 @@ void CPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
 
     // success
     m_sliceViewOffset = 0;
-    m_numRows         = numRows;
-    m_numCols         = numCols;
+    m_numRows = numRows;
+    m_numCols = numCols;
 }
 
 // allocated by the callee but should be deleted by the caller
@@ -1960,6 +1962,12 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ElementDivideBy(const CPUMatrix<ElemTy
     return AssignElementDivisionOf(*this, a);
 }
 
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::ElementMaxWith(const CPUMatrix<ElemType>& a)
+{
+    return AssignElementMaxOf(*this, a);
+}
+
 //[this]=a .* b
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b)
@@ -2061,6 +2069,44 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementDivisionOf(const CPUMatri
             us(i, j) = a(i, j) / v;
     }
 
+    return *this;
+}
+
+//[this]= ElementwiseMax(a, b)
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementMaxOf(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("AssignElementMaxOf: Matrix is empty.");
+
+    if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+        InvalidArgument("AssignElementMaxOf: The input matrix dimensions do not match.");
+
+    auto& us = *this;
+    if (this != &a)
+        RequireSize(a.GetNumRows(), a.GetNumCols());
+
+    long m = (long) GetNumRows(), n = (long) GetNumCols();
+#pragma omp parallel for
+    for (long j = 0; j < n; j++)
+    {
+        // four-way unrolling
+        for (long i = 0; i < (m & ~3); i += 4)
+        {
+            cout << "here2 " << typeid(a(i, j)).name() << "\n";
+            //cout << a(i, j) << " " << b(i, j) << " " << max(a(i, j), b(i, j));
+            us(i, j) = max(a(i, j), b(i, j));
+            us(i + 1, j) = max(a(i + 1, j), b(i + 1, j));
+            us(i + 2, j) = max(a(i + 2, j), b(i + 2, j));
+            us(i + 3, j) = max(a(i + 3, j), b(i + 3, j));
+        }
+        // handle remaining stuffs
+        for (long i = m & ~3; i < m; i++)
+        {
+            cout << "here3 " << typeid(a(i, j)).name() << "\n";
+            us(i, j) = max(a(i, j), b(i, j));
+        }
+    }
     return *this;
 }
 
@@ -2548,7 +2594,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignHardmaxOf(const CPUMatrix<ElemTy
 
             if (isInplace)
             {
-                foreach_column(j, us)
+                foreach_column (j, us)
                     us(i, j) = (j == maxJ) ? 1.0f : 0.0f;
             }
             else
@@ -2585,15 +2631,15 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSqrtOf(const CPUMatrix<ElemType>
         // four-way unrolling
         for (long i = 0; i < (m & ~3); i += 4)
         {
-            us(i, j)     = sqrt(max((ElemType)0, a(i, j)));
-            us(i + 1, j) = sqrt(max((ElemType)0, a(i + 1, j)));
-            us(i + 2, j) = sqrt(max((ElemType)0, a(i + 2, j)));
-            us(i + 3, j) = sqrt(max((ElemType)0, a(i + 3, j)));
+            us(i, j) = sqrt(max((ElemType) 0, a(i, j)));
+            us(i + 1, j) = sqrt(max((ElemType) 0, a(i + 1, j)));
+            us(i + 2, j) = sqrt(max((ElemType) 0, a(i + 2, j)));
+            us(i + 3, j) = sqrt(max((ElemType) 0, a(i + 3, j)));
         }
         // remaining
         for (long i = m & ~3; i < m; i++)
         {
-            us(i, j) = sqrt(max((ElemType)0, a(i, j)));
+            us(i, j) = sqrt(max((ElemType) 0, a(i, j)));
         }
     }
 
@@ -2816,7 +2862,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignTanOf(const CPUMatrix<ElemType>&
         RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
-    foreach_coord(i, j, a)
+    foreach_coord (i, j, a)
     {
         const ElemType v = a(i, j);
         us(i, j) = tan(v);
@@ -2897,7 +2943,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAtanOf(const CPUMatrix<ElemType>
         RequireSize(a.GetNumRows(), a.GetNumCols());
 
 #pragma omp parallel for
-    foreach_coord(i, j, a)
+    foreach_coord (i, j, a)
     {
         const ElemType v = a(i, j);
         us(i, j) = atan(v);
@@ -3249,7 +3295,8 @@ ElemType CPUMatrix<ElemType>::SumOfElements() const
 
     ElemType* bufPtr = Data();
 //four-way unrolling
-#pragma omp parallel for reduction(+ : sum)
+#pragma omp parallel for reduction(+ \
+                                   : sum)
     for (long i = 0; i < (m & ~3); i += 4)
     {
         sum += bufPtr[i] + bufPtr[i + 1] + bufPtr[i + 2] + bufPtr[i + 3];
@@ -3296,7 +3343,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>
     us.RequireSize(nRows, nCols);
     ElemType* bufPtr = Data();
     ElemType* aBufPtr = a.Data();
-    memset(bufPtr, 0, sizeof(ElemType) * nRows *nCols);
+    memset(bufPtr, 0, sizeof(ElemType) * nRows * nCols);
 #pragma omp parallel for
     for (long i = 0; i < a.GetNumElements(); i++)
     {
@@ -3304,7 +3351,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>
         {
             size_t block_id = i / item_size;
             size_t item_id = i % item_size;
-            bufPtr[block_id * num_class * item_size + item_id + item_size * (size_t)aBufPtr[i]] = 1;
+            bufPtr[block_id * num_class * item_size + item_id + item_size * (size_t) aBufPtr[i]] = 1;
         }
     }
 
@@ -3331,7 +3378,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::GatherFromTarget(const CPUMatrix<ElemT
 #pragma omp parallel for
     for (int i = 0; i < indices.GetNumElements(); i++)
     {
-        memcpy(buffer + i * row_elements, targetBufPtr + ((size_t)indicesBufPtr[i] * row_elements), sizeof(ElemType) * row_elements);
+        memcpy(buffer + i * row_elements, targetBufPtr + ((size_t) indicesBufPtr[i] * row_elements), sizeof(ElemType) * row_elements);
     }
 
     return *this;
@@ -3339,13 +3386,13 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::GatherFromTarget(const CPUMatrix<ElemT
 
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterToIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements,
-    const CPUMatrix<char>* mask/*= nullptr*/)
+                                                           const CPUMatrix<char>* mask /*= nullptr*/)
 {
     if (indices.IsEmpty() || values.IsEmpty() || (mask && mask->IsEmpty()))
         LogicError("ScatterToIndices: input matrix is empty.");
     if (mask && (indices.GetNumCols() % mask->GetNumCols() != 0))
         LogicError("ScatterAccordingIndices: The number of columns(%zu) of the matrix slice to be masked is not a multiple of the number of columns(%zu) of the mask slice.",
-            indices.GetNumCols(), mask->GetNumCols());
+                   indices.GetNumCols(), mask->GetNumCols());
 
     ElemType* indicesBufPtr = indices.Data();
     ElemType* valueBufPtr = values.Data();
@@ -3489,7 +3536,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
                 c(0, j) = (ElemType) cblas_dnrm2(m, reinterpret_cast<double*>(bufPtr + us.LocateColumn(j)), 1);
             }
         }
-        else if(std::is_same<ElemType, float>::value)
+        else if (std::is_same<ElemType, float>::value)
         {
 #pragma omp parallel for
             foreach_column (j, c)
@@ -3728,7 +3775,8 @@ ElemType CPUMatrix<ElemType>::FrobeniusNorm() const
 
     ElemType* bufPtr = Data();
 //four-way unrolling
-#pragma omp parallel for reduction(+ : v)
+#pragma omp parallel for reduction(+ \
+                                   : v)
     for (long i = 0; i < (m & ~3); i += 4)
     {
         v += bufPtr[i] * bufPtr[i] + bufPtr[i + 1] * bufPtr[i + 1] + bufPtr[i + 2] * bufPtr[i + 2] + bufPtr[i + 3] * bufPtr[i + 3];
@@ -3807,7 +3855,8 @@ ElemType CPUMatrix<ElemType>::MatrixNorm1() const
     auto& us = *this;
 
     ElemType sum = 0;
-#pragma omp parallel for reduction(+ : sum)
+#pragma omp parallel for reduction(+ \
+                                   : sum)
     foreach_coord (i, j, us)
     {
         sum += abs(us(i, j));
@@ -3909,18 +3958,17 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
         {
             std::vector<int> indices(m);
 
-            const ElemType* curVal =            Data();
-            ElemType* curIdx       = maxIndexes.Data();
-            ElemType* curMax       =  maxValues.Data();
+            const ElemType* curVal = Data();
+            ElemType* curIdx = maxIndexes.Data();
+            ElemType* curMax = maxValues.Data();
             for (int icol = 0; icol < n; icol++, curVal += m, curIdx += topK, curMax += topK)
             {
                 std::iota(indices.begin(), indices.end(), 0);
                 // Partial sort, descending order.
                 std::partial_sort(indices.begin(), indices.begin() + topK, indices.end(),
-                                    [curVal](const int& a, const int& b)
-                                    {
-                                        return curVal[a] > curVal[b];
-                                    });
+                                  [curVal](const int& a, const int& b) {
+                                      return curVal[a] > curVal[b];
+                                  });
                 // REVIEW alexeyk: the following produces warning (see SCL_SECURE_NO_WARNINGS) so use loop instead.
                 // std::transform(indices.begin(), indices.begin() + topK, curIdx, [](const int& a) { return static_cast<ElemType>(a); });
                 for (int i2 = 0; i2 < topK; i2++)
@@ -4062,7 +4110,10 @@ struct PrintRange
     size_t skipBegin;
     size_t skipEnd;
     size_t end;
-    bool IsEmpty() const { return end <= begin; }
+    bool IsEmpty() const
+    {
+        return end <= begin;
+    }
 
     // examples:
     //  * 3..10
@@ -4071,9 +4122,9 @@ struct PrintRange
     {
         if (first >= 0 && last >= 0)
         {
-            begin = (size_t)first;
-            end = (size_t)last + 1;
-            if (end > total)    // allow INT_MAX, meaning to end
+            begin = (size_t) first;
+            end = (size_t) last + 1;
+            if (end > total) // allow INT_MAX, meaning to end
                 end = total;
             skipBegin = end;
             skipEnd = end;
@@ -4087,7 +4138,7 @@ struct PrintRange
                 skipBegin = skipEnd = total;
             end = total;
         }
-        else    // if other combinations are ever of interest then implement them here
+        else // if other combinations are ever of interest then implement them here
             LogicError("Print: Bounds must be either both positive or both negative.");
     }
 };
@@ -4099,9 +4150,9 @@ void CPUMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t rowFirst, ptrd
     fprintf(stderr, "\n###### ");
     if (matrixName != nullptr)
         fprintf(stderr, "%s ", matrixName);
-    fprintf(stderr, "(%lu, %lu)", (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
+    fprintf(stderr, "(%lu, %lu)", (unsigned long) GetNumRows(), (unsigned long) GetNumCols());
     if (rowFirst != 0 || colFirst != 0 || (size_t)(rowLast + 1) != GetNumRows() || (size_t)(colLast + 1) != GetNumCols())
-        fprintf(stderr, " [%ld:%ld, %ld:%ld]", (long)rowFirst, (long)rowLast, (long)colFirst, (long)colLast);
+        fprintf(stderr, " [%ld:%ld, %ld:%ld]", (long) rowFirst, (long) rowLast, (long) colFirst, (long) colLast);
     fprintf(stderr, " ######\n\n");
 
     if (IsEmpty())
@@ -4124,12 +4175,12 @@ void CPUMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t rowFirst, ptrd
         fprintf(stderr, "...\n");
     for (size_t i = rowRange.begin; i < rowRange.end; i++)
     {
-        if (i == rowRange.skipBegin)        // insert ... between the two blocks if any
+        if (i == rowRange.skipBegin) // insert ... between the two blocks if any
         {
             fprintf(stderr, "...\n");
             i = rowRange.skipEnd;
         }
-        if (colRange.begin > 0)             // ... at line start
+        if (colRange.begin > 0) // ... at line start
             fprintf(stderr, "...\t");
         for (size_t j = colRange.begin; j < colRange.end; j++)
         {
@@ -4138,9 +4189,9 @@ void CPUMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t rowFirst, ptrd
                 fprintf(stderr, "...\t");
                 j = colRange.skipEnd;
             }
-            fprintf(stderr, "%.10f\t", (double)us(i, j));
+            fprintf(stderr, "%.10f\t", (double) us(i, j));
         }
-        if (colRange.end < GetNumCols())    // ... at line end
+        if (colRange.end < GetNumCols()) // ... at line end
             fprintf(stderr, "...");
         fprintf(stderr, "\n");
     }
@@ -4208,17 +4259,17 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignPackedConvolutionInput(const CPU
             long x0 = 0, y0 = 0, x1 = 0, y1 = 0;
             if (zeroPadding)
             {
-                x0 = (long) max((ElemType)0, ceil((x - (ElemType)kernelHeight + 1.0f + halfKernelHeight) / (ElemType)verticalSubsample)); // row : first wrow in which x is in
-                x1 = (long) (x + halfKernelHeight - x0 * verticalSubsample);                                                      // first posxInKernel
-                y0 = (long) max((ElemType)0, ceil((y - (ElemType)kernelWidth + 1.0f + halfKernelWidth) / (ElemType)horizontalSubsample)); // col : first wcol in which y is in
-                y1 = (long) (y + halfKernelWidth - y0 * horizontalSubsample);                                                     // first posyInKernel
+                x0 = (long) max((ElemType) 0, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); // row : first wrow in which x is in
+                x1 = (long) (x + halfKernelHeight - x0 * verticalSubsample);                                                                 // first posxInKernel
+                y0 = (long) max((ElemType) 0, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); // col : first wcol in which y is in
+                y1 = (long) (y + halfKernelWidth - y0 * horizontalSubsample);                                                                // first posyInKernel
             }
             else
             {
-                x0 = (long) max((ElemType)0, ceil((x - (ElemType)kernelHeight + 1) / (ElemType)verticalSubsample));  // row : first wrow in which x is in
-                x1 = (long) (x - x0 * verticalSubsample);                                                    // first posxInKernel
-                y0 = (long) max((ElemType)0, ceil((y - (ElemType)kernelWidth + 1) / (ElemType)horizontalSubsample)); // col : first wcol in which y is in
-                y1 = (long) (y - y0 * horizontalSubsample);                                                  // first posyInKernel
+                x0 = (long) max((ElemType) 0, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  // row : first wrow in which x is in
+                x1 = (long) (x - x0 * verticalSubsample);                                                               // first posxInKernel
+                y0 = (long) max((ElemType) 0, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); // col : first wcol in which y is in
+                y1 = (long) (y - y0 * horizontalSubsample);                                                             // first posyInKernel
             }
 
             assert(x1 >= 0 && x1 < kernelHeight && y1 >= 0 && y1 < kernelWidth);
@@ -4279,17 +4330,17 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::UnpackConvolutionInput(CPUMatrix<ElemT
             long x0 = 0, y0 = 0, x1 = 0, y1 = 0;
             if (zeroPadding)
             {
-                x0 = (long) max((ElemType)0, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); // row : first wrow in which x is in
-                x1 = (long) (x + halfKernelHeight - x0 * verticalSubsample);                                                      // first posxInKernel
-                y0 = (long) max((ElemType)0, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); // col : first wcol in which y is in
-                y1 = (long) (y + halfKernelWidth - y0 * horizontalSubsample);                                                     // first posyInKernel
+                x0 = (long) max((ElemType) 0, ceil((x - (ElemType) kernelHeight + 1.0f + halfKernelHeight) / (ElemType) verticalSubsample)); // row : first wrow in which x is in
+                x1 = (long) (x + halfKernelHeight - x0 * verticalSubsample);                                                                 // first posxInKernel
+                y0 = (long) max((ElemType) 0, ceil((y - (ElemType) kernelWidth + 1.0f + halfKernelWidth) / (ElemType) horizontalSubsample)); // col : first wcol in which y is in
+                y1 = (long) (y + halfKernelWidth - y0 * horizontalSubsample);                                                                // first posyInKernel
             }
             else
             {
-                x0 = (long) max((ElemType)0, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  // row : first wrow in which x is in
-                x1 = (long) (x - x0 * verticalSubsample);                                                    // first posxInKernel
-                y0 = (long) max((ElemType)0, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); // col : first wcol in which y is in
-                y1 = (long) (y - y0 * horizontalSubsample);                                                  // first posyInKernel
+                x0 = (long) max((ElemType) 0, ceil((x - (ElemType) kernelHeight + 1) / (ElemType) verticalSubsample));  // row : first wrow in which x is in
+                x1 = (long) (x - x0 * verticalSubsample);                                                               // first posxInKernel
+                y0 = (long) max((ElemType) 0, ceil((y - (ElemType) kernelWidth + 1) / (ElemType) horizontalSubsample)); // col : first wcol in which y is in
+                y1 = (long) (y - y0 * horizontalSubsample);                                                             // first posyInKernel
             }
 
             assert(x1 >= 0 && x1 < kernelHeight && y1 >= 0 && y1 < kernelWidth);
@@ -4329,11 +4380,11 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignMaxPoolingResult(const CPUMatrix
     const size_t batchSize = inputBatch.GetNumCols();
     RequireSize(outputSizePerSample, batchSize);
 
-// IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
-// IN_ELEM_COLPOS = sample
+    // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
+    // IN_ELEM_COLPOS = sample
 
-// OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
-// OUT_ELEM_COLPOS = sample
+    // OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
+    // OUT_ELEM_COLPOS = sample
 
 #pragma omp parallel for
     for (long sample = 0; sample < (long) batchSize; sample++)
@@ -4378,11 +4429,11 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddMaxPoolingGradient(const CPUMatrix<
     const long inputHeightTimesChannel = (long) (inputHeight * channels);
     const long outputHeightTimesChannel = (long) (outputHeight * channels);
 
-// IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
-// IN_ELEM_COLPOS = sample
+    // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
+    // IN_ELEM_COLPOS = sample
 
-// OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
-// OUT_ELEM_COLPOS = sample
+    // OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
+    // OUT_ELEM_COLPOS = sample
 
 #pragma omp parallel for
     for (long sample = 0; sample < batchSize; sample++)
@@ -4394,10 +4445,10 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddMaxPoolingGradient(const CPUMatrix<
             const long x = (long) (nXC / channels);                            // row in input
             const long c = (long) (nXC % channels);                            // channel
 
-            long startOutX = (long) max((ElemType)0, ceil((x - (ElemType) windowHeight + 1) / (ElemType) verticalSubsample));          // inclusive start
-            long endOutX = (long) ((x / verticalSubsample < outputHeight - 1) ? x / verticalSubsample : outputHeight - 1);   // inclusive end
-            long startOutY = (long) max((ElemType)0, ceil((y - (ElemType) windowWidth + 1) / (ElemType) horizontalSubsample));         // inclusive start
-            long endOutY = (long) ((y / horizontalSubsample < outputWidth - 1) ? y / horizontalSubsample : outputWidth - 1); // inclusive end
+            long startOutX = (long) max((ElemType) 0, ceil((x - (ElemType) windowHeight + 1) / (ElemType) verticalSubsample));  // inclusive start
+            long endOutX = (long) ((x / verticalSubsample < outputHeight - 1) ? x / verticalSubsample : outputHeight - 1);      // inclusive end
+            long startOutY = (long) max((ElemType) 0, ceil((y - (ElemType) windowWidth + 1) / (ElemType) horizontalSubsample)); // inclusive start
+            long endOutY = (long) ((y / horizontalSubsample < outputWidth - 1) ? y / horizontalSubsample : outputWidth - 1);    // inclusive end
 
             ElemType inputValue = inputBatch(inputIndexWithinSample, sample);
             for (long outY = startOutY; outY <= endOutY; outY++)
@@ -4426,11 +4477,11 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignAveragePoolingResult(const CPUMa
     const size_t windowSize = windowWidth * windowHeight;
     RequireSize(outputSizePerSample, batchSize);
 
-// IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
-// IN_ELEM_COLPOS = sample
+    // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
+    // IN_ELEM_COLPOS = sample
 
-// OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
-// OUT_ELEM_COLPOS = sample
+    // OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
+    // OUT_ELEM_COLPOS = sample
 
 #pragma omp parallel for
     for (long sample = 0; sample < batchSize; sample++)
@@ -4473,11 +4524,11 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddAveragePoolingGradient(const CPUMat
     const long outputHeightTimesChannel = (long) (outputHeight * channels);
     const long windowSize = (long) (windowWidth * windowHeight);
 
-// IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
-// IN_ELEM_COLPOS = sample
+    // IN_ELEM_ROWPOS(channel, row, col) = (channel + (row + col * inputHeight) * channels)
+    // IN_ELEM_COLPOS = sample
 
-// OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
-// OUT_ELEM_COLPOS = sample
+    // OUT_ELEM_ROWPOS(channel, wrow, wcol) = (channel + (wrow + wcol * outputHeight) * channels)
+    // OUT_ELEM_COLPOS = sample
 
 #pragma omp parallel for
     for (long sample = 0; sample < batchSize; sample++)
@@ -4489,9 +4540,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddAveragePoolingGradient(const CPUMat
             const long x = nXC / (long) channels;                              // row in input
             const long c = nXC % (long) channels;                              // channel
 
-            long startOutX = (long) max((ElemType)0, ceil((x - (ElemType) windowHeight + 1) / (ElemType) verticalSubsample));               // inclusive start
+            long startOutX = (long) max((ElemType) 0, ceil((x - (ElemType) windowHeight + 1) / (ElemType) verticalSubsample));    // inclusive start
             long endOutX = (long) ((x / verticalSubsample < outputHeight - 1) ? x / (long) verticalSubsample : outputHeight - 1); // inclusive end
-            long startOutY = (long) max((ElemType)0, ceil((y - (ElemType) windowWidth + 1) / (ElemType) horizontalSubsample));              // inclusive start
+            long startOutY = (long) max((ElemType) 0, ceil((y - (ElemType) windowWidth + 1) / (ElemType) horizontalSubsample));   // inclusive start
             long endOutY = (long) ((y / horizontalSubsample < outputWidth - 1) ? y / horizontalSubsample : outputWidth - 1);      // inclusive end
 
             for (long outY = startOutY; outY <= endOutY; outY++)
@@ -4514,7 +4565,7 @@ void CPUMatrix<ElemType>::ConvolutionForward(const CPUMatrix<ElemType>& kernel, 
                                              const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
+    for (int64_t sample = 0; sample < (int64_t) output.GetNumCols(); sample++)
     {
         for (size_t row = 0; row < output.GetNumRows(); row++)
         {
@@ -4545,7 +4596,7 @@ void CPUMatrix<ElemType>::ConvolutionBackwardData(const CPUMatrix<ElemType>& ker
                                                   const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& grad) const
 {
 #pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    for (int64_t sample = 0; sample < (int64_t) GetNumCols(); sample++)
     {
         for (size_t row = 0; row < GetNumRows(); row++)
         {
@@ -4609,7 +4660,7 @@ void CPUMatrix<ElemType>::UnrollConvolutionInput(size_t unrollCols, size_t mapOu
     size_t batchSize = GetNumCols();
 
 #pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)batchSize; sample++)
+    for (int64_t sample = 0; sample < (int64_t) batchSize; sample++)
     {
         for (size_t row = 0; row < mapOutSize; row++)
         {
@@ -4647,7 +4698,7 @@ void CPUMatrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapI
     size_t kernelMapSize = kernelSize / mapInCount;
 
 #pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    for (int64_t sample = 0; sample < (int64_t) GetNumCols(); sample++)
     {
         for (size_t row = 0; row < mapOutSize; row++)
         {
@@ -4657,7 +4708,7 @@ void CPUMatrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapI
             int skip = runs(i0++, 0);
             int size = runs(i0++, 0);
             int imask = i0 + size;
-            for (int i = 0; i < std::min(size, (int)kernelMapSize); i++)
+            for (int i = 0; i < std::min(size, (int) kernelMapSize); i++)
             {
                 if (runs(imask + i, 0) == 0)
                     continue;
@@ -4684,7 +4735,7 @@ void CPUMatrix<ElemType>::UnrollConvolutionInputForKernelBackprop(size_t mapOutS
     size_t unrollCols = mapOutSize * batchSize;
 
 #pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)batchSize; sample++)
+    for (int64_t sample = 0; sample < (int64_t) batchSize; sample++)
     {
         for (size_t row = 0; row < mapOutSize; row++)
         {
@@ -4713,7 +4764,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::MaxPoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
 {
 #pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
+    for (int64_t sample = 0; sample < (int64_t) output.GetNumCols(); sample++)
     {
         for (size_t row = 0; row < output.GetNumRows(); row++)
         {
@@ -4743,10 +4794,10 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
                                              CPUMatrix<ElemType>& grad, bool accumulateGradient) const
 {
     if (!accumulateGradient)
-        grad.SetValue((ElemType)0);
+        grad.SetValue((ElemType) 0);
 
 #pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    for (int64_t sample = 0; sample < (int64_t) GetNumCols(); sample++)
     {
         for (size_t row = 0; row < GetNumRows(); row++)
         {
@@ -4787,8 +4838,8 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
 // where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
 template <class ElemType>
 void CPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
-                                              const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output,
-                                              CPUMatrix<ElemType>& argmax, double spatialScale) const
+                                               const size_t pooledWidth, const size_t pooledHeight, const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output,
+                                               CPUMatrix<ElemType>& argmax, double spatialScale) const
 {
     size_t roiOutputSize = pooledHeight * pooledWidth * channels;
 
@@ -4805,22 +4856,22 @@ void CPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_
 
             // roi points represent the absolute location of the roi
             // in the original image.
-            ElemType scX1 = rois(base, (ElemType)0);
-            ElemType scY1 = rois(base + (ElemType)1, (ElemType)0);
-            ElemType scX2 = rois(base + (ElemType)2, (ElemType)0);
-            ElemType scY2 = rois(base + (ElemType)3, (ElemType)0);
+            ElemType scX1 = rois(base, (ElemType) 0);
+            ElemType scY1 = rois(base + (ElemType) 1, (ElemType) 0);
+            ElemType scX2 = rois(base + (ElemType) 2, (ElemType) 0);
+            ElemType scY2 = rois(base + (ElemType) 3, (ElemType) 0);
 
             // compute actual spatial location of the ROI in our featuremap.
-            size_t x1 = (size_t)round(scX1 * spatialScale);
-            size_t y1 = (size_t)round(scY1 * spatialScale);
-            size_t x2 = (size_t)round(scX2 * spatialScale);
-            size_t y2 = (size_t)round(scY2 * spatialScale);
+            size_t x1 = (size_t) round(scX1 * spatialScale);
+            size_t y1 = (size_t) round(scY1 * spatialScale);
+            size_t x2 = (size_t) round(scX2 * spatialScale);
+            size_t y2 = (size_t) round(scY2 * spatialScale);
 
-            ElemType roiW = (ElemType)max(x2 - x1 + 1, (size_t)1);
-            ElemType roiH = (ElemType)max(y2 - y1 + 1, (size_t)1);
+            ElemType roiW = (ElemType) max(x2 - x1 + 1, (size_t) 1);
+            ElemType roiH = (ElemType) max(y2 - y1 + 1, (size_t) 1);
 
-            const ElemType winW = roiW / (ElemType)pooledWidth;
-            const ElemType winH = roiH / (ElemType)pooledHeight;
+            const ElemType winW = roiW / (ElemType) pooledWidth;
+            const ElemType winH = roiH / (ElemType) pooledHeight;
 
             // inspired by Ross Girshick fast-rcnn caffe cpu: https://github.com/rbgirshick/fast-rcnn
             // loop over spatial locations in output.
@@ -4831,19 +4882,19 @@ void CPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_
                 {
                     // compute the top left corner of the input
                     // spatial window corresponding to this output unit
-                    size_t hstart = (size_t)floor(outh * winH);
-                    size_t wstart = (size_t)floor(outw * winW);
+                    size_t hstart = (size_t) floor(outh * winH);
+                    size_t wstart = (size_t) floor(outw * winW);
 
                     // compute bottom right corner (not included)
-                    size_t hend = (size_t)ceil((outh + 1) * winH);
-                    size_t wend = (size_t)ceil((outw + 1) * winW);
+                    size_t hend = (size_t) ceil((outh + 1) * winH);
+                    size_t wend = (size_t) ceil((outw + 1) * winW);
 
                     // offset window based on ROI top left corner.
                     // these indices are into the input slice.
-                    hstart = min(max(hstart + y1, (size_t)0), height);
-                    wstart = min(max(wstart + x1, (size_t)0), width);
-                    hend = min(max(hend + y1, (size_t)0), height);
-                    wend = min(max(wend + x1, (size_t)0), width);
+                    hstart = min(max(hstart + y1, (size_t) 0), height);
+                    wstart = min(max(wstart + x1, (size_t) 0), width);
+                    hend = min(max(hend + y1, (size_t) 0), height);
+                    wend = min(max(wend + x1, (size_t) 0), width);
 
                     bool isempty = (hend <= hstart) || (wend <= wstart);
 
@@ -4852,7 +4903,7 @@ void CPUMatrix<ElemType>::MaxROIPoolingForward(const size_t numRois, const size_
                         // [W x H x C x R x N]; R = ROIs per image
                         size_t outputIdx = roiIdx * roiOutputSize + outw + outh * pooledWidth + c * pooledHeight * pooledWidth;
                         size_t maxidx = 0;
-                        ElemType maxval = isempty ? (ElemType)0 : (ElemType)-FLT_MAX;
+                        ElemType maxval = isempty ? (ElemType) 0 : (ElemType) -FLT_MAX;
                         size_t baseIdx = c * height * width;
 
                         for (size_t h = hstart; h < hend; h++)
@@ -4911,22 +4962,22 @@ void CPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size
 
                     // ROI data points represent the absolute location of the roi
                     // in the original image.
-                    size_t roiStartW = (size_t)round(rois[roiOffset + 0] * spatialScale);
-                    size_t roiStartH = (size_t)round(rois[roiOffset + 1] * spatialScale);
-                    size_t roiEndW = (size_t)round(rois[roiOffset + 2] * spatialScale);
-                    size_t roiEndH = (size_t)round(rois[roiOffset + 3] * spatialScale);
+                    size_t roiStartW = (size_t) round(rois[roiOffset + 0] * spatialScale);
+                    size_t roiStartH = (size_t) round(rois[roiOffset + 1] * spatialScale);
+                    size_t roiEndW = (size_t) round(rois[roiOffset + 2] * spatialScale);
+                    size_t roiEndH = (size_t) round(rois[roiOffset + 3] * spatialScale);
 
-                    size_t roiWidth = max(roiEndW - roiStartW + 1, (size_t)1);
-                    size_t roiHeight = max(roiEndH - roiStartH + 1, (size_t)1);
+                    size_t roiWidth = max(roiEndW - roiStartW + 1, (size_t) 1);
+                    size_t roiHeight = max(roiEndH - roiStartH + 1, (size_t) 1);
 
                     // skip this ROI if it doesn't contain the current input location.
                     const bool inROI = (w >= roiStartW && w < roiStartW + roiWidth &&
-                        h >= roiStartH && h < roiStartH + roiHeight);
+                                        h >= roiStartH && h < roiStartH + roiHeight);
                     if (!inROI)
                         continue;
 
-                    ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
-                    ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
+                    ElemType winH = (ElemType) roiHeight / (ElemType) pooledHeight;
+                    ElemType winW = (ElemType) roiWidth / (ElemType) pooledWidth;
 
                     // what pooled nodes in the output for this ROI could have pooled this input location?
                     size_t phstart = (size_t)((h - roiStartH) / winH);
@@ -4934,16 +4985,16 @@ void CPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size
                     size_t phend = (size_t)(ceil((h - roiStartH + 1) / winH));
                     size_t pwend = (size_t)(ceil((w - roiStartW + 1) / winW));
 
-                    phstart = min(max(phstart, (size_t)0), pooledHeight);
-                    phend = min(max(phend, (size_t)0), pooledHeight);
-                    pwstart = min(max(pwstart, (size_t)0), pooledWidth);
-                    pwend = min(max(pwend, (size_t)0), pooledWidth);
+                    phstart = min(max(phstart, (size_t) 0), pooledHeight);
+                    phend = min(max(phend, (size_t) 0), pooledHeight);
+                    pwstart = min(max(pwstart, (size_t) 0), pooledWidth);
+                    pwend = min(max(pwend, (size_t) 0), pooledWidth);
 
                     for (size_t c = 0; c < channels; c++)
                     {
                         ElemType gradient = 0;
                         // [W x H x C x N]
-                        size_t index = w + h*width + c*height*width;
+                        size_t index = w + h * width + c * height * width;
                         // go right up to channel c of the current ROI.
                         size_t offset = (roiN * channels + c) * pooledWidth * pooledHeight;
                         const ElemType* offsetPoolGrad = pooledGrad + offset;
@@ -4952,7 +5003,7 @@ void CPUMatrix<ElemType>::MaxROIPoolingBackward(const size_t numRois, const size
                         {
                             for (size_t pw = pwstart; pw < pwend; pw++)
                             {
-                                if ((size_t)offsetArgmax[ph * pooledWidth + pw] == (w + h * width))
+                                if ((size_t) offsetArgmax[ph * pooledWidth + pw] == (w + h * width))
                                 {
                                     gradient += offsetPoolGrad[ph * pooledWidth + pw];
                                 }
@@ -4974,7 +5025,7 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
                                        CPUMatrix<ElemType>& input) const
 {
 #pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    for (int64_t sample = 0; sample < (int64_t) GetNumCols(); sample++)
     {
         for (size_t row = 0; row < GetNumRows(); row++)
         {
@@ -5017,7 +5068,7 @@ template <class ElemType>
 void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolIncludePad) const
 {
 #pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
+    for (int64_t sample = 0; sample < (int64_t) output.GetNumCols(); sample++)
     {
         for (size_t row = 0; row < output.GetNumRows(); row++)
         {
@@ -5048,10 +5099,10 @@ template <class ElemType>
 void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolIncludePad, bool accumulateGradient) const
 {
     if (!accumulateGradient)
-        grad.SetValue((ElemType)0);
+        grad.SetValue((ElemType) 0);
 
 #pragma omp parallel for
-    for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
+    for (int64_t sample = 0; sample < (int64_t) GetNumCols(); sample++)
     {
         for (size_t row = 0; row < GetNumRows(); row++)
         {
@@ -5127,10 +5178,15 @@ void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& 
                                                      const CPUMatrix<StatType>& saveMean, const CPUMatrix<StatType>& saveInvStdDev,
                                                      CPUMatrix<StatType>& scaleGrad, CPUMatrix<StatType>& biasGrad) const
 {
-    UNUSED(in); UNUSED(grad); UNUSED(scale); UNUSED(blendFactor), UNUSED(saveMean); UNUSED(saveInvStdDev); UNUSED(scaleGrad); UNUSED(biasGrad);
+    UNUSED(in);
+    UNUSED(grad);
+    UNUSED(scale);
+    UNUSED(blendFactor), UNUSED(saveMean);
+    UNUSED(saveInvStdDev);
+    UNUSED(scaleGrad);
+    UNUSED(biasGrad);
     RuntimeError("Batch normalization training on CPU is not yet implemented.");
 }
-
 
 #pragma region Static BLAS Functions
 
@@ -5199,12 +5255,12 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
     {
         if (std::is_same<ElemType, double>::value)
         {
-            cblas_dgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
+            cblas_dgemm((CBLAS_ORDER)(int) MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
         }
         else if (std::is_same<ElemType, float>::value)
         {
 #pragma warning(suppress : 4244)
-            cblas_sgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
+            cblas_sgemm((CBLAS_ORDER)(int) MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
         }
         else
         {
@@ -5254,11 +5310,11 @@ void CPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CP
 
     if (beta == 0) // don't even read the memory if beta is 0
 #pragma omp parallel for
-        foreach_coord(i, j, c)
+        foreach_coord (i, j, c)
             c(i, j) = alpha * a(i, j) * vd[j];
     else
 #pragma omp parallel for
-        foreach_coord(i, j, c)
+        foreach_coord (i, j, c)
             c(i, j) = alpha * a(i, j) * vd[j] + c(i, j) * beta;
 }
 
@@ -5291,13 +5347,13 @@ void CPUMatrix<ElemType>::SVD(const CPUMatrix<ElemType>& A, CPUMatrix<ElemType>&
     {
         std::vector<double> superb(std::max(std::min(m, n) - 1, 1));
         info = LAPACKE_dgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<double*>(A.Data()), (int) lda, reinterpret_cast<double*>(SIGMA.Data()),
-            reinterpret_cast<double*>(U.Data()), (int) ldu, reinterpret_cast<double*>(VT.Data()), (int) ldvt, &superb[0]);
+                              reinterpret_cast<double*>(U.Data()), (int) ldu, reinterpret_cast<double*>(VT.Data()), (int) ldvt, &superb[0]);
     }
     else if (std::is_same<ElemType, float>::value)
     {
         std::vector<float> superb(std::max(std::min(m, n) - 1, 1));
         info = LAPACKE_sgesvd((int) MatrixOrder::ColMajor, 'A', 'A', (int) m, (int) n, reinterpret_cast<float*>(A.Data()), (int) lda, reinterpret_cast<float*>(SIGMA.Data()),
-            reinterpret_cast<float*>(U.Data()), (int) ldu, reinterpret_cast<float*>(VT.Data()), (int) ldvt, &superb[0]);
+                              reinterpret_cast<float*>(U.Data()), (int) ldu, reinterpret_cast<float*>(VT.Data()), (int) ldvt, &superb[0]);
     }
     else
     {
@@ -5328,7 +5384,8 @@ void CPUMatrix<ElemType>::AssignSoftmaxSum(const CPUMatrix<ElemType>& softmax, C
 {
     ElemType log_likelihood = 0.0;
     size_t batch_size = GetNumCols();
-#pragma omp parallel for reduction(+ : log_likelihood)
+#pragma omp parallel for reduction(+ \
+                                   : log_likelihood)
     for (int instance_id = 0; instance_id < batch_size; instance_id++)
     {
         int sample = (int) (*this)(0, instance_id);
@@ -5348,7 +5405,8 @@ void CPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const CPUMatrix<ElemType>& a
 {
     ElemType log_likelihood = 0.0;
     size_t batch_size = GetNumCols();
-#pragma omp parallel for reduction(+ : log_likelihood)
+#pragma omp parallel for reduction(+ \
+                                   : log_likelihood)
     for (int instance_id = 0; instance_id < batch_size; instance_id++)
     {
         int sample = -(int) (*this)(0, instance_id);
@@ -5424,14 +5482,15 @@ void CPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const CPUMatrix<ElemT
     size_t batch_size = GetNumCols();
     size_t num_noise_samples = sample_size - 1;
     double log_num_noise_samples = std::log(num_noise_samples);
-#pragma omp parallel for reduction(+ : log_likelihood)
+#pragma omp parallel for reduction(+ \
+                                   : log_likelihood)
     for (int instance_id = 0; instance_id < batch_size; instance_id++)
         for (int sample_id = 0; sample_id < sample_size; sample_id++)
         {
             int sample = (int) (*this)(2 * sample_id, instance_id);
             double score = bias(0, sample);
             for (int dim = 0; dim < b.GetNumRows(); dim++)
-                score += (double)(a(dim, instance_id) * b(dim, sample));
+                score += (double) (a(dim, instance_id) * b(dim, sample));
             double sample_prob = -(*this)(2 * sample_id + 1, instance_id);
             if (sample_id == 0)
                 sample_prob = -sample_prob;
@@ -5679,7 +5738,7 @@ void CPUMatrix<ElemType>::AddElementToElement(ElemType beta, const CPUMatrix<Ele
         ci >= c.GetNumRows() || cj >= c.GetNumCols())
         InvalidArgument("AddElementToElement:  index out of range.");
 
-    ElemType us = beta ? beta * c(ci, cj) : (ElemType)0; // do not multiply if beta is 0, could be a NaN
+    ElemType us = beta ? beta * c(ci, cj) : (ElemType) 0; // do not multiply if beta is 0, could be a NaN
     us += a(ai, aj);
     c(ci, cj) = us;
 }
@@ -5768,7 +5827,7 @@ template <class ElemType>
     // four-way unrolling
     for (long i = 0; i < (size & ~3); i += 4)
     {
-        cBufPtr[i]     = alpha * aBufPtr[i];
+        cBufPtr[i] = alpha * aBufPtr[i];
         cBufPtr[i + 1] = alpha * aBufPtr[i + 1];
         cBufPtr[i + 2] = alpha * aBufPtr[i + 2];
         cBufPtr[i + 3] = alpha * aBufPtr[i + 3];
@@ -5979,10 +6038,10 @@ void CPUMatrix<ElemType>::BatchMatMul(ElemType beta, const CPUMatrix<ElemType>& 
     if (!isColWise)
         LogicError("Only column wise is supported.");
 
-    const int aSampleElemNum = (int)a.GetNumRows();
-    const int aBatchSize = (int)a.GetNumCols();
-    const int bSampleElemNum = (int)b.GetNumRows();
-    const int bBatchSize = (int)b.GetNumCols();
+    const int aSampleElemNum = (int) a.GetNumRows();
+    const int aBatchSize = (int) a.GetNumCols();
+    const int bSampleElemNum = (int) b.GetNumRows();
+    const int bBatchSize = (int) b.GetNumCols();
 
     assert(aSampleElemNum > 0 && aBatchSize > 0 && bSampleElemNum > 0 && bBatchSize > 0);
     if (aBatchSize != bBatchSize)
@@ -6009,9 +6068,9 @@ void CPUMatrix<ElemType>::BatchMatMul(ElemType beta, const CPUMatrix<ElemType>& 
     blasTransA = transposeA ? CblasTrans : CblasNoTrans;
     blasTransB = transposeB ? CblasTrans : CblasNoTrans;
     ldc = m;
-    std::vector<const ElemType *> a_array;
-    std::vector<const ElemType *> b_array;
-    std::vector<ElemType *> c_array;
+    std::vector<const ElemType*> a_array;
+    std::vector<const ElemType*> b_array;
+    std::vector<ElemType*> c_array;
     a_array.reserve(aBatchSize);
     b_array.reserve(aBatchSize);
     c_array.reserve(aBatchSize);
@@ -6029,12 +6088,12 @@ void CPUMatrix<ElemType>::BatchMatMul(ElemType beta, const CPUMatrix<ElemType>& 
         if (sizeof(ElemType) == sizeof(double))
         {
             double alpha = 1.0;
-            cblas_dgemm((CBLAS_ORDER)(int)MatrixOrder::ColMajor, blasTransA, blasTransB, m, n, k, alpha, reinterpret_cast<const double*>(a_array[i]), lda, reinterpret_cast<const double*>(b_array[i]), ldb, double(beta), reinterpret_cast<double*>(c_array[i]), ldc);
+            cblas_dgemm((CBLAS_ORDER)(int) MatrixOrder::ColMajor, blasTransA, blasTransB, m, n, k, alpha, reinterpret_cast<const double*>(a_array[i]), lda, reinterpret_cast<const double*>(b_array[i]), ldb, double(beta), reinterpret_cast<double*>(c_array[i]), ldc);
         }
         else
         {
             float alpha = 1.0f;
-            cblas_sgemm((CBLAS_ORDER)(int)MatrixOrder::ColMajor, blasTransA, blasTransB, m, n, k, alpha, reinterpret_cast<const float*>(a_array[i]), lda, reinterpret_cast<const float*>(b_array[i]), ldb, float(beta), reinterpret_cast<float*>(c_array[i]), ldc);
+            cblas_sgemm((CBLAS_ORDER)(int) MatrixOrder::ColMajor, blasTransA, blasTransB, m, n, k, alpha, reinterpret_cast<const float*>(a_array[i]), lda, reinterpret_cast<const float*>(b_array[i]), ldb, float(beta), reinterpret_cast<float*>(c_array[i]), ldc);
         }
     }
 
@@ -6048,9 +6107,9 @@ void CPUMatrix<ElemType>::BatchMatMul(ElemType beta, const CPUMatrix<ElemType>& 
     std::vector<int> group_size(1, aBatchSize);
     std::vector<CBLAS_TRANSPOSE> transa_array(aBatchSize, transposeA ? CblasTrans : CblasNoTrans);
     std::vector<CBLAS_TRANSPOSE> transb_array(aBatchSize, transposeB ? CblasTrans : CblasNoTrans);
-    std::vector<const ElemType *> a_array;
-    std::vector<const ElemType *> b_array;
-    std::vector<ElemType *> c_array;
+    std::vector<const ElemType*> a_array;
+    std::vector<const ElemType*> b_array;
+    std::vector<ElemType*> c_array;
     a_array.reserve(aBatchSize);
     b_array.reserve(aBatchSize);
     c_array.reserve(aBatchSize);
@@ -6069,16 +6128,16 @@ void CPUMatrix<ElemType>::BatchMatMul(ElemType beta, const CPUMatrix<ElemType>& 
         std::vector<double> alpha_array(group_size[0], 1.0);
         std::vector<double> beta_array(group_size[0], double(beta));
         cblas_dgemm_batch(CblasColMajor, &transa_array[0], &transb_array[0], &m_array[0], &n_array[0], &k_array[0], &alpha_array[0],
-            reinterpret_cast<const double**>(&a_array[0]), &lda_array[0], reinterpret_cast<const double**>(&b_array[0]), &ldb_array[0], &beta_array[0],
-            reinterpret_cast<double**>(&c_array[0]), &ldc_array[0], 1, &group_size[0]);
+                          reinterpret_cast<const double**>(&a_array[0]), &lda_array[0], reinterpret_cast<const double**>(&b_array[0]), &ldb_array[0], &beta_array[0],
+                          reinterpret_cast<double**>(&c_array[0]), &ldc_array[0], 1, &group_size[0]);
     }
     else
     {
         std::vector<float> alpha_array(group_size[0], 1.0f);
         std::vector<float> beta_array(group_size[0], float(beta));
         cblas_sgemm_batch(CblasColMajor, &transa_array[0], &transb_array[0], &m_array[0], &n_array[0], &k_array[0], &alpha_array[0],
-            reinterpret_cast<const float**>(&a_array[0]), &lda_array[0], reinterpret_cast<const float**>(&b_array[0]), &ldb_array[0], &beta_array[0],
-            reinterpret_cast<float**>(&c_array[0]), &ldc_array[0], 1, &group_size[0]);
+                          reinterpret_cast<const float**>(&a_array[0]), &lda_array[0], reinterpret_cast<const float**>(&b_array[0]), &ldb_array[0], &beta_array[0],
+                          reinterpret_cast<float**>(&c_array[0]), &ldc_array[0], 1, &group_size[0]);
     }
 #endif
 }
@@ -6125,7 +6184,7 @@ void CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const CP
         size_t nb = (((t * S + s) * M + m) * K + k) * D + d;   // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
         assert(nb < N);
         // perform the computation
-        ElemType cval = keepWeight ? keepWeight * pb[nb] : (ElemType)0; // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
+        ElemType cval = keepWeight ? keepWeight * pb[nb] : (ElemType) 0; // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
         cval += scaleFactor * pa[na];
         pc[nb] = cval;
     }
@@ -6528,49 +6587,52 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
 //      Alpha and Beta scores outside of the delay boundary are set to zero.
 //      Setting this parameter smaller will result in shorted delay between label output during decoding.
 //      delayConstraint=-1 means no constraint
-template<class ElemType>
+template <class ElemType>
 void _assignAlphaScore(
-    const ElemType *prob,
-    ElemType *alphaScore,
-    ElemType *phoneSeq,
-    ElemType *phoneBound,
+    const ElemType* prob,
+    ElemType* alphaScore,
+    ElemType* phoneSeq,
+    ElemType* phoneBound,
     const std::vector<size_t>& uttToChanInd,
     const std::vector<size_t>& uttFrameNum,
     const std::vector<size_t>& uttBeginFrame,
     const std::vector<size_t>& uttPhoneNum,
     size_t numChannels,
     const size_t uttNum,
-    const size_t  t,
-    const size_t maxPhoneNum, // Maximum length of utterance in this MB
+    const size_t t,
+    const size_t maxPhoneNum,   // Maximum length of utterance in this MB
     const size_t totalPhoneNum, // Total number of phones
     const size_t blankTokenId,
     const int delayConstraint)
 {
-    for (size_t uttId = 0;uttId < uttNum;uttId++) {
+    for (size_t uttId = 0; uttId < uttNum; uttId++)
+    {
 
         // Number of phones and frames in this utterance
         size_t frameNum = uttFrameNum[uttId];
-        if (t >= frameNum) continue;
+        if (t >= frameNum)
+            continue;
 
         size_t phoneNum = uttPhoneNum[uttId];
 
 #pragma omp parallel for
-        for (int phoneSeqId = 1;phoneSeqId < phoneNum - 1;phoneSeqId++) {
+        for (int phoneSeqId = 1; phoneSeqId < phoneNum - 1; phoneSeqId++)
+        {
             // Index of the label in the sequence
 
             // Current and previous phone indices in phoneSeq matrix
-            size_t labelid = uttId*maxPhoneNum + phoneSeqId;
+            size_t labelid = uttId * maxPhoneNum + phoneSeqId;
 
             // Actual current phone label
             size_t phoneId = (size_t)(phoneSeq[labelid]);
 
             // Index of the current frame in minibatch
-            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+            size_t timeId = (t + uttBeginFrame[uttId]) * numChannels + uttToChanInd[uttId];
 
             // Index of probability of observing phoneId at frame timeId
-            size_t probId = timeId*totalPhoneNum + phoneId;
+            size_t probId = timeId * totalPhoneNum + phoneId;
 
-            size_t alphaId = maxPhoneNum* timeId + phoneSeqId; // alpha_t(s)
+            size_t alphaId = maxPhoneNum * timeId + phoneSeqId; // alpha_t(s)
 
             if (t == 0)
             {
@@ -6584,10 +6646,10 @@ void _assignAlphaScore(
             {
                 if (phoneSeqId >= 1)
                 {
-                    size_t timeId_1 = timeId - numChannels; // Index corresponding to (t-1)
-                    size_t alphaId_0 = maxPhoneNum* timeId_1 + phoneSeqId; // alpha_{t-1}(s)
-                    size_t alphaId_1 = alphaId_0 - 1; // alpha_{t-1}(s-1)
-                    size_t alphaId_2 = alphaId_0 - 2; // alpha_{t-1}(s-2)
+                    size_t timeId_1 = timeId - numChannels;                 // Index corresponding to (t-1)
+                    size_t alphaId_0 = maxPhoneNum * timeId_1 + phoneSeqId; // alpha_{t-1}(s)
+                    size_t alphaId_1 = alphaId_0 - 1;                       // alpha_{t-1}(s-1)
+                    size_t alphaId_2 = alphaId_0 - 2;                       // alpha_{t-1}(s-2)
                     ElemType x = LZERO;
 
                     ElemType ascore;
@@ -6612,7 +6674,7 @@ void _assignAlphaScore(
                         ascore = prob[probId]; // Probability of observing given label at given time
                     else
                         ascore = 0;
-                    alphaScore[alphaId] = (ElemType)x + ascore;
+                    alphaScore[alphaId] = (ElemType) x + ascore;
                     if (delayConstraint != -1)
                     {
                         size_t labelid_r = labelid + 2;
@@ -6630,7 +6692,6 @@ void _assignAlphaScore(
                         }
                     }
                 }
-
             }
         }
     }
@@ -6638,43 +6699,46 @@ void _assignAlphaScore(
 
 // Calculate beta in forward-backward calculation, equation (10), (11) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
-template<class ElemType>
+template <class ElemType>
 void _assignBetaScore(
-    const ElemType *prob,
-    ElemType *betaScore,
-    ElemType *phoneSeq,
-    ElemType *phoneBound,
+    const ElemType* prob,
+    ElemType* betaScore,
+    ElemType* phoneSeq,
+    ElemType* phoneBound,
     const std::vector<size_t>& uttToChanInd,
     const std::vector<size_t>& uttFrameNum,
     const std::vector<size_t>& uttBeginFrame,
     const std::vector<size_t>& uttPhoneNum,
     const size_t numChannels,
     const size_t uttNum,
-    const long  t,
+    const long t,
     const size_t maxPhoneNum,
     const size_t totalPhoneNum,
     const size_t blankTokenId,
     const int delayConstraint)
 {
-    for (size_t uttId = 0;uttId < uttNum;uttId++) {
+    for (size_t uttId = 0; uttId < uttNum; uttId++)
+    {
 
         // Number of phones and frames in this utterance
         size_t frameNum = uttFrameNum[uttId];
-        if (t >= frameNum) continue;
+        if (t >= frameNum)
+            continue;
 
         size_t phoneNum = uttPhoneNum[uttId];
 
 #pragma omp parallel for
-        for (int phoneSeqId = 1;phoneSeqId < phoneNum - 1;phoneSeqId++) {
+        for (int phoneSeqId = 1; phoneSeqId < phoneNum - 1; phoneSeqId++)
+        {
 
-            size_t labelid = uttId*maxPhoneNum + phoneSeqId;
+            size_t labelid = uttId * maxPhoneNum + phoneSeqId;
             size_t labelid_2 = labelid + 2;
             size_t phoneId = (LONG64)(phoneSeq[labelid]);
-            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
-            size_t probId = timeId*totalPhoneNum + phoneId;
-            size_t betaid = maxPhoneNum* timeId + phoneSeqId;
+            size_t timeId = (t + uttBeginFrame[uttId]) * numChannels + uttToChanInd[uttId];
+            size_t probId = timeId * totalPhoneNum + phoneId;
+            size_t betaid = maxPhoneNum * timeId + phoneSeqId;
             size_t timeId_1 = timeId + numChannels;
-            size_t betaid_0 = maxPhoneNum* timeId_1 + phoneSeqId;
+            size_t betaid_0 = maxPhoneNum * timeId_1 + phoneSeqId;
             size_t betaid_1 = betaid_0 + 1;
             size_t betaid_2 = betaid_0 + 2;
 
@@ -6710,7 +6774,7 @@ void _assignBetaScore(
                         ascore = prob[probId];
                     else
                         ascore = 0;
-                    betaScore[betaid] = (ElemType)x + ascore;
+                    betaScore[betaid] = (ElemType) x + ascore;
                     if (delayConstraint != -1)
                     {
                         size_t phoneBoundId_r = (size_t)(phoneBound[labelid_2]);
@@ -6732,17 +6796,18 @@ void _assignBetaScore(
 }
 
 // Calculate CTC score. equation (8) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
-template<class ElemType>
-void _assignTotalScore(ElemType *betaScore,
-    std::vector<ElemType>& totalScore,
-    const size_t uttNum,
-    const std::vector<size_t>& uttToChanInd,
-    const std::vector<size_t>& uttBeginFrame,
-    const size_t numChannels,
-    const size_t maxPhoneNum)
+template <class ElemType>
+void _assignTotalScore(ElemType* betaScore,
+                       std::vector<ElemType>& totalScore,
+                       const size_t uttNum,
+                       const std::vector<size_t>& uttToChanInd,
+                       const std::vector<size_t>& uttBeginFrame,
+                       const size_t numChannels,
+                       const size_t maxPhoneNum)
 {
 #pragma omp parallel for
-    for (int uttId = 0; uttId < uttNum; uttId++) {
+    for (int uttId = 0; uttId < uttNum; uttId++)
+    {
         if (uttId < uttNum)
         {
             LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
@@ -6755,13 +6820,13 @@ void _assignTotalScore(ElemType *betaScore,
 
 // Calculate derivative, equation (15) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
-template<class ElemType>
+template <class ElemType>
 void _assignCTCScore(
-    ElemType *CTCscore,
-    ElemType *prob,
-    ElemType *alphaScore,
-    ElemType *betaScore,
-    ElemType *phoneSeq,
+    ElemType* CTCscore,
+    ElemType* prob,
+    ElemType* alphaScore,
+    ElemType* betaScore,
+    ElemType* phoneSeq,
     const size_t uttNum,
     const std::vector<size_t>& uttToChanInd,
     const std::vector<size_t>& uttBeginFrame,
@@ -6771,30 +6836,32 @@ void _assignCTCScore(
     const size_t maxPhoneNum,
     const size_t totalPhoneNum)
 {
-    for (size_t uttId = 0;uttId < uttNum;uttId++) {
+    for (size_t uttId = 0; uttId < uttNum; uttId++)
+    {
 #pragma omp parallel for
-        for (int t = 0; t < uttFrameNum[uttId]; t++) {
+        for (int t = 0; t < uttFrameNum[uttId]; t++)
+        {
             size_t phoneNum = uttPhoneNum[uttId];
             size_t alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
-            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+            size_t timeId = (t + uttBeginFrame[uttId]) * numChannels + uttToChanInd[uttId];
             ElemType P_lx = betaScore[alphaId_0];
 
             for (int s = 1; s < phoneNum - 1; s++)
             {
-                long phoneId = phoneSeq[uttId*maxPhoneNum + s];
-                size_t alphaId = maxPhoneNum* timeId + s;
-                size_t probId = timeId*totalPhoneNum + phoneId;
+                long phoneId = phoneSeq[uttId * maxPhoneNum + s];
+                size_t alphaId = maxPhoneNum * timeId + s;
+                size_t probId = timeId * totalPhoneNum + phoneId;
 
                 if (phoneId != SIZE_MAX)
                 {
-                    ElemType logoccu = alphaScore[alphaId] + betaScore[alphaId] - prob[probId] - (ElemType)P_lx;
+                    ElemType logoccu = alphaScore[alphaId] + betaScore[alphaId] - prob[probId] - (ElemType) P_lx;
                     CTCscore[probId] = LogAdd(CTCscore[probId], logoccu);
                 }
             }
 
             for (int s = 0; s < totalPhoneNum; s++)
             {
-                size_t probId = timeId*totalPhoneNum + s;
+                size_t probId = timeId * totalPhoneNum + s;
                 ElemType logoccu = CTCscore[probId];
                 if (logoccu < LZERO)
                     CTCscore[probId] = 0.0f;
@@ -6808,9 +6875,9 @@ void _assignCTCScore(
 // Calculate alpha in forward-backward calculation. equation (6), (7) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
 // prob (input): the posterior output from the network
-// alpha (output): alpha for forward-backward calculation. 
-// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
-// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// alpha (output): alpha for forward-backward calculation.
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance
 // uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
 // uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
 // uttBeginFrame(input): the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
@@ -6825,12 +6892,12 @@ void _assignCTCScore(
 //      Alpha and Beta scores outside of the delay boundary are set to zero.
 //      Setting this parameter smaller will result in shorted delay between label output during decoding.
 //      delayConstraint=-1 means no constraint
-template<class ElemType>
+template <class ElemType>
 void _assignRNNTAlphaScore(
-    const ElemType *prob,
-    ElemType *alphaScore,
-    ElemType *phoneSeq,
-    ElemType *phoneBound,
+    const ElemType* prob,
+    ElemType* alphaScore,
+    ElemType* phoneSeq,
+    ElemType* phoneBound,
     const std::vector<size_t>& uttFrameNum,
     const std::vector<size_t>& uttPhoneNum,
     const std::vector<size_t>& uttFrameBeginIdx,
@@ -6838,73 +6905,73 @@ void _assignRNNTAlphaScore(
     const std::vector<size_t>& uttBeginForOutputditribution,
     size_t numChannels,
     const size_t uttNum,
-    const size_t  t,
+    const size_t t,
     const size_t u,
-    const size_t maxPhoneNum, // Maximum length of utterance in this MB    
+    const size_t maxPhoneNum,   // Maximum length of utterance in this MB
     const size_t totalPhoneNum, // Total number of phones
     const size_t blankTokenId,
     const int delayConstraint)
 
-    
 {
-    for (size_t uttId = 0; uttId < uttNum; uttId++) {
+    for (size_t uttId = 0; uttId < uttNum; uttId++)
+    {
 
         // Number of phones and frames in this utterance
         size_t frameNum = uttFrameNum[uttId];
-        if (t >= frameNum) continue;
-        
+        if (t >= frameNum)
+            continue;
+
         size_t phoneNum = uttPhoneNum[uttId];
-        if (u >= phoneNum) continue;
+        if (u >= phoneNum)
+            continue;
 
         // Current  phone indices in phoneSeq matrix
-        size_t labelid = uttId*maxPhoneNum + u ;
-        
+        size_t labelid = uttId * maxPhoneNum + u;
+
         // Actual current phone label
         size_t phoneId = (size_t)(phoneSeq[labelid]); //phone ID of u
 
         //time Index of the current frame in minibatch
-        size_t timeId = (t + uttFrameBeginIdx[uttId])*numChannels + uttFrameToChanInd[uttId];
+        size_t timeId = (t + uttFrameBeginIdx[uttId]) * numChannels + uttFrameToChanInd[uttId];
 
         // phone Index of the current frame in minibatch
-       // size_t unitId = (u + uttBeginPhonePos[uttId]) * numChannels + uttToChanInd[uttId];
+        // size_t unitId = (u + uttBeginPhonePos[uttId]) * numChannels + uttToChanInd[uttId];
 
         //(t,u) index of outputdistribution in minibatch
-        size_t tuID = uttBeginForOutputditribution[uttId] + t*phoneNum + u;  //tuID for (t,u)
-        
+        size_t tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + u; //tuID for (t,u)
 
         // Index of outputdistribution of observing phoneId at frame timeId
         //size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u)|t,u)
 
         //index for alpha
-        size_t alphaId = maxPhoneNum* timeId + u; // alpha_t(s)
+        size_t alphaId = maxPhoneNum * timeId + u; // alpha_t(s)
 
         if (t == 0 && u == 0)
         {
             alphaScore[alphaId] = 0.0;
         }
-        else if (t == 0 )
+        else if (t == 0)
         {
-            size_t alphaId_1 = alphaId - 1; // alpha ID for [t,u-1]
-            size_t tuID_1 = tuID - 1; //tuID for [t,u-1]           
+            size_t alphaId_1 = alphaId - 1;                     // alpha ID for [t,u-1]
+            size_t tuID_1 = tuID - 1;                           //tuID for [t,u-1]
             size_t probId_1 = tuID_1 * totalPhoneNum + phoneId; //ID for p(y(u)|t,u-1)
 
             alphaScore[alphaId] = alphaScore[alphaId_1] + prob[probId_1];
         }
-        else if ( u == 0 )
-        {            
-            size_t tuID_2 = tuID -  phoneNum; //tuID for [t-1,u]
-            size_t alphaId_2 = alphaId - numChannels * maxPhoneNum; //alpha ID for [t-1, u]
+        else if (u == 0)
+        {
+            size_t tuID_2 = tuID - phoneNum;                         //tuID for [t-1,u]
+            size_t alphaId_2 = alphaId - numChannels * maxPhoneNum;  //alpha ID for [t-1, u]
             size_t probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
             alphaScore[alphaId] = alphaScore[alphaId_2] + prob[probId_2];
-
         }
         else
         {
-            size_t alphaId_1 = alphaId - 1; // alpha ID for [t,u-1]
-            size_t tuID_1 = tuID - 1; //tuID for [t,u-1]           
-            size_t probId_1 = tuID_1 * totalPhoneNum + phoneId; //ID for p(y(u)|t,u-1)
-            size_t tuID_2 = tuID - phoneNum; //tuID for [t-1,u]
-            size_t alphaId_2 = alphaId - numChannels * maxPhoneNum; //alpha ID for [t-1, u]
+            size_t alphaId_1 = alphaId - 1;                          // alpha ID for [t,u-1]
+            size_t tuID_1 = tuID - 1;                                //tuID for [t,u-1]
+            size_t probId_1 = tuID_1 * totalPhoneNum + phoneId;      //ID for p(y(u)|t,u-1)
+            size_t tuID_2 = tuID - phoneNum;                         //tuID for [t-1,u]
+            size_t alphaId_2 = alphaId - numChannels * maxPhoneNum;  //alpha ID for [t-1, u]
             size_t probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
 
             ElemType x = LZERO, y = LZERO;
@@ -6918,12 +6985,12 @@ void _assignRNNTAlphaScore(
 
 // Calculate beta in forward-backward calculation, equation (10), (11) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
-template<class ElemType>
+template <class ElemType>
 void _assignRNNTBetaScore(
-    const ElemType *prob,
-    ElemType *betaScore,
-    ElemType *phoneSeq,
-    ElemType *phoneBound,
+    const ElemType* prob,
+    ElemType* betaScore,
+    ElemType* phoneSeq,
+    ElemType* phoneBound,
     const std::vector<size_t>& uttFrameNum,
     const std::vector<size_t>& uttPhoneNum,
     const std::vector<size_t>& uttFrameBeginIdx,
@@ -6931,53 +6998,56 @@ void _assignRNNTBetaScore(
     const std::vector<size_t>& uttBeginForOutputditribution,
     size_t numChannels,
     const size_t uttNum,
-    const size_t  t,
+    const size_t t,
     const size_t u,
-    const size_t maxPhoneNum, // Maximum length of utterance in this MB    
+    const size_t maxPhoneNum,   // Maximum length of utterance in this MB
     const size_t totalPhoneNum, // Total number of phones
     const size_t blankTokenId,
     const int delayConstraint)
-    
+
 {
-    for (size_t uttId = 0; uttId < uttNum; uttId++) {
+    for (size_t uttId = 0; uttId < uttNum; uttId++)
+    {
 
         // Number of phones and frames in this utterance
         size_t frameNum = uttFrameNum[uttId];
-        if (t >= frameNum) continue;
+        if (t >= frameNum)
+            continue;
 
         size_t phoneNum = uttPhoneNum[uttId];
-        if (u >= phoneNum) continue;
+        if (u >= phoneNum)
+            continue;
 
         // Current and previous phone indices in phoneSeq matrix
-        size_t labelid = uttId*maxPhoneNum + u;
+        size_t labelid = uttId * maxPhoneNum + u;
 
         // Actual current phone label
         size_t phoneId = (size_t)(phoneSeq[labelid + 1]); //phone ID of u+1
 
-                                                          // Index of the current frame in minibatch
-        size_t timeId = (t + uttFrameBeginIdx[uttId])*numChannels + uttFrameToChanInd[uttId];  //timeid in chunk for t
+        // Index of the current frame in minibatch
+        size_t timeId = (t + uttFrameBeginIdx[uttId]) * numChannels + uttFrameToChanInd[uttId]; //timeid in chunk for t
 
         // Index of the current frame in minibatch
-//        size_t unitId = (u + uttBeginPhonePos[uttId] )* numChannels + uttToChanInd[uttId];  //phoneseq id in chunk for u
-        size_t tuID = uttBeginForOutputditribution[uttId] + t*phoneNum + u;  //tuID for (t,u)
+        //        size_t unitId = (u + uttBeginPhonePos[uttId] )* numChannels + uttToChanInd[uttId];  //phoneseq id in chunk for u
+        size_t tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + u; //tuID for (t,u)
 
         // Index of probability of observing phoneId at frame timeId
-        size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u+1)|t,u)
+        size_t probId = tuID * totalPhoneNum + phoneId; // ID for p(y(u+1)|t,u)
 
-        size_t betaId = maxPhoneNum* timeId + u; //betaid for (t,u)
+        size_t betaId = maxPhoneNum * timeId + u; //betaid for (t,u)
 
-        if (u == phoneNum-1 && t == frameNum - 1)
-        {
-            size_t probId_1 = tuID*totalPhoneNum + blankTokenId;//ID for p(phi|t,u)
-            betaScore[betaId] = prob[probId_1];
-        }
-        else if (u == phoneNum-1 )
+        if (u == phoneNum - 1 && t == frameNum - 1)
         {
             size_t probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
-            size_t betaId_1 = betaId + numChannels * maxPhoneNum ; //beta ID for (t+1,u)
+            betaScore[betaId] = prob[probId_1];
+        }
+        else if (u == phoneNum - 1)
+        {
+            size_t probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
+            size_t betaId_1 = betaId + numChannels * maxPhoneNum;  //beta ID for (t+1,u)
             betaScore[betaId] = betaScore[betaId_1] + prob[probId_1];
         }
-        else if ( t == frameNum - 1)
+        else if (t == frameNum - 1)
         {
             size_t betaId_2 = betaId + 1; //beid for (t,u+1)
             betaScore[betaId] = betaScore[betaId_2] + prob[probId];
@@ -6985,8 +7055,8 @@ void _assignRNNTBetaScore(
         else
         {
             size_t probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
-            size_t betaId_1 = betaId + numChannels * maxPhoneNum; //beta ID for (t+1,u)
-            size_t betaId_2 = betaId + 1; //beid for (t,u+1)
+            size_t betaId_1 = betaId + numChannels * maxPhoneNum;  //beta ID for (t+1,u)
+            size_t betaId_2 = betaId + 1;                          //beid for (t,u+1)
 
             ElemType x = LZERO, y = LZERO;
             x = betaScore[betaId_1] + prob[probId_1];
@@ -6998,26 +7068,27 @@ void _assignRNNTBetaScore(
 }
 
 // Calculate CTC score. equation (8) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
-template<class ElemType>
-void _assignRNNTTotalScore(ElemType *alphaScore,
-    ElemType *betaScore,
-    std::vector<ElemType>& totalScore,
-    const size_t uttNum,
-    const std::vector<size_t>& uttFrameToChanInd,
-    const std::vector<size_t>& uttFrameBeginIdx,
-    const std::vector<size_t>& uttFrameNum,
-    const std::vector<size_t>& uttPhoneNum,
-    const size_t numChannels,
-    const size_t maxPhoneNum)
+template <class ElemType>
+void _assignRNNTTotalScore(ElemType* alphaScore,
+                           ElemType* betaScore,
+                           std::vector<ElemType>& totalScore,
+                           const size_t uttNum,
+                           const std::vector<size_t>& uttFrameToChanInd,
+                           const std::vector<size_t>& uttFrameBeginIdx,
+                           const std::vector<size_t>& uttFrameNum,
+                           const std::vector<size_t>& uttPhoneNum,
+                           const size_t numChannels,
+                           const size_t maxPhoneNum)
 
 {
     //#pragma omp parallel for
-    
+
     ElemType x = LZERO;
-    for (int uttId = 0; uttId < uttNum; uttId++) {
+    for (int uttId = 0; uttId < uttNum; uttId++)
+    {
         //if (uttId < uttNum)
         {
-            for (size_t n = 1; n <= uttFrameNum[uttId] + uttPhoneNum[uttId]-1; n++)
+            for (size_t n = 1; n <= uttFrameNum[uttId] + uttPhoneNum[uttId] - 1; n++)
             {
                 x = LZERO;
                 for (size_t t = 1; t <= n; t++)
@@ -7025,20 +7096,19 @@ void _assignRNNTTotalScore(ElemType *alphaScore,
                     size_t u = n - t;
                     if (t >= 1 && t <= uttFrameNum[uttId] && u >= 0 && u <= uttPhoneNum[uttId] - 1)
                     {
-                        size_t timeId = (t - 1 + uttFrameBeginIdx[uttId])*numChannels + uttFrameToChanInd[uttId];
+                        size_t timeId = (t - 1 + uttFrameBeginIdx[uttId]) * numChannels + uttFrameToChanInd[uttId];
 
-                        size_t alphaId = maxPhoneNum* timeId + u;
+                        size_t alphaId = maxPhoneNum * timeId + u;
                         x = LogAdd(x, alphaScore[alphaId] + betaScore[alphaId]);
                     }
                 }
                 if (n > 2)
                 {
-                    if (fabs((double)x - (double)totalScore[uttId]) > 5e-3)
-                        fprintf(stderr, "bad totalscore for RNNT %ld: %f %f\n", (long)n, (double)x, (double)totalScore[uttId]);
+                    if (fabs((double) x - (double) totalScore[uttId]) > 5e-3)
+                        fprintf(stderr, "bad totalscore for RNNT %ld: %f %f\n", (long) n, (double) x, (double) totalScore[uttId]);
                 }
                 else
-                    totalScore[uttId] = x ;
-
+                    totalScore[uttId] = x;
             }
             totalScore[uttId] /= uttFrameNum[uttId];
         }
@@ -7047,73 +7117,73 @@ void _assignRNNTTotalScore(ElemType *alphaScore,
 
 // Calculate derivative, equation (15) in ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 // See _assignAlphaScore for the explanation of parameters
-template<class ElemType>
+template <class ElemType>
 void _assignRNNTScore(
-    ElemType *RNNTscore,
-    ElemType *prob,
-    ElemType *alphaScore,
-    ElemType *betaScore,
-    ElemType *phoneSeq,
+    ElemType* RNNTscore,
+    ElemType* prob,
+    ElemType* alphaScore,
+    ElemType* betaScore,
+    ElemType* phoneSeq,
     const size_t uttNum,
     const std::vector<size_t>& uttFrameNum,
     const std::vector<size_t>& uttPhoneNum,
     const std::vector<size_t>& uttFrameBeginIdx,
     const std::vector<size_t>& uttFrameToChanInd,
-    const std::vector<size_t>& uttBeginForOutputditribution,    
+    const std::vector<size_t>& uttBeginForOutputditribution,
     const size_t numChannels,
     const size_t maxPhoneNum,
     const size_t totalPhoneNum,
     const size_t blankTokenId)
 
-   
 {
     ElemType x = LZERO, y = LZERO;
-    
-    for (size_t uttId = 0; uttId < uttNum; uttId++) {
+
+    for (size_t uttId = 0; uttId < uttNum; uttId++)
+    {
         size_t zeroID = (uttFrameBeginIdx[uttId] * numChannels + uttFrameToChanInd[uttId]) * maxPhoneNum; //beta id for (0,0)
-        ElemType P_lx = betaScore[zeroID]; //p(y|x)
-//#pragma omp parallel for
-        for (int t = 0; t < uttFrameNum[uttId]; t++) {
-            size_t phoneNum = uttPhoneNum[uttId];            
-            size_t timeId = (t + uttFrameBeginIdx[uttId])*numChannels + uttFrameToChanInd[uttId]; //time ID in MB for t
+        ElemType P_lx = betaScore[zeroID];                                                                //p(y|x)
+                                                                                                          //#pragma omp parallel for
+        for (int t = 0; t < uttFrameNum[uttId]; t++)
+        {
+            size_t phoneNum = uttPhoneNum[uttId];
+            size_t timeId = (t + uttFrameBeginIdx[uttId]) * numChannels + uttFrameToChanInd[uttId]; //time ID in MB for t
             for (int u = 0; u < phoneNum; u++)
             {
-                size_t alphaId = maxPhoneNum* timeId + u;     //alpha ID for (t,u)   
+                size_t alphaId = maxPhoneNum * timeId + u; //alpha ID for (t,u)
                 // Index of the current phone in minibatch
-//                size_t unitId = (u + uttBeginPhonePos[uttId] )* numChannels + uttToChanInd[uttId];  //phoneseq id in chunk for u
-                size_t tuID = uttBeginForOutputditribution[uttId] + t*phoneNum + u;      //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
+                //                size_t unitId = (u + uttBeginPhonePos[uttId] )* numChannels + uttToChanInd[uttId];  //phoneseq id in chunk for u
+                size_t tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + u; //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
 
-                x = alphaScore[alphaId] + betaScore[alphaId] - P_lx;   //log of alpha(t,u)*beta(t,u)/p(y|x)
+                x = alphaScore[alphaId] + betaScore[alphaId] - P_lx; //log of alpha(t,u)*beta(t,u)/p(y|x)
 
                 for (int k = 0; k < totalPhoneNum; k++)
                 {
-                    size_t ktuID = tuID*totalPhoneNum + k;  //ID for P(k|t,u)
+                    size_t ktuID = tuID * totalPhoneNum + k; //ID for P(k|t,u)
                     y = x + prob[ktuID];
 
                     if (y < LZERO)
                         RNNTscore[ktuID] = 0.0f;
                     else
-                        RNNTscore[ktuID] = exp(y);           
-                    
+                        RNNTscore[ktuID] = exp(y);
                 }
-                if (u < phoneNum-1 )  //k == y(u+1)
+                if (u < phoneNum - 1) //k == y(u+1)
                 {
-                    long phoneId = phoneSeq[uttId*maxPhoneNum + u+1];  //actual phone ID for u+1
-                    size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u+1)|t,u)
-                    size_t betaId = alphaId + 1; //betaId for (t,u+1)
+                    long phoneId = phoneSeq[uttId * maxPhoneNum + u + 1]; //actual phone ID for u+1
+                    size_t probId = tuID * totalPhoneNum + phoneId;       // ID for p(y(u+1)|t,u)
+                    size_t betaId = alphaId + 1;                          //betaId for (t,u+1)
 
                     x = alphaScore[alphaId] + betaScore[betaId] + prob[probId] - P_lx;
                     if (x < LZERO)
                         y = 0.0f;
                     else
                         y = exp(x);
-                    RNNTscore[probId] -= y;      
+                    RNNTscore[probId] -= y;
                 }
                 if (t < uttFrameNum[uttId] - 1)
                 {
                     // k == phi
-                    size_t probId = tuID *totalPhoneNum + blankTokenId;
-                    size_t betaId = alphaId + numChannels * maxPhoneNum;  //beta ID for(t+1,u)
+                    size_t probId = tuID * totalPhoneNum + blankTokenId;
+                    size_t betaId = alphaId + numChannels * maxPhoneNum; //beta ID for(t+1,u)
                     x = alphaScore[alphaId] + betaScore[betaId] + prob[probId] - P_lx;
 
                     if (x < LZERO)
@@ -7125,7 +7195,7 @@ void _assignRNNTScore(
 
                 if (u == phoneNum - 1 && t == uttFrameNum[uttId] - 1)
                 {
-                    size_t probId = tuID *totalPhoneNum + blankTokenId;
+                    size_t probId = tuID * totalPhoneNum + blankTokenId;
                     x = alphaScore[alphaId] + prob[probId] - P_lx;
                     if (x < LZERO)
                         y = 0.0f;
@@ -7134,21 +7204,18 @@ void _assignRNNTScore(
                     RNNTscore[probId] -= y;
                 }
                 //for (size_t k == 0; k < totalPhoneNum; k++)
-                
             }
-            
         }
     }
 }
 
-
-template<class ElemType>
+template <class ElemType>
 void _assignRNNTScore2(
-    ElemType *RNNTscore,
-    ElemType *prob,
-    ElemType *alphaScore,
-    ElemType *betaScore,
-    ElemType *phoneSeq,
+    ElemType* RNNTscore,
+    ElemType* prob,
+    ElemType* alphaScore,
+    ElemType* betaScore,
+    ElemType* phoneSeq,
     const size_t uttNum,
     const std::vector<size_t>& uttFrameNum,
     const std::vector<size_t>& uttPhoneNum,
@@ -7162,96 +7229,93 @@ void _assignRNNTScore2(
     const size_t maxPhoneNum,
     const size_t totalPhoneNum,
     const size_t blankTokenId,
-    ElemType *derivativeF,
-    ElemType *derivativeG)
+    ElemType* derivativeF,
+    ElemType* derivativeG)
 
 {
-   for (size_t uttId = 0; uttId < uttNum; uttId++) {
+    for (size_t uttId = 0; uttId < uttNum; uttId++)
+    {
         size_t zeroID = (uttFrameBeginIdx[uttId] * numChannels + uttFrameToChanInd[uttId]) * maxPhoneNum; //beta id for (0,0)
-        ElemType P_lx = betaScore[zeroID]; //p(y|x)
-                                           //#pragma omp parallel for
-        for (int t = 0; t < uttFrameNum[uttId]; t++) {
+        ElemType P_lx = betaScore[zeroID];                                                                //p(y|x)
+                                                                                                          //#pragma omp parallel for
+        for (int t = 0; t < uttFrameNum[uttId]; t++)
+        {
             size_t phoneNum = uttPhoneNum[uttId];
-            size_t timeId = (t + uttFrameBeginIdx[uttId])*numChannels + uttFrameToChanInd[uttId]; //time ID in MB for t
+            size_t timeId = (t + uttFrameBeginIdx[uttId]) * numChannels + uttFrameToChanInd[uttId]; //time ID in MB for t
             for (int u = 0; u < phoneNum; u++)
             {
-                size_t alphaId = maxPhoneNum* timeId + u;     //alpha ID for (t,u)   
-                                                              // Index of the current phone in minibatch
-                                                              //                size_t unitId = (u + uttBeginPhonePos[uttId] )* numChannels + uttToChanInd[uttId];  //phoneseq id in chunk for u
-                size_t tuID = uttBeginForOutputditribution[uttId] + t*phoneNum + u;      //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
+                size_t alphaId = maxPhoneNum * timeId + u;                            //alpha ID for (t,u)
+                                                                                      // Index of the current phone in minibatch
+                                                                                      //                size_t unitId = (u + uttBeginPhonePos[uttId] )* numChannels + uttToChanInd[uttId];  //phoneseq id in chunk for u
+                size_t tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + u; //time-unit Id for (t,u), i.e. col ID for prob, RNNTscore
 
-               // x = alphaScore[alphaId] + betaScore[alphaId] - P_lx;   //log of alpha(t,u)*beta(t,u)/p(y|x)
-                long phoneId = (long)phoneSeq[uttId*maxPhoneNum + u + 1];  //actual phone ID for u+1
+                // x = alphaScore[alphaId] + betaScore[alphaId] - P_lx;   //log of alpha(t,u)*beta(t,u)/p(y|x)
+                long phoneId = (long) phoneSeq[uttId * maxPhoneNum + u + 1]; //actual phone ID for u+1
                 for (int k = 0; k < totalPhoneNum; k++)
                 {
-                    size_t ktuID = tuID*totalPhoneNum + k;  //ID for P(k|t,u)
+                    size_t ktuID = tuID * totalPhoneNum + k; //ID for P(k|t,u)
                     if (t == uttFrameNum[uttId] - 1 && u == phoneNum - 1 && k == blankTokenId)
                     {
                         RNNTscore[ktuID] = -exp(alphaScore[alphaId] - P_lx);
                     }
-                    else if (t<uttFrameNum[uttId] - 1 && k == blankTokenId)
+                    else if (t < uttFrameNum[uttId] - 1 && k == blankTokenId)
                     {
                         //grads_tuk[grads_tuk_index + k] = -(alphas[alphas_index + u] / pr_yx)*beta_t_u;
                         size_t betaId = alphaId + numChannels * maxPhoneNum; //beta if for (t+1,u)
                         RNNTscore[ktuID] = -exp(alphaScore[alphaId] - P_lx + betaScore[betaId]);
                     }
-                    else if (u<phoneNum - 1 && k == phoneId)
+                    else if (u < phoneNum - 1 && k == phoneId)
                     {
                         //grads_tuk[grads_tuk_index + k] = -(alphas[alphas_index + u] / pr_yx)*beta_tu_;
                         size_t betaId = alphaId + 1; //beta if for (t,u+1)
                         RNNTscore[ktuID] = -exp(alphaScore[alphaId] - P_lx + betaScore[betaId]);
-
                     }
                     else
                     {
                         RNNTscore[ktuID] = 0;
                     }
-
                 }
-               
-
             }
-
         }
-        for (int t = 0; t < uttFrameNum[uttId]; t++) {
-            size_t timeId = (t + uttFrameBeginIdx[uttId])*numChannels + uttFrameToChanInd[uttId];
+        for (int t = 0; t < uttFrameNum[uttId]; t++)
+        {
+            size_t timeId = (t + uttFrameBeginIdx[uttId]) * numChannels + uttFrameToChanInd[uttId];
             size_t phoneNum = uttPhoneNum[uttId];
-            for (int k = 0; k<totalPhoneNum; k++)
+            for (int k = 0; k < totalPhoneNum; k++)
             {
-                for (int u = 0; u<phoneNum; u++)
+                for (int u = 0; u < phoneNum; u++)
                 {
-                    size_t tuID = uttBeginForOutputditribution[uttId] + t*phoneNum + u;
-                    for (int k_tmp = 0; k_tmp<totalPhoneNum; k_tmp++)
+                    size_t tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + u;
+                    for (int k_tmp = 0; k_tmp < totalPhoneNum; k_tmp++)
                     {
-                        size_t ktuID = tuID*totalPhoneNum + k_tmp;
-                        derivativeF[timeId*totalPhoneNum + k] += RNNTscore[ktuID] * exp(prob[ktuID]) * (k == k_tmp ? 1 - exp(prob[tuID*totalPhoneNum + k]): 0 - exp(prob[tuID*totalPhoneNum+k]));
+                        size_t ktuID = tuID * totalPhoneNum + k_tmp;
+                        derivativeF[timeId * totalPhoneNum + k] += RNNTscore[ktuID] * exp(prob[ktuID]) * (k == k_tmp ? 1 - exp(prob[tuID * totalPhoneNum + k]) : 0 - exp(prob[tuID * totalPhoneNum + k]));
                     }
-
                 }
             }
         }
 
-        for (int u = 0; u<uttPhoneNum[uttId]; u++)
+        for (int u = 0; u < uttPhoneNum[uttId]; u++)
         {
             size_t phoneNum = uttPhoneNum[uttId];
-            size_t timeId = (u + uttPhoneBeginIdx[uttId])*numPhoneChannels + uttPhoneToChanInd[uttId];
-            for (int k = 0; k<totalPhoneNum; k++)
+            size_t timeId = (u + uttPhoneBeginIdx[uttId]) * numPhoneChannels + uttPhoneToChanInd[uttId];
+            for (int k = 0; k < totalPhoneNum; k++)
             {
-                for (int t = 0; t<uttFrameNum[uttId]; t++)
+                for (int t = 0; t < uttFrameNum[uttId]; t++)
                 {
-                    size_t tuID = uttBeginForOutputditribution[uttId] + t*phoneNum + u;
-                    
-                    for (int k_tmp = 0; k_tmp<totalPhoneNum; k_tmp++)
+                    size_t tuID = uttBeginForOutputditribution[uttId] + t * phoneNum + u;
+
+                    for (int k_tmp = 0; k_tmp < totalPhoneNum; k_tmp++)
                     {
-                        size_t ktuID = tuID*totalPhoneNum + k_tmp;
-                        derivativeG[timeId*totalPhoneNum + k] += RNNTscore[ktuID] * exp(prob[ktuID]) * (k == k_tmp ? 1 - exp(prob[tuID*totalPhoneNum + k]): 0 - exp(prob[tuID*totalPhoneNum + k]));
+                        size_t ktuID = tuID * totalPhoneNum + k_tmp;
+                        derivativeG[timeId * totalPhoneNum + k] += RNNTscore[ktuID] * exp(prob[ktuID]) * (k == k_tmp ? 1 - exp(prob[tuID * totalPhoneNum + k]) : 0 - exp(prob[tuID * totalPhoneNum + k]));
                     }
                 }
             }
         }
     }
 }
-template<typename ElemType>
+template <typename ElemType>
 ElemType compute_alphas(const ElemType* const probs_tuk, ElemType* const alphas, int T, int U, const ElemType* label)
 {
     alphas[0] = 1;
@@ -7259,78 +7323,78 @@ ElemType compute_alphas(const ElemType* const probs_tuk, ElemType* const alphas,
     int alphabet_size_ = 5;
     int null_label_ = 4;
     int alphabet_index = 0;
-    for (int t = 0; t<T; t++)
+    for (int t = 0; t < T; t++)
     {
-        alphabet_index = t*U;
-        for (int u = 0; u<U; u++)
+        alphabet_index = t * U;
+        for (int u = 0; u < U; u++)
         {
-            if (t>0)
+            if (t > 0)
             {
-                int tuk_index_tmp = (t - 1)*U*alphabet_size_;
-                tuk_null_index = tuk_index_tmp + u*alphabet_size_ + null_label_;
-                alphas[alphabet_index + u] += alphas[(t - 1)*(U)+u] * exp(probs_tuk[tuk_null_index]);
+                int tuk_index_tmp = (t - 1) * U * alphabet_size_;
+                tuk_null_index = tuk_index_tmp + u * alphabet_size_ + null_label_;
+                alphas[alphabet_index + u] += alphas[(t - 1) * (U) + u] * exp(probs_tuk[tuk_null_index]);
             }
-            if (u>0)
+            if (u > 0)
             {
-                int tuk_index_tmp = t*U*alphabet_size_;
-                tuk_forward_index = tuk_index_tmp + (u - 1)*alphabet_size_ + (int)label[u ];
+                int tuk_index_tmp = t * U * alphabet_size_;
+                tuk_forward_index = tuk_index_tmp + (u - 1) * alphabet_size_ + (int) label[u];
                 alphas[alphabet_index + u] += alphas[alphabet_index + u - 1] * exp(probs_tuk[tuk_forward_index]);
             }
         }
     }
-    tuk_null_index = (T - 1)*U*alphabet_size_ + (U - 1)*alphabet_size_ + null_label_;
-    ElemType loglike = alphas[(T - 1)*U + (U - 1)] * exp(probs_tuk[tuk_null_index]);
+    tuk_null_index = (T - 1) * U * alphabet_size_ + (U - 1) * alphabet_size_ + null_label_;
+    ElemType loglike = alphas[(T - 1) * U + (U - 1)] * exp(probs_tuk[tuk_null_index]);
     return std::log(loglike);
 }
 
-template<typename ElemType>
-ElemType compute_betas_and_grad(ElemType* trans_grads, ElemType* predict_grads, const ElemType* const probs_tuk, 
-    ElemType* const grads_tuk, const ElemType * const label, int T, int U, ElemType* alphas, ElemType* betas) {
+template <typename ElemType>
+ElemType compute_betas_and_grad(ElemType* trans_grads, ElemType* predict_grads, const ElemType* const probs_tuk,
+                                ElemType* const grads_tuk, const ElemType* const label, int T, int U, ElemType* alphas, ElemType* betas)
+{
     int alphabet_size_ = 5;
     int null_label_ = 4;
     //std::fill(trans_grads, trans_grads + T*alphabet_size_, 0.0);
     //std::fill(predict_grads, predict_grads + U*alphabet_size_, 0.0);
-    int tuk_null_index = (T - 1)*U*alphabet_size_ + (U - 1)*alphabet_size_ + null_label_;
+    int tuk_null_index = (T - 1) * U * alphabet_size_ + (U - 1) * alphabet_size_ + null_label_;
     //std::fill(betas, betas + U, exp(probs_tuk[tuk_null_index]));
-    ElemType pr_yx = alphas[(T - 1)*U + (U - 1)] + probs_tuk[tuk_null_index];
+    ElemType pr_yx = alphas[(T - 1) * U + (U - 1)] + probs_tuk[tuk_null_index];
     ElemType beta_tu = exp(probs_tuk[tuk_null_index]), beta_tu_ = exp(probs_tuk[tuk_null_index]), beta_t_u = exp(probs_tuk[tuk_null_index]);
     for (int t = T - 1; t >= 0; t--)
     {
-        int alphas_index = t*U;
+        int alphas_index = t * U;
         for (int u = U - 1; u >= 0; u--)
         {
             beta_tu_ = beta_tu;
             beta_t_u = betas[u];
-            int tu_index = t*U*alphabet_size_ + u*alphabet_size_;
+            int tu_index = t * U * alphabet_size_ + u * alphabet_size_;
             beta_tu = 0;
-            if (t<T - 1)
+            if (t < T - 1)
             {
-                beta_tu += beta_t_u*exp(probs_tuk[tu_index + null_label_]);
+                beta_tu += beta_t_u * exp(probs_tuk[tu_index + null_label_]);
             }
-            if (u<U - 1)
+            if (u < U - 1)
             {
-                beta_tu += beta_tu_*exp(probs_tuk[tu_index + (int)label[u+1]]);
+                beta_tu += beta_tu_ * exp(probs_tuk[tu_index + (int) label[u + 1]]);
             }
             if (t == T - 1 && u == U - 1)
             {
                 beta_tu = exp(probs_tuk[tuk_null_index]);
             }
             //betas[u] = beta_tu;
-            int grads_tuk_index = (u + t*U)*alphabet_size_;
-            for (int k = 0; k<alphabet_size_; k++)
+            int grads_tuk_index = (u + t * U) * alphabet_size_;
+            for (int k = 0; k < alphabet_size_; k++)
             {
-                if (t<T - 1 && k == null_label_)
+                if (t < T - 1 && k == null_label_)
                 {
                     //grads_tuk[grads_tuk_index + k] = -(alphas[alphas_index + u] / pr_yx)*beta_t_u;
-                    
-                        grads_tuk[grads_tuk_index + k] = -exp(alphas[alphas_index + u] - pr_yx + betas[(t+1)*U+u]);
+
+                    grads_tuk[grads_tuk_index + k] = -exp(alphas[alphas_index + u] - pr_yx + betas[(t + 1) * U + u]);
                 }
-                else if (u<U - 1 && k == (int)label[u+1])
+                else if (u < U - 1 && k == (int) label[u + 1])
                 {
                     //grads_tuk[grads_tuk_index + k] = -(alphas[alphas_index + u] / pr_yx)*beta_tu_;
-                    
-                        grads_tuk[grads_tuk_index + k] = -exp(alphas[alphas_index + u] - pr_yx + betas[(t )*U + u+1]);
 
+                    grads_tuk[grads_tuk_index + k] = -exp(alphas[alphas_index + u] - pr_yx + betas[(t) *U + u + 1]);
                 }
                 else
                 {
@@ -7339,32 +7403,31 @@ ElemType compute_betas_and_grad(ElemType* trans_grads, ElemType* predict_grads, 
             }
         }
     }
-    for (int t = 0; t<T; t++)
+    for (int t = 0; t < T; t++)
     {
-        int trans_grads_index = t*alphabet_size_;
-        for (int k = 0; k<alphabet_size_; k++)
+        int trans_grads_index = t * alphabet_size_;
+        for (int k = 0; k < alphabet_size_; k++)
         {
-            for (int u = 0; u<U; u++)
+            for (int u = 0; u < U; u++)
             {
-                int tuk_index = (u + t*U)*alphabet_size_;
+                int tuk_index = (u + t * U) * alphabet_size_;
 
-                for (int k_tmp = 0; k_tmp<alphabet_size_; k_tmp++)
+                for (int k_tmp = 0; k_tmp < alphabet_size_; k_tmp++)
                 {
                     trans_grads[trans_grads_index + k] += grads_tuk[tuk_index + k_tmp] * exp(probs_tuk[tuk_index + k_tmp]) * (k == k_tmp ? 1 : 0 - exp(probs_tuk[tuk_index + k]));
                 }
-
             }
         }
     }
-    for (int u = 0; u<U; u++)
+    for (int u = 0; u < U; u++)
     {
-        int predict_grads_index = u*alphabet_size_;
-        for (int k = 0; k<alphabet_size_; k++)
+        int predict_grads_index = u * alphabet_size_;
+        for (int k = 0; k < alphabet_size_; k++)
         {
-            for (int t = 0; t<T; t++)
+            for (int t = 0; t < T; t++)
             {
-                int tuk_index = (u + t*U)*alphabet_size_;
-                for (int k_tmp = 0; k_tmp<alphabet_size_; k_tmp++)
+                int tuk_index = (u + t * U) * alphabet_size_;
+                for (int k_tmp = 0; k_tmp < alphabet_size_; k_tmp++)
                 {
                     predict_grads[predict_grads_index + k] += grads_tuk[tuk_index + k_tmp] * exp(probs_tuk[tuk_index + k_tmp]) * (1 - exp(probs_tuk[tuk_index + k]));
                 }
@@ -7373,11 +7436,11 @@ ElemType compute_betas_and_grad(ElemType* trans_grads, ElemType* predict_grads, 
     }
     return std::log(beta_tu);
 }
-template<class ElemType>
+template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
     const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
-    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType> & totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
-    const std::vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, CPUMatrix<ElemType>& totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t>& uttBeginFrame, const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
 {
     // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
     if (isColWise)
@@ -7392,133 +7455,129 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
         for (size_t t = 0; t < maxFrameNum; t++)
         {
             _assignAlphaScore(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
-                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+                              uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
         }
 
         for (LONG64 t = maxFrameNum - 1; t >= 0; t--)
         {
             _assignBetaScore(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
-                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+                             uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
         }
 
         std::vector<ElemType> scores(uttNum);
         _assignTotalScore(beta.Data(), scores, uttNum, uttToChanInd, uttBeginFrame, numParallelSequences, maxPhoneNum);
 
         _assignCTCScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttToChanInd,
-            uttBeginFrame, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
+                        uttBeginFrame, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
 
         totalScore(0, 0) = 0.0;
         for (size_t utt = 0; utt < uttNum; utt++)
         {
-            totalScore(0,0) -= scores[utt];
+            totalScore(0, 0) -= scores[utt];
         }
 
         return *this;
-
     }
-    else {
+    else
+    {
         LogicError("Only ColWise minibatch layout is supported.");
     }
 
     return *this;
 }
-template<class ElemType>
+template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp1(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& in2, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
-    const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
-    const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
+                                                        const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
+                                                        const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
 {
-    
+
     if (in1.IsEmpty() || in2.IsEmpty())
         LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
-    if (in1.GetNumRows() != in2.GetNumRows() )
+    if (in1.GetNumRows() != in2.GetNumRows())
         InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
     //in1.Print("F");
     //in2.Print("G");
     auto& us = *this;
     RequireSize(in1.GetNumRows(), totalcol);
-   
-    long numSequences = (long)uttFrameToChanInd.size();
-    long n = (long)GetNumRows(); 
-//#pragma omp parallel for
-    for (long k =0; k< n; k++)         //loop for every k (i.e. phone)
-        for (long s = 0; s < numSequences; s++)   //loop for every utt
-        {        
-            long frameNum = (long)uttFrameNum[s];
-            long phoneNum = (long)uttPhoneNum[s];
-            for (long t = 0; t < frameNum; t++)  //loop for every t
+
+    long numSequences = (long) uttFrameToChanInd.size();
+    long n = (long) GetNumRows();
+    //#pragma omp parallel for
+    for (long k = 0; k < n; k++)                //loop for every k (i.e. phone)
+        for (long s = 0; s < numSequences; s++) //loop for every utt
+        {
+            long frameNum = (long) uttFrameNum[s];
+            long phoneNum = (long) uttPhoneNum[s];
+            for (long t = 0; t < frameNum; t++) //loop for every t
             {
-                for (long u = 0; u < phoneNum; u++)  //loop for every u
+                for (long u = 0; u < phoneNum; u++) //loop for every u
                 {
-                    us(k, uttBeginForOutputditribution[s] + t*phoneNum + u) = in1(k, (uttFrameBeginIdx[s] + t) * numParallelSequences + uttFrameToChanInd[s]) +
-                        in2(k, (uttPhoneBeginIdx[s] + u)*numPhoneParallelSequences + uttPhoneToChanInd[s]);
+                    us(k, uttBeginForOutputditribution[s] + t * phoneNum + u) = in1(k, (uttFrameBeginIdx[s] + t) * numParallelSequences + uttFrameToChanInd[s]) +
+                                                                                in2(k, (uttPhoneBeginIdx[s] + u) * numPhoneParallelSequences + uttPhoneToChanInd[s]);
                 }
             }
-            
         }
     return *this;
-
 }
-template<class ElemType>
+template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignUserOp2(CPUMatrix<ElemType>& in1, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
-    const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
-    const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
+                                                        const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
+                                                        const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
 {
 
     size_t nRow = in1.GetNumRows();
     size_t uttNum = uttFrameToChanInd.size();
     auto& us = *this;
     if (Idx == 0)
-        RequireSize(nRow, maxFrameNum*numParallelSequences);
+        RequireSize(nRow, maxFrameNum * numParallelSequences);
     else
-        RequireSize(nRow, maxPhoneNum*numPhoneParallelSequences);
+        RequireSize(nRow, maxPhoneNum * numPhoneParallelSequences);
 
     SetValue(0.0);
-     
+
     //#pragma omp parallel for
-    for (long k = 0; k < (long)nRow; k++)
+    for (long k = 0; k < (long) nRow; k++)
     {
-        for (long seqId = 0; seqId < (long)uttNum; seqId++)
+        for (long seqId = 0; seqId < (long) uttNum; seqId++)
         {
             size_t frameNum = uttFrameNum[seqId];
             size_t phoneNum = uttPhoneNum[seqId];
             if (Idx == 0)
             {
-                for (long t = 0; t < (long)frameNum; t++)
+                for (long t = 0; t < (long) frameNum; t++)
                 {
-                    size_t timeId = (t + uttFrameBeginIdx[seqId])*numParallelSequences + uttFrameToChanInd[seqId];
-                    
-                    for (long u = 0; u < (long)phoneNum; u++)
+                    size_t timeId = (t + uttFrameBeginIdx[seqId]) * numParallelSequences + uttFrameToChanInd[seqId];
+
+                    for (long u = 0; u < (long) phoneNum; u++)
                     {
-                        size_t tuId = uttBeginForOutputditribution[seqId] + t*phoneNum + u;
+                        size_t tuId = uttBeginForOutputditribution[seqId] + t * phoneNum + u;
                         us(k, timeId) += in1(k, tuId);
                     }
                 }
             }
             else
             {
-                for (long u = 0; u < (long)phoneNum; u++)
-                {                    
-                    size_t timeId = (u + uttPhoneBeginIdx[seqId])*numPhoneParallelSequences + uttPhoneToChanInd[seqId];
-                    for (long t = 0; t < (long)frameNum; t++)
+                for (long u = 0; u < (long) phoneNum; u++)
+                {
+                    size_t timeId = (u + uttPhoneBeginIdx[seqId]) * numPhoneParallelSequences + uttPhoneToChanInd[seqId];
+                    for (long t = 0; t < (long) frameNum; t++)
                     {
-                        size_t tuId = uttBeginForOutputditribution[seqId] + t*phoneNum + u;
+                        size_t tuId = uttBeginForOutputditribution[seqId] + t * phoneNum + u;
                         us(k, timeId) += in1(k, tuId);
                     }
                 }
             }
-        }        
-            
+        }
     }
     return *this;
-
 }
-template<class ElemType>
+template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq,
-    const CPUMatrix<ElemType>& phoneBoundary, const vector<size_t>& uttFrameToChanInd, const vector<size_t> & uttFrameBeginIdx, const vector<size_t> & uttBeginForOutputditribution, 
-    const vector<size_t>& uttPhoneToChanInd, const vector<size_t> & uttPhoneBeginIdx,
-    const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
-    CPUMatrix<ElemType>& totalScore, const size_t blankTokenId,  const int delayConstraint, const bool isColWise)
+                                                          const CPUMatrix<ElemType>& phoneBoundary, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttBeginForOutputditribution,
+                                                          const vector<size_t>& uttPhoneToChanInd, const vector<size_t>& uttPhoneBeginIdx,
+                                                          const vector<size_t>& uttFrameNum, const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
+                                                          CPUMatrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
 
 {
     // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
@@ -7529,8 +7588,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
         size_t uttNum = uttFrameNum.size();
         //fprintf(stderr, "enter AssignRNNTScore\n");
         // Max number of phones in utterances in this minibatch
-       // size_t maxPhoneNum = phoneSeq.GetNumRows();
-        
+        // size_t maxPhoneNum = phoneSeq.GetNumRows();
+
         //prob.Print("prob");
         //for (size_t s = 0; s < uttNum; s++)
         {
@@ -7538,23 +7597,23 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
             {
                 for (size_t u = 0; u < maxPhoneNum; u++)
                     _assignRNNTAlphaScore(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttFrameToChanInd,
-                        uttBeginForOutputditribution, numParallelSequences, uttNum, t, u, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+                                          uttBeginForOutputditribution, numParallelSequences, uttNum, t, u, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
             }
             //alpha.Print("alpha");
             for (LONG64 t = maxFrameNum - 1; t >= 0; t--)
             {
                 for (LONG64 u = maxPhoneNum - 1; u >= 0; u--)
                     _assignRNNTBetaScore(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttFrameToChanInd,
-                        uttBeginForOutputditribution, numParallelSequences, uttNum, t, u, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+                                         uttBeginForOutputditribution, numParallelSequences, uttNum, t, u, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
             }
         }
         //beta.Print("beta");
         std::vector<ElemType> scores(uttNum);
         _assignRNNTTotalScore(alpha.Data(), beta.Data(), scores, uttNum, uttFrameToChanInd, uttFrameBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, maxPhoneNum);
         this->SetValue(0.0);
-        
+
         _assignRNNTScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttFrameToChanInd,
-            uttBeginForOutputditribution, numParallelSequences, maxPhoneNum,  totalPhoneNum, blankTokenId);
+                         uttBeginForOutputditribution, numParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId);
         //    _assignRNNTScore2(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttFrameNum, uttPhoneNum, uttFrameBeginIdx, uttPhoneBeginIdx, uttFrameToChanInd, uttPhoneToChanInd,
         //        uttBeginForOutputditribution, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, totalPhoneNum, blankTokenId, m_derivativeForF.Data(), m_derivativeForG.Data());
         //this->Print("RNNT score");
@@ -7574,14 +7633,14 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemTy
         //beta.SetValue(0.0);
         //trans_grads.SetValue(0.0);
         //predict_grads.SetValue(0.0);
-        
+
         //ElemType score = compute_betas_and_grad(m_derivativeForF.Data(), m_derivativeForG.Data(), prob.Data(),
         //    Data(), phoneSeq.Data(), (int)maxFrameNum, (int)maxPhoneNum, alpha.Data(), beta.Data());
         //printf("%f\n", score);
         return *this;
-
     }
-    else {
+    else
+    {
         LogicError("Only ColWise minibatch layout is supported.");
     }
 
@@ -7693,7 +7752,7 @@ void CPUMatrix<ElemType>::_rcrfTransGrdCompute(size_t i,
                                                const CPUMatrix<ElemType>& pair_scores,
                                                CPUMatrix<ElemType>& grd,
                                                const size_t tPos // position
-                                               )
+)
 {
     int iNumLab = (int) alpha.GetNumRows();
 
@@ -7819,11 +7878,11 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
     omp_set_num_threads(numThreads);
     numThreads = omp_get_max_threads();
 
-    #ifdef USE_MKL
-        mkl_set_num_threads(numThreads);
-    #elif defined(USE_OPENBLAS)
-        openblas_set_num_threads(numThreads);
-    #endif
+#ifdef USE_MKL
+    mkl_set_num_threads(numThreads);
+#elif defined(USE_OPENBLAS)
+    openblas_set_num_threads(numThreads);
+#endif
 #endif
     return numThreads;
 }
@@ -7831,7 +7890,7 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
 template <class ElemType>
 int CPUMatrix<ElemType>::GetMaxNumThreads()
 {
-    int numThreads = (int)std::thread::hardware_concurrency();
+    int numThreads = (int) std::thread::hardware_concurrency();
 #ifdef _OPENMP
     numThreads = omp_get_max_threads();
 #endif
@@ -7911,8 +7970,8 @@ int CPUMatrix<ElemType>::Argmin() const
         int localMinArg = -1;
         ElemType localMinValue = std::numeric_limits<ElemType>::max();
 
-        #pragma omp for
-        for (int index = 0; index < (int)GetNumElements(); ++index)
+#pragma omp for
+        for (int index = 0; index < (int) GetNumElements(); ++index)
         {
             if (localMinValue > Data()[index])
             {
@@ -7926,7 +7985,7 @@ int CPUMatrix<ElemType>::Argmin() const
             }
         }
 
-        #pragma omp critical
+#pragma omp critical
         {
             if (minValue > localMinValue)
             {
@@ -7955,7 +8014,7 @@ int CPUMatrix<ElemType>::Argmax() const
         ElemType localMaxValue = std::numeric_limits<ElemType>::lowest();
 
 #pragma omp for
-        for (int index = 0; index < (int)GetNumElements(); ++index)
+        for (int index = 0; index < (int) GetNumElements(); ++index)
         {
             if (localMaxValue < Data()[index])
             {
@@ -7991,12 +8050,12 @@ int CPUMatrix<ElemType>::ArgOp(ElementWiseOperator reductionOp) const
 {
     switch (reductionOp)
     {
-        case ElementWiseOperator::opArgmin:
-            return Argmin();
-            break;
-        case ElementWiseOperator::opArgmax:
-            return Argmax();
-            break;
+    case ElementWiseOperator::opArgmin:
+        return Argmin();
+        break;
+    case ElementWiseOperator::opArgmax:
+        return Argmax();
+        break;
     }
 
     InvalidArgument("ArgOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
@@ -8013,13 +8072,13 @@ void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseO
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step/*=1*/)
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, size_t indices_step /*=1*/)
 {
-    ScatterValues(indices, value, data, alpha, num_indices, rows, cols, /*mask*/nullptr, /*numElemsPerMaskEntry*/0, indices_step);
+    ScatterValues(indices, value, data, alpha, num_indices, rows, cols, /*mask*/ nullptr, /*numElemsPerMaskEntry*/ 0, indices_step);
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, char* mask, size_t numElemsPerMaskEntry, size_t indices_step/*=1*/)
+void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, ElemType* data, ElemType alpha, size_t num_indices, size_t rows, size_t cols, char* mask, size_t numElemsPerMaskEntry, size_t indices_step /*=1*/)
 {
     if (!indices || !value || !data)
         LogicError("ScatterValues: input data is null.");
@@ -8035,7 +8094,7 @@ void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, Elem
             auto col_r = indices[i * indices_step];
             if (std::isnan(col_r) || col_r < 0)
                 continue;
-            auto col = (size_t)col_r;
+            auto col = (size_t) col_r;
             //ignore the elements that is not partitioned into this thread
             if (col % nthread != ithread)
                 continue;
@@ -8044,7 +8103,7 @@ void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, Elem
                 continue;
 
             if (col >= cols)
-                InvalidArgument("ScatterValues: Indices map out of bounds. %ld >= %ld", (long int)col, (long int)cols);
+                InvalidArgument("ScatterValues: Indices map out of bounds. %ld >= %ld", (long int) col, (long int) cols);
 
             auto index = col * rows;
             auto offset = i * rows;
@@ -8107,4 +8166,6 @@ template void CPUMatrix<short>::SetGaussianRandomValue(const short mean, const s
 
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft

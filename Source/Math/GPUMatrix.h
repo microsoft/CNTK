@@ -338,6 +338,9 @@ public:
     GPUMatrix<ElemType>& AssignElementDivisionOf(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
     GPUMatrix<ElemType>& ElementDivideBy(const GPUMatrix<ElemType>& a);
 
+	GPUMatrix<ElemType>& ElementMaxWith(const GPUMatrix<ElemType>& a);
+    GPUMatrix<ElemType>& AssignElementMaxOf(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b);
+
     GPUMatrix<ElemType>& ColumnElementMultiplyWith(const GPUMatrix<ElemType>& a);
     GPUMatrix<ElemType>& RowElementMultiplyWith(const GPUMatrix<ElemType>& a);
 

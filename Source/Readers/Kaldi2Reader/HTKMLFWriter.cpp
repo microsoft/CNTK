@@ -21,7 +21,12 @@
 #include <vld.h> // for memory leak detection
 #endif
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 // Create a Data Writer
 //DATAWRITER_API IDataWriter* DataWriterFactory(void)
@@ -90,7 +95,7 @@ void HTKMLFWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerConfig
         filelist.clear();
         std::wstring scriptPath = scriptpaths[i];
 
-        // TODO: The format specifier should probably be "%ls" here, but I'm not making that change as part of 
+        // TODO: The format specifier should probably be "%ls" here, but I'm not making that change as part of
         // this checkin as it is on the larger side and I want to limit its scope.
         fprintf(stderr, "HTKMLFWriter::Init: reading output script file %S ...", scriptPath.c_str());
         size_t n = 0;
@@ -236,10 +241,9 @@ void HTKMLFWriter<ElemType>::Save(std::wstring& outputFile, Matrix<ElemType>& ou
         fprintf(stderr, "chunkeval: %d NaNs or INF detected in '%S' (%d frames)\n", (int) nansinf, outputFile.c_str(), (int) output.cols());
     // save it
     msra::files::make_intermediate_dirs(outputFile);
-    msra::util::attempt(5, [&]()
-                        {
-                            msra::asr::htkfeatwriter::write(outputFile, "USER", this->sampPeriod, output);
-                        });
+    msra::util::attempt(5, [&]() {
+        msra::asr::htkfeatwriter::write(outputFile, "USER", this->sampPeriod, output);
+    });
 
     fprintf(stderr, "evaluate: writing %zu frames of %S\n", output.cols(), outputFile.c_str());
 }
@@ -265,10 +269,9 @@ void HTKMLFWriter<ElemType>::SaveToKaldiFile(std::wstring& outputFile, Matrix<El
         fprintf(stderr, "chunkeval: %d NaNs or INF detected in '%S' (%d frames)\n", (int) nansinf, outputFile.c_str(), (int) output.cols());
     // save it
     msra::files::make_intermediate_dirs(outputFile);
-    msra::util::attempt(5, [&]()
-                        {
-                            msra::asr::htkfeatwriter::writeKaldi(outputFile, "USER", this->sampPeriod, output, sizeof(ElemType));
-                        });
+    msra::util::attempt(5, [&]() {
+        msra::asr::htkfeatwriter::writeKaldi(outputFile, "USER", this->sampPeriod, output, sizeof(ElemType));
+    });
 
     fprintf(stderr, "evaluate: writing %zu frames of %S\n", output.cols(), outputFile.c_str());
 }
@@ -278,6 +281,17 @@ void HTKMLFWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<Lab
 {
 }
 
+template <class ElemType>
+std::wstring HTKMLFWriter<ElemType>::GetCurOutputFile(std::wstring outputName)
+{
+    if (outputFiles.size() == 0)
+        return (std::wstring(L""));
+    size_t id = outputNameToIdMap[outputName];
+    return outputFiles[id][outputFileIndex];
+}
+
 template class HTKMLFWriter<float>;
 template class HTKMLFWriter<double>;
-} } }
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft

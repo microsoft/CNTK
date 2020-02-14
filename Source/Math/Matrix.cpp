@@ -2586,6 +2586,12 @@ Matrix<ElemType>& Matrix<ElemType>::ElementDivideBy(const Matrix<ElemType>& a)
     return AssignElementDivisionOf(*this, a);
 }
 
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::ElementMaxWith(const Matrix<ElemType>& a)
+{
+    return AssignElementMaxOf(*this, a);
+}
+
 //[this]=a .* b
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignElementProductOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
@@ -2663,6 +2669,31 @@ Matrix<ElemType>& Matrix<ElemType>::AssignElementDivisionOf(const Matrix<ElemTyp
                             this,
                             m_CPUMatrix->AssignElementDivisionOf(*a.m_CPUMatrix, *b.m_CPUMatrix),
                             m_GPUMatrix->AssignElementDivisionOf(*a.m_GPUMatrix, *b.m_GPUMatrix),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignElementMaxOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("AssignElementMaxOf: Matrix is empty.");
+
+    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+    if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+        InvalidArgument("The input matrix dimensions do not match.");
+
+    DecideAndMoveToRightDevice(a, b, *this);
+    if (!(a.GetMatrixType() == b.GetMatrixType()))
+        NOT_IMPLEMENTED;
+
+    SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->AssignElementMaxOf(*a.m_CPUMatrix, *b.m_CPUMatrix),
+                            m_GPUMatrix->AssignElementMaxOf(*a.m_GPUMatrix, *b.m_GPUMatrix),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 
@@ -6291,9 +6322,9 @@ alpha._transferToDevice(CPUDEVICE);
 
     alpha.Resize(1, prob.GetNumCols());
     beta.Resize(1, prob.GetNumCols());
-        //Resize(prob.GetNumRows(), prob.GetNumCols());
+    //Resize(prob.GetNumRows(), prob.GetNumCols());
 
-        alpha.SetValue(LZERO);
+    alpha.SetValue(LZERO);
     beta.SetValue(LZERO);
     //SetValue(LZERO);
     //SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);

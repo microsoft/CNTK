@@ -371,6 +371,9 @@ public:
     Matrix<ElemType>& AssignElementDivisionOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
     Matrix<ElemType>& ElementDivideBy(const Matrix<ElemType>& a);
 
+	Matrix<ElemType>& ElementMaxWith(const Matrix<ElemType>& a);
+	Matrix<ElemType>& AssignElementMaxOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
+
     Matrix<ElemType>& ColumnElementMultiplyWith(const Matrix<ElemType>& a);
     Matrix<ElemType>& RowElementMultiplyWith(const Matrix<ElemType>& a);
 

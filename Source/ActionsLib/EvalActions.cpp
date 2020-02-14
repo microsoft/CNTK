@@ -269,7 +269,26 @@ void DoWriteOutput(const ConfigParameters& config)
         else if (decodeType == 1)
             writer.WriteOutput_greedy(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         else if (decodeType == 2)
+        {
+            if (config.Exists(L"nbestOutputDir"))
+            {
+                wstring nbestOutputDir = config(L"nbestOutputDir");
+                writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh, &nbestOutputDir);
+            }
             writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh);
+        }
+        else if (decodeType == 4)
+        {
+            if (!config.Exists(L"nbestOutputDir"))
+                InvalidArgument("nbestOutputDir not specified");
+            if (!config.Exists(L"nbestInputDir"))
+                InvalidArgument("nbestInputDir not specified");
+            wstring nbestOutputDir = config(L"nbestOutputDir");
+            wstring nbestInputDir = config(L"nbestInputDir");
+            writer.RescoreNbest(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, nbestInputDir, nbestOutputDir);
+        }
+        else
+            InvalidArgument("Invalid decode_type");
         //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
     }
     else if (config.Exists("outputPath"))
@@ -308,31 +327,34 @@ void DoWriteOutputJoint(const ConfigParameters& config)
         epochSize = requestDataSize;
     }
 
-    vector<wstring> outputNodeNamesVector;
-
     size_t numModels = config(L"numModels", "1");
+
+    vector<vector<wstring>> outputNodeNamesVector(numModels);
 
     vector<ComputationNetworkPtr> nets(numModels);
     vector<ElemType> combination_weights(numModels);
     for (int i = 0; i < numModels; i++)
     {
-        wstringstream modelPathToken;
+        wstringstream modelPathToken, outputNodeNamesToken;
         modelPathToken << L"modelPath" << i;
-        nets[i] = GetModelFromConfig<ConfigParameters, ElemType>(config, L"outputNodeNames", outputNodeNamesVector, modelPathToken.str());
+        outputNodeNamesToken << L"outputNodeNames" << i;
+        nets[i] = GetModelFromConfig<ConfigParameters, ElemType>(config, outputNodeNamesToken.str(), outputNodeNamesVector[i], modelPathToken.str());
 
         // set tracing flags
         nets[i]->EnableNodeTracing(config(L"traceNodeNamesReal", ConfigParameters::Array(stringargvector())),
                                    config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
                                    config(L"traceNodeNamesSparse", ConfigParameters::Array(stringargvector())));
 
-		wstringstream combinationWeightToken;
+        wstringstream combinationWeightToken;
         combinationWeightToken << L"combinationWeight" << i;
         combination_weights[i] = (ElemType) config(combinationWeightToken.str().c_str(), 1.0 / ((ElemType) numModels));
     }
 
-	int combination_method = config(L"combinationMethod", 0);
+    int combination_method = config(L"combinationMethod", 0);
+    bool renormalize_after_combination = config(L"renormalizeAfterCombination", false);
 
-    JointOutputWriter<ElemType> writer(nets, combination_weights, 1, combination_method);
+    JointOutputWriter<ElemType>
+        writer(nets, combination_weights, 1, combination_method, renormalize_after_combination);
 
     if (config.Exists("writer"))
     {
@@ -350,11 +372,15 @@ void DoWriteOutputJoint(const ConfigParameters& config)
         //writer.WriteOutput(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         else if (decodeType == 1)
             InvalidArgument("decode_type=1 has not yet been implemented for Joint decoding");
-            //writer.WriteOutput_greedy(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
+        //writer.WriteOutput_greedy(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         else if (decodeType == 2)
         {
-			writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh);
-		}
+            writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh);
+        }
+        //else if (decodeType == 4)
+        //{
+        //    writer.RescoreNbest();
+        //}
         else
             InvalidArgument("Invalid decode_type");
     }

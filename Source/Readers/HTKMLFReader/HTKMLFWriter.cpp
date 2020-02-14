@@ -171,6 +171,15 @@ void HTKMLFWriter<ElemType>::SaveMapping(std::wstring saveId, const std::map<Lab
 {
 }
 
+template <class ElemType>
+std::wstring HTKMLFWriter<ElemType>::GetCurOutputFile(std::wstring outputName)
+{
+    if (outputFiles.size() == 0)
+        return (std::wstring(L""));
+    size_t id = outputNameToIdMap[outputName];
+    return outputFiles[id][outputFileIndex];
+}
+
 template class HTKMLFWriter<float>;
 template class HTKMLFWriter<double>;
 } } }

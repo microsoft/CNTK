@@ -1,0 +1,373 @@
+\\ccpsofsep\am_s2\users\jinyli\ASR\test\bin\HResults\HResults.long.exe -t -h -c -A -z ::: -e ::: hum -e ::: umm -e ::: um-hum -e ::: um -e ::: hm -e ::: hmm -e ::: huh -e ::: mhm -e ::: uh-huh -e ::: hum-um -e ::: uh -e ::: uh-hum -e ::: uh-hums -e ::: uh-oh -e ::: huh-uh -e ::: sil -e ::: !sent_start -e ::: !sent_end -n -I decode\result\cross_wer_gru_eltgru\1.ref.mlf nul ..\decode\result\gru.mlf 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18800_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18800_0_1.en.wav.mfc
+ LAB: HOW     YOU DOING 
+ REC: HOW ARE YOU DOING 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18803_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18803_0_1.en.wav.mfc
+ LAB: WHO   DO YOU GO WITH 
+ REC: WHO'D    YOU GO WITH 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18804_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18804_0_1.en.wav.mfc
+ LAB: OHH THAT'S FINE WHERE'D YOU GO IRISH YOU SAID THE LENS WHAT KIND OF FOOD DO THEY HAVE 
+ REC: OHH THAT'S FINE WHERE'D YOU GO       YOU SAID THE LENS WHAT KIND OF FOOD DO THEY HAVE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18805_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18805_0_1.en.wav.mfc
+ LAB: OH  NICE WHERE DID YOU HAVE 
+ REC: OHH NICE WHERE DID YOU HAVE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18807_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18807_0_1.en.wav.mfc
+ LAB: YEAH WHERE IS THIS PLACE 
+ REC:      WHERE IS THIS PLACE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18808_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18808_0_1.en.wav.mfc
+ LAB: OH  I THINK I'VE HEARD OF THAT AREA 
+ REC: OHH I THINK I'VE HEARD OF THAT AREA 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18812_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18812_0_1.en.wav.mfc
+ LAB: THAT'S COOL SO WHAT'S THE PLACE LIKE IT'S A  YOU KNOW FORMAL OR MORE CASUAL SIT DOWN 
+ REC: THAT'S COOL SO WHAT'S THE PLACE LIKE IS   IT YOU KNOW FORMAL OR MORE CASUAL SIT DOWN 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18814_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18814_0_1.en.wav.mfc
+ LAB: YEAH I LOVE SWEET STUFF SO WHAT KIND OF DESSERTS DO THEY HAVE I'M ASSUMING LIKE YOU KNOW MEDITERRANEAN STUFF BUT 
+ REC:      I LOVE SWEET STUFF SO WHAT KIND OF DESSERTS DO THEY HAVE I'M ASSUMING LIKE YOU KNOW MEDITERRANEAN STUFF BUT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18815_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18815_0_1.en.wav.mfc
+ LAB: LIKE BACKUP     MAYBE 
+ REC: LIKE BACKGROUND MAYBE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18817_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18817_0_1.en.wav.mfc
+ LAB:      I'LL HAVE TO CHECK THAT OUT 
+ REC: NICE I    HOPE TO CHECK THAT OUT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18826_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18826_0_1.en.wav.mfc
+ LAB: HOW IT EXPENSIVE IS IT 
+ REC: HOW    EXPENSIVE IS IT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18827_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18827_0_1.en.wav.mfc
+ LAB:    THAT'S NOT BAD AT ALL AND IT'S LOCAL BEER RIGHT THEY BREW IT ONSANG   
+ REC: NO THAT'S NOT BAD AT ALL AND IT'S LOCAL BEER RIGHT THEY BREW IT ONSCREEN 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18830_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18830_0_1.en.wav.mfc
+ LAB: THAT'S COOL 
+ REC: LET'S  GO   
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18831_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18831_0_1.en.wav.mfc
+ LAB: ARE THERE A LOT OF PLACES IN COLUMBUS LIKE THAT LIKE IT'S THERE A BIG BREWERY CULTURE HERE 
+ REC: ARE THERE A LOT OF PLACES IN COLUMBUS LIKE THAT LIKE IT'S THERE A BIG BURY    CULTURE HERE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18833_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18833_0_1.en.wav.mfc
+ LAB: I HEARD THAT'S YOU KNOW THAT HAPPENING PLACE WHERE MOST PEOPLE GO OUT 
+ REC: I HEARD THAT'S YOU KNOW THE  HAPPENING PLACE WHERE MOST PEOPLE GO OUT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18834_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18834_0_1.en.wav.mfc
+ LAB: BECAUSE IT SEEMS LIKE 
+ REC: IS      IT SEEMS LIKE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18835_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18835_0_1.en.wav.mfc
+ LAB: YEAH I    AM   WONDERING ARE YOU GOING TO BE THERE 
+ REC: YEAH YEAH WHEN           ARE YOU GOING TO BE THERE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18837_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18837_0_1.en.wav.mfc
+ LAB: OH  OKAY WELL YOU SHOULD TELL HIM THAT HE HAS TO TRY THAT SHE'S  CONE THEN BECAUSE THAT'S 
+ REC: OHH OKAY WELL YOU SHOULD TELL HIM THAT HE HAS TO TRY THE  CHEESE CONE THEN CAUSE   THAT'S 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18838_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18838_0_1.en.wav.mfc
+ LAB: YOU PROBABLY NEED TO GO 
+ REC:     PROBABLY NEED TO GO 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18839_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18839_0_1.en.wav.mfc
+ LAB: YES  LET ME KNOW WHAT YOU THINK OF CINCINNATI IT'S IT'S A COOL PLACE 
+ REC: YEAH LET ME KNOW WHAT YOU THINK OF CINCINNATI IT'S IT'S A COOL PLACE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18840_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18840_0_1.en.wav.mfc
+ LAB: OKAY HAVE FUN BYE 
+ REC: OKAY HOW  FUN BYE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18843_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18843_0_1.en.wav.mfc
+ LAB:    GREAT  I'M DOING GREAT 
+ REC: TO CREATE I'M DOING GREAT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18845_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18845_0_1.en.wav.mfc
+ LAB: AND WENT WITH MY BOYFRIEND 
+ REC: I   WENT WITH MY BOYFRIEND 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18849_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18849_0_1.en.wav.mfc
+ LAB: IT'S PRETTY CASUAL YOU CAN JUST WEAR   PRETTY MUCH WHATEVER PEOPLE DON'T REALLY DRESS UP TO GO THERE 
+ REC: IT'S PRETTY CASUAL YOU CAN JUST WEAR A PRETTY MUCH WHATEVER PEOPLE DON'T REALLY DRESS UP TO GO THERE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18851_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18851_0_1.en.wav.mfc
+ LAB: THERE'S WAITERS THAT SIT DOWN RESTAURANT  AND THEY HAVE A NICE DESSERT KIND OF BAR THERE'S LIKE A 
+ REC:         WAITERS THAT SIT DOWN RESTAURANTS AND THEY HAVE A NICE DESSERT KIND OF BAR THERE'S LIKE A 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18852_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18852_0_1.en.wav.mfc
+ LAB: MOSTLY THEY JUST HAVE DIFFERENT KINDS OF CAKES SO I GUESS THAT'S NOT REALLY VERY            MEDITERRANEAN BUT I THINK THEY DO HAVE 
+ REC: MOSTLY THEY JUST HAVE DIFFERENT KINDS OF CAKES SO I GUESS IT'S   NOT REALLY VERY MUCH RAINY AND           BUT I THINK THEY DO HAVE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18857_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18857_0_1.en.wav.mfc
+ LAB: AND WHAT ABOUT YOU I HEARD YOUR NEW TYPICAL OF       THIS ARE YOU HAVE YOU      BENT ANY RESTAURANTS YET 
+ REC: AND WHAT ABOUT YOU I HEARD YOUR NEW TO      COLUMBUS      ARE YOU HAVE YOU BEEN TO   ANY RESTAURANTS YET 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18858_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18858_0_1.en.wav.mfc
+ LAB: GREAT WHERE DID YOU GO 
+ REC:       WHERE DID YOU GO 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18859_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18859_0_1.en.wav.mfc
+ LAB: OH OKAY OKAY 
+ REC:    OKAY OKAY 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18861_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18861_0_1.en.wav.mfc
+ LAB: THAT SOUNDS GREAT WHAT ARE THE SAUCES   WHAT ARE THE SAUCES LIKE 
+ REC: THAT SOUNDS GREAT WHAT ARE THE SAUSAGES WHAT ARE THE SAUCES LIKE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18862_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18862_0_1.en.wav.mfc
+ LAB: WHILE YOU REALLY DON'T LIKE SPICY FOOD 
+ REC: WELL  YOU REALLY DON'T LIKE SPICY FOOD 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18864_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18864_0_1.en.wav.mfc
+ LAB: YEAH THAT DEFINITELY SOUNDS GOOD SO HOW FORMAL    IS IT I HAVEN'T BEEN THERE 
+ REC: YEAH THAT DEFINITELY SOUNDS GOOD SO HOW FORMALISM       I HAVEN'T BEEN THERE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18865_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18865_0_1.en.wav.mfc
+ LAB:      YEAH I'M SURE THEY DO PROBABLY BUSINESS MEETINGS AND THAT KIND OF THING THERE TOO 
+ REC: YEAH YEAH I'M SURE THEY DO PROBABLY BUSINESS MEETINGS AND THAT KIND OF THING THERE TOO 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18868_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18868_0_1.en.wav.mfc
+ LAB:    NO     ESPECIALLY IF IT'S GOOD QUALITY LIKE YOU SAY IT IS 
+ REC: NO NO AND ESPECIALLY IF IT'S GOOD QUALITY LIKE YOU SAY IT IS 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18869_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18869_0_1.en.wav.mfc
+ LAB: WELL THAT SOUNDS GREAT 
+ REC: OHH  THAT SOUNDS GREAT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18872_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18872_0_1.en.wav.mfc
+ LAB: YEAH IT'S   REALLY GREAT AND 
+ REC: YEAH THAT'S REALLY GREAT AND 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18873_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18873_0_1.en.wav.mfc
+ LAB: YEAH THEY  BROUGHT IT RIGHT THERE YEAH 
+ REC: YEAH RIGHT            RIGHT THERE YEAH 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18876_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18876_0_1.en.wav.mfc
+ LAB:         
+ REC: <BLANK> 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18879_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18879_0_1.en.wav.mfc
+ LAB: AND THERE'S ACTUALLY LOTS OF      DIFFERENCE 
+ REC: AND THERE'S ACTUALLY LOTS OF GOOD ONES       
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18880_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18880_0_1.en.wav.mfc
+ LAB: YEAH      DEFINITELY DEFINITELY 
+ REC: YEAH IT'S DEFINITELY DEFINITELY 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18881_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18881_0_1.en.wav.mfc
+ LAB: SO I WAS ACTUALLY I'M ACTUALLY GOING TO TRAVEL           TO CINCINNATI AND YOU SAID YOU'RE FROM CINCINNATI RIGHT 
+ REC: SO I WAS ACTUALLY              GOING TO TRAVEL SINCE NOW HE SAID       AND YOU SAID YOU'RE FROM CINCINNATI RIGHT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18883_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18883_0_1.en.wav.mfc
+ LAB: YEAH DO THEY HAVE A BUDGETARY IN OPTION 
+ REC: YEAH DO THEY HAVE A BUDGETARY AN OPTION 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18886_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18886_0_1.en.wav.mfc
+ LAB: OH NO  HE'S   NOT 
+ REC: OH NOW YOU'VE NOT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18887_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18887_0_1.en.wav.mfc
+ LAB: THAT SOUNDS PERFECT DO  THEY HAVE DESSERT 
+ REC: THAT SOUNDS PERFECT DID THEY HAVE DESSERT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18889_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18889_0_1.en.wav.mfc
+ LAB:   DEAL WHAT'S YOUR FAVORITE FLAVOR 
+ REC: I DO   WHAT'S YOUR FAVORITE FLAVOR 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18891_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18891_0_1.en.wav.mfc
+ LAB: OKAY WELL I WILL DO THAT AND I'LL LET YOU KNOW HOW I LIKE BUT SKYLINE AND GREATER 
+ REC: OK   WELL I WILL DO THAT IN  I'LL LET YOU KNOW HOW I LIKE BUT SKYLINE A   GREATER 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18892_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18892_0_1.en.wav.mfc
+ LAB: VERY WELL 
+ REC: I    WILL 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18893_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18893_0_1.en.wav.mfc
+ LAB: OKAY WELL I'LL TALK TO YOU LATER 
+ REC: OK   WELL I'LL TALK TO YOU LATER 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18896_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18896_0_1.en.wav.mfc
+ LAB: I   AM DOING REALLY WELL 
+ REC: I'M    DOING REALLY WELL 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18897_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18897_0_1.en.wav.mfc
+ LAB: THE LAST TIME I STAYED IN THE HOTEL WAS LAST NOVEMBER SO IT WOULD BE NOVEMBER              TWENTY   
+ REC: THE LAST TIME I STAYED IN THE HOTEL WAS LAST NOVEMBER SO IT WOULD BE NOVEMBER TWO THOUSAND THIRTEEN 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18898_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18898_0_1.en.wav.mfc
+ LAB:         
+ REC: <BLANK> 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18899_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18899_0_1.en.wav.mfc
+ LAB: YEAH    A   FEW  MONTHS AGO 
+ REC: YEAH IF YOU WANT TO     GO  
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18903_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18903_0_1.en.wav.mfc
+ LAB: A FEW FRIENDS SO IT      WAS A LONG DRIVE LIKE 
+ REC: A FEW FRIENDS SO THERE'S     A LONG DRIVE LIKE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18906_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18906_0_1.en.wav.mfc
+ LAB: NOW NOW     THE WEATHER IS REALLY GOOD FOR THE DRIVE THAT WAS A GOOD THING THAT IT WAS NOVEMBER AND NOT NOW IN JANUARY WHEN THERE'S A LOT OF SNOW 
+ REC: NOW NOW THE THE WEATHER IS REALLY GOOD FOR THE DRY   THAT IS  A GOOD THING THAT IT WAS NOVEMBER AND NOT NOW IN JANUARY WHEN THERE'S A LOT OF SNOW 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18910_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18910_0_1.en.wav.mfc
+ LAB: I HAD AN ACADEMIC CONFERENCE SO   AS  PRESENTING A PAPER THERE AND IT WAS NICE BECAUSE THEY ACTUALLY HAD 
+ REC: I HAD AN ACADEMIC CONFERENCE SO I WAS PRESENTING A PAPER THERE AND IT WAS NICE BECAUSE THEY ACTUALLY HAD 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18911_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18911_0_1.en.wav.mfc
+ LAB: YEAH IT'S A PRETTY BIG CAMPUS REALLY NICE A LOT OF TREES THE ARCHITECTURE IS REALLY PRETTY IT LOOKS VERY LIKE 
+ REC: YEAH IT'S A PRETTY BIG CAMPUS REALLY NICE A LOT OF TREES THE ARCHITECTURE IS REALLY PRETTY    LOOKS VERY LIKE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18912_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18912_0_1.en.wav.mfc
+ LAB: KIND OF I DON'T KNOW KIND OF LIKE        STEREOTYPICALLY WHAT YOU WOULD IMAGINE GEORGIA WOULD TO BE JUST LIKE REALLY 
+ REC: KIND OF I DON'T KNOW KIND OF LIKE STEREO TYPICALLY       WHAT YOU WOULD IMAGINE GEORGE  WOULD TO BE JUST LIKE REALLY 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18913_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18913_0_1.en.wav.mfc
+ LAB: BIG HOUSES AND YEAH LOTS OF AND JUST REALLY REALLY PRETTY LOTS OF OPEN GREEN SPACES 
+ REC: BIG HOUSES AND YEAH LOTS OF     JUST REALLY REALLY PRETTY LOTS OF OPEN GREEN SPACES 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18915_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18915_0_1.en.wav.mfc
+ LAB: YEAH BECAUSE IT WAS IT WAS PRETTY EXPENSIVE LIKE I WANT TO SAY IT WAS SOMETHING LIKE TWO HUNDRED OTHERS  AND I     HAD OR SOMETHING 
+ REC: YEAH BECAUSE IT WAS        PRETTY EXPENSIVE LIKE I WANT TO SAY IT WAS SOMETHING LIKE TWO HUNDRED DOLLARS A   NIGHT     OR SOMETHING 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18916_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18916_0_1.en.wav.mfc
+ LAB:         
+ REC: <BLANK> 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18917_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18917_0_1.en.wav.mfc
+ LAB: SO       SPLITTING THAT BY FOUR 
+ REC: SPUTTING OUT            BY FOUR 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18918_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18918_0_1.en.wav.mfc
+ LAB: YEAH YEAH AS  A STUDENT IT'S   A LOT SO 
+ REC: YEAH YEAH THE   STUDENT THAT'S A LOT SO 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18919_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18919_0_1.en.wav.mfc
+ LAB: INCLUDING FOUR WAYS WAS REALLY HELPFUL 
+ REC:           FOUR WAYS WAS REALLY HELPFUL 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18920_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18920_0_1.en.wav.mfc
+ LAB: YEAH IT WAS A REALLY REALLY CONVENIENT 
+ REC: YEAH IT WAS   REALLY REALLY CONVENIENT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18922_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18922_0_1.en.wav.mfc
+ LAB: YEAH LIKE THINGS ARE MUST  BE  SO YEAH IT WAS REALLY NICE AND 
+ REC: YEAH      THINGS ARE MUSTY ARE SO YEAH IT WAS REALLY NICE AND 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18923_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18923_0_1.en.wav.mfc
+ LAB: SO YEAH      NOT REALLY WELL 
+ REC: SO YEAH IT'S NOT REALLY WELL 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18928_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18928_0_1.en.wav.mfc
+ LAB: AND WHAT ABOUT YOU AND WAS THE LAST TIME THAT YOU WERE AT  A  HOTEL 
+ REC: AND WHAT ABOUT YOU AND WAS THE LAST TIME THAT YOU WERE OUT OF HOTEL 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18936_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18936_0_1.en.wav.mfc
+ LAB: THAT'S NICE WHAT KIND OF AMENITIES DO  THEY HAVE 
+ REC:        NICE WHAT KIND OF AMENITIES DID THEY HAVE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18938_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18938_0_1.en.wav.mfc
+ LAB: OK   WELL THAT'S GOOD AT LEAST YOU'VE GOT SOMETHING IT'S TOO BAD THAT IT WAS THAT IT WAS SO UNSEASONABLY COLD 
+ REC: OKAY WELL THAT'S GOOD AT LEAST YOU    GOT SOMETHING IT'S TOO BAD THAT IT WAS THAT IT WAS SO UNSEASONABLY COLD 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18940_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18940_0_1.en.wav.mfc
+ LAB: HOW WAS THE SERVICE AT THE HOTEL LIKE THE HOUSEKEEPING 
+ REC: HOW WAS THE SURFACE AT THE HOTEL LIKE THE HOUSEKEEPING 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18941_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18941_0_1.en.wav.mfc
+ LAB: SO DID YOU HAVE ROOM SERVICE AT ALL 
+ REC:    DID YOU HAVE      SERVICE AT ALL 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18944_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18944_0_1.en.wav.mfc
+ LAB: YEAH SHE WANTED TO      TAKE ADVANTAGE OF EVERYTHING IN THE PARK APPARENTLY 
+ REC: YEAH SHE WANTED TO LIKE TAKE ADVANTAGE OF EVERYTHING IN THE PARK APPARENTLY 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18949_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18949_0_1.en.wav.mfc
+ LAB:      IT SOUNDS LIKE A USEFUL CLUB TO BE A PART OF 
+ REC: YEAH IT SOUNDS LIKE A USEFUL CLUB TO BE A PART OF 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18950_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18950_0_1.en.wav.mfc
+ LAB:           DEAR PARENTS TRAVEL A LOT 
+ REC: YEAH YEAH DEAR PARENTS TRAVEL A LOT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18951_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18951_0_1.en.wav.mfc
+ LAB: YEAH YEAH YEAH I'D LOVE TO HAVE MORE TIME TO TRAVEL TO  MAYBE HAVE TO WAIT UNTIL I'M RETIRED 
+ REC: YEAH YEAH YEAH I'D LOVE TO HAVE MORE TIME TO TRAVEL TOO MAYBE HAVE TO WAIT UNTIL I'M RETIRED 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18954_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18954_0_1.en.wav.mfc
+ LAB: ALL     RIGHT WELL I'M GONNA GET GOING HAVE A GREAT EVENING 
+ REC: ALRIGHT       WELL I'M GONNA GET GOING HAVE A GREAT EVENING 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18957_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18957_0_1.en.wav.mfc
+ LAB: I'M DOING GOOD HOW BOUT  YOURSELF 
+ REC: I'M DOING GOOD HOW ABOUT YOURSELF 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18958_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18958_0_1.en.wav.mfc
+ LAB: OHH WOW KIND OF A LONG TIME AGO 
+ REC: OH  WOW KIND OF A LONG TIME AGO 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18959_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18959_0_1.en.wav.mfc
+ LAB: WELL A   FEW  MONTHS YEAH 
+ REC: OHH  YOU MUST        YEAH 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18961_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18961_0_1.en.wav.mfc
+ LAB: OHH WOW 
+ REC: SO  WOW 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18962_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18962_0_1.en.wav.mfc
+ LAB: YEAH THERE'S A  LONG DRIVE DID YOU HAVE TO LIKE DRIVE INTO THE NIGHT OR DID YOU MANAGE TO DO IT ALL IN ONE DAY 
+ REC: YEAH THAT'S  SO LONG DRIVE DID YOU HAVE TO LIKE DRIVE INTO THE NIGHT OR DID YOU MANAGE TO DO IT ALL IN ONE DAY 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18965_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18965_0_1.en.wav.mfc
+ LAB: YEAH DEFINITELY IT GETS CHALLENGING SO WHAT HOTELS DID YOU STAY AT 
+ REC: YEAH DEFINITELY IT GETS CHALLENGING SO WHAT HOTEL  DID YOU SAY     
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18969_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18969_0_1.en.wav.mfc
+ LAB: YEAH OR MAYBE LIKE WHEN STUDENTS ARE   VISITING THE CAMPUS AND WANT TO GO WITH THEIR FAMILY OR SOMETHING 
+ REC: YEAH OR MAYBE LIKE WHEN STUDENTS SERVE VISITING THE CAMPUS AND WANT TO GO WITH THEIR FAMILY OR SOMETHING 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18972_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18972_0_1.en.wav.mfc
+ LAB:        OF   NATURE 
+ REC: WHAT'S YOUR NATURE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18977_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18977_0_1.en.wav.mfc
+ LAB: IS A LOT FOR US 
+ REC:    A LOT FOR US 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18978_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18978_0_1.en.wav.mfc
+ LAB: YEAH I GUESS BECAUSE IT'S ON CAMPUS    IT'S PROBABLY WHY IT'S MORE EXPENSIVE BECAUSE IT'S SO CONVENIENT TO EVERYTHING 
+ REC: YEAH I GUESS BECAUSE IT'S ON CAMPUS SO IT'S PROBABLY WHY IT'S MORE EXPENSIVE BECAUSE IT'S SO CONVENIENT TO EVERYTHING 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18980_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18980_0_1.en.wav.mfc
+ LAB: THAT'S GOOD I ALWAYS      WANTED SLEEP WELL WHEN I'M TRAVELING AND SOMETIMES YOU GET REALLY HARD BEDS OR UNCOMFORTABLE PILLOWS 
+ REC: THAT'S GOOD I ALWAYS WANT TO     SLEEP WELL WHEN I'M TRAVELING AND SOMETIMES YOU GET REALLY HARD BEDS OR UNCOMFORTABLE PILLOWS 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18983_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18983_0_1.en.wav.mfc
+ LAB: BUT  YOU WERE YOU WERE PROBABLY AT THE CONFERENCE MOST OF THE DAY SO IT'S NOT LIKE YOU WERE HANGING OUT IN THE ROOM TOO MUCH 
+ REC: WHEN YOU WERE YOU WERE PROBABLY AT THE CONFERENCE MOST OF THE DAY SO IT'S NOT LIKE YOU WERE HANGING OUT IN THE ROOM TOO MUCH 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18984_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18984_0_1.en.wav.mfc
+ LAB: HOW WAS THE       HOUSEKEEPING LIKE TODAY 
+ REC: HOW WAS THE HOUSE KEEPING      LIKE TODAY 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18985_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18985_0_1.en.wav.mfc
+ LAB: TAKE GOOD CARE OF YOU  ROOM EVERY DAY 
+ REC: TAKE GOOD CARE OF YOUR ROOM EVERY DAY 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18986_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18986_0_1.en.wav.mfc
+ LAB: NICE   
+ REC: THANKS 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18993_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_18993_0_1.en.wav.mfc
+ LAB: MAYBE UP INTO THE SIXTIES AS WELL BUT WE MANAGED TO GET SOME TIME IN THE HOT TUB SINCE IT WASN'T WASN'T TOO COLD FOR THAT 
+ REC: MAYBE    INTO THE SIXTIES AS WELL BUT WE MANAGED TO GET SOME TIME IN THE HOT TUB SINCE IT WASN'T WASN'T TOO COLD FOR THAT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19010_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19010_0_1.en.wav.mfc
+ LAB: OHH  
+ REC: I'LL 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19014_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19014_0_1.en.wav.mfc
+ LAB: AND YOU SAID ITS  MEXICAN FOOD WHAT DID YOU ORDER 
+ REC: AND YOU SAID IT'S MEXICAN FOOD WHAT DID YOU ORDER 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19018_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19018_0_1.en.wav.mfc
+ LAB: THE  LIBS  NEAR THE UNIVERSITIES SO INSTEAD OF STAYING AT SOMEONE'S HOME WE STAYED IN THE HOTEL 
+ REC: THAT LIVES NEAR THE UNIVERSITY   SO INSTEAD OF STAYING AT SOMEONE'S HOME WE STAYED IN THE HOTEL 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19021_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19021_0_1.en.wav.mfc
+ LAB: THE ROOM WAS NOT VERY BIG FOR FOUR PEOPLE BUT THEY IT DID HAVE TWO VERY LARGE BEDS I THINK THEY WERE KING SIZE 
+ REC: THE ROOM WAS NOT VERY BIG FOR FOUR PEOPLE BUT THEY    DID HAVE TWO VERY LARGE BEDS I THINK THEY WERE KING SIZE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19022_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19022_0_1.en.wav.mfc
+ LAB: AT  SEAMS  REALLY NICE 
+ REC: YET SEEMED REALLY NICE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19029_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19029_0_1.en.wav.mfc
+ LAB: OHH VERY GOOD WHAT KIND OF         AMENITIES DID THE HOTEL ROOM HAVE DID   IT HAVE AIR CONDITIONING WITH OUR   TV THAT KIND OF THING 
+ REC: OHH VERY GOOD WHAT KIND OF AMMONIA IS        DID THE HOTEL ROOM HAVE LIKED TO HAVE AIR CONDITIONING WITH THEIR TV THAT KIND OF THING 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19030_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19030_0_1.en.wav.mfc
+ LAB: OHH THEY COULDN'T VERY GOOD 
+ REC: NOT VERY GOOD     VERY GOOD 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19031_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19031_0_1.en.wav.mfc
+ LAB: AND HOW WAS THE EQUALITY OF THE SERVICE IN  THE HOUSEKEEPING 
+ REC: AND HOW WAS THE ECOLOGY  OF THE SERVICE AND THE HOUSEKEEPING 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19032_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19032_0_1.en.wav.mfc
+ LAB: VERY    GOOD AND DID YOU ORDER      ROOMS   FOR DID YOU GO OUT TO EAT 
+ REC: ALRIGHT GOOD AND DID YOU ORDER ROOM SERVICE OR  DID YOU GO OUT TO EAT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19034_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19034_0_1.en.wav.mfc
+ LAB: OHH VERY GOOD     AND HOW LONG DID YOU STAY AT THE HOTEL 
+ REC: OHH MY   GOODNESS     HOW LONG DID YOU STAY AT THE HOTEL 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19038_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19038_0_1.en.wav.mfc
+ LAB: VERY GOOD THAT SOUNDS VERY NICE I'LL HAVE TO STAY THERE IF I GO TO MEXICO CITY 
+ REC: VERY GOOD THAT SOUNDS VERY NICE OHH  HAVE TO STAY THERE    I GO TO MEXICO CITY 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19040_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19040_0_1.en.wav.mfc
+ LAB: REALLY  
+ REC: <BLANK> 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19044_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19044_0_1.en.wav.mfc
+ LAB:      TALK TO YOU LATER BYE BYE 
+ REC: I'LL TALK TO YOU LATER BYE BYE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19046_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19046_0_1.en.wav.mfc
+ LAB: I'M WELL HOW ARE YOU 
+ REC: AND WELL HOW ARE YOU 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19055_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19055_0_1.en.wav.mfc
+ LAB: AND HOW'S THE ENVIRONMENT LIKE THE AMBIANCE AND YOU KNOW IS IT CASUAL IS IT FANCY 
+ REC: AND HOW'S THE ENVIRONMENT LIKE THE AMBIANCE AND YOU KNOW AS A  CASUAL IS IT FANCY 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19056_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19056_0_1.en.wav.mfc
+ LAB: AND WHAT TYPE OF THINGS CAN YOU BUY IN THE STORE OF    THE         RESTAURANT 
+ REC: AND WHAT TYPE OF THINGS CAN YOU BUY IN THE STORE OTHER RESTAURANTS            
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19059_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19059_0_1.en.wav.mfc
+ LAB: IT SOUNDS LIKE A REALLY GREAT RESTAURANT IF I EVER VISIT YOUR CITY I DEFINITELY WANT TO GO THERE 
+ REC:    SOUNDS LIKE A REALLY GREAT RESTAURANT IF I EVER VISIT YOUR CITY I DEFINITELY WANT TO GO THERE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19060_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19060_0_1.en.wav.mfc
+ LAB: YES I WENT TO A RESTAURANT A LITTLE OVER A WEEK AGO IT WAS JANUARY TWENTY ONE   WHICH WAS A TUESDAY 
+ REC: YES I WENT TO A RESTAURANT A LITTLE OVER A WEEK AGO IT WAS JANUARY TWENTY FIRST WHICH WAS A TUESDAY 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19062_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19062_0_1.en.wav.mfc
+ LAB:         
+ REC: <BLANK> 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19063_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19063_0_1.en.wav.mfc
+ LAB: I'M WELL HOW ARE YOU 
+ REC: AND WELL HOW ARE YOU 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19066_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19066_0_1.en.wav.mfc
+ LAB:         
+ REC: <BLANK> 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19067_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19067_0_1.en.wav.mfc
+ LAB: AND WHAT ABOUT YOU WHEN IS THE LAST TIME YOU TRAVELLED AND STAYED IN A HOTEL 
+ REC: AND WHAT ABOUT YOU WHEN IS THE LAST TIME YOU TRAVELED  AND STAYED IN A HOTEL 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19071_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19071_0_1.en.wav.mfc
+ LAB:         
+ REC: <BLANK> 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19072_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19072_0_1.en.wav.mfc
+ LAB: THAT SOUNDS LIKE IT'S REALLY NICE IF I EVER TRAVEL   THERE LIKE TO MEXICO CITY I'LL THINK ABOUT STAYING THERE 
+ REC: THAT SOUNDS LIKE IT'S REALLY NICE IF I EVER TRAVELED THERE LIKE TO MEXICO CITY I'LL THINK ABOUT STAYING THERE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19073_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19073_0_1.en.wav.mfc
+ LAB: OKAY TALK TO YOU LATER BYE BYE 
+ REC:      TALK TO YOU LATER BYE BYE 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19076_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19076_0_1.en.wav.mfc
+ LAB: THEY MADE THE BIRD AND EVERYTHING 
+ REC: THEY MADE THE BED  AND EVERYTHING 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19079_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19079_0_1.en.wav.mfc
+ LAB: SO WHAT WAS THE NAME OF THE HOTEL YOU STAYED AT  AND WHERE WAS IT 
+ REC: SO WHAT WAS THE NAME OF THE HOTEL YOU STAYED OUT AND WHERE WAS IT 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19081_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19081_0_1.en.wav.mfc
+ LAB:   OKAY THAT'S ALWAYS 
+ REC: O K    THAT'S ALWAYS 
+Aligned transcription: //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19086_0_1.en.wav.lab vs //ccpsofsep/am_s3/users/jewong/rnnt/decode/features_gru/Skype_19086_0_1.en.wav.mfc
+ LAB: OH THAT SOUNDS GOOD WHAT ABOUT THE QUALITY OF SERVICE AND LIKE THE HOUSEKEEPING AT THE HOTEL 
+ REC:    THAT SOUNDS GOOD WHAT ABOUT THE QUALITY OF SERVICE AND LIKE THE HOUSEKEEPING AT THE HOTEL 
+    ,-----------------------------------------------------------------------.
+    | HTK Results Analysis at Wed Jan 08 13:22:24 2020                      |
+    | Ref: decode\result\cross_wer_gru_eltgru\1.ref.mlf                     |
+    | Rec: ..\decode\result\gru.mlf                                         |
+    |=======================================================================|
+    |           # Snt  | # wrd  |  Corr    Sub    Del    Ins    Err  S. Err |
+    |-----------------------------------------------------------------------|
+    | Sum/Avg |  286   |   2662 |  93.43   4.92   1.65   1.54   8.11  42.31 |
+    `-----------------------------------------------------------------------'

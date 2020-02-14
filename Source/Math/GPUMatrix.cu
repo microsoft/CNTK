@@ -2622,6 +2622,31 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementDivisionOf(const GPUMatri
 }
 
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::ElementMaxWith(const GPUMatrix<ElemType>& a)
+{
+    return AssignElementMaxOf(*this, a);
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementMaxOf(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("AssignElementProductOf: Matrix is empty.");
+
+    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
+    if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+        InvalidArgument("The input matrix dimensions do not match.");
+
+    RequireSize(a.GetNumRows(), a.GetNumCols());
+    CUDA_LONG N = (CUDA_LONG) GetNumElements();
+    int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
+    a.PrepareDevice();
+    SyncGuard syncGuard;
+    _assignElementMaxOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), b.Data(), N);
+    return *this;
+}
+
+template <class ElemType>
 bool GPUMatrix<ElemType>::IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold /*= 1e-8*/) const
 {
     return AreEqual(*this, a, threshold);
