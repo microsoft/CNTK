@@ -2487,6 +2487,18 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetToZeroIfAbsLessThan(const ElemType 
 }
 
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetToZeroIfLessThan(const ElemType threshold)
+{
+    if (IsEmpty())
+        LogicError("SetToZeroIfLessThan: Matrix is empty.");
+    CUDA_LONG N = (CUDA_LONG) GetNumElements();
+    int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
+    PrepareDevice();
+    SyncGuard syncGuard;
+    _setToZeroIfLessThan<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), threshold, N);
+    return *this;
+}
+template <class ElemType>
 ElemType GPUMatrix<ElemType>::SumOfAbsElements() const
 {
     if (IsEmpty())
@@ -5316,6 +5328,119 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
     // regular case
     else
         return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
+
+// perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
+// This binds the N-ariness to a template parameter N, and gets the data pointers out from the matrix objects.
+template <class ElemType>
+void GPUMatrix<ElemType>::TensorOpDebug(ElemType beta, const GPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                        const array<size_t, 2>& offsets,
+                                        const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+{
+    if (reductionOp != ElementWiseOperator::opSum &&
+        reductionOp != ElementWiseOperator::opLogSum &&
+        reductionOp != ElementWiseOperator::opMin &&
+        reductionOp != ElementWiseOperator::opMax &&
+        reductionOp != ElementWiseOperator::opElementwiseProduct)
+        InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
+
+    a.PrepareDevice();
+    if (a.GetComputeDeviceId() != GetComputeDeviceId())
+        InvalidArgument("All matrices must be on the same GPU");
+
+    // special case: linear processing
+    // The case statement has measurable impact for unary ops (but not for binary ops it seems, due to double mem access).
+    // Linear gap-free unary ops happen so regularly that we will eliminate the case statement from the CUDA kernel, and instead expand all.
+    if (regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 && reducingOpDims.size() == 0)
+    {
+        // special case: for copy, use cudaMemcpy() instead, or cublas_axpy()
+        // TODO: We should observe if these actually make a speed difference, and if not, remove these special cases.
+        if (op == ElementWiseOperator::opCopy && beta == 0 && alpha == 1)
+        {
+            //fprintf(stderr, "TensorOpDebug 1 \n");
+            return CUDA_CALL(cudaMemcpy(Data() + offsets[1], a.Data() + offsets[0], sizeof(ElemType) * regularOpDims[0], cudaMemcpyDeviceToDevice));
+        }
+        else if (op == ElementWiseOperator::opCopy && beta == 1)
+        {
+            //fprintf(stderr, "TensorOpDebug 2 \n");
+            return CUBLAS_CALL(cublasaxpyHelper(GetCublasHandle(GetComputeDeviceId()), (int) regularOpDims[0], &alpha, a.Data() + offsets[0], 1, Data() + offsets[1], 1));
+        }
+        else
+        {
+            //fprintf(stderr, "TensorOpDebug 3 \n");
+
+            return LaunchUnaryTensorOp<ElemType>(beta, a.Data() + offsets[0], Data() + offsets[1], alpha, op, regularOpDims[0]);
+        }
+    }
+
+    // special case: sum-reducing a matrix onto a column vector; can be done with SGEMM
+    // Note: A minor risk is that with this, our own reduction function will rarely be used.
+    // That function was tested to give the same results with 'double', and nearly the same with 'float' (different summation order matters).
+    else if (op == ElementWiseOperator::opCopy && // we are just adding to target without any further operation
+             reductionOp == ElementWiseOperator::opSum &&
+#ifdef _DEBUG
+             sizeof(ElemType) == sizeof(float) && // in debug don't shortcut 'double' so we have some test of our own codepath
+#endif
+             regularOpDims.size() == 1 && regularStrides[0][0] == 1 && regularStrides[1][0] == 1 && // we are processing a column
+             reducingOpDims.size() == 1 && reducingStrides[0][0] >= (ptrdiff_t) regularOpDims[0])   // reducing across columns and no overlap
+    {
+        assert(reducingStrides[1][0] == 0);
+        auto ARows = regularOpDims[0];    // vertical steps
+        auto ACols = reducingOpDims[0];   // horizontal steps (reduction)
+        auto ALd = reducingStrides[0][0]; // horizontal step width through matrix
+        cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
+        CUBLAS_CALL(cublasgemmHelper(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int) /*CRows=*/ARows, /*CCols=*/1, (int) ACols, &alpha,
+                                     /*A00=*/a.Data() + offsets[0], (int) ALd,
+                                     /*B00=*/GetOnesVector<ElemType>(ACols, a.GetComputeDeviceId())->Data(), (int) /*BRows=*/ACols, &beta,
+                                     /*C00=*/Data() + offsets[1], (int) /*CRows=*/ARows));
+        //fprintf(stderr, "TensorOpDebug 4 \n");
+
+        return;
+    }
+
+    // TODO: Add a special case for tensor bias reduction. cudnn is ~7% faster on Image/QuickE2E.
+
+    // regular case
+    else
+    {
+        /*
+        fprintf(stderr, "TensorOpDebug 5 \n");
+        for (size_t i = 0; i < 2; i++)
+        {
+            // fprintf(stderr, "i = %d, offsets = %d,  regularStrides = %d, reducingStrides = %d \n ", int(i), int(offsets[i]), int(regularStrides[i]), int(reducingStrides[i]));
+            fprintf(stderr, "TensorOpDebug 5.1, i = %d, offsets = %d\n ", int(i), int(offsets[i]));
+        }
+        fprintf(stderr, "TensorOpDebug 5.1, regularOpDims.size() = %d \n", int(regularOpDims.size()));
+
+        for (size_t i = 0; i < regularOpDims.size(); i++)
+            fprintf(stderr, "TensorOpDebug 5.1, i = %d, regularOpDims = %d\n ", int(i), int(regularOpDims[i]));
+
+        fprintf(stderr, "TensorOpDebug 5.1, reducingOpDims.size() = %d \n", int(reducingOpDims.size()));
+        for (size_t i = 0; i < reducingOpDims.size(); i++)
+            fprintf(stderr, "TensorOpDebug 5.1, i = %d, reducingOpDims = %d\n ", int(i), int(reducingOpDims[i]));
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            fprintf(stderr, "TensorOpDebug 5.1, i = %d, regularStrides.size() = %d \n", int(i), int(regularStrides[i].size()));
+            for (size_t j = 0; j < regularStrides[i].size(); j++)
+            {
+                fprintf(stderr, "TensorOpDebug 5.1, i = %d, j = %d, regularStrides = %d \n ", int(i), int(j), int(regularStrides[i][j]));
+            }
+
+            fprintf(stderr, "TensorOpDebug 5.1, i = %d, reducingStrides.size() = %d \n", int(i), int(reducingStrides[i].size()));
+            for (size_t j = 0; j < reducingStrides[i].size(); j++)
+            {
+                fprintf(stderr, "TensorOpDebug 5.1, i = %d, j = %d, reducingStrides = %d \n ", int(i), int(j), int(reducingStrides[i][j]));
+            }
+        }
+
+        fprintf(stderr, "TensorOpDebug 5.2, beta = %f, alpha = %f, a.data = %f, data = %f \n", double(beta), double(alpha), double(a.FrobeniusNorm()), double(FrobeniusNorm()));
+        // return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+        */
+        return TensorOpNDebug<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides, a, *this);
+
+    }
 }
 
 // perform binary operation 'op' on a and b giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides

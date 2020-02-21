@@ -2987,6 +2987,19 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfAbsLessThan(con
     return *this;
 }
 
+template <class ElemType>
+GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfLessThan(const ElemType threshold)
+{
+    VerifyWritable(__FUNCTION__);
+
+    if (IsEmpty())
+        LogicError("SetToZeroIfLessThan: Matrix is empty.");
+    CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
+    int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _setToZeroIfLessThan<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(NzValues(), threshold, N);
+    return *this;
+}
 #pragma endregion
 
 #pragma region Helper Functions

@@ -710,6 +710,11 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfAbsLessThan(con
 }
 
 template <class ElemType>
+GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfLessThan(const ElemType threshold)
+{
+    return *this;
+}
+template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
 {
     return (*this);
@@ -1723,7 +1728,11 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetToZeroIfAbsLessThan(const ElemType 
 {
     return *this;
 }
-
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetToZeroIfLessThan(const ElemType threshold)
+{
+    return *this;
+}
 template <class ElemType>
 ElemType GPUMatrix<ElemType>::SumOfAbsElements() const
 {

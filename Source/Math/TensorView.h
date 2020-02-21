@@ -131,6 +131,7 @@ public:
 #pragma pop_macro("DeclareTernaryTensorOp")
 
     void DoUnaryOpOf  (ElemType beta, const TensorView& a,                                           ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
+    void DoUnaryOpOfDebug(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
     void DoBinaryOpOf (ElemType beta, const TensorView& a, const TensorView& b,                      ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
     void DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
 

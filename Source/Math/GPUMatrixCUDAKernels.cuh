@@ -1307,6 +1307,19 @@ __global__ void _setToZeroIfAbsLessThan(
 }
 
 template <class ElemType>
+__global__ void _setToZeroIfLessThan(
+    ElemType* a,
+    const ElemType threshold,
+    const CUDA_LONG N)
+{
+    typedef typename TypeSelector<ElemType>::comp_t comp_t;
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= N)
+        return;
+    if (((comp_t) a[id]) < (comp_t) threshold)
+        a[id] = 0;
+}
+template <class ElemType>
 __global__ void _areEqual(
     const ElemType* a,
     const ElemType* b,

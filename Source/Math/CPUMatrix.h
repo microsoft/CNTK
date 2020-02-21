@@ -311,6 +311,7 @@ public:
     CPUMatrix<ElemType>& InplaceSoftThreshold(const ElemType threshold);
 
     CPUMatrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
+    CPUMatrix<ElemType>& SetToZeroIfLessThan(const ElemType threshold);
 
     ElemType SumOfAbsElements() const; // sum of all abs(elements)
     ElemType SumOfElements() const;    // sum of all elements

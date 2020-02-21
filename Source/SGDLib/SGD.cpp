@@ -1051,9 +1051,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     string showWERMode,
                                     bool SVD)
 {
-    PROFILE_SCOPE(profilerEvtMainEpoch);
 
+    PROFILE_SCOPE(profilerEvtMainEpoch);
+    std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
+
+    ComputationNetwork decode_cn_root;
+    decode_cn_root.CopySubTree(*net, decodeOutputNodeNames[0], L"", CopyNodeFlags::copyNodeAll);
+    decode_cn_root.CompileNetwork();
+    std::vector<ComputationNodeBasePtr> decodeOutputNodesTmp = decode_cn_root.OutputNodesByName(decodeOutputNodeNames);
+    decode_cn_root.FormEvalOrder(decodeOutputNodesTmp[0]);
+    decode_cn_root.FormNestedNetwork(decodeOutputNodesTmp[0]);
 
     // bring our 'out' values into consistent state
     epochCriterion = EpochCriterion(0);
@@ -1078,7 +1086,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     auto ContainsAccumulatedResult = [&evaluationNodesWhichAccumulateResult](ComputationNodeBasePtr node) {
         return evaluationNodesWhichAccumulateResult.find(node) != evaluationNodesWhichAccumulateResult.end();
     };
-
     // MA-related variables
     size_t nSamplesSinceLastModelSync = 0;
     size_t blockSizePerWorker = 0;
@@ -1122,7 +1129,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // this is non-trivial, we need a manager object to handle this
     if (numSubminibatchesNeeded > 1)
         smbDispatcher.Init(net, learnableNodes, criterionNodes, evaluationNodes);
-
     // The following is a special feature only supported by the Kaldi2Reader for more efficient sequence training.
     // This attempts to compute the error signal for the whole utterance, which will
     // be fed to the neural network as features. Currently it is a workaround
@@ -1241,6 +1247,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         numSamplesWithLabelOfNetworkMBR = 0;
 
         auto profGetMinibatch = ProfilerTimeBegin();
+
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
                                                                                 useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
 
@@ -1321,12 +1328,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     //net->CompileNetwork();
                     std::vector<std::wstring> encodeOutputNodeNames(outputNodeNamesVector.begin(), outputNodeNamesVector.begin() + 1);
                     std::vector<ComputationNodeBasePtr> encodeOutputNodes = net->OutputNodesByName(encodeOutputNodeNames);
-
                     //
                     //net->CollectInputAndLearnableParameters(encodeOutputNodes[0]);
                     std::list<ComputationNodeBasePtr> InputNodesList = net->InputNodes(criterionNodes[0]);
                     std::vector<std::wstring> encodeInputNodeNames;
-
                     if (SVD)
                         encodeInputNodeNames.assign(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
                     else
@@ -1336,7 +1341,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     *encodeInputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(encodeInputNodes);
 
                     //get decode input matrix
-                    std::vector<std::wstring> decodeOutputNodeNames(outputNodeNamesVector.begin() + 1, outputNodeNamesVector.begin() + 2);
                     std::vector<ComputationNodeBasePtr> decodeOutputNodes = net->OutputNodesByName(decodeOutputNodeNames);
 
                     //net->CollectInputAndLearnableParameters(decodeOutputNodes[0]);
@@ -1346,6 +1350,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     else
                         decodeInputNodeNames.assign(outputNodeNamesVector.begin() + 7, outputNodeNamesVector.begin() + 8);
                     std::vector<ComputationNodeBasePtr> decodeinputNodes = net->OutputNodesByName(decodeInputNodeNames);
+
                     *decodeinputMatrices = DataReaderHelpersFunctions::RetrieveInputMatrices(decodeinputNodes);
 
                     if (!ordered)
@@ -1359,7 +1364,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         std::vector<ComputationNodeBasePtr> Plustransnodes = net->OutputNodesByName(plusTransNodeNames);
                         net->FormEvalOrder(Plustransnodes[0]);
                     }
-
                     //form eval order for RELU
 
                     auto reffeainput = (*encodeInputMatrices).begin();
@@ -1367,9 +1371,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     auto reflminput = (*decodeinputMatrices).begin();
                     auto decodeMBLayout = reflminput->second.pMBLayout;
 
-                    net->ForwardProp(encodeOutputNodes);
+                    //form eval order for RELU
+                    time_t my_time = time(NULL);
+                    fprintf(stderr, "SGD time 0 = %s", ctime(&my_time));
 
-                    Matrix<ElemType> encodeOutput(net->GetDeviceId());
+                    net->ForwardProp(encodeOutputNodes);
+                    size_t deviceid = net->GetDeviceId();
+                    Matrix<ElemType> encodeOutput(deviceid);
                     encodeOutput.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(encodeOutputNodes[0])->Value()));
 
                     vector<vector<PathInfo>> uttPathsInfo;
@@ -1379,12 +1387,50 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     vector<float> vt_onebest_wer;
                     vt_onebest_wer.clear();
 
-                    // time_t my_time = time(NULL);
-                    // fprintf(stderr, "SGD time 1 = %s", ctime(&my_time));
+                    my_time = time(NULL);
+                    fprintf(stderr, "SGD time 1 = %s", ctime(&my_time));
                     RNNTDecodeFunctions<ElemType> rnntdfs;
-                    rnntdfs.RNNT_decode_nbest_MBR(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo, vt_nws, vt_onebest_wer, SVD, *net);
-                    //my_time = time(NULL);
-                    //fprintf(stderr,  "SGD time 2 = %s", ctime(&my_time));
+                    //rnntdfs.RNNT_decode_nbest_MBR(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo, vt_nws, vt_onebest_wer, SVD, *net);
+
+                    //vt_printname.push_back(L"DecodeOutputLN");
+
+                    if (m_enableMultiThreadDecodeMBR)
+                    {
+                        ComputationNodeBasePtr WmNode, WmuNode, WmvNode, bmNode;
+                        Matrix<ElemType> Wm(deviceid), Wmu(deviceid), Wmv(deviceid), bm(deviceid);
+                        if (SVD)
+                        {
+                            WmuNode = net->GetNodeFromName(outputNodeNamesVector[4]);   
+                            WmvNode = net->GetNodeFromName(outputNodeNamesVector[5]);
+                            bmNode = net->GetNodeFromName(outputNodeNamesVector[6]);
+                            Wmu.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmuNode)->Value()));
+                            Wmv.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmvNode)->Value()));
+                            WmNode;
+                            Wm;
+                        }
+                        else
+                        {
+                            WmNode = net->GetNodeFromName(outputNodeNamesVector[4]);
+                            bmNode = net->GetNodeFromName(outputNodeNamesVector[5]);
+                            Wm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(WmNode)->Value()));
+                            WmuNode;
+                            WmvNode;
+                            Wmu;
+                            Wmv;
+                        }
+
+                        bm.SetValue(*(&dynamic_pointer_cast<ComputationNode<ElemType>>(bmNode)->Value()));
+                        /*
+                        size_t num_utt = 7;
+                        size_t start_utt = 0;
+                        */
+                        rnntdfs.RNNT_decode_nbest_MBR_Multithread(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeInputNodeNames, numBestMBR, lengthNorm, vt_labels, uttPathsInfo, vt_nws, vt_onebest_wer, SVD, decode_cn_root,  Wm, Wmu, Wmv, bm); /*, num_utt, start_utt); */
+                    }
+                    else
+                        rnntdfs.RNNT_decode_nbest_MBR(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo, vt_nws, vt_onebest_wer, SVD, net);
+                    // rnntdfs.RNNT_decode_nbest_MBR_Multithread(outputNodeNamesVector, encodeOutput, encodeMBLayout, reflminput->second.GetMatrix<ElemType>(), decodeMBLayout, decodeinputNodes, numBestMBR, lengthNorm, vt_labels, uttPathsInfo, vt_nws, vt_onebest_wer, SVD, *net, decode_cn, decodeinputNodes_tmp);
+                    my_time = time(NULL);
+                    fprintf(stderr, "SGD time 2 = %s", ctime(&my_time));
                     //fprintf(stderr, "decode SGD v0 .\n");
 
                     //net->BumpEvalTimeStamp(decodeinputNodes);
@@ -1400,21 +1446,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     refFeaMatBackup.SetValue(reffeainput->second.GetMatrix<ElemType>());
                     size_t numParallelSequences = encodeMBLayout->GetNumParallelSequences();
 
-                    //my_time = time(NULL);
-                    //fprintf(stderr, "SGD time 3 = %s", ctime(&my_time));
+                    my_time = time(NULL);
+                    fprintf(stderr, "SGD time 3 = %s", ctime(&my_time));
 
                     for (const auto& seq : encodeMBLayout->GetAllSequences())
                     {
-                        /*
-                        if (seqId == 1)
-                        {
-                            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
-                            {
-                                ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
-                                node->force_gradient_accumulate(true);
-                            }
-                        }
-                        */
                         if (seq.seqId == GAP_SEQUENCE_ID)
                         {
                             continue;
@@ -1423,15 +1459,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         {
                             continue;
                         }
-
-                        //if (firstdebug)
                         cNode->SetMWERInfo(uttPathsInfo[seqId], lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR, vt_nws[seqId]);
 
                         // get the feature MBLayout
                         size_t numFrames = seq.GetNumTimeSteps();
                         numSamplesWithLabelOfNetworkMBR += numFrames;
 
-                        // if (firstdebug)
                         reffeainput->second.pMBLayout->Init(1, numFrames); // 1 channel, 1 utterance
 
                         Matrix<ElemType> fea(deviceID);
@@ -1447,11 +1480,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                             fea.SetColumn(refFeaMatBackup.ColumnSlice(uID, 1), t);
                         }
-                        //if (firstdebug)
-                        {
-                            reffeainput->second.GetMatrix<ElemType>().SetValue(fea);
-                            reffeainput->second.pMBLayout->AddSequence(0, 0, 0, numFrames); // guoye: first 0 is for utterance ID, second 0 means 0th channel, lenght is 0 to numFrames
-                        }
+
+                        reffeainput->second.GetMatrix<ElemType>().SetValue(fea);
+                        reffeainput->second.pMBLayout->AddSequence(0, 0, 0, numFrames); // guoye: first 0 is for utterance ID, second 0 means 0th channel, lenght is 0 to numFrames
 
                         // guoye: the below 2 commands reset the state, to make sure ForwardProb always get carried out
                         ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes); // guoy: update the time stamp before you do forward prob
@@ -1463,9 +1494,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         size_t nBest = uttPathsInfo[seqId].size();
                         if (nBest > (m_maxFrameNumPerMinibatchMBR / numFrames))
                         {
-                            // reset nBest to make the MB size framenum with budget
+                            // reset nBest to make the MB size
                             nBest = (m_maxFrameNumPerMinibatchMBR / numFrames);
-                        }    
+                        }
                         size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
 
                         for (size_t n = 1; n < nBest; n++)
@@ -1583,8 +1614,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         }
                     }
 
-                    //my_time = time(NULL);
-                    //fprintf(stderr, "SGD time 4 = %s", ctime(&my_time));
+                    my_time = time(NULL);
+                    fprintf(stderr, "SGD time 4 = %s", ctime(&my_time));
                 }
                 // ===========================================================
                 // forward prop for evaluate eval nodes
@@ -1790,8 +1821,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 {
 #ifdef _DEBUG
                     if (smoothedGradientIter->HasNan("TrainOneEpoch/UpdateWeights(): "))
-                        LogicError("
-                            %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
+                        LogicError("%ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
                     double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
                     double nodeDependentRegMultiplier = dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->GetRegMultiplier();
@@ -3460,7 +3490,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_lengthNorm = configSGD(L"LengthNorm", true);
     m_showWERMode = configSGD(L"showWERMode", "average");
     m_isSVD = configSGD(L"SVD", true);
-
+    m_enableMultiThreadDecodeMBR = configSGD(L"enableMultiThreadDecodeMBR", true);
     m_maxFrameNumPerMinibatchMBR = configSGD(L"MaxFrameNumPerMinibatchMBR", (size_t) 2000);
     if (m_doGradientCheck && sizeofElemType != sizeof(double))
     {

@@ -292,6 +292,7 @@ protected:
     string m_showWERMode;
     bool m_isSVD;
     size_t m_maxFrameNumPerMinibatchMBR;
+    bool m_enableMultiThreadDecodeMBR;
     // Parallel training
     MPIWrapperPtr m_mpi;
 

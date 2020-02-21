@@ -474,6 +474,8 @@ public:
     void InplaceTranspose();
 
     Matrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
+    Matrix<ElemType>& SetToZeroIfLessThan(const ElemType threshold);
+
 
     DeviceBoundNumber<ElemType> Sum_AsDeviceBoundNum() const;
     ElemType SumOfAbsElements() const; // sum of all abs(elements)
@@ -658,6 +660,11 @@ public:
                   const std::array<size_t, 2>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+    void TensorOpDebug(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                  const std::array<size_t, 2>& offsets,
+                  const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                  const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+
     void TensorOp(ElemType beta, const Matrix<ElemType>& a, const Matrix<ElemType>& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                   const std::array<size_t, 3>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 3>& regularStrides,

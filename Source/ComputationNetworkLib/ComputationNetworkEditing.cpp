@@ -75,6 +75,9 @@ void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
         LogicError("CopySubTree: you cannot copy a tree without copying the node values.");
 
     ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
+    std::set<wstring> set_cur_tonode_names;
+
+    set_cur_tonode_names.clear();
 
     if (!fromNet.EvalOrderExists(fromRoot))
         const_cast<ComputationNetwork&>(fromNet).FormEvalOrder(fromRoot);
@@ -84,20 +87,66 @@ void ComputationNetwork::CopySubTree(const ComputationNetwork& fromNet,
         wstring fromNodeName = fromNode->NodeName();
         wstring toNodeName = toNamePrefix + fromNodeName;
 
+        // fprintf(stderr, "CopySubTree node = %ls\n", fromNodeName.c_str());
+
         ComputationNodeBasePtr toNode = CopyNode(fromNet, fromNodeName,
                                                  toNodeName,
                                                  CopyNodeFlags::copyNodeValue);
-
+        set_cur_tonode_names.insert(toNodeName);
+        ComputationNodeBasePtr fromNodeTmp;
+        fromNodeTmp = fromNet.GetNodeFromName(fromNodeName);
+        
+        /* fprintf(stderr, "CopySubTree node = %ls, numrows = %d, numcols = %d \n", fromNodeName.c_str(),
+         int((&dynamic_pointer_cast<ComputationNode<float>>(fromNodeTmp)->Value())->GetNumRows()), 
+            int((&dynamic_pointer_cast<ComputationNode<float>>(fromNodeTmp)->Value())->GetNumCols()) 
+            ); */
         if (flags & CopyNodeFlags::copyNodeInputLinks)
         {
             // copy the children structure but use the new nodes generated
             for (int i = 0; i < fromNode->GetNumInputs(); i++)
-                toNode->SetInput(i, GetNodeFromName(toNamePrefix + fromNode->GetInputs()[i]->NodeName()));
+            {
+                wstring inputNodeName;
+                inputNodeName = (toNamePrefix + fromNode->GetInputs()[i]->NodeName());
+                if (set_cur_tonode_names.find(inputNodeName) == set_cur_tonode_names.end() )
+                {
+                    //somehow the evalorder goes wrong, and the input is not copied to the toNetwork yet, do copy here
+                    // fprintf(stderr, "CopySubTree i = %d, missing node = %ls\n", i, inputNodeName.c_str());
+
+                    CopyNode(fromNet, fromNode->GetInputs()[i]->NodeName(),
+                             inputNodeName,
+                             CopyNodeFlags::copyNodeValue);
+                    set_cur_tonode_names.insert(inputNodeName);
+                }
+                //fprintf(stderr, "CopySubTree i = %d, node = %ls\n", i, toNodeName.c_str());
+
+                //toNode->SetInput(i, GetNodeFromName(toNamePrefix + fromNode->GetInputs()[i]->NodeName()));
+                toNode->SetInput(i, GetNodeFromName(inputNodeName));
+            }
         }
     }
 }
 
-// you can only copy inputs from nodes in the same network
+void ComputationNetwork::ShowNodeMemory(const ComputationNetwork& fromNet,
+                                     const std::wstring fromName)
+{
+   
+    ComputationNodeBasePtr fromRoot = fromNet.GetNodeFromName(fromName);
+  
+    if (!fromNet.EvalOrderExists(fromRoot))
+        const_cast<ComputationNetwork&>(fromNet).FormEvalOrder(fromRoot);
+
+    for (const auto& fromNode : fromNet.GetEvalOrder(fromRoot)) // BUGBUG: This probably will fail because the precomputed eval orders are invalid at this point.
+    {
+        wstring fromNodeName = fromNode->NodeName();
+        ComputationNodeBasePtr fromNodeTmp;
+        fromNodeTmp = fromNet.GetNodeFromName(fromNodeName);
+
+        fprintf(stderr, "ShowNodeMemory node = %ls, numrows = %d, numcols = %d \n", fromNodeName.c_str(),
+                int((&dynamic_pointer_cast<ComputationNode<float>>(fromNodeTmp)->Value())->GetNumRows()),
+                int((&dynamic_pointer_cast<ComputationNode<float>>(fromNodeTmp)->Value())->GetNumCols()));
+    }
+}
+    // you can only copy inputs from nodes in the same network
 void ComputationNetwork::CopyInputs(const std::wstring fromName, std::wstring toName)
 {
     CopyNode(*this, fromName, toName, CopyNodeFlags::copyNodeInputLinks);

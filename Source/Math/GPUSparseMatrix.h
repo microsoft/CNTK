@@ -395,7 +395,7 @@ public:
     GPUSparseMatrix<ElemType>& AssignTruncateTopOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold);
 
     GPUSparseMatrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
-
+    GPUSparseMatrix<ElemType>& SetToZeroIfLessThan(const ElemType threshold);
     GPUSparseMatrix<ElemType>& AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const GPUMatrix<ElemType>& vector);

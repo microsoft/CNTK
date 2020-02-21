@@ -3215,6 +3215,24 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::SetToZeroIfAbsLessThan(const ElemType 
     return *this;
 }
 
+template <class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::SetToZeroIfLessThan(const ElemType threshold)
+{
+    if (IsEmpty())
+        LogicError("SetToZeroIfLessThan: Matrix is empty.");
+
+    auto& us = *this;
+
+#pragma omp parallel for
+    foreach_coord (i, j, us)
+    {
+        if ((us(i, j)) < threshold)
+            us(i, j) = 0;
+    }
+
+    return *this;
+}
+
 //sum of all abs(elements)
 template <class ElemType>
 ElemType CPUMatrix<ElemType>::SumOfAbsElements() const

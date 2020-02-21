@@ -21,7 +21,12 @@
 #include <algorithm>
 #include <assert.h>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 // -----------------------------------------------------------------------
 // Reshape(x, tensorShape, beginAxis=0, endAxis=0) -- reinterpret input samples as having different tensor dimensions
@@ -46,8 +51,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 template <class ElemType>
 class ReshapeNode : public UnaryElementWiseNode<ElemType>
 {
-    typedef UnaryElementWiseNode<ElemType> Base; UsingUnaryElementwiseNodeBaseMembers;
-    static const std::wstring TypeName() { return L"Reshape"; }
+    typedef UnaryElementWiseNode<ElemType> Base;
+    UsingUnaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName()
+    {
+        return L"Reshape";
+    }
 
 public:
     ReshapeNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& replacementSampleLayout = TensorShape(), int beginAxis = 1, int endAxis = 0)
@@ -70,7 +79,7 @@ public:
         {
             auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
             node->m_beginDimParameter = m_beginDimParameter;
-            node->m_endDimParameter   = m_endDimParameter;
+            node->m_endDimParameter = m_endDimParameter;
             node->m_replacementSampleLayout = m_replacementSampleLayout;
         }
     }
@@ -152,25 +161,25 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        auto result     =             ValueFor(fr);
+        auto result = ValueFor(fr);
         auto inputValue = InputRef(0).ValueFor(fr);
         ForwardPropImpl(result, inputValue);
     }
 
-    static void ForwardPropImpl(Matrix<ElemType> &result, Matrix<ElemType> &input)
+    static void ForwardPropImpl(Matrix<ElemType>& result, Matrix<ElemType>& input)
     {
         result.AssignValuesOf(input.Reshaped(result.GetNumRows(), result.GetNumCols()));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        auto gradient      =                      GradientFor(fr);
+        auto gradient = GradientFor(fr);
         auto inputGradient = InputRef(inputIndex).GradientFor(fr);
 
         BackpropImpl(gradient, inputGradient, Input(inputIndex)->IsGradientOptimized(this), Input(inputIndex)->ParentGradientReused());
     }
 
-    static void BackpropImpl(Matrix<ElemType> &gradient, Matrix<ElemType> &inputGradient, bool isGradientOptimized, bool isParentGradientReused)
+    static void BackpropImpl(Matrix<ElemType>& gradient, Matrix<ElemType>& inputGradient, bool isGradientOptimized, bool isParentGradientReused)
     {
         if (isGradientOptimized)
         {
@@ -188,10 +197,19 @@ public:
             inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
-    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override { return ParentGradientOptimization::Reuse; }
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
+    {
+        return ParentGradientOptimization::Reuse;
+    }
 
 private:
     TensorShape m_replacementSampleLayout; // user-specified dimensions to replace dimensions [beginAxis, endAxis]
@@ -222,12 +240,19 @@ template class ReshapeNode<double>;
 template <class ElemType>
 class ReduceElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"ReduceElements"; }
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ReduceElements";
+    }
 
     void ValidateOp();
 
-    static inline bool Contains(const std::vector<int>& axes, int axis) { return std::find(axes.begin(), axes.end(), axis) != axes.end(); }
+    static inline bool Contains(const std::vector<int>& axes, int axis)
+    {
+        return std::find(axes.begin(), axes.end(), axis) != axes.end();
+    }
     static bool DefaultKeepDimensionsSetting(int axis)
     {
         return !((axis == CNTKInternalIdxValueForAllStaticAxes) || (axis == CNTKInternalIdxValueForAllAxes));
@@ -245,11 +270,16 @@ public:
     {
         switch (op)
         {
-        case ElementWiseOperator::opSum:                return  0;
-        case ElementWiseOperator::opLogSum:             return -std::numeric_limits<ElemType>::infinity();
-        case ElementWiseOperator::opMin:                return  std::numeric_limits<ElemType>::infinity();
-        case ElementWiseOperator::opMax:                return -std::numeric_limits<ElemType>::infinity();
-        case ElementWiseOperator::opElementwiseProduct: return 1;
+        case ElementWiseOperator::opSum:
+            return 0;
+        case ElementWiseOperator::opLogSum:
+            return -std::numeric_limits<ElemType>::infinity();
+        case ElementWiseOperator::opMin:
+            return std::numeric_limits<ElemType>::infinity();
+        case ElementWiseOperator::opMax:
+            return -std::numeric_limits<ElemType>::infinity();
+        case ElementWiseOperator::opElementwiseProduct:
+            return 1;
         default:
             InvalidArgument("ReduceElementsNode::NeutralValue: Invalid operation code; allowed are: 'opSum', 'opMax', 'opMin', 'opElementwiseProduct', 'opLogSum'.");
         }
@@ -258,47 +288,57 @@ public:
     // map the operation specified as a string to an ElementWiseOperator value.
     static ElementWiseOperator ReductionOpEnumValue(const std::wstring& opName)
     {
-        if      (opName == L"Plus")   return ElementWiseOperator::opSum;
-        else if (opName == L"Sum")    return ElementWiseOperator::opSum;
-        else if (opName == L"Mean")   return ElementWiseOperator::opSum;
-        else if (opName == L"LogSum") return ElementWiseOperator::opLogSum;
-        else if (opName == L"Min")    return ElementWiseOperator::opMin;
-        else if (opName == L"Max")    return ElementWiseOperator::opMax;
-        else if (opName == L"Prod")   return ElementWiseOperator::opElementwiseProduct;
-        else if (opName == L"Argmin") return ElementWiseOperator::opArgmin;
-        else if (opName == L"Argmax") return ElementWiseOperator::opArgmax;
+        if (opName == L"Plus")
+            return ElementWiseOperator::opSum;
+        else if (opName == L"Sum")
+            return ElementWiseOperator::opSum;
+        else if (opName == L"Mean")
+            return ElementWiseOperator::opSum;
+        else if (opName == L"LogSum")
+            return ElementWiseOperator::opLogSum;
+        else if (opName == L"Min")
+            return ElementWiseOperator::opMin;
+        else if (opName == L"Max")
+            return ElementWiseOperator::opMax;
+        else if (opName == L"Prod")
+            return ElementWiseOperator::opElementwiseProduct;
+        else if (opName == L"Argmin")
+            return ElementWiseOperator::opArgmin;
+        else if (opName == L"Argmax")
+            return ElementWiseOperator::opArgmax;
 
         // more here
-        else InvalidArgument("Invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min', 'Prod', 'Argmax', 'Argmin'.", opName.c_str());
+        else
+            InvalidArgument("Invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min', 'Prod', 'Argmax', 'Argmin'.", opName.c_str());
     }
 
 public:
-    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, int axis, bool keepDimensions) :
-        Base(deviceId, name), m_operation(operation), m_axes({ axis }), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_keepDimensions(keepDimensions)
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, int axis, bool keepDimensions)
+        : Base(deviceId, name), m_operation(operation), m_axes({axis}), m_reductionOp((ElementWiseOperator) -1 /*invalid*/), m_scale(0 /*invalid*/), m_keepDimensions(keepDimensions)
     {
         if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
             ValidateOp();
     }
 
-    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = CNTKInternalIdxValueForAllStaticAxes) :
-        ReduceElementsNode(deviceId, name, operation, { axis }, DefaultKeepDimensionsSetting(axis))
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = CNTKInternalIdxValueForAllStaticAxes)
+        : ReduceElementsNode(deviceId, name, operation, {axis}, DefaultKeepDimensionsSetting(axis))
     {
     }
 
-    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, const std::vector<int>& axis, bool keepDimensions) :
-        Base(deviceId, name), m_operation(operation), m_axes(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_keepDimensions(keepDimensions)
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, const std::vector<int>& axis, bool keepDimensions)
+        : Base(deviceId, name), m_operation(operation), m_axes(axis), m_reductionOp((ElementWiseOperator) -1 /*invalid*/), m_scale(0 /*invalid*/), m_keepDimensions(keepDimensions)
     {
         if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
             ValidateOp();
     }
 
-    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, const std::vector<int>& axis) :
-        ReduceElementsNode(deviceId, name, operation, axis, DefaultKeepDimensionsSetting(axis))
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation, const std::vector<int>& axis)
+        : ReduceElementsNode(deviceId, name, operation, axis, DefaultKeepDimensionsSetting(axis))
     {
     }
 
-    ReduceElementsNode(const ScriptableObjects::IConfigRecordPtr configp) :
-        ReduceElementsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"reductionOp"), (int) configp->Get(L"axis"))
+    ReduceElementsNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ReduceElementsNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"reductionOp"), (int) configp->Get(L"axis"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -352,25 +392,55 @@ public:
         ReleaseMatrixToPool(m_tempGatherIndices, matrixPool);
     }
 
-    std::wstring ReductionOpName() const { return m_operation; }
-    const std::vector<int>& ReductionAxis() const { return m_axes; }
+    std::wstring ReductionOpName() const
+    {
+        return m_operation;
+    }
+    const std::vector<int>& ReductionAxis() const
+    {
+        return m_axes;
+    }
+    // for debug purpose
+    void set_frame(int nfs)
+    {
+        num_frames = nfs;
+    }
+    void is_multi_thread(bool mt)
+    {
+        multi_thread = mt;
+    }
 
-    static const int  CNTKInternalIdxValueForAllStaticAxes = 0;
-    static const int  CNTKInternalIdxValueForAllAxes = -1;
-    static const int  CNTKInternalIdxValueForSequenceAxis = -2;
-    static const int  CNTKInternalIdxValueForBatchAxis = -3;
+    static const int CNTKInternalIdxValueForAllStaticAxes = 0;
+    static const int CNTKInternalIdxValueForAllAxes = -1;
+    static const int CNTKInternalIdxValueForSequenceAxis = -2;
+    static const int CNTKInternalIdxValueForBatchAxis = -3;
 
 private:
-    bool IsMean() const { return (m_operation == L"Mean"); }
-    bool ReduceAllStaticAxes() const { return Contains(m_axes, CNTKInternalIdxValueForAllStaticAxes); }
-    bool ReduceAllAxes() const { return Contains(m_axes, CNTKInternalIdxValueForAllAxes); }
-    bool ReduceSequenceAxis() const { return Contains(m_axes, CNTKInternalIdxValueForSequenceAxis); }
-    bool ReduceBatchAxis() const { return Contains(m_axes, CNTKInternalIdxValueForBatchAxis); }
+    bool IsMean() const
+    {
+        return (m_operation == L"Mean");
+    }
+    bool ReduceAllStaticAxes() const
+    {
+        return Contains(m_axes, CNTKInternalIdxValueForAllStaticAxes);
+    }
+    bool ReduceAllAxes() const
+    {
+        return Contains(m_axes, CNTKInternalIdxValueForAllAxes);
+    }
+    bool ReduceSequenceAxis() const
+    {
+        return Contains(m_axes, CNTKInternalIdxValueForSequenceAxis);
+    }
+    bool ReduceBatchAxis() const
+    {
+        return Contains(m_axes, CNTKInternalIdxValueForBatchAxis);
+    }
 
 private:
     // operation attributes
     std::vector<int> m_axes;
-    std::wstring m_operation;          // the operation as a string, e.g. "Sum", see ValidateOp()
+    std::wstring m_operation; // the operation as a string, e.g. "Sum", see ValidateOp()
     bool m_keepDimensions;
 
     // things cached during validation
@@ -381,6 +451,9 @@ private:
     shared_ptr<Matrix<char>> m_tempMask;
     shared_ptr<Matrix<ElemType>> m_tempScatterIndices;
     shared_ptr<Matrix<ElemType>> m_tempUnpackedData;
+    // debug
+    size_t num_frames;
+    bool multi_thread = false;
 };
 
 // -----------------------------------------------------------------------
@@ -395,8 +468,12 @@ private:
 template <class ElemType>
 class ReconcileDynamicAxisNode : public ComputationNode<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"ReconcileDynamicAxis"; }
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ReconcileDynamicAxis";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(ReconcileDynamicAxisNode);
@@ -412,9 +489,9 @@ public:
 
         m_layoutsMatch = InputRef(0).HasMBLayout() && *m_pMBLayout == *InputRef(0).GetMBLayout(); // this does a deep value-level comparison
 
-        if (InputRef(0).HasMBLayout() && !m_layoutsMatch &&                                       // input is a mismatching data input --only allowed case is broadcast_as()
-            ((InputRef(0).GetMBLayout()->GetNumTimeSteps() != 1) ||                               // not broadcast_as()
-             (InputRef(0).GetMBLayout()->GetNumSequences() != m_pMBLayout->GetNumSequences())))   // different batch??
+        if (InputRef(0).HasMBLayout() && !m_layoutsMatch &&                                     // input is a mismatching data input --only allowed case is broadcast_as()
+            ((InputRef(0).GetMBLayout()->GetNumTimeSteps() != 1) ||                             // not broadcast_as()
+             (InputRef(0).GetMBLayout()->GetNumSequences() != m_pMBLayout->GetNumSequences()))) // different batch??
         {
             InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompatible with that of %ls %ls.",
                             NodeName().c_str(), OperationName().c_str(),
@@ -422,11 +499,11 @@ public:
                             InputRef(1).NodeName().c_str(), InputRef(1).OperationName().c_str());
         }
 
-        if (!InputRef(0).HasMBLayout() || m_layoutsMatch)   // no shuffle-case: everything matches or non-data that can use tensor broadcast
+        if (!InputRef(0).HasMBLayout() || m_layoutsMatch) // no shuffle-case: everything matches or non-data that can use tensor broadcast
         {
             // copy the data from 'dataInput'
             size_t rank = GetSampleLayout().GetRank();
-            auto result =             ValueTensorFor(rank, fr);
+            auto result = ValueTensorFor(rank, fr);
             auto input0 = InputRef(0).ValueTensorFor(rank, InputRef(0).HasMBLayout() ? fr.WithLayout(InputRef(0).GetMBLayout()) : fr.AllowBroadcast());
             // If data input has a layout (which is known to match), then replace the pointer here ^^ to avoid another runtime check.
             // If it has no layout, then set the broadcast-allowed flag, which will accept any layout to be passed in.
@@ -436,7 +513,7 @@ public:
         else // Broadcasting along the sequence case: must reshuffle
         {
             auto result = ValueFor(fr);
-            ComputationNode<ElemType>::BroadcastToPacked(InputRef(0).Value(), InputRef(0).GetMBLayout(), /*beta =*/ 0, result, fr, m_tempGatherIndices);
+            ComputationNode<ElemType>::BroadcastToPacked(InputRef(0).Value(), InputRef(0).GetMBLayout(), /*beta =*/0, result, fr, m_tempGatherIndices);
         }
     }
 
@@ -454,7 +531,7 @@ public:
             TensorView<ElemType> inputGradient;
             if (!InputRef(0).GetMBLayout() || m_layoutsMatch)
             {
-                gradient      =                      GradientTensorFor(rank, fr);
+                gradient = GradientTensorFor(rank, fr);
                 inputGradient = InputRef(inputIndex).GradientTensorFor(rank, InputRef(inputIndex).HasMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
             }
             else
@@ -464,7 +541,7 @@ public:
                     InvalidArgument("%ls %ls operation does not support broadcasting the left operand to the right operand's dynamic axis, inside a recurrent loop.", NodeName().c_str(), OperationName().c_str());
 
                 ElemType gapPadValue = 0;
-                gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, std::shared_ptr<Matrix<char>>(nullptr), /*batchMajor=*/ true, &gapPadValue);
+                gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, std::shared_ptr<Matrix<char>>(nullptr), /*batchMajor=*/true, &gapPadValue);
                 inputGradient = Input(inputIndex)->GradientTensorFor(rank, FrameRange(InputRef(inputIndex).GetMBLayout(), 0));
             }
 
@@ -477,8 +554,14 @@ public:
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
     virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
     {
         return (Input(0).get() == input) ? ParentGradientOptimization::Overwrite : ParentGradientOptimization::None; // no gradient propagation to input1
@@ -533,17 +616,19 @@ template class ReconcileDynamicAxisNode<double>;
 template <class ElemType>
 class ToBatchAxisNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() {
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
         return L"ToBatchAxisNode";
     }
+
 public:
     ToBatchAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
     {
-
     }
-    
+
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         auto& inputValue = InputRef(0).Value();
@@ -570,7 +655,7 @@ public:
         return false;
     }
 
-    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override 
+    virtual ParentGradientOptimization ImplementsGradientOptimization(const ComputationNodeBase* input) const override
     {
         return ParentGradientOptimization::Reuse;
     }
@@ -583,7 +668,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        
+
         if (!m_pMBLayout)
         {
             m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
@@ -614,14 +699,16 @@ public:
 template class ToBatchAxisNode<float>;
 template class ToBatchAxisNode<double>;
 
-
 template <class ElemType>
 class UnpackBatchAxisNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() {
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
         return L"UnpackBatchAxis";
     }
+
 public:
     UnpackBatchAxisNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name)
@@ -644,12 +731,12 @@ public:
         ReshapeNode<ElemType>::BackpropImpl(gradient, inputGradient, Input(0)->IsGradientOptimized(this), Input(0)->ParentGradientReused());
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override 
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
     {
         return false;
     }
 
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override 
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
         return false;
     }
@@ -659,7 +746,7 @@ public:
         return ParentGradientOptimization::Reuse;
     }
 
-    bool ForceDynamicValidation() const override 
+    bool ForceDynamicValidation() const override
     {
         return true;
     }
@@ -705,19 +792,23 @@ template class UnpackBatchAxisNode<double>;
 template <class ElemType>
 class SliceNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"Slice"; }
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"Slice";
+    }
 
 public:
     SliceNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<int> beginIndex = {0}, std::vector<int> endIndex = {0}, std::vector<int> axis = {1}, std::vector<int> stride_multiplier = {1})
         : Base(deviceId, name), m_beginIndex(beginIndex), m_endIndex(endIndex), m_axis(axis), m_stride_multiplier(stride_multiplier)
     {
         if (m_beginIndex.size() != m_endIndex.size() || m_beginIndex.size() != m_axis.size())
-            InvalidArgument("%ls %ls operation: invalid size of beginIndex (%d), endIndx (%d) and axis (%d). They must agree.", NodeName().c_str(), OperationName().c_str(), (int)m_beginIndex.size(), (int)m_endIndex.size(), (int)m_axis.size());
+            InvalidArgument("%ls %ls operation: invalid size of beginIndex (%d), endIndx (%d) and axis (%d). They must agree.", NodeName().c_str(), OperationName().c_str(), (int) m_beginIndex.size(), (int) m_endIndex.size(), (int) m_axis.size());
     }
 
     SliceNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : SliceNode(configp->Get(L"deviceId"), L"<placeholder>", { configp->Get(L"beginIndex") }, { configp->Get(L"endIndex") }, { configp->Get(L"axis") })
+        : SliceNode(configp->Get(L"deviceId"), L"<placeholder>", {configp->Get(L"beginIndex")}, {configp->Get(L"endIndex")}, {configp->Get(L"axis")})
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -735,35 +826,35 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         auto node = dynamic_pointer_cast<SliceNode<ElemType>>(nodeP);
         node->m_beginIndex = m_beginIndex;
-        node->m_endIndex   = m_endIndex;
-        node->m_axis       = m_axis;
+        node->m_endIndex = m_endIndex;
+        node->m_axis = m_axis;
         node->m_stride_multiplier = m_stride_multiplier;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        int num = 1, axis = 1, stride_multiplier = 1;  // axis = 1 to emulate old RowSliceNode 
+        int num = 1, axis = 1, stride_multiplier = 1; // axis = 1 to emulate old RowSliceNode
         ptrdiff_t beginIndex, height;
         if (modelVersion >= CNTK_MODEL_VERSION_22)
-            fstream >> num; 
+            fstream >> num;
         if (num < 1)
-            InvalidArgument("Slice node number of axes (%d) invalid, must be >=1", num); 
+            InvalidArgument("Slice node number of axes (%d) invalid, must be >=1", num);
 
-        m_beginIndex.clear(); 
+        m_beginIndex.clear();
         m_endIndex.clear();
-        m_axis.clear(); 
+        m_axis.clear();
         m_stride_multiplier.clear();
         for (int i = 0; i < num; i++)
         {
             fstream >> beginIndex >> height; // legacy format stored (end-begin)
-            m_beginIndex.push_back((int)beginIndex);
-            m_endIndex.push_back((int)(beginIndex + height));
+            m_beginIndex.push_back((int) beginIndex);
+            m_endIndex.push_back((int) (beginIndex + height));
             if (modelVersion >= CNTK_MODEL_VERSION_3)
                 fstream >> axis;
             if (modelVersion >= CNTK_MODEL_VERSION_27)
                 fstream >> stride_multiplier;
-            m_axis.push_back(axis); 
+            m_axis.push_back(axis);
             m_stride_multiplier.push_back(stride_multiplier);
         }
     }
@@ -771,57 +862,64 @@ public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        int num = (int)m_axis.size(); 
-        fstream << num; 
+        int num = (int) m_axis.size();
+        fstream << num;
         for (auto i = 0; i < num; i++)
         {
-            fstream << (ptrdiff_t)m_beginIndex[i] << (ptrdiff_t)(m_endIndex[i] - m_beginIndex[i]); // legacy file format stores (end-begin), we keep it that way
+            fstream << (ptrdiff_t) m_beginIndex[i] << (ptrdiff_t)(m_endIndex[i] - m_beginIndex[i]); // legacy file format stores (end-begin), we keep it that way
             fstream << m_axis[i];
             fstream << m_stride_multiplier[i];
         }
     }
 
     // these implement numpy-style negative bound values to index from the end
-    std::vector<int> BeginIndex() const { return m_beginIndex; }
-    size_t BeginIndex(int idx) const 
+    std::vector<int> BeginIndex() const
     {
-        if (idx >= (int)m_axis.size())
-            InvalidArgument("Slice BeginIndex call with invalid index (%d) >= axis size (%d)", idx, (int)m_axis.size()); 
-        return m_beginIndex[idx] >= 0 ? (size_t)m_beginIndex[idx] : (size_t)(m_beginIndex[idx] + InputRef(0).GetSampleLayout()[m_axis[idx] - 1]); 
+        return m_beginIndex;
     }
-    std::vector<int> EndIndex() const { return m_endIndex; }
-    size_t EndIndex(int idx)   const 
+    size_t BeginIndex(int idx) const
     {
-        if (idx >= (int)m_axis.size())
-            InvalidArgument("Slice EndIndex call with invalid index (%d) >= axis size (%d)", idx, (int)m_axis.size());
-        return m_endIndex[idx]   >  0 ? (size_t)m_endIndex[idx] : (size_t)(m_endIndex[idx] + InputRef(0).GetSampleLayout()[m_axis[idx] - 1]); 
+        if (idx >= (int) m_axis.size())
+            InvalidArgument("Slice BeginIndex call with invalid index (%d) >= axis size (%d)", idx, (int) m_axis.size());
+        return m_beginIndex[idx] >= 0 ? (size_t) m_beginIndex[idx] : (size_t)(m_beginIndex[idx] + InputRef(0).GetSampleLayout()[m_axis[idx] - 1]);
     }
-    std::vector<int> Axis() const { return m_axis; }
-    int Axis(int idx) const 
-    { 
-        if (idx >= (int)m_axis.size())
-            InvalidArgument("Slice Axis call with invalid index (%d) >= axis size (%d)", idx, (int)m_axis.size());
-        return m_axis[idx]; 
+    std::vector<int> EndIndex() const
+    {
+        return m_endIndex;
+    }
+    size_t EndIndex(int idx) const
+    {
+        if (idx >= (int) m_axis.size())
+            InvalidArgument("Slice EndIndex call with invalid index (%d) >= axis size (%d)", idx, (int) m_axis.size());
+        return m_endIndex[idx] > 0 ? (size_t) m_endIndex[idx] : (size_t)(m_endIndex[idx] + InputRef(0).GetSampleLayout()[m_axis[idx] - 1]);
+    }
+    std::vector<int> Axis() const
+    {
+        return m_axis;
+    }
+    int Axis(int idx) const
+    {
+        if (idx >= (int) m_axis.size())
+            InvalidArgument("Slice Axis call with invalid index (%d) >= axis size (%d)", idx, (int) m_axis.size());
+        return m_axis[idx];
     }
 
 private:
-
     // determine the tensor shape that represents slice of the input that we are taking
-    TensorShape GetInputSlice(size_t rank, const FrameRange & fr) const
+    TensorShape GetInputSlice(size_t rank, const FrameRange& fr) const
     {
-        auto inputSlice = InputRef(0).GetTensorSliceFor(rank, fr);    // input must be narrowed down
-        for (int i = 0; i < (int)m_axis.size(); i++)  
-            inputSlice.NarrowTo(Axis(i)-1, BeginIndex(i), EndIndex(i), m_stride_multiplier[i]);
+        auto inputSlice = InputRef(0).GetTensorSliceFor(rank, fr); // input must be narrowed down
+        for (int i = 0; i < (int) m_axis.size(); i++)
+            inputSlice.NarrowTo(Axis(i) - 1, BeginIndex(i), EndIndex(i), m_stride_multiplier[i]);
         return inputSlice;
     }
 
 public:
-
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto output = ValueTensorFor(rank, fr);
-        let   input = TensorView<ElemType>(InputRef(0).ValuePtr(), GetInputSlice(rank, fr.AllowBroadcast()));
+        let input = TensorView<ElemType>(InputRef(0).ValuePtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         output.AssignCopyOf(input);
     }
 
@@ -833,8 +931,14 @@ public:
         inputGrad.AddCopyOf(outputGrad);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -842,13 +946,13 @@ public:
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         auto sampleLayout = Input(0)->GetSampleLayout();
-        for (int i = 0; i < (int)m_axis.size(); i++)
+        for (int i = 0; i < (int) m_axis.size(); i++)
         {
             if (m_axis[i] < 1 || (isFinalValidationPass && m_axis[i] > sampleLayout.GetRank()))
                 RuntimeError("%ls %ls operation: axis parameter %d (%d) must be in range 1..rank of input ([%s]).", NodeName().c_str(), OperationName().c_str(), i, m_axis[i], string(sampleLayout).c_str());
 
             if (isFinalValidationPass && (sampleLayout[m_axis[i] - 1] < EndIndex(i) || EndIndex(i) < BeginIndex(i) || BeginIndex(i) < 0))
-                RuntimeError("%ls %ls operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_beginIndex[i], m_endIndex[i], (int)BeginIndex(i), (int)EndIndex(i), string(sampleLayout).c_str());
+                RuntimeError("%ls %ls operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_beginIndex[i], m_endIndex[i], (int) BeginIndex(i), (int) EndIndex(i), string(sampleLayout).c_str());
 
             // propagate as much as we can
             if (isFinalValidationPass || (m_axis[i] - 1 < sampleLayout.GetRank() && 0 <= BeginIndex(i) && BeginIndex(i) <= EndIndex(i) && EndIndex(i) <= sampleLayout[m_axis[i] - 1])) // (the second condition guards against failing an out-of-bounds error if not isFinalValidationPass)
@@ -868,40 +972,40 @@ template class SliceNode<double>;
 
 enum class PaddingType
 {
-    CONSTANTPAD = 0, // the default, fill the padding cells with 0
-    REFLECTPAD = 1, // Padding with reflect mode
+    CONSTANTPAD = 0,  // the default, fill the padding cells with 0
+    REFLECTPAD = 1,   // Padding with reflect mode
     SYMMETRICPAD = 2, // Padding with symmetric mode
 };
 
 template <class ElemType>
 class PaddingNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base; 
+    typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() 
+    static const std::wstring TypeName()
     {
         return L"Padding";
     }
-public:
-    
 
+public:
 public:
     PaddingNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<size_t> head, std::vector<size_t> foot, PaddingType mode = PaddingType::CONSTANTPAD, double constantValue = 0)
-        : Base(deviceId, name), m_head(head), m_foot(foot), m_mode(mode), m_constant_value((ElemType)constantValue)
+        : Base(deviceId, name), m_head(head), m_foot(foot), m_mode(mode), m_constant_value((ElemType) constantValue)
     {
     }
 
-    PaddingNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name)
+    PaddingNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
     {
     }
-    
+
 public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
         let input = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-        int maxRank = (int)(Input(0)->GetSampleLayout().GetRank());
+        int maxRank = (int) (Input(0)->GetSampleLayout().GetRank());
         let dims = Input(0)->GetSampleLayout().GetDims();
         let outputDims = GetSampleLayout().GetDims();
         auto outputSubSlice = outputSlice;
@@ -935,14 +1039,14 @@ public:
             }
         }
     }
-    
+
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
         let outputSlice = GetTensorSliceFor(rank, fr); // tensor slice that represents the entire output for FrameRange
 
         auto inputGrad = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
-        int maxRank = (int)(Input(inputIndex)->GetSampleLayout().GetRank());
+        int maxRank = (int) (Input(inputIndex)->GetSampleLayout().GetRank());
         let dims = Input(inputIndex)->GetSampleLayout().GetDims();
         let outputDims = GetSampleLayout().GetDims();
         // first folder the gradients if its padding mode is reflect or symmetric
@@ -973,12 +1077,12 @@ public:
         inputGrad.AddCopyOf(outputGrad);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override 
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
     {
         return false;
     }
-    
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override 
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
         return false;
     }
@@ -1017,7 +1121,6 @@ public:
     }
 
 private:
-
     void FillPaddingCells(const FrameRange& fr, size_t rank, size_t axis, size_t outputIndex, size_t inputIndex, size_t size, bool reverse)
     {
         if (size > 0)
@@ -1101,7 +1204,10 @@ class CropNode : public ComputationNode<ElemType>, public TransformerNode
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
 
-    static const std::wstring TypeName() { return L"Crop"; }
+    static const std::wstring TypeName()
+    {
+        return L"Crop";
+    }
 
 public:
     CropNode(DEVICEID_TYPE deviceId, const std::wstring& name);
@@ -1127,17 +1233,18 @@ private:
     using TransformerNode::m_transforms;
 
     // Declaration of matrix getting method to unify accessing values and gradients.
-    typedef MatrixBasePtr(ComputationNode<ElemType>::*MatrixGetter)() const;
+    typedef MatrixBasePtr (ComputationNode<ElemType>::*MatrixGetter)() const;
 
     // Helper structure to store input/output views which define parts of input and output we work with.
     struct CroppedIOViews
     {
-        CroppedIOViews(CropNode* cropNode, MatrixGetter matrixGetter, TensorShape inputShapeCropped, TensorShape outputShape) :
-            // Input view is derived from first input.
-            inputViewCropped((cropNode->Input(0).get()->*matrixGetter)(), inputShapeCropped),
-            // Output view corresponds to single output.
-            outputView((cropNode->*matrixGetter)(), outputShape)
-        {}
+        CroppedIOViews(CropNode* cropNode, MatrixGetter matrixGetter, TensorShape inputShapeCropped, TensorShape outputShape)
+            : // Input view is derived from first input.
+              inputViewCropped((cropNode->Input(0).get()->*matrixGetter)(), inputShapeCropped),
+              // Output view corresponds to single output.
+              outputView((cropNode->*matrixGetter)(), outputShape)
+        {
+        }
 
         TensorView<ElemType> inputViewCropped;
         TensorView<ElemType> outputView;
@@ -1151,9 +1258,9 @@ private:
     // Performs offsets computation if necessary.
     void ComputeCropOffsets();
 
-    virtual void /*TransformerNode::*/ComputeTransforms() override;
+    virtual void /*TransformerNode::*/ ComputeTransforms() override;
 
-    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override;
+    virtual bool /*TransformerNode::*/ SupportsTransformOnInput(size_t inputIndex) override;
 
 protected:
     // Offset along x axis. We need to store offsets as floats for precision if one crop node affects computation of other.
@@ -1172,11 +1279,15 @@ protected:
 template <class ElemType>
 class RowStackNode : public ComputationNode<ElemType> // note: not deriving from NumInputs<> like most other nodes, because this one takes a variable number of inputs
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"RowStack"; }
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"RowStack";
+    }
 
 public:
-    RowStackNode(DEVICEID_TYPE deviceId, const wstring& name, int spliceDim = 1/*TODO: complete this*/)
+    RowStackNode(DEVICEID_TYPE deviceId, const wstring& name, int spliceDim = 1 /*TODO: complete this*/)
         : Base(deviceId, name), m_spliceDim(spliceDim)
     {
     }
@@ -1194,7 +1305,7 @@ public:
         {
             auto node = dynamic_pointer_cast<RowStackNode<ElemType>>(nodeP);
             node->m_firstIndices = m_firstIndices;
-            node->m_spliceDim = m_spliceDim; 
+            node->m_spliceDim = m_spliceDim;
         }
     }
 
@@ -1215,11 +1326,11 @@ public:
 
 private:
     // changes the result slice (which includes all stacked inputs) to the stripe that matches where one of the inputs goes
-    TensorShape NarrowToStripe(const TensorShape & resultSlice, size_t inputIndex)
+    TensorShape NarrowToStripe(const TensorShape& resultSlice, size_t inputIndex)
     {
         auto resultSubSlice = resultSlice;
         assert(m_spliceDim > 0);
-        size_t index = (size_t)m_spliceDim - 1;
+        size_t index = (size_t) m_spliceDim - 1;
         resultSubSlice.NarrowTo(index, m_firstIndices[inputIndex], m_firstIndices[inputIndex + 1]);
         return resultSubSlice;
     }
@@ -1250,8 +1361,14 @@ public:
         inputGrad.AddCopyOf(outputGrad);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -1263,7 +1380,7 @@ public:
 
         // determine maximum rank (we can stack tensors with lower rank, which will have their dimensions paded to max automatically)
         assert(m_spliceDim > 0);
-        size_t index = (size_t)m_spliceDim - 1;
+        size_t index = (size_t) m_spliceDim - 1;
         size_t maxRank = index + 1; // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
         for (int i = 0; i < GetNumInputs(); i++)
             if (maxRank < Input(i)->GetSampleLayout().GetRank())
@@ -1278,7 +1395,7 @@ public:
         for (int i = 0; i < GetNumInputs(); i++)
         {
             // check/fuse dims and accumulate the spliced dimension
-            let & shape = Input(i)->GetSampleLayout();
+            let& shape = Input(i)->GetSampleLayout();
             for (size_t k = 0; k < maxRank; k++)
             {
                 size_t dim = shape.GetDimPadded(k);
@@ -1286,15 +1403,15 @@ public:
                 {
                     // accumulate the spliced dimension
                     dims[index] += dim;
-                    m_firstIndices.push_back(dims[index]);    // and remember it
+                    m_firstIndices.push_back(dims[index]); // and remember it
                 }
                 else
                 {
                     // check/fuse dimensions
                     if (isFinalValidationPass && dim != dims[k] && dim != 1 && dims[k] != 1)
                         InvalidArgument("%ls %ls operation: Conflicting dimension %d between %ls %ls operation (%d) and other(s) (%d)",
-                                        NodeName().c_str(), OperationName().c_str(), (int)k, Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str(), (int)dim, (int)dims[k]);
-                    if (dims[k] == 1)   // broadcast
+                                        NodeName().c_str(), OperationName().c_str(), (int) k, Input(i)->NodeName().c_str(), Input(i)->OperationName().c_str(), (int) dim, (int) dims[k]);
+                    if (dims[k] == 1) // broadcast
                         dims[k] = dim;
                 }
             }
@@ -1303,7 +1420,10 @@ public:
         SetDims(TensorShape(dims), HasMBLayout());
     }
 
-    int GetSpliceDim() const { return m_spliceDim; }
+    int GetSpliceDim() const
+    {
+        return m_spliceDim;
+    }
 
 private:
     std::vector<size_t> m_firstIndices; // start row number in the stacked matrix of each input (child) (cumsum of matrix heights); plus one final entry that equals the total dimension
@@ -1320,8 +1440,12 @@ template class RowStackNode<double>;
 template <class ElemType>
 class RowRepeatNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"RowRepeat"; }
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"RowRepeat";
+    }
 
 public:
     RowRepeatNode(DEVICEID_TYPE deviceId, const wstring& name, size_t numRepeats = 1)
@@ -1385,8 +1509,14 @@ public:
         InputRef(0).GradientFor(fr).AddToRowRepeatValuesOf(GradientFor(fr), m_numRepeat);
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
 private:
     size_t m_numRepeat;
@@ -1430,22 +1560,36 @@ and Scatter().
 template <class ElemType>
 class WhereNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"Where"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"Where";
+    }
 
-    static const std::wstring DefaultWhereNodeDynamicAxisName() { return L"WhereNodeAxis"; }
+    static const std::wstring DefaultWhereNodeDynamicAxisName()
+    {
+        return L"WhereNodeAxis";
+    }
+
 public:
     DeclareConstructorFromConfigWithNumInputs(WhereNode);
-    WhereNode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& dynamicAxisName = DefaultWhereNodeDynamicAxisName()) :
-        Base(deviceId, name), m_dynamicAxisName(dynamicAxisName)
+    WhereNode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& dynamicAxisName = DefaultWhereNodeDynamicAxisName())
+        : Base(deviceId, name), m_dynamicAxisName(dynamicAxisName)
     {
         MarkValueNonSharable();
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override;
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
     virtual void Validate(bool isFinalValidationPass) override;
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -1463,12 +1607,15 @@ public:
         fstream << m_dynamicAxisName;
     }
 
-    std::wstring DynamicAxisName() const { return m_dynamicAxisName; }
+    std::wstring DynamicAxisName() const
+    {
+        return m_dynamicAxisName;
+    }
 
 private:
     // buffers for creating the result sequences (kept as object state to avoid memory allocations)
-    std::vector<std::vector<size_t>>   m_indexSequenceBuffer; // [sequenceIndex][t] for creating the result sequences
-    std::vector<size_t>               m_rowAllocationsBuffer; // [row] for determining new MBLayout packing
+    std::vector<std::vector<size_t>> m_indexSequenceBuffer;   // [sequenceIndex][t] for creating the result sequences
+    std::vector<size_t> m_rowAllocationsBuffer;               // [row] for determining new MBLayout packing
     std::vector<std::pair<size_t, size_t>> m_placementBuffer; // [sequenceIndex] assigned location for a sequence
     std::wstring m_dynamicAxisName;
 };
@@ -1486,25 +1633,35 @@ private:
 template <class ElemType>
 class PackedIndexNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"PackedIndex"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"PackedIndex";
+    }
 
     // our inputs
     static const size_t SOURCEDATA = 0;
-    static const size_t INDEXDATA  = 1;
+    static const size_t INDEXDATA = 1;
 
 public:
     DeclareConstructorFromConfigWithNumInputs(PackedIndexNode);
-    PackedIndexNode(DEVICEID_TYPE deviceId, const wstring& name) :
-        Base(deviceId, name)
+    PackedIndexNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
     {
         MarkValueNonSharable();
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t /*inputIndex*/) override;
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
     virtual void Validate(bool isFinalValidationPass) override;
 };
 
@@ -1519,8 +1676,12 @@ public:
 template <class ElemType>
 class GatherPackedNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"GatherPacked"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"GatherPacked";
+    }
 
     // our inputs
     static const size_t INDEXDATA = 0;
@@ -1528,15 +1689,21 @@ class GatherPackedNode : public ComputationNodeNonLooping<ElemType>, public NumI
 
 public:
     DeclareConstructorFromConfigWithNumInputs(GatherPackedNode);
-    GatherPackedNode(DEVICEID_TYPE deviceId, const wstring& name) :
-        Base(deviceId, name)
+    GatherPackedNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
     {
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override;
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return childIndex == INDEXDATA; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        return childIndex == INDEXDATA;
+    }
     virtual void Validate(bool isFinalValidationPass) override;
 };
 
@@ -1552,25 +1719,35 @@ public:
 template <class ElemType>
 class ScatterPackedNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<3>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"ScatterPacked"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ScatterPacked";
+    }
 
     // our inputs
     static const size_t LAYOUTDATA = 0;
-    static const size_t INDEXDATA  = 1;
+    static const size_t INDEXDATA = 1;
     static const size_t SOURCEDATA = 2;
 
 public:
     DeclareConstructorFromConfigWithNumInputs(ScatterPackedNode);
-    ScatterPackedNode(DEVICEID_TYPE deviceId, const wstring& name) :
-        Base(deviceId, name)
+    ScatterPackedNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
     {
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override;
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override { return childIndex == INDEXDATA; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
+        return childIndex == INDEXDATA;
+    }
     virtual void Validate(bool isFinalValidationPass) override;
 };
 
@@ -1581,8 +1758,12 @@ public:
 template <class ElemType>
 class DiagonalNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"Diagonal"; }
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"Diagonal";
+    }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(DiagonalNode);
@@ -1620,8 +1801,14 @@ public:
 #endif
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     virtual void Validate(bool isFinalValidationPass) override
     {
@@ -1802,7 +1989,7 @@ public:
     {
     }
     LegacyReshapeNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LegacyReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout"))/*legacy*/))
+        : LegacyReshapeNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"numRows"), ImageDimensions::AsTensorShape(configp->Get(L"imageWidth"), configp->Get(L"imageHeight"), configp->Get(L"imageChannels"), ImageLayoutKindFrom(configp->Get(L"imageLayout")) /*legacy*/))
     {
         // BUGBUG: We should not operate on image layouts here, but on a proper tensor layout.
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
@@ -1919,8 +2106,14 @@ public:
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
+    {
+        return false;
+    }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -2051,7 +2244,6 @@ private:
 template class LegacyReshapeNode<float>;
 template class LegacyReshapeNode<double>;
 
-
 template <class ElemType>
 class GatherNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
 {
@@ -2063,7 +2255,8 @@ class GatherNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<
     }
 
 public:
-    GatherNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name)
+    GatherNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
     {
     }
 
@@ -2092,7 +2285,7 @@ public:
     {
         if (inputIndex == 1) //only right operand need calculate gradient
         {
-            let&  indices = InputRef(0).Value();
+            let& indices = InputRef(0).Value();
             const auto& indicesMask = InputRef(0).GetMBLayout()->GetColumnsValidityMask(indices.GetDeviceId());
             auto& sourceGradient = InputRef(1).Gradient();
             auto& outputGradient = Gradient();
@@ -2118,10 +2311,12 @@ public:
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override {
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
         return false;
     }
-    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override {
+    virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const override
+    {
         return childIndex == 0;
     }
 
@@ -2143,7 +2338,7 @@ public:
         const auto& inputDims2 = inputSampleLayout2.GetDims();
 
         SmallVector<size_t> dims;
-        dims.append(inputDims2.begin(), inputDims2.end() - 1);//pop the last dim of right operand
+        dims.append(inputDims2.begin(), inputDims2.end() - 1); //pop the last dim of right operand
         dims.append(inputDims1.begin(), inputDims1.end());
         auto sampleLayout = TensorShape(dims);
 
@@ -2353,4 +2548,6 @@ other
 
  */
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft

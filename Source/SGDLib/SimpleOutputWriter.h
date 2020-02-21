@@ -421,7 +421,7 @@ public:
         Matrix<ElemType> encodeOutput(deviceid);
         Matrix<ElemType> decodeOutput(deviceid);
         Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
-        Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
+        Matrix<ElemType> maxIdx(deviceid), maxVal(deviceid);
         Matrix<ElemType> lmin(deviceid);
         MatrixPool m_matrixPool;
         m_matrixPool.OptimizedMemoryAllocation();
@@ -472,35 +472,7 @@ public:
                 CurSequences = nextSequences;
 
                 vector<typename RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
-                //deal with the same prefix
-                /*sort(CurSequences.begin(), CurSequences.end(),
-                     [](const Sequence& a, const Sequence& b) -> bool {
-                         return a.labelseq.size() > b.labelseq.size();
-                     });
-                for (size_t n = 0; n < CurSequences.size() - 1; n++)
-                {
-                    for (size_t h = n + 1; h < CurSequences.size(); h++)
-                    {
-                        if (isPrefix(CurSequences[h], CurSequences[n]))
-                        {
-                            //forward_prop the prefix
-                            forward_decode(CurSequences[h], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, CurSequences[h].labelseq.size());
 
-                            forwardmerged(CurSequences[h], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
-
-                            size_t idx = CurSequences[h].labelseq.size();
-                            ElemType curlogp = CurSequences[h].logP + decodeOutput(CurSequences[n].labelseq[idx], 0);
-                            for (size_t k = idx; k < CurSequences[n].labelseq.size() - 1; k++)
-                            {
-                                forward_decode(CurSequences[n], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, k + 1);
-                                forwardmerged(CurSequences[n], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
-
-                                curlogp += decodeOutput(CurSequences[n].labelseq[k + 1], 0);
-                            }
-                            CurSequences[n].logP = decodeOutput.LogAdd(curlogp, CurSequences[n].logP);
-                        }
-                    }
-                }*/
                 //nextSequences.clear();
                 while (true)
                 {
@@ -515,8 +487,8 @@ public:
                     rnntdfs.prepareSequence(tempSeq);
                     rnntdfs.forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size(), *m_net);
                     if (isSVD)
-                        rnntdfs.forwardmergedSVD(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wmu, Wmv, bm, *m_net);
-                    else rnntdfs.forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm, *m_net);
+                        rnntdfs.forwardmergedSVD(tempSeq, t,  encodeOutput, decodeOutput, Plusnodes, Plustransnodes, Wmu, Wmv, bm, m_net);
+                    else rnntdfs.forwardmerged(tempSeq, t,  encodeOutput, decodeOutput, Plusnodes, Plustransnodes, Wm, bm, m_net);
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels
@@ -715,7 +687,7 @@ public:
         Matrix<ElemType> encodeOutput(deviceid);
         Matrix<ElemType> decodeOutput(deviceid);
         Matrix<ElemType> greedyOutput(deviceid), greedyOutputMax(deviceid);
-        Matrix<ElemType> sumofENandDE(deviceid), maxIdx(deviceid), maxVal(deviceid);
+        Matrix<ElemType> maxIdx(deviceid), maxVal(deviceid);
         Matrix<ElemType> lmin(deviceid);
         MatrixPool m_matrixPool;
         m_matrixPool.OptimizedMemoryAllocation();
@@ -760,36 +732,6 @@ public:
                 CurSequences = nextSequences;
 
                 vector<typename RNNTDecodeFunctions<ElemType>::Sequence>().swap(nextSequences);
-                //deal with the same prefix
-                /*sort(CurSequences.begin(), CurSequences.end(),
-                     [](const Sequence& a, const Sequence& b) -> bool {
-                         return a.labelseq.size() > b.labelseq.size();
-                     });
-                for (size_t n = 0; n < CurSequences.size() - 1; n++)
-                {
-                    for (size_t h = n + 1; h < CurSequences.size(); h++)
-                    {
-                        if (isPrefix(CurSequences[h], CurSequences[n]))
-                        {
-                            //forward_prop the prefix
-                            forward_decode(CurSequences[h], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, CurSequences[h].labelseq.size());
-
-                            forwardmerged(CurSequences[h], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
-
-                            size_t idx = CurSequences[h].labelseq.size();
-                            ElemType curlogp = CurSequences[h].logP + decodeOutput(CurSequences[n].labelseq[idx], 0);
-                            for (size_t k = idx; k < CurSequences[n].labelseq.size() - 1; k++)
-                            {
-                                forward_decode(CurSequences[n], decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, k + 1);
-                                forwardmerged(CurSequences[n], t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes);
-
-                                curlogp += decodeOutput(CurSequences[n].labelseq[k + 1], 0);
-                            }
-                            CurSequences[n].logP = decodeOutput.LogAdd(curlogp, CurSequences[n].logP);
-                        }
-                    }
-                }*/
-                //nextSequences.clear();
                 while (true)
                 {
 
@@ -802,7 +744,7 @@ public:
                     CurSequences.erase(maxSeq);
                     rnntdfs.prepareSequence(tempSeq);
                     rnntdfs.forward_decode(tempSeq, decodeinputMatrices, deviceid, decodeOutputNodes, decodeinputNodes, vocabSize, tempSeq.labelseq.size(), *m_net);
-                    rnntdfs.forwardmerged(tempSeq, t, sumofENandDE, encodeOutput, decodeOutput, PlusNode, PlusTransNode, Plusnodes, Plustransnodes, Wm, bm, *m_net);
+                    rnntdfs.forwardmerged(tempSeq, t, encodeOutput, decodeOutput, Plusnodes, Plustransnodes, Wm, bm, m_net);
 
                     //sumofENandDE.Print("sum");
                     //sort log posterior and get best N labels

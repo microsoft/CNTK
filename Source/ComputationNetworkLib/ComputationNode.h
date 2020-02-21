@@ -13,7 +13,7 @@
 #include "MatrixPool.h"
 #include "ComputationEnvironment.h"
 #include "Globals.h"
-
+#include <cuda_runtime.h>
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -233,7 +233,6 @@ struct ComputationNetworkOwnedNodeState
         return m_parentGradientOptimization == ParentGradientOptimization::Reuse;
     }
 
-
     virtual void MarkValueNonSharable()
     {
         m_valueSharable = false;
@@ -350,6 +349,8 @@ class ComputationNodeBase : public IComputationNode,
     // note: enable_shared_from_this<> allows to create a shared_ptr from a raw pointer to this that is correctly aware of all other shared_ptrs (same ref count)
 public:
     typedef shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
+
+
 
     // -----------------------------------------------------------------------
     // constructors, copying, (de-)serialization

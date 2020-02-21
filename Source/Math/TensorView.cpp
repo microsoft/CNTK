@@ -217,7 +217,7 @@ static void PrepareTensorOperands(array<TensorShape, N> shapes, array<size_t, N>
     }
 
     for (size_t i = 0; i < N; i++)
-        offsets[i] = shapes[i].GetOffset();
+        offsets[i] = shapes[i].GetOffset();        
 }
 
 // enforce that in case of broadcasting, the output must not be an input
@@ -249,6 +249,47 @@ void TensorView<ElemType>::DoUnaryOpOf(ElemType beta, const TensorView& a, ElemT
     GetSOB().TensorOp(beta, a.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
+template <class ElemType>
+void TensorView<ElemType>::DoUnaryOpOfDebug(ElemType beta, const TensorView& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
+{
+    // static int cc = 0; if (cc++ == 0)
+    //    fprintf(stderr, "Tensor Op: Op %d: %s -> %s\n", (int)op, string(a.GetShape()).c_str(), string(GetShape()).c_str());
+
+    // prepare all tensor descriptor information as needed for execution
+    array<size_t, 2> offsets;
+    array<SmallVector<ptrdiff_t>, 2> regularStrides, reducingStrides;
+    SmallVector<size_t> regularOpDims, reducingOpDims;
+    PrepareTensorOperands<ElemType, 2>(array<TensorShape, 2>{a.GetShape(), GetShape()}, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+
+    // output cannot be input when reducing
+    if (reducingOpDims.size() > 0)
+        CheckDifferentObject(a, *this);
+    /*
+    for (size_t i = 0; i < 2; i++)
+    {
+        // fprintf(stderr, "i = %d, offsets = %d,  regularStrides = %d, reducingStrides = %d \n ", int(i), int(offsets[i]), int(regularStrides[i]), int(reducingStrides[i]));
+        fprintf(stderr, "i = %d, offsets = %d\n ", int(i), int(offsets[i]));
+    }
+    for (size_t i = 0; i < regularOpDims.size(); i++)
+        fprintf(stderr, "i = %d, regularOpDims = %d\n ", int(i), int(regularOpDims[i]));
+    for (size_t i = 0; i < reducingOpDims.size(); i++)
+        fprintf(stderr, "i = %d, reducingOpDims = %d\n ", int(i), int(reducingOpDims[i]));
+
+    for (size_t i = 0; i < 2; i++)
+    {
+        for (size_t j = 0; j < regularStrides[i].size(); j++)
+        {
+            fprintf(stderr, "i = %d, j = %d, regularStrides = %d \n ", int(i), int(j), int(regularStrides[i][j]));
+        }
+        for (size_t j = 0; j < reducingStrides[i].size(); j++)
+        {
+            fprintf(stderr, "i = %d, j = %d, reducingStrides = %d \n ", int(i), int(j), int(reducingStrides[i][j]));
+        }
+    }
+    */
+    // now perform the operation
+    GetSOB().TensorOpDebug(beta, a.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+}
 template <class ElemType>
 void TensorView<ElemType>::DoBinaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp)
 {

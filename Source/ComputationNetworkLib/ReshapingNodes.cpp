@@ -26,7 +26,12 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft
+{
+namespace MSR
+{
+namespace CNTK
+{
 
 // -----------------------------------------------------------------------
 // ReduceElements (op, axis=, input)
@@ -39,10 +44,10 @@ template <class ElemType>
     if (flags & CopyNodeFlags::copyNodeValue)
     {
         auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
-        node->m_axes        = m_axes;
-        node->m_operation   = m_operation;
+        node->m_axes = m_axes;
+        node->m_operation = m_operation;
         node->m_reductionOp = m_reductionOp;
-        node->m_scale       = m_scale;
+        node->m_scale = m_scale;
         node->m_keepDimensions = m_keepDimensions;
     }
 }
@@ -57,7 +62,7 @@ template <class ElemType>
         fstream >> num_axes;
     for (int i = 0; i < num_axes; ++i)
     {
-        int axis; 
+        int axis;
         fstream >> axis;
         m_axes.push_back(axis);
     }
@@ -123,7 +128,7 @@ template <class ElemType>
     if (ReduceSequenceAxis())
     {
         ElemType gapPadValue = NeutralValue(m_reductionOp);
-        input = ComputationNode<ElemType>::Unpack(GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), m_tempUnpackedData, m_tempScatterIndices, m_tempMask, /*batchMajor=*/ true, &gapPadValue);
+        input = ComputationNode<ElemType>::Unpack(GetSampleLayout(), InputRef(0).Value(), InputRef(0).GetMBLayout(), m_tempUnpackedData, m_tempScatterIndices, m_tempMask, /*batchMajor=*/true, &gapPadValue);
     }
     else
         input = InputRef(0).ValueTensorFor(rank, frInput);
@@ -142,7 +147,24 @@ template <class ElemType>
     default:
         // the actual operation is a Copy with reduction, where the magic is in the reduction op
         // For "Mean", m_scale is 1/#elements, and 1 otherwise.
-        result.DoUnaryOpOf(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
+        {
+            /*
+            if (num_frames == 94)
+            {
+                fprintf(stderr, "reshape 1, name  = %ls, result = %f, input = %f, m_scale = %f \n", NodeName().c_str(), double(result.GetSOB().FrobeniusNorm()), double(input.GetSOB().FrobeniusNorm()), double(m_scale));
+            }
+            */
+            if (multi_thread)
+                result.DoUnaryOpOfDebug(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
+            else
+                result.DoUnaryOpOf(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
+            /*
+            if (num_frames == 94)
+            {
+                fprintf(stderr, "reshape 2, name  = %ls, result = %f, input = %f, m_scale = %f \n", NodeName().c_str(), double(result.GetSOB().FrobeniusNorm()), double(input.GetSOB().FrobeniusNorm()), double(m_scale));
+            }
+            */
+        }
     }
 }
 
@@ -156,15 +178,15 @@ template <class ElemType>
     {
         // Broadcast along the sequence
         auto result = ValueFor(fr);
-        ComputationNode<ElemType>::BroadcastToPacked(Gradient(), GetMBLayout(), /*beta =*/ accumulateGradient ? (ElemType)1 : (ElemType)0, InputRef(0).Gradient(), FrameRange(InputRef(0).GetMBLayout()), m_tempGatherIndices);
+        ComputationNode<ElemType>::BroadcastToPacked(Gradient(), GetMBLayout(), /*beta =*/accumulateGradient ? (ElemType) 1 : (ElemType) 0, InputRef(0).Gradient(), FrameRange(InputRef(0).GetMBLayout()), m_tempGatherIndices);
     }
     else
     {
         const auto frInput = (ReduceAllAxes() || ReduceBatchAxis()) ? FrameRange(InputRef(0).GetMBLayout()) : fr; // can't use 'fr' for ReduceAllAxes() as it refers to the result (same as for training criteria)
-                                                                                        // get the args
+                                                                                                                  // get the args
         size_t rank = DetermineElementwiseTensorRank();
         auto sliceOutputGrad = ReduceAllAxes() ? TensorView<ElemType>(GradientPtr(), GetSampleLayout()) : GradientTensorFor(rank, fr); // propagate from this one...
-        auto sliceInputGrad = InputRef(0).GradientTensorFor(rank, frInput); // ...to this one
+        auto sliceInputGrad = InputRef(0).GradientTensorFor(rank, frInput);                                                            // ...to this one
 
         // gradients are not as simple as passing an op-code, unfortunately
         switch (m_reductionOp)
@@ -220,8 +242,8 @@ template <class ElemType>
         break;
         case ElementWiseOperator::opElementwiseProduct:
         {
-            auto input  = InputRef(inputIndex).ValueTensorFor(rank, frInput);
-            auto output =                      ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
+            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
             if (accumulateGradient)
                 sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
             else
@@ -242,13 +264,20 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum:                   return false;
-    case ElementWiseOperator::opLogSum:                return true;
-    case ElementWiseOperator::opMin:                   return true;
-    case ElementWiseOperator::opMax:                   return true;
-    case ElementWiseOperator::opElementwiseProduct:    return true;
-    case ElementWiseOperator::opArgmin:                return false;
-    case ElementWiseOperator::opArgmax:                return false;
+    case ElementWiseOperator::opSum:
+        return false;
+    case ElementWiseOperator::opLogSum:
+        return true;
+    case ElementWiseOperator::opMin:
+        return true;
+    case ElementWiseOperator::opMax:
+        return true;
+    case ElementWiseOperator::opElementwiseProduct:
+        return true;
+    case ElementWiseOperator::opArgmin:
+        return false;
+    case ElementWiseOperator::opArgmax:
+        return false;
     }
     LogicError("Should not get here.");
 }
@@ -258,13 +287,20 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum:                   return false;
-    case ElementWiseOperator::opLogSum:                return true;
-    case ElementWiseOperator::opMin:                   return true;
-    case ElementWiseOperator::opMax:                   return true;
-    case ElementWiseOperator::opElementwiseProduct:    return true;
-    case ElementWiseOperator::opArgmin:                return false;
-    case ElementWiseOperator::opArgmax:                return false;
+    case ElementWiseOperator::opSum:
+        return false;
+    case ElementWiseOperator::opLogSum:
+        return true;
+    case ElementWiseOperator::opMin:
+        return true;
+    case ElementWiseOperator::opMax:
+        return true;
+    case ElementWiseOperator::opElementwiseProduct:
+        return true;
+    case ElementWiseOperator::opArgmin:
+        return false;
+    case ElementWiseOperator::opArgmax:
+        return false;
     }
     LogicError("Should not get here.");
 }
@@ -282,7 +318,7 @@ template <class ElemType>
     // validate the opcode (in case we got instantiated empty and never updated)
     ValidateOp();
 
-    m_scale = (ElemType)1;
+    m_scale = (ElemType) 1;
     if (ReduceAllAxes())
         Base::ValidateUnaryReduce(isFinalValidationPass, m_keepDimensions);
     else if (ReduceSequenceAxis())
@@ -319,29 +355,27 @@ template <class ElemType>
 
         let shape = Input(0)->GetSampleLayout();
         auto dims = shape.GetDims();
-        size_t reducedDimProd = 1; 
+        size_t reducedDimProd = 1;
         if (ReduceAllStaticAxes())
         {
             reducedDimProd = shape.GetNumElements();
-            dims = m_keepDimensions ? SmallVector<size_t>(shape.GetRank(), 1) : (Environment().IsV2Library() ? SmallVector<size_t>({}) : SmallVector<size_t>({ 1 })); // entire sample is reduced to a scalar
+            dims = m_keepDimensions ? SmallVector<size_t>(shape.GetRank(), 1) : (Environment().IsV2Library() ? SmallVector<size_t>({}) : SmallVector<size_t>({1})); // entire sample is reduced to a scalar
         }
-        else if (!m_axes.empty() 
-                && std::all_of(m_axes.begin(), 
-                                m_axes.end(), 
-                                [&dims](int axis) { return axis - 1 >= 0 && axis - 1 < dims.size(); }))
+        else if (!m_axes.empty() && std::all_of(m_axes.begin(),
+                                                m_axes.end(),
+                                                [&dims](int axis) { return axis - 1 >= 0 && axis - 1 < dims.size(); }))
         {
             //Accumulate the number of elements for reduce_mean
             reducedDimProd = std::accumulate(m_axes.begin(),
-                                                m_axes.end(), 
-                                                1, 
-                                                [&dims](size_t acc, int& axis) { return acc * dims[axis - 1]; });
+                                             m_axes.end(),
+                                             1,
+                                             [&dims](size_t acc, int& axis) { return acc * dims[axis - 1]; });
 
             // axes reduced to a scalar
             if (m_keepDimensions)
                 std::for_each(m_axes.begin(),
-                    m_axes.end(),
-                    [&dims](int axis) {dims[axis - 1] = 1; }
-                 );
+                              m_axes.end(),
+                              [&dims](int axis) { dims[axis - 1] = 1; });
             else
             {
                 SmallVector<size_t> reducedDims(dims.size() - m_axes.size());
@@ -355,13 +389,12 @@ template <class ElemType>
                 dims = reducedDims;
             }
         }
-        else if (isFinalValidationPass) 
+        else if (isFinalValidationPass)
         {
             InvalidArgument("The shape of %ls [%ls] can not be reduced along axes [%ls]",
-                NodeDescription().c_str(),
-                wstring(shape).c_str(),
-                boost::algorithm::join(m_axes | boost::adaptors::transformed([](int axis) { return std::to_wstring(axis); }), ", ").c_str()
-            );
+                            NodeDescription().c_str(),
+                            wstring(shape).c_str(),
+                            boost::algorithm::join(m_axes | boost::adaptors::transformed([](int axis) { return std::to_wstring(axis); }), ", ").c_str());
         }
         // for "Mean", we must divide by #elements
         if (isFinalValidationPass && IsMean())
@@ -384,10 +417,14 @@ struct SequenceLengthVector
 {
     typedef vector<vector<size_t>> SequenceVector;
     typedef MBLayout::SequenceInfo SequenceInfo;
-    const SequenceVector& m_sequenceVector;        // vector of sequences (to get sequence length)
-    const vector<SequenceInfo>& m_sequenceInfo;    // original sequence info (for seqId)
-    SequenceLengthVector(const vector<SequenceInfo>& sequenceInfo, const SequenceVector& sequenceVector) : m_sequenceInfo(sequenceInfo), m_sequenceVector(sequenceVector) { }
-    size_t size() const { return m_sequenceInfo.size(); }
+    const SequenceVector& m_sequenceVector;     // vector of sequences (to get sequence length)
+    const vector<SequenceInfo>& m_sequenceInfo; // original sequence info (for seqId)
+    SequenceLengthVector(const vector<SequenceInfo>& sequenceInfo, const SequenceVector& sequenceVector)
+        : m_sequenceInfo(sequenceInfo), m_sequenceVector(sequenceVector) {}
+    size_t size() const
+    {
+        return m_sequenceInfo.size();
+    }
     MBLayout::SequenceInfo operator[](size_t i) const // return a descriptor of the new sequence
     {
         SequenceInfo seq;
@@ -427,12 +464,12 @@ template <class ElemType>
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
         {
             double delta = input(0, inMBLayout->GetColumnIndex(seq, t)); // how many frames the current time step should expand into
-            desiredCount += delta; // this is now how many frames we should have
+            desiredCount += delta;                                       // this is now how many frames we should have
             // use a margin against round-off errors, so that we get non-binary ratios like 1/3 and 1/5 right
             // This really means generate a frame if too few, unless we are within machine accuracy of the target.
             // The assumption is that the delta has this error, while accumulation (in double) has no error.
             ElemType relativeMargin = 1 - std::numeric_limits<ElemType>::epsilon();
-            while ((indexSequence.empty() && desiredCount > 0)  // no margin for the first frame (always include unless flag is 0)
+            while ((indexSequence.empty() && desiredCount > 0) // no margin for the first frame (always include unless flag is 0)
                    || indexSequence.size() < desiredCount * relativeMargin)
                 indexSequence.push_back(t);
         }
@@ -441,10 +478,10 @@ template <class ElemType>
     input.CollapseDataLocation(); // BUGBUG: Move back, since BOTH state is broken at present.
     // create a new MBLayout
     let& outMBLayout = GetMBLayout();
-    outMBLayout->InitAsPackedSequences(SequenceLengthVector(sequences, indexSequences), /*temp*/m_placementBuffer, /*temp*/m_rowAllocationsBuffer);
+    outMBLayout->InitAsPackedSequences(SequenceLengthVector(sequences, indexSequences), /*temp*/ m_placementBuffer, /*temp*/ m_rowAllocationsBuffer);
     // copy to output
     vector<ElemType> buf(outMBLayout->GetNumCols(), numeric_limits<ElemType>::quiet_NaN()); // STL cannot easily avoid initializing, so we might as well init with NaN for gaps
-    let size = min(sequences.size(), outMBLayout->GetAllSequences().size()); // no non-gap sequence has an index beyond this
+    let size = min(sequences.size(), outMBLayout->GetAllSequences().size());                // no non-gap sequence has an index beyond this
     for (size_t i = 0; i < size; i++)
     {
         let& seq = outMBLayout->GetAllSequences()[i];
@@ -452,7 +489,7 @@ template <class ElemType>
             continue;
         let& indexSequence = indexSequences[i];
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
-            buf[outMBLayout->GetColumnIndex(seq, t)] = (ElemType)indexSequence[t];
+            buf[outMBLayout->GetColumnIndex(seq, t)] = (ElemType) indexSequence[t];
     }
     // there may be dangling gaps at the end. Take the opportunity to verify this.
     for (size_t i = size; i < sequences.size(); i++)
@@ -460,7 +497,7 @@ template <class ElemType>
     for (size_t i = size; i < outMBLayout->GetAllSequences().size(); i++)
         assert(outMBLayout->GetAllSequences()[i].seqId == GAP_SEQUENCE_ID);
     // the result will be kept in CPUDEVICE, since most likely we will access it again in PackedIndexNode
-    Value().TransferToDeviceIfNotThere(CPUDEVICE, /*isBeingMoved=*/ true, /*emptyTransfer=*/ true, /*updatePreferredDevice=*/ true);
+    Value().TransferToDeviceIfNotThere(CPUDEVICE, /*isBeingMoved=*/true, /*emptyTransfer=*/true, /*updatePreferredDevice=*/true);
     Value().SetValue(1, outMBLayout->GetNumCols(), CPUDEVICE, buf.data(), MatrixFormat::matrixFormatColMajor);
 }
 
@@ -501,9 +538,9 @@ template <class ElemType>
 /*virtual*/ void PackedIndexNode<ElemType>::ForwardPropNonLooping() /*override*/
 {
     let& sourceMBLayout = InputRef(SOURCEDATA).GetMBLayout(); // only used for index conversion
-    let& indexMBLayout  = InputRef(INDEXDATA).GetMBLayout();
-    let&  index  = InputRef(INDEXDATA).Value(); // per-seq index values that are to be mapped
-    auto& result =                     Value(); // packed index values as mapped to sourceData's layout
+    let& indexMBLayout = InputRef(INDEXDATA).GetMBLayout();
+    let& index = InputRef(INDEXDATA).Value(); // per-seq index values that are to be mapped
+    auto& result = Value();                   // packed index values as mapped to sourceData's layout
     // loop over sourceSequences
     // Input matrix contains time indices for each sequence that refer to frames inside that sequence.
     // We replace every per-sequence index by the resolved column index w.r.t. the same MBLayout.
@@ -516,10 +553,10 @@ template <class ElemType>
         let& indexSeq = indexMBLayout->FindMatchingSequence(sourceSequences, i); // find corresponding entry in indexMBLayout
         for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++)   // map all index values in index sequence
         {
-            let jIndex  = indexMBLayout->GetColumnIndex(indexSeq, tIndex);    // map time index to actual location in the matrix storage object
-            let tSource = (size_t)index(0, jIndex);                           // the new time location (relative to source sequence)
+            let jIndex = indexMBLayout->GetColumnIndex(indexSeq, tIndex);     // map time index to actual location in the matrix storage object
+            let tSource = (size_t) index(0, jIndex);                          // the new time location (relative to source sequence)
             let jSource = sourceMBLayout->GetColumnIndex(sourceSeq, tSource); // map new time index as well. This performs a range check.
-            result(0, jIndex) = (ElemType)jSource;
+            result(0, jIndex) = (ElemType) jSource;
         }
     }
     // Note: maybe this is no longer needed, now that we do the same inside UpdateFunctionValueSize() for all nodes.
@@ -563,8 +600,8 @@ template <class ElemType>
 /*virtual*/ void GatherPackedNode<ElemType>::ForwardPropNonLooping() /*override*/
 {
     InputRef(INDEXDATA).MaskMissingValueColumnsTo(FrameRange(InputRef(INDEXDATA).GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
-    let&  index  = InputRef(INDEXDATA) .Value(); // column indices to copy from
-    let&  source = InputRef(SOURCEDATA).Value(); // source data to copy
+    let& index = InputRef(INDEXDATA).Value();                                                         // column indices to copy from
+    let& source = InputRef(SOURCEDATA).Value();                                                       // source data to copy
 
 #ifdef _MSC_VER
     auto& outputValuePtrRef = ValuePtrRef();
@@ -587,9 +624,9 @@ template <class ElemType>
 {
     if (inputIndex == SOURCEDATA)
     {
-        let&  index          = InputRef(INDEXDATA) .Value();    // column indices to copy from
+        let& index = InputRef(INDEXDATA).Value();               // column indices to copy from
         auto& sourceGradient = InputRef(SOURCEDATA).Gradient(); // source to propagate the gradient intpu
-        auto& outputGradient =                      Gradient(); // output gradient to propagate
+        auto& outputGradient = Gradient();                      // output gradient to propagate
         sourceGradient.DoScatterColumnsOf(/*beta=*/1, index, outputGradient, /*alpha=*/1, true);
     }
 }
@@ -614,7 +651,7 @@ template <class ElemType>
         SetDims(Input(SOURCEDATA)->GetSampleLayout(), HasMBLayout());
     else
     {
-        SmallVector<size_t> layout = { 1 }; // Scalar
+        SmallVector<size_t> layout = {1}; // Scalar
         if (Input(SOURCEDATA)->GetSampleLayout().GetRank() > 1)
         {
             auto srcLayout = Input(SOURCEDATA)->GetSampleLayout().GetDims();
@@ -638,8 +675,8 @@ template <class ElemType>
     if (*InputRef(INDEXDATA).GetMBLayout() != *InputRef(SOURCEDATA).GetMBLayout())
         InvalidArgument("%ls %ls operation requires the minibatch layout of index and source data to be the same.", NodeName().c_str(), OperationName().c_str());
     InputRef(INDEXDATA).MaskMissingValueColumnsTo(FrameRange(InputRef(INDEXDATA).GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
-    let&  index  = InputRef(INDEXDATA) .Value(); // column indices to copy from
-    let&  source = InputRef(SOURCEDATA).Value(); // source data to copy
+    let& index = InputRef(INDEXDATA).Value();                                                         // column indices to copy from
+    let& source = InputRef(SOURCEDATA).Value();                                                       // source data to copy
 
 #ifdef _MSC_VER
     auto& outputValuePtrRef = ValuePtrRef();
@@ -653,7 +690,7 @@ template <class ElemType>
                                                                source.GetMatrixType(),
                                                                source.GetFormat());
 
-    auto& output =                      Value(); // output goes here
+    auto& output = Value(); // output goes here
     output.DoScatterColumnsOf(/*beta=*/0, index, source, /*alpha=*/1, true);
 }
 
@@ -662,9 +699,9 @@ template <class ElemType>
 {
     if (inputIndex == SOURCEDATA)
     {
-        let&  index          = InputRef(INDEXDATA).Value();     // column indices to copy from
+        let& index = InputRef(INDEXDATA).Value();             // column indices to copy from
         auto& sourceGradient = Input(SOURCEDATA)->Gradient(); // source to propagate the gradient input
-        auto& outputGradient =                      Gradient(); // output gradient to propagate
+        auto& outputGradient = Gradient();                    // output gradient to propagate
         sourceGradient.DoGatherColumnsOf(/*beta=*/1, index, outputGradient, /*alpha=*/1);
     }
 }
@@ -707,8 +744,8 @@ template <class ElemType>
 CropNode<ElemType>::CropNode(size_t offsetX, size_t offsetY, DEVICEID_TYPE deviceId, const wstring& name)
     : CropNode(deviceId, name)
 {
-    m_xOffset = (double)(offsetX);
-    m_yOffset = (double)(offsetY);
+    m_xOffset = (double) (offsetX);
+    m_yOffset = (double) (offsetY);
 }
 
 template <class ElemType>
@@ -880,8 +917,7 @@ void CropNode<ElemType>::ComputeCropOffsets()
     // nodeToTransformMap contains coordinate maps for all nodes traversed so far, and is updated by this function.
     // Traversal stack contains all nodes traversed so far. Inputs of currNode are pushed to traversal stack so that their
     // inputs can be processed later on.
-    auto ProcessInputs = [](ComputationNodeBase* currNode, stack<ComputationNodeBase*>& traversalStack, unordered_map<ComputationNodeBase*, SpaceTransform>& nodeToTransformMap)
-    {
+    auto ProcessInputs = [](ComputationNodeBase* currNode, stack<ComputationNodeBase*>& traversalStack, unordered_map<ComputationNodeBase*, SpaceTransform>& nodeToTransformMap) {
         if (!currNode->Is<TransformerNode>())
             RuntimeError("Node does not support affine transform for cropping.");
 
@@ -1033,4 +1069,6 @@ template class CropNode<float>;
 template class CropNode<double>;
 template class CropNode<half>;
 
-}}}
+} // namespace CNTK
+} // namespace MSR
+} // namespace Microsoft

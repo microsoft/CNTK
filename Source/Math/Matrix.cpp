@@ -3669,6 +3669,21 @@ Matrix<ElemType>& Matrix<ElemType>::SetToZeroIfAbsLessThan(const ElemType thresh
     return *this;
 }
 
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::SetToZeroIfLessThan(const ElemType threshold)
+{
+    if (IsEmpty())
+        LogicError("SetToZeroIfLessThan: Matrix is empty.");
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->SetToZeroIfLessThan(threshold),
+                            m_GPUMatrix->SetToZeroIfLessThan(threshold),
+                            NOT_IMPLEMENTED,
+                            m_GPUSparseMatrix->SetToZeroIfLessThan(threshold));
+
+    return *this;
+}
 //sum of all elements
 template <class ElemType>
 ElemType Matrix<ElemType>::SumOfElements() const
@@ -6396,6 +6411,23 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemTy
                             this,
                             m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             m_GPUMatrix->TensorOp(beta, *a.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+template <class ElemType>
+void Matrix<ElemType>::TensorOpDebug(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
+                                const array<size_t, 2>& offsets,
+                                const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+{
+    VerifyIsDense(*this) && VerifyIsDense(a);
+
+    DecideAndMoveToRightDevice(*this, a);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->TensorOp(beta, *a.m_CPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+                            m_GPUMatrix->TensorOpDebug(beta, *a.m_GPUMatrix, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
