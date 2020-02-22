@@ -638,20 +638,32 @@ static void AugmentNeighbors(const MatrixAsVectorOfVectors& utterance,
                              const size_t rightExtent,
                              array_ref<float>& destination)
 {
-    CopyToOffset(utterance[frameIndex], destination, leftExtent);
+    size_t validFrameIndex = frameIndex;
+    size_t maxLen = utterance.size();
+    if (validFrameIndex >= maxLen)
+        validFrameIndex = maxLen - 1;
+    CopyToOffset(utterance[validFrameIndex], destination, leftExtent);
 
     for (size_t currentFrame = frameIndex, n = 1; n <= leftExtent; n++)
     {
         if (currentFrame > 0)
             currentFrame--; // index does not move beyond boundary
-        CopyToOffset(utterance[currentFrame], destination, leftExtent - n);
+        if (currentFrame >= maxLen)
+            validFrameIndex = maxLen - 1;
+        else
+            validFrameIndex = currentFrame;
+        CopyToOffset(utterance[validFrameIndex], destination, leftExtent - n);
     }
 
     for (size_t currentFrame = frameIndex, n = 1; n <= rightExtent; n++)
     {
         if (currentFrame + 1 < utterance.size())
             currentFrame++; // index does not move beyond boundary
-        CopyToOffset(utterance[currentFrame], destination, leftExtent + n);
+        if (currentFrame >= maxLen)
+            validFrameIndex = maxLen - 1;
+        else
+            validFrameIndex = currentFrame;
+        CopyToOffset(utterance[validFrameIndex], destination, leftExtent + n);
     }
 }
 
