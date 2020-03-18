@@ -2,7 +2,7 @@ from __future__ import print_function
 import cifar_utils as ut
 
 if __name__ == "__main__":
-    trn, tst= ut.loadData('http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz')
+    trn, tst= ut.loadData('https://cntkbuildstorage.blob.core.windows.net/cntk-ci-dependencies/cifar-10-python/cifar-10-python.tar.gz')
     print ('Writing train text file...')
     ut.saveTxt(r'./Train_cntk_text.txt', trn)
     print ('Done.')
