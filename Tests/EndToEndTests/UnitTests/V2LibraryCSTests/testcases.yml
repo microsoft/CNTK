@@ -4,9 +4,9 @@ dataDir: .
 
 tags:
   # CPU-only for now.
-  - bvt-i (build_sku == 'cpu')
-  - nightly-i (build_sku == 'cpu')
-  - weekly-i (build_sku == 'cpu')
+  # - bvt-i (build_sku == 'cpu')
+  # - nightly-i (build_sku == 'cpu')
+  # - weekly-i (build_sku == 'cpu')
 
 testCases:
   Each test passes:
