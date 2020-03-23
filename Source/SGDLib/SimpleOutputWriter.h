@@ -46,10 +46,52 @@ class SimpleOutputWriter
         size_t length;
         size_t processlength;
         size_t lengthwithblank;
+        bool lengthNorm;
+        ElemType lengthNormFactor;
+        ElemType insertionBoost;
+        size_t lengthNormMethod;
+        size_t curFrame;
         shared_ptr<Matrix<ElemType>> decodeoutput;
         bool operator<(const Sequence& rhs) const
         {
-            return logP < rhs.logP;
+            assert(lengthNorm == rhs.lengthNorm);
+            assert(length == labelseq.size());
+            ElemType this_logP = logP;
+            ElemType query_logP = rhs.logP;
+            if (lengthNorm)
+            {
+                assert(lengthNormMethod == rhs.lengthNormMethod);
+                assert(lengthNormFactor == rhs.lengthNormFactor);
+                switch (lengthNormMethod)
+                {
+                case 0:
+                    if (length - 1 >= 1)
+                        this_logP = logP / pow((ElemType)(length - 1), lengthNormFactor);
+                    if (rhs.length - 1 >= 1)
+                        query_logP = rhs.logP / pow((ElemType)(rhs.length - 1), lengthNormFactor);
+                    break;
+                case 1:
+                    if (curFrame + 1 >= 1)
+                        this_logP = logP / pow(((ElemType)(curFrame + length)) * ((ElemType)(curFrame + 1)), lengthNormFactor);
+                    else if (length - 1 >= 1)
+                        this_logP = logP / pow((ElemType)(length - 1), lengthNormFactor);
+                    if (rhs.lengthwithblank - 1 >= 1)
+                        query_logP = rhs.logP / pow(((ElemType)(rhs.curFrame + rhs.length)) * ((ElemType)(rhs.curFrame + 1)), lengthNormFactor);
+                    else if (length - 1 >= 1)
+                        query_logP = rhs.logP / pow((ElemType)(rhs.length - 1), lengthNormFactor);
+                    break;
+                default:
+                    fprintf(stderr, "Unrecognized lengthNormMethod=%d.\n", (int) lengthNormMethod);
+                }
+            }
+
+            assert(insertionBoost == rhs.insertionBoost);
+            if (insertionBoost != 0.0 && length >= 1)
+                this_logP += ((ElemType)(labelseq.size() - 1)) * insertionBoost;
+            if (insertionBoost != 0.0 && rhs.length >= 1)
+                query_logP += ((ElemType)(rhs.labelseq.size() - 1)) * insertionBoost;
+
+            return this_logP < query_logP;
         }
         unordered_map<wstring, shared_ptr<PastValueNode<ElemType>>> nameToNodeValues;
     };
@@ -293,9 +335,9 @@ public:
         // clean up
     }
 
-    Sequence newSeq(size_t numRow, size_t numCol, DEVICEID_TYPE deviceId)
+    Sequence newSeq(size_t numRow, size_t numCol, DEVICEID_TYPE deviceId, bool lengthNorm = false, ElemType lengthNormFactor = 1.0, ElemType insertionBoost = 0.0, size_t lengthNormMethod = 0, size_t curFrame = -1)
     {
-        Sequence oneSeq = {std::vector<size_t>(), 0.0, 0, 0, 0, make_shared<Matrix<ElemType>>(numRow, (size_t) 1, deviceId)};
+        Sequence oneSeq = {std::vector<size_t>(), 0.0, 0, 0, 0, lengthNorm, lengthNormFactor, insertionBoost, lengthNormMethod, curFrame, make_shared<Matrix<ElemType>>(numRow, (size_t) 1, deviceId)};
         for (size_t i = 0; i < m_nodesToCache.size(); i++)
         {
             vector<ElemType> v;
@@ -310,6 +352,11 @@ public:
         oneSeq.logP = a.logP;
         oneSeq.length = a.length;
         oneSeq.lengthwithblank = a.lengthwithblank;
+        oneSeq.lengthNorm = a.lengthNorm;
+        oneSeq.lengthNormFactor = a.lengthNormFactor;
+        oneSeq.insertionBoost = a.insertionBoost;
+        oneSeq.lengthNormMethod = a.lengthNormMethod;
+        oneSeq.curFrame = a.curFrame;
         oneSeq.processlength = a.processlength;
         oneSeq.decodeoutput = make_shared<Matrix<ElemType>>(a.decodeoutput->GetNumRows(), (size_t) 1, a.decodeoutput->GetDeviceId());
         oneSeq.decodeoutput->SetValue(*(a.decodeoutput));
@@ -366,12 +413,13 @@ public:
         return it;
     }
 
-    void extendSeq(Sequence& insequence, size_t labelId, ElemType logP)
+    void extendSeq(Sequence& insequence, size_t labelId, ElemType logP, size_t curFrame)
     {
         insequence.labelseq.push_back(labelId);
         insequence.logP = logP;
         insequence.length++;
         insequence.lengthwithblank++;
+        insequence.curFrame = curFrame;
     }
 
     std::vector<ComputationNodeBasePtr> GetNodesByNames(const std::vector<std::wstring>& names) const
@@ -529,8 +577,10 @@ public:
     }
 
     void WriteOutput_beam(IDataReader& dataReader, size_t mbSize, IDataWriter& dataWriter, const std::vector<std::wstring>& outputNodeNames,
-                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68,
-                          std::wstring* nbestOutputDir = NULL)
+                          size_t numOutputSamples = requestDataSize, bool doWriterUnitTest = false, size_t beamSize = 10, size_t expandBeam = 20, string dictfile = L"", ElemType thresh = 0.68, bool writeNbest = false,
+                          std::wstring* nbestOutputDir = NULL,
+                          bool beamSearchLengthNorm = false, ElemType beamSearchLengthNormFactor = 1.0, ElemType beamSearchInsertionBoost = 0.0, size_t beamSearchLengthNormMethod = 0,
+                          bool finalBeamLengthNorm = false, ElemType finalBeamLengthNormFactor = 1.0, ElemType finalBeamInsertionBoost = 0.0, size_t finalBeamLengthNormMethod = 0)
     {
         ScopedNetworkOperationMode modeGuard(m_net, NetworkOperationMode::inferring);
 
@@ -624,8 +674,8 @@ public:
             nextSequences.clear();
 
             //initialize with blank ID
-            Sequence oneSeq = newSeq(vocabSize, (size_t) 50, deviceid);
-            extendSeq(oneSeq, blankId, 0.0);
+            Sequence oneSeq = newSeq(vocabSize, (size_t) 50, deviceid, beamSearchLengthNorm, beamSearchLengthNormFactor, beamSearchInsertionBoost, beamSearchLengthNormMethod);
+            extendSeq(oneSeq, blankId, 0.0, (size_t) -1);
             nextSequences.push_back(oneSeq);
 
             // loop for each frame
@@ -715,6 +765,7 @@ public:
                     Sequence seqK = newSeq(tempSeq, deviceid);
                     ElemType newlogP = topN[vocabSize].second + tempSeq.logP;
                     seqK.logP = newlogP;
+                    seqK.curFrame = t;
                     bool existseq = false;
                     for (auto itseq = nextSequences.begin(); itseq != nextSequences.end(); itseq++)
                     //for (Sequence seqP : keyNextSequences)  //does not work
@@ -740,10 +791,11 @@ public:
                         seqK = newSeq(tempSeq, deviceid);
                         newlogP = topN[iLabel].second + tempSeq.logP;
                         seqK.logP = newlogP;
+                        seqK.curFrame = t;
 
                         if (topN[iLabel].first != blankId)
                         {
-                            extendSeq(seqK, topN[iLabel].first, newlogP);
+                            extendSeq(seqK, topN[iLabel].first, newlogP, t);
                             CurSequences.push_back(seqK);
                         }
                     }
@@ -784,16 +836,31 @@ public:
             }
 
             // Write nbest list to file
-            if (nbestOutputDir != NULL)
+            if (writeNbest)
             {
-                WriteNbestToFile(nextSequences, *nbestOutputDir, fs::path(dataWriter.GetCurOutputFile(decodeOutputNodeNames[0])).filename());
+                std::wstring this_nbestOutputDir;
+                if (nbestOutputDir == NULL)
+                {
+                    // Get N-best output directory from output SCP file
+                    this_nbestOutputDir = fs::path(dataWriter.GetCurOutputFile(decodeOutputNodeNames[0])).parent_path().wstring() + L"/nbest";
+                }
+                else
+                {
+                    this_nbestOutputDir = *nbestOutputDir;
+                }
+                WriteNbestToFile(nextSequences, this_nbestOutputDir, fs::path(dataWriter.GetCurOutputFile(decodeOutputNodeNames[0])).filename().wstring());
             }
 
             //nbest output
             for (size_t n = 0; n < nextSequences.size(); n++)
             {
-                if (nextSequences[n].labelseq.size() - 1 >= 1)
-                    nextSequences[n].logP /= nextSequences[n].labelseq.size() - 1;
+                //if (nextSequences[n].labelseq.size() - 1 >= 1)
+                //    nextSequences[n].logP /= nextSequences[n].labelseq.size() - 1;
+
+                nextSequences[n].lengthNorm = finalBeamLengthNorm;
+                nextSequences[n].lengthNormFactor = finalBeamLengthNormFactor;
+                nextSequences[n].lengthNormMethod = finalBeamLengthNormMethod;
+                nextSequences[n].insertionBoost = finalBeamInsertionBoost;
             }
             auto yb = std::max_element(nextSequences.begin(), nextSequences.end());
             size_t lmt = yb->length - 1;
@@ -1302,12 +1369,12 @@ public:
             //wstring outNbestFilename = nbestOutputDir + wstring(L"\\") + uttName + wstring(L".txt");
             //WriteNbest(outNbestFilename, nbest);
 
-			// Scale logP by length
-			for (size_t n = 0; n < nbest.size(); n++)
-			{
+            // Scale logP by length
+            for (size_t n = 0; n < nbest.size(); n++)
+            {
                 if (nbest[n].labelseq.size() - 1 >= 1)
-					nbest[n].logP /= nbest[n].labelseq.size() - 1;
-			}
+                    nbest[n].logP /= nbest[n].labelseq.size() - 1;
+            }
 
             // Write the 1-best of the re-scored N-best list to file
             // This will cause dataWriter to move to the next file name

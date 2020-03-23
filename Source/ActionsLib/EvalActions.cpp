@@ -270,12 +270,31 @@ void DoWriteOutput(const ConfigParameters& config)
             writer.WriteOutput_greedy(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest);
         else if (decodeType == 2)
         {
-            if (config.Exists(L"nbestOutputDir"))
+            bool beamSearchLengthNorm = config(L"beamSearchLengthNorm", "false");
+            ElemType beamSearchLengthNormFactor = config(L"beamSearchLengthNormFactor", (ElemType) 1.0);
+            ElemType beamSearchInsertionBoost = config(L"beamSearchInsertionBoost", (ElemType) 0.0);
+            size_t beamSearchLengthNormMethod = config(L"beamSearchLengthNormMethod", 0);
+            bool finalBeamLengthNorm = config(L"finalBeamLengthNorm", "true");
+            ElemType finalBeamLengthNormFactor = config(L"finalBeamLengthNormFactor", (ElemType) 1.0);
+            ElemType finalBeamInsertionBoost = config(L"finalBeamInsertionBoost", (ElemType) 0.0);
+            size_t finalBeamLengthNormMethod = config(L"finalBeamLengthNormMethod", 0);
+            bool writeNbest = config(L"writeNbest", "false");
+            if (writeNbest)
             {
-                wstring nbestOutputDir = config(L"nbestOutputDir");
-                writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh, &nbestOutputDir);
+                if (config.Exists(L"nbestOutputDir"))
+                {
+                    wstring nbestOutputDir = config(L"nbestOutputDir");
+                    writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh, writeNbest, &nbestOutputDir, beamSearchLengthNorm, beamSearchLengthNormFactor, beamSearchInsertionBoost, beamSearchLengthNormMethod, finalBeamLengthNorm, finalBeamLengthNormFactor, finalBeamInsertionBoost, finalBeamLengthNormMethod);
+                }
+                else
+                {
+                    writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh, writeNbest, NULL, beamSearchLengthNorm, beamSearchLengthNormFactor, beamSearchInsertionBoost, beamSearchLengthNormMethod, finalBeamLengthNorm, finalBeamLengthNormFactor, finalBeamInsertionBoost, finalBeamLengthNormMethod);
+                }
             }
-            writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh);
+            else
+            {
+                writer.WriteOutput_beam(testDataReader, mbSize[0], testDataWriter, outputNodeNamesVector, epochSize, writerUnittest, decodeBeam, decodeExpandBeam, indictfile, thresh, writeNbest, NULL, beamSearchLengthNorm, beamSearchLengthNormFactor, beamSearchInsertionBoost, beamSearchLengthNormMethod, finalBeamLengthNorm, finalBeamLengthNormFactor, finalBeamInsertionBoost, finalBeamLengthNormMethod);
+            }
         }
         else if (decodeType == 4)
         {
