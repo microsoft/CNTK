@@ -5402,9 +5402,6 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     std::string cntkOpName = ToLegacyString(ToUTF8(src->OpName()));
     std::string onnxOpName = ToOPName(src);
 
-    if (src->OpName() == L"Pooling")
-        std::cout << "";
-
     // TODO: uncomment this code once bidirectional LSTM is supprted.
     //if (cntkOpName == "Splice")
     //{
@@ -5640,6 +5637,8 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     }
     else if (src->OpName() == L"Pooling" && src->Inputs()[0].HasBatchAxis() && src->Inputs()[0].HasSequenceAxis())
     {
+        // in case a Pooling op is created with bother batch and sequence axes, we need to reshape its input and output to match 
+        // ONNX spec of [N, C, H, W] shape requirement.
         return CreatePoolingNode(src, graph, functionNodes, variableNodes, scanLoops, createLoopIndex);
     }
     //
@@ -7099,6 +7098,7 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             auto lowerPad = ToINTS(src->Attributes()[L"lowerPad"].Value<NDShape>());
             auto upperPad = ToINTS(src->Attributes()[L"upperPad"].Value<NDShape>());
 
+            // lowerPad and upperPad have incorrect dimension when the op has both batch and sequence axes.
             if (IsPadValueValid(lowerPad, upperPad, autoPadding, ceilOutDim) && !(src->Inputs()[0].HasBatchAxis() && src->Inputs()[0].HasSequenceAxis()))
             {
                 if (ceilOutDim)
@@ -8617,6 +8617,7 @@ onnxruntime::Node* ApplyActivationToSequenceConvolution(Node* convNode, const Fu
     return activationNode;
 }
 
+// insert reshape before and after a Pooling op when the CNTK op has both sequence and batch axes.
 onnxruntime::Node* CNTKToONNXHelper::CreatePoolingNode(const FunctionPtr& src,
     onnxruntime::Graph* graph,
     std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
