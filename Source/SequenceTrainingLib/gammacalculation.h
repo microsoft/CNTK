@@ -407,7 +407,10 @@ public:
                                const std::vector<size_t>& vt_labseqlen, 
         bool lengthNorm = false, 
         bool wordPathPosteriorFromDecodeMBR = false,
-        bool doMBR = false)
+        bool doMBR = false,
+        float insertionBoostInFinalBeam = 0.0,
+        size_t scoreNormKind = 0, 
+        size_t enableMultiThreadDecodeMBR = 0)
 
     {
         const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
@@ -564,7 +567,8 @@ public:
        
         mergedinput.AssignRNNTScore(mergedinput, alpha, beta, maxIndexes, maxIndexes, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
             uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, 1,true, 
-            vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR);
+            vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR,
+                                    insertionBoostInFinalBeam, scoreNormKind, enableMultiThreadDecodeMBR);
         
 
         //delete[] phoneSeqData;

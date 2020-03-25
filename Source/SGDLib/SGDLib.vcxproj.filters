@@ -16,6 +16,12 @@
     <ClCompile Include="ASGDHelper.cpp">
       <Filter>Parallelization</Filter>
     </ClCompile>
+    <ClCompile Include="RuntimeDecoder\CCommandLine.cpp">
+      <Filter>RuntimeDecoder</Filter>
+    </ClCompile>
+    <ClCompile Include="RuntimeDecoder\stdafx.cpp">
+      <Filter>RuntimeDecoder</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
@@ -144,6 +150,69 @@
     <ClInclude Include="AccumulatorAggregation.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CCommandLine.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CComplex_simd_sse.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CFeatExtractor.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CFeatReader.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CMatrix.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CModelEvaluator.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CModelParams.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\cntk_nodes.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CRadix4FFT_float.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CRNNTDecoder.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CVector.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\CWaveReader.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes_1.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes_2.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes_3.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes_3svd.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes_3svdopt.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\stdafx.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\targetver.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
+    <ClInclude Include="RuntimeDecoder\utils.h">
+      <Filter>RuntimeDecoder</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -184,6 +253,9 @@
     </Filter>
     <Filter Include="Stat">
       <UniqueIdentifier>{f406217f-5a11-44ca-bb34-52254dbee8af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RuntimeDecoder">
+      <UniqueIdentifier>{5801ebbb-d9b7-4035-894c-ea16b44bee0d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -419,7 +419,8 @@ public:
         const vector<size_t>& uttPhoneToChanInd, const vector<size_t> & uttPhoneBeginIdx, 
         const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
         Matrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise,
-        std::vector<float>& vt_probs, const std::vector<float>& vt_wer, const std::vector<size_t>& vt_labseqlen, bool lengthNorm, bool wordPathPosteriorFromDecodeMBR, bool doMBR);
+        std::vector<float>& vt_probs, const std::vector<float>& vt_wer, const std::vector<size_t>& vt_labseqlen, bool lengthNorm, bool wordPathPosteriorFromDecodeMBR, bool doMBR,
+                                      float insertionBoostInFinalBeam, size_t scoreNormKind, size_t enableMultiThreadDecodeMBR);
 
     Matrix<ElemType>& InplaceSqrt();
     Matrix<ElemType>& AssignSqrtOf(const Matrix<ElemType>& a);

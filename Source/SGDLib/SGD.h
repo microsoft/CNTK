@@ -21,6 +21,7 @@
 #include "MASGD.h"
 #include "ASGDHelper.h"
 #include <map>
+
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1 // 1 -> no version number
@@ -292,7 +293,15 @@ protected:
     string m_showWERMode;
     bool m_isSVD;
     size_t m_maxFrameNumPerMinibatchMBR;
-    bool m_enableMultiThreadDecodeMBR;
+    size_t m_enableMultiThreadDecodeMBR; // 0 for CNTK cpu, 1 for CNTK gpu, 2 for runtime CPU
+    
+    float insertionBoost;
+    float insertionBoostInFinalBeam;
+    size_t recombineKind;
+    size_t scoreNormKind;
+    size_t beamSortKind;
+    size_t matrixKind;
+
     // Parallel training
     MPIWrapperPtr m_mpi;
 
@@ -511,6 +520,16 @@ protected:
                                             IDataReader* trainSetDataReader,
                                             const std::vector<ComputationNodeBasePtr>& featureNodes,
                                             StreamMinibatchInputs* inputMatrices);
+    void PrepareMBR(const std::vector<std::wstring>& outputNodeNamesVector, ComputationNetworkPtr net, StreamMinibatchInputs* encodeInputMatrices,
+                    StreamMinibatchInputs* decodeinputMatrices, const std::vector<ComputationNodeBasePtr>& criterionNodes, bool ordered,
+                    const vector<string>& vt_labels, const size_t& deviceid, const std::vector<std::wstring>& decodeOutputNodeNames, size_t enableMultiThreadDecodeMBR,
+                    WERFunctions& werfs, Matrix<ElemType>& encodeOutput, MBLayoutPtr& encodeMBLayout,
+                    MBLayoutPtr& decodeMBLayout, std::vector<ComputationNodeBasePtr>& decodeinputNodes,
+                    vector<vector<PathInfo>>& uttPathsInfo, vector<size_t>& vt_nws, vector<float>& vt_onebest_wer, time_t& my_time,
+                    std::vector<std::vector<string>>& wordSeqs, std::vector<std::wstring>& decodeInputNodeNames,
+                    size_t& fea_dim, size_t& numParallelSequences, Matrix<ElemType>& refFeaMatBackup,
+                    std::vector<ComputationNodeBasePtr>& encodeInputNodes, std::vector<Matrix<ElemType>*>& vt_feas);
+
 
     size_t TrainOneEpoch(ComputationNetworkPtr net,
                          ComputationNetworkPtr refNet,
@@ -537,14 +556,8 @@ protected:
                          const std::vector<std::wstring>& outputNodeNamesVector = std::vector<std::wstring>(),
                          StreamMinibatchInputs* encodeInputMatrices = NULL,
                          StreamMinibatchInputs* decodeinputMatrices = NULL,
-                         bool doMBR = true,
-                         size_t numBestMBR = 8,               // number of nbest
-                         string trainMethodMBR = "BaumWelch", // can be Viterbi or BaumWelch
-                         bool wordPathPosteriorFromDecodeMBR = true,
-                         bool lengthNorm = true,
-                         const vector<string>& vt_labels = vector<string>(),
-                         string showWERMode = "average",
-                         bool SVD = true); //
+                         const vector<string>& vt_labels = vector<string>()
+                         ); //
 
     void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);

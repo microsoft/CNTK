@@ -4701,7 +4701,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                           const std::vector<size_t>& vt_labseqlen,
                                                           bool lengthNorm,
                                                           bool wordPathPosteriorFromDecodeMBR,
-                                                          bool doMBR)
+                                                          bool doMBR,
+                                                          float insertionBoostInFinalBeam,
+                                                          size_t scoreNormKind,
+                                                          size_t enableMultiThreadDecodeMBR)
 {
     delayConstraint;
     uttFrameBeginIdx;
@@ -4825,9 +4828,38 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                     size_t zeroID = uttBeginForOutputditribution[s]; //beta id for (0,0)
 
                     vt_probs[s] = (float) (cpubeta[zeroID]);
-                    if (lengthNorm)
-                        vt_probs[s] /= vt_labseqlen[s];
+                    if (enableMultiThreadDecodeMBR != 2) // not runtime
+                    {
+                        if (lengthNorm)
+                            vt_probs[s] /= vt_labseqlen[s];
+                    }
+                    else //runtime code, the decode score follows runtime code
+                    {
+                        vt_probs[s] += ((vt_labseqlen[s] - 1) * insertionBoostInFinalBeam);
 
+                        switch (scoreNormKind)
+                        {
+                            case 0:
+                                break;
+
+                            case 1:
+                                vt_probs[s] /= (vt_labseqlen[s]);
+                                break;
+
+                            case 2:
+                                if (vt_labseqlen[s] > 1)
+                                    vt_probs[s] /= (vt_labseqlen[s] -1);
+                                break;
+
+                            case 3:
+                                vt_probs[s] /= float(sqrt(vt_labseqlen[s]));
+                                break;
+
+                            default:
+                                break;
+                            }
+                        
+                    }
                     vt_probs[s] = exp(vt_probs[s]);
                     totalProb += vt_probs[s];
                 }
@@ -5439,7 +5471,6 @@ void GPUMatrix<ElemType>::TensorOpDebug(ElemType beta, const GPUMatrix<ElemType>
         // return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
         */
         return TensorOpNDebug<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides, a, *this);
-
     }
 }
 

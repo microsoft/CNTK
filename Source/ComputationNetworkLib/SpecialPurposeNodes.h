@@ -1777,7 +1777,7 @@ public:
             {
                 vt_probs.push_back(vt_pathinfos[i].prob);
                 vt_wer.push_back(vt_pathinfos[i].WER);
-                vt_labseqlen.push_back(vt_pathinfos[i].label_seq.size());
+                vt_labseqlen.push_back(vt_pathinfos[i].label_seq.size()); // this label sequence includes the sentence begining <blank>
             }
             m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR);
 
@@ -1794,7 +1794,7 @@ public:
             vector<size_t> vt_nuli;
             m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_nulf, vt_nulf, vt_nuli); // the last 3 inputs vt_nul are place holders just to make the function happy
         }
-                                                                                                                                                                                                                                              //m_outputDensity->Print("gradient");
+        //m_outputDensity->Print("gradient");
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
 #endif
@@ -1904,13 +1904,17 @@ public:
 
     void SetMWERInfo(vector<PathInfo> vt_pi,
                      bool ln,
-                     bool post_from_decode, bool mbr, size_t nw)
+                     bool post_from_decode, bool mbr, size_t nw,
+                     float ib, size_t snk, size_t mtmode)
     {
         vt_pathinfos = vt_pi;
         lengthNorm = ln;
         wordPathPosteriorFromDecodeMBR = post_from_decode;
         doMBR = mbr;
         numWords = nw;
+        insertionBoostInFinalBeam = ib;
+        scoreNormKind = snk;
+        enableMultiThreadDecodeMBR = mtmode;
     }
 
     void GetMWERInfo(ElemType& cr, size_t& nw)
@@ -1925,6 +1929,11 @@ protected:
     bool wordPathPosteriorFromDecodeMBR;
     bool doMBR = false;
     size_t numWords;
+
+    float insertionBoostInFinalBeam;
+    size_t scoreNormKind;
+    size_t enableMultiThreadDecodeMBR;
+
     ElemType criterionValue;
 
     virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking()

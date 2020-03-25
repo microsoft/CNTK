@@ -90,6 +90,8 @@
   <ItemDefinitionGroup Condition="$(GpuBuild)">
     <ClCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaInclude)</AdditionalIncludeDirectories>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</TreatWarningAsError>
+      <TreatWarningAsError Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</TreatWarningAsError>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
@@ -136,6 +138,27 @@
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h" />
     <ClInclude Include="MASGD.h" />
     <ClInclude Include="PostComputingActions.h" />
+    <ClInclude Include="RuntimeDecoder\CCommandLine.h" />
+    <ClInclude Include="RuntimeDecoder\CComplex_simd_sse.h" />
+    <ClInclude Include="RuntimeDecoder\CFeatExtractor.h" />
+    <ClInclude Include="RuntimeDecoder\CFeatReader.h" />
+    <ClInclude Include="RuntimeDecoder\CMatrix.h" />
+    <ClInclude Include="RuntimeDecoder\CModelEvaluator.h" />
+    <ClInclude Include="RuntimeDecoder\CModelParams.h" />
+    <ClInclude Include="RuntimeDecoder\cntk_nodes.h" />
+    <ClInclude Include="RuntimeDecoder\CRadix4FFT_float.h" />
+    <ClInclude Include="RuntimeDecoder\CRNNTDecoder.h" />
+    <ClInclude Include="RuntimeDecoder\CVector.h" />
+    <ClInclude Include="RuntimeDecoder\CWaveReader.h" />
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes.h" />
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes_1.h" />
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes_2.h" />
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes_3.h" />
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes_3svd.h" />
+    <ClInclude Include="RuntimeDecoder\rnnt_nodes_3svdopt.h" />
+    <ClInclude Include="RuntimeDecoder\stdafx.h" />
+    <ClInclude Include="RuntimeDecoder\targetver.h" />
+    <ClInclude Include="RuntimeDecoder\utils.h" />
     <ClInclude Include="SimpleDistGradAggregator.h" />
     <ClInclude Include="SimpleEvaluator.h" />
     <ClInclude Include="SimpleOutputWriter.h" />
@@ -148,6 +171,8 @@
     <ClCompile Include="ASGDHelper.cpp" />
     <ClCompile Include="PostComputingActions.cpp" />
     <ClCompile Include="Profiler.cpp" />
+    <ClCompile Include="RuntimeDecoder\CCommandLine.cpp" />
+    <ClCompile Include="RuntimeDecoder\stdafx.cpp" />
     <ClCompile Include="SGD.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
