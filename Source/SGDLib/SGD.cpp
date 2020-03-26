@@ -1073,10 +1073,10 @@ void decode_thread_proc(
         {
             onebest_NormLogPr = entry.NormLogPr;
             onebest_index = 0;
+            first = false;
         }
         else
         {
-            first = false;
             if (entry.NormLogPr > onebest_NormLogPr)
             {
                 onebest_NormLogPr = entry.NormLogPr;
