@@ -264,30 +264,6 @@ void TensorView<ElemType>::DoUnaryOpOfDebug(ElemType beta, const TensorView& a, 
     // output cannot be input when reducing
     if (reducingOpDims.size() > 0)
         CheckDifferentObject(a, *this);
-    /*
-    for (size_t i = 0; i < 2; i++)
-    {
-        // fprintf(stderr, "i = %d, offsets = %d,  regularStrides = %d, reducingStrides = %d \n ", int(i), int(offsets[i]), int(regularStrides[i]), int(reducingStrides[i]));
-        fprintf(stderr, "i = %d, offsets = %d\n ", int(i), int(offsets[i]));
-    }
-    for (size_t i = 0; i < regularOpDims.size(); i++)
-        fprintf(stderr, "i = %d, regularOpDims = %d\n ", int(i), int(regularOpDims[i]));
-    for (size_t i = 0; i < reducingOpDims.size(); i++)
-        fprintf(stderr, "i = %d, reducingOpDims = %d\n ", int(i), int(reducingOpDims[i]));
-
-    for (size_t i = 0; i < 2; i++)
-    {
-        for (size_t j = 0; j < regularStrides[i].size(); j++)
-        {
-            fprintf(stderr, "i = %d, j = %d, regularStrides = %d \n ", int(i), int(j), int(regularStrides[i][j]));
-        }
-        for (size_t j = 0; j < reducingStrides[i].size(); j++)
-        {
-            fprintf(stderr, "i = %d, j = %d, reducingStrides = %d \n ", int(i), int(j), int(reducingStrides[i][j]));
-        }
-    }
-    */
-    // now perform the operation
     GetSOB().TensorOpDebug(beta, a.GetSOB(), alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 template <class ElemType>

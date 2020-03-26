@@ -33,6 +33,7 @@
 
 #include "ComputationGraphAlgorithms.h"
 #include "DataReader.h"
+#include "ReshapingNodes.h"
 // #include "..\SGDlib\SimpleOutputWriter.h"
 
 namespace Microsoft
@@ -2029,7 +2030,6 @@ public:
             if (node->OperationName().find(L"ReduceElements") != string::npos)
             {
                 auto rNode = node->As<ReduceElementsNode<ElemType>>();
-                //rNode->set_frame(uttFrameNum);
                 rNode->is_multi_thread(true);
             }
         }

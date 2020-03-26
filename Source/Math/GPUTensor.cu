@@ -1125,8 +1125,6 @@ static void LaunchTensorOpWithReductionDebug(ElemType beta, array<ElemType*, N> 
                                         const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrideVectors,
                                              const SmallVector<size_t>& reducingOpDimVector, const array<SmallVector<ptrdiff_t>, N>& reducingStrideVectors, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& result)
 {
-    //fprintf(stderr, "LaunchTensorOpWithReductionDebug  1,  a.data = %f, result.data = %f \n", double(a.FrobeniusNorm()), double(result.FrobeniusNorm()));
-    // return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     a;
     result;    
     typedef typename TypeSelector<ElemType>::comp_t ReduceElemType;

@@ -54,7 +54,7 @@ private:
     const CVector& bias;
 };
 
-#define DEFAULT_HIDDEN_ACTIVATION 0.1f
+//#define DEFAULT_HIDDEN_ACTIVATION 0.1f
 
 
 struct LSTMState

@@ -5390,7 +5390,6 @@ void GPUMatrix<ElemType>::TensorOpDebug(ElemType beta, const GPUMatrix<ElemType>
         // TODO: We should observe if these actually make a speed difference, and if not, remove these special cases.
         if (op == ElementWiseOperator::opCopy && beta == 0 && alpha == 1)
         {
-            //fprintf(stderr, "TensorOpDebug 1 \n");
             return CUDA_CALL(cudaMemcpy(Data() + offsets[1], a.Data() + offsets[0], sizeof(ElemType) * regularOpDims[0], cudaMemcpyDeviceToDevice));
         }
         else if (op == ElementWiseOperator::opCopy && beta == 1)
@@ -5436,40 +5435,7 @@ void GPUMatrix<ElemType>::TensorOpDebug(ElemType beta, const GPUMatrix<ElemType>
     // regular case
     else
     {
-        /*
-        fprintf(stderr, "TensorOpDebug 5 \n");
-        for (size_t i = 0; i < 2; i++)
-        {
-            // fprintf(stderr, "i = %d, offsets = %d,  regularStrides = %d, reducingStrides = %d \n ", int(i), int(offsets[i]), int(regularStrides[i]), int(reducingStrides[i]));
-            fprintf(stderr, "TensorOpDebug 5.1, i = %d, offsets = %d\n ", int(i), int(offsets[i]));
-        }
-        fprintf(stderr, "TensorOpDebug 5.1, regularOpDims.size() = %d \n", int(regularOpDims.size()));
-
-        for (size_t i = 0; i < regularOpDims.size(); i++)
-            fprintf(stderr, "TensorOpDebug 5.1, i = %d, regularOpDims = %d\n ", int(i), int(regularOpDims[i]));
-
-        fprintf(stderr, "TensorOpDebug 5.1, reducingOpDims.size() = %d \n", int(reducingOpDims.size()));
-        for (size_t i = 0; i < reducingOpDims.size(); i++)
-            fprintf(stderr, "TensorOpDebug 5.1, i = %d, reducingOpDims = %d\n ", int(i), int(reducingOpDims[i]));
-
-        for (size_t i = 0; i < 2; i++)
-        {
-            fprintf(stderr, "TensorOpDebug 5.1, i = %d, regularStrides.size() = %d \n", int(i), int(regularStrides[i].size()));
-            for (size_t j = 0; j < regularStrides[i].size(); j++)
-            {
-                fprintf(stderr, "TensorOpDebug 5.1, i = %d, j = %d, regularStrides = %d \n ", int(i), int(j), int(regularStrides[i][j]));
-            }
-
-            fprintf(stderr, "TensorOpDebug 5.1, i = %d, reducingStrides.size() = %d \n", int(i), int(reducingStrides[i].size()));
-            for (size_t j = 0; j < reducingStrides[i].size(); j++)
-            {
-                fprintf(stderr, "TensorOpDebug 5.1, i = %d, j = %d, reducingStrides = %d \n ", int(i), int(j), int(reducingStrides[i][j]));
-            }
-        }
-
-        fprintf(stderr, "TensorOpDebug 5.2, beta = %f, alpha = %f, a.data = %f, data = %f \n", double(beta), double(alpha), double(a.FrobeniusNorm()), double(FrobeniusNorm()));
-        // return TensorOpN<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
-        */
+        
         return TensorOpNDebug<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides, a, *this);
     }
 }
