@@ -138,7 +138,6 @@
     <ClInclude Include="..\ComputationNetworkLib\RecurrentNodes.h" />
     <ClInclude Include="MASGD.h" />
     <ClInclude Include="PostComputingActions.h" />
-    <ClInclude Include="RuntimeDecoder\CCommandLine.h" />
     <ClInclude Include="RuntimeDecoder\CComplex_simd_sse.h" />
     <ClInclude Include="RuntimeDecoder\CFeatExtractor.h" />
     <ClInclude Include="RuntimeDecoder\CFeatReader.h" />
@@ -171,7 +170,6 @@
     <ClCompile Include="ASGDHelper.cpp" />
     <ClCompile Include="PostComputingActions.cpp" />
     <ClCompile Include="Profiler.cpp" />
-    <ClCompile Include="RuntimeDecoder\CCommandLine.cpp" />
     <ClCompile Include="RuntimeDecoder\stdafx.cpp" />
     <ClCompile Include="SGD.cpp" />
     <ClCompile Include="stdafx.cpp" />

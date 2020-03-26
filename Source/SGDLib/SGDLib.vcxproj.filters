@@ -16,9 +16,6 @@
     <ClCompile Include="ASGDHelper.cpp">
       <Filter>Parallelization</Filter>
     </ClCompile>
-    <ClCompile Include="RuntimeDecoder\CCommandLine.cpp">
-      <Filter>RuntimeDecoder</Filter>
-    </ClCompile>
     <ClCompile Include="RuntimeDecoder\stdafx.cpp">
       <Filter>RuntimeDecoder</Filter>
     </ClCompile>
@@ -149,9 +146,6 @@
     </ClInclude>
     <ClInclude Include="AccumulatorAggregation.h">
       <Filter>Parallelization</Filter>
-    </ClInclude>
-    <ClInclude Include="RuntimeDecoder\CCommandLine.h">
-      <Filter>RuntimeDecoder</Filter>
     </ClInclude>
     <ClInclude Include="RuntimeDecoder\CComplex_simd_sse.h">
       <Filter>RuntimeDecoder</Filter>

@@ -10,7 +10,7 @@
 #define _USE_MATH_DEFINES
 
 #include <stdio.h>
-#include <tchar.h>
+//#include <tchar.h>
 #include <time.h>
 #include <stdio.h>
 
