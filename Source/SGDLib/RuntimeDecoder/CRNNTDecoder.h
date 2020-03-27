@@ -192,7 +192,7 @@ float NormalizeScore(const token_seq_t& y, float logPr, ScoreNormalizationKind k
         return logPr / sqrtf((float)y.size());
 
         default:
-        rfail("unknown score normalization kind %d\n", kind);
+        rfail("unknown score normalization kind %d\n", int(kind));
     }
 };
 
@@ -239,7 +239,7 @@ public:
             break;
 
             default:
-            rfail("unknown beam sort kind %d\n", m_beamSortKind);
+            rfail("unknown beam sort kind %d\n", int(m_beamSortKind));
         }
         if (m_beam.size() > m_width)
         {
@@ -272,7 +272,7 @@ public:
             return m_beam.back().LogAlpha;
 
             default:
-            rfail("unknown beam sort kind %d\n", m_beamSortKind);
+            rfail("unknown beam sort kind %d\n", int(m_beamSortKind));
         }
     }
 
@@ -323,11 +323,14 @@ private:
 template <typename T>
 class priority_queue_ex: public std::priority_queue<T>
 {
+#ifndef LINUXRUNTIMECODE
+
 public:
     void clear()
     {
         c.clear();
     }
+#endif
 };
 
     
@@ -348,7 +351,7 @@ public:
             break;
 
             default:
-            rfail("unknown beam sort kind %d\n", beamSortKind);
+            rfail("unknown beam sort kind %d\n", int(beamSortKind));
         }
     }
 
@@ -472,7 +475,7 @@ private:
             return logAlpha > logAlpha2 ? logAlpha : logAlpha2;
 
             default:
-            rfail("unknown recombine kind %d\n", kind);
+            rfail("unknown recombine kind %d\n", int(kind));
         }
     }
 
@@ -520,7 +523,11 @@ private:
     public:
         virtual void reset(float tier_line) 
         {
+            #ifdef LINUXRUNTIMECODE
+            m_tier_1 = priority_queue_ex<TailEntry>();
+            #else
             m_tier_1.clear();
+            #endif
             m_tier_2.clear();
             m_tier_line = tier_line;
         }

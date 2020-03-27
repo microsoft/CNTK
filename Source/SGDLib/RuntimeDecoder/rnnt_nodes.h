@@ -94,7 +94,7 @@ std::unique_ptr<IEncoder> make_unique_encoder(const CModelParams& params)
         return std::make_unique<CEncoder_3svdopt>(params);
 
         default:
-        rfail("unknown model version %d\n", v);
+        rfail("unknown model version %d\n", int(v));
     }
 }
 
@@ -120,7 +120,7 @@ std::unique_ptr<IPredictor> make_unique_predictor(const CModelParams& params)
         return std::make_unique<CPredictor_3svdopt>(params);
 
         default:
-        rfail("unknown model version %d\n", v);
+        rfail("unknown model version %d\n", int(v));
     }
 }
 
@@ -146,7 +146,7 @@ std::unique_ptr<IJoint> make_unique_joint(const CModelParams& params)
         return std::make_unique<CJoint_3svdopt>(params);
 
         default:
-        rfail("unknown model version %d\n", v);
+        rfail("unknown model version %d\n", int(v));
     }
 }
 
@@ -170,6 +170,6 @@ void optimize_model(CModelParams& params)
         break;
 
         default:
-        rfail("not supported: model version %d\n", v);
+        rfail("not supported: model version %d\n", int(v));
     }
 }

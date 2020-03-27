@@ -199,12 +199,17 @@ public:
         rassert_op(M_Padded, >=, M);
         rassert_op(M_Padded - M, <, M_Block);
     }
-
-#define _stack_CVector(A, m) \
+    #ifdef LINUXRUNTIMECODE
+    #define _stack_CVector(A, m) \
+    CVector A( \
+        (float*)alloca(((m) + CVector::M_Block - 1) / CVector::M_Block * CVector::M_Block * sizeof(float) + CVector::SIMD_ALIGN), \
+        (m));
+    #else
+    #define _stack_CVector(A, m) \
     CVector A( \
         (float*)_alloca(((m) + CVector::M_Block - 1) / CVector::M_Block * CVector::M_Block * sizeof(float) + CVector::SIMD_ALIGN), \
         (m));
-
+    #endif
     CVector(float* x, uint32_t m)
         : M_Padded((m + M_Block - 1) / M_Block * M_Block),
           M(m),

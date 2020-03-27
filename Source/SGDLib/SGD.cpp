@@ -1224,8 +1224,8 @@ void SGD<ElemType>::PrepareMBR(const std::vector<std::wstring>& outputNodeNamesV
     {
         RuntimeError(
             "TrainOneEpoch vt_feas.size  and  encodeMBLayout->GetNumSequences() mismatch:  %d vs. %d",
-            vt_feas.size(),
-            encodeMBLayout->GetNumSequences());
+            int(vt_feas.size()),
+            int(encodeMBLayout->GetNumSequences()));
     }
 
     vt_nws.clear();

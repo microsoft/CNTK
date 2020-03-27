@@ -1,18 +1,20 @@
 #pragma once
 
-#include <smmintrin.h>   //requires SSE4.1
+#include <smmintrin.h> //requires SSE4.1
 #include <future>
 
-template<class T>
-T* __align(void* p, size_t cnt, size_t ALIGN)
-{
-    auto s = sizeof(T) * cnt + ALIGN;
-    return (T*)std::align(
+
+
+    template <class T>
+    T* __align(void* p, size_t cnt, size_t ALIGN)
+    {
+        auto s = sizeof(T) * cnt + ALIGN;
+        return (T*) std::align(
             ALIGN,
             sizeof(T) * cnt,
             p,
             s);
-}
+    }
 
 enum class MatrixKind
 {
@@ -39,17 +41,17 @@ public:
 
     // C = A * B
     virtual void TimesVector(
-            float* C, 
-            uint32_t C_M,
-            uint32_t C_M_Padded,
-            const float* B,
-            uint32_t B_M,
-            uint32_t B_M_Padded) const = 0;
+        float* C,
+        uint32_t C_M,
+        uint32_t C_M_Padded,
+        const float* B,
+        uint32_t B_M,
+        uint32_t B_M_Padded) const = 0;
 
     virtual void RetrieveColumn(
-            float* C, 
-            uint32_t C_M,
-            uint32_t j) const = 0;
+        float* C,
+        uint32_t C_M,
+        uint32_t j) const = 0;
 
 protected:
     IMatrix(uint32_t m, uint32_t n)
@@ -58,7 +60,6 @@ protected:
     {
     }
 };
-
 
 //
 // Float weight matrix
@@ -82,7 +83,7 @@ public:
         rassert_op(N_Padded - N, <, N_Block);
     }
 
-    static constexpr size_t M_Block= 16;
+    static constexpr size_t M_Block = 16;
     const uint32_t M_Padded;
 
     static constexpr size_t N_Block = 1;
@@ -94,14 +95,14 @@ public:
         rassert_eq(M * N, ::fread(buf, sizeof(float), M * N, fp));
 
         return std::async(
-                std::launch::async,
-                [this,transpose,buf]() {
-                    for (size_t i = 0; i < M; i++)
-                        for (size_t j = 0; j < N; j++)
-                            GetElement(i, j) = transpose ? buf[j * M + i] : buf[i * N + j];
-                    delete[] buf;
-                    return false;
-                });
+            std::launch::async,
+            [this, transpose, buf]() {
+                for (size_t i = 0; i < M; i++)
+                    for (size_t j = 0; j < N; j++)
+                        GetElement(i, j) = transpose ? buf[j * M + i] : buf[i * N + j];
+                delete[] buf;
+                return false;
+            });
     }
 
     virtual std::future<bool> mread(float* buf, bool transpose)
@@ -117,7 +118,7 @@ public:
     }
     virtual void fwrite(FILE* fp)
     {
-        uint32_t Dims[2] = { M, N };
+        uint32_t Dims[2] = {M, N};
         rassert_eq(1, ::fwrite(Dims, sizeof(Dims), 1, fp));
         for (uint32_t i = 0; i < M; i++)
             for (uint32_t j = 0; j < N; j++)
@@ -140,12 +141,12 @@ public:
 
     // C = A * B
     virtual void TimesVector(
-            float* C, 
-            uint32_t C_M,
-            uint32_t C_M_Padded,
-            const float* B,
-            uint32_t B_M,
-            uint32_t B_M_Padded) const
+        float* C,
+        uint32_t C_M,
+        uint32_t C_M_Padded,
+        const float* B,
+        uint32_t B_M,
+        uint32_t B_M_Padded) const
     {
         rassert_eq(M, C_M);
         rassert_op(M_Padded, <=, C_M_Padded);
@@ -165,7 +166,7 @@ public:
         for (size_t i = 0; i < M_Padded; i += 16)
         {
             const float* a = GetBlock(i, 0);
-            const int* b = (const int*)&B[0];
+            const int* b = (const int*) &B[0];
 
             auto zero = _mm_setzero_ps();
             auto t0 = zero;
@@ -181,9 +182,9 @@ public:
 
                 auto y = _mm_castsi128_ps(_mm_set1_epi32(b_k));
 
-                auto x0 = _mm_load_ps(&a[16 * k +  0]);
-                auto x1 = _mm_load_ps(&a[16 * k +  4]);
-                auto x2 = _mm_load_ps(&a[16 * k +  8]);
+                auto x0 = _mm_load_ps(&a[16 * k + 0]);
+                auto x1 = _mm_load_ps(&a[16 * k + 4]);
+                auto x2 = _mm_load_ps(&a[16 * k + 8]);
                 auto x3 = _mm_load_ps(&a[16 * k + 12]);
                 t0 = _mm_add_ps(t0, _mm_mul_ps(x0, y));
                 t1 = _mm_add_ps(t1, _mm_mul_ps(x1, y));
@@ -191,17 +192,17 @@ public:
                 t3 = _mm_add_ps(t3, _mm_mul_ps(x3, y));
             }
 
-            _mm_store_ps(&C[i +  0], t0);
-            _mm_store_ps(&C[i +  4], t1);
-            _mm_store_ps(&C[i +  8], t2);
+            _mm_store_ps(&C[i + 0], t0);
+            _mm_store_ps(&C[i + 4], t1);
+            _mm_store_ps(&C[i + 8], t2);
             _mm_store_ps(&C[i + 12], t3);
         }
     }
 
     virtual void RetrieveColumn(
-            float* C, 
-            uint32_t C_M,
-            uint32_t j) const
+        float* C,
+        uint32_t C_M,
+        uint32_t j) const
     {
         rassert_eq(M, C_M);
         for (size_t i = 0; i < M; i++)
@@ -218,14 +219,14 @@ public:
 private:
     const float& GetElement(size_t i, size_t j) const
     {
-        return ((CMatrix*)this)->GetElement(i, j);
+        return ((CMatrix*) this)->GetElement(i, j);
     }
 
     float& GetElement(size_t i, size_t j)
     {
         auto di = i % M_Block;
         auto dj = j % N_Block;
-        auto block = (float*)GetBlock(i, j);
+        auto block = (float*) GetBlock(i, j);
         return block[di * N_Block + dj];
     }
 
@@ -234,7 +235,6 @@ private:
     std::unique_ptr<uint8_t[]> m_store;
     float* m_x;
 };
-
 
 //
 // Quantized weight matrix
@@ -271,7 +271,7 @@ public:
         rassert_op(N_Padded, <=, Ny_Padded);
     }
 
-    static constexpr size_t M_Block= 16;
+    static constexpr size_t M_Block = 16;
     const uint32_t M_Padded;
     static constexpr size_t N_Block = _N_Block;
     const uint32_t N_Padded;
@@ -299,12 +299,12 @@ public:
         }
 
         return std::async(
-                std::launch::async,
-                [this,A]() {
-                    this->init(A);
-                    delete[] A;
-                    return false;
-                });
+            std::launch::async,
+            [this, A]() {
+                this->init(A);
+                delete[] A;
+                return false;
+            });
     }
     virtual std::future<bool> mread(float* buf, bool transpose)
     {
@@ -342,12 +342,12 @@ public:
 
     // C = A * B
     virtual void TimesVector(
-            float* C, 
-            uint32_t C_M,
-            uint32_t C_M_Padded,
-            const float* B,
-            uint32_t B_M,
-            uint32_t B_M_Padded) const
+        float* C,
+        uint32_t C_M,
+        uint32_t C_M_Padded,
+        const float* B,
+        uint32_t B_M,
+        uint32_t B_M_Padded) const
     {
         rassert_eq(M, C_M);
         rassert_op(M_Padded, <=, C_M_Padded);
@@ -364,7 +364,12 @@ public:
 
         auto c_recip = c == 0.0f ? 1.0f : 1.0f / c;
 
+        #ifdef LINUXRUNTIMECODE
+        auto y1 = alloca(Ny_Padded * sizeof(Ty) + SIMD_ALIGN);
+        #else
         auto y1 = _alloca(Ny_Padded * sizeof(Ty) + SIMD_ALIGN);
+        #endif
+
         auto y = __align<Ty>(y1, Ny_Padded, SIMD_ALIGN);
 
         // float sum_B_k = 0;
@@ -396,14 +401,17 @@ public:
             auto y_k0 = _mm_mul_ps(B_k0, cc_recip);
             auto y_k1 = _mm_mul_ps(B_k1, cc_recip);
 
-            y_k0 = _mm_round_ps(y_k0, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC);
-            y_k1 = _mm_round_ps(y_k1, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC);
-
+            y_k0 = _mm_round_ps(y_k0, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+            y_k1 = _mm_round_ps(y_k1, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+            #ifdef LINUXRUNTIMECODE
+            static_assert(std::is_same<Ty, int16_t>, "Ty is not int16_t");
+            #else
             static_assert(std::is_same_v<Ty, int16_t>, "Ty is not int16_t");
+            #endif
             auto t0 = _mm_cvtps_epi32(y_k0);
             auto t1 = _mm_cvtps_epi32(y_k1);
 
-            _mm_store_si128((__m128i*)&y[k], _mm_packs_epi32(t0, t1));
+            _mm_store_si128((__m128i*) &y[k], _mm_packs_epi32(t0, t1));
         }
         auto ss = _mm_hadd_ps(ssB0, ssB1);
         ss = _mm_hadd_ps(ss, ss);
@@ -426,7 +434,7 @@ public:
         {
             static_assert(N_Block % 2 == 0, "CQMatrix::N_Block not multiples of 2");
             const T* x_i = GetBlock(i, 0);
-            
+
             auto zero = _mm_setzero_si128();
             auto t0 = zero;
             auto t1 = zero;
@@ -434,7 +442,7 @@ public:
             auto t3 = zero;
             for (size_t k = 0; k < N_Padded; k += 2)
             {
-                auto yk2 = *(int*)&y[k];         // 2 x epi16
+                auto yk2 = *(int*) &y[k]; // 2 x epi16
                 if (yk2 == 0)
                     continue;
                 auto y_k = _mm_set1_epi32(yk2);
@@ -466,9 +474,9 @@ public:
     }
 
     virtual void RetrieveColumn(
-            float* C, 
-            uint32_t C_M,
-            uint32_t j) const
+        float* C,
+        uint32_t C_M,
+        uint32_t j) const
     {
         C;
         C_M;
@@ -482,8 +490,8 @@ protected:
         for (size_t i = 0; i < M; i++)
         {
             auto minmax = std::minmax_element(
-                    &A[i * N],
-                    &A[i * N + N]);
+                &A[i * N],
+                &A[i * N + N]);
             m_a[i] = (*minmax.second - *minmax.first) / (MaxT - MinT);
             m_b[i] = (*minmax.first * MaxT - *minmax.second * MinT) / (MaxT - MinT);
 
@@ -495,8 +503,8 @@ protected:
                 rassert_op(MinT, <=, x_ij);
                 rassert_op(x_ij, <=, MaxT);
 
-                GetElement(i, j) = (T)x_ij;
-                rassert_eq((float)GetElement(i, j), x_ij);
+                GetElement(i, j) = (T) x_ij;
+                rassert_eq((float) GetElement(i, j), x_ij);
             }
         }
     }
@@ -511,36 +519,47 @@ protected:
 private:
     const T& GetElement(size_t i, size_t j) const
     {
-        return ((CQMatrix<T>*)this)->GetElement(i, j);
+        return ((CQMatrix<T>*) this)->GetElement(i, j);
     }
 
     T& GetElement(size_t i, size_t j)
     {
         auto di = i % M_Block;
         auto dj = j % N_Block;
-        auto block = (T*)GetBlock(i, j);
+        auto block = (T*) GetBlock(i, j);
         return block[di * N_Block + dj];
     }
 
     static __m128i load_qmatrix_block(const T* addr)
     {
+
+        #ifdef LINUXRUNTIMECODE
+
         static_assert(
-                std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t>,
-                "quantization not supported");
+            std::is_same<T, int8_t> || std::is_same<T, int16_t>,
+            "quantization not supported");
+
+        if (std::is_same<T, int16_t>)
+            return _mm_load_si128((__m128i*) addr);
+        #else
+        static_assert(
+            std::is_same_v<T, int8_t> || std::is_same_v<T, int16_t>,
+            "quantization not supported");
 
         if (std::is_same_v<T, int16_t>)
-            return _mm_load_si128((__m128i*)addr);
+            return _mm_load_si128((__m128i*) addr);
+        #endif
         else
-            return _mm_cvtepi8_epi16(_mm_loadl_epi64((__m128i*)addr));
+            return _mm_cvtepi8_epi16(_mm_loadl_epi64((__m128i*) addr));
     }
 
     // C[i] = m_a[i] * c * t + m_b[i] * sum_B_k;
     void store_qmatrix_result(float* C, size_t i, __m128 cc, __m128i tt, __m128 ss) const
     {
         auto m_a_c_t = _mm_mul_ps(
-                _mm_mul_ps( _mm_load_ps(&m_a[i]), cc),
-                _mm_cvtepi32_ps(tt));
-        auto m_b_ss = _mm_mul_ps( _mm_load_ps(&m_b[i]), ss);
+            _mm_mul_ps(_mm_load_ps(&m_a[i]), cc),
+            _mm_cvtepi32_ps(tt));
+        auto m_b_ss = _mm_mul_ps(_mm_load_ps(&m_b[i]), ss);
         _mm_store_ps(&C[i], _mm_add_ps(m_a_c_t, m_b_ss));
     }
 
@@ -558,8 +577,6 @@ protected:
 
 typedef CQMatrix<int16_t> CQ16Matrix;
 typedef CQMatrix<int8_t> CQ8Matrix;
-
-
 
 //
 // Quantized weight matrix, specialized for 8-bit and SSE
@@ -579,7 +596,7 @@ typedef CQMatrix<int8_t> CQ8Matrix;
 //
 //   - (SSSE3) _mm_maddubs_epi16: used to multiply 8-bit integers from x and y
 //   - _mm_sad_epu8: used to horizontally add 16-bit integers
-// 
+//
 // Details about usage of the two instructions:
 //
 //   - Signed mulplication using _mm_maddubs_epi16
@@ -628,12 +645,12 @@ public:
 
     // C = A * B
     virtual void TimesVector(
-            float* C, 
-            uint32_t C_M,
-            uint32_t C_M_Padded,
-            const float* B,
-            uint32_t B_M,
-            uint32_t B_M_Padded) const
+        float* C,
+        uint32_t C_M,
+        uint32_t C_M_Padded,
+        const float* B,
+        uint32_t B_M,
+        uint32_t B_M_Padded) const
     {
         rassert_eq(M, C_M);
         rassert_op(M_Padded, <=, C_M_Padded);
@@ -642,7 +659,7 @@ public:
         rassert_op(Ny_Padded, <=, B_M_Padded);
 
         typedef int8_t Ty;
-        static constexpr float MinTy = -127;     // so that it can be negated safely
+        static constexpr float MinTy = -127; // so that it can be negated safely
         static constexpr float MaxTy = 127;
 
         float Bmin, Bmax;
@@ -665,7 +682,11 @@ public:
         rassert_eq(isnormal(c), true);
         rassert_eq(d == 0 || isnormal(d), true);
 
+        #ifdef LINUXRUNTIMECODE
+        auto y1 = alloca(Ny_Padded * sizeof(Ty) + SIMD_ALIGN);
+        #else
         auto y1 = _alloca(Ny_Padded * sizeof(Ty) + SIMD_ALIGN);
+        #endif
         auto y = __align<Ty>(y1, Ny_Padded, SIMD_ALIGN);
 
         // float s = 0;
@@ -706,12 +727,15 @@ public:
             auto y_k2 = _mm_sub_ps(_mm_mul_ps(cc_recip, B_k2), dd);
             auto y_k3 = _mm_sub_ps(_mm_mul_ps(cc_recip, B_k3), dd);
 
-            y_k0 = _mm_round_ps(y_k0, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC);
-            y_k1 = _mm_round_ps(y_k1, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC);
-            y_k2 = _mm_round_ps(y_k2, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC);
-            y_k3 = _mm_round_ps(y_k3, _MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC);
-
+            y_k0 = _mm_round_ps(y_k0, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+            y_k1 = _mm_round_ps(y_k1, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+            y_k2 = _mm_round_ps(y_k2, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+            y_k3 = _mm_round_ps(y_k3, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
+            #ifdef LINUXRUNTIMECODE
+            static_assert(std::is_same<Ty, int8_t>, "Ty is not int8_t");
+            #else
             static_assert(std::is_same_v<Ty, int8_t>, "Ty is not int8_t");
+            #endif
             auto t0 = _mm_cvtps_epi32(y_k0);
             auto t1 = _mm_cvtps_epi32(y_k1);
             auto t2 = _mm_cvtps_epi32(y_k2);
@@ -719,7 +743,7 @@ public:
             auto t01 = _mm_packs_epi32(t0, t1);
             auto t23 = _mm_packs_epi32(t2, t3);
 
-            _mm_store_si128((__m128i*)&y[k + 0], _mm_packs_epi16(t01, t23));
+            _mm_store_si128((__m128i*) &y[k + 0], _mm_packs_epi16(t01, t23));
         }
         auto ssB01 = _mm_hadd_ps(ssB0, ssB1);
         auto ssB23 = _mm_hadd_ps(ssB2, ssB3);
@@ -745,7 +769,7 @@ public:
             static_assert(N_Block == 16, "N_Block != 16");
             static_assert(N_SubBlock == 16, "N_SubBlock != 16");
             const auto x_i = GetBlock(i, 0);
-            
+
             auto zero = _mm_setzero_si128();
             auto t0 = zero;
             auto t1 = zero;
@@ -758,16 +782,16 @@ public:
                 auto s2 = zero;
                 auto s3 = zero;
 
-                auto k1 = std::min(k0 + N_MetaBlock, (size_t)N_Padded);
+                auto k1 = std::min(k0 + N_MetaBlock, (size_t) N_Padded);
                 for (size_t k = k0; k < k1; k += N_Block)
                 {
-                    auto sy = _mm_load_si128((__m128i*)&y[k + 0]);
+                    auto sy = _mm_load_si128((__m128i*) &y[k + 0]);
                     auto yy = _mm_abs_epi8(sy);
 
-                    s0 = _mm_add_epi16(s0, sad_dp_block((__m128i*)&x_i[M_Block * k + 16 *  0], yy, sy));
-                    s1 = _mm_add_epi16(s1, sad_dp_block((__m128i*)&x_i[M_Block * k + 16 *  4], yy, sy));
-                    s2 = _mm_add_epi16(s2, sad_dp_block((__m128i*)&x_i[M_Block * k + 16 *  8], yy, sy));
-                    s3 = _mm_add_epi16(s3, sad_dp_block((__m128i*)&x_i[M_Block * k + 16 * 12], yy, sy));
+                    s0 = _mm_add_epi16(s0, sad_dp_block((__m128i*) &x_i[M_Block * k + 16 * 0], yy, sy));
+                    s1 = _mm_add_epi16(s1, sad_dp_block((__m128i*) &x_i[M_Block * k + 16 * 4], yy, sy));
+                    s2 = _mm_add_epi16(s2, sad_dp_block((__m128i*) &x_i[M_Block * k + 16 * 8], yy, sy));
+                    s3 = _mm_add_epi16(s3, sad_dp_block((__m128i*) &x_i[M_Block * k + 16 * 12], yy, sy));
                 }
 
                 t0 = _mm_add_epi32(t0, sad_cvt_block(s0));
@@ -790,11 +814,13 @@ public:
     }
 
     virtual void RetrieveColumn(
-            float* C, 
-            uint32_t C_M,
-            uint32_t j) const
+        float* C,
+        uint32_t C_M,
+        uint32_t j) const
     {
-        C; C_M; j;
+        C;
+        C_M;
+        j;
         rfail("Not supported\n");
     }
 
@@ -806,7 +832,7 @@ protected:
             float Amin, Amax;
             min_max(&A[i * N], N, Amin, Amax);
 
-            float MinT1 = -127;     // so that it can be negated safely
+            float MinT1 = -127; // so that it can be negated safely
 
             auto a_recip = (MaxT - MinT1) / (Amax - Amin);
             m_a[i] = 1.0f / a_recip;
@@ -823,10 +849,10 @@ protected:
                 rassert_op(MinT1, <=, x_ij);
                 rassert_op(x_ij, <=, MaxT);
 
-                get_element(i, j) = (int8_t)x_ij;
-                rassert_eq((float)get_element(i, j), x_ij);
+                get_element(i, j) = (int8_t) x_ij;
+                rassert_eq((float) get_element(i, j), x_ij);
             }
-            m_r[i] = (float)r;
+            m_r[i] = (float) r;
 
             // TODO: handle werid weight matrix
             rassert_eq(isnormal(a_recip), true);
@@ -839,7 +865,7 @@ protected:
 private:
     const int8_t& get_element(size_t i, size_t j) const
     {
-        return ((CSSE_Q8Matrix*)this)->get_element(i, j);
+        return ((CSSE_Q8Matrix*) this)->get_element(i, j);
     }
 
     int8_t& get_element(size_t i, size_t j)
@@ -853,12 +879,11 @@ private:
         auto di = i % M_SubBlock;
         auto dj = j % N_SubBlock;
 
-        auto block = (int8_t*)GetBlock(i, j);
-        return block[
-            si * (M_SubBlock * N_Block) +
-            sj * (M_SubBlock * N_SubBlock) +
-            di * N_SubBlock +
-            dj];
+        auto block = (int8_t*) GetBlock(i, j);
+        return block[si * (M_SubBlock * N_Block) +
+                     sj * (M_SubBlock * N_SubBlock) +
+                     di * N_SubBlock +
+                     dj];
     }
 
     static void min_max(const float* B, size_t N, float& Bmin, float& Bmax)
@@ -897,30 +922,30 @@ private:
 
     inline static __m128i sad_dp_block(const __m128i* x, __m128i yy, __m128i sy)
     {
-        auto xa = _mm_load_si128((__m128i*)&x[0]);
+        auto xa = _mm_load_si128((__m128i*) &x[0]);
         auto va = sad_dp_line(xa, yy, sy);
 
-        auto xb = _mm_load_si128((__m128i*)&x[1]);
+        auto xb = _mm_load_si128((__m128i*) &x[1]);
         auto vb = sad_dp_line(xb, yy, sy);
 
-        auto xc = _mm_load_si128((__m128i*)&x[2]);
+        auto xc = _mm_load_si128((__m128i*) &x[2]);
         auto vc = sad_dp_line(xc, yy, sy);
 
-        auto xd = _mm_load_si128((__m128i*)&x[3]);
+        auto xd = _mm_load_si128((__m128i*) &x[3]);
         auto vd = sad_dp_line(xd, yy, sy);
 
         return _mm_packus_epi32(
-                _mm_packus_epi32(va, vb),
-                _mm_packus_epi32(vc, vd));
+            _mm_packus_epi32(va, vb),
+            _mm_packus_epi32(vc, vd));
     }
 
     inline static __m128i sad_dp_line(__m128i x, __m128i yy, __m128i sy)
     {
-        auto _0x8000= _mm_set1_epi16((short)0x8000);
+        auto _0x8000 = _mm_set1_epi16((short) 0x8000);
         //auto _0x8000 = _mm_set1_epi16((short) -32768);
         auto _sad_shuf = _mm_set_epi8(
-                15, 13, 11, 9, 7, 5, 3, 1,
-                14, 12, 10, 8, 6, 4, 2, 0);
+            15, 13, 11, 9, 7, 5, 3, 1,
+            14, 12, 10, 8, 6, 4, 2, 0);
         auto zero = _mm_setzero_si128();
 
         auto xy = _mm_maddubs_epi16(yy, _mm_sign_epi8(x, sy));
@@ -940,7 +965,7 @@ private:
     // C[i] = m_a[i] * (c * (t + m_r[i] * d) + m_b[i] * s);
     inline void store_sq8_result(float* C, size_t i, __m128 cc, __m128 dd, __m128 ss, __m128i t) const
     {
-        auto r_dd =_mm_mul_ps(_mm_load_ps(&m_r[i]), dd); 
+        auto r_dd = _mm_mul_ps(_mm_load_ps(&m_r[i]), dd);
         auto t_r_dd = _mm_add_ps(_mm_cvtepi32_ps(t), r_dd);
         auto cc_t_r_dd = _mm_mul_ps(cc, t_r_dd);
 
@@ -960,40 +985,38 @@ private:
     static constexpr size_t N_SubBlock = 16;
 };
 
-
-
 static std::unique_ptr<IMatrix> make_unique_matrix(
-        uint32_t m,
-        uint32_t n,
-        MatrixKind kind)
+    uint32_t m,
+    uint32_t n,
+    MatrixKind kind)
 {
     switch (kind)
     {
-        case MatrixKind::Float:
+    case MatrixKind::Float:
         return std::make_unique<CMatrix>(m, n);
 
-        case MatrixKind::Q16:
+    case MatrixKind::Q16:
         return std::make_unique<CQ16Matrix>(m, n);
 
-        case MatrixKind::Q8:
+    case MatrixKind::Q8:
         return std::make_unique<CQ8Matrix>(m, n);
 
-        case MatrixKind::SSE_Q8:
+    case MatrixKind::SSE_Q8:
         return std::make_unique<CSSE_Q8Matrix>(m, n);
 
-        default:
-        rfail("unknown matrix kind: %d\n", kind);
+    default:
+        rfail("unknown matrix kind: %d\n", int(kind));
     }
 }
 
 static constexpr size_t MaxMatrix_M_Block =
-        std::max(CMatrix::M_Block,
-        std::max(CQ16Matrix::M_Block,
-        std::max(CQ8Matrix::M_Block,
-                 CSSE_Q8Matrix::M_Block)));
+    std::max(CMatrix::M_Block,
+             std::max(CQ16Matrix::M_Block,
+                      std::max(CQ8Matrix::M_Block,
+                               CSSE_Q8Matrix::M_Block)));
 
 static constexpr size_t MaxMatrix_N_Block =
-        std::max(CMatrix::N_Block,
-        std::max(CQ16Matrix::N_Block,
-        std::max(CQ8Matrix::N_Block,
-                 CSSE_Q8Matrix::N_Block)));
+    std::max(CMatrix::N_Block,
+             std::max(CQ16Matrix::N_Block,
+                      std::max(CQ8Matrix::N_Block,
+                               CSSE_Q8Matrix::N_Block)));

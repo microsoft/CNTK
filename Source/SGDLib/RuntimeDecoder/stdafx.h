@@ -8,7 +8,7 @@
 #include "targetver.h"
 
 #define _USE_MATH_DEFINES
-
+#define LINUXRUNTIMECODE
 #include <stdio.h>
 //#include <tchar.h>
 #include <time.h>
@@ -22,3 +22,6 @@
 #include <queue>
 
 #include "utils.h"
+#ifdef LINUXRUNTIMECODE
+#include <alloca.h>
+#endif

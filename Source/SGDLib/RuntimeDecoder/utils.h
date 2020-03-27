@@ -13,6 +13,7 @@
 #include <cmath>
 #include <vector>
 #include <complex>
+#include <wchar.h>
 
 #define rassert_op(x, op, y) \
 do \
