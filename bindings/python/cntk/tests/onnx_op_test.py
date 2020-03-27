@@ -425,7 +425,7 @@ def test_AveragePool(tmpdir, dtype, device_id):
 
 #AveragePool
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_AvergaePoolWithSequenceAxis(tmpdir, dtype, device_id):
+def test_AveragePoolWithSequenceAxis(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
