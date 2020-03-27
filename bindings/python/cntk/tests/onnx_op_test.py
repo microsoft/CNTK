@@ -423,6 +423,18 @@ def test_AveragePool(tmpdir, dtype, device_id):
 
         verify_one_input(model, img, tmpdir, 'AveragePool_2', device)
 
+#AveragePool
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_AveragePoolWithSequenceAxis(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype):
+        img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
+        x = C.sequence.input_variable(img.shape)
+        model = C.pooling(x, C.AVG_POOLING, (2,2), (2,2))
+        verify_sequence_model(model, np.reshape(img, [1, 1, 1, 4, 4]), tmpdir, "AveragePoolWithSeq_1", resave = False, bypass_load_into_cntk = True)
+
 #BatchNormalization
 def verify_BN(x, init_scale, init_bias, mean, var, epsilon, spatial, tmpdir, dtype):
     with C.default_options(dtype = dtype):
@@ -1311,7 +1323,7 @@ def test_Max(tmpdir, dtype):
 
 #MaxPool
 @pytest.mark.parametrize("dtype", DType_Config)
-def test_MaxPool(tmpdir, dtype, device_id):    
+def test_MaxPool(tmpdir, dtype, device_id):
     if device_id == -1 and dtype == np.float16:
         pytest.skip('Test is skipped on CPU with float16 data')
     device = cntk_device(device_id)
@@ -1326,6 +1338,18 @@ def test_MaxPool(tmpdir, dtype, device_id):
         x = C.input_variable(img.shape)
         model = C.pooling(x, C.MAX_POOLING, (3, 3), (2, 2), auto_padding=[False, False, False], ceil_out_dim=True)
         verify_one_input(model, img, tmpdir, 'MaxPool_2', device)
+
+#MaxPool
+@pytest.mark.parametrize("dtype", DType_Config)
+def test_MaxPoolWithSequenceAxis(tmpdir, dtype, device_id):
+    if device_id == -1 and dtype == np.float16:
+        pytest.skip('Test is skipped on CPU with float16 data')
+    device = cntk_device(device_id)
+    with C.default_options(dtype=dtype):
+        img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
+        x = C.sequence.input_variable(img.shape)
+        model = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
+        verify_sequence_model(model, np.reshape(img, [1, 1, 1, 4, 4]), tmpdir, "MaxPoolWithSeq_1", resave = False, bypass_load_into_cntk = True)
 
 #MaxRoiPool
 @pytest.mark.parametrize("dtype", DType_Config)

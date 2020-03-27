@@ -845,6 +845,12 @@ private:
         std::unordered_map<Variable, onnxruntime::Node*>& variableNodes, 
         std::vector<ScanLoop>& scanLoops, int createLoopIndex);
 
+    static onnxruntime::Node* CreatePoolingNode(const FunctionPtr& src,
+        onnxruntime::Graph* graph,
+        std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+        std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+        std::vector<ScanLoop>& scanLoops, int createLoopIndex);
+
     static onnxruntime::Node* CreateConvolutionNode(const FunctionPtr& src,
         onnxruntime::Graph* graph,
         std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
@@ -5629,7 +5635,12 @@ onnxruntime::Node* CNTKToONNXHelper::CreateNode(const FunctionPtr& src,
     else
         return CreateConvolutionNode(src, graph, functionNodes, variableNodes, scanLoops, createLoopIndex);
     }
-
+    else if (src->OpName() == L"Pooling" && src->Inputs()[0].HasBatchAxis() && src->Inputs()[0].HasSequenceAxis())
+    {
+        // in case a Pooling op is created with both batch and sequence axes, we need to reshape its input and output to match 
+        // ONNX spec of [N, C, H, W] shape requirement.
+        return CreatePoolingNode(src, graph, functionNodes, variableNodes, scanLoops, createLoopIndex);
+    }
     //
     // If this block node equivalent to a primitive ONNX OP, then treated as such.
     // And just maps its argument to ONNX node.
@@ -7087,7 +7098,8 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             auto lowerPad = ToINTS(src->Attributes()[L"lowerPad"].Value<NDShape>());
             auto upperPad = ToINTS(src->Attributes()[L"upperPad"].Value<NDShape>());
 
-            if (IsPadValueValid(lowerPad, upperPad, autoPadding, ceilOutDim))
+            // lowerPad and upperPad have incorrect dimension when the op has both batch and sequence axes.
+            if (IsPadValueValid(lowerPad, upperPad, autoPadding, ceilOutDim) && !(src->Inputs()[0].HasBatchAxis() && src->Inputs()[0].HasSequenceAxis()))
             {
                 if (ceilOutDim)
                     ValidatePadValueForCeilOutDim(lowerPad, upperPad, autoPadding, kernelShape, inputShape, strides,
@@ -7097,6 +7109,14 @@ void CNTKToONNXHelper::CopyAttributes(const FunctionPtr& src, onnxruntime::Node*
             }
             else
             {
+                if (src->Inputs()[0].HasBatchAxis() && src->Inputs()[0].HasSequenceAxis())
+                {
+                    if (!std::all_of(lowerPad.begin(), lowerPad.end(), [](int64_t pad) {return pad == 0; }) ||
+                        !std::all_of(upperPad.begin(), upperPad.end(), [](int64_t pad) {return pad == 0; }))
+                    {
+                        fprintf(stderr, "Warning: Cannot set upperPad and lowerPad with pooling ops. Padding values will be computed according to kernel and input shapes.");
+                    }
+                }
                 if (isPooling)
                     PutPadAttrInNode(node, autoPadding, kernelShape, inputShape, strides, /*dilation=*/std::vector<size_t>(kernelShape.Rank(), 1),
                                      ceilOutDim, /*transpose=*/!isPooling);
@@ -8603,6 +8623,54 @@ onnxruntime::Node* ApplyActivationToSequenceConvolution(Node* convNode, const Fu
         { activationInputNodeArg }, { activationOutputNodeArg });
 
     return activationNode;
+}
+
+// insert reshape before and after a Pooling op when the CNTK op has both sequence and batch axes.
+onnxruntime::Node* CNTKToONNXHelper::CreatePoolingNode(const FunctionPtr& src,
+    onnxruntime::Graph* graph,
+    std::unordered_map<FunctionPtr, onnxruntime::Node*>& functionNodes,
+    std::unordered_map<Variable, onnxruntime::Node*>& variableNodes,
+    std::vector<ScanLoop>& scanLoops, int createLoopIndex)
+{
+    if (!src->Inputs()[0].HasBatchAxis() || !src->Inputs()[0].HasSequenceAxis())
+        LogicError("CreatePoolingNode is only to handle MaxPool with batch and sequence dimensions.");
+    
+    std::vector<onnxruntime::NodeArg *> inputs;
+    ProcessInputs(src, graph, functionNodes, variableNodes, inputs,
+        scanLoops, createLoopIndex);
+
+    std::vector<onnxruntime::NodeArg *> outputs;
+    ProcessOutputs(src, inputs, outputs, graph);
+
+    // Max/AveragePool takes input of shape [N, C, H, W] or [N, C, D1, D2, ..., Dn]. CNTK input needs to be reshaped to match it.
+    // reshape [#, *][C, H, W] to [-1, C, H, W]
+    // onnx Max/AveragePool
+    // reshape [-1, C_out, H_out, W_out] to [#, *][C_out, H_out, W_out]
+    vector<int64_t> newDimInputToPooling;
+    // collapse extra dims into one axis as N for ONNX Conv
+    newDimInputToPooling.push_back(-1);
+    for (int i = 2; i < inputs[0]->Shape()->dim_size(); i++)
+    {
+        // copy C, H, W
+        if (!inputs[0]->Shape()->dim(i).has_dim_value())
+            LogicError("Max/AveragePool: feature dimensions need to have dim value.");
+        newDimInputToPooling.push_back(inputs[0]->Shape()->dim(i).dim_value());
+    }
+
+    onnxruntime::Node* preReshape = AddReshapeNode(*inputs[0], newDimInputToPooling, inputs[0]->Name() + "_reshaped_for_max_pool", graph);
+    const std::vector<onnxruntime::NodeArg *> pooling_inputs({const_cast<NodeArg *>(preReshape->OutputDefs()[0])});
+    TypeProto poolingOutputTypeProto;
+    UpdateONNXType(src->Outputs()[0].GetDataType(), poolingOutputTypeProto);
+
+    NodeArg *poolingOutputArg = &graph->GetOrCreateNodeArg(outputs[0]->Name() + "_pooling_of_reshaped", &poolingOutputTypeProto);
+
+    onnxruntime::Node* poolingNode = AddNode(src, graph, pooling_inputs, { poolingOutputArg });
+
+    vector<int64_t> newDimOutputFromPooling = ToINTS(*outputs[0]->TypeAsProto());
+    onnxruntime::Node* postReshape = AddReshapeNode(*poolingOutputArg, newDimOutputFromPooling, outputs[0]->Name(), graph);
+
+    functionNodes.emplace(src, poolingNode);
+    return postReshape;
 }
 
 onnxruntime::Node* CNTKToONNXHelper::CreateConvolutionNode(const FunctionPtr& src,
