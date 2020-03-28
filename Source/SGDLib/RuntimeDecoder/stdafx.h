@@ -8,7 +8,7 @@
 #include "targetver.h"
 
 #define _USE_MATH_DEFINES
-// #define LINUXRUNTIMECODE
+#define LINUXRUNTIMECODE
 #include <stdio.h>
 //#include <tchar.h>
 #include <time.h>
