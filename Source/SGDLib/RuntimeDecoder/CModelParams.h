@@ -166,7 +166,11 @@ public:
                 p += LPLen;
                 rassert_eq(*p++, L'[');
                 uint32_t Dims[2];
+                #ifdef LINUXRUNTIMECODE
+                rassert_eq(2, swscanf(p, L"%u,%u]", &Dims[0], &Dims[1]));
+                #else
                 rassert_eq(2, swscanf_s(p, L"%u,%u]", &Dims[0], &Dims[1]));
+                #endif
                 rassert_eq(1, fwrite(Dims, sizeof(Dims), 1, outfp));
 
                 auto M = Dims[0];

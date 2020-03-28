@@ -404,7 +404,7 @@ public:
             y_k0 = _mm_round_ps(y_k0, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
             y_k1 = _mm_round_ps(y_k1, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
             #ifdef LINUXRUNTIMECODE
-            static_assert(std::is_same<Ty, int16_t>, "Ty is not int16_t");
+            static_assert(std::is_same<Ty, int16_t>::value, "Ty is not int16_t");
             #else
             static_assert(std::is_same_v<Ty, int16_t>, "Ty is not int16_t");
             #endif
@@ -536,10 +536,10 @@ private:
         #ifdef LINUXRUNTIMECODE
 
         static_assert(
-            std::is_same<T, int8_t> || std::is_same<T, int16_t>,
+            std::is_same<T, int8_t>::value || std::is_same<T, int16_t>::value,
             "quantization not supported");
 
-        if (std::is_same<T, int16_t>)
+        if (std::is_same<T, int16_t>::value)
             return _mm_load_si128((__m128i*) addr);
         #else
         static_assert(
@@ -732,7 +732,7 @@ public:
             y_k2 = _mm_round_ps(y_k2, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
             y_k3 = _mm_round_ps(y_k3, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC);
             #ifdef LINUXRUNTIMECODE
-            static_assert(std::is_same<Ty, int8_t>, "Ty is not int8_t");
+            static_assert(std::is_same<Ty, int8_t>::value, "Ty is not int8_t");
             #else
             static_assert(std::is_same_v<Ty, int8_t>, "Ty is not int8_t");
             #endif
