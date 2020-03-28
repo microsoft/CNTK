@@ -107,10 +107,12 @@ inline errno_t _t_strcpy_s(char *dst, size_t cnt, const char *src)
     return strcpy_s(dst, cnt, src);
 }
 
+#ifndef LINUXRUNTIMECODE
 inline errno_t _t_strcpy_s(wchar_t *dst, size_t cnt, const wchar_t *src)
 {
     return wcscpy_s(dst, cnt, src);
 }
+#endif
 
 inline void _t_strcpy_s(wchar_t *dst, const wchar_t *src)
 {
