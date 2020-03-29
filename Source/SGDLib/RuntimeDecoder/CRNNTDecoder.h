@@ -1,15 +1,14 @@
 #pragma once
 
-
 typedef unsigned int token_t;
-constexpr token_t InvalidToken = (token_t)-1;
+constexpr token_t InvalidToken = (token_t) -1;
 typedef std::vector<token_t> token_seq_t;
 
 class CTokenTrie
 {
 public:
     typedef unsigned int NodeId;
-    static constexpr NodeId InvalidNodeId = (NodeId)-1;
+    static constexpr NodeId InvalidNodeId = (NodeId) -1;
     static constexpr NodeId Root = 0u;
 
     CTokenTrie()
@@ -20,7 +19,11 @@ public:
     void clear()
     {
         m_nodes.clear();
-        m_nodes.emplace_back(InvalidNodeId, (token_t)-1);
+        #ifdef LINUXRUNTIMECODE
+        m_nodes.emplace_back(NodeId(-1), (token_t) -1);
+        #else
+        m_nodes.emplace_back(InvalidNodeId, (token_t) -1);
+        #endif
     }
 
     bool is_proper_prefix(NodeId x, NodeId y) const
@@ -52,27 +55,27 @@ public:
     }
 
     void append_children(
-            std::vector<std::pair<token_t, NodeId>>& result,
-            NodeId x) const
+        std::vector<std::pair<token_t, NodeId>>& result,
+        NodeId x) const
     {
         for (auto n = m_nodes[x].child;
-                n != InvalidNodeId;
-                n = m_nodes[n].sibling)
+             n != InvalidNodeId;
+             n = m_nodes[n].sibling)
             result.emplace_back(m_nodes[n].label, n);
     }
 
     NodeId walk(NodeId x, token_t k)
     {
         for (auto n = m_nodes[x].child;
-                n != InvalidNodeId;
-                n = m_nodes[n].sibling)
+             n != InvalidNodeId;
+             n = m_nodes[n].sibling)
         {
             if (m_nodes[n].label == k)
                 return n;
 
             if (m_nodes[n].sibling == InvalidNodeId)
             {
-                auto y = (NodeId)m_nodes.size();
+                auto y = (NodeId) m_nodes.size();
                 m_nodes.emplace_back(x, k);
 
                 m_nodes[n].sibling = y;
@@ -82,7 +85,7 @@ public:
 
         rassert_eq(m_nodes[x].child, InvalidNodeId);
 
-        auto y = (NodeId)m_nodes.size();
+        auto y = (NodeId) m_nodes.size();
         m_nodes.emplace_back(x, k);
 
         m_nodes[x].child = y;
@@ -114,11 +117,11 @@ public:
 private:
     struct Node
     {
-        Node(NodeId p, token_t k) :
-            parent(p),
-            label(k),
-            child(InvalidNodeId),
-            sibling(InvalidNodeId)
+        Node(NodeId p, token_t k)
+            : parent(p),
+              label(k),
+              child(InvalidNodeId),
+              sibling(InvalidNodeId)
         {
         }
 
@@ -152,7 +155,6 @@ struct BeamEntry
     }
 };
 
-
 enum class RecombineKind
 {
     Sum = 0,
@@ -179,19 +181,19 @@ float NormalizeScore(const token_seq_t& y, float logPr, ScoreNormalizationKind k
 
     switch (kind)
     {
-        case ScoreNormalizationKind::None:
+    case ScoreNormalizationKind::None:
         return logPr;
 
-        case ScoreNormalizationKind::WordPieceCnt:
+    case ScoreNormalizationKind::WordPieceCnt:
         return logPr / y.size();
 
-        case ScoreNormalizationKind::WordPieceCntMinusOne:
+    case ScoreNormalizationKind::WordPieceCntMinusOne:
         return y.size() <= 1 ? logPr : logPr / (y.size() - 1);
 
-        case ScoreNormalizationKind::SqrtWordPieceCnt:
-        return logPr / sqrtf((float)y.size());
+    case ScoreNormalizationKind::SqrtWordPieceCnt:
+        return logPr / sqrtf((float) y.size());
 
-        default:
+    default:
         rfail("unknown score normalization kind %d\n", int(kind));
     }
 };
@@ -219,26 +221,25 @@ public:
         rassert_eq(isnan(entry.LogAlpha), false);
         rassert_eq(isnan(entry.LogPr), false);
 
-        for (const auto& e: m_beam)
+        for (const auto& e : m_beam)
             rassert_op(e.Y, !=, entry.Y);
 
         m_beam.push_back(entry);
 
         switch (m_beamSortKind)
         {
-            case BeamSortKind::Prob:
+        case BeamSortKind::Prob:
             std::sort(
-                    m_beam.begin(),
-                    m_beam.end(),
-                    [](const BeamEntry& x, const BeamEntry& y) {
-                        return x.LogPr > y.LogPr; });
+                m_beam.begin(),
+                m_beam.end(),
+                [](const BeamEntry& x, const BeamEntry& y) { return x.LogPr > y.LogPr; });
             break;
 
-            case BeamSortKind::Alpha:
+        case BeamSortKind::Alpha:
             std::sort(m_beam.rbegin(), m_beam.rend());
             break;
 
-            default:
+        default:
             rfail("unknown beam sort kind %d\n", int(m_beamSortKind));
         }
         if (m_beam.size() > m_width)
@@ -265,13 +266,13 @@ public:
 
         switch (m_beamSortKind)
         {
-            case BeamSortKind::Prob:
+        case BeamSortKind::Prob:
             return m_beam.back().LogPr;
 
-            case BeamSortKind::Alpha:
+        case BeamSortKind::Alpha:
             return m_beam.back().LogAlpha;
 
-            default:
+        default:
             rfail("unknown beam sort kind %d\n", int(m_beamSortKind));
         }
     }
@@ -304,7 +305,7 @@ public:
     std::string list() const
     {
         std::string result;
-        for (const auto& entry: m_beam)
+        for (const auto& entry : m_beam)
         {
             if (!result.empty())
                 result.push_back(' ');
@@ -321,7 +322,7 @@ private:
 };
 
 template <typename T>
-class priority_queue_ex: public std::priority_queue<T>
+class priority_queue_ex : public std::priority_queue<T>
 {
 #ifndef LINUXRUNTIMECODE
 
@@ -333,7 +334,6 @@ public:
 #endif
 };
 
-    
 class CBeamA
 {
 public:
@@ -342,15 +342,15 @@ public:
     {
         switch (beamSortKind)
         {
-            case BeamSortKind::Prob:
+        case BeamSortKind::Prob:
             m_tail = std::make_unique<CTailQueue>();
             break;
 
-            case BeamSortKind::Alpha:
+        case BeamSortKind::Alpha:
             m_tail = std::make_unique<CLimitedTailQueue>(beamSize);
             break;
 
-            default:
+        default:
             rfail("unknown beam sort kind %d\n", int(beamSortKind));
         }
     }
@@ -364,10 +364,9 @@ public:
         for (auto i = B.begin(); i != B.end(); i++)
         {
             auto has_prefix = std::any_of(
-                    B.begin(),
-                    B.end(),
-                    [this, i](const BeamEntry& j) {
-                        return m_trie.is_proper_prefix(j.Y, i->Y); });
+                B.begin(),
+                B.end(),
+                [this, i](const BeamEntry& j) { return m_trie.is_proper_prefix(j.Y, i->Y); });
 
             if (has_prefix)
                 m_carry.emplace_back(i->Y, i->LogPr);
@@ -375,17 +374,16 @@ public:
             {
                 head_nodes.push_back(i->Y);
                 auto has_suffix = std::any_of(
-                        B.begin(),
-                        B.end(),
-                        [this, i](const BeamEntry& j) {
-                            return m_trie.is_proper_prefix(i->Y, j.Y); });
+                    B.begin(),
+                    B.end(),
+                    [this, i](const BeamEntry& j) { return m_trie.is_proper_prefix(i->Y, j.Y); });
                 if (has_suffix)
                     m_head.emplace(i->Y, i->LogPr);
                 else
                     m_tail->emplace(
-                            m_trie.parent_of(i->Y),
-                            m_trie.label_of(i->Y),
-                            i->LogPr);
+                        m_trie.parent_of(i->Y),
+                        m_trie.label_of(i->Y),
+                        i->LogPr);
             }
         }
 
@@ -407,20 +405,19 @@ public:
     }
 
     void recombine(
-            const BeamEntry& star,
-            const CVector& j,
-            token_t blank,
-            float B_threshold,
-            RecombineKind kind,
-            float insertionBoost)
+        const BeamEntry& star,
+        const CVector& j,
+        token_t blank,
+        float B_threshold,
+        RecombineKind kind,
+        float insertionBoost)
     {
         m_trie.append_children(m_temp_children, star.Y);
         std::sort(
-                m_temp_children.begin(),
-                m_temp_children.end(),
-                [](const std::pair<token_t, token_seq_t_1>& x,
-                   const std::pair<token_t, token_seq_t_1>& y) {
-                        return x.first < y.first; });
+            m_temp_children.begin(),
+            m_temp_children.end(),
+            [](const std::pair<token_t, token_seq_t_1>& x,
+               const std::pair<token_t, token_seq_t_1>& y) { return x.first < y.first; });
         m_temp_children.emplace_back(j.M, m_trie.InvalidNodeId);
         auto iter_y = m_temp_children.begin();
 
@@ -468,13 +465,13 @@ private:
     {
         switch (kind)
         {
-            case RecombineKind::Sum:
+        case RecombineKind::Sum:
             return log_add_exp(logAlpha, logAlpha2);
 
-            case RecombineKind::Max:
+        case RecombineKind::Max:
             return logAlpha > logAlpha2 ? logAlpha : logAlpha2;
 
-            default:
+        default:
             rfail("unknown recombine kind %d\n", int(kind));
         }
     }
@@ -512,30 +509,30 @@ private:
         virtual ~ITailQueue() {}
         virtual void reset(float tier_line) = 0;
         virtual void emplace(
-                const token_seq_t_1& y,
-                token_t k,
-                float logAlpha) = 0;
+            const token_seq_t_1& y,
+            token_t k,
+            float logAlpha) = 0;
         virtual bool try_pop(BeamEntry& entry, float threshold, CTokenTrie& trie) = 0;
     };
 
     class CTailQueue : public ITailQueue
     {
     public:
-        virtual void reset(float tier_line) 
+        virtual void reset(float tier_line)
         {
-            #ifdef LINUXRUNTIMECODE
+#ifdef LINUXRUNTIMECODE
             m_tier_1 = priority_queue_ex<TailEntry>();
-            #else
+#else
             m_tier_1.clear();
-            #endif
+#endif
             m_tier_2.clear();
             m_tier_line = tier_line;
         }
 
         virtual void emplace(
-                const token_seq_t_1& y,
-                token_t k,
-                float logAlpha)
+            const token_seq_t_1& y,
+            token_t k,
+            float logAlpha)
         {
             if (logAlpha >= m_tier_line)
                 m_tier_1.emplace(y, k, logAlpha);
@@ -551,17 +548,17 @@ private:
                     return false;
 
                 const auto& star = m_tier_1.top();
-                entry = { trie.walk(star.Y, star.K), star.LogAlpha };
+                entry = {trie.walk(star.Y, star.K), star.LogAlpha};
                 m_tier_1.pop();
                 return true;
             }
 
             if (!m_tier_2.empty())
             {
-// auto old_size = m_tier_2.size();
+                // auto old_size = m_tier_2.size();
                 auto rem_iter = m_tier_2.begin();
                 auto max_iter = m_tier_2.begin();
-                for (const auto& x: m_tier_2)
+                for (const auto& x : m_tier_2)
                 {
                     if (x.LogAlpha > threshold)
                     {
@@ -581,7 +578,7 @@ private:
                 if (rem_iter != m_tier_2.begin())
                 {
                     m_tier_line = max_iter->LogAlpha;
-                    entry = { trie.walk(max_iter->Y, max_iter->K), max_iter->LogAlpha };
+                    entry = {trie.walk(max_iter->Y, max_iter->K), max_iter->LogAlpha};
 
                     rem_iter--;
                     *max_iter = *rem_iter;
@@ -596,7 +593,7 @@ private:
 
                 m_tier_2.erase(rem_iter, m_tier_2.end());
 
-// fprintf(stderr, "\nprune tier 2: %zu -> %zu (%d)\n", old_size, m_tier_2.size(), ret);
+                // fprintf(stderr, "\nprune tier 2: %zu -> %zu (%d)\n", old_size, m_tier_2.size(), ret);
 
                 return ret;
             }
@@ -631,13 +628,13 @@ private:
         }
 
         virtual void emplace(
-                const token_seq_t_1& y,
-                token_t k,
-                float logAlpha)
+            const token_seq_t_1& y,
+            token_t k,
+            float logAlpha)
         {
             if (m_pmin->LogAlpha < logAlpha)
             {
-                *m_pmin = { y, k, logAlpha };
+                *m_pmin = {y, k, logAlpha};
                 m_pmin = std::min_element(&m_pbegin[0], m_pend);
             }
         }
@@ -653,7 +650,7 @@ private:
 
             // When popping, we shrink the queue so that the output from the
             // queue is limited by the given cnt
-            entry = { trie.walk(pmax->Y, pmax->K), pmax->LogAlpha };
+            entry = {trie.walk(pmax->Y, pmax->K), pmax->LogAlpha};
             *pmax = *(m_pend - 1);
             m_pend--;
             m_pmin = std::min_element(&m_pbegin[0], m_pend);
@@ -692,13 +689,13 @@ public:
         const auto& d = m_predictor.Forward(blank);
         auto s0 = m_predictor.DetachState();
         m_cache.emplace(
-                m_trie.walk(m_trie.Root, blank),
-                Entry{std::move(s0), d});
+            m_trie.walk(m_trie.Root, blank),
+            Entry{std::move(s0), d});
     }
 
     void Prune(const std::vector<token_seq_t_1>& head_nodes)
     {
-/*
+        /*
 static size_t max_size = 0;
 auto size = m_cache.size();
 if (size > max_size)
@@ -707,10 +704,10 @@ fprintf(stderr, "\nmax predictor cache size: %zu\n", max_size);
 max_size = size;
 }
 */
-        for (auto iter = m_cache.begin(); iter != m_cache.end(); )
+        for (auto iter = m_cache.begin(); iter != m_cache.end();)
         {
             bool prune = true;
-            for (const auto& y: head_nodes)
+            for (const auto& y : head_nodes)
             {
                 if (m_trie.is_prefix(y, iter->first))
                 {
@@ -739,7 +736,7 @@ max_size = size;
         auto k = m_trie.label_of(y);
         auto s1 = m_predictor.NewState();
         const auto& d = m_predictor.Forward(*s1, *iter1->second.State, k);
-/*
+        /*
 auto o1 = s1->s1->o.M * s1->s1->o.N;
 auto c1 = s1->s1->ct.M * s1->s1->ct.N;
 auto o2 = s1->s2->o.M * s1->s2->o.N;
@@ -755,8 +752,8 @@ fprintf(stderr, "\nstate size: (%u + %u + %u + %u + %u) * %zu = %zu\n",
             (o1 + c1 + o2 + c2 + dd) * sizeof(float));
 */
         auto p = m_cache.emplace(
-                y,
-                Entry{std::move(s1), d});
+            y,
+            Entry{std::move(s1), d});
         rassert_eq(p.second, true);
 
         return p.first->second.Output;
@@ -766,8 +763,8 @@ private:
     struct Entry
     {
         Entry(
-                std::unique_ptr<IPredictor::IState>&& s,
-                const CVector& o)
+            std::unique_ptr<IPredictor::IState>&& s,
+            const CVector& o)
             : State(std::move(s)),
               Output(o.M)
         {
@@ -854,7 +851,7 @@ public:
         std::vector<ResultEntry> result;
         rassert_eq(result.empty(), true);
 
-        for (auto& entry: B)
+        for (auto& entry : B)
         {
             auto y = token_trie.expand(entry.Y);
             auto logPr = entry.LogPr - (y.size() - 1) * m_insertionBoost;
@@ -862,15 +859,14 @@ public:
 
             normLogPr = logPr + (y.size() - 1) * insertionBoostInFinalBeam;
             normLogPr = NormalizeScore(y, normLogPr, scoreNormKind);
-            
+
             result.emplace_back(y, logPr, normLogPr);
         }
 
         std::sort(
-                result.begin(),
-                result.end(),
-                [](const ResultEntry& x, const ResultEntry& y) {
-                    return x.NormLogPr > y.NormLogPr; });
+            result.begin(),
+            result.end(),
+            [](const ResultEntry& x, const ResultEntry& y) { return x.NormLogPr > y.NormLogPr; });
         return result;
     }
 
