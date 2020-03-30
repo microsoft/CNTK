@@ -1831,18 +1831,29 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         size_t vocSize = vt_labels.size();
                         size_t nBest = uttPathsInfo[seqId].size();
-                        if (nBest > (m_maxFrameNumPerMinibatchMBR / numFrames))
-                        {
-                            // reset nBest to make the MB size
-                            nBest = (m_maxFrameNumPerMinibatchMBR / numFrames);
-                        }
                         size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
 
+                        if ((maxPhoneSeqLen * numFrames) > m_mbSize)
+                        {
+                            RuntimeError("Error! unexpected the first best length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d)", (maxPhoneSeqLen * numFrames), m_mbSize);
+                        }
                         for (size_t n = 1; n < nBest; n++)
                         {
+                            size_t maxPhoneSeqLenCurbest = maxPhoneSeqLen;
+
                             if (uttPathsInfo[seqId][n].label_seq.size() > maxPhoneSeqLen)
-                                maxPhoneSeqLen = uttPathsInfo[seqId][n].label_seq.size();
+                                maxPhoneSeqLenCurbest = uttPathsInfo[seqId][n].label_seq.size();
+
+                            if ((maxPhoneSeqLenCurbest * numFrames * (n + 1)) > m_mbSize)
+                            {
+                                nBest = n;
+                                break;
+                            }
+                            else
+                                maxPhoneSeqLen = maxPhoneSeqLenCurbest;
                         }
+                        fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d \n", m_mbSize, (maxPhoneSeqLen * nBest * numFrames));
+
                         //if (firstdebug)
                         reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
 
@@ -3814,7 +3825,6 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_showWERMode = configSGD(L"showWERMode", "average");
     m_isSVD = configSGD(L"SVD", true);
     m_enableMultiThreadDecodeMBR = configSGD(L"enableMultiThreadDecodeMBR", (size_t) 0);
-    m_maxFrameNumPerMinibatchMBR = configSGD(L"MaxFrameNumPerMinibatchMBR", (size_t) 2000);
 
     insertionBoost = configSGD(L"InsertionBoost", (float) 0.24);
     insertionBoostInFinalBeam = configSGD(L"InsertionBoostInFinalBeam", (float) 0.24);
