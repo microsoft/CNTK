@@ -1833,9 +1833,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         size_t nBest = uttPathsInfo[seqId].size();
                         size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
 
-                        if ((maxPhoneSeqLen * numFrames) > m_mbSize)
+                        if ( int(maxPhoneSeqLen * numFrames) > int(m_mbSize[0]))
                         {
-                            RuntimeError("Error! unexpected the first best length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d)", (maxPhoneSeqLen * numFrames), m_mbSize);
+                            RuntimeError("Error! unexpected the first best length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d)", int(maxPhoneSeqLen * numFrames), int(m_mbSize[0]));
                         }
                         for (size_t n = 1; n < nBest; n++)
                         {
@@ -1844,7 +1844,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             if (uttPathsInfo[seqId][n].label_seq.size() > maxPhoneSeqLen)
                                 maxPhoneSeqLenCurbest = uttPathsInfo[seqId][n].label_seq.size();
 
-                            if ((maxPhoneSeqLenCurbest * numFrames * (n + 1)) > m_mbSize)
+                            if ( int(maxPhoneSeqLenCurbest * numFrames * (n + 1)) > int(m_mbSize[0]))
                             {
                                 nBest = n;
                                 break;
@@ -1852,7 +1852,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             else
                                 maxPhoneSeqLen = maxPhoneSeqLenCurbest;
                         }
-                        fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d \n", m_mbSize, (maxPhoneSeqLen * nBest * numFrames));
+                        fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d \n", int(m_mbSize[0]), int(maxPhoneSeqLen * nBest * numFrames));
 
                         //if (firstdebug)
                         reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
