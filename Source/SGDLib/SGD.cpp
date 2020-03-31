@@ -1669,6 +1669,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         const wchar_t* FEATNORMETA = L"EncoderOutput.featNorm.ElementTimesArgs[0]";
                         const wchar_t* ENFEATNORM = L"EncoderOutput.featNorm";
 
+                        fprintf(stderr, "Debug copy node 0 \n");
+
+
                         for (auto nodeIter : net->GetAllNodesForRoot(criterionNodes[0]))
                         {
 
@@ -1706,6 +1709,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 */
                             vt_nodes.push_back(nf);
                         }
+
+                        fprintf(stderr, "Debug copy node 1 \n");
+
 
                         //my_time = time(NULL);
                         //fprintf(stderr, "runtime time 2 = %s", ctime(&my_time));
@@ -1852,7 +1858,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             else
                                 maxPhoneSeqLen = maxPhoneSeqLenCurbest;
                         }
-                        fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d \n", int(m_mbSize[0]), int(maxPhoneSeqLen * nBest * numFrames));
+                        fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d, maxPhoneSeqLen %d, nBest %d, numFrames %d \n", int(m_mbSize[0]), int(maxPhoneSeqLen * nBest * numFrames),
+                            int(maxPhoneSeqLen), int(nBest), int(numFrames));
 
                         //if (firstdebug)
                         reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
@@ -1885,9 +1892,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
                             // firstdebug = false;
                         }
-
+                        fprintf(stderr, "Debug 1 \n");
                         ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
                         net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
+                        fprintf(stderr, "Debug 2 \n");
 
                         // ===========================================================
                         // backprop
@@ -1895,6 +1903,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                             net->Backprop(criterionNodes[0]);
+                        fprintf(stderr, "Debug 3 \n");
 
                         size_t count = 0;
 
@@ -1931,6 +1940,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         accumSampleNumMBR += localSampleNum;
 
                         seqId++;
+                        fprintf(stderr, "Debug 4 \n");
+
                     }
 
                     int count = 0;
