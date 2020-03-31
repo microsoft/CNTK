@@ -426,8 +426,9 @@ def test_AveragePool(tmpdir, dtype, device_id):
 #AveragePool
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_AveragePoolWithSequenceAxis(tmpdir, dtype, device_id):
-    if device_id == -1 and dtype == np.float16:
-        pytest.skip('Test is skipped on CPU with float16 data')
+    if dtype == np.float16:
+        # CI reporting "FP16 convolution is only supported via cuDNN." on GPU with float16 data
+        pytest.skip('Test is skipped with float16 data')
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype):
         img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
@@ -1342,8 +1343,9 @@ def test_MaxPool(tmpdir, dtype, device_id):
 #MaxPool
 @pytest.mark.parametrize("dtype", DType_Config)
 def test_MaxPoolWithSequenceAxis(tmpdir, dtype, device_id):
-    if device_id == -1 and dtype == np.float16:
-        pytest.skip('Test is skipped on CPU with float16 data')
+    if dtype == np.float16:
+        # CI reporting "FP16 convolution is only supported via cuDNN." on GPU with float16 data
+        pytest.skip('Test is skipped with float16 data')
     device = cntk_device(device_id)
     with C.default_options(dtype=dtype):
         img = np.reshape(np.arange(16, dtype = dtype), [1, 4, 4])
