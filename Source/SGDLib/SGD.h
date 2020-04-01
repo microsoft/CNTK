@@ -292,7 +292,6 @@ protected:
     bool m_lengthNorm;                     // true to do length Norm, false, not. It will be used when computing the posterior
     string m_showWERMode;
     bool m_isSVD;
-    size_t m_maxFrameNumPerMinibatchMBR;
     size_t m_enableMultiThreadDecodeMBR; // 0 for CNTK cpu, 1 for CNTK gpu, 2 for runtime CPU
     
     float insertionBoost;

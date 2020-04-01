@@ -258,7 +258,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         for (const auto& node : originalEvaluationNodes)
             if (criteriaLogged.insert(node).second)
                 evaluationNodes.push_back(node);
-
+        if (m_doMBR && evaluationNodes.empty()) // we don't want it to be empty for MBR, in this case, we simply copy criterion node as evaluation node for logging purpose
+        {
+            for (const auto& node : originalEvaluationNodes)
+                evaluationNodes.push_back(node);
+        }
         if (evaluationNodes.size() == 1)
         {
             LOGPRINTF(stderr, "Evaluation criterion: %ls = %ls\n", evaluationNodes.front()->NodeName().c_str(), evaluationNodes.front()->OperationName().c_str());
@@ -1519,9 +1523,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     std::vector<Matrix<ElemType>> accumGradientsMBR;
 
     accumGradientsMBR.clear();
+    //fprintf(stderr, "Debug -1 \n");
 
     for (;;)
     {
+        // fprintf(stderr, "Debug start for ;; loop \n");
+
         epochCriterion;
         auto profMinibatch = ProfilerTimeBegin();
 
@@ -1601,6 +1608,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
+                //fprintf(stderr, "start of for ismb = %d\n", int(ismb));
+
                 if (actualNumSubminibatches > 1)
                 {
                     smbDispatcher.GetSubMinibatchToNet(ismb); // get sub-minibatch from full-size one
@@ -1669,8 +1678,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         const wchar_t* FEATNORMETA = L"EncoderOutput.featNorm.ElementTimesArgs[0]";
                         const wchar_t* ENFEATNORM = L"EncoderOutput.featNorm";
 
-                        fprintf(stderr, "Debug copy node 0 \n");
-
+                        //fprintf(stderr, "Debug copy node 0 \n");
 
                         for (auto nodeIter : net->GetAllNodesForRoot(criterionNodes[0]))
                         {
@@ -1710,8 +1718,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             vt_nodes.push_back(nf);
                         }
 
-                        fprintf(stderr, "Debug copy node 1 \n");
-
+                        //fprintf(stderr, "Debug copy node 1 \n");
 
                         //my_time = time(NULL);
                         //fprintf(stderr, "runtime time 2 = %s", ctime(&my_time));
@@ -1790,6 +1797,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     //my_time = time(NULL);
                     //fprintf(stderr, "SGD time 3 = %s", ctime(&my_time));
+                    accumGradientsMBR.clear();
 
                     for (const auto& seq : encodeMBLayout->GetAllSequences())
                     {
@@ -1839,7 +1847,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         size_t nBest = uttPathsInfo[seqId].size();
                         size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
 
-                        if ( int(maxPhoneSeqLen * numFrames) > int(m_mbSize[0]))
+                        if (int(maxPhoneSeqLen * numFrames) > int(m_mbSize[0]))
                         {
                             RuntimeError("Error! unexpected the first best length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d)", int(maxPhoneSeqLen * numFrames), int(m_mbSize[0]));
                         }
@@ -1850,7 +1858,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             if (uttPathsInfo[seqId][n].label_seq.size() > maxPhoneSeqLen)
                                 maxPhoneSeqLenCurbest = uttPathsInfo[seqId][n].label_seq.size();
 
-                            if ( int(maxPhoneSeqLenCurbest * numFrames * (n + 1)) > int(m_mbSize[0]))
+                            if (int(maxPhoneSeqLenCurbest * numFrames * (n + 1)) > int(m_mbSize[0]))
                             {
                                 nBest = n;
                                 break;
@@ -1859,7 +1867,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 maxPhoneSeqLen = maxPhoneSeqLenCurbest;
                         }
                         fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d, maxPhoneSeqLen %d, nBest %d, numFrames %d \n", int(m_mbSize[0]), int(maxPhoneSeqLen * nBest * numFrames),
-                            int(maxPhoneSeqLen), int(nBest), int(numFrames));
+                                int(maxPhoneSeqLen), int(nBest), int(numFrames));
 
                         //if (firstdebug)
                         reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
@@ -1892,10 +1900,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
                             // firstdebug = false;
                         }
-                        fprintf(stderr, "Debug 1 \n");
+                        //fprintf(stderr, "Debug 1 \n");
                         ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
                         net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
-                        fprintf(stderr, "Debug 2 \n");
+                        //fprintf(stderr, "Debug 2 \n");
 
                         // ===========================================================
                         // backprop
@@ -1903,9 +1911,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                             net->Backprop(criterionNodes[0]);
-                        fprintf(stderr, "Debug 3 \n");
+                        //fprintf(stderr, "Debug 3 \n");
 
                         size_t count = 0;
+                        bool noGradientInCache;
+                        if (accumGradientsMBR.size() == 0)
+                            noGradientInCache = true;
+                        else
+                            noGradientInCache = false;
 
                         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                         {
@@ -1915,7 +1928,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             {
                                 // Matrix<ElemType> currNodeGradient(node->Gradient().GetNumRows(), node->Gradient().GetNumCols(), net->GetDeviceId());
 
-                                if (seqId == 0)
+                                if (noGradientInCache)
                                 {
 
                                     accumGradientsMBR.push_back(Matrix<ElemType>(node->Gradient().GetNumRows(), node->Gradient().GetNumCols(), node->Gradient().GetDeviceId()));
@@ -1930,6 +1943,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             }
                         }
 
+                        noGradientInCache = false;
+
                         ElemType localCR;
                         size_t localSampleNum;
                         cNode->GetMWERInfo(localCR, localSampleNum);
@@ -1940,10 +1955,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         accumSampleNumMBR += localSampleNum;
 
                         seqId++;
-                        fprintf(stderr, "Debug 4 \n");
-
+                        //fprintf(stderr, "Debug 4 \n");
                     }
-
+                    //fprintf(stderr, "Debug 5 \n");
                     int count = 0;
                     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                     {
@@ -1958,7 +1972,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             count++;
                         }
                     }
-
+                    //fprintf(stderr, "Debug 6 \n");
                     //my_time = time(NULL);
                     //fprintf(stderr, "SGD time 4 = %s", ctime(&my_time));
                 }
@@ -1980,14 +1994,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
                 // fprintf(stderr, "decode SGD v1 .\n");
                 // house-keeping for sub-minibatching
+                //fprintf(stderr, "Debug 7 \n");
+
                 if (actualNumSubminibatches > 1)
                     smbDispatcher.DoneWithCurrentSubMinibatch(ismb); // page state out
                 // fprintf(stderr, "decode SGD v2 .\n");
+                //fprintf(stderr, "end of for ismb = %d\n", int(ismb));
+
             } // end sub-minibatch loop
 
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
-            // fprintf(stderr, "decode SGD v3 .\n");
+            //fprintf(stderr, "decode SGD v3 .\n");
             /* guoye: end */
         } // if (actualMBSize > 0)
         // WARNING: If actualMBSize == 0, then criterion nodes have NOT been updated, and contain garbage (last MB's) values.
@@ -2006,7 +2024,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
         // #samples according to the default dynamic axis, for use with criterion nodes that do not have an MBLayout
         size_t numSamplesWithLabelOfNetwork;
-
+        //fprintf(stderr, "decode SGD v4 .\n");
         if (!m_doMBR)
             numSamplesWithLabelOfNetwork = wasDataRead ? net->GetNumSamplesWithLabelOfNetwork(actualMBSize) : 0; // (0 for empty MB)
         else
@@ -2020,7 +2038,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // 'aggregate' here means across-worker aggregate for this one minibatch.
         size_t aggregateNumSamples = actualMBSize;                                                                                            // (0 for empty MB)
         size_t aggregateNumSamplesWithLabel = CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], numSamplesWithLabelOfNetwork); // (0 for empty MB)
-
+        //fprintf(stderr, "decode SGD v5 .\n");
         if (!useGradientAggregation)
         {
             // accumulate criterion values (objective, eval)
@@ -2110,7 +2128,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     epochEvalErrors[i] += m_gradHeader->evalErrors[i];
             }
         }
-
+        //fprintf(stderr, "decode SGD v6 .\n");
         ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
         auto profWeights = ProfilerTimeBegin();
 
@@ -2189,7 +2207,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
             }
         }
-
+        //fprintf(stderr, "decode SGD v7 .\n");
         // aggregation by model averaging or block momentum
         if (useModelAggregation)
         {
@@ -2207,7 +2225,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 noMoreSamplesToProcess = !wasDataRead;
             }
         }
-
+        //fprintf(stderr, "decode SGD v8 .\n");
         // using parameter server for parameter update
         if (useAsyncGradientAggregation && m_mpi->NumNodesInUse() > 1)
         {
@@ -2223,11 +2241,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 nSamplesSinceLastModelSync = 0;
             }
         }
+        //fprintf(stderr, "decode SGD v9 .\n");
 
         ProfilerTimeEnd(profWeights, profilerEvtMainWeights);
         auto profPost = ProfilerTimeBegin();
 
         timer.Stop();
+        //fprintf(stderr, "decode SGD v9.1 .\n");
 
         numMBsRun++;
         totalTimeInMBs += timer.ElapsedSeconds();
@@ -2235,52 +2255,71 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         bool progressPrintNeeded = numMBsRun <= m_firstMBsToShowResult || (m_numMBsToShowResult && (numMBsRun % m_numMBsToShowResult == 0));
         bool tensorBoardWriteNeeded = tensorBoardWriter && m_tensorBoardNumMBsToLogResult &&
                                       ((totalMBsSeenBefore + numMBsRun) % m_tensorBoardNumMBsToLogResult == 0);
+        //fprintf(stderr, "decode SGD v9.2 .\n");
 
         // Get the epoch Values updated. Take care to fetch values from GPU only when this is really needed.
         if ((progressPrintNeeded || tensorBoardWriteNeeded) && !useGradientAggregation)
         {
             // if no aggregation, we directly get the values from the minibatch accumulators
             timer.Restart();
+            //fprintf(stderr, "decode SGD v9.2.1 .\n");
+
             epochCriterion = localEpochCriterion.GetCriterion(0);
 
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
                 epochEvalErrors[i] = localEpochEvalErrors.GetCriterion(i);
             timer.Stop();
+            //fprintf(stderr, "decode SGD v9.2.2 .\n");
 
             // Add the last trailing compute
             totalTimeInMBs += timer.ElapsedSeconds();
         }
+        //fprintf(stderr, "decode SGD v9.3 .\n");
 
         // log
         // This shows the criterion since last logged.
         if (progressPrintNeeded)
         {
+            //fprintf(stderr, "decode SGD v9.3.1 .\n");
+
             // epochCriterion aggregates over entire epoch, but we only show difference to last time we logged
             EpochCriterion epochCriterionSinceLastLogged = epochCriterion - epochCriterionLastLogged;
+            //fprintf(stderr, "decode SGD v9.3.1.2 .\n");
+
             let trainLossSinceLastLogged = epochCriterionSinceLastLogged.Average(); // TODO: Check whether old trainSamplesSinceLastLogged matches this ^^ difference
+            //fprintf(stderr, "decode SGD v9.3.1.3 , epochEvalErrors.size() = %d, epochEvalErrorsLastLogged.size() = %d .\n", int(epochEvalErrors.size()), int(epochEvalErrorsLastLogged.size()));
             // trainSamplesSinceLastLogged = (int) epochCriterionSinceLastLogged.second;
             // for MBR, epochCriterionSinceLastLogged.second stores the #words rather than #frames
             let trainSamplesSinceLastLogged = (m_doMBR ? (int) (epochEvalErrors[0].second - epochEvalErrorsLastLogged[0].second) : (int) epochCriterionSinceLastLogged.second);
-
+            //let trainSamplesSinceLastLogged = ((int) epochEvalErrors[0].second); // modify to this for debug purpose
+            //fprintf(stderr, "decode SGD v9.3.1.4 .\n");
             // determine progress in percent
             int mbProgNumPrecision = 2;
             double mbProg = 0.0;
 
             // Skip epoch size computation if we aren't asked to and epoch is not the starting epoch
             bool skipComputeEpochSize = epochNumber > startEpoch || epochSize != requestDataSize;
-
+            //fprintf(stderr, "decode SGD v9.3.1.5 .\n");
             if (skipComputeEpochSize)
             {
+                //fprintf(stderr, "decode SGD v9.3.1.6 .\n");
                 if (m_maxComputedEpochSize != 0)
                 {
+                    //fprintf(stderr, "decode SGD v9.3.1.7 .\n");
                     double numMBPerEpoch = (double) m_maxComputedEpochSize / (double) tunedMBSize;
                     mbProg = (double) numMBsRun / numMBPerEpoch;
                     mbProgNumPrecision = (int) ceil(log10(numMBPerEpoch / (double) (numMBsRun - numMBsRunSinceLastLogged)));
                     mbProgNumPrecision = max(mbProgNumPrecision - 2, 2);
+                    //fprintf(stderr, "decode SGD v9.3.1.8 .\n");
                 }
             }
             else // estimate epoch size
+            {
+                //fprintf(stderr, "decode SGD v9.3.1.9 .\n");
                 m_maxComputedEpochSize = numMBsRun * trainSamplesSinceLastLogged / (numMBsRun - numMBsRunSinceLastLogged);
+                //fprintf(stderr, "decode SGD v9.3.1.9.1 .\n");
+            }
+            //fprintf(stderr, "decode SGD v9.3.2 .\n");
 
             // progress tracing for compute cluster management
             let wasProgressPrinted = ProgressTracing::TraceProgressPercentage(epochNumber, mbProg, false);
@@ -2316,6 +2355,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
                         totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
             }
+            //fprintf(stderr, "decode SGD v9.3.3 .\n");
 
             // progress tracing for compute cluster management
             if (wasProgressPrinted)
@@ -2331,6 +2371,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             epochCriterionLastLogged = epochCriterion;
             epochEvalErrorsLastLogged = epochEvalErrors;
             numMBsRunSinceLastLogged = numMBsRun;
+            //fprintf(stderr, "decode SGD v9.3.4 .\n");
+
             for (size_t i = 0; i < epochEvalErrors.size(); i++)
             {
                 if (ContainsAccumulatedResult(evaluationNodes[i]))
@@ -2340,9 +2382,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     epochEvalErrorsLastLogged[i] = EpochCriterion(0);
                 }
             }
+            //fprintf(stderr, "decode SGD v9.3.5 .\n");
 
             totalTimeInMBs = 0;
         }
+        //fprintf(stderr, "decode SGD v9.4 .\n");
 
         // Log progress to TensorBoard.
         // Only do this if TensorBoard logging is enabled, the current worker has rank 0, and it is time to write
@@ -2385,6 +2429,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
             }
         }
+        //fprintf(stderr, "decode SGD v9.5 .\n");
 
         timer.Restart();
         totalEpochSamples += aggregateNumSamplesWithLabel;
@@ -2406,7 +2451,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         ProfilerTimeEnd(profPost, profilerEvtMainPost);
         ProfilerTimeEnd(profMinibatch, profilerEvtMainMinibatch);
+        //fprintf(stderr, "decode SGD v10 .\n");
     }
+
+    //fprintf(stderr, "Debug SGD 11 \n");
 
     // --- END MAIN MINIBATCH LOOP
 
@@ -2415,12 +2463,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         m_pMASGDHelper->OnEpochEnd(learnableNodes, smoothedGradients, nSamplesSinceLastModelSync);
         nSamplesSinceLastModelSync = 0;
     }
-
+    //fprintf(stderr, "Debug SGD 12 \n");
     if (useAsyncGradientAggregation && (m_mpi->NumNodesInUse() > 1))
     {
         m_pASGDHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
         nSamplesSinceLastModelSync = 0;
     }
+    //fprintf(stderr, "Debug SGD 13 \n");
 
     // hoist the accumulated criterion value from GPU side to our 'out'  variables
     // (unless we useGradientAggregation, in which case they are accumulated in the 'out' variables directly)
@@ -2430,7 +2479,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         for (size_t i = 0; i < epochEvalErrors.size(); i++)
             epochEvalErrors[i] = localEpochEvalErrors.GetCriterion(i);
     }
-
+    //fprintf(stderr, "Debug SGD 14 \n");
     // in case of model averaging, do one more final aggregation of criteria
     if (useModelAggregation && (m_mpi->NumNodesInUse() > 1))
     {
@@ -2463,6 +2512,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         totalEpochSamples = totalEpochSamplesOfAllWorkers;
     }
+    //fprintf(stderr, "Debug SGD 15 \n");
 
     if (useGradientAggregation && !evaluationNodesWhichAccumulateResult.empty())
     {
@@ -2472,6 +2522,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             net, evaluationNodesWhichAccumulateResult, m_gradHeader, m_mpi, epochEvalErrors, evaluationNodes,
             localEpochEvalErrors, ContainsAccumulatedResult, m_packThresholdSizeInBytes);
     }
+    //fprintf(stderr, "Debug SGD 16 \n");
 
     return numMBsRun;
 } // namespace CNTK

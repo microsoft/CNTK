@@ -114,10 +114,12 @@ inline errno_t _t_strcpy_s(wchar_t *dst, size_t cnt, const wchar_t *src)
 }
 #endif
 
+#ifdef LINUXRUNTIMECODE
 inline void _t_strcpy_s(wchar_t *dst, const wchar_t *src)
 {
     wcscpy(dst, src);
 }
+#endif
 
 inline char *_t_strtok_s_noskip(char *str, const char *dlm, char **ctx)
 {
