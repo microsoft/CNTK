@@ -1220,6 +1220,7 @@ void SGD<ElemType>::PrepareMBR(const std::vector<std::wstring>& outputNodeNamesV
 
             fea->SetColumn(refFeaMatBackup.ColumnSlice(uID, 1), t);
         }
+
         vt_feas.push_back(fea);
     }
 
@@ -1284,6 +1285,9 @@ void SGD<ElemType>::PrepareMBR(const std::vector<std::wstring>& outputNodeNamesV
             phoneSeqs[utt].push_back((size_t)(maxIndex(0, uID)));
         }
     }
+
+    maxIndex.ReleaseMemory();
+    maxValue.ReleaseMemory();
     // convert the phoneSeqs to word sequence, as reference, convert a string of "_ab_cdef_g" to word sequence of "ab cdef g".
 
     wordSeqs.resize(numSequences);
@@ -1821,20 +1825,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         reffeainput->second.GetMatrix<ElemType>().SetValue(*vt_feas[seqId]);
 
-                        Matrix<ElemType> fea(deviceid);
-                        fea.Resize(fea_dim, numFrames);
-
-                        size_t uttFrameToChanInd = seq.s;
-                        size_t uttFrameBeginIdx = seq.tBegin;
-
-                        for (size_t t = 0; t < numFrames; t++)
-                        {
-
-                            size_t uID = (t + uttFrameBeginIdx) * numParallelSequences + uttFrameToChanInd;
-
-                            fea.SetColumn(refFeaMatBackup.ColumnSlice(uID, 1), t);
-                        }
-                        reffeainput->second.GetMatrix<ElemType>().SetValue(fea);
                         reffeainput->second.pMBLayout->AddSequence(0, 0, 0, numFrames); // guoye: first 0 is for utterance ID, second 0 means 0th channel, lenght is 0 to numFrames
 
                         // guoye: the below 2 commands reset the state, to make sure ForwardProb always get carried out
@@ -1900,6 +1890,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
                             // firstdebug = false;
                         }
+                        lmin.ReleaseMemory();
                         //fprintf(stderr, "Debug 1 \n");
                         ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
                         net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
@@ -1957,6 +1948,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         seqId++;
                         //fprintf(stderr, "Debug 4 \n");
                     }
+
+                    seqId = 0; //frame
+                    for (const auto& seq : encodeMBLayout->GetAllSequences())
+                    {
+                        if (seq.seqId == GAP_SEQUENCE_ID)
+                        {
+                            continue;
+                        }
+                        vt_feas[seqId]->ReleaseMemory();
+                        seqId++;
+                    }
+
                     //fprintf(stderr, "Debug 5 \n");
                     int count = 0;
                     for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
