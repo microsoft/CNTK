@@ -95,7 +95,7 @@ void RedirectStdErr(wstring logpath, bool appendLogFile = false)
     {
         RuntimeError("unexpected failure to redirect stderr to log file");
     }
-    setvbuf(stderr, NULL, _IONBF, 16384); // unbuffer it
+    setvbuf(stderr, nullptr, _IONBF, 16384); // unbuffer it
     static auto fKept = f;                // keep it around (until it gets changed)
 }
 
@@ -390,7 +390,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
 
 std::string TimeDateStamp()
 {
-    time_t t = time(NULL);
+    time_t t = time(nullptr);
     struct tm now = *localtime(&t);
     char buf[30];
     sprintf(buf, "%04d/%02d/%02d %02d:%02d:%02d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
