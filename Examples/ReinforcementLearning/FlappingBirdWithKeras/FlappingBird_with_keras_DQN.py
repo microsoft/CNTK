@@ -140,7 +140,7 @@ def trainNetwork(model, args, pretrained_model_url=None, internal_testing=False)
         action_index = 0
         r_t = 0
         a_t = np.zeros([ACTIONS])
-        #choose an action epsilon greedy
+        #choose an action using epsilon greedy strategy
         if t % FRAME_PER_ACTION == 0:
             if random.random() <= epsilon:
                 print("----------Random Action----------")
