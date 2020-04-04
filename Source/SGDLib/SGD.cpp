@@ -1343,6 +1343,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // if we copy at later stage, the size will be big.
     ComputationNetwork decode_net_seed;
     std::vector<std::wstring> decodeOutputNodeNames;
+    int global_count = 0;
     if (m_doMBR)
     {
         decodeOutputNodeNames.push_back(outputNodeNamesVector[1]);
@@ -1801,6 +1802,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     //my_time = time(NULL);
                     //fprintf(stderr, "SGD time 3 = %s", ctime(&my_time));
+
+                    // mask just for debug purpose, need to open later
                     accumGradientsMBR.clear();
 
                     for (const auto& seq : encodeMBLayout->GetAllSequences())
@@ -1811,9 +1814,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         }
                         if (uttPathsInfo[seqId].size() <= 1) // contain 0 or 1 Best, MWER will take no effect
                         {
+                            vt_feas[seqId]->ReleaseMemory();
                             seqId++;
                             continue;
                         }
+
                         cNode->SetMWERInfo(uttPathsInfo[seqId], m_lengthNorm, m_wordPathPosteriorFromDecodeMBR, m_doMBR, vt_nws[seqId],
                                            insertionBoostInFinalBeam, scoreNormKind, m_enableMultiThreadDecodeMBR);
 
@@ -1821,14 +1826,18 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         size_t numFrames = seq.GetNumTimeSteps();
                         numSamplesWithLabelOfNetworkMBR += numFrames;
 
-                        reffeainput->second.pMBLayout->Init(1, numFrames); // 1 channel, 1 utterance
+                        //if (accumGradientsMBR.size() == 0)
+                        {
+                            reffeainput->second.pMBLayout->Init(1, numFrames); // 1 channel, 1 utterance
 
-                        reffeainput->second.GetMatrix<ElemType>().SetValue(*vt_feas[seqId]);
-
+                            reffeainput->second.GetMatrix<ElemType>().SetValue(*vt_feas[seqId]);
+                        }
                         reffeainput->second.pMBLayout->AddSequence(0, 0, 0, numFrames); // guoye: first 0 is for utterance ID, second 0 means 0th channel, lenght is 0 to numFrames
+                        vt_feas[seqId]->ReleaseMemory();
 
-                        // guoye: the below 2 commands reset the state, to make sure ForwardProb always get carried out
-                        ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes); // guoy: update the time stamp before you do forward prob
+
+                            // guoye: the below 2 commands reset the state, to make sure ForwardProb always get carried out
+                            ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes); // guoy: update the time stamp before you do forward prob
                         //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, encodeinputMatrices);
 
                         // set MB for decode matrix
@@ -1837,6 +1846,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         size_t nBest = uttPathsInfo[seqId].size();
                         size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
 
+                     
                         if (int(maxPhoneSeqLen * numFrames) > int(m_mbSize[0]))
                         {
                             RuntimeError("Error! unexpected the first best length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d)", int(maxPhoneSeqLen * numFrames), int(m_mbSize[0]));
@@ -1859,6 +1869,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d, maxPhoneSeqLen %d, nBest %d, numFrames %d \n", int(m_mbSize[0]), int(maxPhoneSeqLen * nBest * numFrames),
                                 int(maxPhoneSeqLen), int(nBest), int(numFrames));
 
+                       
                         //if (firstdebug)
                         reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
 
@@ -1893,6 +1904,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         lmin.ReleaseMemory();
                         //fprintf(stderr, "Debug 1 \n");
                         ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
+                      
+
                         net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
                         //fprintf(stderr, "Debug 2 \n");
 
@@ -1902,6 +1915,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                             net->Backprop(criterionNodes[0]);
+                        /*
+                        if (accumGradientsMBR.size() != 0)
+                        {
+                            seqId++;
+                            continue;
+                        }
+                        */
                         //fprintf(stderr, "Debug 3 \n");
 
                         size_t count = 0;
@@ -1949,16 +1969,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         //fprintf(stderr, "Debug 4 \n");
                     }
 
-                    seqId = 0; //frame
-                    for (const auto& seq : encodeMBLayout->GetAllSequences())
-                    {
-                        if (seq.seqId == GAP_SEQUENCE_ID)
-                        {
-                            continue;
-                        }
-                        vt_feas[seqId]->ReleaseMemory();
-                        seqId++;
-                    }
 
                     //fprintf(stderr, "Debug 5 \n");
                     int count = 0;
@@ -1995,7 +2005,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
                         net->Backprop(criterionNodes[0]);
                 }
-                // fprintf(stderr, "decode SGD v1 .\n");
+                global_count++;
+                fprintf(stderr, "debug finish forward backward, global_count = %d .\n", global_count);
                 // house-keeping for sub-minibatching
                 //fprintf(stderr, "Debug 7 \n");
 
