@@ -1427,6 +1427,7 @@ class WERFunctions
         while (true)
         {
             lp = word_sequence.find_first_not_of(separator, rp);
+            if(lp == string::npos) break;
             rp = word_sequence.find_first_of(separator, lp);
             if (rp == string::npos)
             {
