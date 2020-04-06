@@ -1905,7 +1905,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         if (int(maxPhoneSeqLen * numFrames) > int(m_mbSize[0]))
                         {
-                            RuntimeError("Error! unexpected the first best length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d)", int(maxPhoneSeqLen * numFrames), int(m_mbSize[0]));
+                            fprintf(stderr, "Warning! unexpected the first best length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d), maxPhoneSeqLen(%d), numFrames (%d) \n",
+                                    int(maxPhoneSeqLen * numFrames), int(m_mbSize[0]), int(maxPhoneSeqLen), int(numFrames));
+                            seqId++;
+
+                            continue;
                         }
                         for (size_t n = 1; n < nBest; n++)
                         {
