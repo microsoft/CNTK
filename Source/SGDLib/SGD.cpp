@@ -1536,12 +1536,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     std::vector<Matrix<ElemType>> accumGradientsMBR;
 
-    accumGradientsMBR.clear();
     fprintf(stderr, "Debug -1 \n");
 
     for (;;)
     {
         fprintf(stderr, "Debug start for ;; loop \n");
+        accumGradientsMBR.clear();
 
         epochCriterion;
         auto profMinibatch = ProfilerTimeBegin();
@@ -1717,28 +1717,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             nf.N = mat->GetNumCols();
                             // the data is stored as column first, so we need to transpose
                             nf.data = (float*) (mat->Transpose().CopyToArray());
-                            /*
-                                nf.data = (float*) (mat->CopyToArray());
-                                fprintf(stderr, "M = %d, N = %d \n", nf.M, nf.N);
-                                for (size_t i = 0; i < nf.M; i++)
-                                {
-                                    for (size_t j = 0; j < nf.N; j++)
-                                    {
-                                        //fprintf(stderr, "i = %d, j = %d, %f \n", int(i), int(j), float(mat->GetValue(i, j)));
-                                        fprintf(stderr, "i = %d, j = %d, %f \n", int(i), int(j), float(nf.data[i*nf.N +j]));
-                                    }
-                                }
-                                */
                             vt_nodes.push_back(nf);
                         }
 
                         fprintf(stderr, "Debug copy node 1 \n");
 
-                        if (global_count == 424)
-                        {
-                            global_count += 0;
-                            fprintf(stderr, "Debug copy node 1.05 \n");
-                        }
                         //my_time = time(NULL);
                         //fprintf(stderr, "runtime time 2 = %s", ctime(&my_time));
                         // CModelParams params(vt_nodes, MatrixKind::Float, TransposeMatrices, FloatMatrices); // this line is only enabled when doing optimize_model
@@ -1751,21 +1734,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         // my_time = time(NULL);
                         //fprintf(stderr, "runtime time 4 = %s", ctime(&my_time));
 
-                        fprintf(stderr, "Debug copy node 1.2 \n");
-
                         std::vector<std::thread> decode_threads;
-                        //if (global_count != 424)
-                        {
-                            for (size_t s = 0; s < vt_feas.size(); s++)
-                            //for (size_t s = 0; s < 1; s++)
-                            {
-                                size_t num_frame = vt_feas[s]->GetNumCols();
 
-                                float* buf = (float*) (vt_feas[s]->CopyToArray());
-                                /*
-                                decode_threads.emplace_back(
-                                    decode_thread_proc,
-                                    std::ref(params),
+                        for (size_t s = 0; s < vt_feas.size(); s++)
+                        {
+                            size_t num_frame = vt_feas[s]->GetNumCols();
+
+                            float* buf = (float*) (vt_feas[s]->CopyToArray());
+                            decode_threads.emplace_back(
+                                decode_thread_proc,
+                                std::ref(params),
                                 buf,
                                 std::ref(wordSeqs[s]),
                                 num_frame,
@@ -1775,95 +1753,30 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 blankId,
                                 m_numBestMBR,
                                 insertionBoost,
-                                    beamSortKind,
-                                    recombineKind,
-                                    scoreNormKind,
-                                    std::ref(werfs));
-                                */
-                                decode_threads.emplace_back(
-                                    decode_thread_proc,
-                                    std::ref(params),
-                                    buf,
-                                    std::ref(wordSeqs[s]),
-                                    num_frame,
-                                    std::ref(uttPathsInfo[s]),
-                                    std::ref(vt_onebest_wer[s]),
-                                    std::ref(vt_labels),
-                                    blankId,
-                                    m_numBestMBR,
-                                    insertionBoost,
-                                    insertionBoostInFinalBeam,
-                                    BeamSortKind(beamSortKind),
-                                    RecombineKind(recombineKind),
-                                    ScoreNormalizationKind(scoreNormKind),
-                                    std::ref(werfs));
-                            }
-                            fprintf(stderr, "Debug copy node 1.3 \n");
-
-                            for (auto& dt : decode_threads)
-                                dt.join();
-                            fprintf(stderr, "Debug copy node 1.4 \n");
+                                insertionBoostInFinalBeam,
+                                BeamSortKind(beamSortKind),
+                                RecombineKind(recombineKind),
+                                ScoreNormalizationKind(scoreNormKind),
+                                std::ref(werfs));
                         }
-                        /*
-                        else
-                        {
-                            for (size_t s = 0; s < vt_feas.size(); s++)
-                            //for (size_t s = 0; s < 1; s++)
-                            {
-                                fprintf(stderr, "Debug 424, s = %d \n", int(s));
+                        fprintf(stderr, "Debug copy node 1.3 \n");
 
-                                size_t num_frame = vt_feas[s]->GetNumCols();
-
-                                float* buf = (float*) (vt_feas[s]->CopyToArray());
-                               
-                                fprintf(stderr, "Debug copy node 1.4 \n");
-
-                                decode_threads.clear();
-                                decode_threads.emplace_back(
-                                    decode_thread_proc,
-                                    std::ref(params),
-                                    buf,
-                                    std::ref(wordSeqs[s]),
-                                    num_frame,
-                                    std::ref(uttPathsInfo[s]),
-                                    std::ref(vt_onebest_wer[s]),
-                                    std::ref(vt_labels),
-                                    blankId,
-                                    m_numBestMBR,
-                                    insertionBoost,
-                                    insertionBoostInFinalBeam,
-                                    BeamSortKind(beamSortKind),
-                                    RecombineKind(recombineKind),
-                                    ScoreNormalizationKind(scoreNormKind),
-                                    std::ref(werfs));
-
-                                for (auto& dt : decode_threads)
-                                    dt.join();
-                            }
-                            
-                            
-                        }
-                        */
+                        for (auto& dt : decode_threads)
+                            dt.join();
+                        fprintf(stderr, "Debug copy node 1.4 \n");
                     }
 
                     //my_time = time(NULL);
                     //fprintf(stderr, "SGD time 2 = %s", ctime(&my_time));
                     fprintf(stderr, "decode SGD v0 .\n");
 
-                    //net->BumpEvalTimeStamp(decodeinputNodes);
-                    //net->FormEvalOrder(forwardPropRoots[0]);
                     net->ResetEvalTimeStamps();
-                    //net->ForwardPropFromTo(decodeinputNodes, forwardPropRoots);
                     auto cNode = criterionNodes[0]->As<RNNTNode<ElemType>>();
 
                     size_t seqId = 0; //frame
 
                     //my_time = time(NULL);
                     //fprintf(stderr, "SGD time 3 = %s", ctime(&my_time));
-
-                    // mask just for debug purpose, need to open later
-                    if (!debug)
-                        accumGradientsMBR.clear();
 
                     for (const auto& seq : encodeMBLayout->GetAllSequences())
                     {
@@ -1885,12 +1798,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         size_t numFrames = seq.GetNumTimeSteps();
                         numSamplesWithLabelOfNetworkMBR += numFrames;
 
-                        //if (accumGradientsMBR.size() == 0)
-                        {
-                            reffeainput->second.pMBLayout->Init(1, numFrames); // 1 channel, 1 utterance
+                        reffeainput->second.pMBLayout->Init(1, numFrames); // 1 channel, 1 utterance
 
-                            reffeainput->second.GetMatrix<ElemType>().SetValue(*vt_feas[seqId]);
-                        }
+                        reffeainput->second.GetMatrix<ElemType>().SetValue(*vt_feas[seqId]);
+
                         reffeainput->second.pMBLayout->AddSequence(0, 0, 0, numFrames); // guoye: first 0 is for utterance ID, second 0 means 0th channel, lenght is 0 to numFrames
                         vt_feas[seqId]->ReleaseMemory();
 
@@ -1955,11 +1866,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 //if (firstdebug)
                                 reflminput->second.pMBLayout->AddSequence(GAP_SEQUENCE_ID, n, phoneSeqLen, maxPhoneSeqLen); // length is phoneSeqLen to maxPhoneSeqLen
                         }
-                        //if (firstdebug)
-                        {
-                            reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
-                            // firstdebug = false;
-                        }
+                        reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
                         lmin.ReleaseMemory();
                         fprintf(stderr, "Debug 1 \n");
                         ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
@@ -2012,7 +1919,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             }
                         }
 
-
                         ElemType localCR;
                         size_t localSampleNum;
                         cNode->GetMWERInfo(localCR, localSampleNum);
@@ -2026,22 +1932,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         fprintf(stderr, "Debug 4 \n");
                     }
 
-                    fprintf(stderr, "Debug 5 \n");
-                    int count = 0;
-                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
-                    {
-                        ComputationNodeBasePtr node = *nodeIter;
-                        if (node->IsParameterUpdateRequired())
-                        {
-                            //node->show_gradient_accumulate();
-                            dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().SetValue(accumGradientsMBR[count]);
-                            // double p_norm = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().FrobeniusNorm();
-
-                            // fprintf(stderr, "Final Count = %d, NodeName = %ls, Norm = %f \n", int(count), node->NodeName().c_str(), p_norm);
-                            count++;
-                        }
-                    }
-                    fprintf(stderr, "Debug 6 \n");
                     //my_time = time(NULL);
                     //fprintf(stderr, "SGD time 4 = %s", ctime(&my_time));
                 }
@@ -2063,10 +1953,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
                 global_count++;
                 fprintf(stderr, "debug finish forward backward, global_count = %d .\n", global_count);
-                if (global_count == 858 || global_count == 424)
-                {
-                    global_count += 0;
-                }
+
                 // house-keeping for sub-minibatching
                 fprintf(stderr, "Debug 7 \n");
 
@@ -2084,6 +1971,25 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         } // if (actualMBSize > 0)
         // WARNING: If actualMBSize == 0, then criterion nodes have NOT been updated, and contain garbage (last MB's) values.
 
+        if (m_doMBR && m_enableMultiThreadDecodeMBR > 1 && accumGradientsMBR.size() != 0 )
+        {
+            fprintf(stderr, "Debug 55 \n");
+
+            int count = 0;
+            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+            {
+                ComputationNodeBasePtr node = *nodeIter;
+                if (node->IsParameterUpdateRequired())
+                {
+                    dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().SetValue(accumGradientsMBR[count]);
+                    accumGradientsMBR[count].ReleaseMemory();
+                    count++;
+                }
+            }
+            fprintf(stderr, "Debug 66 \n");
+
+        }
+        
         // In case of mini epochs (used for adaptive minibatch size and learning rate),
         // no more data should be processed by this worker.
         if (shouldCheckEarlyExit)
@@ -2126,7 +2032,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
             else
             {
-                localEpochCriterion.Assign(0, accumSampleNumMBR); // since accumSampleNumMBR is already accumualted across minibatch, we use assign rather than add to do overwrite
+                localEpochCriterion.Assign(0, accumSampleNumMBR); // since accumSampleNumMBR is already accumualted ACROSS minibatch, we use assign rather than add to do overwrite. Also, for MBR, the sample is word rather than frame
                 localEpochCriterion.SetCriterionValue(ElemType(accumCRMBR));
             }
             for (size_t i = 0; i < evaluationNodes.size(); i++)
@@ -2207,7 +2113,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         auto profWeights = ProfilerTimeBegin();
 
         // update model parameters
-        if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
+        if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01) 
+            && !(m_doMBR && m_enableMultiThreadDecodeMBR > 1 && accumGradientsMBR.size() == 0))
         {
 #if 0 // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria. \
       // This will break test cases. So for now, we will only enable this for per-sample criteria.
@@ -2237,20 +2144,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             totalNorm = sqrt(totalNorm);
             m_normFactor = m_clippingThresholdPerSample / totalNorm;
 
-            /*
-            int count = 0;
-            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
-            {
-                ComputationNodeBasePtr node = *nodeIter;
-                if (node->IsParameterUpdateRequired())
-                {
-                    double p_norm = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().FrobeniusNorm();
-
-                    fprintf(stderr, "Before Update Weight Count = %d, NodeName = %ls, Norm = %f \n", int(count), node->NodeName().c_str(), p_norm);
-                    count++;
-                }
-            }
-            */
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++, smoothedCountIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
