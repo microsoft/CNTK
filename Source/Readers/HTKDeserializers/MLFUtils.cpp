@@ -207,7 +207,7 @@ bool MLFUtteranceParser::Parse(const boost::iterator_range<char*>& sequenceData,
         current.Build(tokens, m_states ? m_states->States() : empty, sequenceOffset + std::distance(sequenceData.begin(), lines[i].begin()));
 
         // Check that frames are sequential.
-        if (i > s)
+        /*if (i > s)
         {
             const auto& previous = utterance[i - s - 1];
             if (previous.FirstFrame() + previous.NumFrames() != current.FirstFrame())
@@ -215,14 +215,14 @@ bool MLFUtteranceParser::Parse(const boost::iterator_range<char*>& sequenceData,
                 fprintf(stderr, "WARNING: Labels are not in the consecutive order MLF in label set for utterance '%s'", sequenceKey.c_str());
                 return false;
             }
-        }
+        }*/
     }
 
-    if (utterance.front().FirstFrame() != 0)
+    /*if (utterance.front().FirstFrame() != 0)
     {
         fprintf(stderr, "WARNING: Invalid first frame in utterance '%s'", sequenceKey.c_str());
         return false;
-    }
+    }*/
 
     return true;
 }

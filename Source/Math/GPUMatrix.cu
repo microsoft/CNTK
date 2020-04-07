@@ -4714,8 +4714,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         _convertPhoneSeq<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneSeq.Data(), matrixPhoneSeq.Data(), uttInfo.Data(), numSequences, numPhoneParallelSequences, maxPhoneNum);
         _convertPhoneBoundary<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneBoundary.Data(), matrixPhoneBoundary.Data(), uttInfo.Data(), numSequences, numPhoneParallelSequences, maxPhoneNum, delayConstraint);
         //phoneBoundary.Print("phone boundary");
-        matrixPhoneBoundary.Print("phones boundary");
-        matrixPhoneSeq.Print("phone seq");
+        //matrixPhoneBoundary.Print("phones boundary");
+        //matrixPhoneSeq.Print("phone seq");
             //uttInfo.Print("uttinf");
 
             //cal alpha and beta
@@ -4737,8 +4737,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, numSequences);
         }
 
-        beta.Print("beta");
-        alpha.Print("alpha");
+        //beta.Print("beta");
+        //alpha.Print("alpha");
 
         //cal p(y\x)
         ElemType zerVar = 0.0;

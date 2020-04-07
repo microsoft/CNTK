@@ -420,7 +420,7 @@ public:
 
        //phoneBoundary.Print("phone boundary");
         mergedinput.AssignRNNTScore(mergedinput, alpha, beta, maxIndexes,  phoneBoundary, uttInfo, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, delayConstraint, true);
-        mergedinput.Print("gradient");
+        //mergedinput.Print("gradient");
         //delete[] phoneSeqData;
         //mergedinput.InplaceExp();
         //m_derivative.AssignElementProductOf(m_derivative, mergedinput);
