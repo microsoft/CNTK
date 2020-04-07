@@ -1971,7 +1971,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         } // if (actualMBSize > 0)
         // WARNING: If actualMBSize == 0, then criterion nodes have NOT been updated, and contain garbage (last MB's) values.
 
-        if (m_doMBR && m_enableMultiThreadDecodeMBR > 1 && accumGradientsMBR.size() != 0 )
+        if (m_doMBR && m_enableMultiThreadDecodeMBR > 1 && accumGradientsMBR.size() != 0)
         {
             fprintf(stderr, "Debug 55 \n");
 
@@ -1987,9 +1987,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 }
             }
             fprintf(stderr, "Debug 66 \n");
-
         }
-        
+
         // In case of mini epochs (used for adaptive minibatch size and learning rate),
         // no more data should be processed by this worker.
         if (shouldCheckEarlyExit)
@@ -2113,8 +2112,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         auto profWeights = ProfilerTimeBegin();
 
         // update model parameters
-        if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01) 
-            && !(m_doMBR && m_enableMultiThreadDecodeMBR > 1 && accumGradientsMBR.size() == 0))
+        //if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01)
+        //    && !(m_doMBR && m_enableMultiThreadDecodeMBR > 1 && accumGradientsMBR.size() == 0))
+        if (false)
         {
 #if 0 // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria. \
       // This will break test cases. So for now, we will only enable this for per-sample criteria.
