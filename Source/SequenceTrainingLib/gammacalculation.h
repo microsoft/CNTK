@@ -399,7 +399,8 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType>& mergedinput,
         const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
                                Microsoft::MSR::CNTK::Matrix<ElemType>& phoneBoundary,
-        size_t blankTokenId, size_t delayConstraint)
+                               size_t blankTokenId, ElemType earlyP,
+                               ElemType lateP, size_t delayConstraint)
 
     {
         size_t numParallelSequences = (size_t) uttInfo.GetValue(8, 0);
@@ -418,8 +419,9 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid_gpu);
         //m_derivative.TransferToDeviceIfNotThere(m_deviceid_gpu);
 
-       //phoneBoundary.Print("phone boundary");
-        mergedinput.AssignRNNTScore(mergedinput, alpha, beta, maxIndexes,  phoneBoundary, uttInfo, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, delayConstraint, true);
+        //phoneBoundary.Print("phone boundary");
+        mergedinput.AssignRNNTScore(mergedinput, alpha, beta, maxIndexes,  phoneBoundary, uttInfo, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, 
+            blankTokenId, earlyP, lateP, delayConstraint, true);
         //mergedinput.Print("gradient");
         //delete[] phoneSeqData;
         //mergedinput.InplaceExp();

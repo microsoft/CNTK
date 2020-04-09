@@ -2263,11 +2263,15 @@ namespace CNTK
 
         return BinaryOp(PrimitiveOpType::ForwardBackward, graph, features, std::move(additionalProperties), name);
     }
-    FunctionPtr RNNT(const Variable& graph, const Variable& uttinfo, const Variable& mergedinput, const Variable& W, const Variable& b, const Variable& phoneBoundary, size_t blankTokenId, int delayConstraint, const std::wstring& name)
+    FunctionPtr RNNT(const Variable& graph, const Variable& uttinfo, const Variable& mergedinput, const Variable& W, const Variable& b, const Variable& phoneBoundary, size_t blankTokenId,
+                     float earlyP, float lateP, int delayConstraint, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameBlankTokenId] = blankTokenId;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameEarlyP] = earlyP;
+        additionalProperties[PrimitiveFunctionAttribute::AttributeNameLateP] = lateP;
         additionalProperties[PrimitiveFunctionAttribute::AttributeNameDelayConstraint] = delayConstraint;
+
 
         std::vector<Variable> operands = {graph, uttinfo, mergedinput, W, b, phoneBoundary};
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::RNNT, operands, std::move(additionalProperties), name), name);

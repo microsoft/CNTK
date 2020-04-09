@@ -4678,10 +4678,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                           const size_t maxFrameNum,
                                                           GPUMatrix<ElemType>& totalScore,
                                                           const size_t blankTokenId,
+                                                          const ElemType earlyP,
+                                                          const ElemType lateP,
                                                           const int delayConstraint,
                                                           const bool isColWise)
 {
-    delayConstraint;
+    //delayConstraint;
     numParallelSequences;
 
     if (isColWise)
@@ -4716,10 +4718,11 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         //phoneBoundary.Print("phone boundary");
         //matrixPhoneBoundary.Print("phones boundary");
         //matrixPhoneSeq.Print("phone seq");
-            //uttInfo.Print("uttinf");
+        //uttInfo.Print("uttinf");
+        //add penalty to the probability of </s>
 
-            //cal alpha and beta
-            int blocksPerGrid = (int) ceil(1.0 * numSequences / GridDim::maxThreadsPerBlock);
+        //cal alpha and beta
+        int blocksPerGrid = (int) ceil(1.0 * numSequences / GridDim::maxThreadsPerBlock);
         size_t maxTU = maxFrameNum + maxPhoneNum - 1;
         for (size_t tu = 0; tu < maxTU; tu++)
         {
@@ -4727,16 +4730,25 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 
             _assignRNNTAlphaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob.Data(), alpha.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                               uttInfo.Data(), tu,
-                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, numSequences);
+                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, numSequences, earlyP, lateP, delayConstraint);
         }
         for (int tu = maxTU - 1; tu >= 0; tu--)
         {
             dim3 block_tail3((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (tu + DEFAULT_THREAD_PER_DIM) / DEFAULT_THREAD_PER_DIM);
             _assignRNNTBetaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob.Data(), beta.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                              uttInfo.Data(), tu,
-                                                                             maxPhoneNum, totalPhoneNum, blankTokenId, numSequences);
+                                                                             maxPhoneNum, totalPhoneNum, blankTokenId, numSequences, earlyP, lateP, delayConstraint);
         }
 
+        //beta.Print("beta");
+        //alpha.Print("alpha");
+
+        if (delayConstraint != 0)
+        {
+            dim3 block_tail_t((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+            _AddPenaltyEos<<<block_tail_t, thread_tail, 0, t_stream>>>(alpha.Data(), beta.Data(), matrixPhoneBoundary.Data(),
+                                                                       uttInfo.Data(), maxFrameNum, maxPhoneNum, numSequences, earlyP, lateP, delayConstraint);
+        }
         //beta.Print("beta");
         //alpha.Print("alpha");
 

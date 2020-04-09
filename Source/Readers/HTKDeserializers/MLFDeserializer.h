@@ -197,21 +197,11 @@ public:
             {
                 size_t phoneBoundNum = utterance.size() + 1;
                 sequencePhoneBoundaries.resize(phoneBoundNum);
-                sequencePhoneBoundaries[phoneBoundNum-1] = utterance[phoneBoundNum-2].FirstFrame()+utterance[phoneBoundNum-2].NumFrames();
-                size_t lastwordend = sequencePhoneBoundaries[phoneBoundNum - 1];
-                for (size_t i = phoneBoundNum-2; i > 0; --i)
+                for (size_t i = 0; i < phoneBoundNum-1; i++)
                 {
-                    if (utterance[i ].wordBegin() == 1)
-                    {
-                        sequencePhoneBoundaries[i] = utterance[i - 1].FirstFrame() + utterance[i - 1].NumFrames();
-                        lastwordend = sequencePhoneBoundaries[i];
-                    }
-                    else
-                    {
-                        sequencePhoneBoundaries[i] = lastwordend;
-                    }
+                    sequencePhoneBoundaries[i] = utterance[i].FirstFrame();
                 }
-                sequencePhoneBoundaries[0] = lastwordend;
+                sequencePhoneBoundaries[phoneBoundNum - 1] = utterance[phoneBoundNum - 2].FirstFrame() + utterance[phoneBoundNum-2].NumFrames();
             }
             size_t numberOfSamples = 0;
             if (m_deserializer.m_squashLabel)
