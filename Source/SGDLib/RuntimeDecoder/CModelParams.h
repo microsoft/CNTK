@@ -99,9 +99,10 @@ public:
         std::vector<std::future<bool>> fread_futures;
 
         
-
+        // int debugcount = 0;
         for (auto& nd : vt_nodes)
         {
+            // fprintf(stderr, "count = %d\n", debugcount);
             auto M = nd.M;
             auto N = nd.N;
 
@@ -122,6 +123,9 @@ public:
                 rassert_eq(p.second, true);
                 fread_futures.push_back(p.first->second->mread(nd.data, transpose));
             }
+            
+            //debugcount++;
+
         }
 
         for (auto& ff : fread_futures)

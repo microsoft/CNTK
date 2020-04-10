@@ -1541,7 +1541,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     for (;;)
     {
         fprintf(stderr, "Debug start for ;; loop \n");
-        accumGradientsMBR.clear();
+        if (!debug)
+            accumGradientsMBR.clear();
 
         epochCriterion;
         auto profMinibatch = ProfilerTimeBegin();
@@ -1694,6 +1695,20 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         fprintf(stderr, "Debug copy node 0 \n");
 
+                        /*
+                        int dcount = 0;
+                        for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                        {
+                            ComputationNodeBasePtr node = *nodeIter;
+                            if (node->IsParameterUpdateRequired())
+                            {
+                                double pnorm = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().FrobeniusNorm();
+                                fprintf(stderr, "Debug A1 dcount = %d, pnorm  = %f \n", dcount, pnorm);
+                                dcount++;
+                            }
+                        }
+                        */
+
                         for (auto nodeIter : net->GetAllNodesForRoot(criterionNodes[0]))
                         {
 
@@ -1726,6 +1741,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         //fprintf(stderr, "runtime time 2 = %s", ctime(&my_time));
                         // CModelParams params(vt_nodes, MatrixKind::Float, TransposeMatrices, FloatMatrices); // this line is only enabled when doing optimize_model
                         CModelParams params(vt_nodes, MatrixKind(matrixKind), TransposeMatrices, FloatMatrices);
+
+                        for (size_t n = 0; n < vt_nodes.size(); n++)
+                            delete[] vt_nodes[n].data;
+                        vt_nodes.clear();
+
                         //my_time = time(NULL);
                         //fprintf(stderr, "runtime time 3 = %s", ctime(&my_time));
                         // optimize_model(params); // do not do optimization as this single step takes 6 second, and also it will make the CNTK code tricky as the optimization is done on Matrixkind::float, while the actual decode is run on quantized matrix
@@ -1784,15 +1804,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         {
                             continue;
                         }
-                        if (uttPathsInfo[seqId].size() <= 1) // contain 0 or 1 Best, MWER will take no effect
-                        {
-                            vt_feas[seqId]->ReleaseMemory();
-                            seqId++;
-                            continue;
-                        }
-
                         cNode->SetMWERInfo(uttPathsInfo[seqId], m_lengthNorm, m_wordPathPosteriorFromDecodeMBR, m_doMBR, vt_nws[seqId],
-                                           insertionBoostInFinalBeam, scoreNormKind, m_enableMultiThreadDecodeMBR);
+                        insertionBoostInFinalBeam, scoreNormKind, m_enableMultiThreadDecodeMBR);
 
                         // get the feature MBLayout
                         size_t numFrames = seq.GetNumTimeSteps();
@@ -1837,8 +1850,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             else
                                 maxPhoneSeqLen = maxPhoneSeqLenCurbest;
                         }
+
                         fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d, maxPhoneSeqLen %d, nBest %d, numFrames %d \n", int(m_mbSize[0]), int(maxPhoneSeqLen * nBest * numFrames),
                                 int(maxPhoneSeqLen), int(nBest), int(numFrames));
+
+                        if (nBest <= 1) // contain 0 or 1 Best, MWER will take no effect
+                        {
+                            vt_feas[seqId]->ReleaseMemory();
+                            seqId++;
+                            continue;
+                        }
+
 
                         //if (firstdebug)
                         reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
@@ -1914,7 +1936,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 {
                                     accumGradientsMBR[count].AddWithScaleOf(1, node->Gradient());
                                 }
-                                // fprintf(stderr, "Count = %d, AccumNorm = %f \n", int(count), accumGradientsMBR[count].FrobeniusNorm());
+                                //fprintf(stderr, "Count = %d, AccumNorm = %f \n", int(count), accumGradientsMBR[count].FrobeniusNorm());
                                 count++;
                             }
                         }
@@ -1982,7 +2004,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 if (node->IsParameterUpdateRequired())
                 {
                     dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient().SetValue(accumGradientsMBR[count]);
-                    accumGradientsMBR[count].ReleaseMemory();
+                    if (!debug)
+                        accumGradientsMBR[count].ReleaseMemory();
                     count++;
                 }
             }
@@ -2114,7 +2137,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // update model parameters
         //if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01)
         //    && !(m_doMBR && m_enableMultiThreadDecodeMBR > 1 && accumGradientsMBR.size() == 0))
-        if (false)
+        //if (false)
         {
 #if 0 // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria. \
       // This will break test cases. So for now, we will only enable this for per-sample criteria.
@@ -2143,7 +2166,19 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
             totalNorm = sqrt(totalNorm);
             m_normFactor = m_clippingThresholdPerSample / totalNorm;
-
+            /*
+            int dcount = 0;
+            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+            {
+                ComputationNodeBasePtr node = *nodeIter;
+                if (node->IsParameterUpdateRequired())
+                {
+                    double pnorm = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().FrobeniusNorm();
+                    fprintf(stderr, "Debug A2 dcount = %d, pnorm  = %f \n", dcount, pnorm);
+                    dcount++;
+                }
+            }
+            */
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++, smoothedCountIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
@@ -2161,6 +2196,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                     if (!debug)
                     {
+
+                        
+
+                        
                         UpdateWeights(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
                                       dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
                                       *smoothedGradientIter, *smoothedCountIter,
@@ -2168,6 +2207,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                       numSamplesInMinibatch,
                                       m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
                                       m_needAveMultiplier, m_useNesterovMomentum);
+
+                        
+
+                        
                     }
 
                     node->BumpEvalTimeStamp();
@@ -2177,6 +2220,19 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #endif
                 }
             }
+            /*
+            dcount = 0;
+            for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+            {
+                ComputationNodeBasePtr node = *nodeIter;
+                if (node->IsParameterUpdateRequired())
+                {
+                    double pnorm = dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value().FrobeniusNorm();
+                    fprintf(stderr, "Debug A3 dcount = %d, pnorm  = %f \n", dcount, pnorm);
+                    dcount++;
+                }
+            }
+            */
         }
         fprintf(stderr, "decode SGD v7 .\n");
         // aggregation by model averaging or block momentum

@@ -838,6 +838,15 @@ protected:
             m_a[i] = 1.0f / a_recip;
             m_b[i] = (Amin * MaxT - Amax * MinT1) / (Amax - Amin);
 
+            // start to add the fix simlar as we do Bmax and Bmin
+            if (Amax == Amin)
+            {
+                a_recip = 1.0f;
+                m_a[i] = 1.0f;
+                m_b[i] = Amax;
+            }
+            // end to add the fix mentined in Hao's email: "Re: error if model is not optimized", 3/18/2020
+
             double r = 0;
             for (size_t j = 0; j < N; j++)
             {
@@ -846,6 +855,9 @@ protected:
                 r += a_ij;
 
                 auto x_ij = roundf(a_ij);
+                /* fprintf(stderr, "amax = %f, amin = %f, a_recip = %f, m_a[i] = %f, m_b[i] = %f, a_ij = %f, x_ij = %f \n",
+                        Amax, Amin, a_recip, m_a[i], m_b[i], a_ij, x_ij);
+                */
                 rassert_op(MinT1, <=, x_ij);
                 rassert_op(x_ij, <=, MaxT);
 
