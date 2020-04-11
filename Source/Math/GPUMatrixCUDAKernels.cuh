@@ -6000,6 +6000,7 @@ __global__ void _assignRNNTBetaScore2(
 template <class ElemType>
 __global__ void _AddPenaltyEos(ElemType* alphaScore,
                                ElemType* betaScore,
+                               ElemType* phoneSeq,
                                ElemType* phoneBoundarySeq,
                                ElemType* uttinfo,
                                const size_t maxFrameNum, // Maximum length of utterance in this MB
@@ -6007,7 +6008,8 @@ __global__ void _AddPenaltyEos(ElemType* alphaScore,
                                const size_t numSequences,
                                ElemType earlyP,
                                ElemType lateP,
-                               int delayConstraint)
+                               int delayConstraint,
+                               size_t blankTokenId)
 {
     const CUDA_LONG uttId = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
@@ -6022,9 +6024,10 @@ __global__ void _AddPenaltyEos(ElemType* alphaScore,
             size_t u = phoneNum - 1;
             // Current and previous phone indices in phoneSeq matrix
             size_t labelid = uttId * maxPhoneNum + u;
-            size_t phoneBoundary = (size_t)(phoneBoundarySeq[labelid]);
+            //size_t phoneBoundary = (size_t)(phoneBoundarySeq[labelid]);
             size_t tuID = uttBeginOutId + t * phoneNum + u; //tuID for (t,u)
-            if (delayConstraint != 0)
+            size_t phoneId = (size_t)(phoneSeq[labelid ]); 
+            if (delayConstraint != 0 && phoneId == blankTokenId-1)
             {
                 int phoneBoundary = (int) (phoneBoundarySeq[labelid - 1] + 1);
                 if (delayConstraint > 0)
@@ -6035,9 +6038,9 @@ __global__ void _AddPenaltyEos(ElemType* alphaScore,
                 }
                 else
                 {
-                    int delayConstraintP = -delayConstraint;
-                    betaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraintP));
-                    alphaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraintP));
+                    //int delayConstraintP = -delayConstraint;
+                    betaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
+                    alphaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
                 }
             }
         }
