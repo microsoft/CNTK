@@ -1695,7 +1695,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                         fprintf(stderr, "Debug copy node 0 \n");
 
-                        /*
+                       
                         int dcount = 0;
                         for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                         {
@@ -1707,7 +1707,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 dcount++;
                             }
                         }
-                        */
+                       
 
                         for (auto nodeIter : net->GetAllNodesForRoot(criterionNodes[0]))
                         {
@@ -2166,7 +2166,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
             totalNorm = sqrt(totalNorm);
             m_normFactor = m_clippingThresholdPerSample / totalNorm;
-            /*
+            
             int dcount = 0;
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
@@ -2178,7 +2178,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     dcount++;
                 }
             }
-            */
+            
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, smoothedGradientIter++, smoothedCountIter++)
             {
                 ComputationNodeBasePtr node = *nodeIter;
@@ -2220,7 +2220,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 #endif
                 }
             }
-            /*
+            
             dcount = 0;
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
             {
@@ -2232,7 +2232,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     dcount++;
                 }
             }
-            */
+            
         }
         fprintf(stderr, "decode SGD v7 .\n");
         // aggregation by model averaging or block momentum

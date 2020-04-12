@@ -855,9 +855,9 @@ protected:
                 r += a_ij;
 
                 auto x_ij = roundf(a_ij);
-                /* fprintf(stderr, "amax = %f, amin = %f, a_recip = %f, m_a[i] = %f, m_b[i] = %f, a_ij = %f, x_ij = %f \n",
-                        Amax, Amin, a_recip, m_a[i], m_b[i], a_ij, x_ij);
-                */
+                //fprintf(stderr, "amax = %f, amin = %f, a_recip = %f, m_a[i] = %f, m_b[i] = %f, a_ij = %f, x_ij = %f \n",
+                //        Amax, Amin, a_recip, m_a[i], m_b[i], a_ij, x_ij);
+                
                 rassert_op(MinT1, <=, x_ij);
                 rassert_op(x_ij, <=, MaxT);
 
