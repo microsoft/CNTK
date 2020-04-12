@@ -11,6 +11,9 @@
 #include <map>
 #include <functional>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
+
 
 //
 // Header only algorithms for working with execution graphs.
@@ -139,7 +142,7 @@ namespace CNTK
         // collected nodes.
         //
         template<class TNode>
-        static void PostOrderTraversalImpl(const DirectedGraph<TNode>& graph, const TNode& node, std::set<TNode>& visited, std::list<TNode>& result)
+        static void PostOrderTraversalImpl(const DirectedGraph<TNode>& graph, const TNode& node, std::unordered_set<TNode>& visited, std::list<TNode>& result)
         {
             if (visited.find(node) != visited.end())
                 return;
@@ -175,7 +178,7 @@ namespace CNTK
             const TNode& node,
             std::stack<TNode>& nodeStack,
             int& index,
-            std::map<TNode, Internal::StrongComponentNodeState>& state,
+            std::unordered_map<TNode, Internal::StrongComponentNodeState>& state,
             std::vector<StrongComponent<TNode>>& strongComponents)
         {
             assert(!state[node].m_visited);
@@ -299,7 +302,7 @@ namespace CNTK
     inline std::list<TNode> PostOrderTraversal(const DirectedGraph<TNode>& graph, const std::vector<TNode>& startNodes)
     {
         std::list<TNode> result;
-        std::set<TNode> visited;
+        std::unordered_set<TNode> visited;
         for (const auto& node : startNodes)
             Internal::PostOrderTraversalImpl(graph, node, visited, result);
         return result;
@@ -311,7 +314,7 @@ namespace CNTK
     template<class TNode>
     std::vector<StrongComponent<TNode>> StrongComponents(const DirectedGraph<TNode>& graph)
     {
-        std::map<TNode, Internal::StrongComponentNodeState> state;
+        std::unordered_map<TNode, Internal::StrongComponentNodeState> state;
         std::vector<StrongComponent<TNode>> result;
         std::stack<TNode> nodeStack;
         int index = 0;
