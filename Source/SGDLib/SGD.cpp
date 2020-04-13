@@ -1936,7 +1936,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 {
                                     accumGradientsMBR[count].AddWithScaleOf(1, node->Gradient());
                                 }
-                                //fprintf(stderr, "Count = %d, AccumNorm = %f \n", int(count), accumGradientsMBR[count].FrobeniusNorm());
+                                fprintf(stderr, "Count = %d, AccumNorm = %f \n", int(count), accumGradientsMBR[count].FrobeniusNorm());
                                 count++;
                             }
                         }
