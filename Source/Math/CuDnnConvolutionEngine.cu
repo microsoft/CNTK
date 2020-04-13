@@ -535,6 +535,7 @@ private:
             CUDNN_CALL(workspaceSizeFinder());
             if (m_forceDeterministicAlgorithms)
             {
+                cudaDeviceSynchronize(); // make sure no in-flight GPU kernels using workspace before release its memory
                 workspace.Resize((algo.DeterministicAlgoWorkspaceSize + sizeof(ElemType) - 1) / sizeof(ElemType), 1, 0, false);
                 CUDNN_CALL(deterministicFinder(calgo, algoPerf));
                 assert(calgo == 1);                                 // only one deterministic algorithm will be returned
@@ -559,6 +560,7 @@ private:
         if (algo.MaxAlgoMBSize == 0)    // MaxAlgoMBSize is 0 only after Init. After this heavy tuning, MaxAlgoMBSize will be set to >0, thus we tune just once.
         {
             size_t curSize = workspace.BufferSize();
+            cudaDeviceSynchronize(); // make sure no in-flight GPU kernels using workspace before release its memory
 
             // To control memory usage. No one seems to be using this flag
             size_t inputSampleSize = m_geometry->InputShape().GetNumElements();
