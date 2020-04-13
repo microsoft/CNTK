@@ -175,7 +175,7 @@ There is a breaking change in the **arguments** property in CNTK python API. The
 
 ## ONNX
 ### Updates
-- Updated CNTK's ONNX import/export to use ONNX 1.2 spec.
+- Updated CNTK's ONNX import/export to use [ONNX](http://onnx.ai/) 1.2 spec.
 - Major update to how batch and sequence axes are handled in export and import. As a result, the complex scenarios and edge cases are handled accurately.
 - Updated CNTK's ONNX `BatchNormalization` op export/import to latest spec.
 - Added model domain to ONNX model export.
