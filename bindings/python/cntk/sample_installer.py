@@ -14,10 +14,15 @@ import warnings
 import textwrap
 import zipfile
 import string
-import pip
 try:
-    from urllib.request import urlretrieve 
-except ImportError: 
+    from pip import main as pip_main  # pip <= 9.x
+except ImportError:
+    # Keeps compatibility with latest versions of pip >= 10.x
+    from pip._internal import main as pip_main
+
+try:
+    from urllib.request import urlretrieve
+except ImportError:
     from urllib import urlretrieve
 
 from cntk import __version__
@@ -76,7 +81,7 @@ def install_samples(url=None, directory=None, quiet=False):
         requirements_file = os.path.join(directory, 'requirements.txt')
         if os.path.isfile(requirements_file):
             show_message('INFO: installing requirements')
-            pip.main(['install', '-r', requirements_file])
+            pip_main(['install', '-r', requirements_file])
         else:
             show_message('WARNING: file %s does not exist, modules to run the samples may be missing'
                 % (requirements_file))
@@ -95,7 +100,7 @@ if __name__ == '__main__':
             default=default_sample_dir())
     parser.add_argument('-q', '--quiet', action='store_true',
             help='suppress output (default: %(default)s)', default=False)
-    
+
     options = parser.parse_args(sys.argv[1:])
 
     install_samples(options.url, options.directory, options.quiet)
