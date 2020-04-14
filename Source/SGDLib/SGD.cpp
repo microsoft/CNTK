@@ -1867,7 +1867,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         {
                             fprintf(stderr, "debug n = %d, prob = %f, wer = %f \n", int(n), float(uttPathsInfo[seqId][n].prob), float(uttPathsInfo[seqId][n].WER));
                             for (size_t kk = 0; kk < uttPathsInfo[seqId][n].label_seq.size(); kk++)
-                                fprintf(stderr, " %d", uttPathsInfo[seqId][n].label_seq[kk]);
+                                fprintf(stderr, " %d", int(uttPathsInfo[seqId][n].label_seq[kk]));
                             fprintf(stderr, "\n");
                         }
 
