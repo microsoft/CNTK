@@ -4743,12 +4743,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         //beta.Print("beta");
         //alpha.Print("alpha");
 
-        if (delayConstraint != 0)
+        /*if (delayConstraint != 0)
         {
             dim3 block_tail_t((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
             _AddPenaltyEos<<<block_tail_t, thread_tail, 0, t_stream>>>(alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                        uttInfo.Data(), maxFrameNum, maxPhoneNum, numSequences, earlyP, lateP, delayConstraint, blankTokenId);
-        }
+        }*/
         //beta.Print("beta");
         //alpha.Print("alpha");
 

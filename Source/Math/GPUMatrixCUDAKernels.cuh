@@ -5822,7 +5822,7 @@ __global__ void _assignRNNTAlphaScore2(
     const size_t numSequences,
     ElemType earlyP,
     ElemType lateP,
-    size_t delayConstraint)
+    int delayConstraint)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     //int uttId = blockDim.x * blockIdx.x + threadIdx.x;
@@ -5901,12 +5901,24 @@ __global__ void _assignRNNTAlphaScore2(
                 }*/
                 }
 
+                
                 //add penalty
-                /*if (u == phoneNum - 1 && delayConstraint != -1)
+                if (u==phoneNum-1 &&  delayConstraint != 0 && (size_t) phoneSeq[labelid] == blankTokenId - 1)
                 {
-                    size_t phoneBoundary = (size_t)(phoneBoundarySeq[labelid - 1]);
-                    alphaScore[tuID] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - t)) + max((ElemType)0.0, lateP * (ElemType)(t - phoneBoundary - delayConstraint));
-                }*/
+                    int phoneBoundary = (int) (phoneBoundarySeq[labelid - 1] + 1);
+                    if (delayConstraint > 0)
+                    {
+                        //printf("boundary: %d\n", phoneBoundary);
+                        
+                        alphaScore[tuID] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
+                    }
+                    else
+                    {
+                        //int delayConstraintP = -delayConstraint;
+                        
+                        alphaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
+                    }
+                }
             }
         }
     }
@@ -5927,7 +5939,7 @@ __global__ void _assignRNNTBetaScore2(
     const size_t numSequences,
     ElemType earlyP,
     ElemType lateP,
-    size_t delayConstraint)
+    int delayConstraint)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     const CUDA_LONG uttId = blockIdx.x * blockDim.x + threadIdx.x;
@@ -5988,11 +6000,22 @@ __global__ void _assignRNNTBetaScore2(
                 }
             }
             //add penalty
-            /*if (u == phoneNum - 1 && delayConstraint != -1)
+            if (u == phoneNum - 1 && delayConstraint != 0 && (size_t) phoneSeq[labelid] == blankTokenId - 1)
             {
-                size_t phoneBoundary = (size_t)(phoneBoundarySeq[labelid - 1]);
-                betaScore[tuID] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - t)) + max((ElemType) 0.0, lateP * (ElemType)(t - phoneBoundary - delayConstraint));
-            }*/
+                int phoneBoundary = (int) (phoneBoundarySeq[labelid - 1] + 1);
+                if (delayConstraint > 0)
+                {
+                    //printf("boundary: %d\n", phoneBoundary);
+                    betaScore[tuID] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
+                    
+                }
+                else
+                {
+                    //int delayConstraintP = -delayConstraint;
+                    betaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
+                    
+                }
+            }
         }
     }
 }
