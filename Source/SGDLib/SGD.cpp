@@ -1836,10 +1836,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         size_t nBest = uttPathsInfo[seqId].size();
                         size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
 
-                        if (int(maxPhoneSeqLen * numFrames) > int(m_mbSize[0]))
+                        if (int(maxPhoneSeqLen * numFrames) > int(minibatchSizePerGPU))
                         {
                             fprintf(stderr, "Warning! unexpected the first best length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d), maxPhoneSeqLen(%d), numFrames (%d) \n",
-                                    int(maxPhoneSeqLen * numFrames), int(m_mbSize[0]), int(maxPhoneSeqLen), int(numFrames));
+                                    int(maxPhoneSeqLen * numFrames), int(minibatchSizePerGPU), int(maxPhoneSeqLen), int(numFrames));
                             seqId++;
 
                             continue;
@@ -1851,7 +1851,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             if (uttPathsInfo[seqId][n].label_seq.size() > maxPhoneSeqLen)
                                 maxPhoneSeqLenCurbest = uttPathsInfo[seqId][n].label_seq.size();
 
-                            if (int(maxPhoneSeqLenCurbest * numFrames * (n + 1)) > int(m_mbSize[0]))
+                            if (int(maxPhoneSeqLenCurbest * numFrames * (n + 1)) > int(minibatchSizePerGPU))
                             {
                                 nBest = n;
                                 break;
@@ -1860,18 +1860,21 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 maxPhoneSeqLen = maxPhoneSeqLenCurbest;
                         }
 
-                        fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d, maxPhoneSeqLen %d, nBest %d, numFrames %d \n", int(m_mbSize[0]), int(maxPhoneSeqLen * nBest * numFrames),
+                        fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d, maxPhoneSeqLen %d, nBest %d, numFrames %d \n", int(minibatchSizePerGPU), int(maxPhoneSeqLen * nBest * numFrames),
                                 int(maxPhoneSeqLen), int(nBest), int(numFrames));
 
-                        for (size_t n = 0; n < nBest; n++)
+                        float firstbeswer = uttPathsInfo[seqId][0].WER;
+                        bool wer_all_equal = true;
+                        for (size_t n = 1; n < nBest; n++)
                         {
-                            fprintf(stderr, "debug n = %d, prob = %f, wer = %f \n", int(n), float(uttPathsInfo[seqId][n].prob), float(uttPathsInfo[seqId][n].WER));
-                            for (size_t kk = 0; kk < uttPathsInfo[seqId][n].label_seq.size(); kk++)
-                                fprintf(stderr, " %d", int(uttPathsInfo[seqId][n].label_seq[kk]));
-                            fprintf(stderr, "\n");
+                            if ((uttPathsInfo[seqId][n].WER - firstbeswer) > 1e-9 || (uttPathsInfo[seqId][n].WER - firstbeswer) < -1e-9)
+                            {
+                                wer_all_equal = false;
+                                break;
+                            }
                         }
 
-                        if (nBest <= 1) // contain 0 or 1 Best, MWER will take no effect
+                        if (wer_all_equal) // MWER will take no effect, including nbest =1 case
                         {
                             vt_feas[seqId]->ReleaseMemory();
                             seqId++;
@@ -2154,10 +2157,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         auto profWeights = ProfilerTimeBegin();
 
         // update model parameters
-        //if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01)
-        //    && !(m_doMBR && m_enableMultiThreadDecodeMBR > 1 && accumGradientsMBR.size() == 0))
+        if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01) && !(m_doMBR && m_enableMultiThreadDecodeMBR > 1 && accumGradientsMBR.size() == 0))
         //if (false)
         {
+
+            fprintf(stderr, "debug model update numsampes = %d, accumGradientsMBR.size() = %d \n", int(aggregateNumSamples), int(accumGradientsMBR.size()));
 #if 0 // BUGBUG: We must skip gaps in our momentum, clipping, regularization etc. criteria. \
       // This will break test cases. So for now, we will only enable this for per-sample criteria.
             size_t numSamplesInMinibatch = aggregateNumSamples;
@@ -3932,6 +3936,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     scoreNormKind = configSGD(L"ScoreNormalizationKind", (size_t) 0);
     beamSortKind = configSGD(L"BeamSortKind", (size_t) 1);
     matrixKind = configSGD(L"MatrixKind", (size_t) 3);
+    minibatchSizePerGPU = configSGD(L"MinibatchSizePerGPU", (size_t) 30000);
     if (scoreNormKind == 0)
         m_lengthNorm = false;
     else

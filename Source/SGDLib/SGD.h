@@ -300,6 +300,7 @@ protected:
     size_t scoreNormKind;
     size_t beamSortKind;
     size_t matrixKind;
+    size_t minibatchSizePerGPU;
 
     // Parallel training
     MPIWrapperPtr m_mpi;
