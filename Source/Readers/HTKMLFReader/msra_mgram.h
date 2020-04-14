@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <algorithm> // for various sort() calls
 #include <math.h>
+
 
 namespace msra { namespace lm {
 
@@ -92,15 +93,33 @@ static inline double invertlogprob(double logP)
 // compare function to allow char* as keys (without, unordered_map will correctly
 // compute a hash key from the actual strings, but then compare the pointers
 // -- duh!)
-struct less_strcmp : public std::binary_function<const char *, const char *, bool>
+struct equal_strcmp : public std::binary_function<const char *, const char *, bool>
 { // this implements operator<
     bool operator()(const char *const &_Left, const char *const &_Right) const
     {
-        return strcmp(_Left, _Right) < 0;
+        return strcmp(_Left, _Right) == 0;
+    }
+};
+struct BKDRHash {
+    //BKDR hash algorithm
+    int operator()(const char * str)const
+    {
+        unsigned int seed = 131; //31  131 1313 13131131313 etc//
+        unsigned int hash = 0;
+        while (*str)
+        {
+            hash = (hash * seed) + (*str);
+            str++;
+        }
+
+        return hash & (0x7FFFFFFF);
     }
 };
 
-class CSymbolSet : public std::unordered_map<const char *, int, std::hash<const char *>, less_strcmp>
+/* bug fix: the customize function of compare should be written in the one commented below is not right. The generated behavior is very strange: it does not correctly make a map. So, fix it. */
+// class CSymbolSet : public std::unordered_map<const char *, int, std::hash<const char *>, less_strcmp>
+// class CSymbolSet : public std::unordered_map<const char *, int, std::hash<const char *>, equal_strcmp>
+class CSymbolSet : public std::unordered_map<const char *, int, BKDRHash, equal_strcmp>
 {
     std::vector<const char *> symbols; // the symbols
 
@@ -128,7 +147,7 @@ public:
     // get id for an existing word, returns -1 if not existing
     int operator[](const char *key) const
     {
-        unordered_map<const char *, int>::const_iterator iter = find(key);
+        unordered_map<const char *, int, BKDRHash, equal_strcmp>::const_iterator iter = find(key);
         return (iter != end()) ? iter->second : -1;
     }
 
@@ -136,7 +155,8 @@ public:
     // determine unique id for a word ('key')
     int operator[](const char *key)
     {
-        unordered_map<const char *, int>::const_iterator iter = find(key);
+        unordered_map<const char *, int, BKDRHash, equal_strcmp>::const_iterator iter = find(key);
+    
         if (iter != end())
             return iter->second;
 
@@ -149,7 +169,8 @@ public:
         {
             int id = (int) symbols.size();
             symbols.push_back(p); // we own the memory--remember to free it
-            insert(std::make_pair(p, id));
+            if(!insert(std::make_pair(p, id)).second)
+                RuntimeError("Insertion key %s into map failed in msra_mgram.h", p);
             return id;
         }
         catch (...)
@@ -1451,23 +1472,23 @@ public:
         auto_file_ptr f(fopenOrDie(pathname, L"rbS"));
         fprintf(stderr, "read: reading %ls", pathname.c_str());
         filename = pathname; // (keep this info for debugging)
-
         // --- read header information
 
         // search for header line
         char buf[1024];
         lineNo++, fgetline(f, buf);
+
         while (strcmp(buf, "\\data\\") != 0 && !feof(f))
             lineNo++, fgetline(f, buf);
+        
         lineNo++, fgetline(f, buf);
-
+        
         // get the dimensions
         std::vector<int> dims;
         dims.reserve(4);
 
         while (buf[0] == 0 && !feof(f))
             lineNo++, fgetline(f, buf);
-
         int n, dim;
         dims.push_back(1); // dummy zerogram entry
         while (sscanf(buf, "ngram %d=%d", &n, &dim) == 2 && n == (int) dims.size())
@@ -1510,11 +1531,10 @@ public:
         {
             while (buf[0] == 0 && !feof(f))
                 lineNo++, fgetline(f, buf);
-
             if (sscanf(buf, "\\%d-grams:", &n) != 1 || n != m)
                 RuntimeError("read: mal-formed LM file, bad section header (%d): %ls", lineNo, pathname.c_str());
             lineNo++, fgetline(f, buf);
-
+            
             std::vector<int> mgram(m + 1, -1);     // current mgram being read ([0]=dummy)
             std::vector<int> prevmgram(m + 1, -1); // cache to speed up symbol lookup
             mgram_map::cache_t mapCache;           // cache to speed up map.create()
@@ -1576,9 +1596,7 @@ public:
                     double boVal = atof(tokens[m + 1]); // ... use sscanf() instead for error checking?
                     thisLogB = boVal * ln10xLMF;        // convert to natural log
                 }
-
                 lineNo++, fgetline(f, buf);
-
                 if (skipEntry) // word contained unknown vocabulary: skip entire entry
                     goto skipMGram;
 

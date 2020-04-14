@@ -81,6 +81,7 @@ void PostComputingActions<ElemType>::BatchNormalizationStatistics(IDataReader * 
         let bnNode = static_pointer_cast<BatchNormalizationNode<ElemType>>(node);
         size_t actualMBSize = 0;
 
+        size_t actualNumWords = 0;
         LOGPRINTF(stderr, "Estimating Statistics --> %ls\n", bnNode->GetName().c_str());
 
 
@@ -90,8 +91,7 @@ void PostComputingActions<ElemType>::BatchNormalizationStatistics(IDataReader * 
         {
             // during the bn stat, dataRead must be ensured
             bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*dataReader, m_net,
-                nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi);
-
+            nullptr, useDistributedMBReading, useParallelTrain, inputMatrices, actualMBSize, m_mpi, actualNumWords);
             if (!wasDataRead) LogicError("DataRead Failure in batch normalization statistics");
 
             ComputationNetwork::BumpEvalTimeStamp(featureNodes);

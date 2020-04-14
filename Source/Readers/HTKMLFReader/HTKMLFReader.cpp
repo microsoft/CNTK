@@ -26,6 +26,8 @@
 #include "ScriptableObjects.h"
 #include "HTKMLFReader.h"
 #include "TimerUtility.h"
+#include "fileutil.h"
+#include <string>
 #ifdef LEAKDETECT
 #include <vld.h> // for memory leak detection
 #endif
@@ -98,7 +100,30 @@ void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
         PrepareForTrainingOrTesting(readerConfig);
     }
 }
+void readwordidmap(const std::wstring &pathname, std::unordered_map<std::string, int>& wordidmap, int start_id)
+{
+    std::unordered_map<std::string, int>::iterator mp_itr;
+    auto_file_ptr f(fopenOrDie(pathname, L"rbS"));
+    fprintf(stderr, "readwordidmap: reading %ls \n", pathname.c_str());
+    char buf[1024];
+    char word[1024];
+    int dumid;
+    while (!feof(f))
+    {
+        fgetline(f, buf);
+        if (sscanf(buf, "%s %d", word, &dumid) != 2)
+        {
+            fprintf(stderr, "readwordidmap: reaching the end of line, with content = %s", buf);
+            break;
+        }
+        if (wordidmap.find(std::string(word)) == wordidmap.end())
+        {
+            wordidmap.insert(pair<std::string, int>(string(word),start_id++));
+        }
+    }
 
+    fclose(f);
+}
 // Load all input and output data.
 // Note that the terms features imply be real-valued quantities and
 // labels imply categorical quantities, irrespective of whether they
@@ -116,6 +141,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     vector<vector<wstring>> infilesmulti;
     size_t numFiles;
     wstring unigrampath(L"");
+    wstring wordidmappath(L"");
 
     size_t randomize = randomizeAuto;
     size_t iFeat, iLabel;
@@ -443,8 +469,16 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (readerConfig.Exists(L"unigram"))
         unigrampath = (const wstring&) readerConfig(L"unigram");
 
+    if (readerConfig.Exists(L"wordidmap"))
+        wordidmappath = (const wstring&)readerConfig(L"wordidmap");
+
     // load a unigram if needed (this is used for MMI training)
     msra::lm::CSymbolSet unigramsymbols;
+    std::set<int> specialwordids;
+    std::vector<string> specialwords;
+    std::unordered_map<std::string, int> wordidmap;
+    std::unordered_map<std::string, int>::iterator wordidmap_itr;
+    
     std::unique_ptr<msra::lm::CMGramLM> unigram;
     size_t silencewordid = SIZE_MAX;
     size_t startwordid = SIZE_MAX;
@@ -452,10 +486,96 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     if (unigrampath != L"")
     {
         unigram.reset(new msra::lm::CMGramLM());
+       
+        unigramsymbols["!NULL"];
+        unigramsymbols["<s>"];
+        unigramsymbols["</s>"];
+        unigramsymbols["!sent_start"];
+        unigramsymbols["!sent_end"];
+        unigramsymbols["!silence"];
         unigram->read(unigrampath, unigramsymbols, false /*filterVocabulary--false will build the symbol map*/, 1 /*maxM--unigram only*/);
         silencewordid = unigramsymbols["!silence"]; // give this an id (even if not in the LM vocabulary)
         startwordid = unigramsymbols["<s>"];
         endwordid = unigramsymbols["</s>"];
+        
+        specialwordids.clear();        
+        specialwordids.insert(unigramsymbols["<s>"]);
+        specialwordids.insert(unigramsymbols["</s>"]);
+        specialwordids.insert(unigramsymbols["!NULL"]);
+        specialwordids.insert(unigramsymbols["!sent_start"]);
+        specialwordids.insert(unigramsymbols["!sent_end"]);
+        specialwordids.insert(unigramsymbols["!silence"]);
+        specialwordids.insert(unigramsymbols["[/CNON]"]);
+        specialwordids.insert(unigramsymbols["[/CSPN]"]);
+        specialwordids.insert(unigramsymbols["[/NPS]"]);
+        specialwordids.insert(unigramsymbols["[CNON/]"]);
+        specialwordids.insert(unigramsymbols["[CNON]"]);
+        specialwordids.insert(unigramsymbols["[CSPN]"]);
+        specialwordids.insert(unigramsymbols["[FILL/]"]);
+        specialwordids.insert(unigramsymbols["[NON/]"]);
+        specialwordids.insert(unigramsymbols["[NONNATIVE/]"]);
+        specialwordids.insert(unigramsymbols["[NPS]"]);
+
+        specialwordids.insert(unigramsymbols["[SB/]"]);
+        specialwordids.insert(unigramsymbols["[SBP/]"]);
+        specialwordids.insert(unigramsymbols["[SN/]"]);
+        specialwordids.insert(unigramsymbols["[SPN/]"]);
+        specialwordids.insert(unigramsymbols["[UNKNOWN/]"]);
+        specialwordids.insert(unigramsymbols[".]"]);
+
+        // this is to exclude the unknown words in lattice brought when merging the numerator lattice into denominator lattice.
+        specialwordids.insert(0xfffff);        
+    }
+
+    else if (wordidmappath != L"")
+    {
+        wordidmap.insert(pair<std::string, int>("!NULL", 0));
+        wordidmap.insert(pair<std::string, int>("<s>", 1));
+        wordidmap.insert(pair<std::string, int>("</s>", 2));
+        wordidmap.insert(pair<std::string, int>("!sent_start", 3));
+        wordidmap.insert(pair<std::string, int>("!sent_end", 4));
+        wordidmap.insert(pair<std::string, int>("!silence", 5));
+
+        silencewordid = 5; // give this an id (even if not in the LM vocabulary)
+        startwordid = 1;
+        endwordid = 2;
+
+        int start_id = 6;
+        readwordidmap(wordidmappath, wordidmap, start_id);
+        specialwordids.clear();
+        specialwords.clear();
+
+        specialwords.push_back("<s>"); 
+
+        specialwords.push_back("</s>");
+        specialwords.push_back("!NULL");
+        specialwords.push_back("!sent_start");
+        specialwords.push_back("!sent_end");
+        specialwords.push_back("!silence");
+        specialwords.push_back("[/CNON]");
+        specialwords.push_back("[/CSPN]");
+        specialwords.push_back("[/NPS]");
+        specialwords.push_back("[CNON/]");
+        specialwords.push_back("[CNON]");
+        specialwords.push_back("[CSPN]");
+        specialwords.push_back("[FILL/]");
+        specialwords.push_back("[NON/]");
+        specialwords.push_back("[NONNATIVE/]");
+        specialwords.push_back("[NPS]");
+
+        specialwords.push_back("[SB/]");
+        specialwords.push_back("[SBP/]");
+        specialwords.push_back("[SN/]");
+        specialwords.push_back("[SPN/]");
+        specialwords.push_back("[UNKNOWN/]");
+        specialwords.push_back(".]");
+        
+        for (size_t i = 0; i < specialwords.size(); i++)
+        {
+            wordidmap_itr = wordidmap.find(specialwords[i]);
+            specialwordids.insert((wordidmap_itr == wordidmap.end()) ? -1 : wordidmap_itr->second);
+        }
+        specialwordids.insert(0xfffff);
     }
 
     if (!unigram && latticetocs.second.size() > 0)
@@ -497,19 +617,18 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
     double htktimetoframe = 100000.0; // default is 10ms
     // std::vector<msra::asr::htkmlfreader<msra::asr::htkmlfentry,msra::lattices::lattice::htkmlfwordsequence>> labelsmulti;
-    std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> labelsmulti;
+    std::vector<std::map<std::wstring, std::pair<std::vector<msra::asr::htkmlfentry>, std::vector<unsigned int>>>> labelsmulti;
     // std::vector<std::wstring> pagepath;
     foreach_index (i, mlfpathsmulti)
     {
-        const msra::lm::CSymbolSet* wordmap = unigram ? &unigramsymbols : NULL;
         msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence>
-        labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordmap, (map<string, size_t>*) NULL, htktimetoframe); // label MLF
+           labels(mlfpathsmulti[i], restrictmlftokeys, statelistpaths[i], wordidmap, htktimetoframe); // label MLF
+
         // get the temp file name for the page file
 
         // Make sure 'msra::asr::htkmlfreader' type has a move constructor
         static_assert(std::is_move_constructible<msra::asr::htkmlfreader<msra::asr::htkmlfentry, msra::lattices::lattice::htkmlfwordsequence>>::value,
                       "Type 'msra::asr::htkmlfreader' should be move constructible!");
-
         labelsmulti.push_back(std::move(labels));
     }
 
@@ -522,7 +641,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
         // now get the frame source. This has better randomization and doesn't create temp files
         bool useMersenneTwisterRand = readerConfig(L"useMersenneTwisterRand", false);
-        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
+        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti,  specialwordids, m_featDims, m_labelDims,
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 
                                                                          m_expandToUtt, m_maxUtteranceLength, m_truncated));
@@ -756,6 +875,8 @@ void HTKMLFReader<ElemType>::StartDistributedMinibatchLoop(size_t requestedMBSiz
         // for the multi-utterance process for lattice and phone boundary
         m_latticeBufferMultiUtt.assign(m_numSeqsPerMB, nullptr);
         m_labelsIDBufferMultiUtt.resize(m_numSeqsPerMB);
+        m_wlabelsIDBufferMultiUtt.resize(m_numSeqsPerMB);
+        m_nwsBufferMultiUtt.resize(m_numSeqsPerMB);
         m_phoneboundaryIDBufferMultiUtt.resize(m_numSeqsPerMB);
 
         if (m_frameMode && (m_numSeqsPerMB > 1))
@@ -894,11 +1015,11 @@ void HTKMLFReader<ElemType>::StartMinibatchLoopToWrite(size_t mbSize, size_t /*e
 
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput,
-                                             vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap)
+    vector<size_t>& uids, vector<size_t>& wids, vector<short>& nws, vector<size_t>& boundaries, vector<size_t>& extrauttmap)
 {
     if (m_trainOrTest)
     {
-        return GetMinibatch4SEToTrainOrTest(latticeinput, uids, boundaries, extrauttmap);
+        return GetMinibatch4SEToTrainOrTest(latticeinput, uids, wids, nws, boundaries, extrauttmap);
     }
     else
     {
@@ -907,16 +1028,22 @@ bool HTKMLFReader<ElemType>::GetMinibatch4SE(std::vector<shared_ptr<const msra::
 }
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput,
-                                                          std::vector<size_t>& uids, std::vector<size_t>& boundaries, std::vector<size_t>& extrauttmap)
+    
+    std::vector<size_t>& uids, std::vector<size_t>& wids, std::vector<short>& nws, std::vector<size_t>& boundaries, std::vector<size_t>& extrauttmap)
 {
     latticeinput.clear();
     uids.clear();
+    wids.clear();
+    nws.clear();
     boundaries.clear();
     extrauttmap.clear();
     for (size_t i = 0; i < m_extraSeqsPerMB.size(); i++)
     {
         latticeinput.push_back(m_extraLatticeBufferMultiUtt[i]);
         uids.insert(uids.end(), m_extraLabelsIDBufferMultiUtt[i].begin(), m_extraLabelsIDBufferMultiUtt[i].end());
+        wids.insert(wids.end(), m_extraWLabelsIDBufferMultiUtt[i].begin(), m_extraWLabelsIDBufferMultiUtt[i].end());
+
+        nws.insert(nws.end(), m_extraNWsBufferMultiUtt[i].begin(), m_extraNWsBufferMultiUtt[i].end());
         boundaries.insert(boundaries.end(), m_extraPhoneboundaryIDBufferMultiUtt[i].begin(), m_extraPhoneboundaryIDBufferMultiUtt[i].end());
     }
 
@@ -984,6 +1111,8 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
             m_extraLabelsIDBufferMultiUtt.clear();
             m_extraPhoneboundaryIDBufferMultiUtt.clear();
             m_extraSeqsPerMB.clear();
+            m_extraWLabelsIDBufferMultiUtt.clear();
+            m_extraNWsBufferMultiUtt.clear();
             if (m_noData && m_numFramesToProcess[0] == 0) // no data left for the first channel of this minibatch,
             {
                 return false;
@@ -1064,6 +1193,8 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                         {
                             m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[i]);
                             m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[i]);
+                            m_extraWLabelsIDBufferMultiUtt.push_back(m_wlabelsIDBufferMultiUtt[i]);
+                            m_extraNWsBufferMultiUtt.push_back(m_nwsBufferMultiUtt[i]);
                             m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[i]);
                         }
                     }
@@ -1106,6 +1237,8 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                                 {
                                     m_extraLatticeBufferMultiUtt.push_back(m_latticeBufferMultiUtt[src]);
                                     m_extraLabelsIDBufferMultiUtt.push_back(m_labelsIDBufferMultiUtt[src]);
+                                    m_extraWLabelsIDBufferMultiUtt.push_back(m_wlabelsIDBufferMultiUtt[src]);
+                                    m_extraNWsBufferMultiUtt.push_back(m_nwsBufferMultiUtt[src]);
                                     m_extraPhoneboundaryIDBufferMultiUtt.push_back(m_phoneboundaryIDBufferMultiUtt[src]);
                                 }
 
@@ -1811,6 +1944,10 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
         m_phoneboundaryIDBufferMultiUtt[i] = m_mbiter->bounds();
         m_labelsIDBufferMultiUtt[i].clear();
         m_labelsIDBufferMultiUtt[i] = m_mbiter->labels();
+        m_wlabelsIDBufferMultiUtt[i].clear();
+        m_wlabelsIDBufferMultiUtt[i] = m_mbiter->wlabels();
+        m_nwsBufferMultiUtt[i].clear();
+        m_nwsBufferMultiUtt[i] = m_mbiter->nwords();
     }
 
     m_processedFrame[i] = 0;
@@ -2031,8 +2168,7 @@ unique_ptr<CUDAPageLockedMemAllocator>& HTKMLFReader<ElemType>::GetCUDAAllocator
     if (m_cudaAllocator == nullptr)
     {
         m_cudaAllocator.reset(new CUDAPageLockedMemAllocator(deviceID));
-    }
-
+    } 
     return m_cudaAllocator;
 }
 
@@ -2049,6 +2185,7 @@ std::shared_ptr<ElemType> HTKMLFReader<ElemType>::AllocateIntermediateBuffer(int
                                              this->GetCUDAAllocator(deviceID)->Free((char*) p);
                                          });
     }
+        
     else
     {
         return std::shared_ptr<ElemType>(new ElemType[numElements], 
@@ -2059,6 +2196,9 @@ std::shared_ptr<ElemType> HTKMLFReader<ElemType>::AllocateIntermediateBuffer(int
     }
 }
 
+
 template class HTKMLFReader<float>;
 template class HTKMLFReader<double>;
 } } }
+
+

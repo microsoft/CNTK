@@ -274,11 +274,11 @@ bool DataReader::GetMinibatch(StreamMinibatchInputs& matrices)
 // uids - lables stored in size_t vector instead of ElemType matrix
 // boundary - phone boundaries
 // returns - true if there are more minibatches, false if no more minibatches remain
-bool DataReader::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap)
+bool DataReader::GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& wids, vector<short>& nws, vector<size_t>& boundaries, vector<size_t>& extrauttmap)
 {
     bool bRet = true;
     for (size_t i = 0; i < m_ioNames.size(); i++)
-        bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, boundaries, extrauttmap);
+        bRet &= m_dataReaders[m_ioNames[i]]->GetMinibatch4SE(latticeinput, uids, wids, nws, boundaries, extrauttmap);
     return bRet;
 }
 
