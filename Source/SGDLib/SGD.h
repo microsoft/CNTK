@@ -301,6 +301,7 @@ protected:
     size_t beamSortKind;
     size_t matrixKind;
     size_t minibatchSizePerGPU;
+    bool m_debugInfo;
 
     // Parallel training
     MPIWrapperPtr m_mpi;
