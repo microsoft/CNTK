@@ -1193,6 +1193,13 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::StableSigmoid, operand, Dictionary(), name);
     }
 
+    FunctionPtr Swish(const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto result = Times(operandPlaceholder, Sigmoid(operandPlaceholder));
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Swish", name);
+    }
+
     FunctionPtr Atanh(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Atanh, operand, Dictionary(), name);

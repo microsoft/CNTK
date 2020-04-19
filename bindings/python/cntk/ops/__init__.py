@@ -1636,6 +1636,30 @@ def sigmoid(x, name=''):
 
 
 @typemap
+def swish(x, name=''):
+    '''
+    Computes the element-wise swish of ``x``:
+
+    :math:`swish(x) = {x \over {1+\exp(-x)}}`
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.swish([-2, -1., 0., 1., 2.]).eval()
+        array([-0.23840584, -0.26894142,  0.        ,  0.73105858,  1.76159416], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import swish
+    x = sanitize_input(x)
+    return swish(x, name)
+
+
+@typemap
 def tanh(x, name=''):
     '''
     Computes the element-wise tanh of ``x``:
