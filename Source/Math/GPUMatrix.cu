@@ -4937,7 +4937,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         }
 
         /*
-		fprintf(stderr, "debug  mbrWeight = %f, ceWeight = %f \n", float(mbrWeight), float(ceWeight));
+        fprintf(stderr, "debug  mbrWeight = %f, ceWeight = %f \n", float(mbrWeight), float(ceWeight));
 
 
         CUDA_CALL(cudaMemcpy(cpudata.data(), Data(), num_row * num_col * sizeof(ElemType), cudaMemcpyDeviceToHost));
@@ -4960,7 +4960,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
             }
             fprintf(stderr, "debug End AssignRNNTScore i = %d, sum = %f, sum * 1e9 = %f \n", int(i), float(sum), float(sum * 1e9));
         }
-		*/
+        */
         CUDA_CALL(cudaFree(gpuFrameNum));
         CUDA_CALL(cudaFree(gpuPhoneNum));
         CUDA_CALL(cudaFree(gpuBeginPhone));
