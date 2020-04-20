@@ -1726,9 +1726,9 @@ public:
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
 
         // compute CTC score
-        m_outputDensity->Print("prob", 0, 4000, 0, 10);
+        //m_outputDensity->Print("prob", 0, 4000, 0, 10);
         m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), *m_outputDensity, *m_maxIndexes, InputRef(5).Value(), m_blankTokenId,m_earlyP, m_lateP, m_delayConstraint);
-        m_outputDensity->Print("gradient", 0, 4000, 0, 10);
+        //m_outputDensity->Print("gradient", 0, 4000, 0, 10);
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
 #endif

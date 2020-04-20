@@ -4716,10 +4716,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         _convertPhoneSeq<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneSeq.Data(), matrixPhoneSeq.Data(), uttInfo.Data(), numSequences, numPhoneParallelSequences, maxPhoneNum);
         _convertPhoneBoundary<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneBoundary.Data(), matrixPhoneBoundary.Data(), uttInfo.Data(), numSequences, numPhoneParallelSequences, maxPhoneNum, delayConstraint);
         //phoneBoundary.Print("phone boundary");
-        matrixPhoneBoundary.Print("phones boundary");
-        matrixPhoneSeq.Print("phone seq");
-        uttInfo.Print("uttinf");
-        //prob.Print("prob"); 
+        //matrixPhoneBoundary.Print("phones boundary");
+        //matrixPhoneSeq.Print("phone seq");
+        //uttInfo.Print("uttinf");
         //add penalty to the probability of </s>
 
             //cal alpha and beta
@@ -4741,15 +4740,15 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, numSequences, earlyP, lateP, delayConstraint);
         }
 
-        beta.Print("beta");
-        alpha.Print("alpha");
+        //beta.Print("beta");
+        //alpha.Print("alpha");
 
-        /*if (delayConstraint != 0)
+        if (delayConstraint != 0)
         {
             dim3 block_tail_t((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
             _AddPenaltyEos<<<block_tail_t, thread_tail, 0, t_stream>>>(alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                        uttInfo.Data(), maxFrameNum, maxPhoneNum, numSequences, earlyP, lateP, delayConstraint, blankTokenId);
-        }*/
+        }
         //beta.Print("beta");
         //alpha.Print("alpha");
 
