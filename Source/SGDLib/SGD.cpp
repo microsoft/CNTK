@@ -1126,7 +1126,8 @@ void SGD<ElemType>::PrepareMBR(const std::vector<std::wstring>& outputNodeNamesV
                                vector<vector<PathInfo>>& uttPathsInfo, vector<size_t>& vt_nws, vector<float>& vt_onebest_wer, time_t& my_time,
                                std::vector<std::vector<string>>& wordSeqs, std::vector<std::wstring>& decodeInputNodeNames,
                                size_t& fea_dim, size_t& numParallelSequences, Matrix<ElemType>& refFeaMatBackup,
-                               std::vector<ComputationNodeBasePtr>& encodeInputNodes, std::vector<Matrix<ElemType>*>& vt_feas)
+                               std::vector<ComputationNodeBasePtr>& encodeInputNodes, std::vector<Matrix<ElemType>*>& vt_feas,
+                               std::vector<std::vector<size_t>>& phoneSeqs)
 {
     //my_time = time(NULL);
     // fprintf(stderr, "SGD time -1 = %s", ctime(&my_time));
@@ -1276,7 +1277,6 @@ void SGD<ElemType>::PrepareMBR(const std::vector<std::wstring>& outputNodeNamesV
     decodeInputMatrix.VectorMax(maxIndex, maxValue, true);
     maxIndex.TransferToDeviceIfNotThere(CPUDEVICE);
 
-    std::vector<std::vector<size_t>> phoneSeqs;
     phoneSeqs.resize(numSequences);
     for (size_t utt = 0; utt < numSequences; utt++)
     {
@@ -1654,12 +1654,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     Matrix<ElemType> refFeaMatBackup(deviceid);
                     std::vector<ComputationNodeBasePtr> encodeInputNodes;
                     std::vector<Matrix<ElemType>*> vt_feas;
+                    std::vector<std::vector<size_t>> phoneSeqs;
                     PrepareMBR(outputNodeNamesVector, net, encodeInputMatrices,
                                decodeinputMatrices, criterionNodes, ordered,
                                vt_labels, deviceid, decodeOutputNodeNames, m_enableMultiThreadDecodeMBR,
                                werfs, encodeOutput, encodeMBLayout, decodeMBLayout, decodeinputNodes,
                                uttPathsInfo, vt_nws, vt_onebest_wer, my_time, wordSeqs, decodeInputNodeNames,
-                               fea_dim, numParallelSequences, refFeaMatBackup, encodeInputNodes, vt_feas);
+                               fea_dim, numParallelSequences, refFeaMatBackup, encodeInputNodes, vt_feas, phoneSeqs);
 
                     auto reflminput = (*decodeinputMatrices).begin();
                     Matrix<ElemType>& decodeInputMatrix = reflminput->second.GetMatrix<ElemType>();
@@ -1830,8 +1831,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         {
                             continue;
                         }
-                        cNode->SetMWERInfo(uttPathsInfo[seqId], m_lengthNorm, m_wordPathPosteriorFromDecodeMBR, m_doMBR, vt_nws[seqId],
-                                           insertionBoostInFinalBeam, scoreNormKind, m_enableMultiThreadDecodeMBR);
 
                         // get the feature MBLayout
                         size_t numFrames = seq.GetNumTimeSteps();
@@ -1851,66 +1850,104 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         // set MB for decode matrix
 
                         size_t nBest = uttPathsInfo[seqId].size();
-                        size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
 
-                        if (int(maxPhoneSeqLen * numFrames) > int(minibatchSizePerGPU))
+                        size_t maxPhoneSeqLen = phoneSeqs[seqId].size();
+                        //size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
+                        size_t curMBSize = maxPhoneSeqLen * numFrames;
+
+                        if (int(curMBSize) > int(minibatchSizePerGPU))
                         {
-                            fprintf(stderr, "Warning! unexpected the first best length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d), maxPhoneSeqLen(%d), numFrames (%d) \n",
-                                    int(maxPhoneSeqLen * numFrames), int(minibatchSizePerGPU), int(maxPhoneSeqLen), int(numFrames));
+                            fprintf(stderr, "Warning! unexpected the ref length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d), maxPhoneSeqLen(%d), numFrames (%d) \n",
+                                    int(curMBSize), int(minibatchSizePerGPU), int(maxPhoneSeqLen), int(numFrames));
                             seqId++;
 
                             continue;
                         }
-                        for (size_t n = 1; n < nBest; n++)
+                        bool refismax = true;
+                        for (size_t n = 0; n < nBest; n++)
+                        //for (size_t n = 1; n < nBest; n++)
                         {
                             size_t maxPhoneSeqLenCurbest = maxPhoneSeqLen;
 
                             if (uttPathsInfo[seqId][n].label_seq.size() > maxPhoneSeqLen)
+                            {
                                 maxPhoneSeqLenCurbest = uttPathsInfo[seqId][n].label_seq.size();
+                                refismax = false;
+                            }
+                            size_t oneSeqMBSize = uttPathsInfo[seqId][n].label_seq.size() * numFrames;
+                             
 
-                            if (int(maxPhoneSeqLenCurbest * numFrames * (n + 1)) > int(minibatchSizePerGPU))
+                            if (int(curMBSize + oneSeqMBSize) > int(minibatchSizePerGPU))
                             {
                                 nBest = n;
                                 break;
                             }
-                            else
-                                maxPhoneSeqLen = maxPhoneSeqLenCurbest;
+                            
+                            maxPhoneSeqLen = maxPhoneSeqLenCurbest;
+                            curMBSize += oneSeqMBSize;
                         }
-                        if (m_debugInfo)
-                            fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize %d, maxPhoneSeqLen %d, nBest %d, numFrames %d \n", int(minibatchSizePerGPU), int(maxPhoneSeqLen * nBest * numFrames),
-                                    int(maxPhoneSeqLen), int(nBest), int(numFrames));
 
-                        float firstbeswer = uttPathsInfo[seqId][0].WER;
+                        if (m_debugInfo)
+                            fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize (Nbest+ reference) %d, maxPhoneSeqLen %d, nBest %d, numFrames %d, ref is max = %d \n", int(minibatchSizePerGPU), int(curMBSize),
+                                    int(maxPhoneSeqLen), int(nBest), int(numFrames), int(refismax));
+
                         bool wer_all_equal = true;
-                        for (size_t n = 1; n < nBest; n++)
+                        if (nBest > 1)
                         {
-                            if ((uttPathsInfo[seqId][n].WER - firstbeswer) > 1e-9 || (uttPathsInfo[seqId][n].WER - firstbeswer) < -1e-9)
+                            float firstbeswer = uttPathsInfo[seqId][0].WER;
+                            for (size_t n = 1; n < nBest; n++)
                             {
-                                wer_all_equal = false;
-                                break;
+                                if ((uttPathsInfo[seqId][n].WER - firstbeswer) > 1e-9 || (uttPathsInfo[seqId][n].WER - firstbeswer) < -1e-9)
+                                {
+                                    wer_all_equal = false;
+                                    break;
+                                }
                             }
                         }
 
                         if (wer_all_equal) // MWER will take no effect, including nbest =1 case
                         {
-                            vt_feas[seqId]->ReleaseMemory();
                             seqId++;
                             continue;
                         }
+                        if (uttPathsInfo[seqId].size() != nBest)
+                        {
+                            uttPathsInfo[seqId].resize(nBest);
+                            //re-normalized
+                            float total_prob = 0;
+                            for (size_t n = 0; n < nBest; n++)
+                                total_prob += uttPathsInfo[seqId][n].prob;
+
+                            for (size_t n = 0; n < nBest; n++)
+                                uttPathsInfo[seqId][n].prob /= total_prob;
+                        }
+                        // add reference as a path
+                        PathInfo pi;
+                        pi.prob = 1;
+                        pi.WER = 0;
+                        pi.label_seq = phoneSeqs[seqId];
+                        uttPathsInfo[seqId].push_back(pi);
+
+                        nBest = nBest + 1;
+
+                        cNode->SetMWERInfo(uttPathsInfo[seqId], m_lengthNorm, m_wordPathPosteriorFromDecodeMBR, m_doMBR, vt_nws[seqId],
+                                           insertionBoostInFinalBeam, scoreNormKind, m_enableMultiThreadDecodeMBR, m_ceWeight, m_mbrWeight);
 
                         //if (firstdebug)
                         reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
-
+                        //reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
                         Matrix<ElemType> lmin(deviceid);
-                        lmin.Resize(vocSize, nBest * maxPhoneSeqLen);
+                        lmin.Resize(vocSize, (nBest) *maxPhoneSeqLen);
+                        //lmin.Resize(vocSize, (nBest) * maxPhoneSeqLen);
                         lmin.SetValue(0.0);
 
                         size_t uttPhoneBeginIdx = 0;
+                        size_t phoneSeqLen;
 
-                        for (size_t n = 0; n < nBest; n++)
+                        for (size_t n = 0; n < (nBest); n++)
                         {
                             size_t uttPhoneToChanInd = n;
-                            size_t phoneSeqLen = uttPathsInfo[seqId][n].label_seq.size();
+                            phoneSeqLen = uttPathsInfo[seqId][n].label_seq.size();
                             for (size_t p = 0; p < phoneSeqLen; p++)
                             {
                                 size_t uID = (p + uttPhoneBeginIdx) * nBest + uttPhoneToChanInd;
@@ -1924,6 +1961,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 //if (firstdebug)
                                 reflminput->second.pMBLayout->AddSequence(GAP_SEQUENCE_ID, n, phoneSeqLen, maxPhoneSeqLen); // length is phoneSeqLen to maxPhoneSeqLen
                         }
+
                         reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
                         lmin.ReleaseMemory();
                         if (m_debugInfo)
@@ -1990,6 +2028,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         cNode->GetMWERInfo(localCR, localSampleNum);
                         if (m_showWERMode == "onebest")
                             localCR = (vt_onebest_wer[seqId] * localSampleNum);
+                        /*
+                        else
+                        {
+                            float avg_wer = 0;
+                            for (size_t n = 0; n < nBest; n++)
+                                avg_wer += (uttPathsInfo[seqId][n].prob * uttPathsInfo[seqId][n].WER);
+                            localCR = avg_wer * localSampleNum;
+                        }
+                        */
+
                         if (m_debugInfo)
                             fprintf(stderr, "nw = %d, 1best wer = %f, num_frame = %d \n", int(vt_nws[seqId]), vt_onebest_wer[seqId], int(numFrames));
                         accumCRMBR += double(localCR);
@@ -4005,6 +4053,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     beamSortKind = configSGD(L"BeamSortKind", (size_t) 1);
     matrixKind = configSGD(L"MatrixKind", (size_t) 3);
     minibatchSizePerGPU = configSGD(L"MinibatchSizePerGPU", (size_t) 30000);
+    m_mbrWeight = configSGD(L"RNNTMBRWeight", (float) 1.0);
+    m_ceWeight = configSGD(L"RNNTCEWeight", (float) 0.0);
+
     if (scoreNormKind == 0)
         m_lengthNorm = false;
     else

@@ -302,6 +302,8 @@ protected:
     size_t matrixKind;
     size_t minibatchSizePerGPU;
     bool m_debugInfo;
+    float m_ceWeight;
+    float m_mbrWeight;
 
     // Parallel training
     MPIWrapperPtr m_mpi;
@@ -529,7 +531,7 @@ protected:
                     vector<vector<PathInfo>>& uttPathsInfo, vector<size_t>& vt_nws, vector<float>& vt_onebest_wer, time_t& my_time,
                     std::vector<std::vector<string>>& wordSeqs, std::vector<std::wstring>& decodeInputNodeNames,
                     size_t& fea_dim, size_t& numParallelSequences, Matrix<ElemType>& refFeaMatBackup,
-                    std::vector<ComputationNodeBasePtr>& encodeInputNodes, std::vector<Matrix<ElemType>*>& vt_feas);
+                    std::vector<ComputationNodeBasePtr>& encodeInputNodes, std::vector<Matrix<ElemType>*>& vt_feas, std::vector<std::vector<size_t>>& phoneSeqs);
 
 
     size_t TrainOneEpoch(ComputationNetworkPtr net,

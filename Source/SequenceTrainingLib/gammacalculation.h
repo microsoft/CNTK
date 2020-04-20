@@ -12,7 +12,10 @@
 
 #pragma warning(disable : 4127) // conditional expression is constant
 
-namespace msra { namespace lattices {
+namespace msra
+{
+namespace lattices
+{
 
 struct SeqGammarCalParam
 {
@@ -248,7 +251,6 @@ public:
         functionValues.SetValue(objectValue);
     }
 
-
     // Calculate CTC score
     // totalScore (output): total CTC score at element (0,0)
     // prob (input): the posterior output from the network (log softmax of right)
@@ -260,14 +262,14 @@ public:
     // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
     //      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
     //      delayConstraint=-1 means no constraint
-    void doCTC(Microsoft::MSR::CNTK::Matrix<ElemType>& totalScore, 
-        const Microsoft::MSR::CNTK::Matrix<ElemType>& prob, 
-        const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
-        const Microsoft::MSR::CNTK::Matrix<ElemType>& maxValues,
-        Microsoft::MSR::CNTK::Matrix<ElemType>& CTCPosterior, 
-        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, 
-        size_t blankTokenId,
-        int delayConstraint = -1)
+    void doCTC(Microsoft::MSR::CNTK::Matrix<ElemType>& totalScore,
+               const Microsoft::MSR::CNTK::Matrix<ElemType>& prob,
+               const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
+               const Microsoft::MSR::CNTK::Matrix<ElemType>& maxValues,
+               Microsoft::MSR::CNTK::Matrix<ElemType>& CTCPosterior,
+               const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout,
+               size_t blankTokenId,
+               int delayConstraint = -1)
     {
         const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
         const auto numSequences = pMBLayout->GetNumSequences();
@@ -320,17 +322,17 @@ public:
             phoneBound.push_back(0);
             int prevPhoneId = -1;
             size_t startFrameInd = seq.tBegin * numParallelSequences + seq.s;
-            size_t endFrameInd   = seq.tEnd   * numParallelSequences + seq.s;
+            size_t endFrameInd = seq.tEnd * numParallelSequences + seq.s;
             size_t frameCounter = 0;
-            for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numParallelSequences, frameCounter++) 
+            for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numParallelSequences, frameCounter++)
             {
                 // Labels are represented as 1-hot vectors for each frame
                 // If the 1-hot vectors may have either value 1 or 2 at the position of the phone corresponding to the frame:
                 //      1 means the frame is within phone boundary
                 //      2 means the frame is the phone boundary
-                if (maxValues(0, frameInd) == 2) 
+                if (maxValues(0, frameInd) == 2)
                 {
-                    prevPhoneId = (size_t)maxIndexes(0, frameInd);
+                    prevPhoneId = (size_t) maxIndexes(0, frameInd);
 
                     phoneSeq.push_back(blankTokenId);
                     phoneBound.push_back(frameCounter);
@@ -358,8 +360,8 @@ public:
         {
             for (size_t j = 0; j < allUttPhoneSeqs[i].size(); j++)
             {
-                matrixPhoneSeqs(j, i) = (ElemType)allUttPhoneSeqs[i][j];
-                matrixPhoneBounds(j, i) = (ElemType)allUttPhoneBounds[i][j];
+                matrixPhoneSeqs(j, i) = (ElemType) allUttPhoneSeqs[i][j];
+                matrixPhoneBounds(j, i) = (ElemType) allUttPhoneBounds[i][j];
             }
         }
 
@@ -371,8 +373,8 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
         CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, totalScore, uttToChanInd, uttBeginFrame,
-            uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, /*isColWise=*/true );
-        
+                                    uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, blankTokenId, delayConstraint, /*isColWise=*/true);
+
         Microsoft::MSR::CNTK::Matrix<ElemType> rowSum(m_deviceid);
         rowSum.Resize(1, numCols);
 
@@ -380,7 +382,6 @@ public:
         CTCPosterior.VectorSum(CTCPosterior, rowSum, /*isColWise=*/true);
         CTCPosterior.RowElementDivideBy(rowSum);
     }
-
 
     // Calculate CTC score
     // totalScore (output): total CTC score at element (0,0)
@@ -404,13 +405,15 @@ public:
                                size_t blankTokenId,
                                std::vector<float>& vt_probs,
                                const std::vector<float>& vt_wer,
-                               const std::vector<size_t>& vt_labseqlen, 
-        bool lengthNorm = false, 
-        bool wordPathPosteriorFromDecodeMBR = false,
-        bool doMBR = false,
-        float insertionBoostInFinalBeam = 0.0,
-        size_t scoreNormKind = 0, 
-        size_t enableMultiThreadDecodeMBR = 0)
+                               const std::vector<size_t>& vt_labseqlen,
+                               bool lengthNorm = false,
+                               bool wordPathPosteriorFromDecodeMBR = false,
+                               bool doMBR = false,
+                               float insertionBoostInFinalBeam = 0.0,
+                               size_t scoreNormKind = 0,
+                               size_t enableMultiThreadDecodeMBR = 0,
+                               float ceWeight = 0.0,
+                               float mbrWeight = 1.0)
 
     {
         const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
@@ -446,10 +449,9 @@ public:
         uttFrameBeginIdx.reserve(numSequences);
         uttPhoneBeginIdx.reserve(numPhoneSequences);
 
-
         //get utt information, such as channel map id and utt begin frame, utt frame num, utt phone num for frame and phone respectively....
-        size_t seqId = 0;   //frame
-        size_t totalframenum = 0, totalphonenum=0;
+        size_t seqId = 0; //frame
+        size_t totalframenum = 0, totalphonenum = 0;
         for (const auto& seq : pMBLayout->GetAllSequences())
         {
             if (seq.seqId == GAP_SEQUENCE_ID)
@@ -458,13 +460,13 @@ public:
             }
             assert(seq.seqId == seqId);
             seqId++;
-            uttFrameToChanInd.push_back(seq.s);            
+            uttFrameToChanInd.push_back(seq.s);
             size_t numFrames = seq.GetNumTimeSteps();
             uttFrameBeginIdx.push_back(seq.tBegin);
             uttFrameNum.push_back(numFrames);
             totalframenum += numFrames;
         }
-        seqId = 0;  //phone
+        seqId = 0; //phone
         for (const auto& seq : phoneMBLayout->GetAllSequences())
         {
             if (seq.seqId == GAP_SEQUENCE_ID)
@@ -488,7 +490,7 @@ public:
             }
             allUttPhoneSeqs.push_back(phoneSeq);*/
         }
-        // for cpu 
+        // for cpu
         m_deviceid_gpu = maxIndexes.GetDeviceId();
         m_deviceid = m_deviceid_gpu;
         /*Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneSeqs(CPUDEVICE);
@@ -512,14 +514,15 @@ public:
         //calculate the memory need for f*g
         std::vector<size_t> uttBeginForOutputditribution;
         uttBeginForOutputditribution.reserve(numSequences);
-        
+
         size_t totalcol = 0;
         for (size_t s = 0; s < numPhoneSequences; s++)
         {
             uttBeginForOutputditribution.push_back(totalcol);
             if (numSequences == 1)
-                totalcol += uttFrameNum[0] * uttPhoneNum[s];            
-            else totalcol += uttFrameNum[s] * uttPhoneNum[s];            
+                totalcol += uttFrameNum[0] * uttPhoneNum[s];
+            else
+                totalcol += uttFrameNum[s] * uttPhoneNum[s];
         }
 
         //compute f+g
@@ -545,31 +548,29 @@ public:
         //G.SetValue(0.0);
         //F.Print("H");
         //G.Print("G");
-        
+
         //matrixOutputDistribution.Resize(numRows, totalcol);
-        //matrixOutputDistribution.AssignUserOp1(F, G, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, 
+        //matrixOutputDistribution.AssignUserOp1(F, G, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
         //   totalcol, numParallelSequences, numPhoneParallelSequences);
         //matrixOutputDistribution.Print("h");
         //log softmax of f+g
         //mergedinput.InplaceLogSoftmax(true);
-       
+
         /*Microsoft::MSR::CNTK::Matrix<ElemType> logsoftmax(m_deviceid_gpu);
         logsoftmax.SetValue(mergedinput);
 
         logsoftmax.InplaceLogSoftmax(true);*/
         //matrixOutputDistribution.Print("prob");
         // forward backward to compute alpha, beta derivaitves
-        
+
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid_gpu);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid_gpu);
         //m_derivative.TransferToDeviceIfNotThere(m_deviceid_gpu);
 
-       
         mergedinput.AssignRNNTScore(mergedinput, alpha, beta, maxIndexes, maxIndexes, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
-            uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, 1,true, 
-            vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR,
-                                    insertionBoostInFinalBeam, scoreNormKind, enableMultiThreadDecodeMBR);
-        
+                                    uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, 1, true,
+                                    vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR,
+                                    insertionBoostInFinalBeam, scoreNormKind, enableMultiThreadDecodeMBR, ceWeight, mbrWeight);
 
         //delete[] phoneSeqData;
         //mergedinput.InplaceExp();
@@ -577,7 +578,7 @@ public:
         //mergedinput.ReleaseMemory();
         ElemType finalscore = 0;
         //m_derivative.Print("RNNT");
-        finalscore =  totalScore.Get00Element();
+        finalscore = totalScore.Get00Element();
         //fprintf(stderr, "finalscore:%f\n", finalscore);
         /*if (finalscore > 50 || finalscore < 0)
         {
@@ -591,7 +592,7 @@ public:
         /*alpha.Print("alpha");
         beta.Print("beta");
         prob.Print("prob");*/
-       
+
         //m_derivative.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         //matrixOutputDistribution.ReleaseMemory();
 
@@ -600,7 +601,7 @@ public:
             printf("m_derivativeForF before is in GPU");
         if (m_derivativeForG.GetDeviceId() != CPUDEVICE)
             printf("m_derivativeForG before is in GPU");*/
-        
+
         /*m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         m_derivativeForG.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         m_derivativeForF.SetValue(0.0);
@@ -636,7 +637,6 @@ public:
         m_derivativeForF.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         m_derivativeForG.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid_gpu);
         printf("finish gamma");*/
-
     }
 
 private:
@@ -735,17 +735,15 @@ private:
         {
             // Use pinned memory for GPU devices for better copy performance
             size_t totalSize = sizeof(ElemType) * numElements;
-            return std::shared_ptr<ElemType>((ElemType*) GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p)
-                                             {
-                                                 this->GetCUDAAllocator(deviceID)->Free((char*) p);
-                                             });
+            return std::shared_ptr<ElemType>((ElemType*) GetCUDAAllocator(deviceID)->Malloc(totalSize), [this, deviceID](ElemType* p) {
+                this->GetCUDAAllocator(deviceID)->Free((char*) p);
+            });
         }
         else
         {
-            return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p)
-                                             {
-                                                 delete[] p;
-                                             });
+            return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p) {
+                delete[] p;
+            });
         }
     }
 
@@ -773,4 +771,5 @@ private:
     size_t m_intermediateCUDACopyBufferSize;
 };
 
-}}
+} // namespace lattices
+} // namespace msra

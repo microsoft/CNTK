@@ -6298,7 +6298,8 @@ Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob
                                                     bool lengthNorm,
                                                     bool wordPathPosteriorFromDecodeMBR,
                                                     bool doMBR,
-                                                    float insertionBoostInFinalBeam, size_t scoreNormKind, size_t enableMultiThreadDecodeMBR)
+                                                    float insertionBoostInFinalBeam, size_t scoreNormKind, size_t enableMultiThreadDecodeMBR,
+                                                    float ceWeight, float mbrWeight)
 {
     //DecideAndMoveToRightDevice(prob, *this);
 
@@ -6328,7 +6329,7 @@ alpha._transferToDevice(CPUDEVICE);
                                                                uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_GPUMatrix, blankTokenId,
                                                                delayConstraint, isColWise, 
                                                                vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR, 
-                                                               insertionBoostInFinalBeam, scoreNormKind, enableMultiThreadDecodeMBR),
+                                                               insertionBoostInFinalBeam, scoreNormKind, enableMultiThreadDecodeMBR, ceWeight, mbrWeight),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 

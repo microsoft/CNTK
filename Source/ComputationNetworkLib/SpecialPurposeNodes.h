@@ -1779,7 +1779,9 @@ public:
                 vt_wer.push_back(vt_pathinfos[i].WER);
                 vt_labseqlen.push_back(vt_pathinfos[i].label_seq.size()); // this label sequence includes the sentence begining <blank>
             }
-            m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR);
+            m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(),
+                                             InputRef(2).GetMBLayout(), m_blankTokenId, vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR, 
+                                             insertionBoostInFinalBeam, scoreNormKind, enableMultiThreadDecodeMBR, ceWeight, mbrWeight);
 
             criterionValue = Value().Get00Element();
             criterionValue *= numWords;
@@ -1905,7 +1907,8 @@ public:
     void SetMWERInfo(vector<PathInfo> vt_pi,
                      bool ln,
                      bool post_from_decode, bool mbr, size_t nw,
-                     float ib, size_t snk, size_t mtmode)
+                     float ib, size_t snk, size_t mtmode,
+                     float m_ceWeight, float m_mbrWeight)
     {
         vt_pathinfos = vt_pi;
         lengthNorm = ln;
@@ -1915,6 +1918,8 @@ public:
         insertionBoostInFinalBeam = ib;
         scoreNormKind = snk;
         enableMultiThreadDecodeMBR = mtmode;
+        ceWeight = m_ceWeight;
+        mbrWeight = m_mbrWeight;
     }
 
     void GetMWERInfo(ElemType& cr, size_t& nw)
@@ -1933,6 +1938,8 @@ protected:
     float insertionBoostInFinalBeam;
     size_t scoreNormKind;
     size_t enableMultiThreadDecodeMBR;
+    float ceWeight;
+    float mbrWeight;
 
     ElemType criterionValue;
 

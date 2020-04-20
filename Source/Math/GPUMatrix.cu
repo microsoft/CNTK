@@ -4704,7 +4704,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                           bool doMBR,
                                                           float insertionBoostInFinalBeam,
                                                           size_t scoreNormKind,
-                                                          size_t enableMultiThreadDecodeMBR)
+                                                          size_t enableMultiThreadDecodeMBR,
+                                                          float ceWeight,
+                                                          float mbrWeight)
 {
     delayConstraint;
     uttFrameBeginIdx;
@@ -4713,7 +4715,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
     uttPhoneBeginIdx;
     uttPhoneToChanInd;
     uttFrameToChanInd;
-
+    ceWeight;
+    mbrWeight;
     if (isColWise)
     {
 
@@ -4823,7 +4826,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                 //logadd is not supported in this file, so change to regular add
 
                 float totalProb = 0;
-                for (size_t s = 0; s < uttNum; s++)
+                for (size_t s = 0; s < (uttNum - 1); s++) // as the last one is the reference, not used in MWER
+                //for (size_t s = 0; s < (uttNum); s++) // as the last one is the reference, not used in MWER
                 {
                     size_t zeroID = uttBeginForOutputditribution[s]; //beta id for (0,0)
 
@@ -4839,43 +4843,45 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 
                         switch (scoreNormKind)
                         {
-                            case 0:
-                                break;
+                        case 0:
+                            break;
 
-                            case 1:
-                                vt_probs[s] /= (vt_labseqlen[s]);
-                                break;
+                        case 1:
+                            vt_probs[s] /= (vt_labseqlen[s]);
+                            break;
 
-                            case 2:
-                                if (vt_labseqlen[s] > 1)
-                                    vt_probs[s] /= (vt_labseqlen[s] -1);
-                                break;
+                        case 2:
+                            if (vt_labseqlen[s] > 1)
+                                vt_probs[s] /= (vt_labseqlen[s] - 1);
+                            break;
 
-                            case 3:
-                                vt_probs[s] /= float(sqrt(vt_labseqlen[s]));
-                                break;
+                        case 3:
+                            vt_probs[s] /= float(sqrt(vt_labseqlen[s]));
+                            break;
 
-                            default:
-                                break;
-                            }
-                        
+                        default:
+                            break;
+                        }
                     }
                     vt_probs[s] = exp(vt_probs[s]);
                     totalProb += vt_probs[s];
                 }
 
-                for (size_t s = 0; s < uttNum; s++)
+                for (size_t s = 0; s < (uttNum - 1); s++)
+                //for (size_t s = 0; s < (uttNum ); s++)
                 {
                     vt_probs[s] /= totalProb;
                 }
             }
             float avg_wer = 0;
-            for (size_t s = 0; s < uttNum; s++)
+            for (size_t s = 0; s < uttNum - 1; s++)
+            //for (size_t s = 0; s < (uttNum ); s++)
             {
                 avg_wer += vt_probs[s] * vt_wer[s];
             }
 
-            for (size_t s = 0; s < uttNum; s++)
+            for (size_t s = 0; s < uttNum - 1; s++)
+            // for (size_t s = 0; s < (uttNum); s++)
             {
                 vt_probs[s] = (avg_wer - vt_wer[s]) * vt_probs[s]; // now vt_probs[s] stores the weight
             }
@@ -4909,23 +4915,52 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 
         dim3 block_tail2((totalPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
-        // num_row = GetNumRows();
-        // num_col = GetNumCols();
-        // vector<ElemType> cpudata(num_row * num_col);
+        //num_row = GetNumRows();
+        //num_col = GetNumCols();
+        //vector<ElemType> cpudata(num_row * num_col);
 
         for (int s = 0; s < uttNum; s++)
         {
             if (doMBR)
             {
-                _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
-                                                                              uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, vt_probs[s]);
-                // CUDA_CALL(cudaMemcpy(cpudata.data(), Data(), num_row * 5.3num_col * sizeof(ElemType), cudaMemcpyDeviceToHost));
+                
+                if (s != (uttNum - 1))
+                    _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
+                                                                                  uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, vt_probs[s] * mbrWeight);
+                else
+                    _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
+                                                                                  uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, ceWeight);
             }
             else
                 _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
                                                                               uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, 1);
         }
 
+        /*
+		fprintf(stderr, "debug  mbrWeight = %f, ceWeight = %f \n", float(mbrWeight), float(ceWeight));
+
+
+        CUDA_CALL(cudaMemcpy(cpudata.data(), Data(), num_row * num_col * sizeof(ElemType), cudaMemcpyDeviceToHost));
+
+        for (size_t i = 0; i < uttNum; i++)
+        {
+            size_t sidx, eidx;
+            sidx = uttBeginForOutputditribution[i] * totalPhoneNum;
+            if (i != (uttNum - 1))
+                eidx = uttBeginForOutputditribution[i + 1] * totalPhoneNum;
+            else
+                eidx = cpudata.size();
+            fprintf(stderr, "debug Start AssignRNNTScore i = %d, sidx = %d, eidx = %d \n", int(i), int(sidx), int(eidx));
+            float sum = 0;
+            for (size_t j = sidx; j < eidx; j++)
+            {
+                if (j % 10000 == 0)
+                  fprintf(stderr, "j= %d, data*1e9= %f\n", int(j), float(cpudata[j]) * 1e9);
+                sum += float(cpudata[j]);
+            }
+            fprintf(stderr, "debug End AssignRNNTScore i = %d, sum = %f, sum * 1e9 = %f \n", int(i), float(sum), float(sum * 1e9));
+        }
+		*/
         CUDA_CALL(cudaFree(gpuFrameNum));
         CUDA_CALL(cudaFree(gpuPhoneNum));
         CUDA_CALL(cudaFree(gpuBeginPhone));
@@ -5435,7 +5470,7 @@ void GPUMatrix<ElemType>::TensorOpDebug(ElemType beta, const GPUMatrix<ElemType>
     // regular case
     else
     {
-        
+
         return TensorOpNDebug<ElemType, 2>(beta, array<ElemType*, 2>{a.Data(), Data()}, alpha, op, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides, a, *this);
     }
 }
