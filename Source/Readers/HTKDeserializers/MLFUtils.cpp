@@ -224,6 +224,8 @@ bool MLFUtteranceParser::Parse(const boost::iterator_range<char*>& sequenceData,
         return false;
     }*/
 
+    if (utterance.size() == 1)
+        return false;
     return true;
 }
 

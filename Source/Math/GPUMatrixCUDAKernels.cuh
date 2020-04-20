@@ -5888,6 +5888,14 @@ __global__ void _assignRNNTAlphaScore2(
                         //int delayConstraintP = -delayConstraint;
                         prob_t_u_1 -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
                     }
+                    if (prob_t_u_1 >= 0)
+                    {
+                        prob_t_u_1 = -0.00001;
+                        printf("boundary: %d\n", phoneBoundary);
+                        printf("phoneId: %d\n", (int) phoneId);
+                        printf("t: %d\n", (int)t);
+                        printf("prob: %f\n", prob_t_u_1);
+                    }
                     /*if (t == 239)
                     {
                         printf("prob after: %f\n", prob_t_u_1);
@@ -6022,10 +6030,14 @@ __global__ void _assignRNNTBetaScore2(
                         //int delayConstraintP = -delayConstraint;
                         prob_t_u -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
                     }
-                    /*if (t == 239)
+                    if (prob_t_u >= 0)
                     {
-                        printf("prob after: %f\n", prob_t_u);
-                    }*/
+                        prob_t_u = -0.00001;
+                        printf("boundary: %d\n", phoneBoundary);
+                        printf("phoneId: %d\n", (int) phoneId);
+                        printf("t: %d\n", (int) t);
+                        printf("prob: %f\n", prob_t_u);
+                    }
                 }
                 if (u == phoneNum - 1 && t == frameNum - 1)
                 {
