@@ -5866,8 +5866,7 @@ __global__ void _assignRNNTAlphaScore2(
                 tuID_2 = tuID - phoneNum;                    //tuID for [t-1,u]
                 //alphaId_2 = alphaId - numChannels * maxPhoneNum;  //alpha ID for [t-1, u]
                 probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
-                        
-                        
+
                 if (t == 0 && u == 0)
                 {
                     alphaScore[tuID] = 0.0;
@@ -6059,6 +6058,11 @@ __global__ void _AddPenaltyEos(ElemType* alphaScore,
                     //printf("boundary: %d\n", phoneBoundary);
                     betaScore[tuID] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
                     alphaScore[tuID] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
+                    if (betaScore[tuID] >= 0.0f)
+                        betaScore[tuID] = -0.0001;
+                    if (alphaScore[tuID] >= 0.0f)
+                        alphaScore[tuID] = -0.0001;
+
                 }
                 else
                 {
