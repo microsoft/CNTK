@@ -20,7 +20,8 @@
 #include "DataTransferer.h"
 #include "PerformanceProfiler.h"
 
-namespace CNTK {
+namespace CNTK
+{
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -40,27 +41,27 @@ inline TensorShape AsTensorShape(const NDShape& viewShape)
 }
 
 template <class ElemType>
-ReaderShim<ElemType>::ReaderShim() :
-    m_deviceId(CPUDEVICE),
-    m_dataTransferers(2, DataTransfererPtr()),
-    m_currentDataTransferIndex(0),
-    m_endOfEpoch(false),
-    m_endOfSweep(false),
-    m_reader(nullptr),
-    m_factory(nullptr)
+ReaderShim<ElemType>::ReaderShim()
+    : m_deviceId(CPUDEVICE),
+      m_dataTransferers(2, DataTransfererPtr()),
+      m_currentDataTransferIndex(0),
+      m_endOfEpoch(false),
+      m_endOfSweep(false),
+      m_reader(nullptr),
+      m_factory(nullptr)
 {
 }
 
 template <class ElemType>
-ReaderShim<ElemType>::ReaderShim(ReaderFactory factory) :
-    ReaderShim()
+ReaderShim<ElemType>::ReaderShim(ReaderFactory factory)
+    : ReaderShim()
 {
     m_factory = factory;
 }
 
 template <class ElemType>
-ReaderShim<ElemType>::ReaderShim(ReaderPtr reader) :
-    ReaderShim()
+ReaderShim<ElemType>::ReaderShim(ReaderPtr reader)
+    : ReaderShim()
 {
     m_reader = reader;
 }
@@ -69,7 +70,7 @@ template <class ElemType>
 void ReaderShim<ElemType>::Init(const ConfigParameters& config)
 {
     intargvector numberOfuttsPerMinibatchForAllEpochs =
-        config(L"nbruttsineachrecurrentiter", ConfigParameters::Array(intargvector(vector<int> { 1 })));
+        config(L"nbruttsineachrecurrentiter", ConfigParameters::Array(intargvector(vector<int>{1})));
 
     bool prefetch = config(L"prefetch", true);
     // if prefetch - launching asynchronously,
@@ -171,12 +172,12 @@ void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const st
     // Now we can be sure, no prefetch thread is running and there are no outstanding memcopies.
     // Let's check that requested devices are ok and see whether we need to change our data transferers.
     auto device = std::find_if(inputs.begin(), inputs.end(),
-        [](const InputStreamDescription& d) { return d.GetDeviceId() != CPUDEVICE; });
+                               [](const InputStreamDescription& d) { return d.GetDeviceId() != CPUDEVICE; });
     auto deviceId = device != inputs.end() ? device->GetDeviceId() : CPUDEVICE;
 
     // Check that all devices either the same as m_deviceId or CPU.
-    auto secondDevice = std::find_if(inputs.begin(), inputs.end(), 
-        [deviceId](const InputStreamDescription& d) { return d.GetDeviceId() != CPUDEVICE && d.GetDeviceId() != deviceId; });
+    auto secondDevice = std::find_if(inputs.begin(), inputs.end(),
+                                     [deviceId](const InputStreamDescription& d) { return d.GetDeviceId() != CPUDEVICE && d.GetDeviceId() != deviceId; });
     if (secondDevice != inputs.end())
     {
         LogicError("Readers do not support running on several GPUs in the same process, at least two devices found '%d', '%d'", deviceId, secondDevice->GetDeviceId());
@@ -198,12 +199,10 @@ void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const st
     {
         inputDescriptions[i.GetStreamName()] = i.GetDeviceId();
         // Creating buffers with the same properties the network expects.
-        m_prefetchBuffers[i.GetStreamName()] = StreamPrefetchBuffer
-        {
+        m_prefetchBuffers[i.GetStreamName()] = StreamPrefetchBuffer{
             std::make_shared<Matrix<ElemType>>(0, 0, i.GetDeviceId(), i.GetMatrixType(), i.GetMatrixFormat()),
             std::make_shared<MBLayout>(),
-            NDShape::Unknown()
-        };
+            NDShape::Unknown()};
     }
 
     m_endOfEpoch = false;
@@ -219,8 +218,7 @@ void ReaderShim<ElemType>::StartAsyncPrefetching()
     // Starting the prefetch task. There is always a single async read in flight.
     // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
     // and kick off the new prefetch.
-    m_prefetchTask = std::async(m_launchType, [this, localCurrentDataTransferIndex]()
-    {
+    m_prefetchTask = std::async(m_launchType, [this, localCurrentDataTransferIndex]() {
         return PrefetchMinibatch(localCurrentDataTransferIndex);
     });
 }
@@ -262,7 +260,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         {
             string inputNames = EnumerateInputs(m_nameToStreamId);
             RuntimeError("Could not map input '%ls' to the reader. Reader outputs only [%s].",
-                mx.first.c_str(), inputNames.c_str());
+                         mx.first.c_str(), inputNames.c_str());
         }
     }
 
@@ -323,9 +321,9 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         else if (*layout != *streamLayout) // this does a deep value-level comparison
         {
             RuntimeError("Dynamic axis layout '%ls' is shared between inputs '%ls' and '%ls', but layouts generated "
-                "from the input data are incompatible on this axis. Are you using different sequence lengths? "
-                "Did you consider adding a DynamicAxis() to the Input nodes?",
-                layout->GetAxisName(), layoutToInputMap[layout->GetAxisName()].c_str(), i->first.c_str());
+                         "from the input data are incompatible on this axis. Are you using different sequence lengths? "
+                         "Did you consider adding a DynamicAxis() to the Input nodes?",
+                         layout->GetAxisName(), layoutToInputMap[layout->GetAxisName()].c_str(), i->first.c_str());
         }
 
         // Check sample shape.
@@ -336,8 +334,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         }
         else if (i->second.sampleLayout.GetNumElements() != AsTensorShape(sampleShape).GetNumElements())
         {
-            RuntimeError("Sample shape for '%ls' provided by the deserializer '%s' does not match the shape expected by the network '%s'.", 
-                i->first.c_str(), string(AsTensorShape(sampleShape)).c_str(), string(i->second.sampleLayout).c_str());
+            RuntimeError("Sample shape for '%ls' provided by the deserializer '%s' does not match the shape expected by the network '%s'.",
+                         i->first.c_str(), string(AsTensorShape(sampleShape)).c_str(), string(i->second.sampleLayout).c_str());
         }
     }
 
@@ -375,12 +373,40 @@ void FillMatrixFromStream(StorageFormat type, Matrix<ElemType>* matrix, size_t n
         size_t* data = reinterpret_cast<size_t*>(stream->m_data);
         size_t nnzCount = *data;
         ElemType* values = reinterpret_cast<ElemType*>(data + 1);
+
         IndexType* rows = reinterpret_cast<IndexType*>(values + nnzCount);
         IndexType* columns = reinterpret_cast<IndexType*>(rows + nnzCount);
-        matrix->SetMatrixFromCSCFormat(columns, rows, values, nnzCount, numRows, numCols, transferer);
+        //for RNNT time constraint
+        //if (values[0] < 0)
+        {
+            //values[0] = fabs(values[0]);
+            ElemType* ones;
+            ones = new ElemType[numCols];
+            for (size_t i = 0; i < numCols; i++)
+                ones[i] = 1.0;
+            matrix->SetMatrixFromCSCFormat(columns, rows, ones, nnzCount, numRows, numCols, transferer);
+            delete ones;
+
+            CNTK::Matrix<ElemType> phoneboundarymatrix(matrix->GetDeviceId());
+            phoneboundarymatrix.SetMatrixFromCSCFormat(columns, rows, values, nnzCount, numRows, numCols, transferer);
+            CNTK::Matrix<ElemType> maxIndexes(matrix->GetDeviceId());
+            CNTK::Matrix<ElemType> maxValues(matrix->GetDeviceId());
+            phoneboundarymatrix.VectorMax(maxIndexes, maxValues, true);
+
+            //maxIndexes.Print("max index");
+            //maxValues.Print("max value");
+            CNTK::Matrix<ElemType> tempmatrix  = matrix->Transpose();
+            tempmatrix.SetColumn(maxValues.Transpose(), numRows - 1);
+            matrix->SetValue(tempmatrix.Transpose());
+
+            //InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
+        }
+        //else
+        //    matrix->SetMatrixFromCSCFormat(columns, rows, values, nnzCount, numRows, numCols, transferer);
+        //matrix->Print("label", numRows - 1, numRows - 1, 0, numCols-1);
     }
     else
-        RuntimeError("Storage type %d is not supported.", (int)type);
+        RuntimeError("Storage type %d is not supported.", (int) type);
 }
 
 template <class ElemType>
@@ -396,7 +422,7 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
 
     // If there is no data we can simply return.
     if (minibatch.m_data.empty())
-        return PrefetchResult{ minibatch.m_endOfSweep, minibatch.m_endOfEpoch, false };
+        return PrefetchResult{minibatch.m_endOfSweep, minibatch.m_endOfEpoch, false};
 
     // Ok we have some data. Let's load it to GPU.
     // But before we need to make sure that corresponding compute has already finished from the last iteration.
@@ -429,11 +455,14 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
     if (m_dataTransferers[currentDataTransferIndex])
         m_dataTransferers[currentDataTransferIndex]->RecordCPUToGPUCopy();
 
-    return PrefetchResult{ minibatch.m_endOfSweep, minibatch.m_endOfEpoch, true };
+    return PrefetchResult{minibatch.m_endOfSweep, minibatch.m_endOfEpoch, true};
 }
 
 template <class ElemType>
-bool ReaderShim<ElemType>::DataEnd() { return false; } // Note: Return value never used.
+bool ReaderShim<ElemType>::DataEnd()
+{
+    return false;
+} // Note: Return value never used.
 
 template <class ElemType>
 void ReaderShim<ElemType>::CopyMBLayoutTo(MBLayoutPtr layout)
@@ -449,7 +478,7 @@ size_t ReaderShim<ElemType>::GetNumParallelSequencesForFixingBPTTMode()
 {
     // BUGBUG This is a property of the stream, of which this reader might produce several, with different nr. of
     // parallel sequences. Thus this property doesn't make sense anymore.
-    // This method is called by 
+    // This method is called by
     // * DataReaderHelpers::GetNumSubminibatchesNeeded to estimate mb size
     // * ComputationNetwork::SetBatchNormalizationTimeConstants to compute learning rate per sample
     // * ComputationNetwork::SetBatchNormalizationTimeConstants to compute actual mb size and momentum per sample
@@ -491,4 +520,4 @@ void ReaderShim<ElemType>::SetState(const std::map<std::wstring, size_t>& state)
 
 template class ReaderShim<float>;
 template class ReaderShim<double>;
-}
+} // namespace CNTK

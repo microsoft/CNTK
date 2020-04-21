@@ -63,7 +63,6 @@ Minibatch SequencePacker::ReadMinibatch()
     //get one minibatch
     //select sequences for one minibatch, loop for sequence
 
-    //loop for stream, put sequence data into batch
 
     const auto& batch = sequences.m_data;
 

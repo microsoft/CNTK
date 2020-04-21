@@ -1506,7 +1506,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
                                                           const GPUMatrix<ElemType> phoneSeq, const GPUMatrix<ElemType> phoneBound, const GPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
-    GPUMatrix<ElemType>& totalScore, const size_t blankTokenId,  const int delayConstraint, const bool isColWise)
+                                                          GPUMatrix<ElemType>& totalScore, const size_t blankTokenId, const ElemType earlyP,
+                                                          const ElemType lateP, const int delayConstraint, const bool isColWise)
 {
     return *this;
 }

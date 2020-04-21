@@ -1229,7 +1229,9 @@ template <typename ElementType>
             {
                 auto delayContraint = functionConfig[PrimitiveFunctionAttribute::AttributeNameDelayConstraint].Value<int>();
                 auto blankTokenId = functionConfig[PrimitiveFunctionAttribute::AttributeNameBlankTokenId].Value<size_t>();
-                ASSIGN_NEW_NODE(RNNTNode, network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
+                auto earlyP = functionConfig[PrimitiveFunctionAttribute::AttributeNameEarlyP].Value<float>();
+                auto lateP = functionConfig[PrimitiveFunctionAttribute::AttributeNameLateP].Value<float>();
+                ASSIGN_NEW_NODE(RNNTNode, network->GetDeviceId(), internalNodeName, blankTokenId, earlyP, lateP, delayContraint);
                 break;
             }
             case PrimitiveOpType::LambdaRank:

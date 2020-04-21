@@ -1576,7 +1576,7 @@ template class CustomProxyOpNode<float>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class RNNTNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<5>
+class RNNTNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<6>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -1586,13 +1586,13 @@ class RNNTNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<5>
     }
 
 public:
-    RNNTNode(DEVICEID_TYPE deviceId, const wstring& name, size_t blankTokenId = SIZE_MAX, int delayConstraint = -1)
-        : Base(deviceId, name), m_blankTokenId(blankTokenId)
+    RNNTNode(DEVICEID_TYPE deviceId, const wstring& name, size_t blankTokenId = SIZE_MAX, ElemType earlyP = 0.0, ElemType lateP=0.0, int delayConstraint = 0)
+        : Base(deviceId, name), m_blankTokenId(blankTokenId), m_earlyP(earlyP), m_lateP(lateP), m_delayConstraint(delayConstraint)
     {
     }
 
     RNNTNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : RNNTNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"))
+        : RNNTNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"blankTokenId"), configp->Get(L"earlyP"), configp->Get(L"lateP"), configp->Get(L"delayConstraint"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -1726,8 +1726,9 @@ public:
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
 
         // compute CTC score
-        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(),  *m_outputDensity, *m_maxIndexes,  m_blankTokenId);
-       // m_outputDensity->Print("gradient");
+        //m_outputDensity->Print("prob", 0, 4000, 0, 10);
+        m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), *m_outputDensity, *m_maxIndexes, InputRef(5).Value(), m_blankTokenId,m_earlyP, m_lateP, m_delayConstraint);
+        //m_outputDensity->Print("gradient", 0, 4000, 0, 10);
 #if NANCHECK
         functionValues.HasNan("RNNTNode");
 #endif
@@ -1817,6 +1818,8 @@ public:
         Base::Save(fstream);
         fstream << m_delayConstraint;
         fstream << m_blankTokenId;
+        fstream << m_earlyP;
+        fstream << m_lateP;
     }
 
     virtual void Load(File& fstream, size_t modelVersion) override
@@ -1824,6 +1827,8 @@ public:
         Base::Load(fstream, modelVersion);
         fstream >> m_delayConstraint;
         fstream >> m_blankTokenId;
+        fstream >> m_earlyP;
+        fstream >> m_lateP;
     }
 
     int DelayConstraint()
@@ -1833,6 +1838,16 @@ public:
     size_t BlankTokenId()
     {
         return m_blankTokenId;
+    }
+
+    ElemType earlyP()
+    {
+        return m_earlyP;
+    }
+
+    ElemType lateP()
+    {
+        return m_lateP;
     }
 
 protected:
@@ -1850,6 +1865,8 @@ protected:
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;
     size_t m_blankTokenId;
     int m_delayConstraint;
+    ElemType m_earlyP, m_lateP;
+
 };
 
 template class RNNTNode<float>;

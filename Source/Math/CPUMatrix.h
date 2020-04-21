@@ -252,7 +252,8 @@ public:
     CPUMatrix<ElemType>& AssignUserOp2(CPUMatrix<ElemType>& in1, CPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx, const size_t combineMode);
     CPUMatrix<ElemType>& AssignRNNTScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, 
         const CPUMatrix<ElemType>& phoneBoundary, const CPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, 
-        const size_t maxPhoneNum, const size_t maxFrameNum, CPUMatrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+        const size_t maxPhoneNum, const size_t maxFrameNum, CPUMatrix<ElemType>& totalScore, const size_t blankTokenId, const ElemType earlyP,
+                                         const ElemType lateP, const int delayConstraint, const bool isColWise);
     CPUMatrix<ElemType>& MatrixTimeReduction(CPUMatrix<ElemType>& in, CPUMatrix<ElemType>& uttInfo, const size_t factor, const size_t numParallelSequences, bool revert);
 
     

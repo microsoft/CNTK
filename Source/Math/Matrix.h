@@ -412,7 +412,8 @@ public:
     Matrix<ElemType>& AssignUserOp2(Matrix<ElemType>& in1, Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx, const size_t combineMode);
     Matrix<ElemType>& AssignRNNTScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq,
                                       const Matrix<ElemType>& phoneBoundary, const Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, 
-        const size_t maxPhoneNum, const size_t maxFrameNum,  Matrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+                                      const size_t maxPhoneNum, const size_t maxFrameNum, Matrix<ElemType>& totalScore, const size_t blankTokenId, const ElemType earlyP,
+                                      const ElemType lateP, const int delayConstraint, const bool isColWise);
     Matrix<ElemType>& MatrixTimeReduction(Matrix<ElemType>& in, Matrix<ElemType>& uttInfo, const size_t factor, const size_t numParallelSequences, bool revert);
 
     Matrix<ElemType>& InplaceSqrt();

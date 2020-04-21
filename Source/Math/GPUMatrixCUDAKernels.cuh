@@ -5813,12 +5813,16 @@ __global__ void _assignRNNTAlphaScore2(
     const ElemType* prob,
     ElemType* alphaScore,
     ElemType* phoneSeq,
+    ElemType* phoneBoundarySeq,
     ElemType* uttinfo,
     const size_t tu,
     const size_t maxPhoneNum,   // Maximum length of utterance in this MB
     const size_t totalPhoneNum, // Total number of phones
     const size_t blankTokenId,
-    const size_t numSequences)
+    const size_t numSequences,
+    ElemType earlyP,
+    ElemType lateP,
+    int delayConstraint)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     //int uttId = blockDim.x * blockIdx.x + threadIdx.x;
@@ -5837,44 +5841,55 @@ __global__ void _assignRNNTAlphaScore2(
             size_t labelid = uttId * maxPhoneNum + u;
             // Actual current phone label
             size_t phoneId = (size_t)(phoneSeq[labelid]); //phone ID of u
+
             //time Index of the current frame in minibatch
             //size_t timeId = (t + uttBeginFrame[uttId]) * numChannels + uttToChanInd[uttId];
             // phone Index of the current frame in minibatch
             // size_t unitId = (u + uttBeginPhonePos[uttId]) * numChannels + uttToChanInd[uttId];
             //(t,u) index of outputdistribution in minibatch
+
             size_t tuID = uttBeginOutId + t * phoneNum + u; //tuID for (t,u)
-            // Index of outputdistribution of observing phoneId at frame timeId
-            //size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u)|t,u)
-            //index for alpha
-            //size_t alphaId = maxPhoneNum * timeId + u; // alpha_t(s)
-            size_t tuID_1, probId_1, tuID_2, probId_2;
-            tuID_1 = tuID - 1;                           //tuID for [t,u-1]
-            probId_1 = tuID_1 * totalPhoneNum + phoneId; //ID for p(y(u)|t,u-1)
-            tuID_2 = tuID - phoneNum;                    //tuID for [t-1,u]
-            //alphaId_2 = alphaId - numChannels * maxPhoneNum;  //alpha ID for [t-1, u]
-            probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
-            if (t == 0 && u == 0)
+                                                            // Index of outputdistribution of observing phoneId at frame timeId
+                                                            //size_t probId = tuID*totalPhoneNum + phoneId;// ID for p(y(u)|t,u)
+                                                            //index for alpha
+                                                            //size_t alphaId = maxPhoneNum * timeId + u; // alpha_t(s)
+            /*if (t > phoneBoundary)
             {
-                alphaScore[tuID] = 0.0;
+                alphaScore[tuID] = LZERO;
             }
-            else if (t == 0)
-            {
-                //alphaId_1 = alphaId - 1;                     // alpha ID for [t,u-1]
-
-                alphaScore[tuID] = alphaScore[tuID_1] + prob[probId_1];
-            }
-            else if (u == 0)
+            else*/
             {
 
-                alphaScore[tuID] = alphaScore[tuID_2] + prob[probId_2];
-            }
-            else
-            {
-                ElemType x = LZERO, y = LZERO;
-                x = alphaScore[tuID_1] + prob[probId_1];
-                y = alphaScore[tuID_2] + prob[probId_2];
-                alphaScore[tuID] = LogAdd(x, y);
-                /*if (uttId == 0 && t == 1 && u == 1)
+                size_t tuID_1, probId_1, tuID_2, probId_2;
+                tuID_1 = tuID - 1;                           //tuID for [t,u-1]
+                probId_1 = tuID_1 * totalPhoneNum + phoneId; //ID for p(y(u)|t,u-1)
+                tuID_2 = tuID - phoneNum;                    //tuID for [t-1,u]
+                //alphaId_2 = alphaId - numChannels * maxPhoneNum;  //alpha ID for [t-1, u]
+                probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
+                        
+                        
+                if (t == 0 && u == 0)
+                {
+                    alphaScore[tuID] = 0.0;
+                }
+                else if (t == 0)
+                {
+                    //alphaId_1 = alphaId - 1;                     // alpha ID for [t,u-1]
+
+                    alphaScore[tuID] = alphaScore[tuID_1] + prob[probId_1];
+                }
+                else if (u == 0)
+                {
+
+                    alphaScore[tuID] = alphaScore[tuID_2] + prob[probId_2];
+                }
+                else
+                {
+                    ElemType x = LZERO, y = LZERO;
+                    x = alphaScore[tuID_1] + prob[probId_1];
+                    y = alphaScore[tuID_2] + prob[probId_2];
+                    alphaScore[tuID] = LogAdd(x, y);
+                    /*if (uttId == 0 && t == 1 && u == 1)
                 {
                     printf("score: %f %f %f\n", (double) x, (double) y, (double) (alphaScore[alphaId]));
                     printf("phoneNum: %d \n", (int) phoneNum);
@@ -5885,6 +5900,25 @@ __global__ void _assignRNNTAlphaScore2(
                     printf("1 score: %f %f %f\n", (double) x, (double) y, (double) (alphaScore[alphaId]));
                     printf("1 phoneNum: %d \n", (int) phoneNum);
                     printf("1 uttid: %d t %d u %d \n", (int) uttId, (int) t, (int) u);
+                }*/
+                }
+
+                //add penalty
+                /*if (u==phoneNum-1 &&  delayConstraint != 0 && (size_t) phoneSeq[labelid] == blankTokenId - 1)
+                {
+                    int phoneBoundary = (int) (phoneBoundarySeq[labelid - 1] + 1);
+                    if (delayConstraint > 0)
+                    {
+                        //printf("boundary: %d\n", phoneBoundary);
+                        
+                        alphaScore[tuID] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
+                    }
+                    else
+                    {
+                        //int delayConstraintP = -delayConstraint;
+                        
+                        alphaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
+                    }
                 }*/
             }
         }
@@ -5897,12 +5931,16 @@ __global__ void _assignRNNTBetaScore2(
     const ElemType* prob,
     ElemType* betaScore,
     ElemType* phoneSeq,
+    ElemType* phoneBoundarySeq,
     ElemType* uttinfo,
     const size_t tu,
     const size_t maxPhoneNum,   // Maximum length of utterance in this MB
     const size_t totalPhoneNum, // Total number of phones
     const size_t blankTokenId,
-    const size_t numSequences)
+    const size_t numSequences,
+    ElemType earlyP,
+    ElemType lateP,
+    int delayConstraint)
 {
     typedef typename TypeSelector<ElemType>::comp_t comp_t;
     const CUDA_LONG uttId = blockIdx.x * blockDim.x + threadIdx.x;
@@ -5919,40 +5957,115 @@ __global__ void _assignRNNTBetaScore2(
             size_t labelid = uttId * maxPhoneNum + u;
             // Actual current phone label
             size_t phoneId = (size_t)(phoneSeq[labelid + 1]); //phone ID of u+1
+            size_t phoneBoundary = (size_t)(phoneBoundarySeq[labelid]);
             // Index of the current frame in minibatch
             //size_t timeId = (t + uttBeginFrame[uttId]) * numChannels + uttToChanInd[uttId]; //timeid in chunk for t
             // Index of the current frame in minibatch
             //        size_t unitId = (u + uttBeginPhonePos[uttId] )* numChannels + uttToChanInd[uttId];  //phoneseq id in chunk for u
             size_t tuID = uttBeginOutId + t * phoneNum + u; //tuID for (t,u)
-            // Index of probability of observing phoneId at frame timeId
-            size_t probId = tuID * totalPhoneNum + phoneId; // ID for p(y(u+1)|t,u)
-            //size_t betaId = maxPhoneNum * timeId + u;       //betaid for (t,u)
-            size_t probId_1, tuID_1, tuID_2;
-            probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
-            tuID_1 = tuID + phoneNum;                       //beta ID for (t+1,u)
-            tuID_2 = tuID + 1;                              //beid for (t,u+1)
-            if (u == phoneNum - 1 && t == frameNum - 1)
+            /*if (t > phoneBoundary)
             {
-                //probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
-                betaScore[tuID] = prob[probId_1];
+                betaScore[tuID] = LZERO;
             }
-            else if (u == phoneNum - 1)
-            {
+            else*/
 
-                betaScore[tuID] = betaScore[tuID_1] + prob[probId_1];
-            }
-            else if (t == frameNum - 1)
-            {
+            {                                                   // Index of probability of observing phoneId at frame timeId
+                size_t probId = tuID * totalPhoneNum + phoneId; // ID for p(y(u+1)|t,u)
+                //size_t betaId = maxPhoneNum * timeId + u;       //betaid for (t,u)
+                size_t probId_1, tuID_1, tuID_2;
+                probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
+                tuID_1 = tuID + phoneNum;                       //beta ID for (t+1,u)
+                tuID_2 = tuID + 1;                              //beid for (t,u+1)
+                if (u == phoneNum - 1 && t == frameNum - 1)
+                {
+                    //probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
+                    betaScore[tuID] = prob[probId_1];
+                }
+                else if (u == phoneNum - 1)
+                {
 
-                betaScore[tuID] = betaScore[tuID_2] + prob[probId];
+                    betaScore[tuID] = betaScore[tuID_1] + prob[probId_1];
+                }
+                else if (t == frameNum - 1)
+                {
+
+                    betaScore[tuID] = betaScore[tuID_2] + prob[probId];
+                }
+                else
+                {
+                    //probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
+                    ElemType x = LZERO, y = LZERO;
+                    x = betaScore[tuID_1] + prob[probId_1];
+                    y = betaScore[tuID_2] + prob[probId];
+                    betaScore[tuID] = LogAdd(x, y);
+                }
             }
-            else
+            //add penalty
+            /*if (u == phoneNum - 1 && delayConstraint != 0 && (size_t) phoneSeq[labelid] == blankTokenId - 1)
             {
-                //probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
-                ElemType x = LZERO, y = LZERO;
-                x = betaScore[tuID_1] + prob[probId_1];
-                y = betaScore[tuID_2] + prob[probId];
-                betaScore[tuID] = LogAdd(x, y);
+                int phoneBoundary = (int) (phoneBoundarySeq[labelid - 1] + 1);
+                if (delayConstraint > 0)
+                {
+                    //printf("boundary: %d\n", phoneBoundary);
+                    betaScore[tuID] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
+                    
+                }
+                else
+                {
+                    //int delayConstraintP = -delayConstraint;
+                    betaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
+                    
+                }
+            }*/
+        }
+    }
+}
+
+template <class ElemType>
+__global__ void _AddPenaltyEos(ElemType* alphaScore,
+                               ElemType* betaScore,
+                               ElemType* phoneSeq,
+                               ElemType* phoneBoundarySeq,
+                               ElemType* uttinfo,
+                               const size_t maxFrameNum, // Maximum length of utterance in this MB
+                               const size_t maxPhoneNum,
+                               const size_t numSequences,
+                               ElemType earlyP,
+                               ElemType lateP,
+                               int delayConstraint,
+                               size_t blankTokenId)
+{
+    const CUDA_LONG uttId = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    if (uttId < numSequences && t <= maxFrameNum)
+    {
+        size_t frameNum = (size_t) uttinfo[IDX2C(0, uttId, 12)];
+        size_t phoneNum = (size_t) uttinfo[IDX2C(1, uttId, 12)];
+        size_t uttBeginOutId = (size_t) uttinfo[IDX2C(6, uttId, 12)];
+
+        if (t < frameNum)
+        {
+            size_t u = phoneNum - 1;
+            // Current and previous phone indices in phoneSeq matrix
+            size_t labelid = uttId * maxPhoneNum + u;
+            //size_t phoneBoundary = (size_t)(phoneBoundarySeq[labelid]);
+            size_t tuID = uttBeginOutId + t * phoneNum + u; //tuID for (t,u)
+            size_t phoneId = (size_t)(phoneSeq[labelid]);
+            if (delayConstraint != 0 && phoneId == blankTokenId - 1)
+            {
+                int phoneBoundary = (int) (phoneBoundarySeq[labelid - 1] + 1);
+                if (delayConstraint > 0)
+                {
+                    //printf("boundary: %d\n", phoneBoundary);
+                    betaScore[tuID] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
+                    alphaScore[tuID] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
+                }
+                else
+                {
+                    //int delayConstraintP = -delayConstraint;
+                    betaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
+                    alphaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
+                }
             }
         }
     }
@@ -6832,6 +6945,36 @@ __global__ void _convertPhoneSeq(ElemType* in,
         }
     }
 }
+
+template <class ElemType>
+__global__ void _convertPhoneBoundary(ElemType* in,
+                                      ElemType* out,
+                                      ElemType* uttinfo,
+                                      size_t numSequences,
+                                      size_t numParallelseq,
+                                      size_t maxPhoneNum,
+                                      size_t delayConstraint)
+{
+    const CUDA_LONG uttID = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG u = blockIdx.y * blockDim.y + threadIdx.y;
+    ElemType endTime;
+    size_t FrameInd;
+    if (uttID < numSequences)
+    {
+        int phoneNum = (int) uttinfo[IDX2C(1, uttID, 12)];
+        ElemType frameNum = uttinfo[IDX2C(0, uttID, 12)];
+        int uttBeginPhoneId = (int) uttinfo[IDX2C(3, uttID, 12)];
+        int uttPhonetoChanId = (int) uttinfo[IDX2C(5, uttID, 12)];
+        if (u < phoneNum)
+        {
+            FrameInd = (u + uttBeginPhoneId) * numParallelseq + uttPhonetoChanId;
+            endTime = in[FrameInd];
+
+            out[IDX2C(u, uttID, maxPhoneNum)] = endTime;
+        }
+    }
+}
+
 template <class ElemType>
 __global__ void _assignUserOp1(ElemType* us,
                                ElemType* in1,
@@ -6888,7 +7031,7 @@ __global__ void _matrixTimeReduction(ElemType* us,
     if (uttID < numSequences)
     {
 
-        int frameNum = (int) uttinfo[IDX2C(0, uttID,  12)];
+        int frameNum = (int) uttinfo[IDX2C(0, uttID, 12)];
         int uttBeginFrameId = (int) uttinfo[IDX2C(2, uttID, 12)];
         int uttFrametoChanId = (int) uttinfo[IDX2C(4, uttID, 12)];
         int outframeNum = (int) ceil((float) frameNum / (float) factor);
@@ -7014,15 +7157,15 @@ __global__ void _assignUserOp1_mergeall(ElemType* us,
 
 template <class ElemType>
 __global__ void _assignUserOp1_cat(ElemType* us,
-                                        ElemType* in1,
-                                        ElemType* in2,
-                                        ElemType* uttinfo,
-                                        int BS,
-                                        int numSequences,
-                                        int numParallelSeq,
-                                        int numPhoneParallelSeq,
-                                        int sumYdim,
-                                        int totalUTNum)
+                                   ElemType* in1,
+                                   ElemType* in2,
+                                   ElemType* uttinfo,
+                                   int BS,
+                                   int numSequences,
+                                   int numParallelSeq,
+                                   int numPhoneParallelSeq,
+                                   int sumYdim,
+                                   int totalUTNum)
 {
     const CUDA_LONG tuIDl = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG k = blockIdx.y * blockDim.y + threadIdx.y;
@@ -7063,15 +7206,13 @@ __global__ void _assignUserOp1_cat(ElemType* us,
                 //for (int u = 0; u < phoneNum; u++)
                 {
                     //printf("K:%d,t:%d,u:%d\n", k,t,u);
-                    us[IDX2C(k, uttBeginOutId + t * phoneNum + u, 2*BS)] = in1[IDX3C(k, t + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)];
-                    us[IDX2C(k+BS, uttBeginOutId + t * phoneNum + u, 2*BS)] = in2[IDX3C(k, u + uttBeginPhoneId, uttPhonetoChanId, BS, numPhoneParallelSeq)];
+                    us[IDX2C(k, uttBeginOutId + t * phoneNum + u, 2 * BS)] = in1[IDX3C(k, t + uttBeginFrameId, uttFrametoChanId, BS, numParallelSeq)];
+                    us[IDX2C(k + BS, uttBeginOutId + t * phoneNum + u, 2 * BS)] = in2[IDX3C(k, u + uttBeginPhoneId, uttPhonetoChanId, BS, numPhoneParallelSeq)];
                 }
             }
         }
     }
 }
-
-
 
 template <class ElemType>
 __global__ void _assignUserOp1_s(ElemType* us,
@@ -7242,7 +7383,6 @@ __global__ void _assignUserOp2_all(ElemType* us,
     }
 }
 
-
 template <class ElemType>
 __global__ void _assignUserOp2_cat(ElemType* us,
                                    ElemType* in1,
@@ -7267,25 +7407,25 @@ __global__ void _assignUserOp2_cat(ElemType* us,
         int outBeinId = (int) uttinfo[IDX2C(6, uttID, 12)];
         if (Idx == 0)
         {
-            if (k < nRow/2 && t < frameNum)
+            if (k < nRow / 2 && t < frameNum)
             {
                 int timeId = (t + frameBeginId) * numParallelSequences + frameChanId;
                 for (int u = 0; u < phoneNum; u++)
                 {
                     int tuId = outBeinId + t * phoneNum + u;
-                    us[IDX2C(k, timeId, nRow/2)] += in1[IDX2C(k, tuId, nRow)];
+                    us[IDX2C(k, timeId, nRow / 2)] += in1[IDX2C(k, tuId, nRow)];
                 }
             }
         }
         else
         {
-            if (k < nRow/2 && t < phoneNum)
+            if (k < nRow / 2 && t < phoneNum)
             {
                 int timeId = (t + phoneBeginId) * numPhoneParallelSequences + phoneChanId;
                 for (int u = 0; u < frameNum; u++)
                 {
                     int tuId = outBeinId + u * phoneNum + t;
-                    us[IDX2C(k, timeId, nRow/2)] += in1[IDX2C(k+nRow/2, tuId, nRow)];
+                    us[IDX2C(k, timeId, nRow / 2)] += in1[IDX2C(k + nRow / 2, tuId, nRow)];
                 }
             }
         }

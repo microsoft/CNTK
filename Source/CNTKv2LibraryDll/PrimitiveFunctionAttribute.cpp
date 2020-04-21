@@ -80,6 +80,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameReductionFactor = L"ReductionFactor";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameCombineMode = L"combineMode";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameDelayConstraint = L"DelayConstraint";
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameEarlyP = L"EarlyP";
+    /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameLateP= L"LateP";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameBlankTokenId = L"BlankTokenId";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNamePhonePath = L"PhonePath";
     /*static*/ const std::wstring PrimitiveFunctionAttribute::AttributeNameSymListPath = L"SymListPath";

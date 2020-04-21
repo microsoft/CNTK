@@ -51,8 +51,18 @@ struct MLFSequenceData : SparseSequenceData
     MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries, const NDShape& frameShape)
         : MLFSequenceData(numberOfSamples, frameShape)
     {
-        for (auto boundary : phoneBoundaries)
-            m_values[boundary] = s_phoneBoundary;
+        //RNNT
+        if (numberOfSamples == phoneBoundaries.size())
+        {
+            for (size_t i = 0; i < phoneBoundaries.size(); i++)
+                m_values[i] = (float) phoneBoundaries[i];
+        }
+        //CTC
+        else
+        {
+            for (auto boundary : phoneBoundaries)
+                m_values[boundary] = s_phoneBoundary;
+        }
     }
 
     const void* GetDataBuffer() override
@@ -173,25 +183,41 @@ public:
                 return;
             }*/
             // Packing labels for the utterance into sparse sequence.
-            vector<size_t> sequencePhoneBoundaries(m_deserializer.m_withPhoneBoundaries ? utterance.size() : 0);
-            if (m_deserializer.m_withPhoneBoundaries)
+
+            vector<size_t> sequencePhoneBoundaries(0);
+
+            if (m_deserializer.m_withPhoneBoundaries && !m_deserializer.m_squashLabel)
             {
+                sequencePhoneBoundaries.resize(utterance.size());
                 for (size_t i = 0; i < utterance.size(); ++i)
                     sequencePhoneBoundaries[i] = utterance[i].FirstFrame();
+            }
+            // word boundary for RNNT
+            else if (m_deserializer.m_withPhoneBoundaries && m_deserializer.m_squashLabel)
+            {
+                size_t phoneBoundNum = utterance.size() + 1;
+                sequencePhoneBoundaries.resize(phoneBoundNum);
+                for (size_t i = 0; i < phoneBoundNum-1; i++)
+                {
+                    sequencePhoneBoundaries[i] = utterance[i].FirstFrame();
+                }
+                sequencePhoneBoundaries[phoneBoundNum - 1] = utterance[phoneBoundNum - 2].FirstFrame() + utterance[phoneBoundNum-2].NumFrames();
             }
             size_t numberOfSamples = 0;
             if (m_deserializer.m_squashLabel)
                 numberOfSamples = utterance.size() + 1;
             else
                 numberOfSamples = sequence.m_numberOfSamples;
-
+            //if (!m_deserializer.m_squashLabel)
             auto s = make_shared<MLFSequenceData<ElementType>>(numberOfSamples, sequencePhoneBoundaries, m_deserializer.m_streams.front().m_sampleLayout);
+
             auto* startRange = s->m_indices;
             if (m_deserializer.m_squashLabel && m_deserializer.m_blankInFront)
             {
                 fill(startRange, startRange + 1, static_cast<IndexType>(m_deserializer.m_blankID));
                 startRange += 1;
             }
+            //size_t lastwordbegin = 0;
             for (const auto& range : utterance)
             {
                 if (range.ClassId() >= m_deserializer.m_dimension)
@@ -206,6 +232,7 @@ public:
                 }
                 else
                 {
+
                     fill(startRange, startRange + 1, static_cast<IndexType>(range.ClassId()));
                     startRange += 1;
                 }

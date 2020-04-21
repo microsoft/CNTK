@@ -548,9 +548,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Forwa
 }
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RNNT(const ComputationNodePtr graph, const ComputationNodePtr uttinfo, const ComputationNodePtr mergedinput,
-                                                                                const ComputationNodePtr W, const ComputationNodePtr b, int blankTokenId, int delayConstraint, const std::wstring nodeName)
+                                                                                const ComputationNodePtr W, const ComputationNodePtr b, const ComputationNodePtr phoneBoundary, int blankTokenId, 
+    ElemType earlyP, ElemType lateP, int delayConstraint, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<RNNTNode<ElemType>>(net.GetDeviceId(), nodeName, blankTokenId, delayConstraint), {graph, uttinfo, mergedinput, W, b});
+    return net.AddNodeToNetAndAttachInputs(New<RNNTNode<ElemType>>(net.GetDeviceId(), nodeName, blankTokenId, earlyP, lateP, delayConstraint), {graph, uttinfo, mergedinput, W, b, phoneBoundary});
 }
 
 template <class ElemType>

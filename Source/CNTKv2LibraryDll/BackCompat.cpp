@@ -551,6 +551,8 @@ private:
         {
             auto edNode = node->As<RNNTNode<ElementType>>();
             primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameDelayConstraint] = edNode->DelayConstraint();
+            primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameEarlyP] = edNode->earlyP();
+            primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameLateP] = edNode->lateP();
             primitiveFunctionConfigParameters[PrimitiveFunctionAttribute::AttributeNameBlankTokenId] = edNode->BlankTokenId();
 
             opType = PrimitiveOpType::RNNT;

@@ -7651,7 +7651,8 @@ template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRNNTScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq,
                                                           const CPUMatrix<ElemType>& phoneBoundary, const CPUMatrix<ElemType>& uttInfo, const size_t numParallelSequences,
                                                           const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
-                                                          CPUMatrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+                                                          CPUMatrix<ElemType>& totalScore, const size_t blankTokenId, const ElemType earlyP,
+                                                          const ElemType lateP, const int delayConstraint, const bool isColWise)
 
 {
     // Column wise representation of sequences in input matrices (each column is one sequence/utterance)

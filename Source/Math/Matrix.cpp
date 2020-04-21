@@ -6274,7 +6274,8 @@ Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob,
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
                                                     const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, const Matrix<ElemType>& uttInfo, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxPhoneNum, const size_t maxFrameNum,
-                                                    Matrix<ElemType>& totalScore, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+                                                    Matrix<ElemType>& totalScore, const size_t blankTokenId, const ElemType earlyP,
+                                                    const ElemType lateP, const int delayConstraint, const bool isColWise)
 {
     //DecideAndMoveToRightDevice(prob, *this);
 
@@ -6298,9 +6299,9 @@ alpha._transferToDevice(CPUDEVICE);
     DISPATCH_MATRIX_ON_FLAG(&prob,
                             this,
                             this->m_CPUMatrix->AssignRNNTScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, *uttInfo.m_CPUMatrix, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_CPUMatrix, blankTokenId,
-                                                               delayConstraint, isColWise),
+                                                               earlyP, lateP, delayConstraint, isColWise),
                             this->m_GPUMatrix->AssignRNNTScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, *uttInfo.m_GPUMatrix, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_GPUMatrix, blankTokenId,
-                                                               delayConstraint, isColWise),
+                                                               earlyP, lateP, delayConstraint, isColWise),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 
