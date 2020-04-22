@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(SolutionDir)\CNTK.Common.props" />
   <PropertyGroup>
-    <CudaVersion />
+    
     <CudaVersion Condition="Exists('$(CUDA_PATH_V10_0)') And '$(CudaVersion)' == ''">10.0</CudaVersion>
 
     <NvmlDll>%ProgramW6432%\NVIDIA Corporation\NVSMI\nvml.dll</NvmlDll>
