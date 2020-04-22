@@ -11,12 +11,6 @@
 #define __UNIX__
 #endif
 
-#if defined(_MSC_VER) && (_MSC_VER <= 1800 /*VS2013*/)
-#define THREAD_LOCAL __declspec(thread)
-#else
-#define THREAD_LOCAL thread_local
-#endif
-
 // ===========================================================================
 // compiler differences
 // ===========================================================================
@@ -25,20 +19,6 @@
 #define __declspec_noreturn __declspec(noreturn)
 #else
 #define __declspec_noreturn __attribute__((noreturn))
-#endif
-
-#if defined(_MSC_VER) && (_MSC_VER <= 1800 /*VS2013*/)
-#include "xkeycheck.h" // this header checks whether one attempted to redefine keywords incl. 'noexcept', so must include before redefining it
-#undef noexcept
-#define noexcept throw() // noexcept not defined in VS2013, but needed for gcc to pick the correct overload for constructor/assignment from an rvalue ref
-#endif
-
-#if defined(_MSC_VER) && (_MSC_VER <= 1800 /*VS2013*/)
-#define __func__ __FUNCTION__
-#endif
-
-#if defined(_MSC_VER) && (_MSC_VER <= 1800 /*VS2013*/)
-#define snprintf _snprintf
 #endif
 
 // ===========================================================================
