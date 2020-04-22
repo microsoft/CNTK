@@ -200,7 +200,6 @@ IGNORE_FUNCTION CNTK::Function::Serialize;
 IGNORE_FUNCTION CNTK::Function::Deserialize;
 IGNORE_FUNCTION CNTK::Function::Function;
 IGNORE_FUNCTION CNTK::Function::RestoreFromCheckpoint;
-IGNORE_FUNCTION CNTK::Function::Gradients;
 IGNORE_FUNCTION CNTK::Function::RegisterNativeUserFunction;
 IGNORE_FUNCTION CNTK::Function::NativeUserFunction;
 IGNORE_FUNCTION CNTK::Function::SetAttribute;
@@ -213,7 +212,9 @@ IGNORE_FUNCTION CNTK::NCELoss;
 
 #ifndef SWIGCSHARP
 IGNORE_CLASS CNTK::TrainingParameterSchedule;
+IGNORE_FUNCTION CNTK::Function::Gradients;
 #else
+RENAME_AND_MAKE_PRIVATE(CNTK::Function, Gradients);
 %ignore CNTK::TrainingParameterSchedule::TrainingParameterSchedule(TrainingParameterSchedule<T>&&); 
 %ignore CNTK::TrainingParameterSchedule::operator=;
 %ignore CNTK::TrainingParameterSchedule::Transform;

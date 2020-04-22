@@ -214,6 +214,69 @@ namespace CNTK
         }
 
         /// <summary>
+        /// Evaluate the gradients.
+        /// </summary>
+        /// <param name="inputs">Dictionary specifying the inputs to the function.</param>
+        /// <param name="gradients">Dictionary specifying the variables to calculate the
+        /// gradients with respect to.</param>
+        /// <param name="computeDevice"></param>
+        public void Gradients(
+                IDictionary<Variable, Value> inputs,
+                IDictionary<Variable, Value> gradients,
+                DeviceDescriptor computeDevice
+                )
+        {
+            var outputsToEvaluate = new Dictionary<Variable, Value>();
+            Gradients(inputs, gradients, outputsToEvaluate, computeDevice);
+        }
+
+        /// <summary>
+        /// Evaluate the gradients and preserve some output values from the
+        /// forward pass.
+        /// </summary>
+        /// <param name="inputs">Dictionary specifying the inputs to the function.</param>
+        /// <param name="gradients">Dictionary specifying the variables to calculate the
+        /// gradients with respect to.</param>
+        /// <param name="outputsToEvaluate">Dictionary specifying the output variables to
+        /// evaluate on the forward pass.</param>
+        /// <param name="computeDevice"></param>
+        public void Gradients(
+                IDictionary<Variable, Value> inputs,
+                IDictionary<Variable, Value> gradients,
+                IDictionary<Variable, Value> outputsToEvaluate,
+                DeviceDescriptor computeDevice
+                )
+        {
+            var inputMap = new UnorderedMapVariableValuePtr();
+            var gradientMap = new UnorderedMapVariableValuePtr();
+            var outputMap = new UnorderedMapVariableValuePtr();
+            foreach (var p in inputs)
+            {
+                inputMap.Add(p.Key, p.Value);
+            }
+            foreach (var p in gradients)
+            {
+                gradientMap.Add(p.Key, p.Value);
+            }
+            foreach (var p in outputsToEvaluate)
+            {
+                outputMap.Add(p.Key, p.Value);
+            }
+
+            _Gradients(inputMap, gradientMap, outputMap, computeDevice);
+
+            foreach (var p in gradientMap)
+            {
+                // for shared_ptr<Value>, the p.Value returns a copy, so it is safe to use it directly in outputs.
+                gradients[p.Key] = p.Value;
+            }
+            foreach (var p in outputMap)
+            {
+                outputsToEvaluate[p.Key] = p.Value;
+            }
+        }
+
+        /// <summary>
         /// Find the function with the specified name.
         /// </summary>
         /// <param name="name"></param>
