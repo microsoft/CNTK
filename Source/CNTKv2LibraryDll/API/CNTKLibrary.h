@@ -6126,6 +6126,101 @@ namespace CNTK
     }
 
     ///
+    /// Collection of informations for transform configuration in image feature stream configuration.
+    /// The construction of configuration is left to the library users.
+    ///
+    using TransformConfig = ::CNTK::Dictionary;
+
+    ///
+    /// Collection of informations for feature stream configuration in image minibatch source.
+    ///
+    struct ImageFeatureStreamConfiguration
+    {
+        ImageFeatureStreamConfiguration(const std::wstring& streamName, const std::vector<TransformConfig>& transformConfigs)
+            : m_streamName(streamName), m_transformConfigs(transformConfigs)
+        {}
+
+        ImageFeatureStreamConfiguration(const std::wstring& streamName, std::vector<TransformConfig>&& transformConfigs)
+            : m_streamName(streamName), m_transformConfigs(std::move(transformConfigs))
+        {}
+
+        std::wstring m_streamName;
+        std::vector<TransformConfig> m_transformConfigs;
+    };
+
+    ///
+    /// Collection of informations for label stream configuration in image minibatch source.
+    ///
+    struct ImageLabelStreamConfiguration
+    {
+        ImageLabelStreamConfiguration(const std::wstring& streamName, size_t labelDim)
+            : m_streamName(streamName), m_labelDim(labelDim)
+        {}
+
+        std::wstring m_streamName;
+        size_t m_labelDim;
+    };
+
+    ///
+    /// Instantiate the CNTK built-in image minibatch source
+    ///
+    inline MinibatchSourcePtr ImageMinibatchSource(const std::wstring& mapFilePath, 
+        const std::vector<ImageFeatureStreamConfiguration>& featureStreamConfigs,
+        const ImageLabelStreamConfiguration& labelStreamConfig,
+        size_t epochSize = MinibatchSource::InfinitelyRepeat,
+        bool randomize = true,
+        size_t randomizationWindow = MinibatchSource::DefaultRandomizationWindow,
+        bool sampleBasedRandomizationWindow = true)
+    {
+        ::CNTK::Dictionary minibatchSourceConfiguration;
+        minibatchSourceConfiguration[L"epochSize"] = epochSize;
+
+        if (randomize)
+        {
+            minibatchSourceConfiguration[L"randomize"] = true;
+            minibatchSourceConfiguration[L"randomizationWindow"] = randomizationWindow;
+            minibatchSourceConfiguration[L"sampleBasedRandomizationWindow"] = sampleBasedRandomizationWindow;
+        }
+
+        ::CNTK::Dictionary deserializerConfiguration;
+        deserializerConfiguration[L"type"] = L"ImageDeserializer";
+        deserializerConfiguration[L"file"] = mapFilePath;
+
+        ::CNTK::Dictionary inputStreamsConfig;
+
+        for (auto streamConfig : featureStreamConfigs)
+        {
+            std::wstring streamName = streamConfig.m_streamName;
+
+            ::CNTK::Dictionary inputStreamConfig;
+            std::vector<::CNTK::DictionaryValue> transformConfigs;
+
+            // For conversion from ::CTNK::Dictionary to ::CNTK::DictionaryValue
+            for (auto transformConfig : streamConfig.m_transformConfigs)
+            {
+                transformConfigs.push_back(transformConfig);
+            }
+
+            inputStreamConfig[L"transforms"] = transformConfigs;
+            inputStreamsConfig[streamName] = inputStreamConfig;
+        }
+
+        {
+            std::wstring streamName = labelStreamConfig.m_streamName;
+            size_t labelDim = labelStreamConfig.m_labelDim;
+
+            ::CNTK::Dictionary inputStreamConfig;
+            inputStreamConfig[L"labelDim"] = labelDim;
+
+            inputStreamsConfig[streamName] = inputStreamConfig;
+        }
+
+        deserializerConfiguration[L"input"] = inputStreamsConfig;
+        minibatchSourceConfiguration[L"deserializers"] = std::vector<::CNTK::DictionaryValue>({ deserializerConfiguration });
+        return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+    }
+
+    ///
     /// Compute the per dimension means and variances for each of the specified streams using data from the specified minibatchSource.
     ///
     CNTK_API void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,
