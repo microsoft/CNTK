@@ -51,8 +51,9 @@ def cntk_check_distro_info():
         # warn the user CNTK may not work out of the box
         __my_distro__ = __my_distro__.lower()
         __my_distro_ver__ = __my_distro_ver__.lower()
+        __my_distro_ver_yy__ = __my_distro_ver__.split('.')[0] if __my_distro__ == 'ubuntu' else 0
 
-        if __my_distro__ != 'ubuntu' or __my_distro_ver__ != '16.04':
+        if __my_distro__ != 'ubuntu' or int(__my_distro_ver_yy__) < 16:
             warnings.warn('Unsupported Linux distribution (%s-%s). CNTK supports Ubuntu 16.04 and above, only.' % (__my_distro__, __my_distro_ver__))
     else:
         warnings.warn('Unsupported platform (%s). CNTK supports Linux and Windows platforms, only.' % __my_system__)
