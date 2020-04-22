@@ -5034,6 +5034,7 @@ namespace CNTK
     };
 
     typedef TrainingParameterSchedule<double> LearningRateSchedule;
+	typedef TrainingParameterSchedule<double> WeightDecaySchedule;
     typedef TrainingParameterSchedule<double> MomentumSchedule;
     typedef TrainingParameterSchedule<size_t> MinibatchSizeSchedule;
     
@@ -5083,6 +5084,7 @@ namespace CNTK
     {
         double l1RegularizationWeight = 0.0;
         double l2RegularizationWeight = 0.0;
+		WeightDecaySchedule weightDecay = 0.0;
         TrainingParameterSchedule<double> gaussianNoiseInjectionStdDev = 0.0;
         double gradientClippingThresholdPerSample = std::numeric_limits<double>::infinity();
         bool gradientClippingWithTruncation = true;
