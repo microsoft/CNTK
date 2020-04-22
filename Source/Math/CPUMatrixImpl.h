@@ -375,7 +375,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddToRowSliceValuesOf(const CPUMatrix<
         LogicError("AddToRowSliceValuesOf: startIndex + numRows exceeds GetNumRows().");
 
     if (a.GetNumCols() != GetNumCols())
-        LogicError("AddToRowSliceValuesOf: columns does not match.");
+        LogicError("AddToRowSliceValuesOf: columns do not match.");
 
     long n = (long) a.GetNumCols(), m = (long) numRows;
 
@@ -416,7 +416,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddWithRowSliceValuesOf(const CPUMatri
         LogicError("AddWithRowSliceValuesOf: startIndex + numRows exceeds a.GetNumRows().");
 
     if (a.GetNumCols() != GetNumCols())
-        LogicError("AddWithRowSliceValuesOf: columns does not match.");
+        LogicError("AddWithRowSliceValuesOf: columns do not match.");
 
     long n = (long) a.GetNumCols(), m = (long) numRows;
 
@@ -654,7 +654,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
 
     auto& us = *this;
     // race-condition consideration: Since this loops over independent output columns, this has no race condition. Cf. DoScatterColumnsOf().
-#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
+#pragma omp parallel for // TODO: Depending on the circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jOut, us)
     {
         auto jInF = idx(0, jOut);         // this is the column we need to get
@@ -1713,7 +1713,7 @@ CPUMatrix<ElemType> CPUMatrix<ElemType>::operator+(const CPUMatrix<ElemType>& a)
     }
     else
     {
-        CPUMatrix<ElemType> c(*this); // this implementation will introduce a copy overhead. but make resue of the code
+        CPUMatrix<ElemType> c(*this); // this implementation will introduce a copy overhead, but make reuse of the code
         c += a;
         return c;
     }
@@ -1823,7 +1823,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::operator-=(const CPUMatrix<ElemType>& 
 template <class ElemType>
 CPUMatrix<ElemType> CPUMatrix<ElemType>::operator-(const CPUMatrix<ElemType>& a) const
 {
-    CPUMatrix<ElemType> c(*this); // this implementation will introduce a copy overhead. but make resue of the code
+    CPUMatrix<ElemType> c(*this); // this implementation will introduce a copy overhead, but make reuse of the code
     c -= a;
     return c;
 }
@@ -4637,13 +4637,13 @@ void CPUMatrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapI
                                                   const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
 {
     if (mpRowCol.GetNumRows() % mapOutCount != 0)
-        InvalidArgument("The number of rows in mpRowCol must be multiple of mapOutCount.");
+        InvalidArgument("The number of rows in mpRowCol must be a multiple of mapOutCount.");
     size_t mapOutSize = mpRowCol.GetNumRows() / mapOutCount;
     size_t batchSize = GetNumCols();
 
     size_t kernelSize = runs(1, 0);
     if (kernelSize % mapInCount != 0)
-        InvalidArgument("kernelSize must be multiple of mapInCount.");
+        InvalidArgument("kernelSize must be a multiple of mapInCount.");
     size_t kernelMapSize = kernelSize / mapInCount;
 
 #pragma omp parallel for
@@ -6263,7 +6263,7 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
     }
     else if (isColWise) // col-wise
     {
-        c.RequireSize(negnumber + 1, n); // this line ischanged
+        c.RequireSize(negnumber + 1, n); // this line is changed
 
         ElemType* aBufPtr = a.Data();
         ElemType* bBufPtr = b.Data();
@@ -7303,7 +7303,7 @@ void CPUMatrix<ElemType>::ScatterValues(ElemType* indices, ElemType* value, Elem
             if (std::isnan(col_r) || col_r < 0)
                 continue;
             auto col = (size_t)col_r;
-            //ignore the elements that is not partitioned into this thread
+            //ignore the elements that are not partitioned into this thread
             if (col % nthread != ithread)
                 continue;
             //check if colMask is invalid
