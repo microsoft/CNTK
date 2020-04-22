@@ -70,8 +70,11 @@ void CheckMask(const ValuePtr testValue, const vector<size_t>& seqLenList, const
 
 // Check the actual Value match the expected shape and the given data (in dense format)
 template <typename ElementType>
-void CheckValue(const ValuePtr testValue, const NDShape& sampleShape, const vector<vector<ElementType>>& expectedData, const vector<size_t>& seqLenList, const vector<bool>& seqStartFlags = {})
+void CheckValue(const ValuePtr testValue, const NDShape& sampleShape, const vector<vector<ElementType>>& expectedData, bool expectedReadonliness, const vector<size_t>& seqLenList, const vector<bool>& seqStartFlags = {})
 {
+    // Check readonly attribute.
+    BOOST_TEST(testValue->IsReadOnly() == expectedReadonliness, "The IsReadOnly() returns unexpected value.");
+
     size_t sampleSize = sampleShape.TotalSize();
     // Check parameters
     BOOST_TEST(expectedData.size() == seqLenList.size(), "Parameter error: the sequence number in the exepected data and sequence list does not match.");
@@ -134,8 +137,11 @@ void CheckValue(const ValuePtr testValue, const NDShape& sampleShape, const vect
 
 // Check the actual Value match the expected shape and the given data (in onehot vector format)
 template <typename ElementType>
-void CheckValue(const ValuePtr testValue, const size_t dimension, const vector<vector<size_t>>& expectedData, const vector<size_t>& seqLenList, const vector<bool>& seqStartFlags = {})
+void CheckValue(const ValuePtr testValue, const size_t dimension, const vector<vector<size_t>>& expectedData, bool expectedReadonliness, const vector<size_t>& seqLenList, const vector<bool>& seqStartFlags = {})
 {
+    // Check readonly attribute.
+    BOOST_TEST(testValue->IsReadOnly() == expectedReadonliness, "The IsReadOnly() returns unexpected value.");
+
     // Check parameters
     BOOST_TEST(expectedData.size() == seqLenList.size(), "Parameter error: the sequence number in the exepected data and sequence list does not match.");
     for (size_t i = 0; i < expectedData.size(); i++)
@@ -206,13 +212,13 @@ void ValueCreationNoNDMaskTest(const DeviceDescriptor device, bool readOnly)
     std::vector<size_t> seqLenList = {1};
     data = GenerateSequences<ElementType>(seqLenList, sampleShape);
     testValue = Value::Create(sampleShape, data, device, readOnly);
-    CheckValue(testValue, sampleShape, data, seqLenList);
+    CheckValue(testValue, sampleShape, data, readOnly, seqLenList);
 
     // Single sequence, multiple samples
     seqLenList = {2};
     data = GenerateSequences<ElementType>(seqLenList, sampleShape);
     testValue = Value::Create(sampleShape, data, device, readOnly);
-    CheckValue(testValue, sampleShape, data, seqLenList);
+    CheckValue(testValue, sampleShape, data, readOnly, seqLenList);
 
     // Batch with sequences
 
@@ -232,7 +238,7 @@ void ValueCreationNoNDMaskTest(const DeviceDescriptor device, bool readOnly)
         // Create the Value object based on the given data and shape.
         testValue = Value::Create(sampleShape, data, device, readOnly);
         // Check whether the created value matches expected shape and data.
-        CheckValue(testValue, sampleShape, data, seqLenListBatch);
+        CheckValue(testValue, sampleShape, data, readOnly, seqLenListBatch);
     }
 }
 
@@ -258,7 +264,7 @@ void ValueCreationWithNDMaskTest(const DeviceDescriptor device, bool readOnly)
         data = GenerateSequences<ElementType>(seqLenList, sampleShape);
 
         ValuePtr testValue = Value::Create(sampleShape, data, device, readOnly);
-        CheckValue(testValue, sampleShape, data, seqLenList);
+        CheckValue(testValue, sampleShape, data, readOnly, seqLenList);
     }
 
     // Test with only 1 sequence with a sequenceStartFlag=false to ensure a mask
@@ -266,7 +272,7 @@ void ValueCreationWithNDMaskTest(const DeviceDescriptor device, bool readOnly)
     data = GenerateSequences<ElementType>(seqLenList, sampleShape);
 
     ValuePtr testValue = Value::Create(sampleShape, data, {false}, device, readOnly);
-    CheckValue(testValue, sampleShape, data, seqLenList, {false} );
+    CheckValue(testValue, sampleShape, data, readOnly, seqLenList, {false} );
 }
 
 template <typename ElementType>
@@ -280,13 +286,13 @@ void ValueCreationOneHotNoNDMaskTest(const DeviceDescriptor device, bool readOnl
     std::vector<size_t> seqLenList = {1};
     data = GenerateOneHotSequences(seqLenList, vocabSize);
     testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
-    CheckValue<ElementType>(testValue, vocabSize, data, seqLenList);
+    CheckValue<ElementType>(testValue, vocabSize, data, readOnly, seqLenList);
 
     // Single sequence, multiple samples
     seqLenList = {2};
     data = GenerateOneHotSequences(seqLenList, vocabSize);
     testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
-    CheckValue<ElementType>(testValue, vocabSize, data, seqLenList);
+    CheckValue<ElementType>(testValue, vocabSize, data, readOnly, seqLenList);
 
     size_t maxNumOfSequences = 160;
     size_t seqLen = 26;
@@ -301,7 +307,7 @@ void ValueCreationOneHotNoNDMaskTest(const DeviceDescriptor device, bool readOnl
 
         data = GenerateOneHotSequences(seqLenListBatch, vocabSize);
         testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
-        CheckValue<ElementType>(testValue, vocabSize, data, seqLenListBatch);
+        CheckValue<ElementType>(testValue, vocabSize, data, readOnly, seqLenListBatch);
     }
 }
 
@@ -327,7 +333,7 @@ void ValueCreationOneHotWithNDMaskTest(const DeviceDescriptor device, bool readO
         maxSeqLen = *std::max_element(seqLenList.begin(), seqLenList.end());
         data = GenerateOneHotSequences(seqLenList, vocabSize);
         ValuePtr testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
-        CheckValue<ElementType>(testValue, vocabSize, data, seqLenList);
+        CheckValue<ElementType>(testValue, vocabSize, data, readOnly, seqLenList);
     }
 }
 
@@ -1061,7 +1067,7 @@ void CreateBatchTestDense(const DeviceDescriptor device, bool readOnly)
         expectedResult.push_back(vector<ElementType>(data[0].begin() + i, data[0].begin() + i + sampleSize));
     }
     vector<size_t> resultSeqLen(data[0].size()/sampleSize, 1);
-    CheckValue(testValue, sampleShape, expectedResult, resultSeqLen);
+    CheckValue(testValue, sampleShape, expectedResult, readOnly, resultSeqLen);
 
     vector<ElementType> wrongBatch(sampleSize * 2 - 1, 0);
     VerifyException([&sampleShape, &wrongBatch, &device, &readOnly]() {
@@ -1090,21 +1096,21 @@ void CreateSequenceTestDense(const DeviceDescriptor device, bool readOnly)
     auto data = GenerateSequences<ElementType>(seqLenList, sampleShape);
     auto seq = data[0];
     auto testValue = Value::CreateSequence(sampleShape, seq, device, readOnly);
-    CheckValue(testValue, sampleShape, data, seqLenList);
+    CheckValue(testValue, sampleShape, data, readOnly, seqLenList);
 
     // Test seqStartFlag is true
     seqLenList = GenerateSequenceLengths(batchCount, maxSequenceLen);
     data = GenerateSequences<ElementType>(seqLenList, sampleShape);
     seq = data[0];
     testValue = Value::CreateSequence(sampleShape, seq, true, device, readOnly);
-    CheckValue(testValue, sampleShape, data, seqLenList, { true });
+    CheckValue(testValue, sampleShape, data, readOnly, seqLenList, { true });
 
     // Test seqStartFlag is false
     seqLenList = GenerateSequenceLengths(batchCount, maxSequenceLen);
     data = GenerateSequences<ElementType>(seqLenList, sampleShape);
     seq = data[0];
     testValue = Value::CreateSequence(sampleShape, seq, false, device, readOnly);
-    CheckValue(testValue, sampleShape, data, seqLenList, { false });
+    CheckValue(testValue, sampleShape, data, readOnly, seqLenList, { false });
 
     vector<ElementType> wrongSeq(sampleSize * 2 - 1, 0);
     VerifyException([&sampleShape, &wrongSeq, &device, &readOnly]() {
@@ -1134,20 +1140,20 @@ void CreateBatchOfSequencesTestDense(const DeviceDescriptor device, bool readOnl
     auto data = GenerateSequences<ElementType>(seqLenList, sampleShape);
     vector<bool> seqStartFlags = { true, true };
     auto testValue = Value::CreateBatchOfSequences(sampleShape, data, seqStartFlags, device, readOnly);
-    CheckValue(testValue, sampleShape, data, seqLenList, seqStartFlags);
+    CheckValue(testValue, sampleShape, data, readOnly, seqLenList, seqStartFlags);
 
     seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
     data = GenerateSequences<ElementType>(seqLenList, sampleShape);
     seqStartFlags = { false, false };
     testValue = Value::CreateBatchOfSequences(sampleShape, data, seqStartFlags, device, readOnly);
-    CheckValue(testValue, sampleShape, data, seqLenList, seqStartFlags);
+    CheckValue(testValue, sampleShape, data, readOnly, seqLenList, seqStartFlags);
 
     batchCount = 3;
     seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
     data = GenerateSequences<ElementType>(seqLenList, sampleShape);
     seqStartFlags = { true, false, true };
     testValue = Value::CreateBatchOfSequences(sampleShape, data, seqStartFlags, device, readOnly);
-    CheckValue(testValue, sampleShape, data, seqLenList, seqStartFlags);
+    CheckValue(testValue, sampleShape, data, readOnly, seqLenList, seqStartFlags);
 
     int testRun = 4;
     std::default_random_engine generator;
@@ -1158,13 +1164,13 @@ void CreateBatchOfSequencesTestDense(const DeviceDescriptor device, bool readOnl
         seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
         data = GenerateSequences<ElementType>(seqLenList, sampleShape);
         testValue = Value::CreateBatchOfSequences(sampleShape, data, device, readOnly);
-        CheckValue(testValue, sampleShape, data, seqLenList);
+        CheckValue(testValue, sampleShape, data, readOnly, seqLenList);
 
         seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
         data = GenerateSequences<ElementType>(seqLenList, sampleShape);
         seqStartFlags = GenerateSequenceStartFlags(batchCount);
         testValue = Value::CreateBatchOfSequences(sampleShape, data, seqStartFlags, device, readOnly);
-        CheckValue(testValue, sampleShape, data, seqLenList, seqStartFlags);
+        CheckValue(testValue, sampleShape, data, readOnly, seqLenList, seqStartFlags);
     }
 }
 
@@ -1190,7 +1196,7 @@ void CreateBatchTestOneHot(const DeviceDescriptor device, bool readOnly)
         expectedResult.push_back(vector<size_t>(1, data[0][i]));
     }
     vector<size_t> resultSeqLen(data[0].size(), 1);
-    CheckValue<ElementType>(testValue, dimSize, expectedResult, resultSeqLen);
+    CheckValue<ElementType>(testValue, dimSize, expectedResult, readOnly, resultSeqLen);
 
     auto emptyBatch = vector<size_t>(0);
     VerifyException([&dimSize, &emptyBatch, &device, &readOnly]() {
@@ -1213,7 +1219,7 @@ void CreateSequenceTestOneHot(const DeviceDescriptor device, bool readOnly)
     auto data = GenerateOneHotSequences(seqLenList, dimSize);
     auto seq = data[0];
     auto testValue = Value::CreateSequence<ElementType>(dimSize, seq, device, readOnly);
-    CheckValue<ElementType>(testValue, dimSize, data, seqLenList);
+    CheckValue<ElementType>(testValue, dimSize, data, readOnly, seqLenList);
 
     // Test seqStartFlag is true
     dimSize = dimSizeDistribution(dimSizeGenerator);
@@ -1221,7 +1227,7 @@ void CreateSequenceTestOneHot(const DeviceDescriptor device, bool readOnly)
     data = GenerateOneHotSequences(seqLenList, dimSize);
     seq = data[0];
     testValue = Value::CreateSequence<ElementType>(dimSize, seq, true, device, readOnly);
-    CheckValue<ElementType>(testValue, dimSize, data, seqLenList, { true });
+    CheckValue<ElementType>(testValue, dimSize, data, readOnly, seqLenList, { true });
 
     // Test seqStartFlag is false
     dimSize = dimSizeDistribution(dimSizeGenerator);
@@ -1229,7 +1235,7 @@ void CreateSequenceTestOneHot(const DeviceDescriptor device, bool readOnly)
     data = GenerateOneHotSequences(seqLenList, dimSize);
     seq = data[0];
     testValue = Value::CreateSequence<ElementType>(dimSize, seq, false, device, readOnly);
-    CheckValue<ElementType>(testValue, dimSize, data, seqLenList, { false });
+    CheckValue<ElementType>(testValue, dimSize, data, readOnly, seqLenList, { false });
 
     auto emptySeq = vector<size_t>(0);
     VerifyException([&dimSize, &emptySeq, &device, &readOnly]() {
@@ -1256,14 +1262,14 @@ void CreateBatchOfSequencesTestOneHot(const DeviceDescriptor device, bool readOn
     auto data = GenerateOneHotSequences(seqLenList, dimSize);
     vector<bool> seqStartFlags = { true, true };
     auto testValue = Value::CreateBatchOfSequences<ElementType>(dimSize, data, seqStartFlags, device, readOnly);
-    CheckValue<ElementType>(testValue, dimSize, data, seqLenList, seqStartFlags);
+    CheckValue<ElementType>(testValue, dimSize, data, readOnly, seqLenList, seqStartFlags);
 
     dimSize = dimSizeDistribution(dimSizeGenerator);
     seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
     data = GenerateOneHotSequences(seqLenList, dimSize);
     seqStartFlags = { false, false };
     testValue = Value::CreateBatchOfSequences<ElementType>(dimSize, data, seqStartFlags, device, readOnly);
-    CheckValue<ElementType>(testValue, dimSize, data, seqLenList, seqStartFlags);
+    CheckValue<ElementType>(testValue, dimSize, data, readOnly, seqLenList, seqStartFlags);
 
     batchCount = 3;
     dimSize = dimSizeDistribution(dimSizeGenerator);
@@ -1271,7 +1277,7 @@ void CreateBatchOfSequencesTestOneHot(const DeviceDescriptor device, bool readOn
     data = GenerateOneHotSequences(seqLenList, dimSize);
     seqStartFlags = { true, false, true };
     testValue = Value::CreateBatchOfSequences<ElementType>(dimSize, data, seqStartFlags, device, readOnly);
-    CheckValue<ElementType>(testValue, dimSize, data, seqLenList, seqStartFlags);
+    CheckValue<ElementType>(testValue, dimSize, data, readOnly, seqLenList, seqStartFlags);
 
     int testRun = 4;
     std::default_random_engine generator;
@@ -1283,13 +1289,13 @@ void CreateBatchOfSequencesTestOneHot(const DeviceDescriptor device, bool readOn
         seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
         data = GenerateOneHotSequences(seqLenList, dimSize);
         testValue = Value::CreateBatchOfSequences<ElementType>(dimSize, data, device, readOnly);
-        CheckValue<ElementType>(testValue, dimSize, data, seqLenList);
+        CheckValue<ElementType>(testValue, dimSize, data, readOnly, seqLenList);
 
         seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
         data = GenerateOneHotSequences(seqLenList, dimSize);
         seqStartFlags = GenerateSequenceStartFlags(batchCount);
         testValue = Value::CreateBatchOfSequences<ElementType>(dimSize, data, seqStartFlags, device, readOnly);
-        CheckValue<ElementType>(testValue, dimSize, data, seqLenList, seqStartFlags);
+        CheckValue<ElementType>(testValue, dimSize, data, readOnly, seqLenList, seqStartFlags);
     }
 }
 
@@ -1350,6 +1356,46 @@ void CreateSequenceTestSparse(const DeviceDescriptor device, bool readOnly)
     sparseValue = Value::CreateSequence<ElementType>({ dimSize, dimSize }, seqLen, colsStarts.data(), rowIndices.data(), nonZeroValues.data(), numNonZeroValues, device, readOnly);
     denseValue = Value::CreateSequence({ dimSize, dimSize }, referenceDenseData, device, readOnly);
     CheckSparseValueEqualToDenseValue(sparseValue, denseValue, device);
+}
+
+
+void ValueCreateReadOnlyTest(const DeviceDescriptor device)
+{
+    vector<size_t> dims{ 3, 2 };
+    NDShape sampleShape(dims);
+    auto seqLenList = GenerateSequenceLengths(1, 10);
+    auto data = GenerateSequences<float>(seqLenList, sampleShape);
+    auto seq = data[0];
+    auto shapeSize = sampleShape.TotalSize();
+    ValuePtr testValue;
+
+    BOOST_TEST(seq.size() % shapeSize == 0, "The number of elements in the sequence data must be a multiple of the size of the sample shape");
+
+    // Test Value::Create() creates a Value object with correct readOnly setting.
+    std::vector<bool> isReadOnlyNDArrayView = { false, true };
+    for (int i = 0; i < isReadOnlyNDArrayView.size(); i++)
+    {
+        auto sequenceLength = seq.size() / shapeSize;
+        std::vector<NDArrayViewPtr> sequencesView(1);
+        auto sequenceDataShape = sampleShape.AppendShape({ sequenceLength });
+        sequencesView[0] = MakeSharedObject<NDArrayView>(sequenceDataShape, seq, isReadOnlyNDArrayView[i]);
+        // Test readOnly is true.
+        testValue = Value::Create(sampleShape, sequencesView, { true }, device, /*readOnly =*/ true, /*createNewCopy =*/ false);
+        BOOST_TEST(testValue->IsReadOnly() == true, "The created value should be read-only.");
+        testValue = Value::Create(sampleShape, sequencesView, { true }, device, /*readOnly =*/ true, /*createNewCopy =*/ true);
+        BOOST_TEST(testValue->IsReadOnly() == true, "The created value should be read-only.");
+        // Test readOnly is false.
+        testValue = Value::Create(sampleShape, sequencesView, { true }, device, /*readOnly =*/ false, /*createNewCopy =*/ false);
+        BOOST_TEST(testValue->IsReadOnly() == false, "The created value should not be read-only.");
+        testValue = Value::Create(sampleShape, sequencesView, { true }, device, /*readOnly =*/ false, /*createNewCopy =*/ true);
+        BOOST_TEST(testValue->IsReadOnly() == false, "The created value should not be read-only.");
+    }
+
+    // Use Value::CreateSequence() to create a sequence with length 1, and checks the readonly setting.
+    testValue = Value::CreateSequence(sampleShape, seq, true, device, /*readOnly =*/ true);
+    BOOST_TEST(testValue->IsReadOnly() == true, "The created value should be read-only.");
+    testValue = Value::CreateSequence(sampleShape, seq, true, device, /*readOnly =*/ false);
+    BOOST_TEST(testValue->IsReadOnly() == false, "The created value should not be read-only.");
 }
 
 struct ValueFixture
@@ -1678,6 +1724,23 @@ BOOST_AUTO_TEST_CASE(ValueCopyToExceptionsInGPU)
         ValueCopyToExceptionsTest(DeviceDescriptor::GPUDevice(0));
     }
 }
+
+BOOST_AUTO_TEST_CASE(ValueCreateReadOnlyInCPU)
+{
+    if (ShouldRunOnCpu())
+    {
+        ValueCreateReadOnlyTest(DeviceDescriptor::CPUDevice());
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ValueCreateReadOnlyInGPU)
+{
+    if (ShouldRunOnGpu())
+    {
+        ValueCreateReadOnlyTest(DeviceDescriptor::GPUDevice(0));
+    }
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 
