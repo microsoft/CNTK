@@ -138,7 +138,7 @@ namespace CNTK
                 }
                 std::copy(data->DataBuffer<float>(), data->DataBuffer<float>() + size, v.data);
                 result.get()[i] = v;
-                valCleaner.release();
+                valCleaner.reset(nullptr);
             }
         }
 

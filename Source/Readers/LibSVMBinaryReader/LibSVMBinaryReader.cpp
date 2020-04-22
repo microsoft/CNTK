@@ -217,6 +217,8 @@ SparseBinaryInput<ElemType>::SparseBinaryInput(std::wstring fileName)
 template <class ElemType>
 SparseBinaryInput<ElemType>::~SparseBinaryInput()
 {
+    free(m_readOrder);
+    free(m_tempValues);
 }
 
 template <class ElemType>

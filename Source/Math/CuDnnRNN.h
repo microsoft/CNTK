@@ -159,7 +159,7 @@ public:
             int dimW[3] = { (int)m_filterSize, 1, 1 };
             CUDNN_CALL(cudnnSetFilterNdDescriptor(m_filterDesc, m_dataType, CUDNN_TENSOR_NCHW, 3, dimW));
         }
-        catch (exception e)
+        catch (exception& e)
         {
             cudnnDestroyFilterDescriptor(m_filterDesc);
             m_filterDesc = nullptr;
