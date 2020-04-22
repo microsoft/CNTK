@@ -1332,6 +1332,17 @@ public:
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<TransposeDimensionsNode<ElemType>>(nodeP);
+            node->m_axis1 = m_axis1;
+            node->m_axis2 = m_axis2;
+        }
+    }
+
     void Save(File& fstream) const
     {
         Base::Save(fstream);
