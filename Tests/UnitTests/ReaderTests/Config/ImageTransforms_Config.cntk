@@ -88,3 +88,27 @@ reader = [
         )
     ]
 ]
+
+ScaleSmallerDimension_Test = [
+reader = [
+        verbosity = 0
+        randomize = true
+
+        deserializers = (
+            [
+                type = "ImageDeserializer"
+                module = "ImageReader"
+                file = "$RootDir$/ImageReader4x8_map.txt"
+                input = [
+                    features = [
+                        transforms = (
+                           [ type = "Scale" ; width = 2 ; height = 8 ; channels = 3 ; interpolations = "linear" ]
+                        )
+                    ]
+                    labels = [ labelDim = 10 ]
+                ]
+            ]
+        )
+    ]
+]
+

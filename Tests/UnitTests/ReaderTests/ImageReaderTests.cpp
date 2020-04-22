@@ -519,6 +519,23 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingScaleTransforms)
         });
 }
 
+BOOST_AUTO_TEST_CASE(ImageReaderScaleSmallerDimension)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageTransforms_Config.cntk",
+        testDataPath() + "/Control/ImageReaderScaleSmallerDimension_Control.txt",
+        testDataPath() + "/Control/ImageReaderScaleSmallerDimension_Output.txt",
+        "ScaleSmallerDimension_Test",
+        "reader",
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        1);
+}
+
 BOOST_AUTO_TEST_CASE(ImageReaderNoMatchingIds)
 {
     BOOST_REQUIRE_EXCEPTION(
