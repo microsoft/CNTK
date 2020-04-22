@@ -118,6 +118,7 @@ class CntkLayerType(Enum):
     lrn = 13
     psroi_pooling = 14
     softmax = 15
+    prelu = 16
     unknown = 100
 
 
