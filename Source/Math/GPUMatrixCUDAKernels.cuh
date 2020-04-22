@@ -5867,17 +5867,17 @@ __global__ void _assignRNNTAlphaScore2(
                 //alphaId_2 = alphaId - numChannels * maxPhoneNum;  //alpha ID for [t-1, u]
                 probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
                 ElemType prob_t_u_1 = prob[probId_1];
-                if (u == phoneNum - 1 && delayConstraint != 0 && (size_t) phoneId == blankTokenId - 1)
+                /*if (u == phoneNum - 1 && delayConstraint != 0 && (size_t) phoneId == blankTokenId - 1)
                 {
                     int phoneBoundary = (int) (phoneBoundarySeq[labelid - 1] + 1);
-                    /*if (t == 239)
+                    if (t == 239)
                     {
                         printf("boundary: %d\n", phoneBoundary);
                         printf("phoneId: %d\n", (int) phoneId);
                         
                             printf("prob before: %f\n", prob_t_u_1);
                         
-                    }*/
+                    }
                     if (delayConstraint > 0)
                     {
                         //printf("boundary: %d\n", phoneBoundary);
@@ -5893,14 +5893,14 @@ __global__ void _assignRNNTAlphaScore2(
                         prob_t_u_1 = -0.00001;
                         printf("boundary: %d\n", phoneBoundary);
                         printf("phoneId: %d\n", (int) phoneId);
-                        printf("t: %d\n", (int)t);
+                        printf("t: %d\n", (int) t);
                         printf("prob: %f\n", prob_t_u_1);
                     }
-                    /*if (t == 239)
+                    if (t == 239)
                     {
                         printf("prob after: %f\n", prob_t_u_1);
-                    }*/
-                }
+                    }
+                }*/
                 if (t == 0 && u == 0)
                 {
                     alphaScore[tuID] = 0.0;
@@ -6011,15 +6011,15 @@ __global__ void _assignRNNTBetaScore2(
                 tuID_2 = tuID + 1;                              //beid for (t,u+1)
                 //ElemType prob_t_u_b = prob[probId_1];
                 ElemType prob_t_u = prob[probId];
-                if (u == phoneNum - 2 && delayConstraint != 0 && (size_t) phoneId == blankTokenId - 1)
+                /*if (u == phoneNum - 2 && delayConstraint != 0 && (size_t) phoneId == blankTokenId - 1)
                 {
                     int phoneBoundary = (int) (phoneBoundarySeq[labelid] + 1);
-                    /*if (t == 239)
+                    if (t == 239)
                     {
                         printf("boundary: %d\n", phoneBoundary);
                         printf("phoneId: %d\n", (int) phoneId);
                         printf("prob before: %f\n", prob_t_u);
-                    }*/
+                    }
                     if (delayConstraint > 0)
                     {
                         //printf("boundary: %d\n", phoneBoundary);
@@ -6038,7 +6038,7 @@ __global__ void _assignRNNTBetaScore2(
                         printf("t: %d\n", (int) t);
                         printf("prob: %f\n", prob_t_u);
                     }
-                }
+                }*/
                 if (u == phoneNum - 1 && t == frameNum - 1)
                 {
                     //probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
@@ -6128,6 +6128,71 @@ __global__ void _AddPenaltyEos(ElemType* alphaScore,
                     //int delayConstraintP = -delayConstraint;
                     betaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
                     alphaScore[tuID] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
+                }
+            }
+        }
+    }
+}
+
+template <class ElemType>
+__global__ void _AddPenaltyEosProb(ElemType* prob,
+                                   ElemType* phoneSeq,
+                                   ElemType* phoneBoundarySeq,
+                                   ElemType* uttinfo,
+                                   const size_t maxFrameNum, // Maximum length of utterance in this MB
+                                   const size_t maxPhoneNum,
+                                   const size_t numSequences,
+                                   ElemType earlyP,
+                                   ElemType lateP,
+                                   int delayConstraint,
+                                   size_t blankTokenId,
+                                   size_t totalPhoneNum)
+{
+    const CUDA_LONG uttId = blockIdx.x * blockDim.x + threadIdx.x;
+    const CUDA_LONG t = blockIdx.y * blockDim.y + threadIdx.y;
+    if (uttId < numSequences && t <= maxFrameNum)
+    {
+        size_t frameNum = (size_t) uttinfo[IDX2C(0, uttId, 12)];
+        size_t phoneNum = (size_t) uttinfo[IDX2C(1, uttId, 12)];
+        size_t uttBeginOutId = (size_t) uttinfo[IDX2C(6, uttId, 12)];
+
+        if (t < frameNum)
+        {
+            size_t u = phoneNum - 2;
+            // Current and previous phone indices in phoneSeq matrix
+            size_t labelid = uttId * maxPhoneNum + u;
+            //size_t phoneBoundary = (size_t)(phoneBoundarySeq[labelid]);
+            size_t tuID = uttBeginOutId + t * phoneNum + u; //tuID for (t,u)
+            size_t phoneId = (size_t)(phoneSeq[labelid + 1]);
+            size_t probId = tuID * totalPhoneNum + phoneId;
+            size_t probId_blank = tuID * totalPhoneNum + blankTokenId;
+
+            if (delayConstraint != 0 && phoneId == blankTokenId - 1)
+            {
+                int phoneBoundary = (int) (phoneBoundarySeq[labelid] + 1);
+                //printf("t:%d phone prob before: %f\n", (int) t, prob[probId]);
+                //printf("t:%d blank prob before: %f\n", (int) t, prob[probId_blank]);
+                if (delayConstraint > 0)
+                {
+                    //printf("boundary: %d\n", phoneBoundary);
+                    prob[probId] += max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
+                    if (prob[probId] >= 0.0f)
+                    {
+                        prob[probId] = -0.0001;
+                        printf("t:%d, bound:%d,  %f\n", t, phoneBoundary, prob[probId]);
+                    }
+                    //prob[probId_blank] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
+                }
+                else
+                {
+                    //int delayConstraintP = -delayConstraint;
+                    prob[probId] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
+                    //prob[probId_blank] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary + delayConstraint));
+                }
+                //if (t > phoneBoundary + delayConstraint)
+                {
+                    // printf("t:%d phone prob: %f\n", (int)t, prob[probId]);
+                    // printf("t:%d blank prob: %f\n", (int)t, prob[probId_blank]);
                 }
             }
         }

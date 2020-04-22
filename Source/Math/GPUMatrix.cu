@@ -4716,33 +4716,45 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         _convertPhoneSeq<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneSeq.Data(), matrixPhoneSeq.Data(), uttInfo.Data(), numSequences, numPhoneParallelSequences, maxPhoneNum);
         _convertPhoneBoundary<<<block_tail_c, thread_tail, 0, t_stream>>>(phoneBoundary.Data(), matrixPhoneBoundary.Data(), uttInfo.Data(), numSequences, numPhoneParallelSequences, maxPhoneNum, delayConstraint);
         //phoneBoundary.Print("phone boundary");
-        matrixPhoneBoundary.Print("phones boundary");
-        matrixPhoneSeq.Print("phone seq");
-        uttInfo.Print("uttinf");
-        //prob.Print("prob"); 
+        //matrixPhoneBoundary.Print("phones boundary");
+        //matrixPhoneSeq.Print("phone seq");
+        //uttInfo.Print("uttinf");
+        //prob.Print("prob");
         //add penalty to the probability of </s>
 
-            //cal alpha and beta
-            int blocksPerGrid = (int) ceil(1.0 * numSequences / GridDim::maxThreadsPerBlock);
+        //pre-process prob for EOS DCT
+
+        GPUMatrix<ElemType> prob_eos(prob.GetComputeDeviceId());
+        prob_eos.SetValue(prob);
+        //prob_eos.Print("prob before", 0, prob.GetNumRows() - 1, 3999, 4002); 
+        if (delayConstraint != 0)
+        {
+            dim3 block_tail_t((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+            _AddPenaltyEosProb<<<block_tail_t, thread_tail, 0, t_stream>>>(prob_eos.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
+                                                                           uttInfo.Data(), maxFrameNum, maxPhoneNum, numSequences, earlyP, lateP, delayConstraint, blankTokenId, totalPhoneNum);
+        }
+        //prob_eos.Print("prob after", 0, prob.GetNumRows() - 1, 3999, 4002);
+        //cal alpha and beta
+        int blocksPerGrid = (int) ceil(1.0 * numSequences / GridDim::maxThreadsPerBlock);
         size_t maxTU = maxFrameNum + maxPhoneNum - 1;
         for (size_t tu = 0; tu < maxTU; tu++)
         {
             dim3 block_tail3((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (tu + DEFAULT_THREAD_PER_DIM) / DEFAULT_THREAD_PER_DIM);
 
-            _assignRNNTAlphaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob.Data(), alpha.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
+            _assignRNNTAlphaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob_eos.Data(), alpha.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                               uttInfo.Data(), tu,
                                                                               maxPhoneNum, totalPhoneNum, blankTokenId, numSequences, earlyP, lateP, delayConstraint);
         }
         for (int tu = maxTU - 1; tu >= 0; tu--)
         {
             dim3 block_tail3((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (tu + DEFAULT_THREAD_PER_DIM) / DEFAULT_THREAD_PER_DIM);
-            _assignRNNTBetaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob.Data(), beta.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
+            _assignRNNTBetaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob_eos.Data(), beta.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                              uttInfo.Data(), tu,
                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, numSequences, earlyP, lateP, delayConstraint);
         }
 
-        beta.Print("beta");
-        alpha.Print("alpha");
+        //beta.Print("beta");
+        //alpha.Print("alpha");
 
         /*if (delayConstraint != 0)
         {
