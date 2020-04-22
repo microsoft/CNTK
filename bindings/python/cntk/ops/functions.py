@@ -1466,7 +1466,7 @@ class Function(cntk_py.Function):
                     else:
                         config[0] = cb
             else:
-                ValueError('callbacks list can only contain objects of type ProgressWriter, CheckpointConfig, CrossValidationConfig, and TestConfig.')
+                raise ValueError('callbacks list can only contain objects of type ProgressWriter, CheckpointConfig, CrossValidationConfig, and TestConfig.')
         # use a progress tracker to capture the loss, metric, and count values
         if progress_frequency is None and epoch_size is not None: # if epoch size is given then default training summary frequency to it
             progress_frequency = epoch_size
@@ -1528,7 +1528,7 @@ class Function(cntk_py.Function):
         # callbacks. Only ProgressWriter is allowed in test()
         from ..cntk_py import ProgressWriter
         if callbacks and any(not isinstance(cb, ProgressWriter) for cb in callbacks):
-            ValueError('callbacks list must only contain objects of type ProgressWriter')
+            raise ValueError('callbacks list must only contain objects of type ProgressWriter')
         progress_writers = callbacks or []
         evaluator = Evaluator(output, progress_writers + [collector])
 
