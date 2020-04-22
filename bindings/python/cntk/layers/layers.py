@@ -135,7 +135,11 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
         infer_input_rank_to_map = map_rank  # infer W to use all input dims except the first static 'map_rank' ones
 
     # parameters bound to this Function
-    init_weights = _initializer_for(init, Record(output_rank=output_rank))
+    if isinstance(init, np.ndarray):
+        init_weights = init
+    else:
+        init_weights = _initializer_for(init, Record(output_rank=output_rank))
+
     W = Parameter(input_shape + output_shape, init=init_weights, name='W')
     b = Parameter(              output_shape, init=init_bias,    name='b') if bias else None
 
