@@ -4699,6 +4699,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                           std::vector<float>& vt_probs,
                                                           const std::vector<float>& vt_wer,
                                                           const std::vector<size_t>& vt_labseqlen,
+                                                          const std::vector<size_t>& vt_numWords,
+                                                          const std::vector<size_t>& accum_nBest,
                                                           bool lengthNorm,
                                                           bool wordPathPosteriorFromDecodeMBR,
                                                           bool doMBR,
@@ -4734,9 +4736,24 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 
         if (uttFNum != uttPNum)
         {
-            assert(uttFNum == 1);
-            for (size_t i = 0; i < uttPNum; i++)
-                uttFrameNumExtend[i] = (uttFrameNum[0]);
+            assert(uttFNum == accum_nBest.size());
+            assert(accum_nBest.back() == uttPNum);
+
+            for (size_t i = 0; i < accum_nBest.size(); i++)
+            {
+                size_t sidx, eidx;
+                if (i == 0)
+                    sidx = 0;
+                else
+                    sidx = accum_nBest[i - 1];
+                eidx = accum_nBest[i];
+                for (size_t j = sidx; j < eidx; j++)
+                {
+                    uttFrameNumExtend[j] = (uttFrameNum[i]);
+                }
+            }
+            //for (size_t i = 0; i < uttPNum; i++)
+            //    uttFrameNumExtend[i] = (uttFrameNum[0]);
         }
         else
         {
@@ -4824,69 +4841,92 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
             if (!wordPathPosteriorFromDecodeMBR)
             {
                 //logadd is not supported in this file, so change to regular add
-
-                float totalProb = 0;
-                for (size_t s = 0; s < (uttNum - 1); s++) // as the last one is the reference, not used in MWER
-                //for (size_t s = 0; s < (uttNum); s++) // as the last one is the reference, not used in MWER
+                for (size_t i = 0; i < accum_nBest.size(); i++)
                 {
-                    size_t zeroID = uttBeginForOutputditribution[s]; //beta id for (0,0)
+                    size_t sidx, eidx;
+                    if (i == 0)
+                        sidx = 0;
+                    else
+                        sidx = accum_nBest[i - 1];
+                    eidx = accum_nBest[i];
 
-                    vt_probs[s] = (float) (cpubeta[zeroID]);
-                    if (enableMultiThreadDecodeMBR != 2) // not runtime
+                    float totalProb = 0;
+                    for (size_t s = sidx; s < (eidx - 1); s++) // as the last one is the reference, not used in MWER
+                    //for (size_t s = 0; s < (uttNum); s++) // as the last one is the reference, not used in MWER
                     {
-                        if (lengthNorm)
-                            vt_probs[s] /= vt_labseqlen[s];
-                    }
-                    else //runtime code, the decode score follows runtime code
-                    {
-                        vt_probs[s] += ((vt_labseqlen[s] - 1) * insertionBoostInFinalBeam);
+                        size_t zeroID = uttBeginForOutputditribution[s]; //beta id for (0,0)
 
-                        switch (scoreNormKind)
+                        vt_probs[s] = (float) (cpubeta[zeroID]);
+                        if (enableMultiThreadDecodeMBR != 2) // not runtime
                         {
-                        case 0:
-                            break;
-
-                        case 1:
-                            vt_probs[s] /= (vt_labseqlen[s]);
-                            break;
-
-                        case 2:
-                            if (vt_labseqlen[s] > 1)
-                                vt_probs[s] /= (vt_labseqlen[s] - 1);
-                            break;
-
-                        case 3:
-                            vt_probs[s] /= float(sqrt(vt_labseqlen[s]));
-                            break;
-
-                        default:
-                            break;
+                            if (lengthNorm)
+                                vt_probs[s] /= vt_labseqlen[s];
                         }
-                    }
-                    vt_probs[s] = exp(vt_probs[s]);
-                    totalProb += vt_probs[s];
-                }
+                        else //runtime code, the decode score follows runtime code
+                        {
+                            vt_probs[s] += ((vt_labseqlen[s] - 1) * insertionBoostInFinalBeam);
 
-                for (size_t s = 0; s < (uttNum - 1); s++)
+                            switch (scoreNormKind)
+                            {
+                            case 0:
+                                break;
+
+                            case 1:
+                                vt_probs[s] /= (vt_labseqlen[s]);
+                                break;
+
+                            case 2:
+                                if (vt_labseqlen[s] > 1)
+                                    vt_probs[s] /= (vt_labseqlen[s] - 1);
+                                break;
+
+                            case 3:
+                                vt_probs[s] /= float(sqrt(vt_labseqlen[s]));
+                                break;
+
+                            default:
+                                break;
+                            }
+                        }
+                        vt_probs[s] = exp(vt_probs[s]);
+                        totalProb += vt_probs[s];
+                    }
+
+                    //for (size_t s = 0; s < (uttNum - 1); s++)
+                    for (size_t s = sidx; s < (eidx - 1); s++)
+                    {
+                        vt_probs[s] /= totalProb;
+                    }
+                }
+            }
+            float total_avg_wer = 0;
+            size_t total_nws = 0;
+            for (size_t i = 0; i < accum_nBest.size(); i++)
+            {
+                float avg_wer = 0;
+                size_t sidx, eidx;
+                if (i == 0)
+                    sidx = 0;
+                else
+                    sidx = accum_nBest[i - 1];
+                eidx = accum_nBest[i];
+
+                for (size_t s = sidx; s < eidx - 1; s++)
                 //for (size_t s = 0; s < (uttNum ); s++)
                 {
-                    vt_probs[s] /= totalProb;
+                    avg_wer += (vt_probs[s] * vt_wer[s]);
                 }
+                for (size_t s = sidx; s < eidx - 1; s++)
+                //for (size_t s = 0; s < (uttNum ); s++)
+                {
+                    vt_probs[s] = (avg_wer - vt_wer[s]) * vt_probs[s]; // now vt_probs[s] stores the weight
+                }
+                total_nws += vt_numWords[i];
+                total_avg_wer += avg_wer * vt_numWords[i];
             }
-            float avg_wer = 0;
-            for (size_t s = 0; s < uttNum - 1; s++)
-            //for (size_t s = 0; s < (uttNum ); s++)
-            {
-                avg_wer += vt_probs[s] * vt_wer[s];
-            }
+            total_avg_wer /= float(total_nws);
 
-            for (size_t s = 0; s < uttNum - 1; s++)
-            // for (size_t s = 0; s < (uttNum); s++)
-            {
-                vt_probs[s] = (avg_wer - vt_wer[s]) * vt_probs[s]; // now vt_probs[s] stores the weight
-            }
-
-            ElemType var = ElemType(avg_wer);
+            ElemType var = ElemType(total_avg_wer);
             totalScore.SetColumn(&var, 0);
         }
 
@@ -4918,24 +4958,32 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         //num_row = GetNumRows();
         //num_col = GetNumCols();
         //vector<ElemType> cpudata(num_row * num_col);
-
-        for (int s = 0; s < uttNum; s++)
+        for (size_t i = 0; i < accum_nBest.size(); i++)
         {
-            if (doMBR)
+            size_t sidx, eidx;
+            if (i == 0)
+                sidx = 0;
+            else
+                sidx = accum_nBest[i - 1];
+            eidx = accum_nBest[i];
+
+            for (int s = sidx; s < eidx; s++)
             {
-                
-                if (s != (uttNum - 1))
-                    _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
-                                                                                  uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, vt_probs[s] * mbrWeight);
+                if (doMBR)
+                {
+
+                    if (s != (eidx - 1))
+                        _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
+                                                                                      uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, vt_probs[s] * mbrWeight);
+                    else
+                        _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
+                                                                                      uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, ceWeight);
+                }
                 else
                     _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
-                                                                                  uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, ceWeight);
+                                                                                  uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, 1);
             }
-            else
-                _assignRNNTScoreS2<<<block_tail2, thread_tail, 0, t_stream>>>(Data(), gpuDerivativeValue, alpha.Data(), beta.Data(), matrixPhoneSeq.Data(), uttFrameNumExtend[s], uttPhoneNum[s],
-                                                                              uttBeginForOutputditribution[s], maxPhoneNum, totalPhoneNum, blankTokenId, s, 1);
         }
-
         /*
         fprintf(stderr, "debug  mbrWeight = %f, ceWeight = %f \n", float(mbrWeight), float(ceWeight));
 
@@ -4986,7 +5034,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1, GPUMatrix<ElemType>& in2, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
                                                         const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
-                                                        const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
+                                                        const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences,
+                                                        const vector<size_t>& accum_nBest)
 {
     if (in1.IsEmpty() || in2.IsEmpty())
         LogicError("AssignElementProductOf: Matrix is empty.");
@@ -5001,8 +5050,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
 
     int numSequences = uttFrameToChanInd.size();
     int numPhoneSequences = uttPhoneToChanInd.size();
+    numPhoneSequences;
     // the output matrix is of size (nt+1, BS)
-    assert(numSequences == numPhoneSequences || numSequences == 1);
+    assert(numSequences == numPhoneSequences || numSequences == accum_nBest.size());
     dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
     // x dimension is for each phone
     // y dimention is for each time
@@ -5010,15 +5060,24 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
     dim3 block_tail((BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
     in1.PrepareDevice();
     SyncGuard syncGuard;
-
-    for (int s = 0; s < numPhoneSequences; s++)
+    for (size_t i = 0; i < accum_nBest.size(); i++)
     {
-        if (numSequences == 1)
-            _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, (int) uttFrameNum[0], (int) uttPhoneNum[s], (int) uttFrameToChanInd[0],
-                                                                               (int) uttPhoneToChanInd[s], (int) uttFrameBeginIdx[0], (int) uttPhoneBeginIdx[s], (int) uttBeginForOutputditribution[s], (int) numParallelSequences, (int) numPhoneParallelSequences);
+        size_t sidx, eidx;
+        if (i == 0)
+            sidx = 0;
         else
-            _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, (int) uttFrameNum[s], (int) uttPhoneNum[s], (int) uttFrameToChanInd[s],
-                                                                               (int) uttPhoneToChanInd[s], (int) uttFrameBeginIdx[s], (int) uttPhoneBeginIdx[s], (int) uttBeginForOutputditribution[s], (int) numParallelSequences, (int) numPhoneParallelSequences);
+            sidx = accum_nBest[i - 1];
+        eidx = accum_nBest[i];
+
+        for (int s = sidx; s < eidx; s++)
+        {
+            if (numSequences != numPhoneSequences)
+                _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, (int) uttFrameNum[i], (int) uttPhoneNum[s], (int) uttFrameToChanInd[i],
+                                                                                   (int) uttPhoneToChanInd[s], (int) uttFrameBeginIdx[i], (int) uttPhoneBeginIdx[s], (int) uttBeginForOutputditribution[s], (int) numParallelSequences, (int) numPhoneParallelSequences);
+            else
+                _assignUserOp1<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), in2.Data(), BS, (int) uttFrameNum[s], (int) uttPhoneNum[s], (int) uttFrameToChanInd[s],
+                                                                                   (int) uttPhoneToChanInd[s], (int) uttFrameBeginIdx[s], (int) uttPhoneBeginIdx[s], (int) uttBeginForOutputditribution[s], (int) numParallelSequences, (int) numPhoneParallelSequences);
+        }
     }
 
     return *this;
@@ -5030,7 +5089,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp1(GPUMatrix<ElemType>& in1
 template <class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
                                                         const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
-                                                        const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
+                                                        const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences,
+                                                        const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx, const vector<size_t>& accum_nBest)
 {
     int nRow = in1.GetNumRows();
     int numSequences = uttFrameToChanInd.size();
@@ -5047,7 +5107,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
         nCol = maxPhoneNum;
     }
 
-    assert(numSequences == numPhoneSequences || numSequences == 1);
+    assert(numSequences == numPhoneSequences || numSequences == accum_nBest.size());
     dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
     // x dimension is for phone
     // y dimention is for time
@@ -5076,32 +5136,39 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignUserOp2(GPUMatrix<ElemType>& in1
     size_t *gpuUttOutBeginId;
     CUDA_CALL(cudaMalloc((void **)&gpuUttOutBeginId, uttNum * sizeof(size_t)));
     CUDA_CALL(cudaMemcpy(gpuUttOutBeginId, uttBeginForOutputditribution.data(), uttNum * sizeof(size_t), cudaMemcpyHostToDevice));*/
-
-    for (int s = 0; s < numPhoneSequences; s++)
+    for (size_t i = 0; i < accum_nBest.size(); i++)
     {
-        int frameNum, frameBeginId, frameChanId;
-        if (numSequences == 1)
-        {
-            frameNum = (int) uttFrameNum[0];
-            frameBeginId = (int) uttFrameBeginIdx[0];
-            frameChanId = (int) uttFrameToChanInd[0];
-        }
+        size_t sidx, eidx;
+        if (i == 0)
+            sidx = 0;
         else
+            sidx = accum_nBest[i - 1];
+        eidx = accum_nBest[i];
+        for (int s = sidx; s < eidx; s++)
         {
-            frameNum = (int) uttFrameNum[s];
-            frameBeginId = (int) uttFrameBeginIdx[s];
-            frameChanId = (int) uttFrameToChanInd[s];
+            int frameNum, frameBeginId, frameChanId;
+            if (numSequences != numPhoneSequences)
+            {
+                frameNum = (int) uttFrameNum[i];
+                frameBeginId = (int) uttFrameBeginIdx[i];
+                frameChanId = (int) uttFrameToChanInd[i];
+            }
+            else
+            {
+                frameNum = (int) uttFrameNum[s];
+                frameBeginId = (int) uttFrameBeginIdx[s];
+                frameChanId = (int) uttFrameToChanInd[s];
+            }
+
+            int phoneNum = (int) uttPhoneNum[s];
+            int phoneBeginId = (int) uttPhoneBeginIdx[s];
+            int phoneChanId = (int) uttPhoneToChanInd[s];
+            int outBeginId = (int) uttBeginForOutputditribution[s];
+
+            _assignUserOp2<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), nRow, frameNum, phoneNum, frameBeginId,
+                                                                               phoneBeginId, frameChanId, phoneChanId, outBeginId, numParallelSequences, numPhoneParallelSequences, s, Idx);
         }
-
-        int phoneNum = (int) uttPhoneNum[s];
-        int phoneBeginId = (int) uttPhoneBeginIdx[s];
-        int phoneChanId = (int) uttPhoneToChanInd[s];
-        int outBeginId = (int) uttBeginForOutputditribution[s];
-
-        _assignUserOp2<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), in1.Data(), nRow, frameNum, phoneNum, frameBeginId,
-                                                                           phoneBeginId, frameChanId, phoneChanId, outBeginId, numParallelSequences, numPhoneParallelSequences, s, Idx);
     }
-
     //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(Data(), a.Data(), b.Data(), nt);
 
     return *this;

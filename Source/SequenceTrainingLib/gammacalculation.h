@@ -406,6 +406,8 @@ public:
                                std::vector<float>& vt_probs,
                                const std::vector<float>& vt_wer,
                                const std::vector<size_t>& vt_labseqlen,
+                               const std::vector<size_t>& vt_numWords,
+                               const std::vector<size_t>& accum_nBest,
                                bool lengthNorm = false,
                                bool wordPathPosteriorFromDecodeMBR = false,
                                bool doMBR = false,
@@ -422,7 +424,7 @@ public:
 
         const auto numPhoneSequences = phoneMBLayout->GetNumSequences();
         //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
-        assert(numSequences == numPhoneSequences || numSequences == 1);
+        assert(numSequences == numPhoneSequences || numSequences == accum_nBest.size());
         const size_t numRows = F.GetNumRows();
         const size_t numCols = F.GetNumCols();
         const size_t numPhoneCols = G.GetNumCols();
@@ -513,17 +515,38 @@ public:
 
         //calculate the memory need for f*g
         std::vector<size_t> uttBeginForOutputditribution;
-        uttBeginForOutputditribution.reserve(numSequences);
+        uttBeginForOutputditribution.reserve(numPhoneSequences);
 
+        if (accum_nBest.back() != numPhoneSequences)
+        {
+            fprintf(stderr, "twodimForwardBackward, accum_nbest.bac() = %d, is not equal to numPhoneSequence = %d \n", int(accum_nBest.back()), int(numPhoneSequences));
+            exit(-1);
+        }
         size_t totalcol = 0;
+        for (size_t i = 0; i < accum_nBest.size(); i++)
+        {
+            size_t sidx, eidx;
+            if (i == 0)
+                sidx = 0;
+            else
+                sidx = accum_nBest[i - 1];
+            eidx = accum_nBest[i];
+            for (size_t j = sidx; j < eidx; j++)
+            {
+                uttBeginForOutputditribution.push_back(totalcol);
+
+                totalcol += uttFrameNum[i] * uttPhoneNum[j];
+            }
+        }
+        /*
         for (size_t s = 0; s < numPhoneSequences; s++)
         {
-            uttBeginForOutputditribution.push_back(totalcol);
             if (numSequences == 1)
                 totalcol += uttFrameNum[0] * uttPhoneNum[s];
             else
                 totalcol += uttFrameNum[s] * uttPhoneNum[s];
         }
+        */
 
         //compute f+g
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixOutputDistribution(m_deviceid_gpu);
@@ -566,10 +589,10 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid_gpu);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid_gpu);
         //m_derivative.TransferToDeviceIfNotThere(m_deviceid_gpu);
-
+     
         mergedinput.AssignRNNTScore(mergedinput, alpha, beta, maxIndexes, maxIndexes, uttFrameToChanInd, uttFrameBeginIdx, uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx,
                                     uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, totalScore, blankTokenId, 1, true,
-                                    vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR,
+                                        vt_probs, vt_wer, vt_labseqlen, vt_numWords, accum_nBest, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR,
                                     insertionBoostInFinalBeam, scoreNormKind, enableMultiThreadDecodeMBR, ceWeight, mbrWeight);
 
         //delete[] phoneSeqData;

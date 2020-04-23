@@ -140,7 +140,7 @@ public:
         const auto numSequences = pMBLayout->GetNumSequences();
         const auto numPhoneSequences = phoneMBLayout->GetNumSequences();
         //assert(numParallelSequences==phoneMBLayout->GetNumParallelSequences());
-        assert(numSequences == numPhoneSequences || numSequences == 1); // numSequences == 1: the input for encoder is one utteranc, for MWER training
+        assert(numSequences == numPhoneSequences || numSequences == accum_nBest.size()); // numSequences == 1: the input for encoder is one utteranc, for MWER training
 
         //get frame number, phone number and output label number
         const size_t numRows = InputRef(0).Value().GetNumRows();
@@ -199,20 +199,26 @@ public:
         //calculate the memory need for f*g
         uttBeginForOutputditribution.clear();
         uttBeginForOutputditribution.reserve(numPhoneSequences);
+        assert(numPhoneSequences == accum_nBest.back());
         totalcol = 0;
-        for (size_t s = 0; s < numPhoneSequences; s++)
+        for (size_t i = 0; i < accum_nBest.size(); i++)
         {
-            uttBeginForOutputditribution.push_back(totalcol);
-            
-            if (numSequences == 1)
-                totalcol += uttFrameNum[0] * uttPhoneNum[s];
+            size_t sidx, eidx;
+            if (i == 0)
+                sidx = 0;
+            else
+                sidx = accum_nBest[i-1];
+            eidx = accum_nBest[i];
+            for (size_t s = sidx; s < eidx; s++)
+            {
+                uttBeginForOutputditribution.push_back(totalcol);
 
-            else totalcol += uttFrameNum[s] * uttPhoneNum[s];
+                totalcol += uttFrameNum[i] * uttPhoneNum[s];
+            }
         }
-
         //compute f+g
         Value().AssignUserOp1(InputRef(0).Value(), InputRef(1).Value(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-                              totalcol, numParallelSequences, numPhoneParallelSequences);
+                              totalcol, numParallelSequences, numPhoneParallelSequences, accum_nBest);
 
         //Value().Print("output of plus");
         //m_pMBLayout = nullptr;
@@ -225,7 +231,7 @@ public:
         //auto gradient = Gradient();
         //auto inputGradient = InputRef(inputIndex).Gradient();
         FrameRange frameRange(InputRef(inputIndex).GetMBLayout());
-        InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex);
+        InputRef(inputIndex).Gradient().AssignUserOp2(Gradient(), uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, inputIndex, accum_nBest);
         InputRef(inputIndex).InvalidateMissingGradientColumns(frameRange);
         //InputRef(inputIndex).Gradient().Print("devirative");
     }
@@ -254,6 +260,11 @@ public:
         //SetDims(TensorShape::Scalar(Environment().IsV2Library()), false);
     }
 
+    void SetMWERInfo(vector<size_t> anbst)
+    {
+        accum_nBest = anbst;
+    }
+
 protected:
     // Prepare data structures from the reader
     // the position of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
@@ -273,6 +284,7 @@ protected:
 
     size_t numParallelSequences;
     size_t numPhoneParallelSequences;
+    vector<size_t> accum_nBest;
 };
 
 template class PlusBroadcastNode<float>;

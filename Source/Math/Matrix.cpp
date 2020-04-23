@@ -6295,6 +6295,8 @@ Matrix<ElemType>& Matrix<ElemType>::AssignRNNTScore(const Matrix<ElemType>& prob
                                                     std::vector<float>& vt_probs,
                                                     const std::vector<float>& vt_wer,
                                                     const std::vector<size_t>& vt_labseqlen,
+                                                    const std::vector<size_t>& vt_numWords,
+                                                    const std::vector<size_t>& accum_nBest,
                                                     bool lengthNorm,
                                                     bool wordPathPosteriorFromDecodeMBR,
                                                     bool doMBR,
@@ -6328,7 +6330,8 @@ alpha._transferToDevice(CPUDEVICE);
                             this->m_GPUMatrix->AssignRNNTScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, uttFrameToChanInd, uttFrameBeginIdx,
                                                                uttBeginForOutputditribution, uttPhoneToChanInd, uttPhoneBeginIdx, uttFrameNum, uttPhoneNum, numParallelSequences, numPhoneParallelSequences, maxPhoneNum, maxFrameNum, *totalScore.m_GPUMatrix, blankTokenId,
                                                                delayConstraint, isColWise, 
-                                                               vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR, 
+                                                               vt_probs, vt_wer, vt_labseqlen, vt_numWords,
+                                                               accum_nBest, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR, 
                                                                insertionBoostInFinalBeam, scoreNormKind, enableMultiThreadDecodeMBR, ceWeight, mbrWeight),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
@@ -6342,7 +6345,8 @@ alpha._transferToDevice(CPUDEVICE);
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<ElemType>& in2, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
                                                   const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
-                                                  const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences)
+                                                  const vector<size_t>& uttPhoneNum, const size_t totalcol, const size_t numParallelSequences, const size_t numPhoneParallelSequences,
+                                                  const vector<size_t>& accum_nBest)
 {
 
     //in1._transferToDevice(CPUDEVICE);
@@ -6357,7 +6361,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<
                             this->m_CPUMatrix->AssignUserOp1(*in1.m_CPUMatrix, *in2.m_CPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution,
                                                              uttFrameNum, uttPhoneNum, totalcol, numParallelSequences, numPhoneParallelSequences),
                             this->m_GPUMatrix->AssignUserOp1(*in1.m_GPUMatrix, *in2.m_GPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution,
-                                                             uttFrameNum, uttPhoneNum, totalcol, numParallelSequences, numPhoneParallelSequences),
+                                                             uttFrameNum, uttPhoneNum, totalcol, numParallelSequences, numPhoneParallelSequences, accum_nBest),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 
@@ -6370,7 +6374,8 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp1(Matrix<ElemType>& in1, Matrix<
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const vector<size_t>& uttFrameToChanInd, const vector<size_t>& uttPhoneToChanInd,
                                                   const vector<size_t>& uttFrameBeginIdx, const vector<size_t>& uttPhoneBeginIdx, const vector<size_t>& uttBeginForOutputditribution, const vector<size_t>& uttFrameNum,
-                                                  const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences, const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx)
+                                                  const vector<size_t>& uttPhoneNum, const size_t numParallelSequences, const size_t numPhoneParallelSequences,
+                                                  const size_t maxFrameNum, const size_t maxPhoneNum, const size_t Idx, const vector<size_t>& accum_nBest)
 {
 
     //in1._transferToDevice(CPUDEVICE);
@@ -6383,7 +6388,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignUserOp2(Matrix<ElemType>& in1, const v
                             this->m_CPUMatrix->AssignUserOp2(*in1.m_CPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
                                                              numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx),
                             this->m_GPUMatrix->AssignUserOp2(*in1.m_GPUMatrix, uttFrameToChanInd, uttPhoneToChanInd, uttFrameBeginIdx, uttPhoneBeginIdx, uttBeginForOutputditribution, uttFrameNum, uttPhoneNum,
-                                                             numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx),
+                                                             numParallelSequences, numPhoneParallelSequences, maxFrameNum, maxPhoneNum, Idx, accum_nBest),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 

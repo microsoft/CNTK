@@ -1312,6 +1312,209 @@ void SGD<ElemType>::PrepareMBR(const std::vector<std::wstring>& outputNodeNamesV
     //my_time = time(NULL);
     //fprintf(stderr, "SGD time 2 = %s", ctime(&my_time));
 }
+struct STACKMBINFO
+{
+    vector<size_t> vt_seqIdx;
+    size_t maxPhoneSeqLen;
+    size_t maxNumFrames;
+    size_t mbSize;
+    vector<size_t> accum_nBest;
+};
+
+void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeqLen, vector<size_t>& vt_curMBSize, vector<size_t>& vt_nBest, vector<size_t>& vt_valid_seqs,
+                    const size_t& num_sequence, size_t& numSamplesWithLabelOfNetworkMBR, const MBLayoutPtr& encodeMBLayout, vector<vector<PathInfo>>& uttPathsInfo,
+                    const size_t& minibatchSizePerGPU, const std::vector<std::vector<size_t>>& phoneSeqs, vector<STACKMBINFO>& vt_MB_seqIdx)
+{
+    vt_numFrames.resize(num_sequence);
+    vt_maxPhoneSeqLen.resize(num_sequence);
+    vt_curMBSize.resize(num_sequence);
+    vt_nBest.resize(num_sequence);
+    vt_valid_seqs.clear();
+
+    size_t seqId = 0;
+
+    for (const auto& seq : encodeMBLayout->GetAllSequences())
+    {
+        if (seq.seqId == GAP_SEQUENCE_ID)
+            continue;
+        // get the feature MBLayout
+        size_t numFrames = seq.GetNumTimeSteps();
+
+        //todo: need to move after the frame is considered valid
+        numSamplesWithLabelOfNetworkMBR += numFrames;
+
+        // set MB for decode matrix
+
+        size_t nBest = uttPathsInfo[seqId].size();
+
+        size_t maxPhoneSeqLen = phoneSeqs[seqId].size();
+        size_t curMBSize = maxPhoneSeqLen * numFrames;
+
+        if (int(curMBSize) > int(minibatchSizePerGPU))
+        {
+            fprintf(stderr, "Warning! unexpected the ref length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d), maxPhoneSeqLen(%d), numFrames (%d) \n",
+                    int(curMBSize), int(minibatchSizePerGPU), int(maxPhoneSeqLen), int(numFrames));
+            seqId++;
+
+            continue;
+        }
+        bool refismax = true;
+        for (size_t n = 0; n < nBest; n++)
+        {
+            size_t maxPhoneSeqLenCurbest = maxPhoneSeqLen;
+
+            if (uttPathsInfo[seqId][n].label_seq.size() > maxPhoneSeqLen)
+            {
+                maxPhoneSeqLenCurbest = uttPathsInfo[seqId][n].label_seq.size();
+                refismax = false;
+            }
+            size_t oneSeqMBSize = uttPathsInfo[seqId][n].label_seq.size() * numFrames;
+
+            if (int(curMBSize + oneSeqMBSize) > int(minibatchSizePerGPU))
+            {
+                nBest = n;
+                break;
+            }
+
+            maxPhoneSeqLen = maxPhoneSeqLenCurbest;
+            curMBSize += oneSeqMBSize;
+        }
+
+        bool wer_all_equal = true;
+        if (nBest > 1)
+        {
+            float firstbeswer = uttPathsInfo[seqId][0].WER;
+            for (size_t n = 1; n < nBest; n++)
+            {
+                if ((uttPathsInfo[seqId][n].WER - firstbeswer) > 1e-9 || (uttPathsInfo[seqId][n].WER - firstbeswer) < -1e-9)
+                {
+                    wer_all_equal = false;
+                    break;
+                }
+            }
+        }
+
+        if (wer_all_equal) // MWER will take no effect, including nbest =1 case
+        {
+            seqId++;
+            continue;
+        }
+        if (uttPathsInfo[seqId].size() != nBest)
+        {
+            uttPathsInfo[seqId].resize(nBest);
+            //re-normalized
+            float total_prob = 0;
+            for (size_t n = 0; n < nBest; n++)
+                total_prob += uttPathsInfo[seqId][n].prob;
+
+            for (size_t n = 0; n < nBest; n++)
+                uttPathsInfo[seqId][n].prob /= total_prob;
+        }
+        // add reference as a path
+        PathInfo pi;
+        pi.prob = 1;
+        pi.WER = 0;
+        pi.label_seq = phoneSeqs[seqId];
+        uttPathsInfo[seqId].push_back(pi);
+
+        nBest = nBest + 1;
+
+        vt_valid_seqs.push_back(seqId);
+        vt_numFrames[seqId] = numFrames;
+
+        vt_maxPhoneSeqLen[seqId] = maxPhoneSeqLen;
+        vt_curMBSize[seqId] = curMBSize;
+        vt_nBest[seqId] = nBest;
+
+        seqId++;
+    }
+
+    map<size_t, vector<size_t>> mp_fNum_seqIds;
+    map<size_t, vector<size_t>>::iterator mp_itr;
+    mp_fNum_seqIds.clear();
+    for (size_t i = 0; i < vt_valid_seqs.size(); i++)
+    {
+        mp_itr = mp_fNum_seqIds.find(vt_numFrames[vt_valid_seqs[i]]);
+        if (mp_itr != mp_fNum_seqIds.end())
+            mp_itr->second.push_back(vt_valid_seqs[i]);
+        else
+        {
+            vector<size_t> vt_seqIds;
+            vt_seqIds.push_back(vt_valid_seqs[i]);
+            mp_fNum_seqIds.insert(pair<size_t, vector<size_t>>(vt_numFrames[vt_valid_seqs[i]], vt_seqIds));
+        }
+    }
+    STACKMBINFO mbinfo;
+    mbinfo.vt_seqIdx.clear();
+    mbinfo.maxNumFrames = mbinfo.maxPhoneSeqLen = 0;
+    mbinfo.mbSize = 0;
+    mbinfo.accum_nBest.clear();
+
+    vt_MB_seqIdx.clear();
+
+    /*
+        for (size_t i = 0; i < vt_nBest.size(); i++)
+        {
+            if (vt_curMBSize[i] > minibatchSizePerGPU)
+            {
+                LogicError("seqidx = %d, curMBSize = %d, which is larger than minibatchSizePerGPU = %d.",
+                           int(i), int(vt_curMBSize[i]), int(minibatchSizePerGPU));
+            }
+            if ((mbinfo.mbSize != 0 && mbinfo.mbSize + vt_curMBSize[i]) > 0)
+            {
+                vt_MB_seqIdx.push_back(mbinfo);
+                mbinfo.vt_seqIdx.clear();
+                mbinfo.accum_nBest.clear();
+                mbinfo.maxNumFrames = mbinfo.maxPhoneSeqLen = 0;
+                mbinfo.mbSize = 0;
+            }
+            mbinfo.mbSize += vt_curMBSize[i];
+            mbinfo.vt_seqIdx.push_back(i);
+            mbinfo.maxNumFrames = (mbinfo.maxNumFrames >= vt_numFrames[i]) ? mbinfo.maxNumFrames : vt_numFrames[i];
+            mbinfo.maxPhoneSeqLen = (mbinfo.maxPhoneSeqLen >= vt_maxPhoneSeqLen[i]) ? mbinfo.maxPhoneSeqLen : vt_maxPhoneSeqLen[i];
+
+            if (mbinfo.accum_nBest.empty())
+                mbinfo.accum_nBest.push_back(vt_nBest[i]);
+            else
+                mbinfo.accum_nBest.push_back(vt_nBest[i] + mbinfo.accum_nBest.back());
+        }
+    */
+    
+    for (mp_itr = mp_fNum_seqIds.begin(); mp_itr != mp_fNum_seqIds.end(); mp_itr++)
+    {
+        for (size_t i = 0; i < mp_itr->second.size(); i++)
+        {
+            if (vt_curMBSize[mp_itr->second[i]] > minibatchSizePerGPU)
+            {
+                LogicError("seqidx = %d, curMBSize = %d, which is larger than minibatchSizePerGPU = %d.",
+                           int(mp_itr->second[i]), int(vt_curMBSize[mp_itr->second[i]]), int(minibatchSizePerGPU));
+            }
+            if ((mbinfo.mbSize + vt_curMBSize[mp_itr->second[i]]) > minibatchSizePerGPU)
+            //DEBUG, each utteerance is a minibatch, no patching
+            // if ((mbinfo.mbSize != 0 && mbinfo.mbSize + vt_curMBSize[mp_itr->second[i]]) > 0) 
+            {
+                vt_MB_seqIdx.push_back(mbinfo);
+                mbinfo.vt_seqIdx.clear();
+                mbinfo.accum_nBest.clear();
+                mbinfo.maxNumFrames = mbinfo.maxPhoneSeqLen = 0;
+                mbinfo.mbSize = 0;
+            }
+            mbinfo.mbSize += vt_curMBSize[mp_itr->second[i]];
+            mbinfo.vt_seqIdx.push_back(mp_itr->second[i]);
+            mbinfo.maxNumFrames = (mbinfo.maxNumFrames >= vt_numFrames[mp_itr->second[i]]) ? mbinfo.maxNumFrames : vt_numFrames[mp_itr->second[i]];
+            mbinfo.maxPhoneSeqLen = (mbinfo.maxPhoneSeqLen >= vt_maxPhoneSeqLen[mp_itr->second[i]]) ? mbinfo.maxPhoneSeqLen : vt_maxPhoneSeqLen[mp_itr->second[i]];
+
+            if (mbinfo.accum_nBest.empty())
+                mbinfo.accum_nBest.push_back(vt_nBest[mp_itr->second[i]]);
+            else
+                mbinfo.accum_nBest.push_back(vt_nBest[mp_itr->second[i]] + mbinfo.accum_nBest.back());
+        }
+    }
+   
+    
+     vt_MB_seqIdx.push_back(mbinfo);
+
+}
 
 template <class ElemType>
 size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
@@ -1805,6 +2008,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     net->ResetEvalTimeStamps();
                     auto cNode = criterionNodes[0]->As<RNNTNode<ElemType>>();
 
+                    std::vector<std::wstring> plusBroadcastNodeNames(outputNodeNamesVector.begin() + 2, outputNodeNamesVector.begin() + 3);
+                    std::vector<ComputationNodeBasePtr> plusBroadcastNodes = net->OutputNodesByName(plusBroadcastNodeNames);
+                    auto bNode = plusBroadcastNodes[0]->As<PlusBroadcastNode<ElemType>>();
+
                     size_t seqId = 0; //frame
 
                     //my_time = time(NULL);
@@ -1822,154 +2029,125 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             seqId++;
                         }
                     }
+                    vector<size_t> vt_numFrames, vt_maxPhoneSeqLen, vt_curMBSize, vt_nBest, vt_valid_seqs;
+                    vector<STACKMBINFO> vt_MB_seqIdx;
 
-                    seqId = 0;
+                    MinibatchStack(vt_numFrames, vt_maxPhoneSeqLen, vt_curMBSize, vt_nBest, vt_valid_seqs,
+                                   vt_feas.size(), numSamplesWithLabelOfNetworkMBR, encodeMBLayout, uttPathsInfo,
+                                   minibatchSizePerGPU, phoneSeqs, vt_MB_seqIdx);
 
-                    for (const auto& seq : encodeMBLayout->GetAllSequences())
+                    for (size_t i = 0; i < vt_MB_seqIdx.size(); i++)
+                    //for (size_t i = 1; i < vt_MB_seqIdx.size(); i++)
                     {
-                        if (seq.seqId == GAP_SEQUENCE_ID)
+                        // get the feature MBLayout
+                        size_t maxNumFrames = vt_MB_seqIdx[i].maxNumFrames;
+                        size_t S = vt_MB_seqIdx[i].vt_seqIdx.size();
+
+                        reffeainput->second.pMBLayout->Init(S, maxNumFrames); // S channel, S utterance
+
+                        Matrix<ElemType> feas(deviceid);
+                        feas.Resize(fea_dim, S * maxNumFrames);
+
+                        size_t uttFrameBeginIdx = 0;
+
+                        for (size_t s = 0; s < S; s++)
                         {
-                            continue;
+                            seqId = vt_MB_seqIdx[i].vt_seqIdx[s];
+
+                            for (size_t t = 0; t < vt_numFrames[seqId]; t++)
+                            {
+                                size_t uID = (t + uttFrameBeginIdx) * S + s;
+                                feas.SetColumn(vt_feas[seqId]->ColumnSlice(t, 1), uID);
+                            }
+                            reffeainput->second.pMBLayout->AddSequence(s, s, 0, vt_numFrames[seqId]);
+                            // guoye: first one is for seq ID, second one means nth channel, lenght is 0 to phoneSeqLen
+                            if (vt_numFrames[seqId] < maxNumFrames)
+                                reffeainput->second.pMBLayout->AddSequence(GAP_SEQUENCE_ID, s, vt_numFrames[seqId], maxNumFrames); // length is phoneSeqLen to maxPhoneSeqLen
                         }
 
-                        // get the feature MBLayout
-                        size_t numFrames = seq.GetNumTimeSteps();
-                        numSamplesWithLabelOfNetworkMBR += numFrames;
-
-                        reffeainput->second.pMBLayout->Init(1, numFrames); // 1 channel, 1 utterance
-
-                        reffeainput->second.GetMatrix<ElemType>().SetValue(*vt_feas[seqId]);
-
-                        reffeainput->second.pMBLayout->AddSequence(0, 0, 0, numFrames); // guoye: first 0 is for utterance ID, second 0 means 0th channel, lenght is 0 to numFrames
-                        vt_feas[seqId]->ReleaseMemory();
-
-                        // guoye: the below 2 commands reset the state, to make sure ForwardProb always get carried out
-                        ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes); // guoy: update the time stamp before you do forward prob
-                        //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, encodeinputMatrices);
+                        reffeainput->second.GetMatrix<ElemType>().SetValue(feas);
+                        feas.ReleaseMemory();
 
                         // set MB for decode matrix
 
-                        size_t nBest = uttPathsInfo[seqId].size();
-
-                        size_t maxPhoneSeqLen = phoneSeqs[seqId].size();
-                        //size_t maxPhoneSeqLen = uttPathsInfo[seqId][0].label_seq.size();
-                        size_t curMBSize = maxPhoneSeqLen * numFrames;
-
-                        if (int(curMBSize) > int(minibatchSizePerGPU))
-                        {
-                            fprintf(stderr, "Warning! unexpected the ref length maxPhoneSeqLen * numFrames (%d) exceed minibatch size (%d), maxPhoneSeqLen(%d), numFrames (%d) \n",
-                                    int(curMBSize), int(minibatchSizePerGPU), int(maxPhoneSeqLen), int(numFrames));
-                            seqId++;
-
-                            continue;
-                        }
-                        bool refismax = true;
-                        for (size_t n = 0; n < nBest; n++)
-                        //for (size_t n = 1; n < nBest; n++)
-                        {
-                            size_t maxPhoneSeqLenCurbest = maxPhoneSeqLen;
-
-                            if (uttPathsInfo[seqId][n].label_seq.size() > maxPhoneSeqLen)
-                            {
-                                maxPhoneSeqLenCurbest = uttPathsInfo[seqId][n].label_seq.size();
-                                refismax = false;
-                            }
-                            size_t oneSeqMBSize = uttPathsInfo[seqId][n].label_seq.size() * numFrames;
-                             
-
-                            if (int(curMBSize + oneSeqMBSize) > int(minibatchSizePerGPU))
-                            {
-                                nBest = n;
-                                break;
-                            }
-                            
-                            maxPhoneSeqLen = maxPhoneSeqLenCurbest;
-                            curMBSize += oneSeqMBSize;
-                        }
-
                         if (m_debugInfo)
-                            fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize (Nbest+ reference) %d, maxPhoneSeqLen %d, nBest %d, numFrames %d, ref is max = %d \n", int(minibatchSizePerGPU), int(curMBSize),
-                                    int(maxPhoneSeqLen), int(nBest), int(numFrames), int(refismax));
+                            fprintf(stderr, "Debug minibatchsize %d vs. RealBatchSize  %d, maxPhoneSeqLen %d, accum_nBest %d, maxNumFrames %d \n", int(minibatchSizePerGPU), int(vt_MB_seqIdx[i].mbSize),
+                                    int(vt_MB_seqIdx[i].maxPhoneSeqLen), int(vt_MB_seqIdx[i].accum_nBest.back()), int(vt_MB_seqIdx[i].maxNumFrames));
 
-                        bool wer_all_equal = true;
-                        if (nBest > 1)
+                        vector<vector<PathInfo>> vt_curMBUttPathsInfo;
+                        vector<size_t> vt_curMB_nws;
+
+                        vt_curMBUttPathsInfo.clear();
+                        vt_curMB_nws.clear();
+
+                        for (size_t s = 0; s < S; s++)
                         {
-                            float firstbeswer = uttPathsInfo[seqId][0].WER;
-                            for (size_t n = 1; n < nBest; n++)
-                            {
-                                if ((uttPathsInfo[seqId][n].WER - firstbeswer) > 1e-9 || (uttPathsInfo[seqId][n].WER - firstbeswer) < -1e-9)
-                                {
-                                    wer_all_equal = false;
-                                    break;
-                                }
-                            }
+                            seqId = vt_MB_seqIdx[i].vt_seqIdx[s];
+                            vt_curMBUttPathsInfo.push_back(uttPathsInfo[seqId]);
+                            vt_curMB_nws.push_back(vt_nws[seqId]);
                         }
 
-                        if (wer_all_equal) // MWER will take no effect, including nbest =1 case
-                        {
-                            seqId++;
-                            continue;
-                        }
-                        if (uttPathsInfo[seqId].size() != nBest)
-                        {
-                            uttPathsInfo[seqId].resize(nBest);
-                            //re-normalized
-                            float total_prob = 0;
-                            for (size_t n = 0; n < nBest; n++)
-                                total_prob += uttPathsInfo[seqId][n].prob;
-
-                            for (size_t n = 0; n < nBest; n++)
-                                uttPathsInfo[seqId][n].prob /= total_prob;
-                        }
-                        // add reference as a path
-                        PathInfo pi;
-                        pi.prob = 1;
-                        pi.WER = 0;
-                        pi.label_seq = phoneSeqs[seqId];
-                        uttPathsInfo[seqId].push_back(pi);
-
-                        nBest = nBest + 1;
-
-                        cNode->SetMWERInfo(uttPathsInfo[seqId], m_lengthNorm, m_wordPathPosteriorFromDecodeMBR, m_doMBR, vt_nws[seqId],
+                        cNode->SetMWERInfo(vt_curMBUttPathsInfo, m_lengthNorm, m_wordPathPosteriorFromDecodeMBR, m_doMBR, vt_curMB_nws, vt_MB_seqIdx[i].accum_nBest,
                                            insertionBoostInFinalBeam, scoreNormKind, m_enableMultiThreadDecodeMBR, m_ceWeight, m_mbrWeight);
+                        bNode->SetMWERInfo(vt_MB_seqIdx[i].accum_nBest);
 
-                        //if (firstdebug)
+                        vector<vector<PathInfo>>().swap(vt_curMBUttPathsInfo); // release memory
+                        vector<size_t>().swap(vt_curMB_nws);
+
+                        // set LM
+                        size_t nBest = vt_MB_seqIdx[i].accum_nBest.back();
+                        size_t maxPhoneSeqLen = vt_MB_seqIdx[i].maxPhoneSeqLen;
+
                         reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
-                        //reflminput->second.pMBLayout->Init(nBest, maxPhoneSeqLen);
+
                         Matrix<ElemType> lmin(deviceid);
                         lmin.Resize(vocSize, (nBest) *maxPhoneSeqLen);
-                        //lmin.Resize(vocSize, (nBest) * maxPhoneSeqLen);
                         lmin.SetValue(0.0);
 
                         size_t uttPhoneBeginIdx = 0;
                         size_t phoneSeqLen;
 
-                        for (size_t n = 0; n < (nBest); n++)
+                        size_t uttPhoneToChanInd = 0;
+
+                        for (size_t s = 0; s < S; s++)
                         {
-                            size_t uttPhoneToChanInd = n;
-                            phoneSeqLen = uttPathsInfo[seqId][n].label_seq.size();
-                            for (size_t p = 0; p < phoneSeqLen; p++)
+                            seqId = vt_MB_seqIdx[i].vt_seqIdx[s];
+                            for (size_t n = 0; n < uttPathsInfo[seqId].size(); n++)
                             {
-                                size_t uID = (p + uttPhoneBeginIdx) * nBest + uttPhoneToChanInd;
-                                size_t labID = uttPathsInfo[seqId][n].label_seq[p];
-                                lmin(labID, uID) = 1.0;
+
+                                phoneSeqLen = uttPathsInfo[seqId][n].label_seq.size();
+                                for (size_t p = 0; p < phoneSeqLen; p++)
+                                {
+                                    size_t uID = (p + uttPhoneBeginIdx) * nBest + uttPhoneToChanInd;
+                                    size_t labID = uttPathsInfo[seqId][n].label_seq[p];
+                                    lmin(labID, uID) = 1.0;
+                                }
+
+                                // if (firstdebug)
+                                reflminput->second.pMBLayout->AddSequence(uttPhoneToChanInd, uttPhoneToChanInd, 0, phoneSeqLen);
+                                // guoye: first one is for seq ID, second one means nth channel, lenght is 0 to phoneSeqLen
+                                if (phoneSeqLen < maxPhoneSeqLen)
+                                    reflminput->second.pMBLayout->AddSequence(GAP_SEQUENCE_ID, uttPhoneToChanInd, phoneSeqLen, maxPhoneSeqLen); // length is phoneSeqLen to maxPhoneSeqLen
+                                uttPhoneToChanInd++;
                             }
-                            // if (firstdebug)
-                            reflminput->second.pMBLayout->AddSequence(n, n, 0, phoneSeqLen);
-                            // guoye: first n is for seq ID, second n means nth channel, lenght is 0 to phoneSeqLen
-                            if (phoneSeqLen < maxPhoneSeqLen)
-                                //if (firstdebug)
-                                reflminput->second.pMBLayout->AddSequence(GAP_SEQUENCE_ID, n, phoneSeqLen, maxPhoneSeqLen); // length is phoneSeqLen to maxPhoneSeqLen
+                        }
+                        if (uttPhoneToChanInd != nBest)
+                        {
+                            LogicError("uttPhoneToChanInd = %d, is not equal to nBest = %d.", int(uttPhoneToChanInd), int(nBest));
                         }
 
                         reflminput->second.GetMatrix<ElemType>().SetValue(lmin);
                         lmin.ReleaseMemory();
                         if (m_debugInfo)
                             fprintf(stderr, "Debug 1 \n");
-                        ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
 
                         if (accumGradientsMBR.size() == 0 || !debug)
                         {
+                            // guoye: the below 2 commands reset the state, to make sure ForwardProb always get carried out
+                            ComputationNetwork::BumpEvalTimeStamp(encodeInputNodes); // guoy: update the time stamp before you do forward prob
+                                                                                     //DataReaderHelpers::NotifyChangedNodes<ElemType>(m_net, encodeinputMatrices);
+
+                            ComputationNetwork::BumpEvalTimeStamp(decodeinputNodes);
 
                             net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
                             if (m_debugInfo)
@@ -1986,9 +2164,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     fprintf(stderr, "Debug 2.5 \n");
                             }
                         }
-                        /*
-                        
-                        */
+
                         if (m_debugInfo)
                             fprintf(stderr, "Debug 3 \n");
 
@@ -2016,6 +2192,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                 else
                                 {
                                     accumGradientsMBR[count].AddWithScaleOf(1, node->Gradient());
+                                    // accumGradientsMBR[count].SetValue(node->Gradient());
                                 }
                                 if (m_debugInfo)
                                     fprintf(stderr, "noGradientInCache = %d, Count = %d, AccumNorm = %f \n", int(noGradientInCache), int(count), accumGradientsMBR[count].FrobeniusNorm());
@@ -2027,7 +2204,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         size_t localSampleNum;
                         cNode->GetMWERInfo(localCR, localSampleNum);
                         if (m_showWERMode == "onebest")
-                            localCR = (vt_onebest_wer[seqId] * localSampleNum);
+                        {
+                            localCR = ElemType(0);
+
+                            for (size_t s = 0; s < S; s++)
+                            {
+                                seqId = vt_MB_seqIdx[i].vt_seqIdx[s];
+                                localCR += (vt_onebest_wer[seqId] * vt_nws[seqId]);
+                            }
+                        }
                         /*
                         else
                         {
@@ -2038,16 +2223,25 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         }
                         */
 
-                        if (m_debugInfo)
-                            fprintf(stderr, "nw = %d, 1best wer = %f, num_frame = %d \n", int(vt_nws[seqId]), vt_onebest_wer[seqId], int(numFrames));
                         accumCRMBR += double(localCR);
                         accumSampleNumMBR += localSampleNum;
 
-                        seqId++;
                         if (m_debugInfo)
                             fprintf(stderr, "Debug 4 \n");
                     }
+                    // release memory for feature
 
+                    vector<STACKMBINFO>().swap(vt_MB_seqIdx);
+                    seqId = 0;
+
+                    for (const auto& seq : encodeMBLayout->GetAllSequences())
+                    {
+                        if (seq.seqId == GAP_SEQUENCE_ID)
+                            continue;
+
+                        vt_feas[seqId]->ReleaseMemory();
+                        seqId++;
+                    }
                     //my_time = time(NULL);
                     //fprintf(stderr, "SGD time 4 = %s", ctime(&my_time));
                 }

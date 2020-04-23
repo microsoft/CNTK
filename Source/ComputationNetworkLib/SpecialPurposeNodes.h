@@ -1780,7 +1780,7 @@ public:
                 vt_labseqlen.push_back(vt_pathinfos[i].label_seq.size()); // this label sequence includes the sentence begining <blank>
             }
             m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(),
-                                             InputRef(2).GetMBLayout(), m_blankTokenId, vt_probs, vt_wer, vt_labseqlen, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR, 
+                                             InputRef(2).GetMBLayout(), m_blankTokenId, vt_probs, vt_wer, vt_labseqlen, vt_numWords, accum_nBest, lengthNorm, wordPathPosteriorFromDecodeMBR, doMBR,
                                              insertionBoostInFinalBeam, scoreNormKind, enableMultiThreadDecodeMBR, ceWeight, mbrWeight);
 
             criterionValue = Value().Get00Element();
@@ -1794,7 +1794,7 @@ public:
             // compute CTC score
             vector<float> vt_nulf;
             vector<size_t> vt_nuli;
-            m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_nulf, vt_nulf, vt_nuli); // the last 3 inputs vt_nul are place holders just to make the function happy
+            m_GammaCal.twodimForwardBackward(Value(), InputRef(1).Value(), InputRef(2).Value(), *m_outputDensity, *m_maxIndexes, *m_derivative, InputRef(1).GetMBLayout(), InputRef(2).GetMBLayout(), m_blankTokenId, vt_nulf, vt_nulf, vt_nuli, vt_nuli, vt_nuli); // the last 5 inputs vt_nul are place holders just to make the function happy
         }
         //m_outputDensity->Print("gradient");
 #if NANCHECK
@@ -1904,17 +1904,24 @@ public:
         return m_blankTokenId;
     }
 
-    void SetMWERInfo(vector<PathInfo> vt_pi,
+    void SetMWERInfo(vector<vector<PathInfo>> vt_pi,
                      bool ln,
-                     bool post_from_decode, bool mbr, size_t nw,
+                     bool post_from_decode, bool mbr, vector<size_t> nw, vector<size_t> anbst,
                      float ib, size_t snk, size_t mtmode,
                      float m_ceWeight, float m_mbrWeight)
     {
-        vt_pathinfos = vt_pi;
+        vt_pathinfos.clear();
+        for (size_t i = 0; i < vt_pi.size(); i++)
+        {
+            vt_pathinfos.insert(vt_pathinfos.end(), vt_pi[i].begin(), vt_pi[i].end());
+        }
         lengthNorm = ln;
         wordPathPosteriorFromDecodeMBR = post_from_decode;
         doMBR = mbr;
-        numWords = nw;
+        vt_numWords = nw;
+        numWords = 0;
+        for (size_t i = 0; i < vt_numWords.size(); i++) numWords += vt_numWords[i];
+        accum_nBest = anbst;
         insertionBoostInFinalBeam = ib;
         scoreNormKind = snk;
         enableMultiThreadDecodeMBR = mtmode;
@@ -1933,7 +1940,9 @@ protected:
     bool lengthNorm;
     bool wordPathPosteriorFromDecodeMBR;
     bool doMBR = false;
+    vector<size_t> vt_numWords;
     size_t numWords;
+    vector<size_t> accum_nBest;
 
     float insertionBoostInFinalBeam;
     size_t scoreNormKind;
