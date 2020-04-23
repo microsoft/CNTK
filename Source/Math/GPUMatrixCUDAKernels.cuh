@@ -6179,7 +6179,7 @@ __global__ void _AddPenaltyEosProb(ElemType* prob,
                     if (prob[probId] >= 0.0f)
                     {
                         prob[probId] = -0.0001;
-                        printf("t:%d, bound:%d,  %f\n", t, phoneBoundary, prob[probId]);
+                        //printf("t:%d, bound:%d,  %f\n", t, phoneBoundary, prob[probId]);
                     }
                     //prob[probId_blank] -= max((ElemType) 0.0, earlyP * (ElemType)(phoneBoundary - (int) t)) + max((ElemType) 0.0, lateP * (ElemType)((int) t - phoneBoundary - delayConstraint));
                 }

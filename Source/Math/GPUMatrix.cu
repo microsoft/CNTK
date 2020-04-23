@@ -4752,7 +4752,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
                                                                              uttInfo.Data(), tu,
                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, numSequences, earlyP, lateP, delayConstraint);
         }
-
+        prob_eos.ReleaseStorageMemory();
         //beta.Print("beta");
         //alpha.Print("alpha");
 
