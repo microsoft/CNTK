@@ -1496,6 +1496,11 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
     */
     if (m_debugInfo)
         fprintf(stderr, "debug MinibatchStack: here 4 \n");
+
+    if (mp_fNum_seqIds.empty())
+        return;
+
+
     for (mp_itr = mp_fNum_seqIds.begin(); mp_itr != mp_fNum_seqIds.end(); mp_itr++)
     {
         for (size_t i = 0; i < mp_itr->second.size(); i++)
