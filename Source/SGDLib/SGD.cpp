@@ -1323,8 +1323,10 @@ struct STACKMBINFO
 
 void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeqLen, vector<size_t>& vt_curMBSize, vector<size_t>& vt_nBest, vector<size_t>& vt_valid_seqs,
                     const size_t& num_sequence, size_t& numSamplesWithLabelOfNetworkMBR, const MBLayoutPtr& encodeMBLayout, vector<vector<PathInfo>>& uttPathsInfo,
-                    const size_t& minibatchSizePerGPU, const std::vector<std::vector<size_t>>& phoneSeqs, vector<STACKMBINFO>& vt_MB_seqIdx)
+                    const size_t& minibatchSizePerGPU, const std::vector<std::vector<size_t>>& phoneSeqs, vector<STACKMBINFO>& vt_MB_seqIdx, bool m_debugInfo)
 {
+    if (m_debugInfo)
+        fprintf(stderr, "debug MinibatchStack: here 1 \n");
     vt_numFrames.resize(num_sequence);
     vt_maxPhoneSeqLen.resize(num_sequence);
     vt_curMBSize.resize(num_sequence);
@@ -1332,7 +1334,8 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
     vt_valid_seqs.clear();
 
     size_t seqId = 0;
-
+    if (m_debugInfo)
+        fprintf(stderr, "debug MinibatchStack: here 1.5 \n");
     for (const auto& seq : encodeMBLayout->GetAllSequences())
     {
         if (seq.seqId == GAP_SEQUENCE_ID)
@@ -1344,7 +1347,8 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
         numSamplesWithLabelOfNetworkMBR += numFrames;
 
         // set MB for decode matrix
-
+        if (m_debugInfo)
+            fprintf(stderr, "debug MinibatchStack: here 1.6, seqId = %d \n", int(seqId));
         size_t nBest = uttPathsInfo[seqId].size();
 
         size_t maxPhoneSeqLen = phoneSeqs[seqId].size();
@@ -1359,6 +1363,8 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
             continue;
         }
         bool refismax = true;
+        if (m_debugInfo)
+            fprintf(stderr, "debug MinibatchStack: here 1.7, seqId = %d \n", int(seqId));
         for (size_t n = 0; n < nBest; n++)
         {
             size_t maxPhoneSeqLenCurbest = maxPhoneSeqLen;
@@ -1379,6 +1385,8 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
             maxPhoneSeqLen = maxPhoneSeqLenCurbest;
             curMBSize += oneSeqMBSize;
         }
+        if (m_debugInfo)
+            fprintf(stderr, "debug MinibatchStack: here 1.8, seqId = %d \n", int(seqId));
 
         bool wer_all_equal = true;
         if (nBest > 1)
@@ -1393,7 +1401,8 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
                 }
             }
         }
-
+        if (m_debugInfo)
+            fprintf(stderr, "debug MinibatchStack: here 1.9, seqId = %d \n", int(seqId));
         if (wer_all_equal) // MWER will take no effect, including nbest =1 case
         {
             seqId++;
@@ -1418,7 +1427,8 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
         uttPathsInfo[seqId].push_back(pi);
 
         nBest = nBest + 1;
-
+        if (m_debugInfo)
+            fprintf(stderr, "debug MinibatchStack: here 1.91, seqId = %d \n", int(seqId));
         vt_valid_seqs.push_back(seqId);
         vt_numFrames[seqId] = numFrames;
 
@@ -1426,9 +1436,12 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
         vt_curMBSize[seqId] = curMBSize;
         vt_nBest[seqId] = nBest;
 
+        if (m_debugInfo)
+            fprintf(stderr, "debug MinibatchStack: here 1.92, seqId = %d \n", int(seqId));
         seqId++;
     }
-
+    if (m_debugInfo)
+        fprintf(stderr, "debug MinibatchStack: here 2 \n");
     map<size_t, vector<size_t>> mp_fNum_seqIds;
     map<size_t, vector<size_t>>::iterator mp_itr;
     mp_fNum_seqIds.clear();
@@ -1444,6 +1457,8 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
             mp_fNum_seqIds.insert(pair<size_t, vector<size_t>>(vt_numFrames[vt_valid_seqs[i]], vt_seqIds));
         }
     }
+    if (m_debugInfo)
+        fprintf(stderr, "debug MinibatchStack: here 3 \n");
     STACKMBINFO mbinfo;
     mbinfo.vt_seqIdx.clear();
     mbinfo.maxNumFrames = mbinfo.maxPhoneSeqLen = 0;
@@ -1479,7 +1494,8 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
                 mbinfo.accum_nBest.push_back(vt_nBest[i] + mbinfo.accum_nBest.back());
         }
     */
-    
+    if (m_debugInfo)
+        fprintf(stderr, "debug MinibatchStack: here 4 \n");
     for (mp_itr = mp_fNum_seqIds.begin(); mp_itr != mp_fNum_seqIds.end(); mp_itr++)
     {
         for (size_t i = 0; i < mp_itr->second.size(); i++)
@@ -1491,7 +1507,7 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
             }
             if ((mbinfo.mbSize + vt_curMBSize[mp_itr->second[i]]) > minibatchSizePerGPU)
             //DEBUG, each utteerance is a minibatch, no patching
-            // if ((mbinfo.mbSize != 0 && mbinfo.mbSize + vt_curMBSize[mp_itr->second[i]]) > 0) 
+            // if ((mbinfo.mbSize != 0 && mbinfo.mbSize + vt_curMBSize[mp_itr->second[i]]) > 0)
             {
                 vt_MB_seqIdx.push_back(mbinfo);
                 mbinfo.vt_seqIdx.clear();
@@ -1510,10 +1526,12 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
                 mbinfo.accum_nBest.push_back(vt_nBest[mp_itr->second[i]] + mbinfo.accum_nBest.back());
         }
     }
-   
-    
-     vt_MB_seqIdx.push_back(mbinfo);
+    if (m_debugInfo)
+        fprintf(stderr, "debug MinibatchStack: here 5 \n");
 
+    vt_MB_seqIdx.push_back(mbinfo);
+    if (m_debugInfo)
+        fprintf(stderr, "debug MinibatchStack: here 6 \n");
 }
 
 template <class ElemType>
@@ -2028,18 +2046,21 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             fprintf(stderr, "debug info: seqId = %d, numFrames = %d, nws = %d \n", int(seqId), int(seq.GetNumTimeSteps()), int(vt_nws[seqId]));
                             seqId++;
                         }
+                        fprintf(stderr, "debug info: finished the for loop \n");
                     }
                     vector<size_t> vt_numFrames, vt_maxPhoneSeqLen, vt_curMBSize, vt_nBest, vt_valid_seqs;
                     vector<STACKMBINFO> vt_MB_seqIdx;
 
                     MinibatchStack(vt_numFrames, vt_maxPhoneSeqLen, vt_curMBSize, vt_nBest, vt_valid_seqs,
                                    vt_feas.size(), numSamplesWithLabelOfNetworkMBR, encodeMBLayout, uttPathsInfo,
-                                   minibatchSizePerGPU, phoneSeqs, vt_MB_seqIdx);
+                                   minibatchSizePerGPU, phoneSeqs, vt_MB_seqIdx, m_debugInfo);
 
                     for (size_t i = 0; i < vt_MB_seqIdx.size(); i++)
                     //for (size_t i = 1; i < vt_MB_seqIdx.size(); i++)
                     {
                         // get the feature MBLayout
+                        if (m_debugInfo)
+                            fprintf(stderr, "debug info: here 1 \n");
                         size_t maxNumFrames = vt_MB_seqIdx[i].maxNumFrames;
                         size_t S = vt_MB_seqIdx[i].vt_seqIdx.size();
 
@@ -2049,7 +2070,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         feas.Resize(fea_dim, S * maxNumFrames);
 
                         size_t uttFrameBeginIdx = 0;
-
+                        if (m_debugInfo)
+                            fprintf(stderr, "debug info: here 2 \n");
                         for (size_t s = 0; s < S; s++)
                         {
                             seqId = vt_MB_seqIdx[i].vt_seqIdx[s];
@@ -2064,10 +2086,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                             if (vt_numFrames[seqId] < maxNumFrames)
                                 reffeainput->second.pMBLayout->AddSequence(GAP_SEQUENCE_ID, s, vt_numFrames[seqId], maxNumFrames); // length is phoneSeqLen to maxPhoneSeqLen
                         }
-
+                        if (m_debugInfo)
+                            fprintf(stderr, "debug info: here 3 \n");
                         reffeainput->second.GetMatrix<ElemType>().SetValue(feas);
                         feas.ReleaseMemory();
-
+                        if (m_debugInfo)
+                            fprintf(stderr, "debug info: here 4 \n");
                         // set MB for decode matrix
 
                         if (m_debugInfo)
