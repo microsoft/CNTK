@@ -1500,7 +1500,6 @@ void MinibatchStack(vector<size_t>& vt_numFrames, vector<size_t>& vt_maxPhoneSeq
     if (mp_fNum_seqIds.empty())
         return;
 
-
     for (mp_itr = mp_fNum_seqIds.begin(); mp_itr != mp_fNum_seqIds.end(); mp_itr++)
     {
         for (size_t i = 0; i < mp_itr->second.size(); i++)
@@ -2261,18 +2260,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     // release memory for feature
 
                     vector<STACKMBINFO>().swap(vt_MB_seqIdx);
-                    seqId = 0;
 
-                    for (const auto& seq : encodeMBLayout->GetAllSequences())
+                    for (size_t i = 0; i < vt_feas.size(); i++)
                     {
-                        if (seq.seqId == GAP_SEQUENCE_ID)
-                            continue;
-
-                        vt_feas[seqId]->ReleaseMemory();
-                        seqId++;
+                        vt_feas[i]->ReleaseMemory();
                     }
+
                     //my_time = time(NULL);
-                    //fprintf(stderr, "SGD time 4 = %s", ctime(&my_time));
+                    fprintf(stderr, "SGD time 4 seqId = %d", int(seqId));
                 }
                 // ===========================================================
                 // forward prop for evaluate eval nodes
