@@ -2268,7 +2268,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     }
 
                     //my_time = time(NULL);
-                    fprintf(stderr, "SGD time 4 seqId = %d", int(seqId));
+                    //fprintf(stderr, "SGD time 4 seqId = %d", int(seqId));
                 }
                 // ===========================================================
                 // forward prop for evaluate eval nodes
