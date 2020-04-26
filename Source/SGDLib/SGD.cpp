@@ -1226,6 +1226,7 @@ void SGD<ElemType>::PrepareMBR(const std::vector<std::wstring>& outputNodeNamesV
 
         vt_feas.push_back(fea);
     }
+    refFeaMatBackup.ReleaseMemory();
 
     size_t numSequences = vt_feas.size();
     if (numSequences != encodeMBLayout->GetNumSequences())
