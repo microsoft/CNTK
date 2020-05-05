@@ -5867,17 +5867,17 @@ __global__ void _assignRNNTAlphaScore2(
                 //alphaId_2 = alphaId - numChannels * maxPhoneNum;  //alpha ID for [t-1, u]
                 probId_2 = tuID_2 * totalPhoneNum + blankTokenId; //ID for p(phi|t-1,u)
                 ElemType prob_t_u_1 = prob[probId_1];
-                /*if (u == phoneNum - 1 && delayConstraint != 0 && (size_t) phoneId == blankTokenId - 1)
+                if (u == phoneNum - 1 && delayConstraint != 0 && (size_t) phoneId == blankTokenId - 1)
                 {
                     int phoneBoundary = (int) (phoneBoundarySeq[labelid - 1] + 1);
-                    if (t == 239)
+                    /*if (t == 239)
                     {
                         printf("boundary: %d\n", phoneBoundary);
                         printf("phoneId: %d\n", (int) phoneId);
                         
                             printf("prob before: %f\n", prob_t_u_1);
                         
-                    }
+                    }*/
                     if (delayConstraint > 0)
                     {
                         //printf("boundary: %d\n", phoneBoundary);
@@ -5891,16 +5891,16 @@ __global__ void _assignRNNTAlphaScore2(
                     if (prob_t_u_1 >= 0)
                     {
                         prob_t_u_1 = -0.00001;
-                        printf("boundary: %d\n", phoneBoundary);
+                        /*printf("boundary: %d\n", phoneBoundary);
                         printf("phoneId: %d\n", (int) phoneId);
                         printf("t: %d\n", (int) t);
-                        printf("prob: %f\n", prob_t_u_1);
+                        printf("prob: %f\n", prob_t_u_1);*/
                     }
-                    if (t == 239)
+/*                    if (t == 239)
                     {
                         printf("prob after: %f\n", prob_t_u_1);
-                    }
-                }*/
+                    }*/
+                }
                 if (t == 0 && u == 0)
                 {
                     alphaScore[tuID] = 0.0;
@@ -6011,15 +6011,15 @@ __global__ void _assignRNNTBetaScore2(
                 tuID_2 = tuID + 1;                              //beid for (t,u+1)
                 //ElemType prob_t_u_b = prob[probId_1];
                 ElemType prob_t_u = prob[probId];
-                /*if (u == phoneNum - 2 && delayConstraint != 0 && (size_t) phoneId == blankTokenId - 1)
+                if (u == phoneNum - 2 && delayConstraint != 0 && (size_t) phoneId == blankTokenId - 1)
                 {
                     int phoneBoundary = (int) (phoneBoundarySeq[labelid] + 1);
-                    if (t == 239)
+                    /*if (t == 239)
                     {
                         printf("boundary: %d\n", phoneBoundary);
                         printf("phoneId: %d\n", (int) phoneId);
                         printf("prob before: %f\n", prob_t_u);
-                    }
+                    }*/
                     if (delayConstraint > 0)
                     {
                         //printf("boundary: %d\n", phoneBoundary);
@@ -6033,12 +6033,12 @@ __global__ void _assignRNNTBetaScore2(
                     if (prob_t_u >= 0)
                     {
                         prob_t_u = -0.00001;
-                        printf("boundary: %d\n", phoneBoundary);
+                        /*printf("boundary: %d\n", phoneBoundary);
                         printf("phoneId: %d\n", (int) phoneId);
                         printf("t: %d\n", (int) t);
-                        printf("prob: %f\n", prob_t_u);
+                        printf("prob: %f\n", prob_t_u);*/
                     }
-                }*/
+                }
                 if (u == phoneNum - 1 && t == frameNum - 1)
                 {
                     //probId_1 = tuID * totalPhoneNum + blankTokenId; //ID for p(phi|t,u)
