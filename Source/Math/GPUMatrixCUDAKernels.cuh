@@ -5869,6 +5869,8 @@ __global__ void _assignRNNTAlphaScore2(
                 ElemType prob_t_u_1 = prob[probId_1];
                 if (u == phoneNum - 1 && delayConstraint != 0 && (size_t) phoneId == blankTokenId - 1)
                 {
+                    printf("here\n");
+
                     int phoneBoundary = (int) (phoneBoundarySeq[labelid - 1] + 1);
                     /*if (t == 239)
                     {
@@ -5896,7 +5898,7 @@ __global__ void _assignRNNTAlphaScore2(
                         printf("t: %d\n", (int) t);
                         printf("prob: %f\n", prob_t_u_1);*/
                     }
-/*                    if (t == 239)
+                    /*                    if (t == 239)
                     {
                         printf("prob after: %f\n", prob_t_u_1);
                     }*/
@@ -5990,7 +5992,7 @@ __global__ void _assignRNNTBetaScore2(
             size_t labelid = uttId * maxPhoneNum + u;
             // Actual current phone label
             size_t phoneId = (size_t)(phoneSeq[labelid + 1]); //phone ID of u+1
-            size_t phoneBoundary = (size_t)(phoneBoundarySeq[labelid]);
+            //size_t phoneBoundary = (size_t)(phoneBoundarySeq[labelid]);
             // Index of the current frame in minibatch
             //size_t timeId = (t + uttBeginFrame[uttId]) * numChannels + uttToChanInd[uttId]; //timeid in chunk for t
             // Index of the current frame in minibatch
@@ -6010,9 +6012,14 @@ __global__ void _assignRNNTBetaScore2(
                 tuID_1 = tuID + phoneNum;                       //beta ID for (t+1,u)
                 tuID_2 = tuID + 1;                              //beid for (t,u+1)
                 //ElemType prob_t_u_b = prob[probId_1];
-                ElemType prob_t_u = prob[probId];
+                ElemType prob_t_u;
+                if (u < phoneNum - 1 && t < frameNum - 1)
+                    prob_t_u = prob[probId];
+                else 
+                    prob_t_u = 0;
                 if (u == phoneNum - 2 && delayConstraint != 0 && (size_t) phoneId == blankTokenId - 1)
                 {
+                    printf("here\n");
                     int phoneBoundary = (int) (phoneBoundarySeq[labelid] + 1);
                     /*if (t == 239)
                     {
