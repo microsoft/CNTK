@@ -4724,13 +4724,13 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
 
         //pre-process prob for EOS DCT
 
-        GPUMatrix<ElemType> prob_eos(prob.GetComputeDeviceId());
-        prob_eos.SetValue(prob);
+        //GPUMatrix<ElemType> prob_eos(prob.GetComputeDeviceId());
+        //prob_eos.SetValue(prob);
         //prob_eos.Print("prob before", 0, prob.GetNumRows() - 1, 3999, 4002); 
         if (delayConstraint != 0)
         {
             dim3 block_tail_t((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
-            _AddPenaltyEosProb<<<block_tail_t, thread_tail, 0, t_stream>>>(prob_eos.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
+            _AddPenaltyEosProb<<<block_tail_t, thread_tail, 0, t_stream>>>(prob.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                            uttInfo.Data(), maxFrameNum, maxPhoneNum, numSequences, earlyP, lateP, delayConstraint, blankTokenId, totalPhoneNum);
         }
         //prob_eos.Print("prob after", 0, prob.GetNumRows() - 1, 3999, 4002);
@@ -4741,18 +4741,18 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRNNTScore(const GPUMatrix<ElemTy
         {
             dim3 block_tail3((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (tu + DEFAULT_THREAD_PER_DIM) / DEFAULT_THREAD_PER_DIM);
 
-            _assignRNNTAlphaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob_eos.Data(), alpha.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
+            _assignRNNTAlphaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob.Data(), alpha.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                               uttInfo.Data(), tu,
                                                                               maxPhoneNum, totalPhoneNum, blankTokenId, numSequences, earlyP, lateP, delayConstraint);
         }
         for (int tu = maxTU - 1; tu >= 0; tu--)
         {
             dim3 block_tail3((numSequences + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (tu + DEFAULT_THREAD_PER_DIM) / DEFAULT_THREAD_PER_DIM);
-            _assignRNNTBetaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob_eos.Data(), beta.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
+            _assignRNNTBetaScore2<<<block_tail3, thread_tail, 0, t_stream>>>(prob.Data(), beta.Data(), matrixPhoneSeq.Data(), matrixPhoneBoundary.Data(),
                                                                              uttInfo.Data(), tu,
                                                                              maxPhoneNum, totalPhoneNum, blankTokenId, numSequences, earlyP, lateP, delayConstraint);
         }
-        prob_eos.ReleaseStorageMemory();
+        //prob_eos.ReleaseStorageMemory();
         //beta.Print("beta");
         //alpha.Print("alpha");
 
