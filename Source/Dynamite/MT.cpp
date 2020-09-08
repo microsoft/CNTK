@@ -138,6 +138,22 @@ static void SetConfigurationVariablesFor(string systemId) // set variables; over
         tgtVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/vocab.ende.txt";
         tieSoftmaxWithTgtEmbeddings = tieSrcAndTgtEmbeddings = true;      // share both embeddings, also share with output layer
     }
+    else if (systemId == "en_de_bpe1") // same as en_dddddddde_bpe except recreated the vocab
+    {
+        // cat vocab.ende.yml | sed 's/: [0-9]*$//' | tr -d ^" > vocab.ende.txt && "C:\Program Files\Git\usr\bin\echo.exe" >> ..\data\vocab.ende.txt
+        // BUGBUG: These vocabs contain a few \x and \u expressions, which get transformed incorrectly ()
+        srcVocabSize = 36629;
+        tgtVocabSize = 36629;
+        srcTrainFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/corpus.bpe.en";
+        tgtTrainFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/corpus.bpe.de";
+        srcDevFile   = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/valid.bpe.en";
+        tgtDevFile   = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/valid.bpe.de";
+        srcTestFile  = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/test2016.bpe.en";
+        tgtTestFile  = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/test2016.bpe.de";
+        srcVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/corpus.bpe.ende.wl";
+        tgtVocabFile = L"${PHILLY_DATA_DIR}/data2/fseide/marian-examples/transformer/data/corpus.bpe.ende.wl";
+        tieSoftmaxWithTgtEmbeddings = tieSrcAndTgtEmbeddings = true;      // share both embeddings, also share with output layer
+    }
     else if (systemId == "chs_enu")
     {
         srcVocabSize = 78440;
@@ -786,7 +802,7 @@ class SmoothedCriterion
 {
     NDArrayViewPtr smoothedNumer; // loss value is accumulated on the GPU
     double smoothedDenom = 0;
-    const double smoothingTimeConstant = 4096000; // e.g. smooth over 1000 minibatches
+    const double smoothingTimeConstant = 50*2000;//4096000; // e.g. smooth over 1000 minibatches
     mutable vector<float> fetchBuf; // (float since that's what it most likely is; avoids an extra malloc)
 public:
     // 'mbLoss' = sum over 'count' loss/metric tuples
@@ -798,10 +814,15 @@ public:
         // update smoothed numerator and denominator
         // this smoothing will converge to 1.0 for the denominator
         // (actually a little higher since we add 'count' items instead of 1)
+#if 0   // #if 0 to log the raw values, for direct comparisons
         let decay      =     exp(-(double)count / smoothingTimeConstant);
         let complement = 1 - exp(-1             / smoothingTimeConstant);
         let alpha = complement;
         let beta = decay;
+#else
+        let alpha = 1.0;
+        let beta = 0.0;
+#endif
         smoothedDenom   = alpha * count  + beta * smoothedDenom;
         //smoothedNumer = alpha * mbLoss + beta * smoothedNumer;
         NDArrayView::NumericOperation({ mbLoss }, alpha, L"Copy", smoothedNumer, beta);
@@ -874,17 +895,16 @@ BinaryFoldingModel CreateModelFunctionMarian()
         L"allow-unk",                     false,    
         L"batch-flexible-lr",             false,    
         L"batch-normal-words",            1920,    
-        L"beam-size",                     6,    
-        L"best-deep",                     false,    
-        L"clip-norm",                     5,    
-        L"cost-type",                     L"ce-sum",
-        //L"cost-type",                     L"ce-mean",
+        //L"beam-size",                     6,    
+        //L"best-deep",                     false,    
+        //L"clip-norm",                     0.0f,    // not meaningful with ce-sum
+        L"cost-type",                     L"ce-sum", // L"ce-mean",
         L"dec-cell",                      L"gru",    
         L"dec-cell-base-depth",           2,    
         L"dec-cell-high-depth",           1,    
         L"dec-depth",                     6,    
-        L"devices",                       Options::VectorOf({ 0, 1, 2, 3 }),    
-        L"dim-emb",                       512,    
+        //L"devices",                       Options::VectorOf({ 0, 1, 2, 3 }),    
+        L"dim-emb",                       512,      // TODO: get these from our variables as well
         L"dim-rnn",                       1024,    
         L"dim-vocabs",                    Options::VectorOf({ (int)srcVocabSize, (int)tgtVocabSize }),    // changed from 0,0
         L"disp-freq",                     500,    
@@ -905,71 +925,71 @@ BinaryFoldingModel CreateModelFunctionMarian()
         L"guided-alignment-weight",       1,    
         L"ignore-model-config",           false,    
         L"keep-best",                     false,    
-        L"label-smoothing",               0.1f, // disable for easier debugging
-        L"layer-normalization",           false,    
+        L"label-smoothing",               0.0f,// DISABLED 1f, // disable for easier debugging
+        L"layer-normalization",           false,    // note: post-processing with "dan" does layer norm
         //L"learn-rate",                    0.0003,     // not used in Dynamite
-        L"log",                           L"model/train.log",    
-        L"log-level",                     L"info",    
-        L"lr-decay",                      0,    
-        L"lr-decay-freq",                 50000,    
-        L"lr-decay-inv-sqrt",             16000,    
-        L"lr-decay-repeat-warmup",        false,    
-        L"lr-decay-reset-optimizer",      false,    
-        L"lr-decay-start",                Options::VectorOf({ 10, 1 }),    
-        L"lr-decay-strategy",             L"epoch+stalled",    
-        L"lr-report",                     true,    
-        L"lr-warmup",                     16000,    
-        L"lr-warmup-at-reload",           false,    
-        L"lr-warmup-cycle",               false,    
-        L"lr-warmup-start-rate",          0,    
-        L"max-length",                    100,    
+        //L"log",                           L"model/train.log",    
+        //L"log-level",                     L"info",    
+        //L"lr-decay",                      0,    
+        //L"lr-decay-freq",                 50000,    
+        //L"lr-decay-inv-sqrt",             16000,    
+        //L"lr-decay-repeat-warmup",        false,    
+        //L"lr-decay-reset-optimizer",      false,    
+        //L"lr-decay-start",                Options::VectorOf({ 10, 1 }),    
+        //L"lr-decay-strategy",             L"epoch+stalled",    
+        //L"lr-report",                     true,    
+        //L"lr-warmup",                     16000,    
+        //L"lr-warmup-at-reload",           false,    
+        //L"lr-warmup-cycle",               false,    
+        //L"lr-warmup-start-rate",          0,    
+        L"max-length",                    500,    
         L"max-length-crop",               false,    
-        L"maxi-batch",                    1000,    
-        L"maxi-batch-sort",               L"trg",
-        L"mini-batch",                    64,    
-        L"mini-batch-fit",                true,    
-        L"mini-batch-words",              0,    
-        L"model",                         L"model/model.npz",    
-        L"n-best",                        false,    
-        L"no-reload",                     false,    
-        L"no-shuffle",                    true,    
-        L"normalize",                     1,    
-        L"optimizer",                     L"adam",    
-        L"optimizer-delay",               1,    
+        //L"maxi-batch",                    1000,    
+        //L"maxi-batch-sort",               L"trg",
+        //L"mini-batch",                    64,    
+        //L"mini-batch-fit",                true,    
+        //L"mini-batch-words",              0,    
+        //L"model",                         L"model/model.npz",    
+        //L"n-best",                        false,    
+        //L"no-reload",                     false,    
+        //L"no-shuffle",                    true,    
+        //L"normalize",                     1,    
+        //L"optimizer",                     L"adam",    
+        //L"optimizer-delay",               1,    
         //L"optimizer-params",              Options::VectorOf({ 0.9, 0.98, 1e-09 }),     // not used in Dynamite
-        L"overwrite",                     false,    
-        L"quiet",                         false,    
-        L"quiet-translation",             true,    
-        L"relative-paths",                false,    
-        L"save-freq",                     5000,    
+        //L"overwrite",                     false,    
+        //L"quiet",                         false,    
+        //L"quiet-translation",             true,    
+        //L"relative-paths",                false,    
+        //L"save-freq",                     5000,    
         L"seed",                          1111,    
         L"skip",                          false,    
-        L"sync-sgd",                      true,    
-        L"tempdir",                       L"/tmp",    
-        L"tied-embeddings",               tieSoftmaxWithTgtEmbeddings, // tie target embeddings with softmax weights
-        L"tied-embeddings-src",           tieSrcAndTgtEmbeddings,      // embeddings tied across source and target (must have same vocab)
+        //L"sync-sgd",                      true,    
+        //L"tempdir",                       L"/tmp",    
+        L"tied-embeddings",               !tieSrcAndTgtEmbeddings && tieSoftmaxWithTgtEmbeddings, // tie target embeddings with softmax weights
         L"tied-embeddings-all",           tieSrcAndTgtEmbeddings && tieSoftmaxWithTgtEmbeddings, // embeddings tied across source, target, and softmax
-        L"train-sets",                    Options::VectorOf({ L"XXdata/corpus.bpe.en", L"XXdata/corpus.bpe.de" }),    
+        L"tied-embeddings-src",           tieSrcAndTgtEmbeddings && !tieSoftmaxWithTgtEmbeddings,      // embeddings tied across source and target (must have same vocab)
+        //L"train-sets",                    Options::VectorOf({ L"XXdata/corpus.bpe.en", L"XXdata/corpus.bpe.de" }),    
         L"transformer-dim-ffn",           2048,    
-        L"transformer-dropout",           0.1f,    
-        L"transformer-dropout-attention", 0.0f,    
-        L"transformer-heads",             8,    
-        //L"transformer-postprocess",       L"an",    
-        //L"transformer-postprocess-emb",   L"",    
-        L"transformer-postprocess",       L"dan",    
-        L"transformer-postprocess-emb",   L"d",    
-        L"transformer-preprocess",        L"",    
-        L"type",                          L"transformer",    
-        L"valid-freq",                    5000,    
-        L"valid-log",                     L"model/valid.log",    
-        L"valid-max-length",              1000,    
-        L"valid-metrics",                 Options::VectorOf({ L"cross-entropy", L"perplexity", L"translation" }),    
-        L"valid-mini-batch",              64,    
-        L"valid-script-path",             L"./scripts/validate.sh",    
-        L"valid-sets",                    Options::VectorOf({ L"XXdata/valid.bpe.en", L"XXdata/valid.bpe.de" }),    
-        L"valid-translation-output",      L"data/valid.bpe.en.output",    
-        L"vocabs",                        Options::VectorOf({ L"XXmodel/vocab.ende.yml", L"XXmodel/vocab.ende.yml" }),    
-        L"workspace",                     10000    
+        L"transformer-dropout",           0.0f,// DISABLED 1f,
+        L"transformer-dropout-attention", 0.0f,
+        L"transformer-dropout-ffn",       0.0f,
+        L"transformer-ffn-activation",    L"swish",
+        L"transformer-heads",             8,
+        L"transformer-postprocess",       L"dan",
+        L"transformer-postprocess-emb",   L"d",
+        L"transformer-preprocess",        L"",
+        L"type",                          L"transformer"
+        //L"valid-freq",                    5000,    
+        //L"valid-log",                     L"model/valid.log",    
+        //L"valid-max-length",              1000,    
+        //L"valid-metrics",                 Options::VectorOf({ L"cross-entropy", L"perplexity", L"translation" }),    
+        //L"valid-mini-batch",              64,    
+        //L"valid-script-path",             L"./scripts/validate.sh",    
+        //L"valid-sets",                    Options::VectorOf({ L"XXdata/valid.bpe.en", L"XXdata/valid.bpe.de" }),    
+        //L"valid-translation-output",      L"data/valid.bpe.en.output",    
+        //L"vocabs",                        Options::VectorOf({ L"XXmodel/vocab.ende.yml", L"XXmodel/vocab.ende.yml" }),    
+        //L"workspace",                     10000    
     ));
     auto mmodel = models::encoder_decoder()(options)
         .push_back(models::encoder()("type", "transformer"))
@@ -983,13 +1003,13 @@ BinaryFoldingModel CreateModelFunctionMarian()
     // TODO: why does this need the batch at all? Does this really run through, and really initialize the parameters?
     auto mparamsVector = graph->params()->get();
     auto mparams = shared_ptr<Dynamite::ModelParameters>(new Dynamite::ModelParameters(mparamsVector, {}));
-#if 0 // for comparison to Marian, read all initial values from Marian
+#if 1 // for comparison to Marian, read all initial values from Marian
     vector<float> buf;
     for (auto& p : mparamsVector)
     {
-        p.Value()->LogToFile(p.Name() + L" (CNTK)");
+        //p.Value()->LogToFile(p.Name() + L" (CNTK)");
         // load it from the Marian init file
-        wstring path = dataRootDir + L"/data2/fseide/marian-examples/transformer/initvals/" + p.Name();
+        wstring path = L"/tmp/initval." + p.Name() + L".float32";
         let numElem = p.Shape().TotalSize();
         fprintf(stderr, "Loading %d init vals: %S\n", (int)numElem, path.c_str()), fflush(stderr);
         FILE* f = _wfopen(path.c_str(), L"rb");
@@ -998,13 +1018,13 @@ BinaryFoldingModel CreateModelFunctionMarian()
             buf.resize(numElem);
             let res = fread(buf.data(), sizeof(*buf.data()), buf.size(), f); res;
             fclose(f);
-            fprintf(stderr, "first val: %.f\n", buf.front());
+            //fprintf(stderr, "first val: %.f\n", buf.front());
             auto temp = CNTK::NDArrayView(CNTK::DataType::Float, p.Shape(),
                                       (void*)buf.data(), buf.size() * sizeof(*buf.data()),
                                       CNTK::DeviceDescriptor::CPUDevice(), /*readOnly=*/true)
                                       .DeepClone(p.Value()->Device(), /*readOnly=*/false);
             p.SetValue(temp);
-            p.Value()->LogToFile(p.Name() + L" (Marian)");
+            //p.Value()->LogToFile(p.Name() + L" (Marian)");
         }
         else
             fprintf(stderr, "######### Failed to open\n"), fflush(stderr);
@@ -1068,11 +1088,11 @@ BinaryFoldingModel CreateCriterionFunctionMarian(const BinaryFoldingModel& model
 
         std::string costType = "ce-sum";// mmodel->opt<string>("cost-type");
         bool inference = false; // TODO
-        float ls = inference ? 0.f :    0.1f; //mmodel->opt<float>("label-smoothing");// TODO: parameterize this again
+        float ls = 0;// DISABLED inference ? 0.f :    0.1f; //mmodel->opt<float>("label-smoothing");// TODO: parameterize this again
 
         auto cost   = Cost(probs, trgData, trgMask, costType, ls);
 #if 1
-        auto metric = Cost(probs, trgData, trgMask, costType); // metric is the same except no label smoothing. Auto-batch will compute CE only once.
+        auto metric = ls ? Cost(probs, trgData, trgMask, costType) : cost; // metric is the same except no label smoothing. Auto-batch will compute CE only once.
         //fprintf(stderr, "====> cost/target = %.8f\n", cost.Value()->AsScalar<float>() / trgSubBatch->batchWords()), fflush(stderr);
 
 #if 0
@@ -1113,7 +1133,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     let numWorkers = communicator->Workers().size();
     let workerId = communicator->CurrentWorker().m_globalRank;
 
-#if 0   // old Dynamite model
+#if 0   // genuine Dynamite model
     insertBOS = true; // we expect data to contain <s>
 
     // dynamic model and criterion function
@@ -1144,7 +1164,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     // data
     if (runProfiling     /*||true*/) // if profiling then use small files so we don't measure the load time
         srcTrainFile = srcDevFile, tgtTrainFile = tgtDevFile;
-    let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/true);
+    let minibatchSource = CreateMinibatchSource(srcTrainFile, tgtTrainFile, /*isTraining=*/false);    //DISABLED true);
 
     //model_fn.LogParameters();
 
@@ -1268,7 +1288,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
     NDArrayViewPtr mbLossAndMetric; // temp for passing loss/metric around at one point
     for (mbCount = 0; ; mbCount++, bucketCounter++) // mbCount = #updates. Not partial sub-minibatches, not bucketing sub-batches.
     {
-        let logThisMb = mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
+        let logThisMb = true;     //mbCount <= 20 || mbCount % 10 == 0; // (use this to cut down on logging)
         let relPosition = totalNumLabelsSeen / (double)epochSize;
 
         if (bucketCounter == bucketedMinibatchSet.size()) // wrap around the bucket counter
@@ -1338,11 +1358,13 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             fprintf(stderr, "Fetching next set of %d samples (for bucketed minibatching). Model has seen %.0f samples so far.\n",
                     (int)maxibatchSize, (double)totalNumLabelsSeen), fflush(stderr);
             let scaledMinibatchSize = (size_t)(minibatchSize * minibatchSizeScaling);
-            Dynamite::GetSubBatches(bucketedMinibatchSet, { L"src", L"tgt" }, minibatchSource,
-                                    scaledMinibatchSize, maxibatchSize, maxBatchSizePerWorker, /*hasPadding=*/true, // Marian uses padding
-                                    numWorkers, workerId,
-                                    /*shuffleSeed=*/mbCount,
-                                    /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
+            let res = Dynamite::GetSubBatches(bucketedMinibatchSet, { L"src", L"tgt" }, minibatchSource,
+                                              scaledMinibatchSize, maxibatchSize, maxBatchSizePerWorker, /*hasPadding=*/true, // Marian uses padding
+                                              numWorkers, workerId,
+                                              /*shuffleSeed=*/mbCount,
+                                              /*inferenceOnly=*/false, CurrentDataType(), CurrentDevice());
+            if (!res)
+                LogicError("GetSubBatches() hit end of data in training mode??");
             fprintf(stderr, "Samples were distributed over %d buckets, target MB size %d.\n", (int)bucketedMinibatchSet.size(), (int)scaledMinibatchSize), fflush(stderr);
         }
         let timeGetNextMinibatch = partTimer.Elapsed();
@@ -1460,6 +1482,10 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
         // BUGBUG: It has a strange shape.
         //let partialWorkerLossVar = partialWorkerLossAndMetricVar[0]; // we backprop only through the loss, not the metric
         partialWorkerLossVar.Backward(gradients, /*beta=*/isFirstPartialBatch ? 0 : 1);
+#if 0
+if (mbCount == 1000)
+ abort();
+#endif
         let timeBackward = partTimer.Elapsed();
 
         // BUGBUG: needed to move this here to avoid spurious error (hopefully)
@@ -1520,6 +1546,17 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
                     for (let& p : parameters)
                         NDArrayView::NumericOperation({ gradients[p] }, /*alpha=*/globalNormClipping / totalL2Norm, L"Copy", gradients[p], /*beta=*/0);
                 }
+            }
+#endif
+#if 0       // log the gradients for debugging
+            for (let& p : parameters)
+            {
+                let& shape = p.Shape();
+                let rank = shape.Rank();
+                vector<NDShapeDimension> perm;
+                for (NDShapeDimension i = 0; i < rank; i++)
+                    perm.push_back(rank - 1 - i);
+                gradients[p]->AsTransposed(NDShapePermutation(perm))->DeepClone(gradients[p]->Device())->LogToFile(p.Name());
             }
 #endif
 
@@ -1596,7 +1633,7 @@ static void Train(const DistributedCommunicatorPtr& communicator, const wstring&
             {
                 double smoothedLossVal, smoothedMetricVal; tie
                 (smoothedLossVal, smoothedMetricVal) = smoothedLoss.RunningAverage();
-                fprintf(stderr, "ce=%4.2f, L=%4.2f after %.0f (%.2f ep), PPL=%8.2f", smoothedMetricVal, smoothedLossVal, (double)totalNumLabelsSeen, relPosition, exp(smoothedMetricVal));
+                fprintf(stderr, "ce=%4.2f, L=%4.8f after %.0f (%.2f ep), PPL=%8.2f", smoothedMetricVal, smoothedLossVal, (double)totalNumLabelsSeen, relPosition, exp(smoothedMetricVal));
 #if 1
                 fprintf(stderr, ", mbs=%d, lr=%.9f, ", (int)(minibatchSize * minibatchSizeScaling), baseLearner->LearningRate());
 #else

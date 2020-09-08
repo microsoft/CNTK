@@ -791,7 +791,7 @@ namespace CNTK
         GET_WRITABLE_MATRICES;
 
         const auto learningRate = LearningRate(thisMinibatchSize);
-#if 0   // hard-coded parameters for Marian comparison
+#if 1   // hard-coded parameters for Marian comparison
         const auto momentum = 0.9f;//MomentumValueForMB(thisMinibatchSize);
         const auto unitGainFactor = 1.0f - momentum; //UnitGainFactor<ElementType>(thisMinibatchSize);
 

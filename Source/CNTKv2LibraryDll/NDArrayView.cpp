@@ -1604,7 +1604,7 @@ namespace CNTK
             LogicError("NDArrayView::LogToFile: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
         }
-        fprintf(f, "%S : %s%S = ", name.empty() ? L"_" : name.c_str(), DataTypeName(GetDataType()), Shape().AsString().c_str());
+        fprintf(f, "%S : %s%S =\n", name.empty() ? L"_" : name.c_str(), DataTypeName(GetDataType()), Shape().AsString().c_str());
         fprintf(f, "%s\n", asString.c_str());
         fflush(f); // flush right away since most likely users are debugging
     }

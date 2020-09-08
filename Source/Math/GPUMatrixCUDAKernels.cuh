@@ -5411,7 +5411,7 @@ __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* varMomentumState
     }
 }
 
-#if 1
+#if 0
 // [fseide] Hacked version that
 //  - applies the decay process only to non-zero gradients (idea: zero ones are "absent" rather than "zero" for purpose of statistics estimation)
 //  - no momentum (because this way I can reuse the momentum buffer for the denominator--that's why it's a HACK)
@@ -5516,7 +5516,7 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
             w = adaMul / smoothAda[idx];
         }
 
-#if 0
+#if 1
         g = mom * smoothMom[idx] + unitGainFactor * g;
         smoothMom[idx] = g;
 #endif

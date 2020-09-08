@@ -812,7 +812,7 @@ static size_t TensorDataAsString(string& res,
     if (subRank == 0) // scalar: print the item
     {
         char buf[400]; // largest double is 1e309, so 400 should be enough. Enough said.
-        sprintf(buf, "%.8f", (double)*data);
+        sprintf(buf, "%.8f", 1000.0*(double)*data);
         res.append(buf);
         if (is_same<ElemType, size_t>())
             res.append(":1");
