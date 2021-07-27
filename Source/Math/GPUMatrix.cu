@@ -9,6 +9,7 @@
 #include "BestGpu.h"
 
 #ifndef CPUONLY
+#pragma warning(disable : 4324) // 'thrust::detail::aligned_type<2>::type': structure was padded due to alignment
 
 #include "GPUMatrix.h"
 #include "GPUMatrixCUDAKernels.cuh"

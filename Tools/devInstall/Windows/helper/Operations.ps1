@@ -299,21 +299,21 @@ function OpSwig3010(
         } )
 }
 
-function OpCheckVS2017
+function OpCheckVS2019
 {
-    @( @{Name = "Verify Installation of VS2017"; ShortName = "PREVS17"; VerifyInfo = "Checking for Visual Studio 2017"; 
-                        Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Visual Studio (Community|Professional|Enterprise) 2017$"; Version = "15.5"; MatchExact = $false} ); 
-                        PreReq = @( @{Function = "PrereqInfoVS17" } );
+    @( @{Name = "Verify Installation of VS2019"; ShortName = "PREVS19"; VerifyInfo = "Checking for Visual Studio 2019"; 
+                        Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Visual Studio (Community|Professional|Enterprise) 2019$"; Version = "15.5"; MatchExact = $false} ); 
+                        PreReq = @( @{Function = "PrereqInfoVS19" } );
                         Action = @( @{Function = "StopInstallation" } )
                         } )
 }
 
 function OpCheckCuda10
 {
-    $programPath = join-path $env:ProgramFiles "NVIDIA GPU Computing Toolkit\CUDA\v10.0"
-    @( @{Name = "Verify Installation of NVidia Cuda 10.0"; ShortName = "PRECUDA100"; VerifyInfo = "Checking for NVidia Cuda 10.0";
+    $programPath = join-path $env:ProgramFiles "NVIDIA GPU Computing Toolkit\CUDA\v10.2"
+    @( @{Name = "Verify Installation of NVidia Cuda 10.2"; ShortName = "PRECUDA102"; VerifyInfo = "Checking for NVidia Cuda 10.2";
          Verification = @( @{Function = "VerifyDirectory"; Path = $programPath },
-                           @{Function = "VerifyEnvironmentAndData"; EnvVar = "CUDA_PATH_V10_0"; Content = $programPath } );
+                           @{Function = "VerifyEnvironmentAndData"; EnvVar = "CUDA_PATH_V10_2"; Content = $programPath } );
          PreReq = @( @{Function = "PrereqInfoCuda10" } );
          Action = @( @{Function = "StopInstallation" } )
         } )

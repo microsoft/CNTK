@@ -250,10 +250,12 @@ bindings/python/cntk/i_plus_c_0.mod
 bindings/python/cntk/i_plus_i_0.mod
 
 # CSharp bindings
-bindings/csharp/Swig/cntk_cs_wrap.h
-bindings/csharp/Swig/cntk_cs_wrap.cxx
-bindings/csharp/Swig/cntk_cs_wrap.cxx
-bindings/csharp/Swig/Generated/*
+# Comment out below to get SWIG code in git
+bindings/csharp/Swig/Generated/cntk_cs_wrap.h
+bindings/csharp/Swig/Generated/cntk_cs_wrap.cxx
+# Out comment below to get C# code in git
+#!bindings/csharp/Swig/Generated/*/Debug
+#!bindings/csharp/Swig/Generated/*/Release
 bindings/csharp/CNTKLibraryManagedDll/build/Linux/Debug/CSharpBindings/CMakeFiles/CSharpBindings.dir/depend.make
 bindings/csharp/CNTKLibraryManagedDll/build/Linux/Release/CSharpBindings/CMakeFiles/CSharpBindings.dir/depend.make
 

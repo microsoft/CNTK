@@ -30,7 +30,7 @@ function PreRequisiteItem(
     Invoke-Expression $expr 
 }
 
-function PrereqInfoVS17(
+function PrereqInfoVS19(
     [Parameter(Mandatory = $true)][hashtable] $table
 )
 {

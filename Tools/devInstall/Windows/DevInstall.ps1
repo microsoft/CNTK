@@ -134,7 +134,7 @@ Function main
 
         $operation = @();
         $operation += OpScanProgram
-        $operation += OpCheckVS2017
+        $operation += OpCheckVS2019
 
         $operation += OpCheckCuda10
         $operation += OpNVidiaCudnn73100 -cache $localCache -targetFolder $localDir

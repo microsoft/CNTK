@@ -19,6 +19,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CNTKLibraryCSEvalExamples</RootNamespace>
     <AssemblyName>CNTKLibraryCSEvalExamplesTest.standard</AssemblyName>
+    <TargetFramework>net461</TargetFramework>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
