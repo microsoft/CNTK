@@ -49,8 +49,8 @@
     <PlatformTarget>x64</PlatformTarget>
 	<DebugType>portable</DebugType>
      
-    <PackageId>Cntk.Core.Managed</PackageId>
-    <PackageId Condition="'$(CntkComponentSuffix)'!=''">Cntk.Core.Managed-$(CntkComponentSuffix)</PackageId>
+    <PackageId>$(NugetPackagePrefix)Cntk.Core.Managed</PackageId>
+    <PackageId Condition="'$(CntkComponentSuffix)'!=''">$(NugetPackagePrefix)Cntk.Core.Managed-$(CntkComponentSuffix)</PackageId>
   </PropertyGroup>
   
   <ItemGroup>

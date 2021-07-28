@@ -129,6 +129,55 @@ at the top of the file.
 
 See https://github.com/nietras/CNTK/pull/1/files
 
+# Add SWIG Generated C++ and C#
+See https://github.com/nietras/CNTK/pull/3/files
+
+# Define new nuget packages
+* Searching for `*.nuspec` only shows the following files:
+```
+CNTK\bindings\csharp\CNTKLibraryManagedDll\obj\Debug\Cntk.Core.Managed-d.2.7.0.nuspec
+CNTK\bindings\csharp\CNTKLibraryManagedDll\obj\Release\Cntk.Core.Managed.2.7.0.nuspec
+CNTK\bindings\csharp\CNTKLibraryManagedDll\obj\Release_CpuOnly\Cntk.Core.Managed.2.7.0.nuspec
+CNTK\Source\Multiverso\binding\C#\NuGet\MultiversoCLR.nuspec
+CNTK\Source\CNTKv2LibraryDll\proto\onnx\onnxruntime\cmake\external\protobuf\csharp\Google.Protobuf.Tools.nuspec
+CNTK\Source\CNTKv2LibraryDll\proto\onnx\onnxruntime\tools\nuget\template.nuspec
+```
+Hence, only `Cntk.Core.Managed` appears present here, but the project itself
+defines the package, so one can just `pack` the `CNTKLibraryManagedDll` project.
+But what about the other projects then? Could not find any nuspec or similar for this,
+so recreating from the official packages on nuget.
+
+[https://www.nuget.org/packages?q=Cntk](https://www.nuget.org/packages?q=Cntk)
+
+Hence downloading the following packages and unzipping them:
+
+https://www.nuget.org/packages/CNTK.GPU/2.8.0-rc0.dev20200201
+https://www.nuget.org/packages/CNTK.Deps.cuDNN/2.8.0-rc0.dev20200201
+https://www.nuget.org/packages/CNTK.Deps.Cuda/2.8.0-rc0.dev20200201
+https://www.nuget.org/packages/CNTK.Deps.MKL/2.8.0-rc0.dev20200201
+https://www.nuget.org/packages/CNTK.Deps.OpenCV.Zip/2.8.0-rc0.dev20200201
+
+
+For `CNTK.GPU` package copy contents of:
+```
+C:\git\oss\CNTK\Source\CNTKv2LibraryDll\API
+```
+to
+```
+C:\git\oss\CNTK\PackageSpecs\nietras.cntk.gpu\build\native\include
+```
+Then copy binary files to the different packages from:
+```
+C:\git\oss\CNTK\x64\Release
+```
+
+TODO: Create a script for this.
+
+Then created packages in `PackageSpecs` based on the above downloaded
+packages, unzipping them and then manually modifying them to match
+the latest version.
+
+
 # CUDA 11 - Modifications to support Ampere GPUs
 https://github.com/microsoft/CNTK/issues/3835
 

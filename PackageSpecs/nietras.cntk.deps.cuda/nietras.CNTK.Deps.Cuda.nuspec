@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+  <metadata>
+    <id>nietras.CNTK.Deps.Cuda</id>
+    <version>2.7.1</version>
+    <title>Microsoft CNTK, Cuda dependencies</title>
+    <authors>Microsoft</authors>
+    <owners>Microsoft, CNTKTeam</owners>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>http://www.cntk.ai/</projectUrl>
+    <iconUrl>http://go.microsoft.com/fwlink/?LinkID=288890</iconUrl>
+    <description>Microsoft Cognitive Toolkit Libraries, Cuda dependencies</description>
+    <summary>This NuGet package provides Cuda dependencies for CNTK GPU build.</summary>
+    <releaseNotes>git commit:c7bc93fde7d206f71d98a13420b6f2140a97cf20</releaseNotes>
+    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
+  </metadata>
+</package>

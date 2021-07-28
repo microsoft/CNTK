@@ -113,7 +113,7 @@
   <PropertyGroup Condition="'$(CudaVersion)' == '10.2'">
     <CudaPath>$(CUDA_PATH_V10_2)</CudaPath>
     <CudaRuntimeDll>cudart64_102.dll</CudaRuntimeDll>
-    <CudaDlls>cublas64_10.dll;cusparse64_10.dll;curand64_10.dll;$(CudaRuntimeDll)</CudaDlls>
+    <CudaDlls>cublasLt64_10.dll;cublas64_10.dll;cusparse64_10.dll;curand64_10.dll;$(CudaRuntimeDll)</CudaDlls>
 
     <!-- Use NvidiaCompute to define nvcc target architectures (will generate code to support them all, i.e. fat-binary, in release mode)
     In debug mode we only include cubin/PTX for 30 and rely on PTX / JIT to generate the required native cubin format

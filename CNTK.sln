@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2024
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31321.278
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{D45DF403-6781-444E-B654-A96868C5BE68}"
 EndProject
@@ -1640,6 +1640,11 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CNTKLibraryCSTrainingTest", "Tests\EndToEndTests\CNTKv2CSharp\CNTKLibraryCSTrainingTest\CNTKLibraryCSTrainingTest.csproj", "{4F2971CD-021F-443A-95F9-2AEAABDFD5F8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CNTKLibraryCSEvalExamplesTest", "Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest\CNTKLibraryCSEvalExamplesTest.csproj", "{069DB9BE-7AD0-4BE5-B52E-EEED23EBEC6D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "root", "root", "{FC5C3CF9-65F9-47AC-9190-67993E37E249}"
+	ProjectSection(SolutionItems) = preProject
+		BUILD-Windows.md = BUILD-Windows.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
