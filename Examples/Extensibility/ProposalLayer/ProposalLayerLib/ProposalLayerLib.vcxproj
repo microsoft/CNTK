@@ -36,6 +36,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>ProposalLayerLib</RootNamespace>
     <ProjectName>ProposalLayerLib</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

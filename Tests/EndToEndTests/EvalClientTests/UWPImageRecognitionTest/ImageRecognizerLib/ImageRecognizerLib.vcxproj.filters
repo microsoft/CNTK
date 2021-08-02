@@ -8,11 +8,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)\Examples\Evaluation\UWPImageRecognition\ImageRecognizerLib\CNTKImageRecognizer.cpp" />
-    <ClCompile Include="$(SolutionDir)\Examples\Evaluation\UWPImageRecognition\ImageRecognizerLib\pch.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="$(SolutionDir)$(Platform)\$(Configuration)\Cntk.Core$(OutputSuffix)-$(CntkComponentVersion).dll" />
-    <None Include="$(SolutionDir)$(Platform)\$(Configuration)\Cntk.Math$(OutputSuffix)-$(CntkComponentVersion).dll" />
-    <None Include="$(SolutionDir)$(Platform)\$(Configuration)\libopenblas.dll" />
+    <None Include="$(SolutionDir)\Examples\Evaluation\UWPImageRecognition\ImageRecognizerLib\utils.inl" />
   </ItemGroup>
 </Project>

@@ -26,6 +26,7 @@
     <ProjectGuid>{5D1972FA-F0A4-4035-8E63-8BAEF0230097}</ProjectGuid>
     <RootNamespace>CNTKLibraryJavaBinding</RootNamespace>
     <ProjectName>CNTKLibraryJavaBinding</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">

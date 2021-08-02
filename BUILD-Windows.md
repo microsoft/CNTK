@@ -184,3 +184,41 @@ https://github.com/microsoft/CNTK/issues/3835
 ## Look at changes in other repo for reference
 https://github.com/haryngod/CNTK/tree/2.7-cuda-11.1
 
+## Downloads
+* CUDA 11.4 https://developer.download.nvidia.com/compute/cuda/11.4.0/network_installers/cuda_11.4.0_win10_network.exe
+* cuDNN 8.2.2 https://developer.nvidia.com/compute/machine-learning/cudnn/secure/8.2.2/11.4_07062021/cudnn-11.4-windows-x64-v8.2.2.26.zip (need login)
+* OpenCV 4.5.3 https://sourceforge.net/projects/opencvlibrary/files/4.5.3/opencv-4.5.3-vc14_vc15.exe/download 
+
+# Update Environment Variables
+```
+setx CNTK_ENABLE_ASGD false
+setx MKL_PATH c:\local\mklml-mkldnn-0.12
+setx BOOST_INCLUDE_PATH c:\local\boost_1_60_0-msvc-14.0
+setx BOOST_LIB_PATH c:\local\boost_1_60_0-msvc-14.0\lib64-msvc-14.0
+setx PROTOBUF_PATH c:\local\protobuf-3.1.0-vs17
+setx CUDNN_PATH C:\local\cudnn-11.4-windows-x64-v8.2.2.26\cuda
+setx OPENCV_PATH_V31 c:\local\Opencv3.1.0\build
+setx ZLIB_PATH c:\local\zlib-vs17
+setx CUB_PATH "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.4"
+setx SWIG_PATH C:\local\swigwin-3.0.10
+```
+Note that `CUB` is part of CUDA now.
+
+IMPORTANT: Remember to restart your shell/powershell window after, then check variables e.g. via:
+```
+gci env:
+```
+
+## 11.4
+This fails spectacularly with a lot of errors when trying to compile `MathCUDA`project in `CNTK.sln`.
+Hence, reverting to trying with 11.1 since this was reportedly working.
+
+## 11.1
+Change some environment variables.
+```
+setx CUB_PATH "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.1"
+```
+Some warnings with 11.1.1 due to deprecated methods, disabling the warnings in `fpgeneric.h`.
+
+Release then builds, but Debug does not. Don't care about Debug so moving on.
+

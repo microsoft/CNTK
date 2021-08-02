@@ -20,8 +20,8 @@ enable_csharp=
 
 # cntk build version
 # Modify both of the following during major release
-default_build_version="2.6"
-default_build_public="no"
+default_build_version="2.7"
+default_build_public="yes"
 build_version=$default_build_version
 build_public=$default_build_public
 
@@ -127,14 +127,14 @@ default_openblas=""
 
 default_boost="boost-1.60.0"
 
-default_cudas="cuda-10.2"
+default_cudas="cuda-11.1"
 default_nccls="nccl"
 default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdk_includes="include/nvidia/gdk cuda/include"
 default_gdk_nvml_libs="src/gdk/nvml/lib cuda/lib64/stubs"
-default_cubs="cub-1.8.0"
-default_cudnns="cudnn-7.3"
-default_opencvs="opencv-3.1.0 opencv-3.0.0"
+default_cubs="cub-1.12.1"
+default_cudnns="cudnn-8.0"
+default_opencvs="opencv-4.3.0 opencv-4.1.0"
 default_protobuf="protobuf-3.1.0"
 default_libzips="libzip-1.1.2"
 default_swig="swig-3.0.10"

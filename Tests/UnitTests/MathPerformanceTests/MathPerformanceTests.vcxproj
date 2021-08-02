@@ -26,6 +26,7 @@
     <ProjectGuid>{668BEED5-AC07-4F35-B3AE-EE65A7F9C976}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>MathPerformanceTests</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

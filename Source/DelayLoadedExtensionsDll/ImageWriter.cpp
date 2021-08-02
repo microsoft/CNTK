@@ -9,6 +9,8 @@
 #include "ImageWriter.h"
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/mat.hpp>
+//#include <opencv2/imgcodecs.hpp>
+//#include <opencv2/imgproc/imgproc_c.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -29,6 +31,7 @@ extern "C" IMAGEWRITER_API void EncodeImageAsPNG(void* matrix, ::CNTK::DataType 
     cv::Mat source = cv::Mat(height, width, cvDataType, matrix);
     std::vector<int> parameters = std::vector<int>(2);
     parameters[0] = CV_IMWRITE_PNG_COMPRESSION;
+    //parameters[0] = cv::ImwriteFlags::IMWRITE_PNG_COMPRESSION;
     parameters[1] = 3; //default(3)  0-9
 
     if (!imencode(".png", source, buffer, parameters)) {

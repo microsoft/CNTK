@@ -280,9 +280,25 @@ protected:
         // Find max Memory needed while running static finder. Workaround for cudnnFind fail. Number of algo is constant as in cudnn 5.1
         auto staticFinder = [&,this](cudnnConvolutionFwdAlgo_t& algo, bool noMem) -> cudnnStatus_t
         {
-            if(!noMem)
+            // 2020.12.09 - mj.jo
+            // cuda 10.0
+            /*if(!noMem)
                 return cudnnGetConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT, workspace.BufferSize(), &algo);
-            return cudnnGetConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, CUDNN_CONVOLUTION_FWD_NO_WORKSPACE, 0, &algo);
+            return cudnnGetConvolutionForwardAlgorithm(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, CUDNN_CONVOLUTION_FWD_NO_WORKSPACE, 0, &algo);*/
+
+			// 2020.12.09 - mj.jo
+			// cuda 11.1
+            int res_count = 0;
+            cudnnConvolutionFwdAlgoPerf_t fwd_perf;
+
+			cudnnStatus_t result;
+            if (!noMem)
+                result = cudnnGetConvolutionForwardAlgorithm_v7(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, 1, &res_count, &fwd_perf);
+            else
+                result = cudnnGetConvolutionForwardAlgorithm_v7(*m_cudnn, m_inT, *m_kernelT, *m_conv, m_outT, 0, &res_count, &fwd_perf);
+
+            algo = fwd_perf.algo;
+            return result;
         };
         // find deterministic algorithm
         auto deterministicFinder = [&, this](int& calgo, cudnnConvolutionFwdAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
@@ -345,9 +361,25 @@ protected:
         // Find max Memory needed while running static finder. Workaround for cudnnFind fail. Number of algo is constant as in cudnn 5.1
         auto staticFinder = [&,this](cudnnConvolutionBwdDataAlgo_t& algo, bool noMem) -> cudnnStatus_t
         {
-            if(!noMem)
+            // 2020.12.09 - mj.jo
+			// cuda 10.0
+            /*if (!noMem)
                 return cudnnGetConvolutionBackwardDataAlgorithm(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT, workspace.BufferSize(), &algo);
-            return cudnnGetConvolutionBackwardDataAlgorithm(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, CUDNN_CONVOLUTION_BWD_DATA_NO_WORKSPACE, 0, &algo);
+            return cudnnGetConvolutionBackwardDataAlgorithm(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, CUDNN_CONVOLUTION_BWD_DATA_NO_WORKSPACE, 0, &algo);*/
+
+			// 2020.12.09 - mj.jo
+            // cuda 11.1
+            int res_count = 0;
+            cudnnConvolutionBwdDataAlgoPerf_t bwd_perf;
+
+			cudnnStatus_t result;
+            if (!noMem)
+                result = cudnnGetConvolutionBackwardDataAlgorithm_v7(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, 1, &res_count, &bwd_perf);
+            else
+                result = cudnnGetConvolutionBackwardDataAlgorithm_v7(*m_cudnn, *m_kernelT, m_outT, *m_conv, m_inT, 0, &res_count, &bwd_perf);
+
+            algo = bwd_perf.algo;
+            return result;
         };
         // find deterministic algorithm
         auto deterministicFinder = [&, this](int& calgo, cudnnConvolutionBwdDataAlgoPerf_t algoPerf[MaxAlgoCount]) -> cudnnStatus_t
@@ -410,8 +442,33 @@ protected:
         // Find max Memory needed while running static finder. Workaround for cudnnFind fail. Number of algo is constant as in cudnn 5.1
         auto staticFinder = [&,this](cudnnConvolutionBwdFilterAlgo_t& algo, bool noMem) -> cudnnStatus_t
         {
-            if(!noMem)
-                return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT, workspace.BufferSize(), &algo);
+            // 2020.12.09 - mj.jo
+            // cuda 10.0
+            //if(!noMem)
+            //    return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT, workspace.BufferSize(), &algo);
+            //// special case for half/odd filter
+            //if(m_kernelT->isOdd() && m_dataType == CUDNN_DATA_HALF)
+            //{
+            //    size_t tmpSize = 0;
+            //    algo = (cudnnConvolutionBwdFilterAlgo_t) 1;
+            //    auto err = cudnnGetConvolutionBackwardFilterWorkspaceSize(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, algo, &tmpSize);
+            //    workspace.Resize((tmpSize + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
+            //    return err;
+            //}
+            //return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE, 0, &algo);
+
+			// 2020.12.09 - mj.jo
+            // cuda 11.1
+			int res_count = 0;
+            cudnnConvolutionBwdFilterAlgoPerf_t bwd_perf;
+            cudnnStatus_t result;
+
+			if (!noMem)
+			{
+                result = cudnnGetConvolutionBackwardFilterAlgorithm_v7(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, 1, &res_count, &bwd_perf);
+                algo = bwd_perf.algo;
+                return result;
+			}
             // special case for half/odd filter
             if(m_kernelT->isOdd() && m_dataType == CUDNN_DATA_HALF)
             {
@@ -421,7 +478,9 @@ protected:
                 workspace.Resize((tmpSize + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
                 return err;
             }
-            return cudnnGetConvolutionBackwardFilterAlgorithm(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, CUDNN_CONVOLUTION_BWD_FILTER_NO_WORKSPACE, 0, &algo);
+            result = cudnnGetConvolutionBackwardFilterAlgorithm_v7(*m_cudnn, m_inT, m_outT, *m_conv, *m_kernelT, 0, &res_count, &bwd_perf);
+			algo = bwd_perf.algo;
+            return result;
         };
         // find deterministic algorithm
         auto deterministicFinder = [&, this](int& calgo, cudnnConvolutionBwdFilterAlgoPerf_t algoPerf[MaxAlgoCount])->cudnnStatus_t

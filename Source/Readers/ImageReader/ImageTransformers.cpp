@@ -761,7 +761,7 @@ void ColorTransformer::Apply(cv::Mat &mat, int indexInBatch)
 
         // To change saturation, we need to convert the image to HSV format first,
         // the change S channgel and convert the image back to BGR format.
-        cv::cvtColor(mat, *hsv, CV_BGR2HSV);
+        cv::cvtColor(mat, *hsv, cv::ColorConversionCodes::COLOR_BGR2HSV);
         assert(hsv->rows == mat.rows && hsv->cols == mat.cols);
         size_t count = hsv->rows * hsv->cols * mat.channels();
         ElemType* phsvBase = reinterpret_cast<ElemType*>(hsv->data);
@@ -770,7 +770,7 @@ void ColorTransformer::Apply(cv::Mat &mat, int indexInBatch)
             const int HsvIndex = 1;
             phsv[HsvIndex] = std::min((ElemType)(phsv[HsvIndex] * ratio), (ElemType)1);
         }
-        cv::cvtColor(*hsv, mat, CV_HSV2BGR);
+        cv::cvtColor(*hsv, mat, cv::ColorConversionCodes::COLOR_HSV2BGR);
 
         m_hsvTemp.push(std::move(hsv));
     }

@@ -45,12 +45,13 @@
     <Company>Microsoft Corporation</Company>
     <Authors>Microsoft Corporation</Authors>
     <Product>Cntk.Core.Managed</Product>
-    <Version>$(CntkVersion)</Version>
+    <Version>$(CntkVersionInformational)</Version>
     <PlatformTarget>x64</PlatformTarget>
-	<DebugType>portable</DebugType>
+    <DebugType>portable</DebugType>
      
     <PackageId>$(NugetPackagePrefix)Cntk.Core.Managed</PackageId>
     <PackageId Condition="'$(CntkComponentSuffix)'!=''">$(NugetPackagePrefix)Cntk.Core.Managed-$(CntkComponentSuffix)</PackageId>
+    <repositoryUrl>https://github.com/nietras/CNTK.git</repositoryUrl>
   </PropertyGroup>
   
   <ItemGroup>

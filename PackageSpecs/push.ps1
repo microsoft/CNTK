@@ -1,1 +1,0 @@
-./nuget.exe push *2.7.1.nupkg -Source https://api.nuget.org/v3/index.json -ApiKey <ENTERAPIKEYHERE!>

@@ -27,6 +27,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CNTK</RootNamespace>
     <ProjectName>CNTK</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
@@ -106,7 +107,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;Cntk.Actions-$(CntkComponentVersion).lib; Cntk.SGD-$(CntkComponentVersion).lib; Cntk.ComputationNetwork-$(CntkComponentVersion).lib; Cntk.Math-$(CntkComponentVersion).lib; Cntk.Common-$(CntkComponentVersion).lib; kernel32.lib; user32.lib; shell32.lib; Cntk.SequenceTrainingLib-$(CntkComponentVersion).lib; Cntk.PerformanceProfiler-$(CntkComponentVersion).lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;Cntk.Actions-$(CntkComponentVersion).lib;Cntk.SGD-$(CntkComponentVersion).lib;Cntk.ComputationNetwork-$(CntkComponentVersion).lib;Cntk.Math-$(CntkComponentVersion).lib;Cntk.Common-$(CntkComponentVersion).lib;kernel32.lib;user32.lib;shell32.lib;Cntk.SequenceTrainingLib-$(CntkComponentVersion).lib;Cntk.PerformanceProfiler-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
       <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
       <StackReserveSize>200000000</StackReserveSize>

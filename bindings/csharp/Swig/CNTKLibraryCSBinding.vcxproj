@@ -26,6 +26,7 @@
     <ProjectGuid>{277EBD9D-2504-49FA-AC72-59D5515130C3}</ProjectGuid>
     <RootNamespace>CNTKLibraryCSBinding</RootNamespace>
     <ProjectName>CNTKLibraryCSBinding</ProjectName>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
