@@ -272,6 +272,19 @@ inline cublasStatus_t cublasasumHelper(cublasHandle_t, int n, const half *x, int
 
     return (cublasStatus_t) 0;
 }
+inline cublasStatus_t cublasasumHelper(cublasHandle_t, int n, const int *x, int incx, int *result)
+{
+    RuntimeError("Unsupported template argument(int) in cublasasumHelper");
+}
+inline cublasStatus_t cublasasumHelper(cublasHandle_t, int n, const short *x, int incx, short *result)
+{
+    RuntimeError("Unsupported template argument(short) in cublasasumHelper");
+}
+inline cublasStatus_t cublasasumHelper(cublasHandle_t, int n, const char *x, int incx, char *result)
+{
+    RuntimeError("Unsupported template argument(char) in cublasasumHelper");
+}
+
 
 // amax
 inline cublasStatus_t cublasamaxHelper(cublasHandle_t handle, int n, const float *x, int incx, int *result)
@@ -432,15 +445,17 @@ inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, half *output
 
     return (curandStatus_t) 0;
 }
-
-inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, char*, size_t, char, char)
+inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, int *, size_t, int, int)
 {
-    RuntimeError("Unsupported template argument(char) in GPUSparseMatrix");
+    RuntimeError("Unsupported template argument(int) in GPUSparseMatrix");
 }
-
-inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, short*, size_t, short, short)
+inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, short *, size_t, short, short)
 {
     RuntimeError("Unsupported template argument(short) in GPUSparseMatrix");
+}
+inline curandStatus_t curandGenerateNormalHelper(curandGenerator_t, char *, size_t, char, char)
+{
+    RuntimeError("Unsupported template argument(char) in GPUSparseMatrix");
 }
 
 #pragma warning(push) 
@@ -458,7 +473,11 @@ inline cusparseStatus_t cusparsecsr2denseHelper(cusparseHandle_t, int, int, cons
 {
     RuntimeError("Unsupported template argument(half) in GPUSparseMatrix");
 }
-inline cusparseStatus_t cusparsecsr2denseHelper(cusparseHandle_t,int,int,const cusparseMatDescr_t, const short *, const int *, const int *, short *, int)
+inline cusparseStatus_t cusparsecsr2denseHelper(cusparseHandle_t, int, int, const cusparseMatDescr_t, const int *, const int *, const int *, int *, int)
+{
+    RuntimeError("Unsupported template argument(int) in GPUSparseMatrix");
+}
+inline cusparseStatus_t cusparsecsr2denseHelper(cusparseHandle_t, int, int, const cusparseMatDescr_t, const short *, const int *, const int *, short *, int)
 {
     RuntimeError("Unsupported template argument(short) in GPUSparseMatrix");
 }
@@ -479,7 +498,11 @@ inline cusparseStatus_t cusparsecsc2denseHelper(cusparseHandle_t,int,int,const c
 {
     RuntimeError("Unsupported template argument(half) in GPUSparseMatrix");
 }
-inline cusparseStatus_t cusparsecsc2denseHelper(cusparseHandle_t,int,int,const cusparseMatDescr_t, const short *, const int *, const int *, short *, int)
+inline cusparseStatus_t cusparsecsc2denseHelper(cusparseHandle_t, int, int, const cusparseMatDescr_t, const int *, const int *, const int *, int *, int)
+{
+    RuntimeError("Unsupported template argument(int) in GPUSparseMatrix");
+}
+inline cusparseStatus_t cusparsecsc2denseHelper(cusparseHandle_t, int, int, const cusparseMatDescr_t, const short *, const int *, const int *, short *, int)
 {
     RuntimeError("Unsupported template argument(short) in GPUSparseMatrix");
 }
@@ -517,6 +540,18 @@ inline cusparseStatus_t cusparseCsr2cscEx2_bufferSizeHelper(cusparseHandle_t, in
 {
     RuntimeError("Unsupported template argument(half) in cusparseCsr2cscEx2_bufferSizeHelper");
 }
+inline cusparseStatus_t cusparseCsr2cscEx2_bufferSizeHelper(cusparseHandle_t, int, int, int, const int *, const int *, const int *, int *, int *, int *, cusparseAction_t, cusparseIndexBase_t, size_t *)
+{
+    RuntimeError("Unsupported template argument(int) in cusparseCsr2cscEx2_bufferSizeHelper");
+}
+inline cusparseStatus_t cusparseCsr2cscEx2_bufferSizeHelper(cusparseHandle_t, int, int, int, const short *, const int *, const int *, short *, int *, int *, cusparseAction_t, cusparseIndexBase_t, size_t *)
+{
+    RuntimeError("Unsupported template argument(short) in cusparseCsr2cscEx2_bufferSizeHelper");
+}
+inline cusparseStatus_t cusparseCsr2cscEx2_bufferSizeHelper(cusparseHandle_t, int, int, int, const char *, const int *, const int *, char *, int *, int *, cusparseAction_t, cusparseIndexBase_t, size_t *)
+{
+    RuntimeError("Unsupported template argument(char) in cusparseCsr2cscEx2_bufferSizeHelper");
+}
 inline cusparseStatus_t cusparseCsr2cscEx2Helper(cusparseHandle_t handle, int m, int n, int nnz, const float *csrVal, const int *csrRowPtr, const int *csrColInd, float *cscVal, int *cscColPtr, int *cscRowInd, cusparseAction_t copyValues, cusparseIndexBase_t idxBase, void *buffer)
 {
     return cusparseCsr2cscEx2(handle, m, n, nnz, csrVal, csrRowPtr, csrColInd, cscVal, cscColPtr, cscRowInd, CUDA_R_32F, copyValues, idxBase, CUSPARSE_CSR2CSC_ALG1, buffer);
@@ -528,6 +563,18 @@ inline cusparseStatus_t cusparseCsr2cscEx2Helper(cusparseHandle_t handle, int m,
 inline cusparseStatus_t cusparseCsr2cscEx2Helper(cusparseHandle_t, int, int, int, const half *, const int *, const int *, half *, int *, int *, cusparseAction_t, cusparseIndexBase_t, void *)
 {
     RuntimeError("Unsupported template argument(half) in cusparseCsr2cscEx2Helper");
+}
+inline cusparseStatus_t cusparseCsr2cscEx2Helper(cusparseHandle_t, int, int, int, const int *, const int *, const int *, int *, int *, int *, cusparseAction_t, cusparseIndexBase_t, void *)
+{
+    RuntimeError("Unsupported template argument(int) in cusparseCsr2cscEx2Helper");
+}
+inline cusparseStatus_t cusparseCsr2cscEx2Helper(cusparseHandle_t, int, int, int, const short *, const int *, const int *, short *, int *, int *, cusparseAction_t, cusparseIndexBase_t, void *)
+{
+    RuntimeError("Unsupported template argument(short) in cusparseCsr2cscEx2Helper");
+}
+inline cusparseStatus_t cusparseCsr2cscEx2Helper(cusparseHandle_t, int, int, int, const char *, const int *, const int *, char *, int *, int *, cusparseAction_t, cusparseIndexBase_t, void *)
+{
+    RuntimeError("Unsupported template argument(char) in cusparseCsr2cscEx2Helper");
 }
 #pragma warning(pop)
 
@@ -543,7 +590,11 @@ inline cusparseStatus_t cusparsennzHelper(cusparseHandle_t,cusparseDirection_t,i
 {
     RuntimeError("Unsupported template argument(half) in GPUSparseMatrix");
 }
-inline cusparseStatus_t cusparsennzHelper(cusparseHandle_t,cusparseDirection_t,int,int , const cusparseMatDescr_t, const short *, int, int *, int *)
+inline cusparseStatus_t cusparsennzHelper(cusparseHandle_t, cusparseDirection_t, int, int, const cusparseMatDescr_t, const int *, int, int *, int *)
+{
+    RuntimeError("Unsupported template argument(int) in GPUSparseMatrix");
+}
+inline cusparseStatus_t cusparsennzHelper(cusparseHandle_t, cusparseDirection_t, int, int, const cusparseMatDescr_t, const short *, int, int *, int *)
 {
     RuntimeError("Unsupported template argument(short) in GPUSparseMatrix");
 }
@@ -566,7 +617,11 @@ inline cusparseStatus_t cusparsedense2csrHelper(cusparseHandle_t,int,int,const c
 {
     RuntimeError("Unsupported template argument(half) in GPUSparseMatrix");
 }
-inline cusparseStatus_t cusparsedense2csrHelper(cusparseHandle_t,int,int,const cusparseMatDescr_t, const short *, int, const int *, short *, int *, int *)
+inline cusparseStatus_t cusparsedense2csrHelper(cusparseHandle_t, int, int, const cusparseMatDescr_t, const int *, int, const int *, int *, int *, int *)
+{
+    RuntimeError("Unsupported template argument(int) in GPUSparseMatrix");
+}
+inline cusparseStatus_t cusparsedense2csrHelper(cusparseHandle_t, int, int, const cusparseMatDescr_t, const short *, int, const int *, short *, int *, int *)
 {
     RuntimeError("Unsupported template argument(short) in GPUSparseMatrix");
 }
@@ -587,7 +642,11 @@ inline cusparseStatus_t cusparsedense2cscHelper(cusparseHandle_t,int,int,const c
 {
     RuntimeError("Unsupported template argument(half) in GPUSparseMatrix");
 }
-inline cusparseStatus_t cusparsedense2cscHelper(cusparseHandle_t,int,int,const cusparseMatDescr_t, const short *, int, const int *, short *, int *, int *)
+inline cusparseStatus_t cusparsedense2cscHelper(cusparseHandle_t, int, int, const cusparseMatDescr_t, const int *, int, const int *, int *, int *, int *)
+{
+    RuntimeError("Unsupported template argument(int) in GPUSparseMatrix");
+}
+inline cusparseStatus_t cusparsedense2cscHelper(cusparseHandle_t, int, int, const cusparseMatDescr_t, const short *, int, const int *, short *, int *, int *)
 {
     RuntimeError("Unsupported template argument(short) in GPUSparseMatrix");
 }
@@ -626,6 +685,18 @@ inline cusparseStatus_t cusparseCreateCsrHelper(cusparseSpMatDescr_t *, int, int
 {
     RuntimeError("Unsupported template argument(half) in cusparseCreateCsrHelper");
 }
+inline cusparseStatus_t cusparseCreateCsrHelper(cusparseSpMatDescr_t *, int, int, int, cusparseIndexBase_t, int *, int *, int *)
+{
+    RuntimeError("Unsupported template argument(int) in cusparseCreateCsrHelper");
+}
+inline cusparseStatus_t cusparseCreateCsrHelper(cusparseSpMatDescr_t *, int, int, int, cusparseIndexBase_t, short *, int *, int *)
+{
+    RuntimeError("Unsupported template argument(short) in cusparseCreateCsrHelper");
+}
+inline cusparseStatus_t cusparseCreateCsrHelper(cusparseSpMatDescr_t *, int, int, int, cusparseIndexBase_t, char *, int *, int *)
+{
+    RuntimeError("Unsupported template argument(char) in cusparseCreateCsrHelper");
+}
 inline cusparseStatus_t cusparseCreateDnMatHelper(cusparseDnMatDescr_t *dnMatDescr, int64_t rows, int64_t cols, int64_t Id, float *values, cusparseOrder_t order)
 {
     return cusparseCreateDnMat(dnMatDescr, rows, cols, Id, values, CUDA_R_32F, order);
@@ -637,6 +708,18 @@ inline cusparseStatus_t cusparseCreateDnMatHelper(cusparseDnMatDescr_t *dnMatDes
 inline cusparseStatus_t cusparseCreateDnMatHelper(cusparseDnMatDescr_t *, int64_t, int64_t, int64_t, half *, cusparseOrder_t)
 {
     RuntimeError("Unsupported template argument(half) in cusparseCreateDnMatHelper");
+}
+inline cusparseStatus_t cusparseCreateDnMatHelper(cusparseDnMatDescr_t *, int64_t, int64_t, int64_t, int *, cusparseOrder_t)
+{
+    RuntimeError("Unsupported template argument(int) in cusparseCreateDnMatHelper");
+}
+inline cusparseStatus_t cusparseCreateDnMatHelper(cusparseDnMatDescr_t *, int64_t, int64_t, int64_t, short *, cusparseOrder_t)
+{
+    RuntimeError("Unsupported template argument(short) in cusparseCreateDnMatHelper");
+}
+inline cusparseStatus_t cusparseCreateDnMatHelper(cusparseDnMatDescr_t *, int64_t, int64_t, int64_t, char *, cusparseOrder_t)
+{
+    RuntimeError("Unsupported template argument(char) in cusparseCreateDnMatHelper");
 }
 inline cusparseStatus_t cusparseSpMM_bufferSizeHelper(cusparseHandle_t handle, cusparseOperation_t opA, cusparseOperation_t opB, const float *alpha, cusparseSpMatDescr_t matA, cusparseDnMatDescr_t matB, const float *beta, cusparseDnMatDescr_t matC, size_t *bufferSize)
 {
@@ -650,6 +733,18 @@ inline cusparseStatus_t cusparseSpMM_bufferSizeHelper(cusparseHandle_t, cusparse
 {
     RuntimeError("Unsupported template argument(half) in cusparseSpMM_bufferSizeHelper");
 }
+inline cusparseStatus_t cusparseSpMM_bufferSizeHelper(cusparseHandle_t, cusparseOperation_t, cusparseOperation_t, const int *, cusparseSpMatDescr_t, cusparseDnMatDescr_t, const int *, cusparseDnMatDescr_t, size_t *)
+{
+    RuntimeError("Unsupported template argument(int) in cusparseSpMM_bufferSizeHelper");
+}
+inline cusparseStatus_t cusparseSpMM_bufferSizeHelper(cusparseHandle_t, cusparseOperation_t, cusparseOperation_t, const short *, cusparseSpMatDescr_t, cusparseDnMatDescr_t, const short *, cusparseDnMatDescr_t, size_t *)
+{
+    RuntimeError("Unsupported template argument(short) in cusparseSpMM_bufferSizeHelper");
+}
+inline cusparseStatus_t cusparseSpMM_bufferSizeHelper(cusparseHandle_t, cusparseOperation_t, cusparseOperation_t, const char *, cusparseSpMatDescr_t, cusparseDnMatDescr_t, const char *, cusparseDnMatDescr_t, size_t *)
+{
+    RuntimeError("Unsupported template argument(char) in cusparseSpMM_bufferSizeHelper");
+}
 inline cusparseStatus_t cusparseSpMMHelper(cusparseHandle_t handle, cusparseOperation_t opA, cusparseOperation_t opB, const float *alpha, cusparseSpMatDescr_t matA, cusparseDnMatDescr_t matB, const float *beta, cusparseDnMatDescr_t matC, void *externalBuffer)
 {
     return cusparseSpMM(handle, opA, opB, alpha, matA, matB, beta, matC, CUDA_R_32F, CUSPARSE_SPMM_ALG_DEFAULT, externalBuffer);
@@ -661,6 +756,18 @@ inline cusparseStatus_t cusparseSpMMHelper(cusparseHandle_t handle, cusparseOper
 inline cusparseStatus_t cusparseSpMMHelper(cusparseHandle_t, cusparseOperation_t, cusparseOperation_t, const half *, cusparseSpMatDescr_t, cusparseDnMatDescr_t, const half *, cusparseDnMatDescr_t, void *)
 {
     RuntimeError("Unsupported template argument(half) in cusparseSpMMHelper");
+}
+inline cusparseStatus_t cusparseSpMMHelper(cusparseHandle_t, cusparseOperation_t, cusparseOperation_t, const int *, cusparseSpMatDescr_t, cusparseDnMatDescr_t, const int *, cusparseDnMatDescr_t, void *)
+{
+    RuntimeError("Unsupported template argument(int) in cusparseSpMMHelper");
+}
+inline cusparseStatus_t cusparseSpMMHelper(cusparseHandle_t, cusparseOperation_t, cusparseOperation_t, const short *, cusparseSpMatDescr_t, cusparseDnMatDescr_t, const short *, cusparseDnMatDescr_t, void *)
+{
+    RuntimeError("Unsupported template argument(short) in cusparseSpMMHelper");
+}
+inline cusparseStatus_t cusparseSpMMHelper(cusparseHandle_t, cusparseOperation_t, cusparseOperation_t, const char *, cusparseSpMatDescr_t, cusparseDnMatDescr_t, const char *, cusparseDnMatDescr_t, void *)
+{
+    RuntimeError("Unsupported template argument(char) in cusparseSpMMHelper");
 }
 
 // 2020.12.11 - mj.jo
@@ -746,6 +853,18 @@ inline cusparseStatus_t cusparsecsrgeam2_bufferSizeExtHelper(cusparseHandle_t, i
 {
     RuntimeError("Unsupported template argument(half) in cusparsecsrgeam2_bufferSizeExtHelper");
 }
+inline cusparseStatus_t cusparsecsrgeam2_bufferSizeExtHelper(cusparseHandle_t, int, int, const int *, const cusparseMatDescr_t, int, const int *, const int *, const int *, const int *, const cusparseMatDescr_t, int, const int *, const int *, const int *, const cusparseMatDescr_t, const int *, const int *, const int *, size_t *)
+{
+    RuntimeError("Unsupported template argument(int) in cusparsecsrgeam2_bufferSizeExtHelper");
+}
+inline cusparseStatus_t cusparsecsrgeam2_bufferSizeExtHelper(cusparseHandle_t, int, int, const short *, const cusparseMatDescr_t, int, const short *, const int *, const int *, const short *, const cusparseMatDescr_t, int, const short *, const int *, const int *, const cusparseMatDescr_t, const short *, const int *, const int *, size_t *)
+{
+    RuntimeError("Unsupported template argument(short) in cusparsecsrgeam2_bufferSizeExtHelper");
+}
+inline cusparseStatus_t cusparsecsrgeam2_bufferSizeExtHelper(cusparseHandle_t, int, int, const char *, const cusparseMatDescr_t, int, const char *, const int *, const int *, const char *, const cusparseMatDescr_t, int, const char *, const int *, const int *, const cusparseMatDescr_t, const char *, const int *, const int *, size_t *)
+{
+    RuntimeError("Unsupported template argument(char) in cusparsecsrgeam2_bufferSizeExtHelper");
+}
 inline cusparseStatus_t cusparsecsrgeam2Helper(cusparseHandle_t handle, int m, int n, const float *alpha, const cusparseMatDescr_t descrA, int nnzA, const float *csrSortedValA, const int *csrSortedRowPtrA, const int *csrSortedColIndA, const float *beta, const cusparseMatDescr_t descrB, int nnzB, const float *csrSortedValB, const int *csrSortedRowPtrB, const int *csrSortedColIndB, const cusparseMatDescr_t descrC, float *csrSortedValC, int *csrSortedRowPtrC, int *csrSortedColIndC, void *pBuffer)
 {
     return cusparseScsrgeam2(handle, m, n, alpha, descrA, nnzA, csrSortedValA, csrSortedRowPtrA, csrSortedColIndA, beta, descrB, nnzB, csrSortedValB, csrSortedRowPtrB, csrSortedColIndB, descrC, csrSortedValC, csrSortedRowPtrC, csrSortedColIndC, pBuffer);
@@ -757,6 +876,18 @@ inline cusparseStatus_t cusparsecsrgeam2Helper(cusparseHandle_t handle, int m, i
 inline cusparseStatus_t cusparsecsrgeam2Helper(cusparseHandle_t, int, int, const half *, const cusparseMatDescr_t, int, const half *, const int *, const int *, const half *, const cusparseMatDescr_t, int, const half *, const int *, const int *, const cusparseMatDescr_t, half *, int *, int *, void *)
 {
     RuntimeError("Unsupported template argument(half) in cusparsecsrgeam2Helper");
+}
+inline cusparseStatus_t cusparsecsrgeam2Helper(cusparseHandle_t, int, int, const int *, const cusparseMatDescr_t, int, const int *, const int *, const int *, const int *, const cusparseMatDescr_t, int, const int *, const int *, const int *, const cusparseMatDescr_t, int *, int *, int *, void *)
+{
+    RuntimeError("Unsupported template argument(int) in cusparsecsrgeam2Helper");
+}
+inline cusparseStatus_t cusparsecsrgeam2Helper(cusparseHandle_t, int, int, const short *, const cusparseMatDescr_t, int, const short *, const int *, const int *, const short *, const cusparseMatDescr_t, int, const short *, const int *, const int *, const cusparseMatDescr_t, short *, int *, int *, void *)
+{
+    RuntimeError("Unsupported template argument(short) in cusparsecsrgeam2Helper");
+}
+inline cusparseStatus_t cusparsecsrgeam2Helper(cusparseHandle_t, int, int, const char *, const cusparseMatDescr_t, int, const char *, const int *, const int *, const char *, const cusparseMatDescr_t, int, const char *, const int *, const int *, const cusparseMatDescr_t, char *, int *, int *, void *)
+{
+    RuntimeError("Unsupported template argument(char) in cusparsecsrgeam2Helper");
 }
 
 // 2020.12.14 - mj.jo
@@ -788,6 +919,18 @@ inline cusparseStatus_t cusparseCreateSpVecHelper(cusparseSpVecDescr_t *, int64_
 {
     RuntimeError("Unsupported template argument(half) in cusparseCreateSpVecHelper");
 }
+inline cusparseStatus_t cusparseCreateSpVecHelper(cusparseSpVecDescr_t *, int64_t, int64_t, int *, int *, cusparseIndexBase_t)
+{
+    RuntimeError("Unsupported template argument(int) in cusparseCreateSpVecHelper");
+}
+inline cusparseStatus_t cusparseCreateSpVecHelper(cusparseSpVecDescr_t *, int64_t, int64_t, int *, short *, cusparseIndexBase_t)
+{
+    RuntimeError("Unsupported template argument(short) in cusparseCreateSpVecHelper");
+}
+inline cusparseStatus_t cusparseCreateSpVecHelper(cusparseSpVecDescr_t *, int64_t, int64_t, int *, char *, cusparseIndexBase_t)
+{
+    RuntimeError("Unsupported template argument(char) in cusparseCreateSpVecHelper");
+}
 inline cusparseStatus_t cusparseCreateDnVecHelper(cusparseDnVecDescr_t *dnVecDescr, int64_t size, float *values)
 {
     return cusparseCreateDnVec(dnVecDescr, size, values, CUDA_R_32F);
@@ -799,6 +942,18 @@ inline cusparseStatus_t cusparseCreateDnVecHelper(cusparseDnVecDescr_t *dnVecDes
 inline cusparseStatus_t cusparseCreateDnVecHelper(cusparseDnVecDescr_t *, int64_t, half *)
 {
     RuntimeError("Unsupported template argument(half) in cusparseCreateDnVecHelper");
+}
+inline cusparseStatus_t cusparseCreateDnVecHelper(cusparseDnVecDescr_t *, int64_t, int *)
+{
+    RuntimeError("Unsupported template argument(int) in cusparseCreateDnVecHelper");
+}
+inline cusparseStatus_t cusparseCreateDnVecHelper(cusparseDnVecDescr_t *, int64_t, short *)
+{
+    RuntimeError("Unsupported template argument(short) in cusparseCreateDnVecHelper");
+}
+inline cusparseStatus_t cusparseCreateDnVecHelper(cusparseDnVecDescr_t *, int64_t, char *)
+{
+    RuntimeError("Unsupported template argument(char) in cusparseCreateDnVecHelper");
 }
 inline cusparseStatus_t cusparseSpVV_bufferSizeHelper(cusparseHandle_t handle, cusparseOperation_t opX, cusparseSpVecDescr_t vecX, cusparseDnVecDescr_t vecY, float *result, size_t *bufferSize)
 {
@@ -812,6 +967,18 @@ inline cusparseStatus_t cusparseSpVV_bufferSizeHelper(cusparseHandle_t, cusparse
 {
     RuntimeError("Unsupported template argument(half) in cusparseSpVV_bufferSizeHelper");
 }
+inline cusparseStatus_t cusparseSpVV_bufferSizeHelper(cusparseHandle_t, cusparseOperation_t, cusparseSpVecDescr_t, cusparseDnVecDescr_t, int *, size_t *)
+{
+    RuntimeError("Unsupported template argument(int) in cusparseSpVV_bufferSizeHelper");
+}
+inline cusparseStatus_t cusparseSpVV_bufferSizeHelper(cusparseHandle_t, cusparseOperation_t, cusparseSpVecDescr_t, cusparseDnVecDescr_t, short *, size_t *)
+{
+    RuntimeError("Unsupported template argument(short) in cusparseSpVV_bufferSizeHelper");
+}
+inline cusparseStatus_t cusparseSpVV_bufferSizeHelper(cusparseHandle_t, cusparseOperation_t, cusparseSpVecDescr_t, cusparseDnVecDescr_t, char *, size_t *)
+{
+    RuntimeError("Unsupported template argument(char) in cusparseSpVV_bufferSizeHelper");
+}
 inline cusparseStatus_t cusparseSpVVHelper(cusparseHandle_t handle, cusparseOperation_t opX, cusparseSpVecDescr_t vecX, cusparseDnVecDescr_t vecY, float *result, void *externalBuffer)
 {
     return cusparseSpVV(handle, opX, vecX, vecY, result, CUDA_R_32F, externalBuffer);
@@ -823,6 +990,18 @@ inline cusparseStatus_t cusparseSpVVHelper(cusparseHandle_t handle, cusparseOper
 inline cusparseStatus_t cusparseSpVVHelper(cusparseHandle_t, cusparseOperation_t, cusparseSpVecDescr_t, cusparseDnVecDescr_t, half *, void *)
 {
     RuntimeError("Unsupported template argument(half) in cusparseSpVV");
+}
+inline cusparseStatus_t cusparseSpVVHelper(cusparseHandle_t, cusparseOperation_t, cusparseSpVecDescr_t, cusparseDnVecDescr_t, int *, void *)
+{
+    RuntimeError("Unsupported template argument(int) in cusparseSpVV");
+}
+inline cusparseStatus_t cusparseSpVVHelper(cusparseHandle_t, cusparseOperation_t, cusparseSpVecDescr_t, cusparseDnVecDescr_t, short *, void *)
+{
+    RuntimeError("Unsupported template argument(short) in cusparseSpVV");
+}
+inline cusparseStatus_t cusparseSpVVHelper(cusparseHandle_t, cusparseOperation_t, cusparseSpVecDescr_t, cusparseDnVecDescr_t, char *, void *)
+{
+    RuntimeError("Unsupported template argument(char) in cusparseSpVV");
 }
 
 

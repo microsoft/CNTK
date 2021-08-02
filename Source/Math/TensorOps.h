@@ -42,13 +42,38 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     DECL double x##_(double f)  \
     {                           \
         return x(f);            \
+    }                           \
+    DECL int x##_(int f)        \
+    {                           \
+        assert(false && "Unsupported template argument(int) in x##_");  \
+        return f;               \
+    }                           \
+    DECL char x##_(char f)                                           \
+    {                                                                \
+        assert(false && "Unsupported template argument(char) in x##_"); \
+        return f;                                                       \
+    }
+
+#define OverloadUnaryMathFnsWithoutInt(x)                            \
+    DECL float x##_(float f)                                         \
+    {                                                                \
+        return x##f(f);                                              \
+    }                                                                \
+    DECL double x##_(double f)                                       \
+    {                                                                \
+        return x(f);                                                 \
+    }                                                                \
+    DECL char x##_(char f)                                           \
+    {                                                                \
+        assert(false && "Unsupported template argument(char) in x##_"); \
+        return f;                                                       \
     }
 
 OverloadUnaryMathFns(exp);
 OverloadUnaryMathFns(log);
 OverloadUnaryMathFns(tanh);
 OverloadUnaryMathFns(sqrt);
-OverloadUnaryMathFns(fabs);
+OverloadUnaryMathFnsWithoutInt(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
 OverloadUnaryMathFns(tan);
@@ -61,6 +86,15 @@ OverloadUnaryMathFns(sinh);
 OverloadUnaryMathFns(cosh);
 OverloadUnaryMathFns(asinh);
 OverloadUnaryMathFns(atanh);
+
+//DECL int sqrt_(int v)
+//{
+//    RuntimeError("Unsupported template argument(int) in sqrt_");
+//}
+//DECL char sqrt_(char v)
+//{
+//    RuntimeError("Unsupported template argument(char) in sqrt_");
+//}
 
 // Add overload for half math functions(Assume CUDA 9)
 // Only enable fp16 math for sm_60(P100) and sm_70+(V100)
@@ -182,6 +216,16 @@ DECL float rsqrt_(float v) {
 DECL double rsqrt_(double v) {
     return rsqrt(v);
 }
+DECL int rsqrt_(int v)
+{
+    assert(false && "Unsupported template argument(int) in rsqrt_");
+    return v;
+}
+DECL char rsqrt_(char v)
+{
+    assert(false "Unsupported template argument(char) in rsqrt_");
+    return v;
+}
 
 #endif // __CUDACC__
 
@@ -197,6 +241,18 @@ DECL double rsqrt_(double v) {
     DECL double x##_(double f, double y) \
     {                                    \
         return x(f, y);                  \
+    }                                    \
+    DECL int x##_(int f, int y)          \
+    {                                    \
+        assert(false && "Unsupported template argument(int) in x##_");  \
+        (void)y;                                                     \
+        return f;                                                    \
+    }                                    \
+    DECL char x##_(char f, char y)       \
+    {                                    \
+        assert(false && "Unsupported template argument(char) in x##_"); \
+        (void)y;                                                     \
+        return f;                                                    \
     }
 
 // Because we compile with fast math the following produces nan for negative numbers raised to integer power.
